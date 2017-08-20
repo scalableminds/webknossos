@@ -4,16 +4,18 @@
 import * as React from "react";
 import type { APIDatasetType } from "admin/api_flow_types";
 
-export default class DatasetActionView extends React.PureComponent<{
+type Props = {
   dataset: APIDatasetType,
-}, {
+};
+
+type State = {
   contentType: string,
-}> {
+};
+
+export default class DatasetActionView extends React.PureComponent<Props, State> {
   form: HTMLFormElement;
 
-  state: {
-    contentType: string,
-  } = {
+  state = {
     contentType: "",
   };
 

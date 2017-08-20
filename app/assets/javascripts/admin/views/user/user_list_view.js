@@ -14,7 +14,7 @@ import type { APIUserType, APITeamRole } from "admin/api_flow_types";
 const { Column } = Table;
 const { Search } = Input;
 
-class UserListView extends React.PureComponent<{}, {
+type State = {
   isLoading: boolean,
   users: Array<APIUserType>,
   selectedUserIds: Array<string>,
@@ -22,16 +22,10 @@ class UserListView extends React.PureComponent<{}, {
   isTeamRoleModalVisible: boolean,
   activationFilter: Array<"true" | "false">,
   searchQuery: string,
-}> {
-  state: {
-    isLoading: boolean,
-    users: Array<APIUserType>,
-    selectedUserIds: Array<string>,
-    isExperienceModalVisible: boolean,
-    isTeamRoleModalVisible: boolean,
-    activationFilter: Array<"true" | "false">,
-    searchQuery: string,
-  } = {
+};
+
+class UserListView extends React.PureComponent<{}, State> {
+  state = {
     isLoading: true,
     users: [],
     selectedUserIds: [],

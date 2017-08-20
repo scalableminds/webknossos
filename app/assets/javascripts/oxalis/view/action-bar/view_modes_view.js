@@ -9,10 +9,12 @@ import Store from "oxalis/store";
 import { connect } from "react-redux";
 import Utils from "libs/utils";
 
-class ViewModesView extends PureComponent<{
+type Props = {
   viewMode: ModeType,
   allowedModes: Array<AllowedModeType>,
-}> {
+};
+
+class ViewModesView extends PureComponent<Props> {
   blurElement = (event: SyntheticInputEvent<>) => {
     event.target.blur();
   };

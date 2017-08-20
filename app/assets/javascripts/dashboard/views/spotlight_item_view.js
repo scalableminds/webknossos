@@ -7,16 +7,18 @@ import TemplateHelpers from "libs/template_helpers";
 import app from "app";
 import type { APIDatasetType } from "admin/api_flow_types";
 
-class SpotlightItemView extends React.PureComponent<{
+type Props = {
   dataset: APIDatasetType,
-}, {
+};
+
+type State = {
   contentType: string,
-}> {
+};
+
+class SpotlightItemView extends React.PureComponent<Props, State> {
   form: any;
 
-  state: {
-    contentType: string,
-  } = {
+  state = {
     contentType: "",
   };
 

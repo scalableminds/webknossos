@@ -19,10 +19,12 @@ type Props = {
   isAdminView: boolean,
 };
 
-class DashboardView extends React.PureComponent<Props, {
+type State = {
   activeTabKey: string,
   user: ?APIUserType,
-}> {
+};
+
+class DashboardView extends React.PureComponent<Props, State> {
   constructor(props: Props) {
     super(props);
 

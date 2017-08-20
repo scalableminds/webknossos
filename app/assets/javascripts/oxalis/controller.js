@@ -36,15 +36,19 @@ import { fetchGistContent } from "libs/gist";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
-class Controller extends React.PureComponent<{
+type Props = {
   initialTracingType: SkeletonTracingTypeTracingType,
   initialTracingId: string,
   initialControlmode: ControlModeType,
   // Delivered by connect()
   viewMode: ModeType,
-}, {
+};
+
+type State = {
   ready: boolean,
-}> {
+};
+
+class Controller extends React.PureComponent<Props, State> {
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 
@@ -52,9 +56,7 @@ class Controller extends React.PureComponent<{
   listenTo: Function;
   stopListening: Function;
 
-  state: {
-    ready: boolean,
-  } = {
+  state = {
     ready: false,
   };
 

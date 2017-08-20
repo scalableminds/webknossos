@@ -25,17 +25,19 @@ import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 const InputGroup = Input.Group;
 
-type CommentTabStateType = {
-  isSortedAscending: boolean,
-};
-
-class CommentTabView extends React.Component<{
+type Props = {
   skeletonTracing: SkeletonTracingType,
   setActiveNode: (nodeId: number) => void,
   deleteComment: () => void,
   createComment: (text: string) => void,
-}, CommentTabStateType> {
-  state: CommentTabStateType = {
+};
+
+type CommentTabStateType = {
+  isSortedAscending: boolean,
+};
+
+class CommentTabView extends React.Component<Props, CommentTabStateType> {
+  state = {
     isSortedAscending: true,
   };
 

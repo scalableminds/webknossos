@@ -8,14 +8,13 @@ type EditableTextLabelPropType = {
   onChange: Function,
 };
 
-class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, {
+type State = {
   isEditing: boolean,
   value: string,
-}> {
-  state: {
-    isEditing: boolean,
-    value: string,
-  } = {
+};
+
+class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, State> {
+  state = {
     isEditing: false,
     value: "",
   };

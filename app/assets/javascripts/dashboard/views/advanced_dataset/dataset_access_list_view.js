@@ -7,16 +7,17 @@ import TemplateHelpers from "libs/template_helpers";
 import type { APIDatasetType } from "admin/api_flow_types";
 import { Spin, Tag } from "antd";
 
-export default class DatasetAccessListView extends React.PureComponent<{
+type Props = {
   dataset: APIDatasetType,
-}, {
+};
+
+type State = {
   datasetUsers: any,
   isLoading: boolean,
-}> {
-  state: {
-    datasetUsers: any,
-    isLoading: boolean,
-  } = {
+};
+
+export default class DatasetAccessListView extends React.PureComponent<Props, State> {
+  state = {
     datasetUsers: [],
     isLoading: false,
   };

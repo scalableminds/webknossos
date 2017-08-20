@@ -9,14 +9,16 @@ import C3Chart from "react-c3js";
 
 const { Column } = Table;
 
-export default class LoggedTimeView extends React.PureComponent<{
+type Props = {
   userID: ?string,
-}, {
+};
+
+type State = {
   timeEntries: Array<Object>,
-}> {
-  state: {
-    timeEntries: Array<Object>,
-  } = {
+};
+
+export default class LoggedTimeView extends React.PureComponent<Props, State> {
+  state = {
     timeEntries: [],
   };
 

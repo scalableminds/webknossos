@@ -22,7 +22,7 @@ type State = { isLoading: boolean };
 
 export class AsyncButton extends React.PureComponent<Props, State> {
   _isMounted: boolean;
-  state: State = { isLoading: false };
+  state = { isLoading: false };
 
   componentDidMount() {
     this._isMounted = true;
@@ -42,7 +42,7 @@ export class AsyncLink extends React.PureComponent<Props & { children: React.Nod
   static defaultProps = {
     children: [],
   };
-  state: State = { isLoading: false };
+  state = { isLoading: false };
 
   componentDidMount() {
     this._isMounted = true;

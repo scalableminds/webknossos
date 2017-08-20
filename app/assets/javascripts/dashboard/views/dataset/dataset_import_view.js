@@ -7,23 +7,21 @@ import update from "immutability-helper";
 import Toast from "libs/toast";
 import type { APIDatasetType } from "admin/api_flow_types";
 
-class DatasetImportView extends React.PureComponent<{
+type Props = {
   datasetName: string,
   isEditingMode: boolean,
-}, {
+};
+
+type State = {
   dataLoaded: boolean,
   dataset: ?APIDatasetType,
   datasetJson: string,
   isValidJSON: boolean,
   messages: Array<{ ["info" | "warning" | "error"]: string }>,
-}> {
-  state: {
-    dataLoaded: boolean,
-    dataset: ?APIDatasetType,
-    datasetJson: string,
-    isValidJSON: boolean,
-    messages: Array<{ ["info" | "warning" | "error"]: string }>,
-  } = {
+};
+
+class DatasetImportView extends React.PureComponent<Props, State> {
+  state = {
     dataLoaded: false,
     dataset: null,
     datasetJson: "",

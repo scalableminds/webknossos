@@ -20,20 +20,20 @@ type TeamRoleModalPropType = {
   selectedUserIds: Array<string>,
   users: Array<APIUserType>,
 };
+
+type State = {
+  teams: Array<APITeamType>,
+  selectedTeams: Array<APITeamRoleType>,
+};
+
 /**
  * All team selection in this modal is based on whether their is a role
  * associated with the respective team. In other words, 'selectedTeams' contains
  * all globally available teams, but only those with an attached role are
  * significant. See <APITeamRoleType>
  */
-class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, {
-  teams: Array<APITeamType>,
-  selectedTeams: Array<APITeamRoleType>,
-}> {
-  state: {
-    teams: Array<APITeamType>,
-    selectedTeams: Array<APITeamRoleType>,
-  } = {
+class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State> {
+  state = {
     teams: [],
     selectedTeams: [],
   };

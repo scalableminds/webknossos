@@ -38,7 +38,7 @@ class InputComponent extends React.PureComponent<InputComponentPropType, InputCo
     style: {},
   };
 
-  state: InputComponentStateType = {
+  state = {
     isFocused: false,
     currentValue: this.props.value,
   };

@@ -14,10 +14,12 @@ import { Input } from "antd";
 import Vector3Input from "libs/vector3_input";
 import ButtonComponent from "oxalis/view/components/button_component";
 
-class DatasetPositionView extends PureComponent<{
+type Props = {
   flycam: FlycamType,
   viewMode: ModeType,
-}> {
+};
+
+class DatasetPositionView extends PureComponent<Props> {
   copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(this.props.flycam)).join(", ");
     await Clipboard.copy(position);

@@ -13,20 +13,16 @@ type UserScriptsModalViewPropsType = {
   isVisible: boolean,
 };
 
-class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewPropsType, {
+type State = {
   code: string,
   isCodeChanged: boolean,
   scripts: Array<ScriptType>,
   selectedScript: ?string,
   isLoading: boolean,
-}> {
-  state: {
-    code: string,
-    isCodeChanged: boolean,
-    scripts: Array<ScriptType>,
-    selectedScript: ?string,
-    isLoading: boolean,
-  } = {
+};
+
+class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewPropsType, State> {
+  state = {
     code: "",
     isCodeChanged: false,
     scripts: [],

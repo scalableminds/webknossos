@@ -8,7 +8,7 @@ import type { APIUserType } from "admin/api_flow_types";
 
 const { Option } = Select;
 
-class TransferTaskModal extends React.PureComponent<{
+type Props = {
   onChange: Function,
   // Somehow, eslint doesn't recognize that annotationId is used in
   // the async functions
@@ -17,16 +17,16 @@ class TransferTaskModal extends React.PureComponent<{
   onCancel: Function,
   visible: boolean,
   userID: ?string,
-}, {
+};
+
+type State = {
   isLoading: boolean,
   users: Array<APIUserType>,
   currentUserIdValue: string,
-}> {
-  state: {
-    isLoading: boolean,
-    users: Array<APIUserType>,
-    currentUserIdValue: string,
-  } = {
+};
+
+class TransferTaskModal extends React.PureComponent<Props, State> {
+  state = {
     isLoading: false,
     users: [],
     currentUserIdValue: "",

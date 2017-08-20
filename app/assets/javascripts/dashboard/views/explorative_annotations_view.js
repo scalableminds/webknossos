@@ -21,7 +21,7 @@ type Props = {
   isAdminView: boolean,
 };
 
-export default class ExplorativeAnnotationsView extends React.PureComponent<Props, {
+type State = {
   shouldShowArchivedTracings: boolean,
   archivedTracings: Array<APIAnnotationType>,
   unarchivedTracings: Array<APIAnnotationType>,
@@ -32,19 +32,10 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
   searchQuery: string,
   requestCount: number,
   isUploadingNML: boolean,
-}> {
-  state: {
-    shouldShowArchivedTracings: boolean,
-    archivedTracings: Array<APIAnnotationType>,
-    unarchivedTracings: Array<APIAnnotationType>,
-    didAlreadyFetchMetaInfo: {
-      isArchived: boolean,
-      isUnarchived: boolean,
-    },
-    searchQuery: string,
-    requestCount: number,
-    isUploadingNML: boolean,
-  } = {
+};
+
+export default class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+  state = {
     shouldShowArchivedTracings: false,
     archivedTracings: [],
     unarchivedTracings: [],

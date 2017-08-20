@@ -211,11 +211,13 @@ type VectorInputSettingPropTypes<T: Vector6> = {
   tooltipTitle: string,
 };
 
-export class Vector6InputSetting extends React.PureComponent<VectorInputSettingPropTypes<Vector6>, {
+type State = {
   isEditing: boolean,
   isValid: boolean,
   text: string,
-}> {
+};
+
+export class Vector6InputSetting extends React.PureComponent<VectorInputSettingPropTypes<Vector6>, State> {
   constructor(props: VectorInputSettingPropTypes<Vector6>) {
     super(props);
     this.state = {

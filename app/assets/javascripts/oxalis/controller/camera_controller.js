@@ -19,10 +19,12 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
 
-class CameraController extends React.Component<{
+type Props = {
   cameras: OrthoViewMapType<THREE.OrthographicCamera>,
   onCameraPositionChanged: () => void,
-}> {
+};
+
+class CameraController extends React.Component<Props> {
   storePropertyUnsubscribers: Array<Function>;
 
   componentDidMount() {

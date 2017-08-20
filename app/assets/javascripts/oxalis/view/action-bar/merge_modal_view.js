@@ -18,6 +18,13 @@ type TaskTypeInfoType = {
   label: string,
 };
 
+type Props = {
+  isVisible: boolean,
+  onOk: () => void,
+  tracingId: string,
+  tracingType: string,
+};
+
 type MergeModalViewState = {
   taskTypes: Array<TaskTypeInfoType>,
   projects: Array<string>,
@@ -39,12 +46,7 @@ type UploadInfoType<T> = {
       },
 };
 
-class MergeModalView extends PureComponent<{
-  isVisible: boolean,
-  onOk: () => void,
-  tracingId: string,
-  tracingType: string,
-}, MergeModalViewState> {
+class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   state: MergeModalViewState = {
     taskTypes: [],
     projects: [],

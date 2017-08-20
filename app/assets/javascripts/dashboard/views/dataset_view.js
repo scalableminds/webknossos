@@ -17,6 +17,13 @@ type Props = {
   user: APIUserType,
 };
 
+type State = {
+  currentDataViewType: "gallery" | "advanced",
+  datasets: Array<APIDatasetType>,
+  searchQuery: string,
+  isLoading: boolean,
+};
+
 function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>): string {
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
@@ -25,18 +32,8 @@ function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>):
   return "";
 }
 
-class DatasetView extends React.PureComponent<Props, {
-  currentDataViewType: "gallery" | "advanced",
-  datasets: Array<APIDatasetType>,
-  searchQuery: string,
-  isLoading: boolean,
-}> {
-  state: {
-    currentDataViewType: "gallery" | "advanced",
-    datasets: Array<APIDatasetType>,
-    searchQuery: string,
-    isLoading: boolean,
-  } = {
+class DatasetView extends React.PureComponent<Props, State> {
+  state = {
     currentDataViewType: "gallery",
     datasets: [],
     searchQuery: "",

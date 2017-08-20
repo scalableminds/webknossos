@@ -17,12 +17,12 @@ type ShareModalPropType = {
   setAnnotationPublic: Function,
 };
 
-class ShareModalView extends PureComponent<ShareModalPropType, {
+type State = {
   isPublic: boolean,
-}> {
-  state: {
-    isPublic: boolean,
-  } = {
+};
+
+class ShareModalView extends PureComponent<ShareModalPropType, State> {
+  state = {
     isPublic: false,
   };
 

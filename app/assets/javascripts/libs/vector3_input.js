@@ -10,11 +10,13 @@ type Vector3InputPropTypes = {
   onChange: (value: Vector3) => void,
 };
 
-export default class Vector3Input extends React.PureComponent<Vector3InputPropTypes, {
+type State = {
   isEditing: boolean,
   isValid: boolean,
   text: string,
-}> {
+};
+
+export default class Vector3Input extends React.PureComponent<Vector3InputPropTypes, State> {
   constructor(props: Vector3InputPropTypes) {
     super(props);
     this.state = {

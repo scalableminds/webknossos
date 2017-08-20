@@ -31,7 +31,7 @@ class TemplateHelpers {
     return hash % this.COLOR_MAP.length;
   }
 
-  formatTuple(tuple: Array<number>) {
+  formatTuple(tuple: Array<number> | Vector3) {
     if (tuple != null && tuple.length > 0) {
       const tupleRounded = tuple.map(value => Utils.roundTo(value, 2));
       return `(${tupleRounded.join(", ")})`;

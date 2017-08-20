@@ -9,16 +9,6 @@ class DatasetModel extends NestedObjModel {
   }
 
   parse(response) {
-    // since defaults doesn't override null...
-    if (response.dataSource === null) {
-      response.dataSource = {
-        needsImport: true,
-        baseDir: "",
-        scale: [],
-        dataLayers: [],
-      };
-    }
-
     response.hasSegmentation = _.some(
       response.dataSource.dataLayers,
       layer => layer.category === "segmentation",

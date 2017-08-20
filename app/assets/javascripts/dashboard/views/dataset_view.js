@@ -17,17 +17,17 @@ type Props = {
   user: APIUserType,
 };
 
+export type DatasetType = APIDatasetType & {
+  hasSegmentation: boolean,
+  thumbnailURL: string,
+  formattedCreated: string,
+};
+
 type State = {
   currentDataViewType: "gallery" | "advanced",
   datasets: Array<DatasetType>,
   searchQuery: string,
   isLoading: boolean,
-};
-
-export type DatasetType = APIDatasetType & {
-  hasSegmentation: boolean,
-  thumbnailURL: string,
-  formattedCreated: string,
 };
 
 function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>): string {

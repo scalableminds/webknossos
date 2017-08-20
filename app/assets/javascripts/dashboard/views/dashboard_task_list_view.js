@@ -32,10 +32,9 @@ const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnot
 
   if (!task) {
     // This should never be the case unless tasks were deleted in the DB.
-    console.warn(
+    throw Error(
       `[Dashboard Tasks] Annotation ${annotation.id} has no task assigned. Please inform your admin.`,
     );
-    return null;
   }
 
   if (!task.type) {

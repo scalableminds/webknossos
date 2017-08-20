@@ -3,7 +3,7 @@ import * as React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
-import type { APITeamType, APIUserType, APITeamRoleType } from "admin/api_flow_types";
+import type { APITeamType, APIUserType, APIRoleType } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -11,6 +11,11 @@ const RadioGroup = Radio.Group;
 const ROLES = {
   admin: "admin",
   user: "user",
+};
+
+type TeamOptionalRoleType = {
+  +team: string,
+  +role: ?APIRoleType,
 };
 
 type TeamRoleModalPropType = {
@@ -23,7 +28,7 @@ type TeamRoleModalPropType = {
 
 type State = {
   teams: Array<APITeamType>,
-  selectedTeams: Array<APITeamRoleType>,
+  selectedTeams: Array<TeamOptionalRoleType>,
 };
 
 /**
@@ -32,6 +37,7 @@ type State = {
  * all globally available teams, but only those with an attached role are
  * significant. See <APITeamRoleType>
  */
+
 class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State> {
   state = {
     teams: [],
@@ -128,7 +134,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
     this.setState({ selectedTeams: newSelectedTeams });
   }
 
-  getTeamComponent(team: APITeamRoleType) {
+  getTeamComponent(team: TeamOptionalRoleType) {
     return (
       <Checkbox
         value={team.team}
@@ -146,13 +152,13 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
     );
   }
 
-  getRoleComponent(team: APITeamRoleType) {
+  getRoleComponent(team: TeamOptionalRoleType) {
     return (
       <RadioGroup
         size="small"
-        value={team.role === null ? null : team.role.name}
+        value={team.role == null ? null : team.role.name}
         style={{ width: "100%" }}
-        disabled={team.role === null}
+        disabled={team.role == null}
         onChange={({ target: { value } }) => this.handleSelectTeamRole(team.team, value)}
       >
         <RadioButton value={ROLES.admin}>Admin</RadioButton>

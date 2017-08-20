@@ -95,17 +95,12 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
       // Branchpointvideo
       ".": () => this.nextNode(true),
       ",": () => this.nextNode(false),
-    });
 
-    this.input.keyboardOnce = new InputKeyboard(
-      {
-        // Delete active node and recenter last node
-        "shift + space": () => {
-          Store.dispatch(deleteNodeAction());
-        },
+      // Delete active node and recenter last node
+      "shift + space": () => {
+        Store.dispatch(deleteNodeAction());
       },
-      -1,
-    );
+    });
   }
 
   // make sure that it is not possible to keep nodes from being created

@@ -1,22 +1,29 @@
-// @flow
+// flow
 /* eslint-disable jsx-a11y/href-no-hash */
-
 import * as React from "react";
-import { Modal, Card } from "antd";
+import { Row, Col, Modal, Card } from "antd";
+import Utils from "libs/utils";
+import type { DatasetType } from "dashboard/views/dataset_view";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
-import type { DatasetType } from "dashboard/views/dataset_view";
+
+const padding = 16;
 
 type Props = {
-  dataset: DatasetType,
+  datasets: Array<DatasetType>,
+  searchQuery: string,
 };
 
 type State = {
   contentType: string,
 };
 
-class SpotlightItemView extends React.PureComponent<Props, State> {
+class GalleryDatasetView extends React.PureComponent<Props, State> {
   form: any;
+
+  static defaultProps = {
+    searchQuery: "",
+  };
 
   state = {
     contentType: "",
@@ -39,7 +46,7 @@ class SpotlightItemView extends React.PureComponent<Props, State> {
       });
     } else {
       const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
-      Do you wish to sign up now?`;
+        Do you wish to sign up now?`;
       Modal.confirm({
         content: loginNotice,
         onOk: () => {
@@ -49,8 +56,7 @@ class SpotlightItemView extends React.PureComponent<Props, State> {
     }
   }
 
-  render() {
-    const dataset = this.props.dataset;
+  renderCard(dataset: DatasetType) {
     let description;
     if (dataset.description) {
       description = (
@@ -106,6 +112,22 @@ class SpotlightItemView extends React.PureComponent<Props, State> {
       </Card>
     );
   }
+
+  render() {
+    return (
+      <Row gutter={padding}>
+        {Utils.filterWithSearchQuery(
+          this.props.datasets.filter(ds => ds.isActive),
+          ["name", "owningTeam", "description"],
+          this.props.searchQuery,
+        ).map(ds =>
+          <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
+            {this.renderCard(ds)}
+          </Col>,
+        )}
+      </Row>
+    );
+  }
 }
 
-export default SpotlightItemView;
+export default GalleryDatasetView;

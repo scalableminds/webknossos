@@ -7,9 +7,9 @@ import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
-import { Spin, Input, Button, Row, Col } from "antd";
-import SpotlightItemView from "./spotlight_item_view";
+import { Spin, Input, Button } from "antd";
 import AdvancedDatasetView from "./advanced_dataset/advanced_dataset_view";
+import GalleryDatasetView from "./gallery_dataset_view";
 
 const { Search } = Input;
 
@@ -84,20 +84,7 @@ class DatasetView extends React.PureComponent<Props, State> {
   };
 
   renderGallery() {
-    const padding = 16;
-    return (
-      <Row gutter={padding}>
-        {Utils.filterWithSearchQuery(
-          this.state.datasets.filter(ds => ds.isActive),
-          ["name", "owningTeam", "description"],
-          this.state.searchQuery,
-        ).map(ds =>
-          <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
-            <SpotlightItemView dataset={ds} />
-          </Col>,
-        )}
-      </Row>
-    );
+    return <GalleryDatasetView datasets={this.state.datasets} />;
   }
 
   renderAdvanced() {

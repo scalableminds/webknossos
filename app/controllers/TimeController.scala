@@ -21,6 +21,8 @@ import scala.concurrent.Future
 class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
   // REST API
+
+  //for one user
   def loggedTimeByInterval(email: String, year: Int, month: Int) = Authenticated.async { implicit request =>
     lazy val startDate = Calendar.getInstance()
     startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
@@ -35,9 +37,58 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
       timeListWithTask <- getOnlyTimeSpansWithTask(timeList)
       js <- Future.traverse(timeListWithTask)(timeWrites(_))
     } yield {
-      Ok(Json.obj(
-        "user" -> Json.toJson(user)(User.userCompactWrites),
-        "timelogs" -> Json.toJson(js)))
+      if(hasPermission()) {
+        Ok(Json.obj(
+          "user" -> Json.toJson(user)(User.userCompactWrites),
+          "timelogs" -> Json.toJson(js)))
+      }else{
+        Ok("no Permission")
+      }
+    }
+  }
+
+  //all users with working hours > 0
+  def getWorkingHoursOfAllUsers(year: Int, month: Int) = Authenticated.async { implicit request =>
+    for {
+      users <- UserDAO.findAll
+      js <- loggedTimeForUserList(users, year, month)
+    } yield {
+      if(hasPermission())
+        Ok(js)
+      else
+        Ok("no Permission")
+    }
+  }
+
+  //list user with working hours > 0
+  def loggedTimeForMultipleUser(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
+    for {
+      usersList <- Fox.sequence(getUsersForEmail(userString.split(",").toList))
+      users = getUsers(usersList)
+      js <- loggedTimeForUserList(users, year, month)
+    } yield {
+      if(hasPermission())
+        Ok(js)
+      else
+        Ok("no Permission")
+    }
+  }
+
+
+  //helper methods
+
+  def loggedTimeForUserList(users: List[User], year: Int, month: Int) (implicit request: AuthenticatedRequest[AnyContent]) =  {
+    lazy val startDate = Calendar.getInstance()
+    startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
+    startDate.set(Calendar.MILLISECOND, 0)
+    lazy val endDate = Calendar.getInstance()
+    endDate.set(year, month - 1, endDate.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
+    endDate.set(Calendar.MILLISECOND, 999)
+
+    for {
+      list <- getJsObjects(getUserWithWorkingHours(users, startDate, endDate))
+    } yield {
+      Json.toJson(list)
     }
   }
 
@@ -90,25 +141,6 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-  //all users working hours > 0
-
-  def getWorkingHoursOfAllUsers(year: Int, month: Int) = Authenticated.async { implicit request =>
-    lazy val startDate = Calendar.getInstance()
-    startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
-    startDate.set(Calendar.MILLISECOND, 0)
-    lazy val endDate = Calendar.getInstance()
-    endDate.set(year, month - 1, endDate.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
-    endDate.set(Calendar.MILLISECOND, 999)
-
-    for {
-      users <- UserDAO.findAll
-      filtered = getUserWithWorkingHours(users, startDate, endDate)
-      list <- getJsObjects(filtered)
-    } yield {
-      Ok(Json.toJson(list))
-    }
-  }
-
   def getJsObjects(list: List[Fox[JsObject]]): Future[List[JsObject]] = {
     for {
       li <- Fox.sequence(list)
@@ -147,26 +179,6 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     spans.foldLeft(0l)((i, span) => span.time)
   }
 
-  //list user time logging
-
-  def loggedTimeForUserList(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
-    lazy val startDate = Calendar.getInstance()
-    startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
-    startDate.set(Calendar.MILLISECOND, 0)
-    lazy val endDate = Calendar.getInstance()
-    endDate.set(year, month - 1, endDate.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
-    endDate.set(Calendar.MILLISECOND, 999)
-
-    for {
-      usersList <- Fox.sequence(getUsersForEmail(userString.split(",").toList))
-      users = getUsers(usersList)
-      filtered = getUserWithWorkingHours(users, startDate, endDate)
-      list <- getJsObjects(filtered)
-    } yield {
-      Ok(Json.toJson(list))
-    }
-  }
-
   def getUsers(users: List[Box[User]]) = {
     users.flatten
   }
@@ -177,6 +189,15 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield {
       UserService.findOneByEmail(email)
     }
+  }
+
+  def hasPermission()(implicit request: AuthenticatedRequest[AnyContent]): Boolean = {
+    request.user.email == "scmboy@scalableminds.com"
+    // who is allowed to use this?
+    // only Martin? then you could hardcode his email
+    // isAdminOf(...)?
+    // experience?
+    // roleInTeam(...)?
   }
 
 }

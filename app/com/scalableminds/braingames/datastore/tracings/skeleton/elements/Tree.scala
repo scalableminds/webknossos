@@ -6,7 +6,7 @@ import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.xml.{XMLWrites, Xml}
 import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json, OWrites, Writes}
 
 /**
   * Created by f on 15.06.17.
@@ -20,15 +20,15 @@ case class Tree(
                  comments: List[Comment],
                  name: String = "") {
 
-  def addNodes(ns: Set[Node]) = this.copy(nodes = nodes ++ ns)
-
-  def addEdges(es: Set[Edge]) = this.copy(edges = edges ++ es)
-
   def timestamp =
     if (nodes.isEmpty)
       System.currentTimeMillis()
     else
       nodes.minBy(_.timestamp).timestamp
+
+  def addNodes(ns: Set[Node]) = this.copy(nodes = nodes ++ ns)
+
+  def addEdges(es: Set[Edge]) = this.copy(edges = edges ++ es)
 
   def --(t: Tree) = {
     this.copy(nodes = nodes -- t.nodes, edges = edges -- t.edges)
@@ -61,7 +61,16 @@ case class Tree(
 }
 
 object Tree {
-  implicit val jsonFormat = Json.format[Tree]
+
+  implicit class OWritesExt[A](owrites: OWrites[A]) {
+    def withValue[B : Writes](key: String, value: A => B): OWrites[A] =
+      new OWrites[A] {
+        def writes(a: A): JsObject = owrites.writes(a) ++ Json.obj(key -> value(a))
+      }
+  }
+
+  implicit val jsonWrites = Json.writes[Tree].withValue("timestamp", _.timestamp)
+  implicit val jsonReads = Json.reads[Tree]
 
   implicit object TreeLikeXMLWrites extends XMLWrites[Tree] with LazyLogging {
     def writes(t: Tree)(implicit writer: XMLStreamWriter): Fox[Boolean] = {

@@ -91,7 +91,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
   def download(typ: String, id: String) = UserAwareAction.async { implicit request =>
     logger.trace(s"Requested download for annotation: $typ/$id")
-    //TODO RocksDB: prettier dispatch?
+    //TODO: RocksDB: prettier dispatch?
     request.userOpt match {
       case Some(user) => {
         if (typ == AnnotationType.View.toString) Fox.failure("Cannot download View annotation")
@@ -114,7 +114,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       restrictions <- restrictionsFor(AnnotationIdentifier(typ, annotationId))
       _ <- restrictions.allowDownload(user) ?~> Messages("annotation.download.notAllowed")
       dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
-      tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO RocksDB: what if it is a volume tracing?
+      tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO: RocksDB: what if it is a volume tracing?
       scale <- dataSet.dataSource.toUsable.map(_.scale)
       nmlStream = Enumerator.outputStream { os => NmlWriter.toNml(tracing, os, scale).map(_ => os.close()) }
     } yield {

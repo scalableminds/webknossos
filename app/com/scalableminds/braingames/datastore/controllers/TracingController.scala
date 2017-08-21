@@ -44,7 +44,7 @@ trait TracingController[T <: Tracing] extends Controller {
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracing <- tracingService.find(tracingId, applyUpdates = true) ?~> Messages("tracing.notFound")
+          tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
           Ok(Json.toJson(tracing))
         }

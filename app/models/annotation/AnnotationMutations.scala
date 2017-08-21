@@ -75,7 +75,6 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   }
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {
-    //TODO: RocksDB: test this
     case AnnotationType.Explorational =>
       Fox.failure("annotation.revert.skeletonOnly")
     case AnnotationType.Task if annotation.tracingType == TracingType.skeleton =>

@@ -159,7 +159,6 @@ object AnnotationService
   }
 
   def createAnnotationFor(user: User, task: Task)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
-    //TODO: rocksDB: test this
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
         newTracing <- tracingFromBase(annotation) ?~> "Failed to create tracing from base"
@@ -219,7 +218,6 @@ object AnnotationService
                 annotationType: AnnotationType,
                 settings: AnnotationSettings,
                 name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
-    //TODO: RocksDB: test this
     val annotation = Annotation(
       Some(user._id),
       tracingReference,
@@ -233,33 +231,9 @@ object AnnotationService
     } yield annotation
   }
 
-  def createAnnotationFrom(
-    user: User,
-    additionalFiles: Map[String, TemporaryFile],
-    typ: AnnotationType,
-    name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
-    Fox.failure("")
-
-    //TODO: rocksDB
-
-    /* TODO: until we implemented workspaces, we need to decide if this annotation is going to be a skeleton or a volume
-       annotation --> hence, this hacky way of making a decision */
-
-    /*def createContent() = {
-      //TODO: rocksDB - call datastore create (with nml if applicable - readd nml to this functions parameters?)
-      Fox.successful(TracingReference("dummyId", TracingType.skeletonTracing))
-    }
-    for {
-      content <- createContent()
-      annotation <- AnnotationService.createFrom(user, content, typ, name) ?~> Messages("annotation.create.fromFailed")
-    } yield annotation*/
-  }
 
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.logTime(time, _annotation)
-
-
-
 
 
 

@@ -93,7 +93,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def revert(typ: String, id: String, version: Int) = Authenticated.async { implicit request =>
     for {
       annotation <- findAnnotation(typ, id)
-      _ <- isUpdateAllowed(annotation, version).toFox
+      restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
+      _ <- restrictions.allowUpdate(request.user) ?~> Messages("notAllowed")
       _ <- annotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
       dataSet <- DataSetDAO.findOneBySourceName(
         annotation.dataSetName).toFox ?~> Messages("dataSet.notFound", annotation.dataSetName)
@@ -152,32 +153,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       case a: Annotation => Some(a)
       case _             => None
     }
-  }
-
-  def isUpdateAllowed(annotation: Annotation, version: Int)(implicit request: AuthenticatedRequest[_]) = {
-    //TODO: rocksDB
-    Full(true)
-//    if (annotation.restrictions.allowUpdate(request.user))
-//      Full(version == annotation.version + 1)
-//    else
-//      Failure(Messages("notAllowed")) ~> FORBIDDEN
-  }
-
-  def updateWithJson(typ: String, id: String, version: Int) = Authenticated.async(parse.json(maxLength = 8388608)) { implicit request =>
-    //TODO: rocksDB
-    // Logger.info(s"Tracing update [$typ - $id, $version]: ${request.body}")
-//    AnnotationUpdateService.store(typ, id, version, request.body)
-//    val clientTimestamp = request.headers.get("x-date").flatMap(s => Try(s.toLong).toOption).getOrElse(System.currentTimeMillis)
-//
-//    for {
-//      oldAnnotation <- findAnnotation(typ, id)
-//      updateableAnnotation <- isUpdateable(oldAnnotation) ?~> Messages("annotation.update.impossible")
-//      isAllowed <- isUpdateAllowed(oldAnnotation, version).toFox
-//      result <- executeUpdateIfAllowed(updateableAnnotation, isAllowed, request.body, version, request.user, clientTimestamp)
-//    } yield {
-//      result
-//    }
-    Fox.successful(JsonOk)
   }
 
   private def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {

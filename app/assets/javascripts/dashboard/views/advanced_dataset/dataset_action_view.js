@@ -1,18 +1,21 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import * as React from "react";
 import type { APIDatasetType } from "admin/api_flow_types";
 
-export default class DatasetActionView extends React.PureComponent {
-  form: HTMLFormElement;
-  props: {
-    dataset: APIDatasetType,
-  };
+type Props = {
+  dataset: APIDatasetType,
+};
 
-  state: {
-    contentType: string,
-  } = {
+type State = {
+  contentType: string,
+};
+
+export default class DatasetActionView extends React.PureComponent<Props, State> {
+  form: HTMLFormElement;
+
+  state = {
     contentType: "",
   };
 
@@ -39,7 +42,9 @@ export default class DatasetActionView extends React.PureComponent {
           action={jsRoutes.controllers.AnnotationController.createExplorational().url}
           method="POST"
           ref={form => {
-            this.form = form;
+            if (form) {
+              this.form = form;
+            }
           }}
         >
           <input type="hidden" name="dataSetName" value={dataset.name} />

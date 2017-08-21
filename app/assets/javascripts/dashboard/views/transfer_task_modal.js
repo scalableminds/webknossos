@@ -1,30 +1,32 @@
 // @flow
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import { Spin, Modal, Button, Select } from "antd";
 import Request from "libs/request";
 import type { APIUserType } from "admin/api_flow_types";
 
 const { Option } = Select;
 
-class TransferTaskModal extends React.PureComponent {
-  props: {
-    onChange: Function,
-    // Somehow, eslint doesn't recognize that annotationId is used in
-    // the async functions
-    // eslint-disable-next-line react/no-unused-prop-types
-    annotationId: ?string,
-    onCancel: Function,
-    visible: boolean,
-    userID: ?string,
-  };
+type Props = {
+  onChange: Function,
+  // Somehow, eslint doesn't recognize that annotationId is used in
+  // the async functions
+  // eslint-disable-next-line react/no-unused-prop-types
+  annotationId: ?string,
+  onCancel: Function,
+  visible: boolean,
+  userID: ?string,
+};
 
-  state: {
-    isLoading: boolean,
-    users: Array<APIUserType>,
-    currentUserIdValue: string,
-  } = {
+type State = {
+  isLoading: boolean,
+  users: Array<APIUserType>,
+  currentUserIdValue: string,
+};
+
+class TransferTaskModal extends React.PureComponent<Props, State> {
+  state = {
     isLoading: false,
     users: [],
     currentUserIdValue: "",

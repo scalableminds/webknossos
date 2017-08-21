@@ -11,11 +11,11 @@ import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 
-class MappingInfoView extends Component {
-  props: {
-    position: Vector3,
-  };
+type Props = {
+  position: Vector3,
+};
 
+class MappingInfoView extends Component<Props> {
   componentDidMount() {
     const cube = this.getCube();
     cube.on("bucketLoaded", this._forceUpdate);

@@ -38,9 +38,7 @@ type DatasetSettingsProps = {
   ) => void,
 };
 
-class DatasetSettings extends Component {
-  props: DatasetSettingsProps;
-
+class DatasetSettings extends Component<DatasetSettingsProps> {
   shouldComponentUpdate(nextProps: DatasetSettingsProps) {
     return this.props.datasetConfiguration !== nextProps.datasetConfiguration;
   }

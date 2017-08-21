@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu } from "antd";
 import Window from "libs/window";
@@ -24,12 +24,24 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import type { Dispatch } from "redux";
 import Store from "oxalis/store";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
 
-class TreesTabView extends React.Component {
+type Props = {
+  onShuffleTreeColor: number => void,
+  onSortTree: boolean => void,
+  onSelectNextTreeForward: () => void,
+  onSelectNextTreeBackward: () => void,
+  onCreateTree: () => void,
+  onDeleteTree: () => void,
+  onChangeTreeName: string => void,
+  skeletonTracing: SkeletonTracingType,
+  userConfiguration: UserConfigurationType,
+};
+
+class TreesTabView extends React.Component<Props> {
   handleChangeTreeName = evt => {
     this.props.onChangeTreeName(evt.target.value);
   };

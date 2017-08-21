@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import * as React from "react";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
@@ -16,6 +16,15 @@ const { Column } = Table;
 type Props = {
   userID: ?string,
   isAdminView: boolean,
+};
+
+type State = {
+  showFinishedTasks: boolean,
+  finishedTasks: Array<APITaskWithAnnotationType>,
+  unfinishedTasks: Array<APITaskWithAnnotationType>,
+  isLoading: boolean,
+  isTransferModalVisible: boolean,
+  currentAnnotationId: ?string,
 };
 
 const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnotationType => {
@@ -40,16 +49,8 @@ const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnot
   return task;
 };
 
-export default class DashboardTaskListView extends React.PureComponent {
-  props: Props;
-  state: {
-    showFinishedTasks: boolean,
-    finishedTasks: Array<APITaskWithAnnotationType>,
-    unfinishedTasks: Array<APITaskWithAnnotationType>,
-    isLoading: boolean,
-    isTransferModalVisible: boolean,
-    currentAnnotationId: ?string,
-  } = {
+export default class DashboardTaskListView extends React.PureComponent<Props, State> {
+  state = {
     showFinishedTasks: false,
     finishedTasks: [],
     unfinishedTasks: [],

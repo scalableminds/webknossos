@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import * as React from "react";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Upload, Modal } from "antd";
@@ -21,20 +21,21 @@ type Props = {
   isAdminView: boolean,
 };
 
-export default class ExplorativeAnnotationsView extends React.PureComponent {
-  props: Props;
-  state: {
-    shouldShowArchivedTracings: boolean,
-    archivedTracings: Array<APIAnnotationType>,
-    unarchivedTracings: Array<APIAnnotationType>,
-    didAlreadyFetchMetaInfo: {
-      isArchived: boolean,
-      isUnarchived: boolean,
-    },
-    searchQuery: string,
-    requestCount: number,
-    isUploadingNML: boolean,
-  } = {
+type State = {
+  shouldShowArchivedTracings: boolean,
+  archivedTracings: Array<APIAnnotationType>,
+  unarchivedTracings: Array<APIAnnotationType>,
+  didAlreadyFetchMetaInfo: {
+    isArchived: boolean,
+    isUnarchived: boolean,
+  },
+  searchQuery: string,
+  requestCount: number,
+  isUploadingNML: boolean,
+};
+
+export default class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+  state = {
     shouldShowArchivedTracings: false,
     archivedTracings: [],
     unarchivedTracings: [],
@@ -132,7 +133,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   handleNMLUpload = (info: {
     file: { response: Object, status: "uploading" | "error" | "done" },
     fileList: Array<Object>,
-    event: SyntheticInputEvent,
+    event: SyntheticInputEvent<>,
   }) => {
     const response = info.file.response;
     if (info.file.status === "uploading") {
@@ -195,7 +196,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       : this.state.unarchivedTracings;
   }
 
-  handleSearch = (event: SyntheticInputEvent): void => {
+  handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
   };
 

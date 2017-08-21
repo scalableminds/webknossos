@@ -25,7 +25,6 @@ type MergeModalViewState = {
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   selectedNML: ?AnnotationInfoType,
-  readOnly: boolean,
 };
 
 type UploadInfoType<T> = {
@@ -54,7 +53,6 @@ class MergeModalView extends PureComponent {
     selectedProject: null,
     selectedExplorativeAnnotation: "",
     selectedNML: null,
-    readOnly: false,
   };
 
   componentWillMount() {
@@ -70,7 +68,7 @@ class MergeModalView extends PureComponent {
 
   async merge(url: string) {
     const annotation = await Request.receiveJSON(
-      `${url}/${this.state.readOnly ? "true" : "false"}`,
+      url,
     );
     Toast.message(annotation.messages);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
@@ -221,14 +219,6 @@ class MergeModalView extends PureComponent {
         </Form>
         <hr />
         <p>The merged tracing will be saved as a new explorative tracing.</p>
-        {/* <p>
-          <Switch
-            value={this.state.readOnly}
-            onChange={value => this.setState({ readOnly: value })}
-            style={{ marginRight: 5 }}
-          />
-          The merged tracing will be {this.state.readOnly ? "read-only" : "writeable"}.
-        </p> */}
       </Modal>
     );
   }

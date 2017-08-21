@@ -59,13 +59,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def infoReadOnly(typ: String, id: String) = info(typ, id, readOnly = true)
 
-  def merge(typ: String, id: String, mergedTyp: String, mergedId: String, readOnly: Boolean) = Authenticated.async { implicit request =>
+  def merge(typ: String, id: String, mergedTyp: String, mergedId: String) = Authenticated.async { implicit request =>
     for {
-      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(id, typ, mergedId, mergedTyp, persistTracing = !readOnly)
+      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(id, typ, mergedId, mergedTyp, true)
       restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(mergedAnnotation)
       _ <- restrictions.allowAccess(request.user) ?~> Messages("notAllowed") ~> BAD_REQUEST
       savedAnnotation <- mergedAnnotation.saveToDB //TODO: RocksDB  should we save it if readOnly?
-      json <- savedAnnotation.toJson(Some(request.user), Some(restrictions), Some(readOnly))
+      json <- savedAnnotation.toJson(Some(request.user), Some(restrictions))
     } yield {
       JsonOk(json, Messages("annotation.merge.success"))
     }
@@ -278,7 +278,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
 
   def duplicate(typ: String, id: String) = Authenticated.async { implicit request =>
-    //TODO: RocksDB: test this
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
         newAnnotation <- duplicateAnnotation(annotation, request.user)

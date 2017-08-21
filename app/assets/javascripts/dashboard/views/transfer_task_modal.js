@@ -37,8 +37,9 @@ class TransferTaskModal extends React.PureComponent {
   async fetchData() {
     this.setState({ isLoading: true });
     const users = await Request.receiveJSON("/api/users");
+    const activeUsers = users.filter(u => u.isActive);
     this.setState({ isLoading: false });
-    const sortedUsers = _.sortBy(users, "lastName");
+    const sortedUsers = _.sortBy(activeUsers, "lastName");
 
     this.setState({
       users: sortedUsers,

@@ -3,13 +3,14 @@
 
 import _ from "lodash";
 import * as React from "react";
-import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
 import { Spin, Input, Button } from "antd";
-import AdvancedDatasetView from "./advanced_dataset/advanced_dataset_view";
-import GalleryDatasetView from "./gallery_dataset_view";
+import AdvancedDatasetView from "dashboard/views/advanced_dataset/advanced_dataset_view";
+import GalleryDatasetView from "dashboard/views/gallery_dataset_view";
+import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
+import type { DataLayerType } from "oxalis/store";
 
 const { Search } = Input;
 
@@ -30,12 +31,29 @@ type State = {
   isLoading: boolean,
 };
 
-function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>): string {
+function createThumbnailURL(datasetName: string, layers: Array<DataLayerType>): string {
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
     return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
   }
   return "";
+}
+
+export function transformDatasets(datasets: Array<DatasetType>): Array<DatasetType> {
+  return _.sortBy(
+    datasets.map(dataset => {
+      dataset.hasSegmentation = _.some(
+        dataset.dataSource.dataLayers,
+        layer => layer.category === "segmentation",
+      );
+
+      dataset.thumbnailURL = createThumbnailURL(dataset.name, dataset.dataSource.dataLayers);
+      dataset.formattedCreated = moment(dataset.created).format("YYYY-MM-DD HH:mm");
+
+      return dataset;
+    }),
+    "created",
+  );
 }
 
 class DatasetView extends React.PureComponent<Props, State> {
@@ -55,21 +73,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     this.setState({ isLoading: true });
     const datasets = await Request.receiveJSON(url);
 
-    const transformedDatasets = _.sortBy(
-      datasets.map(dataset => {
-        dataset.hasSegmentation = _.some(
-          dataset.dataSource.dataLayers,
-          layer => layer.category === "segmentation",
-        );
-
-        dataset.thumbnailURL = createThumbnailURL(dataset.name, dataset.dataSource.dataLayers);
-        dataset.formattedCreated = moment(dataset.created).format("YYYY-MM-DD HH:mm");
-
-        return dataset;
-      }),
-      "created",
-    );
-
+    const transformedDatasets = transformDatasets(datasets);
     this.setState({
       datasets: transformedDatasets,
       isLoading: false,

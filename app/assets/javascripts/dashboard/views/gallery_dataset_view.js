@@ -3,9 +3,9 @@
 import * as React from "react";
 import { Row, Col, Modal, Card } from "antd";
 import Utils from "libs/utils";
-import type { DatasetType } from "dashboard/views/dataset_view";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
+import type { DatasetType } from "dashboard/views/dataset_view";
 
 const padding = 16;
 

@@ -3,7 +3,6 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
-import com.scalableminds.braingames.datastore.tracings.skeleton.CreateEmptyParameters
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{Node, SkeletonTracing, Tree}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.image.Color

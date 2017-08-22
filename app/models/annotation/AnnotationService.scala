@@ -4,7 +4,7 @@ import java.io.{BufferedOutputStream, FileOutputStream}
 import java.util.UUID
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.braingames.datastore.tracings.skeleton.{DownloadTracingParameters, NmlWriter}
+import com.scalableminds.braingames.datastore.tracings.skeleton.{NmlWriter}
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{Node, SkeletonTracing, Tree}
 import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTracing => VolumeTracing, AbstractVolumeTracingLayer => VolumeTracingLayer}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}

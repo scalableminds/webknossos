@@ -316,6 +316,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       muta = annotation.muta
       _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
       _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
+      _ <- (request.body \ "tags").asOpt[List[String]].map(muta.setTags).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
     } yield {
       JsonOk(Messages("annotation.edit.success"))
     }

@@ -32,7 +32,8 @@ case class Annotation(
                        _id: BSONObjectID = BSONObjectID.generate,
                        isActive: Boolean = true,
                        readOnly: Option[Boolean] = None,
-                       isPublic: Boolean = false
+                       isPublic: Boolean = false,
+                       tags: Set[String] = Set.empty
                      )
 
   extends AnnotationLike with FoxImplicits {
@@ -297,6 +298,12 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("isPublic" -> isPublic)),
+      returnNew = true)
+
+  def setTags(_annotation: BSONObjectID, tags: List[String])(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("tags" -> tags)),
       returnNew = true)
 
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =

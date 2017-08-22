@@ -95,6 +95,7 @@ export type APIAnnotationType = {
   +contentType: string,
   +dataSetName: string,
   +tracingTime: null,
+  +tags: Array<string>,
 };
 
 export type APITaskWithAnnotationType = {

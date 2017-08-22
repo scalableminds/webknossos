@@ -21,7 +21,7 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
     return (
       <div>
         <Table
-          dataSource={Utils.filterWithSearchQuery(
+          dataSource={Utils.filterWithSearchQueryOR(
             this.props.datasets,
             ["name", "owningTeam", "description"],
             this.props.searchQuery,

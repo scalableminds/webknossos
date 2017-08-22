@@ -5,8 +5,9 @@ import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import app from "app";
-import { Modal, Button, Upload, Select, Form } from "antd";
+import { Modal, Button, Upload, Select, Form, Spin } from "antd";
 import InputComponent from "oxalis/view/components/input_component";
+import api from "oxalis/api/internal_api";
 
 type AnnotationInfoType = {
   typ: string,
@@ -32,16 +33,17 @@ type MergeModalViewState = {
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   selectedNML: ?AnnotationInfoType,
+  isUploading: boolean,
   readOnly: boolean,
 };
 
 type UploadInfoType<T> = {
   file:
     | {
-        status: "uploading" | "error",
+        status: "uploading",
       }
     | {
-        status: "done",
+        status: "done" | "error",
         response: T,
       },
 };
@@ -54,6 +56,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     selectedProject: null,
     selectedExplorativeAnnotation: "",
     selectedNML: null,
+    isUploading: false,
     readOnly: false,
   };
 
@@ -73,6 +76,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   }
 
   async merge(url: string) {
+    await api.tracing.save();
     const annotation = await Request.receiveJSON(
       `${url}/${this.state.readOnly ? "true" : "false"}`,
     );
@@ -99,11 +103,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     if (info.file.status === "done") {
       const { annotation } = info.file.response;
       Toast.message(info.file.response.messages);
+      this.setState({ isUploading: false });
       const url =
         `/annotations/${annotation.typ}/${annotation.id}/merge/` +
         `${this.props.tracingType}/${this.props.tracingId}`;
       this.merge(url);
+    } else if (info.file.status === "error") {
+      Toast.message(info.file.response.messages);
+      this.setState({ isUploading: false });
     }
+  };
+
+  handleBeforeUploadNML = () => {
+    this.setState({ isUploading: true });
   };
 
   handleMergeTaskType = (event: SyntheticInputEvent<>) => {
@@ -150,90 +162,93 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
         onCancel={this.props.onOk}
         className="merge-modal"
       >
-        <Form layout="inline" onSubmit={this.handleMergeTaskType}>
-          <Form.Item label="Task Type">
-            <Select
-              value={this.state.selectedTaskType}
-              style={{ width: 200 }}
-              onChange={this.handleChangeMergeTaskType}
-            >
-              {this.state.taskTypes.map(taskType =>
-                <Select.Option key={taskType.id} value={taskType.id}>
-                  {taskType.label}
-                </Select.Option>,
-              )}
-            </Select>
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" size="default">
-              Merge
-            </Button>
-          </Form.Item>
-        </Form>
-
-        <Form layout="inline" onSubmit={this.handleMergeProject}>
-          <Form.Item label="Project">
-            <Select
-              value={this.state.selectedProject}
-              style={{ width: 200 }}
-              onChange={this.handleChangeMergeProject}
-            >
-              {this.state.projects.map(project =>
-                <Select.Option key={project} value={project}>
-                  {project}
-                </Select.Option>,
-              )}
-            </Select>
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" size="default">
-              Merge
-            </Button>
-          </Form.Item>
-        </Form>
-
-        <Form layout="inline">
-          <Form.Item label="NML">
-            <Upload
-              name="nmlFile"
-              action={jsRoutes.controllers.AnnotationIOController.upload().url}
-              headers={{ authorization: "authorization-text" }}
-              onChange={this.handleChangeNML}
-              value={this.state.selectedNML}
-              accept=".nml"
-              showUploadList={false}
-            >
-              <Button icon="upload" style={{ width: 200 }}>
-                Upload NML and merge
+        <Spin spinning={this.state.isUploading}>
+          <Form layout="inline" onSubmit={this.handleMergeTaskType}>
+            <Form.Item label="Task Type">
+              <Select
+                value={this.state.selectedTaskType}
+                style={{ width: 200 }}
+                onChange={this.handleChangeMergeTaskType}
+              >
+                {this.state.taskTypes.map(taskType =>
+                  <Select.Option key={taskType.id} value={taskType.id}>
+                    {taskType.label}
+                  </Select.Option>,
+                )}
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" size="default">
+                Merge
               </Button>
-            </Upload>
-          </Form.Item>
-        </Form>
+            </Form.Item>
+          </Form>
 
-        <Form layout="inline" onSubmit={this.handleMergeExplorativeAnnotation}>
-          <Form.Item label="Explorative Annotation">
-            <InputComponent
-              value={this.state.selectedExplorativeAnnotation}
-              style={{ width: 200 }}
-              onChange={this.handleChangeMergeExplorativeAnnotation}
+          <Form layout="inline" onSubmit={this.handleMergeProject}>
+            <Form.Item label="Project">
+              <Select
+                value={this.state.selectedProject}
+                style={{ width: 200 }}
+                onChange={this.handleChangeMergeProject}
+              >
+                {this.state.projects.map(project =>
+                  <Select.Option key={project} value={project}>
+                    {project}
+                  </Select.Option>,
+                )}
+              </Select>
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" size="default">
+                Merge
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <Form layout="inline">
+            <Form.Item label="NML">
+              <Upload
+                name="nmlFile"
+                action={jsRoutes.controllers.AnnotationIOController.upload().url}
+                headers={{ authorization: "authorization-text" }}
+                beforeUpload={this.handleBeforeUploadNML}
+                onChange={this.handleChangeNML}
+                value={this.state.selectedNML}
+                accept=".nml"
+                showUploadList={false}
+              >
+                <Button icon="upload" style={{ width: 200 }}>
+                  Upload NML and merge
+                </Button>
+              </Upload>
+            </Form.Item>
+          </Form>
+
+          <Form layout="inline" onSubmit={this.handleMergeExplorativeAnnotation}>
+            <Form.Item label="Explorative Annotation">
+              <InputComponent
+                value={this.state.selectedExplorativeAnnotation}
+                style={{ width: 200 }}
+                onChange={this.handleChangeMergeExplorativeAnnotation}
+              />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" size="default">
+                Merge
+              </Button>
+            </Form.Item>
+          </Form>
+          <hr />
+          <p>The merged tracing will be saved as a new explorative tracing.</p>
+          {/* <p>
+            <Switch
+              value={this.state.readOnly}
+              onChange={value => this.setState({ readOnly: value })}
+              style={{ marginRight: 5 }}
             />
-          </Form.Item>
-          <Form.Item>
-            <Button type="primary" htmlType="submit" size="default">
-              Merge
-            </Button>
-          </Form.Item>
-        </Form>
-        <hr />
-        <p>The merged tracing will be saved as a new explorative tracing.</p>
-        {/* <p>
-          <Switch
-            value={this.state.readOnly}
-            onChange={value => this.setState({ readOnly: value })}
-            style={{ marginRight: 5 }}
-          />
-          The merged tracing will be {this.state.readOnly ? "read-only" : "writeable"}.
-        </p> */}
+            The merged tracing will be {this.state.readOnly ? "read-only" : "writeable"}.
+          </p> */}
+        </Spin>
       </Modal>
     );
   }

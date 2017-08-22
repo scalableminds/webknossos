@@ -10,16 +10,16 @@ import play.api.libs.json.Json
 /**
   * Created by f on 15.06.17.
   */
-case class SkeletonTracing(id: String = UUID.randomUUID.toString,
+case class SkeletonTracing(id: String = SkeletonTracing.defaultId,
                            dataSetName: String,
-                           override val trees: List[Tree] = List(),
-                           timestamp: Long = System.currentTimeMillis(),
-                           boundingBox: Option[BoundingBox] = None,
-                           activeNodeId: Option[Int] = None,
-                           editPosition: Point3D = Point3D(0, 0, 0),
-                           editRotation: Vector3D = Vector3D(),
-                           zoomLevel: Double = 2.0,
-                           version: Long = 0) extends Tracing {
+                           override val trees: List[Tree] = SkeletonTracing.defaultTrees,
+                           timestamp: Long = SkeletonTracing.defaultTimestamp,
+                           boundingBox: Option[BoundingBox] = SkeletonTracing.defaultBoundingBox,
+                           activeNodeId: Option[Int] = SkeletonTracing.defaultActiveNodeId,
+                           editPosition: Point3D = SkeletonTracing.defaultEditPosition,
+                           editRotation: Vector3D = SkeletonTracing.defaultEditRotation,
+                           zoomLevel: Double = SkeletonTracing.defaultZoomLevel,
+                           version: Long = SkeletonTracing.defaultVersion) extends Tracing {
 
   def addTree(newTree: Tree): SkeletonTracing =
     this.copy(trees = newTree :: this.trees)
@@ -126,8 +126,24 @@ case class SkeletonTracing(id: String = UUID.randomUUID.toString,
       }
     }
   }
+  def hasInvalidBranchpoints = {
+    this.trees.forall { tree =>
+      val nodeIds = tree.nodes.map(_.id)
+      tree.branchPoints.forall { branchPoint => nodeIds.contains(branchPoint.id)}
+    }
+  }
 }
 
 object SkeletonTracing {
   implicit val jsonFormat = Json.format[SkeletonTracing]
+
+  def defaultId = UUID.randomUUID.toString
+  def defaultTrees = List()
+  def defaultTimestamp = System.currentTimeMillis()
+  def defaultBoundingBox = None
+  def defaultActiveNodeId = None
+  def defaultEditPosition = Point3D(0, 0, 0)
+  def defaultEditRotation = Vector3D()
+  def defaultZoomLevel = 2.0
+  def defaultVersion = 0
 }

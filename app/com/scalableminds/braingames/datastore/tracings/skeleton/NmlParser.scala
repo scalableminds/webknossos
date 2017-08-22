@@ -42,10 +42,9 @@ object NmlParser extends LazyLogging {
       } yield {
         val dataSetName = parseDataSetName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
-        val editPosition = parseEditPosition(parameters \ "editPosition").getOrElse(Point3D(0, 0, 0))
-        // TODO: PROPER DEFAULT VALUES
-        val editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(Vector3D(0, 0, 0))
-        val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(2.0)
+        val editPosition = parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracing.defaultEditPosition)
+        val editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracing.defaultEditRotation)
+        val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracing.defaultZoomLevel)
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}")
         SkeletonTracing(id, dataSetName, trees.toList, time, None, activeNodeId,

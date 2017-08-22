@@ -9,7 +9,7 @@ RUN mkdir -p /srv/webknossos-datastore \
 
 WORKDIR /srv/webknossos-datastore
 
-VOLUME /srv/webknossos-datastore/binaryData /srv/webknossos-datastore/tracingData
+VOLUME /srv/webknossos-datastore/binaryData /srv/webknossos-datastore/tracingData /tmp
 
 COPY target/universal/stage .
 

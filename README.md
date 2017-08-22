@@ -25,6 +25,7 @@ binaryData/ # Needs to be writable by docker user (uid=1000 gid=1000)
             settings.json
         ...
 tracingData/ # Needs to be writable by docker user (uid=1000 gid=1000)
+tmp/ # Needs to be writable by docker user (uid=1000 gid=1000)
 ```
 
 ### Configure datastore
@@ -51,6 +52,7 @@ docker create \
   --name webknossos-datastore \
   -v /path/to/binaryData:/srv/webknossos-datastore/binaryData \
   -v /path/to/tracingData:/srv/webknossos-datastore/tracingData \
+  -v /path/to/tmp:/tmp \
   -v /path/to/docker.conf:/srv/webknossos-datastore/conf/docker.conf \
   -p 9090:9090 \
   scalableminds/webknossos-datastore:master \

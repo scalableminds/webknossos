@@ -58,8 +58,8 @@ docker create \
   -J-Xms1G \
   -Dhttp.port=9090 \
   -Dlogger.file=conf/logback-docker.xml \
-  -Dconfig.file=conf/docker.conf \
-  -Djava.io.tmpdir=disk
+  -Dlogback.configurationFile=conf/logback-docker.xml \
+  -Dconfig.file=conf/docker.conf
 
 docker start webknossos-datastore
 

@@ -17,12 +17,10 @@ binaryData/ # Needs to be writable by docker user (uid=1000 gid=1000)
     <Team name>/ 
         <Dataset 1>/ # Can be converted from image stack with webknossos-cuber
             color/
-                layer.json
                 1 # mag1
                 2 # mag2
                 4 # mag4
                 ...
-            settings.json
         ...
 tracingData/ # Needs to be writable by docker user (uid=1000 gid=1000)
 tmp/ # Needs to be writable by docker user (uid=1000 gid=1000)

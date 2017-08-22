@@ -3,6 +3,7 @@
 
 import * as React from "react";
 import { Modal, Card } from "antd";
+import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
 import type { DatasetType } from "dashboard/views/dataset_view";
@@ -54,9 +55,7 @@ class SpotlightItemView extends React.PureComponent<Props, State> {
     let description;
     if (dataset.description) {
       description = (
-        <p style={{ whiteSpace: "pre-wrap" }}>
-          {dataset.description}
-        </p>
+        <Markdown source={dataset.description} options={{ html: false, breaks: true, linkify: true }} />
       );
     } else {
       description = dataset.hasSegmentation

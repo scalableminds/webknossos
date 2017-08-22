@@ -72,7 +72,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
   val mpi = Team("Connectomics department", None, RoleService.roles)
 
   def insert(conf: Configuration) = {
-    insertUsers()
+    insertDefaultUser(conf)
     insertTeams()
     insertTasks()
     if (conf.getBoolean("datastore.enabled").getOrElse(true)) {
@@ -80,18 +80,20 @@ object InitialData extends GlobalDBAccess with LazyLogging {
     }
   }
 
-  def insertUsers() = {
-    UserDAO.findOneByEmail("scmboy@scalableminds.com").futureBox.map {
+  def insertDefaultUser(conf: Configuration) = {
+    UserService.defaultUser.futureBox.map {
       case Full(_) =>
       case _ =>
+        val email = conf.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
+        val password = conf.getString("application.authentication.defaultUser.password").getOrElse("secret")
         logger.info("Inserted default user scmboy")
         UserDAO.insert(User(
-          "scmboy@scalableminds.com",
+          email,
           "SCM",
           "Boy",
           true,
-          SCrypt.hashPassword("secret"),
-          SCrypt.md5("secret"),
+          SCrypt.hashPassword(password),
+          SCrypt.md5(password),
           List(TeamMembership(mpi.name, Role.Admin)))
         )
     }

@@ -181,7 +181,7 @@ type NumberInputSettingProps = {
 
 export class NumberInputSetting extends React.PureComponent<NumberInputSettingProps> {
   static defaultProps = {
-    max: 100,
+    max: undefined,
     min: 1,
     step: 1,
   };
@@ -217,7 +217,10 @@ type State = {
   text: string,
 };
 
-export class Vector6InputSetting extends React.PureComponent<VectorInputSettingPropTypes<Vector6>, State> {
+export class Vector6InputSetting extends React.PureComponent<
+  VectorInputSettingPropTypes<Vector6>,
+  State,
+> {
   constructor(props: VectorInputSettingPropTypes<Vector6>) {
     super(props);
     this.state = {

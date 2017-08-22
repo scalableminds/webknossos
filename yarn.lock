@@ -261,6 +261,13 @@ argparse@^1.0.7:
   dependencies:
     sprintf-js "~1.0.2"
 
+argparse@~0.1.15:
+  version "0.1.16"
+  resolved "https://registry.yarnpkg.com/argparse/-/argparse-0.1.16.tgz#cfd01e0fbba3d6caed049fbd758d40f65196f57c"
+  dependencies:
+    underscore "~1.7.0"
+    underscore.string "~2.4.0"
+
 aria-query@^0.7.0:
   version "0.7.0"
   resolved "https://registry.yarnpkg.com/aria-query/-/aria-query-0.7.0.tgz#4af10a1e61573ddea0cf3b99b51c52c05b424d24"
@@ -410,6 +417,10 @@ atob@~1.1.0:
 auto-bind@^1.1.0:
   version "1.1.0"
   resolved "https://registry.yarnpkg.com/auto-bind/-/auto-bind-1.1.0.tgz#93b864dc7ee01a326281775d5c75ca0a751e5961"
+
+autolinker@~0.15.0:
+  version "0.15.3"
+  resolved "https://registry.yarnpkg.com/autolinker/-/autolinker-0.15.3.tgz#342417d8f2f3461b14cf09088d5edf8791dc9832"
 
 autoprefixer@^6.3.1:
   version "6.7.7"
@@ -6401,6 +6412,12 @@ react-redux@^5.0.2:
     loose-envify "^1.1.0"
     prop-types "^15.5.10"
 
+react-remarkable@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/react-remarkable/-/react-remarkable-1.1.1.tgz#37908ac95894576d0d39187bd289bc2cbb5ac6de"
+  dependencies:
+    remarkable "^1.4.1"
+
 react-slick@~0.14.2:
   version "0.14.11"
   resolved "https://registry.yarnpkg.com/react-slick/-/react-slick-0.14.11.tgz#c2cbdbe3728c66a2ff4929be96d457e3ea0d80f3"
@@ -6720,6 +6737,13 @@ remark@^8.0.0:
     remark-parse "^4.0.0"
     remark-stringify "^4.0.0"
     unified "^6.0.0"
+
+remarkable@^1.4.1:
+  version "1.7.1"
+  resolved "https://registry.yarnpkg.com/remarkable/-/remarkable-1.7.1.tgz#aaca4972100b66a642a63a1021ca4bac1be3bff6"
+  dependencies:
+    argparse "~0.1.15"
+    autolinker "~0.15.0"
 
 remote-origin-url@0.4.0:
   version "0.4.0"
@@ -7723,9 +7747,17 @@ unc-path-regex@^0.1.0:
   version "0.1.2"
   resolved "https://registry.yarnpkg.com/unc-path-regex/-/unc-path-regex-0.1.2.tgz#e73dd3d7b0d7c5ed86fbac6b0ae7d8c6a69d50fa"
 
-underscore@^1.8.3, underscore@>=1.8.3:
+underscore.string@~2.4.0:
+  version "2.4.0"
+  resolved "https://registry.yarnpkg.com/underscore.string/-/underscore.string-2.4.0.tgz#8cdd8fbac4e2d2ea1e7e2e8097c42f442280f85b"
+
+underscore@>=1.8.3, underscore@^1.8.3:
   version "1.8.3"
   resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.8.3.tgz#4f3fb53b106e6097fcf9cb4109f2a5e9bdfa5022"
+
+underscore@~1.7.0:
+  version "1.7.0"
+  resolved "https://registry.yarnpkg.com/underscore/-/underscore-1.7.0.tgz#6bbaf0877500d36be34ecaa584e0db9fef035209"
 
 unherit@^1.0.4:
   version "1.1.0"

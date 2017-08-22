@@ -74,6 +74,9 @@ class AnnotationMutations(val annotation: Annotation)
   def setIsPublic(isPublic: Boolean)(implicit ctx: DBAccessContext) =
     AnnotationDAO.setIsPublic(annotation._id, isPublic)
 
+  def setTags(tags: List[String])(implicit ctx: DBAccessContext) =
+    AnnotationDAO.setTags(annotation._id, tags)
+
   def cancelTask()(implicit ctx: DBAccessContext) = {
     def insertReplacement(task: Task, project: Project) = {
       project.assignmentConfiguration match {

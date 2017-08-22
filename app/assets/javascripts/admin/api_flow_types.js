@@ -1,3 +1,7 @@
+/**
+ * api_flow_types.js
+ * @flow
+ */
 import type { Vector3 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
 
@@ -30,9 +34,11 @@ export type APIDatasetType = {
   +isEditable: boolean,
 };
 
+export type APIRoleType = { +name: string };
+
 export type APITeamRoleType = {
   +team: string,
-  +role: { +name: string },
+  +role: APIRoleType,
 };
 
 type ExperienceMapType = { +[string]: number };
@@ -89,6 +95,7 @@ export type APIAnnotationType = {
   +contentType: string,
   +dataSetName: string,
   +tracingTime: null,
+  +tags: Array<string>,
 };
 
 export type APITaskWithAnnotationType = {

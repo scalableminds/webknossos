@@ -1,9 +1,9 @@
 // @flow
-import React from "react";
+import * as React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
-import type { APITeamType, APIUserType, APITeamRoleType } from "admin/api_flow_types";
+import type { APITeamType, APIUserType, APIRoleType } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -13,6 +13,11 @@ const ROLES = {
   user: "user",
 };
 
+type TeamOptionalRoleType = {
+  +team: string,
+  +role: ?APIRoleType,
+};
+
 type TeamRoleModalPropType = {
   onChange: Function,
   onCancel: Function,
@@ -20,19 +25,21 @@ type TeamRoleModalPropType = {
   selectedUserIds: Array<string>,
   users: Array<APIUserType>,
 };
+
+type State = {
+  teams: Array<APITeamType>,
+  selectedTeams: Array<TeamOptionalRoleType>,
+};
+
 /**
  * All team selection in this modal is based on whether their is a role
  * associated with the respective team. In other words, 'selectedTeams' contains
  * all globally available teams, but only those with an attached role are
  * significant. See <APITeamRoleType>
  */
-class TeamRoleModalView extends React.PureComponent {
-  props: TeamRoleModalPropType;
 
-  state: {
-    teams: Array<APITeamType>,
-    selectedTeams: Array<APITeamRoleType>,
-  } = {
+class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State> {
+  state = {
     teams: [],
     selectedTeams: [],
   };
@@ -127,12 +134,12 @@ class TeamRoleModalView extends React.PureComponent {
     this.setState({ selectedTeams: newSelectedTeams });
   }
 
-  getTeamComponent(team: APITeamRoleType) {
+  getTeamComponent(team: TeamOptionalRoleType) {
     return (
       <Checkbox
         value={team.team}
         checked={team.role !== null}
-        onChange={(event: SyntheticInputEvent) => {
+        onChange={(event: SyntheticInputEvent<>) => {
           if (event.target.checked) {
             this.handleSelectTeamRole(team.team, ROLES.user);
           } else {
@@ -145,13 +152,13 @@ class TeamRoleModalView extends React.PureComponent {
     );
   }
 
-  getRoleComponent(team: APITeamRoleType) {
+  getRoleComponent(team: TeamOptionalRoleType) {
     return (
       <RadioGroup
         size="small"
-        value={team.role === null ? null : team.role.name}
+        value={team.role == null ? null : team.role.name}
         style={{ width: "100%" }}
-        disabled={team.role === null}
+        disabled={team.role == null}
         onChange={({ target: { value } }) => this.handleSelectTeamRole(team.team, value)}
       >
         <RadioButton value={ROLES.admin}>Admin</RadioButton>

@@ -1,6 +1,6 @@
 // @flow
 
-import React from "react";
+import * as React from "react";
 import { connect } from "react-redux";
 import { Button } from "antd";
 import Constants, { OrthoViews } from "oxalis/constants";
@@ -9,12 +9,20 @@ import api from "oxalis/api/internal_api";
 
 const ButtonGroup = Button.Group;
 
-class InputCatchers extends React.PureComponent {
+type Props = {
+  scale: number,
+};
+
+type State = {
+  activeInputCatcher: string,
+};
+
+class InputCatchers extends React.PureComponent<Props, State> {
   state = {
     activeInputCatcher: "",
   };
 
-  handleMouseOver = (event: SyntheticInputEvent) => {
+  handleMouseOver = (event: SyntheticInputEvent<>) => {
     this.setState({
       activeInputCatcher: event.target.dataset.value,
     });

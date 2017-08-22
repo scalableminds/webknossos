@@ -19,9 +19,7 @@ type Props = {
   volumeTracing: VolumeTracingType,
 };
 
-class VolumeActionsView extends PureComponent {
-  props: Props;
-
+class VolumeActionsView extends PureComponent<Props> {
   handleSetMode = (event: { target: { value: VolumeTraceOrMoveModeType } }) => {
     Store.dispatch(setModeAction(event.target.value));
   };

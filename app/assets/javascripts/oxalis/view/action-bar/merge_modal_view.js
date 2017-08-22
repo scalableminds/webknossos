@@ -19,6 +19,13 @@ type TaskTypeInfoType = {
   label: string,
 };
 
+type Props = {
+  isVisible: boolean,
+  onOk: () => void,
+  tracingId: string,
+  tracingType: string,
+};
+
 type MergeModalViewState = {
   taskTypes: Array<TaskTypeInfoType>,
   projects: Array<string>,
@@ -41,14 +48,7 @@ type UploadInfoType<T> = {
       },
 };
 
-class MergeModalView extends PureComponent {
-  props: {
-    isVisible: boolean,
-    onOk: () => void,
-    tracingId: string,
-    tracingType: string,
-  };
-
+class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   state: MergeModalViewState = {
     taskTypes: [],
     projects: [],
@@ -93,7 +93,7 @@ class MergeModalView extends PureComponent {
     this.setState({ selectedProject: project });
   };
 
-  handleChangeMergeExplorativeAnnotation = (event: SyntheticInputEvent) => {
+  handleChangeMergeExplorativeAnnotation = (event: SyntheticInputEvent<>) => {
     this.setState({ selectedExplorativeAnnotation: event.target.value });
   };
 
@@ -118,7 +118,7 @@ class MergeModalView extends PureComponent {
     this.setState({ isUploading: true });
   };
 
-  handleMergeTaskType = (event: SyntheticInputEvent) => {
+  handleMergeTaskType = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
     const { selectedTaskType } = this.state;
     if (selectedTaskType != null) {
@@ -129,7 +129,7 @@ class MergeModalView extends PureComponent {
     }
   };
 
-  handleMergeProject = (event: SyntheticInputEvent) => {
+  handleMergeProject = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
     const { selectedProject } = this.state;
     if (selectedProject != null) {
@@ -140,7 +140,7 @@ class MergeModalView extends PureComponent {
     }
   };
 
-  handleMergeExplorativeAnnotation = async (event: SyntheticInputEvent) => {
+  handleMergeExplorativeAnnotation = async (event: SyntheticInputEvent<>) => {
     event.preventDefault();
     const { selectedExplorativeAnnotation } = this.state;
 

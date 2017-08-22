@@ -2,28 +2,30 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import { Table, Tag, Icon, Spin, Button, Input } from "antd";
 import Request from "libs/request";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
-import type { APIUserType, APITeamRole } from "admin/api_flow_types";
+import type { APIUserType, APITeamRoleType } from "admin/api_flow_types";
 
 const { Column } = Table;
 const { Search } = Input;
 
-class UserListView extends React.PureComponent {
-  state: {
-    isLoading: boolean,
-    users: Array<APIUserType>,
-    selectedUserIds: Array<string>,
-    isExperienceModalVisible: boolean,
-    isTeamRoleModalVisible: boolean,
-    activationFilter: Array<"true" | "false">,
-    searchQuery: string,
-  } = {
+type State = {
+  isLoading: boolean,
+  users: Array<APIUserType>,
+  selectedUserIds: Array<string>,
+  isExperienceModalVisible: boolean,
+  isTeamRoleModalVisible: boolean,
+  activationFilter: Array<"true" | "false">,
+  searchQuery: string,
+};
+
+class UserListView extends React.PureComponent<{}, State> {
+  state = {
     isLoading: true,
     users: [],
     selectedUserIds: [],
@@ -82,7 +84,7 @@ class UserListView extends React.PureComponent {
     });
   };
 
-  handleSearch = (event: SyntheticInputEvent): void => {
+  handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
   };
 
@@ -152,7 +154,7 @@ class UserListView extends React.PureComponent {
         />
 
         <Table
-          dataSource={Utils.filterWithSearchQuery(
+          dataSource={Utils.filterWithSearchQueryOR(
             this.state.users,
             ["firstName", "lastName", "email", "teams", "experiences"],
             this.state.searchQuery,
@@ -203,7 +205,7 @@ class UserListView extends React.PureComponent {
             dataIndex="teams"
             key="teams_"
             width={300}
-            render={(teams: Array<APITeamRole>, user: APIUserType) =>
+            render={(teams: Array<APITeamRoleType>, user: APIUserType) =>
               teams.map(team =>
                 <Tag
                   key={`team_role_${user.id}_${team.team}`}

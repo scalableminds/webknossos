@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
 import {
@@ -16,12 +16,11 @@ import classNames from "classnames";
 import Checkbox from "oxalis/view/components/checkbox_component";
 
 type ListTreeItemViewProps = {
-  activeTreeId: number,
+  activeTreeId: ?number,
   tree: TreeType,
 };
 
-class ListTreeItemView extends React.PureComponent {
-  props: ListTreeItemViewProps;
+class ListTreeItemView extends React.PureComponent<ListTreeItemViewProps> {
   domElement: HTMLElement;
 
   componentDidUpdate() {
@@ -51,7 +50,9 @@ class ListTreeItemView extends React.PureComponent {
     return (
       <li
         ref={domElement => {
-          this.domElement = domElement;
+          if (domElement) {
+            this.domElement = domElement;
+          }
         }}
       >
         <Checkbox checked={this.props.tree.isVisible} onChange={this.handleToggleTree} />

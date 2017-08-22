@@ -1,86 +1,116 @@
-/**
- * logged_time_view.js
- * @flow weak
- */
+// @flow
 
-import _ from "lodash";
-import Marionette from "backbone.marionette";
-import c3 from "c3";
-import LoggedTimeListView from "dashboard/views/logged_time_list_view";
-import LoggedTimeCollection from "dashboard/models/logged_time_collection";
+import * as React from "react";
+import moment from "moment";
+import { Table, Row, Col } from "antd";
+import FormatUtils from "libs/format_utils";
+import Request from "libs/request";
+import C3Chart from "react-c3js";
 
-class LoggedTimeView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<h3>Tracked Time</h3>
-<div class="row">
-  <div class="col-sm-10">
-    <div id="time-graph"></div>
-  </div>
-  <div class="col-sm-2">
-    <div class="time-table"></div>
-  </div>
-  <% if (items.length == 0) { %>
-    <h4>Sorry. We don't have any time logs for you. Trace something and come back later</h4>
-  <% } %>
-</div>\
-`);
+const { Column } = Table;
 
-    this.prototype.regions = { timeTable: ".time-table" };
+type Props = {
+  userID: ?string,
+};
+
+type State = {
+  timeEntries: Array<Object>,
+};
+
+export default class LoggedTimeView extends React.PureComponent<Props, State> {
+  state = {
+    timeEntries: [],
+  };
+
+  componentDidMount() {
+    this.fetch();
   }
 
-  initialize(options) {
-    this.options = options;
-    // If you know how to do this better, do it. Backbones Collection type is not compatible to Marionettes
-    // Collection type according to flow - although they actually should be...
-    this.collection = ((new LoggedTimeCollection([], {
-      userID: this.options.userID,
-    }): any): Marionette.Collection);
-    this.listenTo(this.collection, "sync", this.render);
-    return this.collection.fetch();
-  }
+  async fetch(): Promise<void> {
+    const url = this.props.userID
+      ? `/api/users/${this.props.userID}/loggedTime`
+      : "/api/user/loggedTime";
 
-  onRender() {
-    if (this.collection.length > 0) {
-      this.showChildView("timeTable", new LoggedTimeListView({ collection: this.collection }));
-      _.defer(() => this.addGraph());
-    }
-  }
+    Request.receiveJSON(url).then(response => {
+      const timeEntries = response.loggedTime
+        .map(entry => {
+          const interval = entry.paymentInterval;
+          return {
+            interval: moment(`${interval.year} ${interval.month}`, "YYYY MM"),
+            time: moment.duration(entry.durationInSeconds, "seconds"),
+            months: interval.year * 12 + interval.month,
+          };
+        })
+        .sort((a, b) => b.months - a.months);
 
-  addGraph() {
-    // Only render the chart if we have any data.
-    if (this.collection.length > 0) {
-      const dates = this.collection.map(item => item.get("interval").toDate());
-      const monthlyHours = this.collection.map(item => item.get("time").asHours());
-
-      c3.generate({
-        bindto: "#time-graph", // doesn't work with classes
-        data: {
-          x: "date",
-          columns: [["date"].concat(dates), ["monthlyHours"].concat(monthlyHours)],
-        },
-        axis: {
-          x: {
-            type: "timeseries",
-            tick: {
-              format: "%Y %m",
-            },
-          },
-          y: {
-            label: "minutes / month",
-          },
-        },
-        legend: {
-          show: false,
-        },
+      this.setState({
+        timeEntries,
       });
-    }
+    });
   }
 
-  serializeData() {
-    return { items: this.serializeCollection() };
+  renderGraph = () => {
+    // Only render the chart if we have any data.
+    const timeEntries = this.state.timeEntries;
+    if (timeEntries.length > 0) {
+      const dates = timeEntries.map(item => item.interval.toDate());
+      const monthlyHours = timeEntries.map(item => item.time.asHours());
+
+      return (
+        <C3Chart
+          data={{
+            x: "date",
+            columns: [["date"].concat(dates), ["monthlyHours"].concat(monthlyHours)],
+          }}
+          axis={{
+            x: {
+              type: "timeseries",
+              tick: {
+                format: "%Y %m",
+              },
+            },
+            y: {
+              label: "minutes / month",
+            },
+          }}
+          legend={{ show: false }}
+        />
+      );
+    }
+
+    return null;
+  };
+
+  render() {
+    return (
+      <div>
+        <h3>Tracked Time</h3>
+        {this.state.timeEntries.length === 0
+          ? <h4>
+              {"Sorry. We don't have any time logs for you. Trace something and come back later."}
+            </h4>
+          : <div>
+              <Row>
+                <Col span={18}>
+                  {this.renderGraph()}
+                </Col>
+                <Col span={6}>
+                  <Table dataSource={this.state.timeEntries} rowKey="interval">
+                    <Column
+                      title="Month"
+                      dataIndex="interval"
+                      render={interval => moment(interval).format("MM/YYYY")}
+                    />
+                    <Column
+                      title="Worked Hours"
+                      dataIndex="time"
+                      render={time => FormatUtils.formatSeconds(time.asSeconds())}
+                    />
+                  </Table>
+                </Col>
+              </Row>
+            </div>}
+      </div>
+    );
   }
 }
-LoggedTimeView.initClass();
-
-export default LoggedTimeView;

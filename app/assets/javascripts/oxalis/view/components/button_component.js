@@ -1,6 +1,6 @@
 // @flow
 
-import React from "react";
+import * as React from "react";
 import _ from "lodash";
 import { Button } from "antd";
 
@@ -12,8 +12,7 @@ type ButtonComponentPropType = {
  * A lightweight wrapper around <Button> to automatically blur the button
  * after it was clicked.
  */
-class ButtonComponent extends React.PureComponent {
-  props: ButtonComponentPropType;
+class ButtonComponent extends React.PureComponent<ButtonComponentPropType> {
   static defaultProps: ButtonComponentPropType = {
     onClick: _.noop,
   };

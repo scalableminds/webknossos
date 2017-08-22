@@ -6,7 +6,7 @@ type ZoomInActionType = { type: "ZOOM_IN" };
 type ZoomOutActionType = { type: "ZOOM_OUT" };
 type ZoomByDeltaActionType = { type: "ZOOM_BY_DELTA", zoomDelta: number };
 type SetZoomStepActionType = { type: "SET_ZOOM_STEP", zoomStep: number };
-type SetPositionActionType = { type: "SET_POSITION", position: Vector3, dimensionToSkip?: number };
+type SetPositionActionType = { type: "SET_POSITION", position: Vector3, dimensionToSkip: ?number };
 type SetRotationActionType = { type: "SET_ROTATION", rotation: Vector3 };
 type MoveFlycamOrthoActionType = {
   type: "MOVE_FLYCAM_ORTHO",
@@ -73,8 +73,12 @@ export const setZoomStepAction = (zoomStep: number): SetZoomStepActionType => ({
 });
 export const setPositionAction = (
   position: Vector3,
-  dimensionToSkip?: number,
-): SetPositionActionType => ({ type: "SET_POSITION", position, dimensionToSkip });
+  dimensionToSkip: ?number,
+): SetPositionActionType => ({
+  type: "SET_POSITION",
+  position,
+  dimensionToSkip,
+});
 export const setRotationAction = (rotation: Vector3): SetRotationActionType => ({
   type: "SET_ROTATION",
   rotation,

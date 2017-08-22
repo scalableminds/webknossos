@@ -4,7 +4,7 @@
  */
 /* globals JQueryInputEventObject:false */
 
-import React from "react";
+import * as React from "react";
 import Backbone from "backbone";
 import $ from "jquery";
 import _ from "lodash";
@@ -59,12 +59,11 @@ type Props = OwnProps & {
   scale: Vector3,
 };
 
-class PlaneController extends React.PureComponent {
+class PlaneController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Plane Controller: Responsible for Plane Modes
   planeView: PlaneView;
-  props: Props;
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>,
     keyboard?: InputKeyboard,

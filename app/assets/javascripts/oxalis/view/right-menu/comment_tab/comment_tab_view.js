@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import { connect } from "react-redux";
@@ -25,19 +25,19 @@ import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 const InputGroup = Input.Group;
 
+type Props = {
+  skeletonTracing: SkeletonTracingType,
+  setActiveNode: (nodeId: number) => void,
+  deleteComment: () => void,
+  createComment: (text: string) => void,
+};
+
 type CommentTabStateType = {
   isSortedAscending: boolean,
 };
 
-class CommentTabView extends React.Component {
-  props: {
-    skeletonTracing: SkeletonTracingType,
-    setActiveNode: (nodeId: number) => void,
-    deleteComment: () => void,
-    createComment: (text: string) => void,
-  };
-
-  state: CommentTabStateType = {
+class CommentTabView extends React.Component<Props, CommentTabStateType> {
+  state = {
     isSortedAscending: true,
   };
 

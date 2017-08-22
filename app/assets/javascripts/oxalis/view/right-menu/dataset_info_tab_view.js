@@ -23,9 +23,7 @@ type DatasetInfoTabStateProps = {
 
 type DatasetInfoTabProps = DatasetInfoTabStateProps & { setAnnotationName: string => void };
 
-class DatasetInfoTabView extends Component {
-  props: DatasetInfoTabProps;
-
+class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
   calculateZoomLevel(): number {
     let width;
     let zoom;

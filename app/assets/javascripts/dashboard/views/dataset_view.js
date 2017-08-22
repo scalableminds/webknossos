@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import Request from "libs/request";
 import Utils from "libs/utils";
@@ -23,6 +23,13 @@ export type DatasetType = APIDatasetType & {
   formattedCreated: string,
 };
 
+type State = {
+  currentDataViewType: "gallery" | "advanced",
+  datasets: Array<DatasetType>,
+  searchQuery: string,
+  isLoading: boolean,
+};
+
 function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>): string {
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
@@ -31,14 +38,8 @@ function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>):
   return "";
 }
 
-class DatasetView extends React.PureComponent {
-  props: Props;
-  state: {
-    currentDataViewType: "gallery" | "advanced",
-    datasets: Array<DatasetType>,
-    searchQuery: string,
-    isLoading: boolean,
-  } = {
+class DatasetView extends React.PureComponent<Props, State> {
+  state = {
     currentDataViewType: "gallery",
     datasets: [],
     searchQuery: "",
@@ -78,7 +79,7 @@ class DatasetView extends React.PureComponent {
   showAdvancedView = () => this.setState({ currentDataViewType: "advanced" });
   showGalleryView = () => this.setState({ currentDataViewType: "gallery" });
 
-  handleSearch = (event: SyntheticInputEvent): void => {
+  handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
   };
 

@@ -3,27 +3,27 @@
 import React from "react";
 import { Input, Icon } from "antd";
 
-type EditableTextIconPropType = {
+type Props = {
   icon: string,
   onChange: Function,
 };
 
-class EditableTextIcon extends React.PureComponent {
-  props: EditableTextIconPropType;
+type State = {
+  isEditing: boolean,
+  value: string,
+};
 
-  state: {
-    isEditing: boolean,
-    value: string,
-  } = {
+class EditableTextIcon extends React.PureComponent<Props, State> {
+  state = {
     isEditing: false,
     value: "",
   };
 
-  handleInputChange = (event: SyntheticInputEvent) => {
+  handleInputChange = (event: SyntheticInputEvent<>) => {
     this.setState({ value: event.target.value });
   };
 
-  handleInputSubmit = (event: SyntheticInputEvent) => {
+  handleInputSubmit = (event: SyntheticInputEvent<>) => {
     const value = this.state.value;
 
     if (value !== "") {

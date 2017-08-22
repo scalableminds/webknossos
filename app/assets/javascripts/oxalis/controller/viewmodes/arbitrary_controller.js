@@ -3,7 +3,7 @@
  * @flow
  */
 
-import React from "react";
+import * as React from "react";
 import Backbone from "backbone";
 import _ from "lodash";
 import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
@@ -56,7 +56,7 @@ type Props = {
   viewMode: ModeType,
 };
 
-class ArbitraryController extends React.PureComponent {
+class ArbitraryController extends React.PureComponent<Props> {
   // See comment in Controller class on general controller architecture.
   //
   // Arbitrary Controller: Responsible for Arbitrary Modes
@@ -70,7 +70,6 @@ class ArbitraryController extends React.PureComponent {
     keyboard?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
-  props: Props;
   storePropertyUnsubscribers: Array<Function>;
 
   // Copied from backbone events (TODO: handle this better)

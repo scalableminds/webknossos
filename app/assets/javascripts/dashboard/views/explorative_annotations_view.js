@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
-import React from "react";
+import * as React from "react";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Upload, Modal, Tag } from "antd";
@@ -24,21 +24,22 @@ type Props = {
   isAdminView: boolean,
 };
 
-export default class ExplorativeAnnotationsView extends React.PureComponent {
-  props: Props;
-  state: {
-    shouldShowArchivedTracings: boolean,
-    archivedTracings: Array<APIAnnotationType>,
-    unarchivedTracings: Array<APIAnnotationType>,
-    didAlreadyFetchMetaInfo: {
-      isArchived: boolean,
-      isUnarchived: boolean,
-    },
-    searchQuery: string,
-    requestCount: number,
-    isUploadingNML: boolean,
-    tags: Array<string>,
-  } = {
+type State = {
+  shouldShowArchivedTracings: boolean,
+  archivedTracings: Array<APIAnnotationType>,
+  unarchivedTracings: Array<APIAnnotationType>,
+  didAlreadyFetchMetaInfo: {
+    isArchived: boolean,
+    isUnarchived: boolean,
+  },
+  searchQuery: string,
+  requestCount: number,
+  isUploadingNML: boolean,
+  tags: Array<string>,
+};
+
+export default class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+  state = {
     shouldShowArchivedTracings: false,
     archivedTracings: [],
     unarchivedTracings: [],
@@ -151,7 +152,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   handleNMLUpload = (info: {
     file: { response: Object, status: "uploading" | "error" | "done" },
     fileList: Array<Object>,
-    event: SyntheticInputEvent,
+    event: SyntheticInputEvent<>,
   }) => {
     const response = info.file.response;
     if (info.file.status === "uploading") {
@@ -214,7 +215,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       : this.state.unarchivedTracings;
   }
 
-  handleSearch = (event: SyntheticInputEvent): void => {
+  handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
   };
 
@@ -283,7 +284,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     annotation: APIAnnotationType,
     shouldAddTag: boolean,
     tag: string,
-    event: SyntheticInputEvent,
+    event: SyntheticInputEvent<>,
   ): void => {
     event.stopPropagation(); // prevent the onClick event
     const newTracings = this.state.unarchivedTracings.map(t => {
@@ -308,7 +309,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     this.setState({ unarchivedTracings: newTracings });
   };
 
-  handleSearchPressEnter = (event: SyntheticInputEvent) => {
+  handleSearchPressEnter = (event: SyntheticInputEvent<>) => {
     const value = event.target.value;
     if (value !== "") {
       this.addTagToSearch(event.target.value);

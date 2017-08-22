@@ -1,31 +1,24 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
-import java.io.{BufferedOutputStream, File, FileOutputStream}
+import java.io.File
 
 import com.google.inject.Inject
-import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPoint, Node, SkeletonTracing, Tree}
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingService, TracingType}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import com.scalableminds.util.image.Color
-import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
+import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
-import play.api.cache.Cache
-import scala.concurrent.duration._
-import play.api.Play.current
 
-import scala.concurrent.Future
 import scala.io.Source
 import scala.reflect._
 
-/**
-  * Created by f on 28.06.17.
-  */
+
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore
                                       ) extends TracingService[SkeletonTracing] with FoxImplicits with TextUtils {

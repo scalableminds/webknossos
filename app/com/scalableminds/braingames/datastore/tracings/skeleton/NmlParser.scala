@@ -1,15 +1,18 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements._
-
-import scala.annotation.tailrec
-import scala.xml.{NodeSeq, XML, Node => XMLNode}
 import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
+
+import scala.annotation.tailrec
+import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
 object NmlParser extends LazyLogging {
 

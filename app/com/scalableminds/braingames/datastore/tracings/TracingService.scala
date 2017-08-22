@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings
 
 import java.util.UUID
@@ -7,8 +10,6 @@ import com.scalableminds.braingames.datastore.temporarystore.TemporaryStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Empty, Failure, Full}
-import play.api.Play.current
-import play.api.cache.Cache
 import play.api.libs.json.Format
 
 import scala.concurrent.ExecutionContext.Implicits.global

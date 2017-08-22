@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
 import javax.xml.stream.XMLStreamWriter
@@ -6,9 +9,6 @@ import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.xml.SynchronousXMLWrites
 import play.api.libs.json.Json
 
-/**
-  * Created by f on 15.06.17.
-  */
 case class Node(
                  id: Int,
                  position: Point3D,

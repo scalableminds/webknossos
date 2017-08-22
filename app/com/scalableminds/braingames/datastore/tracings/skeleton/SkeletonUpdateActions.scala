@@ -1,9 +1,11 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
-import com.scalableminds.braingames.datastore.tracings.{UpdateAction, UpdateActionGroup}
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements._
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.image.Color
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements._
 import play.api.libs.json._
 
 trait SkeletonUpdateAction {

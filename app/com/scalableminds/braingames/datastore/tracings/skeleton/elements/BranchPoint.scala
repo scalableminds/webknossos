@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
 import javax.xml.stream.XMLStreamWriter
@@ -5,9 +8,7 @@ import javax.xml.stream.XMLStreamWriter
 import com.scalableminds.util.xml.SynchronousXMLWrites
 import play.api.libs.json.Json
 
-/**
-  * Created by f on 15.06.17.
-  */
+
 case class BranchPoint(
   id: Int,
   timestamp: Long)

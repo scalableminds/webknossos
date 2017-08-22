@@ -1,10 +1,10 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings
 
 import play.api.libs.json.{Format, Json, Reads, Writes}
 
-/**
-  * Created by jfrohnhofen on 8/2/17.
-  */
 
 object TracingType extends Enumeration {
   val skeleton, volume = Value

@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
 import javax.xml.stream.XMLStreamWriter
@@ -8,9 +11,6 @@ import com.scalableminds.util.xml.{XMLWrites, Xml}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsObject, Json, OWrites, Writes}
 
-/**
-  * Created by f on 15.06.17.
-  */
 case class Tree(
                  treeId: Int,
                  nodes: Set[Node],

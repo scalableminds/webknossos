@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import java.io.OutputStream
@@ -14,9 +17,6 @@ import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.Future
 
-/**
-  * Created by f on 04.07.17.
-  */
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
 

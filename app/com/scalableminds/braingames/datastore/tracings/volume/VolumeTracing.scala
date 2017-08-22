@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.datastore.tracings.volume
 
-import com.scalableminds.braingames.binary.models.datasource.{DataSource, ElementClass, SegmentationLayer}
+import com.scalableminds.braingames.binary.models.datasource.{DataSource, SegmentationLayer}
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
 import com.scalableminds.braingames.datastore.tracings.Tracing
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}

@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton.elements
 
 import java.util.UUID
@@ -7,9 +10,6 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.image.Color
 import play.api.libs.json.Json
 
-/**
-  * Created by f on 15.06.17.
-  */
 case class SkeletonTracing(id: String = SkeletonTracing.defaultId,
                            dataSetName: String,
                            override val trees: List[Tree] = SkeletonTracing.defaultTrees,

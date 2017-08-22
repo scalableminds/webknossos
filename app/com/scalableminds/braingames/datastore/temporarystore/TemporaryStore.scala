@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.temporarystore
 
 import java.util.concurrent.ConcurrentHashMap
@@ -8,9 +11,6 @@ import play.api.Play.current
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 
-/**
-  * Created by f on 17.08.17.
-  */
 object TemporaryStore {
   val map = new ConcurrentHashMap[String, Object]()
 

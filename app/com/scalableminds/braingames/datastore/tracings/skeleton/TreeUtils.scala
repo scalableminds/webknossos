@@ -1,10 +1,11 @@
+/*
+ * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.Tree
 
-/**
-  * Created by f on 25.07.17.
-  */
+
 object TreeUtils {
   type FunctionalNodeMapping = Function[Int, Int]
 

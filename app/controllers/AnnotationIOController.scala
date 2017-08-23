@@ -82,13 +82,13 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
 
-  def download(typ: String, id: String) = Authenticated.async { implicit request =>
+  def download(typ: String, id: String) = UserAwareAction.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) {
       annotation =>
         logger.trace(s"Requested download for tracing: $typ/$id")
         for {
           name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-          _ <- annotation.restrictions.allowDownload(request.user) ?~> Messages("annotation.download.notAllowed")
+          _ <- annotation.restrictions.allowDownload(request.userOpt) ?~> Messages("annotation.download.notAllowed")
           annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
           content <- annotation.content ?~> Messages("annotation.content.empty")
           stream <- content.toDownloadStream(name)
@@ -146,7 +146,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }
-  
+
   def userDownload(userId: String) = Authenticated.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")

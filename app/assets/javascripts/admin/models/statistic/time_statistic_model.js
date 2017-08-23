@@ -9,13 +9,17 @@ class TimeStatisticModel extends Backbone.Model {
 
   initialize() {
     // set defaults
-    return this.set("tracingTimes", new Backbone.Collection([{
-      start: moment().startOf("week"),
-      end: moment().endOf("week"),
-      tracingTime: 0 }]),
+    return this.set(
+      "tracingTimes",
+      new Backbone.Collection([
+        {
+          start: moment().startOf("week"),
+          end: moment().endOf("week"),
+          tracingTime: 0,
+        },
+      ]),
     );
   }
-
 
   parse(response) {
     const timings = _.sortBy(response.tracingTimes, timeEntry => timeEntry.start);
@@ -27,4 +31,3 @@ class TimeStatisticModel extends Backbone.Model {
 TimeStatisticModel.initClass();
 
 export default TimeStatisticModel;
-

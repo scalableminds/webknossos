@@ -1,11 +1,14 @@
 // @flow
 
-export default function runAsync(functions: Array<Function>, waitTimeMs: number = 100): Promise<void> {
+export default function runAsync(
+  functions: Array<Function>,
+  waitTimeMs: number = 100,
+): Promise<void> {
   // Executes a the list of functions, waiting `waitTimeMs` before executing
   // each of them. The functions can either return synchronous or return a
   // promise.
 
-  return new Promise((resolve) => {
+  return new Promise(resolve => {
     if (functions.length === 0) {
       resolve();
       return;

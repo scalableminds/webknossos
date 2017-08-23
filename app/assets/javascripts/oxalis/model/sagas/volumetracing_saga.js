@@ -3,12 +3,18 @@
  * @flow
  */
 import app from "app";
-import { call, select, put, take, race, takeEvery } from "redux-saga/effects";
-import { updateDirectionAction, resetContourAction } from "oxalis/model/actions/volumetracing_actions";
+import { call, select, put, take, race, takeEvery, fork } from "redux-saga/effects";
+import {
+  updateDirectionAction,
+  resetContourAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { isVolumeTracingDisallowed, getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  isVolumeTracingDisallowed,
+  getActiveCellId,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -22,11 +28,12 @@ export function* updateIsosurface(): Generator<*, *, *> {
   const activeCellIdMaybe = yield select(state => getActiveCellId(state.tracing));
 
   if (shouldDisplayIsosurface) {
-    activeCellIdMaybe.map(activeCellId =>
-      // importing SceneController breaks webpack (circular dependency)
-      // TODO fix later
-      // SceneController.renderVolumeIsosurface(activeCellId),
-      activeCellId,
+    activeCellIdMaybe.map(
+      activeCellId =>
+        // importing SceneController breaks webpack (circular dependency)
+        // TODO fix later
+        // SceneController.renderVolumeIsosurface(activeCellId),
+        activeCellId,
     );
   }
 }
@@ -34,6 +41,23 @@ export function* updateIsosurface(): Generator<*, *, *> {
 export function* watchVolumeTracingAsync(): Generator<*, *, *> {
   yield take("WK_READY");
   yield takeEvery(["FINISH_EDITING"], updateIsosurface);
+  yield fork(warnOfTooLowOpacity);
+}
+
+function* warnOfTooLowOpacity(): Generator<*, *, *> {
+  yield take("INITIALIZE_SETTINGS");
+  if (yield select(state => state.tracing.type !== "volume")) {
+    return;
+  }
+
+  const isOpacityTooLow = yield select(
+    state => state.datasetConfiguration.segmentationOpacity < 10,
+  );
+  if (isOpacityTooLow) {
+    Toast.warning(
+      'Your setting for "segmentation opacity" is set very low.<br />Increase it for better visibility while volume tracing.',
+    );
+  }
 }
 
 export function* editVolumeLayerAsync(): Generator<*, *, *> {
@@ -75,9 +99,8 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
-
 export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
-  if ((layer == null) || layer.isEmpty()) {
+  if (layer == null || layer.isEmpty()) {
     return;
   }
 
@@ -89,12 +112,11 @@ export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
     const binary = yield call([Model, Model.getSegmentationBinary]);
     yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
   }
-  console.log("Labeling time:", (Date.now() - start));
+  console.log("Labeling time:", Date.now() - start);
 
   yield put(updateDirectionAction(layer.getCentroid()));
   yield put(resetContourAction());
 }
-
 
 export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
   while (true) {
@@ -111,8 +133,5 @@ export function* diffVolumeTracing(
   flycam: FlycamType,
 ): Generator<UpdateAction, *, *> {
   // no diffing happening here (yet) as for volume tracings there are only updateTracing actions so far
-  yield updateVolumeTracing(
-    volumeTracing,
-    V3.floor(getPosition(flycam)),
-  );
+  yield updateVolumeTracing(volumeTracing, V3.floor(getPosition(flycam)));
 }

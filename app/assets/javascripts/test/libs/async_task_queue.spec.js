@@ -5,7 +5,7 @@ import Deferred from "libs/deferred";
 import Utils from "libs/utils";
 import sinon from "sinon";
 
-test("AsyncTaskQueue should run a task (1/2)", async (t) => {
+test("AsyncTaskQueue should run a task (1/2)", async t => {
   t.plan(1);
   const queue = new AsyncTaskQueue();
   const task = new Deferred();
@@ -18,7 +18,7 @@ test("AsyncTaskQueue should run a task (1/2)", async (t) => {
   await queue.join();
 });
 
-test("AsyncTaskQueue should run a task (2/2)", async (t) => {
+test("AsyncTaskQueue should run a task (2/2)", async t => {
   t.plan(2);
   const queue = new AsyncTaskQueue();
   const task = new Deferred();
@@ -32,7 +32,7 @@ test("AsyncTaskQueue should run a task (2/2)", async (t) => {
   t.deepEqual(await handle, result);
 });
 
-test("AsyncTaskQueue should fail the queue on a failed task", async (t) => {
+test("AsyncTaskQueue should fail the queue on a failed task", async t => {
   t.plan(4);
   const result = new Error("foo");
   const queue = new AsyncTaskQueue(0);
@@ -56,7 +56,7 @@ test("AsyncTaskQueue should fail the queue on a failed task", async (t) => {
   }
 });
 
-test("AsyncTaskQueue should seralize task execution", async (t) => {
+test("AsyncTaskQueue should seralize task execution", async t => {
   t.plan(1);
   const queue = new AsyncTaskQueue(0);
   const task1 = new Deferred();
@@ -75,7 +75,7 @@ test("AsyncTaskQueue should seralize task execution", async (t) => {
   t.deepEqual(taskLog, [1, 2]);
 });
 
-test("AsyncTaskQueue should retry failed tasks (1/2)", async (t) => {
+test("AsyncTaskQueue should retry failed tasks (1/2)", async t => {
   t.plan(3);
   const result = new Error("foo");
   const queue = new AsyncTaskQueue(3, 1);
@@ -88,6 +88,7 @@ test("AsyncTaskQueue should retry failed tasks (1/2)", async (t) => {
   const handle = queue.scheduleTask(task);
   handle.catch(catcherBox.do);
   for (let i = 0; i < 3; i++) {
+    // eslint-disable-next-line no-await-in-loop
     await Utils.sleep(5);
     deferredBox.value.reject(result);
     deferredBox.value = new Deferred();
@@ -102,7 +103,7 @@ test("AsyncTaskQueue should retry failed tasks (1/2)", async (t) => {
   }
 });
 
-test("AsyncTaskQueue should retry failed tasks (2/2)", async (t) => {
+test("AsyncTaskQueue should retry failed tasks (2/2)", async t => {
   t.plan(1);
   const result = new Error("foo");
   const queue = new AsyncTaskQueue(3, 1);
@@ -111,6 +112,7 @@ test("AsyncTaskQueue should retry failed tasks (2/2)", async (t) => {
 
   const handle = queue.scheduleTask(task);
   for (let i = 0; i < 2; i++) {
+    // eslint-disable-next-line no-await-in-loop
     await Utils.sleep(5);
     deferredBox.value.reject(result);
     deferredBox.value = new Deferred();

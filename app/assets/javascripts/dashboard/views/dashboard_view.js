@@ -1,116 +1,112 @@
-/**
- * dashboard_view.js
- * @flow weak
- */
+// @flow
+/* eslint-disable jsx-a11y/href-no-hash */
 
-import _ from "lodash";
-import Marionette from "backbone.marionette";
-import DashboardTaskListView from "dashboard/views/dashboard_task_list_view";
-import ExplorativeTracingListView from "dashboard/views/explorative_tracing_list_view";
-import LoggedTimeView from "dashboard/views/logged_time_view";
-import DatasetSwitchView from "dashboard/views/dataset/dataset_switch_view";
+import * as React from "react";
+import Request from "libs/request";
+import { Spin, Tabs } from "antd";
+import type { APIUserType } from "admin/api_flow_types";
+import DatasetView from "./dataset_view";
+import DashboardTaskListView from "./dashboard_task_list_view";
+import ExplorativeAnnotationsView from "./explorative_annotations_view";
+import LoggedTimeView from "./logged_time_view";
 
-class DashboardView extends Marionette.View {
+const TabPane = Tabs.TabPane;
 
-  viewCache: Object;
+const validTabKeys = ["datasets", "tasks", "explorativeAnnotations"];
 
-  static initClass() {
-    this.prototype.className = "container wide";
-    this.prototype.id = "dashboard";
-    this.prototype.template = _.template(`\
-<% if (isAdminView) { %>
-  <h3>User: <%- firstName %> <%- lastName %></h3>
-<% } %>
-<div class="tabbable" id="tabbable-dashboard">
-  <ul class="nav nav-tabs">
-    <% if (!isAdminView) { %>
-      <li class="active">
-        <a href="#" id="tab-datasets" data-target="#placeholder" data-toggle="tab">Datasets</a>
-      </li>
-    <% } %>
-    <li <% if (isAdminView) { %> class="active" <% } %> >
-      <a href="#" id="tab-tasks" data-target="#placeholder" data-toggle="tab">Tasks</a>
-    <li <% if (isAdminView) { %> class="active" <% } %> >
-    </li>
-    <li>
-      <a href="#" id="tab-explorative" data-target="#placeholder" data-toggle="tab">Explorative Annotations</a>
-    </li>
-    <% if (isAdminView) { %>
-      <li>
-        <a href="#" id="tab-logged-time" data-target="#placeholder" data-toggle="tab">Tracked Time</a>
-      </li>
-    <% } %>
-  </ul>
-  <div class="tab-content">
-    <div class="tab-pane active" id="placeholder"></div>
-  </div>
-</div>\
-`);
+type Props = {
+  userID: ?string,
+  isAdminView: boolean,
+};
 
-    this.prototype.regions =
-      { tabPane: ".tab-pane" };
+type State = {
+  activeTabKey: string,
+  user: ?APIUserType,
+};
 
+class DashboardView extends React.PureComponent<Props, State> {
+  constructor(props: Props) {
+    super(props);
 
-    this.prototype.events = {
-      "click #tab-datasets": "showDatasets",
-      "click #tab-tasks": "showTasks",
-      "click #tab-explorative": "showExplorative",
-      "click #tab-logged-time": "showLoggedTime",
+    const lastUsedTabKey = localStorage.getItem("lastUsedDashboardTab");
+    const isValid = lastUsedTabKey && validTabKeys.indexOf(lastUsedTabKey) > -1;
+    const defaultTab = this.props.isAdminView ? "tasks" : "datasets";
+    this.state = {
+      activeTabKey: lastUsedTabKey && isValid ? lastUsedTabKey : defaultTab,
+      user: null,
     };
   }
 
-  // Cannot be ES6 style function, as these are covariant by default
-  templateContext = function templateContext() {
-    return { isAdminView: this.options.isAdminView };
+  componentDidMount() {
+    this.fetchData();
   }
 
+  async fetchData(): Promise<void> {
+    const url = this.props.userID ? `/api/users/${this.props.userID}` : "/api/user";
+    const user = await Request.receiveJSON(url);
 
-  initialize(options) {
-    this.options = options;
-    if (this.options.isAdminView) {
-      this.listenTo(this, "render", this.showTasks);
-    } else {
-      this.listenTo(this, "render", this.showDatasets);
+    this.setState({
+      user,
+    });
+  }
+
+  getTabs(user: APIUserType) {
+    const isAdmin = this.props.isAdminView;
+    return [
+      !isAdmin
+        ? <TabPane tab="Datasets" key="datasets">
+            <DatasetView user={user} />
+          </TabPane>
+        : null,
+      <TabPane tab="Tasks" key="tasks">
+        <DashboardTaskListView isAdminView={this.props.isAdminView} userID={this.props.userID} />
+      </TabPane>,
+      <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
+        <ExplorativeAnnotationsView
+          isAdminView={this.props.isAdminView}
+          userID={this.props.userID}
+        />
+      </TabPane>,
+      isAdmin
+        ? <TabPane tab="Tracked Time" key="trackedTime">
+            <LoggedTimeView userID={this.props.userID} />
+          </TabPane>
+        : null,
+    ];
+  }
+
+  render() {
+    const user = this.state.user;
+    if (!user) {
+      return (
+        <div className="text-center" style={{ marginTop: 50 }}>
+          <Spin size="large" />
+        </div>
+      );
     }
 
-    this.viewCache = {
-      datasetSwitchView: null,
-      taskListView: null,
-      explorativeTracingListView: null,
-      loggedTimeView: null,
+    const onTabChange = activeTabKey => {
+      const isValid = validTabKeys.indexOf(activeTabKey) > -1;
+      if (isValid) {
+        localStorage.setItem("lastUsedDashboardTab", activeTabKey);
+      }
+      this.setState({ activeTabKey });
     };
-  }
+    const userHeader = this.props.isAdminView
+      ? <h3>
+          User: {user.firstName} {user.lastName}
+        </h3>
+      : null;
 
-
-  showDatasets() {
-    return this.showTab("datasetSwitchView", DatasetSwitchView);
-  }
-
-
-  showTasks() {
-    return this.showTab("taskListView", DashboardTaskListView);
-  }
-
-
-  showExplorative() {
-    return this.showTab("explorativeTracingListView", ExplorativeTracingListView);
-  }
-
-
-  showLoggedTime() {
-    return this.showTab("loggedTimeView", LoggedTimeView);
-  }
-
-
-  showTab(viewName, ViewClass) {
-    let view = this.viewCache[viewName];
-    if (!view) {
-      view = this.viewCache[viewName] = new ViewClass(this.options);
-    }
-    return this.showChildView("tabPane", view, { preventDestroy: true });
+    return (
+      <div id="dashboard" className="container wide">
+        {userHeader}
+        <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange} style={{ marginTop: 20 }}>
+          {this.getTabs(user)}
+        </Tabs>
+      </div>
+    );
   }
 }
-DashboardView.initClass();
-
 
 export default DashboardView;

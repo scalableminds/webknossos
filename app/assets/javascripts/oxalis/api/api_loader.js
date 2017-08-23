@@ -12,22 +12,21 @@ import createApiV1 from "./api_v1";
 const latestVersion = 2;
 
 class Api {
-
   readyPromise: Promise<void>;
   apiInterface: Object;
   model: OxalisModel;
- /**
+  /**
   * @private
   */
   constructor(oxalisModel: OxalisModel) {
-    this.readyPromise = new Promise((resolve) => {
+    this.readyPromise = new Promise(resolve => {
       app.vent.listenTo(app.vent, "webknossos:ready", resolve);
     });
 
     this.model = oxalisModel;
   }
 
- /**
+  /**
   * API initializer. Will be called as soon as the webKnossos API is ready.
   * @name apiReady
   * @memberof Api

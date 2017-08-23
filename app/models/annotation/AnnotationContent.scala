@@ -3,9 +3,7 @@ package models.annotation
 import java.util.Date
 import javax.xml.stream.XMLStreamWriter
 
-import scala.xml.NodeSeq
-
-import com.scalableminds.braingames.binary.models.{DataLayer, DataLayerMapping, FallbackLayer}
+import com.scalableminds.braingames.binary.models.datasource.{Category, ElementClass, DataLayerLike => DataLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -16,6 +14,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json._
 
 trait AnnotationContent {
+
   type Self <: AnnotationContent
 
   def service: AnnotationContentService
@@ -61,22 +60,15 @@ object AnnotationContent extends FoxImplicits {
 
   import AnnotationSettings._
 
-  implicit val dataLayerWrites: Writes[DataLayer] =
-    ((__ \ 'name).write[String] and
-      (__ \ 'category).write[String] and
-      (__ \ 'maxCoordinates).write[BoundingBox] and
-      (__ \ 'resolutions).write[List[Int]] and
-      (__ \ 'fallback).write[Option[FallbackLayer]] and
-      (__ \ 'elementClass).write[String] and
-      (__ \ 'mappings).write[List[DataLayerMapping]]) (l =>
-      (l.name, l.category, l.maxCoordinates, l.resolutions, l.fallback, l.elementClass, l.mappings))
+  import DataLayer.dataLayerLikeFormat
 
   implicit val dataSetWrites: Writes[DataSet] =
     ((__ \ 'name).write[String] and
       (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'scale).write[Option[Scale]] and
+      (__ \ 'isPublic).write[Boolean] and
       (__ \ 'dataLayers).write[Option[List[DataLayer]]]) (d =>
-      (d.name, d.dataStoreInfo, d.dataSource.map(_.scale), d.dataSource.map(_.dataLayers)))
+      (d.name, d.dataStoreInfo, d.dataSource.toUsable.map(_.scale), d.isPublic, d.dataSource.toUsable.map(_.dataLayers)))
 
   def writeAsJson(ac: AnnotationContent)(implicit ctx: DBAccessContext) = {
     for {
@@ -100,7 +92,7 @@ object AnnotationContent extends FoxImplicits {
 
     for {
       dataSet <- DataSetDAO.findOneBySourceName(ac.dataSetName)
-      dataSource <- dataSet.dataSource.toFox
+      dataSource <- dataSet.dataSource.toUsable
     } yield {
       writer.writeStartElement("experiment")
       writer.writeAttribute("name", dataSet.name)

@@ -83,9 +83,6 @@
                 </li>
               </ul>
             </li>
-            <li>
-              <a href="#script-modal" id="add-script-link" class="hide"><i class="fa fa-gear fa-fw"></i>Add script</a>
-            </li>
             @if(user.hasAdminAccess){
               <li>
                 <a href="https://discuss.webknossos.org" target="_blank"><i class="fa fa-comments fa-fw"></i>Discussion Board</a>
@@ -112,14 +109,13 @@
             </li>
           </ul>
         }.getOrElse {
-          <ul class="nav navbar-nav navbar-right">
-            <li>
-              <a href="@controllers.routes.Authentication.login(None)">Login</a>
-            </li>
-            <li>
-              <a href="@controllers.routes.Authentication.register()">Sign up</a>
-            </li>
-          </ul>
+            <a href="@controllers.routes.Authentication.register()" class="btn btn-default navbar-btn navbar-right">Sign up</a>
+            <form action="/auth/login" method="POST" class="navbar-form navbar-right">
+              <input type="email" id="email" name="email" placeholder="Email" class="form-control">
+              <input type="password" id="password" name="password" placeholder="Password" class="form-control">
+              <button type="submit" class="form-control btn btn-primary">Login</button>
+              <input type="hidden" name="redirect" value="">
+            </form>
         }
       </div>
     </div>

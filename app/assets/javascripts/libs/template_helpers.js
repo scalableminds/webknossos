@@ -7,8 +7,16 @@ import Utils from "libs/utils";
 import type { Vector3 } from "oxalis/constants";
 
 class TemplateHelpers {
-
-  COLOR_MAP: Array<string> = ["#6962C5", "#403C78", "#B2B1C4", "#6D6C78", "#C4C4C4", "#FF5000", "#899AC4", "#60e0ac"];
+  COLOR_MAP: Array<string> = [
+    "#6962C5",
+    "#403C78",
+    "#B2B1C4",
+    "#6D6C78",
+    "#C4C4C4",
+    "#FF5000",
+    "#899AC4",
+    "#60e0ac",
+  ];
 
   stringToColor(role: string): string {
     const hash = this.hashString(role);
@@ -23,7 +31,7 @@ class TemplateHelpers {
     return hash % this.COLOR_MAP.length;
   }
 
-  formatTuple(tuple: Array<number>) {
+  formatTuple(tuple: Array<number> | Vector3) {
     if (tuple != null && tuple.length > 0) {
       const tupleRounded = tuple.map(value => Utils.roundTo(value, 2));
       return `(${tupleRounded.join(", ")})`;

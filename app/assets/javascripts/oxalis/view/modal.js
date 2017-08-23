@@ -6,16 +6,19 @@
 import $ from "jquery";
 
 type ButtonType = {
-  id: string;
-  label: string;
-  callback?: (()=>void);
-}
+  id: string,
+  label: string,
+  callback?: () => void,
+};
 
 const Modal = {
-
   callbacks: {},
 
-  show(text: string, title: string = "Ups...", buttons:Array<ButtonType> = [{ id: "ok-button", label: "OK" }]) {
+  show(
+    text: string,
+    title: string = "Ups...",
+    buttons: Array<ButtonType> = [{ id: "ok-button", label: "OK" }],
+  ) {
     // buttons: [{id:..., label:..., callback:...}, ...]
 
     let html = `\
@@ -29,10 +32,9 @@ const Modal = {
       <p>${text}</p>
     </div>`;
 
-    html += "<div class=\"modal-footer\">";
+    html += '<div class="modal-footer">';
     for (const button of buttons) {
-      html += `<a href="#" id="${button.id}" class="btn btn-default">${
-                    button.label}</a>`;
+      html += `<a href="#" id="${button.id}" class="btn btn-default">${button.label}</a>`;
     }
     html += "</div></div></div>";
 
@@ -44,7 +46,7 @@ const Modal = {
     for (const button of buttons) {
       this.callbacks[button.id] = button.callback;
 
-      $(`#${button.id}`).on("click", (evt) => {
+      $(`#${button.id}`).on("click", evt => {
         if (!(evt.target instanceof window.HTMLElement)) {
           throw new Error("event target is not a HTMLElement!");
         }
@@ -58,7 +60,6 @@ const Modal = {
 
     return $("#modal").modal("show");
   },
-
 
   hide() {
     return $("#modal").modal("hide");

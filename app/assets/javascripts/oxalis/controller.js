@@ -2,9 +2,9 @@
  * controller.js
  * @flow
  */
- /* globals JQueryInputEventObject:false */
+/* globals JQueryInputEventObject:false */
 
-import React from "react";
+import * as React from "react";
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -22,31 +22,33 @@ import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combina
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import Request from "libs/request";
 import ApiLoader from "oxalis/api/api_loader";
+import api from "oxalis/api/internal_api";
 import { wkReadyAction } from "oxalis/model/actions/actions";
-import { saveNowAction } from "oxalis/model/actions/save_actions";
+import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
 import messages from "messages";
+import { fetchGistContent } from "libs/gist";
 
-import type { ToastType } from "libs/toast";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
-class Controller extends React.PureComponent {
-  props: {
-    initialTracingType: SkeletonTracingTypeTracingType,
-    initialTracingId: string,
-    initialControlmode: ControlModeType,
-    // Delivered by connect()
-    viewMode: ModeType,
-  }
+type Props = {
+  initialTracingType: SkeletonTracingTypeTracingType,
+  initialTracingId: string,
+  initialControlmode: ControlModeType,
+  // Delivered by connect()
+  viewMode: ModeType,
+};
 
-  zoomStepWarningToast: ToastType;
+type State = {
+  ready: boolean,
+};
+
+class Controller extends React.PureComponent<Props, State> {
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 
@@ -54,11 +56,9 @@ class Controller extends React.PureComponent {
   listenTo: Function;
   stopListening: Function;
 
-  state: {
-    ready: boolean,
-  } = {
+  state = {
     ready: false,
-  }
+  };
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -84,9 +84,14 @@ class Controller extends React.PureComponent {
       Toast.error(messages["webgl.disabled"]);
     }
 
-    Model.fetch(this.props.initialTracingType, this.props.initialTracingId, this.props.initialControlmode, true)
+    Model.fetch(
+      this.props.initialTracingType,
+      this.props.initialTracingId,
+      this.props.initialControlmode,
+      true,
+    )
       .then(() => this.modelFetchDone())
-      .catch((error) => {
+      .catch(error => {
         // Don't throw errors for errors already handled by the model.
         if (error !== Model.HANDLED_ERROR) {
           throw error;
@@ -116,10 +121,10 @@ class Controller extends React.PureComponent {
     this.maybeShowNewTaskTypeModal();
 
     for (const binaryName of Object.keys(Model.binary)) {
-      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () => app.vent.trigger("rerender"));
+      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () =>
+        app.vent.trigger("rerender"),
+      );
     }
-
-    listenToStoreProperty(store => store.flycam.zoomStep, () => this.maybeWarnAboutZoomStep(), true);
 
     window.webknossos = new ApiLoader(Model);
 
@@ -129,29 +134,22 @@ class Controller extends React.PureComponent {
     this.setState({ ready: true });
   }
 
-  initTaskScript() {
+  async initTaskScript() {
     // Loads a Gist from GitHub with a user script if there is a
     // script assigned to the task
     const task = Store.getState().task;
     if (task != null && task.script != null) {
       const script = task.script;
-      const gistId = _.last(script.gist.split("/"));
-
-      Request.receiveJSON(`https://api.github.com/gists/${gistId}`).then((gist) => {
-        const firstFile = gist.files[Object.keys(gist.files)[0]];
-
-        if (firstFile && firstFile.content) {
-          try {
-            // eslint-disable-next-line no-eval
-            eval(firstFile.content);
-          } catch (error) {
-            console.error(error);
-            Toast.error(`Error executing the task script "${script.name}". See console for more information.`);
-          }
-        } else {
-          Toast.error(`${messages["task.user_script_retrieval_error"]} ${script.name}`);
-        }
-      });
+      const content = await fetchGistContent(script.gist, script.name);
+      try {
+        // eslint-disable-next-line no-eval
+        eval(content);
+      } catch (error) {
+        console.error(error);
+        Toast.error(
+          `Error executing the task script "${script.name}". See console for more information.`,
+        );
+      }
     }
   }
 
@@ -161,7 +159,9 @@ class Controller extends React.PureComponent {
     // they start working on a new TaskType and need to be instructed.
     let text;
     const task = Store.getState().task;
-    if (!Utils.getUrlParams("differentTaskType") || (task == null)) { return; }
+    if (!Utils.getUrlParams("differentTaskType") || task == null) {
+      return;
+    }
 
     const taskType = task.type;
     const title = `Attention, new Task Type: ${taskType.summary}`;
@@ -174,17 +174,26 @@ class Controller extends React.PureComponent {
   }
 
   isWebGlSupported() {
-    return window.WebGLRenderingContext && document.createElement("canvas").getContext("experimental-webgl");
+    return (
+      window.WebGLRenderingContext &&
+      document.createElement("canvas").getContext("experimental-webgl")
+    );
   }
 
   initKeyboard() {
     // avoid scrolling while pressing space
     $(document).keydown((event: JQueryInputEventObject) => {
-      if ((event.which === 32 || event.which === 18 || event.which >= 37 && event.which <= 40) && !$(":focus").length) { event.preventDefault(); }
+      if (
+        (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
+        !$(":focus").length
+      ) {
+        event.preventDefault();
+      }
     });
 
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     const keyboardControls = {};
+    let prevSegAlpha = 20;
     if (controlMode === ControlModeEnum.TRACE) {
       _.extend(keyboardControls, {
         // Set Mode, outcomment for release
@@ -200,34 +209,53 @@ class Controller extends React.PureComponent {
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
 
-        "super + s": (event) => {
+        "super + s": event => {
           event.preventDefault();
           event.stopPropagation();
           Model.save();
         },
 
-        "ctrl + s": (event) => {
+        "ctrl + s": event => {
           event.preventDefault();
           event.stopPropagation();
           Model.save();
         },
 
+        // Undo
+        "super + z": event => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(undoAction());
+        },
+        "ctrl + z": () => Store.dispatch(undoAction()),
+
+        // Redo
+        "super + y": event => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(redoAction());
+        },
+        "ctrl + y": () => Store.dispatch(redoAction()),
+
+        // In the long run this should probably live in a user script
+        "9": function toggleSegmentationOpacity() {
+          // Flow cannot infer the return type of getConfiguration :(
+          // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
+          const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
+          let newSegAlpha = 0;
+
+          if (curSegAlpha > 0) {
+            prevSegAlpha = curSegAlpha;
+          } else {
+            newSegAlpha = prevSegAlpha;
+          }
+
+          api.data.setConfiguration("segmentationOpacity", newSegAlpha);
+        },
       });
     }
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
-  }
-
-  maybeWarnAboutZoomStep() {
-    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
-    if (shouldWarn && (this.zoomStepWarningToast == null)) {
-      const toastType = Store.getState().tracing.type === "volume" ? "danger" : "info";
-      this.zoomStepWarningToast = Toast.message(toastType,
-        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.", true);
-    } else if (!shouldWarn && (this.zoomStepWarningToast != null)) {
-      this.zoomStepWarningToast.remove();
-      this.zoomStepWarningToast = null;
-    }
   }
 
   updateStats = () => this.stats.update();
@@ -254,7 +282,9 @@ class Controller extends React.PureComponent {
       if (state.tracing.restrictions.advancedOptionsAllowed) {
         return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
       } else {
-        return <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />;
+        return (
+          <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />
+        );
       }
     } else if (isPlane) {
       switch (state.tracing.type) {

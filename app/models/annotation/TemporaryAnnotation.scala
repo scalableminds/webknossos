@@ -32,7 +32,8 @@ case class TemporaryAnnotation(
                                 _name: Option[String] = None,
                                 restrictions: AnnotationRestrictions = AnnotationRestrictions.restrictEverything,
                                 version: Int = 0,
-                                created: Long = System.currentTimeMillis
+                                created: Long = System.currentTimeMillis,
+                                isPublic: Boolean = false
                                 ) extends AnnotationLike {
 
   def incrementVersion = this.copy(version = version + 1)
@@ -42,6 +43,8 @@ case class TemporaryAnnotation(
   lazy val content = _content()
 
   def tracingTime = None    // We currently do not tracing time on temporary annotations
+
+  def tags = Set.empty
 
   def muta = new TemporaryAnnotationMutations(this)
 

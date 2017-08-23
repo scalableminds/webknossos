@@ -16,10 +16,22 @@ const ZOOM_STEP_MIN = 0.005;
 
 function cloneMatrix(m: Matrix4x4): Matrix4x4 {
   return [
-    m[0], m[1], m[2], m[3],
-    m[4], m[5], m[6], m[7],
-    m[8], m[9], m[10], m[11],
-    m[12], m[13], m[14], m[15],
+    m[0],
+    m[1],
+    m[2],
+    m[3],
+    m[4],
+    m[5],
+    m[6],
+    m[7],
+    m[8],
+    m[9],
+    m[10],
+    m[11],
+    m[12],
+    m[13],
+    m[14],
+    m[15],
   ];
 }
 
@@ -28,8 +40,11 @@ function rotateOnAxis(currentMatrix: Matrix4x4, angle: number, axis: Vector3): M
 }
 
 function rotateOnAxisWithDistance(
-  zoomStep: number, distance: number,
-  currentMatrix: Matrix4x4, angle: number, axis: Vector3,
+  zoomStep: number,
+  distance: number,
+  currentMatrix: Matrix4x4,
+  angle: number,
+  axis: Vector3,
 ): Matrix4x4 {
   const distanceVecNegative = [0, 0, -zoomStep * distance];
   const distanceVecPositive = [0, 0, zoomStep * distance];
@@ -39,22 +54,33 @@ function rotateOnAxisWithDistance(
   return M4x4.translate(distanceVecPositive, matrix, []);
 }
 
-function rotateReducer(state: OxalisState, angle: number, axis: Vector3, regardDistance: boolean): OxalisState {
+function rotateReducer(
+  state: OxalisState,
+  angle: number,
+  axis: Vector3,
+  regardDistance: boolean,
+): OxalisState {
   const { flycam } = state;
   if (regardDistance) {
-    return update(state, { flycam: {
-      currentMatrix: { $set: rotateOnAxisWithDistance(
-        flycam.zoomStep,
-        state.userConfiguration.sphericalCapRadius,
-        flycam.currentMatrix,
-        angle,
-        axis,
-      ) },
-    } });
+    return update(state, {
+      flycam: {
+        currentMatrix: {
+          $set: rotateOnAxisWithDistance(
+            flycam.zoomStep,
+            state.userConfiguration.sphericalCapRadius,
+            flycam.currentMatrix,
+            angle,
+            axis,
+          ),
+        },
+      },
+    });
   }
-  return update(state, { flycam: {
-    currentMatrix: { $set: rotateOnAxis(flycam.currentMatrix, angle, axis) },
-  } });
+  return update(state, {
+    flycam: {
+      currentMatrix: { $set: rotateOnAxis(flycam.currentMatrix, angle, axis) },
+    },
+  });
 }
 
 function getMatrixScale(dataSetScale: Vector3): Vector3 {
@@ -86,22 +112,26 @@ function moveReducer(state: OxalisState, vector: Vector3): OxalisState {
 }
 
 export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
-  return update(state, { flycam: {
-    zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state)) },
-  } });
+  return update(state, {
+    flycam: {
+      zoomStep: { $set: Utils.clamp(ZOOM_STEP_MIN, zoomStep, getMaxZoomStep(state)) },
+    },
+  });
 }
 
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
     let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.scale);
-    matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
-    matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
-    matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
+    matrix = rotateOnAxis(matrix, -z * Math.PI / 180, [0, 0, 1]);
+    matrix = rotateOnAxis(matrix, -y * Math.PI / 180, [0, 1, 0]);
+    matrix = rotateOnAxis(matrix, -x * Math.PI / 180, [1, 0, 0]);
     let newState = update(state, { flycam: { currentMatrix: { $set: matrix } } });
     if (state.userConfiguration.dynamicSpaceDirection) {
-      const spaceDirectionOrtho = [0, 1, 2].map(index => rotation[index] < 0 ? -1 : 1);
-      newState = update(newState, { flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } } });
+      const spaceDirectionOrtho = [0, 1, 2].map(index => (rotation[index] < 0 ? -1 : 1));
+      newState = update(newState, {
+        flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } },
+      });
     }
     return newState;
   }
@@ -111,9 +141,11 @@ export function setRotationReducer(state: OxalisState, rotation: Vector3) {
 function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "SET_DATASET": {
-      return update(state, { flycam: {
-        currentMatrix: { $set: resetMatrix(state.flycam.currentMatrix, action.dataset.scale) },
-      } });
+      return update(state, {
+        flycam: {
+          currentMatrix: { $set: resetMatrix(state.flycam.currentMatrix, action.dataset.scale) },
+        },
+      });
     }
 
     case "ZOOM_IN":
@@ -123,7 +155,10 @@ function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
       return zoomReducer(state, state.flycam.zoomStep * ZOOM_STEP_INTERVAL);
 
     case "ZOOM_BY_DELTA":
-      return zoomReducer(state, state.flycam.zoomStep / Math.pow(ZOOM_STEP_INTERVAL, action.zoomDelta));
+      return zoomReducer(
+        state,
+        state.flycam.zoomStep / Math.pow(ZOOM_STEP_INTERVAL, action.zoomDelta),
+      );
 
     case "SET_ZOOM_STEP":
       return zoomReducer(state, action.zoomStep);
@@ -131,13 +166,13 @@ function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
     case "SET_POSITION": {
       // cannot use M4x4.clone because of immutable-seamless
       const matrix = cloneMatrix(state.flycam.currentMatrix);
-      if (action.position[0] != null && action.dimensionToSkip !== 0) {
+      if (action.dimensionToSkip !== 0) {
         matrix[12] = action.position[0];
       }
-      if (action.position[1] != null && action.dimensionToSkip !== 1) {
+      if (action.dimensionToSkip !== 1) {
         matrix[13] = action.position[1];
       }
-      if (action.position[2] != null && action.dimensionToSkip !== 2) {
+      if (action.dimensionToSkip !== 2) {
         matrix[14] = action.position[2];
       }
       return update(state, { flycam: { currentMatrix: { $set: matrix } } });
@@ -148,9 +183,11 @@ function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
     }
 
     case "MOVE_FLYCAM":
-      return update(state, { flycam: {
-        currentMatrix: { $set: M4x4.translate(action.vector, state.flycam.currentMatrix, []) },
-      } });
+      return update(state, {
+        flycam: {
+          currentMatrix: { $set: M4x4.translate(action.vector, state.flycam.currentMatrix, []) },
+        },
+      });
 
     case "MOVE_FLYCAM_ORTHO": {
       const vector = _.clone(action.vector);

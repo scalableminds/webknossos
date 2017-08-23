@@ -8,7 +8,6 @@ import Utils from "libs/utils";
 import Backbone from "backbone";
 
 class NestedObjModel extends Backbone.Model {
-
   changed: Object;
   superSetFunction: (attributeString: string, val: any, options: Object) => any;
 
@@ -23,9 +22,9 @@ class NestedObjModel extends Backbone.Model {
     return _.reduce(
       attributes,
       (value, attribute) => Utils.__guard__(value, x => x[attribute]),
-      valueObj);
+      valueObj,
+    );
   }
-
 
   set = (attributeString: string, val: any, options: Object = {}) => {
     // We don't handle objects for now
@@ -35,8 +34,7 @@ class NestedObjModel extends Backbone.Model {
 
     this.changed = {};
     return this.deepSet(this.attributes, attributeString, val, options.silent);
-  }
-
+  };
 
   deepSet = (obj, attributeString, val, silent = false) => {
     const attributes = attributeString.split(".");
@@ -61,16 +59,21 @@ class NestedObjModel extends Backbone.Model {
         }
         return null;
       },
-      obj);
-  }
-
+      obj,
+    );
+  };
 
   triggerDeepChange = (oldObj, newObj, deepKey) => {
     // This method only triggers the change for those parts of the object
     // that actually changed (e.g. layers.color.brightness)
     if (_.isPlainObject(newObj)) {
       // Recursively call triggerDeepChange for each key
-      _.forOwn(newObj, (value, key) => this.triggerDeepChange(((oldObj != null) ? oldObj[key] : oldObj), newObj[key], `${deepKey}.${key}`),
+      _.forOwn(newObj, (value, key) =>
+        this.triggerDeepChange(
+          oldObj != null ? oldObj[key] : oldObj,
+          newObj[key],
+          `${deepKey}.${key}`,
+        ),
       );
     } else if (oldObj !== newObj) {
       // Add the change to the changed object
@@ -78,7 +81,7 @@ class NestedObjModel extends Backbone.Model {
       // Trigger the change
       this.trigger(`change:${deepKey}`, this, newObj);
     }
-  }
+  };
 }
 
 export default NestedObjModel;

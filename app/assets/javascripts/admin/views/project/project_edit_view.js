@@ -75,10 +75,8 @@ class ProjectEditView extends Marionette.View {
       "click .resume-button": "handleResumeClick",
     };
 
-    this.prototype.ui =
-      { form: "form" };
+    this.prototype.ui = { form: "form" };
   }
-
 
   initialize() {
     this.listenTo(this.model, "sync", this.render);
@@ -99,11 +97,13 @@ class ProjectEditView extends Marionette.View {
     // convert expectedTime from minutes to milliseconds
     formValues.expectedTime *= 60000;
 
-    this.model.save(formValues).then(
-      () => {},
-      Toast.success("Saved!"),
-      app.router.loadURL(`/projects#${this.model.get("name")}`),
-    );
+    this.model
+      .save(formValues)
+      .then(
+        () => {},
+        Toast.success("Saved!"),
+        app.router.loadURL(`/projects#${this.model.get("name")}`),
+      );
   }
 
   async handlePauseClick(event) {
@@ -121,6 +121,5 @@ class ProjectEditView extends Marionette.View {
   }
 }
 ProjectEditView.initClass();
-
 
 export default ProjectEditView;

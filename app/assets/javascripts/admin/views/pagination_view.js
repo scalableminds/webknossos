@@ -55,8 +55,7 @@ class PaginationView extends Marionette.View {
 
     this.prototype.className = "container wide";
 
-    this.prototype.ui =
-      { inputSearch: ".search-query" };
+    this.prototype.ui = { inputSearch: ".search-query" };
 
     this.prototype.events = {
       "click .prev": "goBack",
@@ -74,19 +73,18 @@ class PaginationView extends Marionette.View {
     return {
       pageRange: _.range(
         Math.max(paginationInfo.firstPage, paginationInfo.currentPage - 4),
-        Math.min(paginationInfo.lastPage, paginationInfo.currentPage + 4) + 1),
+        Math.min(paginationInfo.lastPage, paginationInfo.currentPage + 4) + 1,
+      ),
       Pagination: paginationInfo,
       addButtonText: this.options.addButtonText,
     };
   }
-
 
   initialize(options) {
     this.options = options;
     this.listenToOnce(this.collection, "reset", this.searchByHash);
     this.listenTo(this.collection, "reset", this.render);
   }
-
 
   goFirst(evt) {
     Utils.__guard__(evt, x => x.preventDefault());
@@ -108,7 +106,6 @@ class PaginationView extends Marionette.View {
     return this.collection.getNextPage();
   }
 
-
   handleClickPage(evt) {
     Utils.__guard__(evt, x => x.preventDefault());
     const page = $(evt.target).text();
@@ -119,11 +116,9 @@ class PaginationView extends Marionette.View {
     return this.collection.getPage(page);
   }
 
-
   addElement() {
     app.vent.trigger("paginationView:addElement");
   }
-
 
   filterBySearch() {
     // implement actually filtering on the collection in each respective view
@@ -131,7 +126,6 @@ class PaginationView extends Marionette.View {
     const filterQuery = this.ui.inputSearch.val();
     app.vent.trigger("paginationView:filter", filterQuery);
   }
-
 
   render() {
     this.triggerMethod("before:render", this);
@@ -148,7 +142,6 @@ class PaginationView extends Marionette.View {
     return this;
   }
 
-
   searchByHash() {
     const hash = location.hash.slice(1);
     if (hash) {
@@ -159,6 +152,5 @@ class PaginationView extends Marionette.View {
   }
 }
 PaginationView.initClass();
-
 
 export default PaginationView;

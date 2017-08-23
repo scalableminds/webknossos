@@ -9,18 +9,10 @@ class DatasetModel extends NestedObjModel {
   }
 
   parse(response) {
-    // since defaults doesn't override null...
-    if (response.dataSource === null) {
-      response.dataSource = {
-        needsImport: true,
-        baseDir: "",
-        scale: [],
-        dataLayers: [],
-      };
-    }
-
-    response.hasSegmentation = _.some(response.dataSource.dataLayers,
-      layer => layer.category === "segmentation");
+    response.hasSegmentation = _.some(
+      response.dataSource.dataLayers,
+      layer => layer.category === "segmentation",
+    );
 
     response.thumbnailURL = this.createThumbnailURL(response.name, response.dataSource.dataLayers);
 
@@ -28,7 +20,6 @@ class DatasetModel extends NestedObjModel {
 
     return response;
   }
-
 
   createThumbnailURL(datasetName, layers) {
     const colorLayer = _.find(layers, { category: "color" });

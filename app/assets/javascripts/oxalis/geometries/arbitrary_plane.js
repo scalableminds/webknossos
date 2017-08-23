@@ -29,7 +29,6 @@ import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary
 // The result is then projected on a flat surface.
 
 class ArbitraryPlane {
-
   mesh: THREE.Mesh;
   isDirty: boolean;
   queryVertices: ?Float32Array;
@@ -52,21 +51,26 @@ class ArbitraryPlane {
 
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
-      binary.cube.on("bucketLoaded", () => { this.isDirty = true; });
+      binary.cube.on("bucketLoaded", () => {
+        this.isDirty = true;
+      });
     }
 
-    if ((Math.log(this.width) / Math.LN2) % 1 === 1) { throw new Error("width needs to be a power of 2"); }
+    if (Math.log(this.width) / Math.LN2 % 1 === 1) {
+      throw new Error("width needs to be a power of 2");
+    }
 
     Store.subscribe(() => {
       this.isDirty = true;
     });
   }
 
-
   setMode(mode: ModeType) {
     switch (mode) {
       case constants.MODE_ARBITRARY:
-        this.queryVertices = this.calculateSphereVertices(Store.getState().userConfiguration.sphericalCapRadius);
+        this.queryVertices = this.calculateSphereVertices(
+          Store.getState().userConfiguration.sphericalCapRadius,
+        );
         break;
       case constants.MODE_ARBITRARY_PLANE:
         this.queryVertices = this.calculatePlaneVertices();
@@ -79,11 +83,9 @@ class ArbitraryPlane {
     this.isDirty = true;
   }
 
-
   addToScene(scene: THREE.Scene) {
     scene.add(this.mesh);
   }
-
 
   update() {
     if (this.isDirty) {
@@ -98,10 +100,24 @@ class ArbitraryPlane {
 
       this.textureMaterial.setData("color", newColors);
 
-      mesh.matrix.set(matrix[0], matrix[4], matrix[8], matrix[12],
-                      matrix[1], matrix[5], matrix[9], matrix[13],
-                      matrix[2], matrix[6], matrix[10], matrix[14],
-                      matrix[3], matrix[7], matrix[11], matrix[15]);
+      mesh.matrix.set(
+        matrix[0],
+        matrix[4],
+        matrix[8],
+        matrix[12],
+        matrix[1],
+        matrix[5],
+        matrix[9],
+        matrix[13],
+        matrix[2],
+        matrix[6],
+        matrix[10],
+        matrix[14],
+        matrix[3],
+        matrix[7],
+        matrix[11],
+        matrix[15],
+      );
 
       mesh.matrix.multiply(new THREE.Matrix4().makeRotationY(Math.PI));
       mesh.matrixWorldNeedsUpdate = true;
@@ -110,8 +126,7 @@ class ArbitraryPlane {
     }
   }
 
-
-  calculateSphereVertices = _.memoize((sphericalCapRadius) => {
+  calculateSphereVertices = _.memoize(sphericalCapRadius => {
     const queryVertices = new Float32Array(this.width * this.width * 3);
 
     // so we have Point [0, 0, 0] centered
@@ -126,8 +141,8 @@ class ArbitraryPlane {
     // http://en.wikipedia.org/wiki/Spherical_cap
     for (let y = 0; y < this.width; y++) {
       for (let x = 0; x < this.width; x++) {
-        vertex[0] = x - (Math.floor(this.width / 2));
-        vertex[1] = y - (Math.floor(this.width / 2));
+        vertex[0] = x - Math.floor(this.width / 2);
+        vertex[1] = y - Math.floor(this.width / 2);
         vertex[2] = 0;
 
         vector = V3.sub(vertex, centerVertex, vector);
@@ -143,7 +158,6 @@ class ArbitraryPlane {
     return queryVertices;
   });
 
-
   calculatePlaneVertices = _.memoize(() => {
     const queryVertices = new Float32Array(this.width * this.width * 3);
 
@@ -152,8 +166,8 @@ class ArbitraryPlane {
 
     for (let y = 0; y < this.width; y++) {
       for (let x = 0; x < this.width; x++) {
-        queryVertices[currentIndex++] = x - (Math.floor(this.width / 2));
-        queryVertices[currentIndex++] = y - (Math.floor(this.width / 2));
+        queryVertices[currentIndex++] = x - Math.floor(this.width / 2);
+        queryVertices[currentIndex++] = y - Math.floor(this.width / 2);
         queryVertices[currentIndex++] = 0;
       }
     }
@@ -161,15 +175,15 @@ class ArbitraryPlane {
     return queryVertices;
   });
 
-
   applyScale(delta: number) {
     this.x = Number(this.mesh.scale.x) + Number(delta);
 
     if (this.x > 0.5 && this.x < 10) {
-      this.mesh.scale.x = this.mesh.scale.y = this.mesh.scale.z = this.x;
+      this.mesh.scale.x = this.x;
+      this.mesh.scale.y = this.x;
+      this.mesh.scale.z = this.x;
     }
   }
-
 
   createMesh() {
     this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width).getMaterial();

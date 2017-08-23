@@ -10,7 +10,7 @@ import tlt from "oxalis/view/polygons/tlt";
 import type { Vector3 } from "oxalis/constants";
 
 export type PolygonResultType = {
-  [cellId: number]: Vector3[][];
+  [cellId: number]: Vector3[][],
 };
 
 // This class is capable of turning voxel data into triangles
@@ -43,17 +43,14 @@ class PolygonFactory {
     this.endZ = round(max[2]) + this.voxelsToSkip;
   }
 
-
   getTriangles(): Promise<PolygonResultType | null> {
     this.isCancelled = false;
     return this.calculateTrianglesAsync();
   }
 
-
   cancel() {
     this.isCancelled = true;
   }
-
 
   async calculateTrianglesAsync(): Promise<PolygonResultType | null> {
     const result: PolygonResultType = {};
@@ -66,6 +63,7 @@ class PolygonFactory {
       i++;
       // If chunk size is reached, pause execution
       if (i % this.chunkSize === 0 && !position.done) {
+        // eslint-disable-next-line no-await-in-loop
         await Utils.idleFrame(10);
       }
     }
@@ -75,17 +73,20 @@ class PolygonFactory {
     return result;
   }
 
-
   isPositionInBoundingBox(position: Vector3): boolean {
     if (position != null) {
       const [x, y, z] = position;
-      return (x >= this.startX && y >= this.startY && z >= this.startZ) &&
-        (x <= this.endX && y <= this.endY && z <= this.endZ);
+      return (
+        x >= this.startX &&
+        y >= this.startY &&
+        z >= this.startZ &&
+        (x <= this.endX && y <= this.endY && z <= this.endZ)
+      );
     }
     return false;
   }
 
-  getPositionGenerator = function* (): Generator<Vector3, void, void> {
+  getPositionGenerator = function*(): Generator<Vector3, void, void> {
     // For z coordinate, always sample in maximal resolution
     for (let z = this.startZ; z < this.endZ; z += 1) {
       for (let y = this.startY; y < this.endY; y += this.voxelsToSkip) {
@@ -94,7 +95,7 @@ class PolygonFactory {
         }
       }
     }
-  }
+  };
 
   updateTriangles(result: PolygonResultType, position: Vector3): void {
     const cubeIndices = this.getCubeIndices(position);
@@ -119,10 +120,16 @@ class PolygonFactory {
       this.modelCube.getDataValue([x, y, z + this.voxelsToSkip]),
       this.modelCube.getDataValue([x, y + this.voxelsToSkip, z]),
       this.modelCube.getDataValue([x + this.voxelsToSkip, y + this.voxelsToSkip, z]),
-      this.modelCube.getDataValue([x + this.voxelsToSkip, y + this.voxelsToSkip, z + this.voxelsToSkip]),
+      this.modelCube.getDataValue([
+        x + this.voxelsToSkip,
+        y + this.voxelsToSkip,
+        z + this.voxelsToSkip,
+      ]),
       this.modelCube.getDataValue([x, y + this.voxelsToSkip, z + this.voxelsToSkip]),
     ];
-    const cellIds = new Set(labels.filter(label => label !== 0 && ((this.id == null) || this.id === label)));
+    const cellIds = new Set(
+      labels.filter(label => label !== 0 && (this.id == null || this.id === label)),
+    );
 
     const result = {};
     for (const cellId of cellIds) {
@@ -137,7 +144,6 @@ class PolygonFactory {
     return result;
   }
 
-
   getCellTriangles(cubeIndex: number, [x, y, z]: Vector3): Vector3[][] {
     const triangleList = [];
     for (const triangle of tlt[cubeIndex]) {
@@ -145,9 +151,9 @@ class PolygonFactory {
 
       for (const vertex of triangle) {
         vertices.push([
-          (vertex[0] * this.voxelsToSkip) + x,
-          (vertex[1] * this.voxelsToSkip) + y,
-          (vertex[2] * this.voxelsToSkip) + z,
+          vertex[0] * this.voxelsToSkip + x,
+          vertex[1] * this.voxelsToSkip + y,
+          vertex[2] * this.voxelsToSkip + z,
         ]);
       }
 

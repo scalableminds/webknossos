@@ -1,6 +1,6 @@
 // @flow
 import type { Vector3 } from "oxalis/constants";
-import React from "react";
+import * as React from "react";
 import Utils from "libs/utils";
 import _ from "lodash";
 import { Input } from "antd";
@@ -10,14 +10,13 @@ type Vector3InputPropTypes = {
   onChange: (value: Vector3) => void,
 };
 
-export default class Vector3Input extends React.PureComponent {
-  props: Vector3InputPropTypes;
-  state: {
-    isEditing: boolean,
-    isValid: boolean,
-    text: string,
-  };
+type State = {
+  isEditing: boolean,
+  isValid: boolean,
+  text: string,
+};
 
+export default class Vector3Input extends React.PureComponent<Vector3InputPropTypes, State> {
   constructor(props: Vector3InputPropTypes) {
     super(props);
     this.state = {
@@ -64,11 +63,11 @@ export default class Vector3Input extends React.PureComponent {
     });
   };
 
-  handleChange = (evt: SyntheticInputEvent) => {
+  handleChange = (evt: SyntheticInputEvent<>) => {
     const text = evt.target.value;
 
     // only numbers, commas and whitespace is allowed
-    const isValidInput = (/^[\d\s,]*$/g).test(text);
+    const isValidInput = /^[\d\s,]*$/g.test(text);
     const value = Utils.stringToNumberArray(text);
     const isValidFormat = value.length === 3;
 

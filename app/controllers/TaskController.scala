@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import models.binary.DataSetDAO
 import javax.inject.Inject
 
+import com.newrelic.api.agent.NewRelic
 import net.liftweb.common.{Box, Failure, Full}
 import oxalis.nml.NMLService
 import play.api.libs.iteratee.Cont
@@ -192,7 +193,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           _ <- AnnotationService.updateAllOfTask(updatedTask, team, dataSetName, boundingBox, taskType.settings)
           _ <- AnnotationService.updateAnnotationBase(updatedTask, start, rotation)
           json <- Task.transformToJson(updatedTask, request.userOpt)
-          _ <- OpenAssignmentService.updateAllOf(updatedTask, project, status.open)
+          _ <- OpenAssignmentService.updateRemainingInstances(updatedTask, project, status.open)
         } yield {
           JsonOk(json, Messages("task.editSuccess"))
         }
@@ -263,17 +264,18 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val s = System.currentTimeMillis()
     TaskService.findAssignableFor(user).futureBox.flatMap {
       case Full(assignment) =>
-        TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.remove(assignment)).flatMap {
-          removeResult =>
-          if (removeResult.n >= 1)
+        NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
+        TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.take(assignment)).flatMap {
+          updateResult =>
+          if (updateResult.n >= 1)
             Fox.successful(assignment)
           else if (retryCount > 0)
             tryToGetNextAssignmentFor(user, retryCount - 1)
           else {
             val e = System.currentTimeMillis()
             logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
-              s"Result: $removeResult n:${removeResult.n} ok:${removeResult.ok} " +
-              s"code:${removeResult.code} TOOK: ${e-s}ms")
+              s"Result: $updateResult n:${updateResult.n} ok:${updateResult.ok} " +
+              s"code:${updateResult.code} TOOK: ${e-s}ms")
             Fox.failure(Messages("task.unavailable"))
           }
         }.futureBox

@@ -14,9 +14,7 @@ import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants"
 import Model from "oxalis/model";
 import SceneController from "oxalis/controller/scene_controller";
 
-
 class PlaneView {
-
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
   listenTo: Function;
@@ -59,10 +57,12 @@ class PlaneView {
     }
 
     // Attach the canvas to the container
-    renderer.setSize((2 * this.curWidth) + 20, (2 * this.curWidth) + 20);
+    renderer.setSize(2 * this.curWidth + 20, 2 * this.curWidth + 20);
 
     this.needsRerender = true;
-    app.vent.on("rerender", () => { this.needsRerender = true; });
+    app.vent.on("rerender", () => {
+      this.needsRerender = true;
+    });
     Store.subscribe(() => {
       // Render in the next frame after the change propagated everywhere
       window.requestAnimationFrame(() => {
@@ -80,9 +80,10 @@ class PlaneView {
     );
   }
 
-
   animate(): void {
-    if (!this.running) { return; }
+    if (!this.running) {
+      return;
+    }
 
     this.renderFunction();
 
@@ -167,16 +168,16 @@ class PlaneView {
     app.vent.trigger("rerender");
   }
 
-
   resizeThrottled = _.throttle((): void => {
     // throttle resize to avoid annoying flickering
     this.resize();
   }, Constants.RESIZE_THROTTLE_TIME);
 
-
   resize = (): void => {
     // Call this after the canvas was resized to fix the viewport
-    const viewportWidth = Math.round(Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH);
+    const viewportWidth = Math.round(
+      Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH,
+    );
     const canvasWidth = viewportWidth * 2 + 20;
     this.curWidth = viewportWidth;
 
@@ -192,7 +193,6 @@ class PlaneView {
     return this.cameras;
   }
 
-
   stop(): void {
     this.running = false;
 
@@ -200,7 +200,6 @@ class PlaneView {
       SceneController.scene.remove(this.cameras[plane]);
     }
   }
-
 
   start(): void {
     this.running = true;

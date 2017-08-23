@@ -58,7 +58,7 @@ case class Task(
     def calculateRemaining(project: Project) = {
       project.assignmentConfiguration match {
         case WebknossosAssignmentConfig =>
-          OpenAssignmentDAO.countFor(_id)
+          OpenAssignmentDAO.countForTask(_id)
         case _: MTurkAssignmentConfig   =>
           MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfOpenAssignments)
       }

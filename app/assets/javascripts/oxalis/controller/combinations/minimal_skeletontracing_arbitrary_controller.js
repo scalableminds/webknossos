@@ -8,12 +8,20 @@ import Store from "oxalis/store";
 import Constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
-import { deleteNodeAction, createBranchPointAction, requestDeleteBranchPointAction } from "oxalis/model/actions/skeletontracing_actions";
+import {
+  deleteNodeAction,
+  createBranchPointAction,
+  requestDeleteBranchPointAction,
+} from "oxalis/model/actions/skeletontracing_actions";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
-import { zoomInAction, zoomOutAction, yawFlycamAction, pitchFlycamAction } from "oxalis/model/actions/flycam_actions";
+import {
+  zoomInAction,
+  zoomOutAction,
+  yawFlycamAction,
+  pitchFlycamAction,
+} from "oxalis/model/actions/flycam_actions";
 
 class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
-
   // See comment in Controller class on general controller architecture.
   //
   // Minimal Skeleton Tracing Arbitrary Controller:
@@ -30,43 +38,69 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
     this.input.keyboard = new InputKeyboard({
       space: timeFactor => this.move(timeFactor),
       // Zoom in/out
-      i: () => { Store.dispatch(zoomInAction()); },
-      o: () => { Store.dispatch(zoomOutAction()); },
+      i: () => {
+        Store.dispatch(zoomInAction());
+      },
+      o: () => {
+        Store.dispatch(zoomOutAction());
+      },
       // Rotate in distance
-      left: (timeFactor) => {
+      left: timeFactor => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        Store.dispatch(yawFlycamAction(rotateValue * timeFactor, this.props.viewMode === Constants.MODE_ARBITRARY));
+        Store.dispatch(
+          yawFlycamAction(
+            rotateValue * timeFactor,
+            this.props.viewMode === Constants.MODE_ARBITRARY,
+          ),
+        );
       },
-      right: (timeFactor) => {
+      right: timeFactor => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        Store.dispatch(yawFlycamAction(-rotateValue * timeFactor, this.props.viewMode === Constants.MODE_ARBITRARY));
+        Store.dispatch(
+          yawFlycamAction(
+            -rotateValue * timeFactor,
+            this.props.viewMode === Constants.MODE_ARBITRARY,
+          ),
+        );
       },
-      up: (timeFactor) => {
+      up: timeFactor => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        Store.dispatch(pitchFlycamAction(-rotateValue * timeFactor, this.props.viewMode === Constants.MODE_ARBITRARY));
+        Store.dispatch(
+          pitchFlycamAction(
+            -rotateValue * timeFactor,
+            this.props.viewMode === Constants.MODE_ARBITRARY,
+          ),
+        );
       },
-      down: (timeFactor) => {
+      down: timeFactor => {
         const rotateValue = Store.getState().userConfiguration.rotateValue;
-        Store.dispatch(pitchFlycamAction(rotateValue * timeFactor, this.props.viewMode === Constants.MODE_ARBITRARY));
+        Store.dispatch(
+          pitchFlycamAction(
+            rotateValue * timeFactor,
+            this.props.viewMode === Constants.MODE_ARBITRARY,
+          ),
+        );
       },
     });
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
-
       // Branches
-      b: () => { Store.dispatch(createBranchPointAction()); },
-      j: () => { Store.dispatch(requestDeleteBranchPointAction()); },
+      b: () => {
+        Store.dispatch(createBranchPointAction());
+      },
+      j: () => {
+        Store.dispatch(requestDeleteBranchPointAction());
+      },
 
       // Branchpointvideo
       ".": () => this.nextNode(true),
       ",": () => this.nextNode(false),
 
-    });
-
-    this.input.keyboardOnce = new InputKeyboard({
       // Delete active node and recenter last node
-      "shift + space": () => { Store.dispatch(deleteNodeAction()); },
-    }, -1);
+      "shift + space": () => {
+        Store.dispatch(deleteNodeAction());
+      },
+    });
   }
 
   // make sure that it is not possible to keep nodes from being created
@@ -77,6 +111,5 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
     super.setWaypoint();
   }
 }
-
 
 export default MinimalSkeletonTracingArbitraryController;

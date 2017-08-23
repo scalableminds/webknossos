@@ -29,10 +29,18 @@ import * as THREE from "three";
 
 function TrackballControls(object, domElement, target, updateCallback) {
   const _this = this;
-  const STATE = { NONE: -1, PAN: 0, ZOOM: 1, ROTATE: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM: 4, TOUCH_PAN: 5 };
+  const STATE = {
+    NONE: -1,
+    PAN: 0,
+    ZOOM: 1,
+    ROTATE: 2,
+    TOUCH_ROTATE: 3,
+    TOUCH_ZOOM: 4,
+    TOUCH_PAN: 5,
+  };
 
   this.object = object;
-  this.domElement = (domElement !== undefined) ? domElement : document;
+  this.domElement = domElement !== undefined ? domElement : document;
   this.updateCallback = updateCallback;
 
   // API
@@ -94,7 +102,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
   const startEvent = { type: "start" };
   const endEvent = { type: "end" };
 
-
   // methods
 
   this.getScreenBounds = function getScreenBounds() {
@@ -127,7 +134,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     const objectUp = new THREE.Vector3();
     const mouseOnBall = new THREE.Vector3();
 
-
     return (pageX, pageY, projection) => {
       const screenBounds = _this.getScreenBounds();
 
@@ -135,7 +141,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
         (pageX - screenBounds.width * 0.5 - screenBounds.left) / (screenBounds.width * 0.5),
         (screenBounds.height * 0.5 + screenBounds.top - pageY) / (screenBounds.height * 0.5),
         0.0,
-     );
+      );
 
       const length = mouseOnBall.length();
 
@@ -165,9 +171,10 @@ function TrackballControls(object, domElement, target, updateCallback) {
     const axis = new THREE.Vector3();
     const quaternion = new THREE.Quaternion();
 
-
     return () => {
-      let angle = Math.acos(_rotateStart.dot(_rotateEnd) / _rotateStart.length() / _rotateEnd.length());
+      let angle = Math.acos(
+        _rotateStart.dot(_rotateEnd) / _rotateStart.length() / _rotateEnd.length(),
+      );
 
       if (angle) {
         axis.crossVectors(_rotateStart, _rotateEnd).normalize();
@@ -231,7 +238,9 @@ function TrackballControls(object, domElement, target, updateCallback) {
         if (_this.staticMoving) {
           _panStart.copy(_panEnd);
         } else {
-          _panStart.add(mouseChange.subVectors(_panEnd, _panStart).multiplyScalar(_this.dynamicDampingFactor));
+          _panStart.add(
+            mouseChange.subVectors(_panEnd, _panStart).multiplyScalar(_this.dynamicDampingFactor),
+          );
         }
       }
     };
@@ -249,7 +258,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     }
   };
 
-  this.update = () => {
+  this.update = (externalUpdate = false) => {
     _eye.subVectors(_this.object.position, _this.lastTarget);
 
     if (!_this.noRotate) {
@@ -277,7 +286,9 @@ function TrackballControls(object, domElement, target, updateCallback) {
     }
 
     _this.lastTarget = _this.target.clone();
-    _this.updateCallback();
+    if (!externalUpdate) {
+      _this.updateCallback();
+    }
   };
 
   this.reset = () => {
@@ -386,9 +397,11 @@ function TrackballControls(object, domElement, target, updateCallback) {
 
     let delta = 0;
 
-    if (event.wheelDelta) { // WebKit / Opera / Explorer 9
+    if (event.wheelDelta) {
+      // WebKit / Opera / Explorer 9
       delta = event.wheelDelta / 40;
-    } else if (event.detail) { // Firefox
+    } else if (event.detail) {
+      // Firefox
       delta = -event.detail / 3;
     }
 
@@ -401,28 +414,36 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     switch (event.touches.length) {
-
       case 1:
         _state = STATE.TOUCH_ROTATE;
-        _rotateEnd.copy(_this.getMouseProjectionOnBall(event.touches[0].pageX, event.touches[0].pageY, _rotateStart));
+        _rotateEnd.copy(
+          _this.getMouseProjectionOnBall(
+            event.touches[0].pageX,
+            event.touches[0].pageY,
+            _rotateStart,
+          ),
+        );
         break;
 
       case 2: {
         _state = STATE.TOUCH_ZOOM;
         const dx = event.touches[0].pageX - event.touches[1].pageX;
         const dy = event.touches[0].pageY - event.touches[1].pageY;
-        _touchZoomDistanceEnd = _touchZoomDistanceStart = Math.sqrt(dx * dx + dy * dy);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        _touchZoomDistanceEnd = distance;
+        _touchZoomDistanceStart = distance;
         break;
       }
 
       case 3:
         _state = STATE.TOUCH_PAN;
-        _panEnd.copy(_this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panStart));
+        _panEnd.copy(
+          _this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panStart),
+        );
         break;
 
       default:
         _state = STATE.NONE;
-
     }
     _this.dispatchEvent(startEvent);
   }
@@ -433,7 +454,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
     event.preventDefault();
 
     switch (event.touches.length) {
-
       case 1:
         _this.getMouseProjectionOnBall(event.touches[0].pageX, event.touches[0].pageY, _rotateEnd);
         break;
@@ -451,7 +471,6 @@ function TrackballControls(object, domElement, target, updateCallback) {
 
       default:
         _state = STATE.NONE;
-
     }
   }
 
@@ -459,22 +478,29 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     switch (event.touches.length) {
-
       case 1:
-        _rotateStart.copy(_this.getMouseProjectionOnBall(event.touches[0].pageX, event.touches[0].pageY, _rotateEnd));
+        _rotateStart.copy(
+          _this.getMouseProjectionOnBall(
+            event.touches[0].pageX,
+            event.touches[0].pageY,
+            _rotateEnd,
+          ),
+        );
         break;
 
       case 2:
-        _touchZoomDistanceStart = _touchZoomDistanceEnd = 0;
+        _touchZoomDistanceStart = 0;
+        _touchZoomDistanceEnd = 0;
         break;
 
       case 3:
-        _panStart.copy(_this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panEnd));
+        _panStart.copy(
+          _this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panEnd),
+        );
         break;
 
       default:
-        // Do nothing
-
+      // Do nothing
     }
 
     _state = STATE.NONE;
@@ -482,7 +508,13 @@ function TrackballControls(object, domElement, target, updateCallback) {
   }
 
   this.destroy = () => {
-    this.domElement.removeEventListener("contextmenu", (event) => { event.preventDefault(); }, false);
+    this.domElement.removeEventListener(
+      "contextmenu",
+      event => {
+        event.preventDefault();
+      },
+      false,
+    );
 
     this.domElement.removeEventListener("mousedown", mousedown, false);
 
@@ -497,7 +529,13 @@ function TrackballControls(object, domElement, target, updateCallback) {
     window.removeEventListener("keyup", keyup, false);
   };
 
-  this.domElement.addEventListener("contextmenu", (event) => { event.preventDefault(); }, false);
+  this.domElement.addEventListener(
+    "contextmenu",
+    event => {
+      event.preventDefault();
+    },
+    false,
+  );
 
   this.domElement.addEventListener("mousedown", mousedown, false);
 

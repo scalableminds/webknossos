@@ -18,14 +18,12 @@ class TaskTypeModel extends Backbone.Model {
     };
   }
 
-
   parse(response) {
     response.formattedHash = FormatUtils.formatHash(response.id);
     response.formattedShortText = FormatUtils.formatShortText(response.description);
 
     return response;
   }
-
 
   destroy() {
     const options = { url: `/api/taskTypes/${this.get("id")}` };

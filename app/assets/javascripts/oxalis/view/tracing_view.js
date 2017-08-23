@@ -3,7 +3,7 @@
  * @flow
  */
 
-import React from "react";
+import * as React from "react";
 import classnames from "classnames";
 import { connect } from "react-redux";
 import { Switch } from "antd";
@@ -15,16 +15,16 @@ import type { OxalisState } from "oxalis/store";
 import type { ModeType } from "oxalis/constants";
 import type { Dispatch } from "redux";
 
-class TracingView extends React.PureComponent {
-  props: {
-    flightmodeRecording: boolean,
-    onChangeFlightmodeRecording: ?Function,
-    viewMode: ModeType,
-    scale: number,
-    isVolumeTracingDisallowed: boolean,
-  }
+type Props = {
+  flightmodeRecording: boolean,
+  onChangeFlightmodeRecording: ?Function,
+  viewMode: ModeType,
+  scale: number,
+  isVolumeTracingDisallowed: boolean,
+};
 
-  handleContextMenu(event: SyntheticInputEvent) {
+class TracingView extends React.PureComponent<Props> {
+  handleContextMenu(event: SyntheticInputEvent<>) {
     // hide contextmenu, while rightclicking a canvas
     event.preventDefault();
   }
@@ -36,7 +36,7 @@ class TracingView extends React.PureComponent {
       unCheckedChildren="Watching"
       checked={this.props.flightmodeRecording}
       onChange={this.props.onChangeFlightmodeRecording}
-    />
+    />;
 
   render() {
     const isArbitraryMode = Constants.MODES_ARBITRARY.includes(this.props.viewMode);
@@ -52,8 +52,8 @@ class TracingView extends React.PureComponent {
 
     return (
       <div id="tracing" className={divClassName} onContextMenu={this.handleContextMenu}>
-        { inputCatchers }
-        { flightModeRecordingSwitch }
+        {inputCatchers}
+        {flightModeRecordingSwitch}
         <canvas id="render-canvas" style={canvasStyle} />
       </div>
     );

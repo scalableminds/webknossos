@@ -55,12 +55,11 @@ export const OrthoViewCrosshairColors: OrthoViewMapType<[number, number]> = {
 
 export const OrthoViewGrayCrosshairColor = 0x222222;
 
-
 export const ControlModeEnum = {
   TRACE: "TRACE",
   VIEW: "VIEW",
 };
-export type ControlModeType = $Keys<typeof ControlModeEnum>
+export type ControlModeType = $Keys<typeof ControlModeEnum>;
 
 const Constants = {
   ARBITRARY_VIEW: 4,
@@ -95,6 +94,11 @@ const Constants = {
   MIN_SCALE: 0.5,
   MAX_SCALE: 20,
 
+  // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
+  MIN_NODE_RADIUS: 1,
+  MAX_NODE_RADIUS: 5000,
+
+  // The particle size is measured in pixels - it's independent of zoom and dataset scale
   MIN_PARTICLE_SIZE: 1,
   MAX_PARTICLE_SIZE: 20,
 

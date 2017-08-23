@@ -1,5 +1,3 @@
-import scala.concurrent.duration._
-
 import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Mailer
@@ -21,6 +19,8 @@ import play.api.libs.concurrent._
 import play.api.libs.json.Json
 import play.api.mvc._
 
+import scala.concurrent.duration._
+
 object Global extends GlobalSettings with LazyLogging{
 
   override def onStart(app: Application) {
@@ -30,7 +30,7 @@ object Global extends GlobalSettings with LazyLogging{
     startActors(conf.underlying, app)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insert()
+      InitialData.insert(conf)
     }
 
     CleanUpService.register("deletion of expired dataTokens", DataToken.expirationTime){
@@ -67,29 +67,33 @@ object Global extends GlobalSettings with LazyLogging{
  * Initial set of data to be imported
  * in the sample application.
  */
-object InitialData extends GlobalDBAccess with LazyLogging{
+object InitialData extends GlobalDBAccess with LazyLogging {
 
   val mpi = Team("Connectomics department", None, RoleService.roles)
 
-  def insert() = {
-    insertUsers()
+  def insert(conf: Configuration) = {
+    insertDefaultUser(conf)
     insertTeams()
     insertTasks()
-    insertLocalDataStore()
+    if (conf.getBoolean("datastore.enabled").getOrElse(true)) {
+      insertLocalDataStore(conf)
+    }
   }
 
-  def insertUsers() = {
-    UserDAO.findOneByEmail("scmboy@scalableminds.com").futureBox.map {
+  def insertDefaultUser(conf: Configuration) = {
+    UserService.defaultUser.futureBox.map {
       case Full(_) =>
       case _ =>
+        val email = conf.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
+        val password = conf.getString("application.authentication.defaultUser.password").getOrElse("secret")
         logger.info("Inserted default user scmboy")
         UserDAO.insert(User(
-          "scmboy@scalableminds.com",
+          email,
           "SCM",
           "Boy",
           true,
-          SCrypt.hashPassword("secret"),
-          SCrypt.md5("secret"),
+          SCrypt.hashPassword(password),
+          SCrypt.md5(password),
           List(TeamMembership(mpi.name, Role.Admin)))
         )
     }
@@ -116,10 +120,11 @@ object InitialData extends GlobalDBAccess with LazyLogging{
     }
   }
 
-  def insertLocalDataStore() = {
+  def insertLocalDataStore(conf: Configuration) = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        DataStoreDAO.insert(DataStore("localhost", None, WebKnossosStore, "something-secure"))
+        val url = conf.getString("http.uri").getOrElse("http://localhost:9000")
+        DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, "something-secure"))
       }
     }
   }

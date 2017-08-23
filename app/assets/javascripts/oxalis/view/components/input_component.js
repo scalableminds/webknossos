@@ -1,6 +1,6 @@
 // @flow
 
-import React from "react";
+import * as React from "react";
 import _ from "lodash";
 import { Input } from "antd";
 
@@ -28,18 +28,17 @@ type InputComponentStateType = {
  * Inspired by https://github.com/facebook/react/issues/955#issuecomment-281802381
  * @class
  */
-class InputComponent extends React.PureComponent {
-
-  props: InputComponentPropType;
+class InputComponent extends React.PureComponent<InputComponentPropType, InputComponentStateType> {
   static defaultProps: InputComponentPropType = {
     onChange: _.noop,
     onFocus: _.noop,
     onBlur: _.noop,
     placeholder: "",
     value: "",
+    style: {},
   };
 
-  state: InputComponentStateType = {
+  state = {
     isFocused: false,
     currentValue: this.props.value,
   };
@@ -48,39 +47,41 @@ class InputComponent extends React.PureComponent {
     if (!this.state.isFocused) {
       this.setState({ currentValue: nextProps.value });
     }
-  }
+  };
 
-  handleChange = (e: SyntheticInputEvent) => {
+  handleChange = (e: SyntheticInputEvent<>) => {
     this.setState({ currentValue: e.target.value });
     if (this.props.onChange) {
       this.props.onChange(e);
     }
-  }
+  };
 
-  handleFocus = (e: SyntheticInputEvent) => {
+  handleFocus = (e: SyntheticInputEvent<>) => {
     this.setState({ isFocused: true });
     if (this.props.onFocus) {
       this.props.onFocus(e);
     }
-  }
+  };
 
-  handleBlur = (e: SyntheticInputEvent) => {
+  handleBlur = (e: SyntheticInputEvent<>) => {
     this.setState({ isFocused: false });
     if (this.props.onBlur) {
       this.props.onBlur(e);
     }
-  }
+  };
 
   render() {
-    return (<Input
-      {...this.props}
-      onChange={this.handleChange}
-      onFocus={this.handleFocus}
-      onBlur={this.handleBlur}
-      value={this.state.currentValue}
-      style={this.props.style}
-      placeholder={this.props.placeholder}
-    />);
+    return (
+      <Input
+        {...this.props}
+        onChange={this.handleChange}
+        onFocus={this.handleFocus}
+        onBlur={this.handleBlur}
+        value={this.state.currentValue}
+        style={this.props.style}
+        placeholder={this.props.placeholder}
+      />
+    );
   }
 }
 

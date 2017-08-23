@@ -81,12 +81,8 @@ export type ServerVolumeTracingType = {
   fallbackLayer?: string,
   id: string,
   version: number,
-<<<<<<< HEAD
   zoomLevel: number,
-=======
-  isPublic: boolean,
   tags: Array<string>,
->>>>>>> master
 };
 
 type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;

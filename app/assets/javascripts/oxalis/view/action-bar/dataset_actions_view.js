@@ -16,31 +16,11 @@ import api from "oxalis/api/internal_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 
-<<<<<<< HEAD
-class DatasetActionsView extends PureComponent {
-  props: {
-    // eslint-disable-next-line react/no-unused-prop-types
-    tracingType: string,
-    // eslint-disable-next-line react/no-unused-prop-types
-    annotationId: string,
-    // eslint-disable-next-line react/no-unused-prop-types
-    restrictions: RestrictionsType & SettingsType,
-    // eslint-disable-next-line react/no-unused-prop-types
-    dispatch: Dispatch<*>,
-    task: ?TaskType,
-  };
-
-  state: {
-    isShareModalOpen: boolean,
-    isMergeModalOpen: boolean,
-    isUserScriptsModalOpen: boolean,
-  } = {
-=======
 type Props = {
   // eslint-disable-next-line react/no-unused-prop-types
   tracingType: string,
   // eslint-disable-next-line react/no-unused-prop-types
-  tracingId: string,
+  annotationId: string,
   // eslint-disable-next-line react/no-unused-prop-types
   restrictions: RestrictionsType & SettingsType,
   // eslint-disable-next-line react/no-unused-prop-types
@@ -56,7 +36,6 @@ type State = {
 
 class DatasetActionsView extends PureComponent<Props, State> {
   state = {
->>>>>>> master
     isShareModalOpen: false,
     isMergeModalOpen: false,
     isUserScriptsModalOpen: false,

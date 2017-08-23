@@ -135,19 +135,11 @@ export type APIAnnotationType = {
     +isFinished: boolean,
     +isInProgress: boolean,
   },
-<<<<<<< HEAD
   +stats: { +numberOfNodes: number, +numberOfEdges: number, +numberOfTrees: number },
+  +tags: Array<string>,
   +task: APITaskType,
   +tracingTime: number,
   +typ: APITracingTypeTracingType,
-=======
-  +formattedHash: string,
-  +downloadUrl: string,
-  +contentType: string,
-  +dataSetName: string,
-  +tracingTime: null,
-  +tags: Array<string>,
->>>>>>> master
 };
 
 export type APITaskWithAnnotationType = {

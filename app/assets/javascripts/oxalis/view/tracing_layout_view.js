@@ -20,24 +20,15 @@ import type { ControlModeType } from "oxalis/constants";
 
 const { Header, Sider } = Layout;
 
-<<<<<<< HEAD
-class TracingLayoutView extends React.PureComponent {
-  props: {
-    initialTracingType: TracingTypeTracingType,
-    initialAnnotationId: string,
-    initialControlmode: ControlModeType,
-  };
-=======
 type Props = {
-  initialTracingType: SkeletonTracingTypeTracingType,
-  initialTracingId: string,
+  initialTracingType: TracingTypeTracingType,
+  initialAnnotationId: string,
   initialControlmode: ControlModeType,
 };
 
 type State = {
   isSettingsCollapsed: boolean,
 };
->>>>>>> master
 
 class TracingLayoutView extends React.PureComponent<Props, State> {
   state = {

@@ -247,19 +247,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     Modal.confirm({
       content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags?`,
       onOk: async () => {
-<<<<<<< HEAD
-        const unarchivedAnnoationIds = this.state.unarchivedTracings.map(t => t.id);
-        const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
-          method: "POST",
-          data: {
-            annotations: unarchivedAnnoationIds,
-=======
         const selectedAnnotationIds = selectedAnnotations.map(t => t.id);
         const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
           method: "POST",
           data: {
             annotations: selectedAnnotationIds,
->>>>>>> master
           },
         });
         Toast.message(data.messages);

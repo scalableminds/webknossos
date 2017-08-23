@@ -36,19 +36,9 @@ import { fetchGistContent } from "libs/gist";
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
-<<<<<<< HEAD
-class Controller extends React.PureComponent {
-  props: {
-    initialTracingType: TracingTypeTracingType,
-    initialAnnotationId: string,
-    initialControlmode: ControlModeType,
-    // Delivered by connect()
-    viewMode: ModeType,
-  };
-=======
 type Props = {
-  initialTracingType: SkeletonTracingTypeTracingType,
-  initialTracingId: string,
+  initialTracingType: TracingTypeTracingType,
+  initialAnnotationId: string,
   initialControlmode: ControlModeType,
   // Delivered by connect()
   viewMode: ModeType,
@@ -57,7 +47,6 @@ type Props = {
 type State = {
   ready: boolean,
 };
->>>>>>> master
 
 class Controller extends React.PureComponent<Props, State> {
   keyboardNoLoop: InputKeyboardNoLoop;

@@ -3,7 +3,7 @@
  * @flow
  */
 
-import React from "react";
+import * as React from "react";
 import { Provider } from "react-redux";
 import app from "app";
 import Store from "oxalis/throttled_store";
@@ -20,13 +20,26 @@ import type { ControlModeType } from "oxalis/constants";
 
 const { Header, Sider } = Layout;
 
+<<<<<<< HEAD
 class TracingLayoutView extends React.PureComponent {
   props: {
     initialTracingType: TracingTypeTracingType,
     initialAnnotationId: string,
     initialControlmode: ControlModeType,
   };
+=======
+type Props = {
+  initialTracingType: SkeletonTracingTypeTracingType,
+  initialTracingId: string,
+  initialControlmode: ControlModeType,
+};
 
+type State = {
+  isSettingsCollapsed: boolean,
+};
+>>>>>>> master
+
+class TracingLayoutView extends React.PureComponent<Props, State> {
   state = {
     isSettingsCollapsed: true,
   };

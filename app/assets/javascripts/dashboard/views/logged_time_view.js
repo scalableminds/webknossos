@@ -1,6 +1,6 @@
 // @flow
 
-import React from "react";
+import * as React from "react";
 import moment from "moment";
 import { Table, Row, Col } from "antd";
 import FormatUtils from "libs/format_utils";
@@ -9,14 +9,16 @@ import C3Chart from "react-c3js";
 
 const { Column } = Table;
 
-export default class LoggedTimeView extends React.PureComponent {
-  props: {
-    userID: ?string,
-  };
+type Props = {
+  userID: ?string,
+};
 
-  state: {
-    timeEntries: Array<Object>,
-  } = {
+type State = {
+  timeEntries: Array<Object>,
+};
+
+export default class LoggedTimeView extends React.PureComponent<Props, State> {
+  state = {
     timeEntries: [],
   };
 

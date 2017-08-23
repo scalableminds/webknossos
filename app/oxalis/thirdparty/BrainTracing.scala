@@ -94,7 +94,8 @@ object BrainTracing extends LazyLogging with FoxImplicits {
       Mailer ! Send(DefaultMails.overLimitMail(
         user,
         p.name,
-        task.map(_.id)))
+        task.map(_.id),
+        a.id))
     }
   }
 

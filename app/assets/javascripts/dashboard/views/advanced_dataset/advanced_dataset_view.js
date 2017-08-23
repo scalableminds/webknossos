@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function */
 
-import React from "react";
+import * as React from "react";
 import TemplateHelpers from "libs/template_helpers";
 import type { DatasetType } from "dashboard/views/dataset_view";
 import Utils from "libs/utils";
@@ -16,14 +16,12 @@ type Props = {
   searchQuery: string,
 };
 
-class AdvancedDatasetView extends React.PureComponent {
-  props: Props;
-
+class AdvancedDatasetView extends React.PureComponent<Props> {
   render() {
     return (
       <div>
         <Table
-          dataSource={Utils.filterWithSearchQuery(
+          dataSource={Utils.filterWithSearchQueryOR(
             this.props.datasets,
             ["name", "owningTeam", "description"],
             this.props.searchQuery,
@@ -103,7 +101,7 @@ class AdvancedDatasetView extends React.PureComponent {
             dataIndex="dataSource.dataLayers"
             render={(__, dataset) =>
               (dataset.dataSource.dataLayers || []).map(layer =>
-                <Tag key={`${layer.category} - ${layer.elementClass}`}>
+                <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
                 </Tag>,
               )}

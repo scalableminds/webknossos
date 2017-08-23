@@ -3,7 +3,7 @@
  * @flow
  */
 
-import React from "react";
+import * as React from "react";
 import { Tabs } from "antd";
 import UserSettingsView from "oxalis/view/settings/user_settings_view";
 import DatasetSettingsView from "oxalis/view/settings/dataset_settings_view";

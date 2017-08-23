@@ -25,16 +25,16 @@ case class Annotation(
                        settings: AnnotationSettings,
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
-                       isActive: Boolean = true,
                        state: AnnotationState = AnnotationState.InProgress,
                        created : Long = System.currentTimeMillis,
                        tracingTime: Option[Long] = None,
                        _name: Option[String] = None,
                        _task: Option[BSONObjectID] = None,
                        _id: BSONObjectID = BSONObjectID.generate,
-                       isPublic: Boolean = false
-                     )
-  extends FoxImplicits {
+                       isActive: Boolean = true,
+                       isPublic: Boolean = false,
+                       tags: Set[String] = Set.empty
+                     ) extends FoxImplicits {
 
   val name = _name getOrElse ""
 
@@ -97,17 +97,14 @@ case class Annotation(
   }
 }
 
+object Annotation  {
+  implicit val annotationFormat = Json.format[Annotation]
+}
 
-object Annotation  {implicit val annotationFormat = Json.format[Annotation]}
-
-
-
-
-
-
-object AnnotationDAO
-  extends SecuredBaseDAO[Annotation]
-  with FoxImplicits with MongoHelpers with QuerySupportedDAO[Annotation]{
+object AnnotationDAO extends SecuredBaseDAO[Annotation]
+  with FoxImplicits
+  with MongoHelpers
+  with QuerySupportedDAO[Annotation] {
 
   val collectionName = "annotations"
 
@@ -275,6 +272,12 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("isPublic" -> isPublic)),
+      returnNew = true)
+
+  def setTags(_annotation: BSONObjectID, tags: List[String])(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("tags" -> tags)),
       returnNew = true)
 
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =

@@ -2,19 +2,21 @@ package models.task
 
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.basics._
 import models.project.Project
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsArray, Json}
+import play.api.libs.json.{JsArray, JsObject, Json}
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
 case class OpenAssignment(
+  instances: Int,
   _task: BSONObjectID,
   team: String,
   _project: String,
@@ -37,8 +39,8 @@ case class OpenAssignment(
 object OpenAssignment extends FoxImplicits {
   implicit val openAssignmentFormat = Json.format[OpenAssignment]
 
-  def from(task: Task, project: Project): OpenAssignment =
-    OpenAssignment(task._id, task.team, task._project, task.neededExperience,
+  def from(task: Task, project: Project, instances: Int): OpenAssignment =
+    OpenAssignment(instances, task._id, task.team, task._project, task.neededExperience,
       priority = if(project.paused) -1 else project.priority)
 }
 
@@ -89,12 +91,16 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     find(validPriorityQ).sort(byPriority).cursor[OpenAssignment]().enumerate()
   }
 
-  def countFor(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
-    count(Json.obj("_task" -> _task))
+  private def countInstances(query: JsObject)(implicit ctx: DBAccessContext): Fox[Int] = {
+    find(query).cursor[OpenAssignment]().fold(0)((count, assignment) => count + assignment.instances)
+  }
+
+  def countForTask(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
+    countInstances(Json.obj("_task" -> _task))
   }
 
   def countForProject(project: String)(implicit ctx: DBAccessContext) = {
-    count(Json.obj("_project" -> project))
+    countInstances(Json.obj("_project" -> project))
   }
 
   def removeByTask(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
@@ -106,14 +112,32 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {
-    count(Json.obj())
+    countInstances(Json.obj())
+  }
+
+  def updateRemainingInstances(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
+    update(
+      Json.obj("_project" -> project.name, "_task" -> task._id),
+      Json.obj("$set" -> Json.obj("instances" -> remainingInstances))
+    )
+  }
+
+  def decrementInstanceCount(id: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[WriteResult] {
+    update(
+      Json.obj("_id" -> id, "instances" -> Json.obj("$gt" -> 0)),
+      Json.obj("$inc" -> Json.obj("instances" -> -1))
+    ).map { writeResult =>
+      // delete OpenAssignment, if no more instances are available
+      if (writeResult.n == 0) removeById(id)
+      writeResult
+    }
   }
 
   def updateAllOf(name: String, project: Project)(implicit ctx: DBAccessContext) = {
     update(Json.obj("_project" -> name), Json.obj("$set" -> Json.obj(
       "priority" -> (if(project.paused) -1 else project.priority),
       "_project" -> name
-    )),multi = true)
+    )), multi = true)
   }
 
   def updateAllOf(task: Task)(implicit ctx: DBAccessContext) = {
@@ -121,6 +145,6 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
       "team" -> task.team,
       "project" -> task._project,
       "neededExperience" -> task.neededExperience
-    )),multi = true)
+    )), multi = true)
   }
 }

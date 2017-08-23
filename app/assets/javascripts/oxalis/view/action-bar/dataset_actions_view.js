@@ -16,6 +16,7 @@ import api from "oxalis/api/internal_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 
+<<<<<<< HEAD
 class DatasetActionsView extends PureComponent {
   props: {
     // eslint-disable-next-line react/no-unused-prop-types
@@ -34,6 +35,28 @@ class DatasetActionsView extends PureComponent {
     isMergeModalOpen: boolean,
     isUserScriptsModalOpen: boolean,
   } = {
+=======
+type Props = {
+  // eslint-disable-next-line react/no-unused-prop-types
+  tracingType: string,
+  // eslint-disable-next-line react/no-unused-prop-types
+  tracingId: string,
+  // eslint-disable-next-line react/no-unused-prop-types
+  restrictions: RestrictionsType & SettingsType,
+  // eslint-disable-next-line react/no-unused-prop-types
+  dispatch: Dispatch<*>,
+  task: ?TaskType,
+};
+
+type State = {
+  isShareModalOpen: boolean,
+  isMergeModalOpen: boolean,
+  isUserScriptsModalOpen: boolean,
+};
+
+class DatasetActionsView extends PureComponent<Props, State> {
+  state = {
+>>>>>>> master
     isShareModalOpen: false,
     isMergeModalOpen: false,
     isUserScriptsModalOpen: false,
@@ -41,20 +64,20 @@ class DatasetActionsView extends PureComponent {
 
   modalWrapper: ?HTMLDivElement = null;
 
-  handleSave = async (event?: SyntheticInputEvent) => {
+  handleSave = async (event?: SyntheticInputEvent<>) => {
     if (event != null) {
       event.target.blur();
     }
     await Model.save();
   };
 
-  handleCopyToAccount = async (event: SyntheticInputEvent) => {
+  handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
     const url = `/annotations/${this.props.tracingType}/${this.props.annotationId}/duplicate`;
     app.router.loadURL(url);
   };
 
-  handleFinish = async (event: SyntheticInputEvent) => {
+  handleFinish = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
     const url = `/annotations/${this.props.tracingType}/${this.props
       .annotationId}/finishAndRedirect`;
@@ -72,7 +95,7 @@ class DatasetActionsView extends PureComponent {
     this.setState({ isShareModalOpen: false });
   };
 
-  handleDownload = async (event: SyntheticInputEvent) => {
+  handleDownload = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
     const win = window.open("about:blank", "_blank");
     win.document.body.innerHTML = messages["download.wait"];
@@ -84,7 +107,7 @@ class DatasetActionsView extends PureComponent {
     win.document.body.innerHTML = messages["download.close_window"];
   };
 
-  handleFinishAndGetNextTask = async (event: SyntheticInputEvent) => {
+  handleFinishAndGetNextTask = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
     api.tracing.finishAndGetNextTask();
   };

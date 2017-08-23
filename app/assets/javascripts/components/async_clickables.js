@@ -1,9 +1,7 @@
 // @flow
 /* eslint-disable react/no-unused-prop-types, react/no-unused-props, react/jsx-no-bind, react/no-multi-comp  */
-import React from "react";
+import * as React from "react";
 import { Button, Spin } from "antd";
-
-const ReactElement = React.Element;
 
 const onClick = async function() {
   this.setState({ isLoading: true });
@@ -22,10 +20,9 @@ type Props = {
 
 type State = { isLoading: boolean };
 
-export class AsyncButton extends React.PureComponent {
-  props: Props;
+export class AsyncButton extends React.PureComponent<Props, State> {
   _isMounted: boolean;
-  state: State = { isLoading: false };
+  state = { isLoading: false };
 
   componentDidMount() {
     this._isMounted = true;
@@ -40,13 +37,12 @@ export class AsyncButton extends React.PureComponent {
   }
 }
 
-export class AsyncLink extends React.PureComponent {
-  props: Props & { children: Array<ReactElement<*>> };
+export class AsyncLink extends React.PureComponent<Props & { children: React.Node }, State> {
   _isMounted: boolean;
   static defaultProps = {
     children: [],
   };
-  state: State = { isLoading: false };
+  state = { isLoading: false };
 
   componentDidMount() {
     this._isMounted = true;
@@ -59,7 +55,8 @@ export class AsyncLink extends React.PureComponent {
   render() {
     let content;
     if (this.state.isLoading) {
-      const childrenWithoutIcon = this.props.children.filter(child => child.type !== "i");
+      const children = React.Children.toArray(this.props.children);
+      const childrenWithoutIcon = children.filter(child => !child.type || child.type !== "i");
       content = [<Spin key="icon" />, childrenWithoutIcon];
     } else {
       content = this.props.children;

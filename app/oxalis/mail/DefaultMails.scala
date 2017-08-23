@@ -32,11 +32,11 @@ object DefaultMails {
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(newUserMailingList))
 
-  def overLimitMail(user: User, projectName: String, taskId: Option[String]) =
+  def overLimitMail(user: User, projectName: String, taskId: Option[String], annotationId: String) =
     Mail(
       from = defaultFrom,
       subject = s"Time limit reached. ${user.abreviatedName} in $projectName",
-      bodyText = html.mail.timeLimit(user.name, projectName, taskId.getOrElse(""), uri).body,
+      bodyText = html.mail.timeLimit(user.name, projectName, taskId.getOrElse(""), annotationId, uri).body,
       recipients = List(overTimeMailingList))
 
   /**

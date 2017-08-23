@@ -69,8 +69,6 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
           AnnotationSettings.defaultFor(TracingType.skeleton),
           None,
           typ,
-          true,
-          AnnotationState.InProgress,
           _id = newId)
       }
       AnnotationStore.storeAnnotationInCache(mergedAnnotationFox, newId)

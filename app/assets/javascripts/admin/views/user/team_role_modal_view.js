@@ -1,5 +1,5 @@
 // @flow
-import React from "react";
+import * as React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
@@ -25,19 +25,21 @@ type TeamRoleModalPropType = {
   selectedUserIds: Array<string>,
   users: Array<APIUserType>,
 };
+
+type State = {
+  teams: Array<APITeamType>,
+  selectedTeams: Array<TeamOptionalRoleType>,
+};
+
 /**
  * All team selection in this modal is based on whether their is a role
  * associated with the respective team. In other words, 'selectedTeams' contains
  * all globally available teams, but only those with an attached role are
  * significant. See <APITeamRoleType>
  */
-class TeamRoleModalView extends React.PureComponent {
-  props: TeamRoleModalPropType;
 
-  state: {
-    teams: Array<APITeamType>,
-    selectedTeams: Array<TeamOptionalRoleType>,
-  } = {
+class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State> {
+  state = {
     teams: [],
     selectedTeams: [],
   };
@@ -137,7 +139,7 @@ class TeamRoleModalView extends React.PureComponent {
       <Checkbox
         value={team.team}
         checked={team.role !== null}
-        onChange={(event: SyntheticInputEvent) => {
+        onChange={(event: SyntheticInputEvent<>) => {
           if (event.target.checked) {
             this.handleSelectTeamRole(team.team, ROLES.user);
           } else {

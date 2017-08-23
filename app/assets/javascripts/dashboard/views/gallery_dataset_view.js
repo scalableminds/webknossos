@@ -1,21 +1,32 @@
-// @flow
+// flow
 /* eslint-disable jsx-a11y/href-no-hash */
-
-import React from "react";
-import { Modal, Card } from "antd";
+import * as React from "react";
+import { Row, Col, Modal, Card } from "antd";
+import Utils from "libs/utils";
+import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
 import type { DatasetType } from "dashboard/views/dataset_view";
 
-class SpotlightItemView extends React.PureComponent {
+const padding = 16;
+
+type Props = {
+  datasets: Array<DatasetType>,
+  searchQuery: string,
+};
+
+type State = {
+  contentType: string,
+};
+
+class GalleryDatasetView extends React.PureComponent<Props, State> {
   form: any;
-  props: {
-    dataset: DatasetType,
+
+  static defaultProps = {
+    searchQuery: "",
   };
 
-  state: {
-    contentType: string,
-  } = {
+  state = {
     contentType: "",
   };
 
@@ -36,7 +47,7 @@ class SpotlightItemView extends React.PureComponent {
       });
     } else {
       const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
-      Do you wish to sign up now?`;
+        Do you wish to sign up now?`;
       Modal.confirm({
         content: loginNotice,
         onOk: () => {
@@ -46,14 +57,14 @@ class SpotlightItemView extends React.PureComponent {
     }
   }
 
-  render() {
-    const dataset = this.props.dataset;
+  renderCard(dataset: DatasetType) {
     let description;
     if (dataset.description) {
       description = (
-        <p style={{ whiteSpace: "pre-wrap" }}>
-          {dataset.description}
-        </p>
+        <Markdown
+          source={dataset.description}
+          options={{ html: false, breaks: true, linkify: true }}
+        />
       );
     } else {
       description = dataset.hasSegmentation
@@ -103,6 +114,22 @@ class SpotlightItemView extends React.PureComponent {
       </Card>
     );
   }
+
+  render() {
+    return (
+      <Row gutter={padding}>
+        {Utils.filterWithSearchQueryAND(
+          this.props.datasets.filter(ds => ds.isActive),
+          ["name", "owningTeam", "description"],
+          this.props.searchQuery,
+        ).map(ds =>
+          <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
+            {this.renderCard(ds)}
+          </Col>,
+        )}
+      </Row>
+    );
+  }
 }
 
-export default SpotlightItemView;
+export default GalleryDatasetView;

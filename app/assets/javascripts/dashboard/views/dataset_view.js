@@ -2,14 +2,15 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
-import React from "react";
-import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
+import * as React from "react";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
-import { Spin, Input, Button, Row, Col } from "antd";
-import SpotlightItemView from "./spotlight_item_view";
-import AdvancedDatasetView from "./advanced_dataset/advanced_dataset_view";
+import { Spin, Input, Button } from "antd";
+import AdvancedDatasetView from "dashboard/views/advanced_dataset/advanced_dataset_view";
+import GalleryDatasetView from "dashboard/views/gallery_dataset_view";
+import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
+import type { DataLayerType } from "oxalis/store";
 
 const { Search } = Input;
 
@@ -23,7 +24,14 @@ export type DatasetType = APIDatasetType & {
   formattedCreated: string,
 };
 
-function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>): string {
+type State = {
+  currentDataViewType: "gallery" | "advanced",
+  datasets: Array<DatasetType>,
+  searchQuery: string,
+  isLoading: boolean,
+};
+
+function createThumbnailURL(datasetName: string, layers: Array<DataLayerType>): string {
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
     return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
@@ -31,14 +39,24 @@ function createThumbnailURL(datasetName: string, layers: Array<APIDatasetType>):
   return "";
 }
 
-class DatasetView extends React.PureComponent {
-  props: Props;
-  state: {
-    currentDataViewType: "gallery" | "advanced",
-    datasets: Array<DatasetType>,
-    searchQuery: string,
-    isLoading: boolean,
-  } = {
+export function transformDatasets(datasets: Array<APIDatasetType>): Array<DatasetType> {
+  return _.sortBy(
+    datasets.map(dataset =>
+      Object.assign({}, dataset, {
+        hasSegmentation: _.some(
+          dataset.dataSource.dataLayers,
+          layer => layer.category === "segmentation",
+        ),
+        thumbnailURL: createThumbnailURL(dataset.name, dataset.dataSource.dataLayers),
+        formattedCreated: moment(dataset.created).format("YYYY-MM-DD HH:mm"),
+      }),
+    ),
+    "created",
+  );
+}
+
+class DatasetView extends React.PureComponent<Props, State> {
+  state = {
     currentDataViewType: "gallery",
     datasets: [],
     searchQuery: "",
@@ -54,21 +72,7 @@ class DatasetView extends React.PureComponent {
     this.setState({ isLoading: true });
     const datasets = await Request.receiveJSON(url);
 
-    const transformedDatasets = _.sortBy(
-      datasets.map(dataset => {
-        dataset.hasSegmentation = _.some(
-          dataset.dataSource.dataLayers,
-          layer => layer.category === "segmentation",
-        );
-
-        dataset.thumbnailURL = createThumbnailURL(dataset.name, dataset.dataSource.dataLayers);
-        dataset.formattedCreated = moment(dataset.created).format("YYYY-MM-DD HH:mm");
-
-        return dataset;
-      }),
-      "created",
-    );
-
+    const transformedDatasets = transformDatasets(datasets);
     this.setState({
       datasets: transformedDatasets,
       isLoading: false,
@@ -78,24 +82,13 @@ class DatasetView extends React.PureComponent {
   showAdvancedView = () => this.setState({ currentDataViewType: "advanced" });
   showGalleryView = () => this.setState({ currentDataViewType: "gallery" });
 
-  handleSearch = (event: SyntheticInputEvent): void => {
+  handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
   };
 
   renderGallery() {
-    const padding = 16;
     return (
-      <Row gutter={padding}>
-        {Utils.filterWithSearchQuery(
-          this.state.datasets.filter(ds => ds.isActive),
-          ["name", "owningTeam", "description"],
-          this.state.searchQuery,
-        ).map(ds =>
-          <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
-            <SpotlightItemView dataset={ds} />
-          </Col>,
-        )}
-      </Row>
+      <GalleryDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
     );
   }
 

@@ -7,8 +7,8 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project.Project
 import models.user.User
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 
 object OpenAssignmentService extends FoxImplicits{
@@ -26,11 +26,11 @@ object OpenAssignmentService extends FoxImplicits{
   def removeByProject(project: Project)(implicit ctx: DBAccessContext) =
     OpenAssignmentDAO.removeByProject(project.name)
 
-  def remove(assignment: OpenAssignment)(implicit ctx: DBAccessContext) =
-    OpenAssignmentDAO.removeById(assignment._id)
+  def take(assignment: OpenAssignment)(implicit ctx: DBAccessContext): Fox[WriteResult] =
+    OpenAssignmentDAO.decrementInstanceCount(assignment._id)
 
   def insertOneFor(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
-    OpenAssignmentDAO.insert(OpenAssignment.from(task, project))
+    OpenAssignmentDAO.insert(OpenAssignment.from(task, project, 1))
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {
@@ -38,15 +38,11 @@ object OpenAssignmentService extends FoxImplicits{
   }
 
   def insertInstancesFor(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
-    val assignments = List.fill(remainingInstances)(OpenAssignment.from(task, project))
-    Fox.serialSequence(assignments)(a => OpenAssignmentDAO.insert(a))
+    OpenAssignmentDAO.insert(OpenAssignment.from(task, project, remainingInstances))
   }
 
-  def updateAllOf(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
-    for{
-      _ <- removeByTask(task._id)
-      _ <- insertInstancesFor(task, project, remainingInstances).toFox
-    } yield true
+  def updateRemainingInstances(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
+    OpenAssignmentDAO.updateRemainingInstances(task, project, remainingInstances)
   }
 
   def updateAllOfProject(name: String, project: Project)(implicit ctx: DBAccessContext) = {

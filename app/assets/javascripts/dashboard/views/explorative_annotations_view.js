@@ -1,17 +1,20 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import _ from "lodash";
+import * as React from "react";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
-import { Spin, Input, Table, Button, Upload, Modal } from "antd";
+import { Spin, Input, Table, Button, Upload, Modal, Tag } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
 import update from "immutability-helper";
 import app from "app";
+import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -21,20 +24,22 @@ type Props = {
   isAdminView: boolean,
 };
 
-export default class ExplorativeAnnotationsView extends React.PureComponent {
-  props: Props;
-  state: {
-    shouldShowArchivedTracings: boolean,
-    archivedTracings: Array<APIAnnotationType>,
-    unarchivedTracings: Array<APIAnnotationType>,
-    didAlreadyFetchMetaInfo: {
-      isArchived: boolean,
-      isUnarchived: boolean,
-    },
-    searchQuery: string,
-    requestCount: number,
-    isUploadingNML: boolean,
-  } = {
+type State = {
+  shouldShowArchivedTracings: boolean,
+  archivedTracings: Array<APIAnnotationType>,
+  unarchivedTracings: Array<APIAnnotationType>,
+  didAlreadyFetchMetaInfo: {
+    isArchived: boolean,
+    isUnarchived: boolean,
+  },
+  searchQuery: string,
+  requestCount: number,
+  isUploadingNML: boolean,
+  tags: Array<string>,
+};
+
+export default class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+  state = {
     shouldShowArchivedTracings: false,
     archivedTracings: [],
     unarchivedTracings: [],
@@ -45,9 +50,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     searchQuery: "",
     requestCount: 0,
     isUploadingNML: false,
+    tags: [],
   };
 
   componentDidMount() {
+    this.restoreSearchTags();
     this.fetchDataMaybe();
   }
 
@@ -62,6 +69,19 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
 
   leaveRequest() {
     this.setState({ requestCount: this.state.requestCount - 1 });
+  }
+
+  restoreSearchTags() {
+    // restore the search query tags from the last session
+    const searchTagString = localStorage.getItem("lastDashboardSearchTags");
+    if (searchTagString) {
+      try {
+        const searchTags = JSON.parse(searchTagString);
+        this.setState({ tags: searchTags });
+      } catch (error) {
+        // pass
+      }
+    }
   }
 
   async fetchDataMaybe(): Promise<void> {
@@ -131,7 +151,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   handleNMLUpload = (info: {
     file: { response: Object, status: "uploading" | "error" | "done" },
     fileList: Array<Object>,
-    event: SyntheticInputEvent,
+    event: SyntheticInputEvent<>,
   }) => {
     const response = info.file.response;
     if (info.file.status === "uploading") {
@@ -193,7 +213,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
       : this.state.unarchivedTracings;
   }
 
-  handleSearch = (event: SyntheticInputEvent): void => {
+  handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
   };
 
@@ -223,34 +243,98 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
   }
 
   archiveAll = () => {
+    const selectedAnnotations = this.getFilteredTracings();
     Modal.confirm({
-      content: "Are you sure you want to archive all explorative annotations?",
+      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags?`,
       onOk: async () => {
+<<<<<<< HEAD
         const unarchivedAnnoationIds = this.state.unarchivedTracings.map(t => t.id);
         const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
           method: "POST",
           data: {
             annotations: unarchivedAnnoationIds,
+=======
+        const selectedAnnotationIds = selectedAnnotations.map(t => t.id);
+        const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
+          method: "POST",
+          data: {
+            annotations: selectedAnnotationIds,
+>>>>>>> master
           },
         });
         Toast.message(data.messages);
 
         this.setState({
-          archivedTracings: this.state.unarchivedTracings.concat(this.state.archivedTracings),
-          unarchivedTracings: [],
+          archivedTracings: this.state.archivedTracings.concat(selectedAnnotations),
+          unarchivedTracings: _.without(this.state.unarchivedTracings, ...selectedAnnotations),
         });
       },
     });
   };
 
+  addTagToSearch = (tag: string): void => {
+    if (!this.state.tags.includes(tag)) {
+      const newTags = update(this.state.tags, { $push: [tag] });
+      this.setState({ tags: newTags });
+      localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
+    }
+  };
+
+  removeTagFromSearch = (tag: string): void => {
+    const newTags = this.state.tags.filter(t => t !== tag);
+    this.setState({ tags: newTags });
+    localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
+  };
+
+  editTagFromAnnotation = (
+    annotation: APIAnnotationType,
+    shouldAddTag: boolean,
+    tag: string,
+    event: SyntheticInputEvent<>,
+  ): void => {
+    event.stopPropagation(); // prevent the onClick event
+    const newTracings = this.state.unarchivedTracings.map(t => {
+      let newAnnotation = t;
+
+      if (t.id === annotation.id) {
+        if (shouldAddTag) {
+          // add the tag to an annotation
+          newAnnotation = update(t, { tags: { $push: [tag] } });
+        } else {
+          // remove the tag from an annotation
+          const newTags = _.without(t.tags, tag);
+          newAnnotation = update(t, { tags: { $set: newTags } });
+        }
+
+        // persist to server
+        const url = `/annotations/${newAnnotation.typ}/${newAnnotation.id}/edit`;
+        Request.sendJSONReceiveJSON(url, { data: { tags: newAnnotation.tags } });
+      }
+      return newAnnotation;
+    });
+    this.setState({ unarchivedTracings: newTracings });
+  };
+
+  handleSearchPressEnter = (event: SyntheticInputEvent<>) => {
+    const value = event.target.value;
+    if (value !== "") {
+      this.addTagToSearch(event.target.value);
+      this.setState({ searchQuery: "" });
+    }
+  };
+
+  getFilteredTracings() {
+    return Utils.filterWithSearchQueryAND(
+      this.getCurrentTracings(),
+      ["id", "name", "modified", "tags"],
+      `${this.state.searchQuery} ${this.state.tags.join(" ")}`,
+    );
+  }
+
   renderTable() {
     return (
       <Table
-        dataSource={Utils.filterWithSearchQuery(
-          this.getCurrentTracings(),
-          ["id", "name", "dataSetName", "contentType"],
-          this.state.searchQuery,
-        )}
+        dataSource={this.getFilteredTracings()}
         rowKey="id"
         pagination={{
           defaultPageSize: 50,
@@ -274,11 +358,6 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
             />}
         />
         <Column
-          title="Dataset"
-          dataIndex="dataSetName"
-          sorter={Utils.localeCompareBy("dataSetName")}
-        />
-        <Column
           title="Stats"
           render={(__, tracing) =>
             tracing.stats && tracing.contentType === "skeleton"
@@ -300,11 +379,38 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
                 </div>
               : null}
         />
-        <Column title="Type" dataIndex="contentType" />
         <Column
-          title="Creation Date"
-          dataIndex="created"
-          sorter={Utils.localeCompareBy("created")}
+          title="Tags"
+          dataIndex="tags"
+          width={500}
+          render={(tags, tracing) =>
+            <div>
+              {tags.map(tag =>
+                <Tag
+                  key={tag}
+                  color={TemplateHelpers.stringToColor(tag)}
+                  onClick={_.partial(this.addTagToSearch, tag)}
+                  onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
+                  closable={
+                    !(tag === tracing.dataSetName || tag === tracing.contentType) &&
+                    !this.state.shouldShowArchivedTracings
+                  }
+                >
+                  {tag}
+                </Tag>,
+              )}
+              {this.state.shouldShowArchivedTracings
+                ? null
+                : <EditableTextIcon
+                    icon="plus"
+                    onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
+                  />}
+            </div>}
+        />
+        <Column
+          title="Modification Date"
+          dataIndex="modified"
+          sorter={Utils.localeCompareBy("modified")}
         />
         <Column
           title="Actions"
@@ -316,13 +422,27 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
     );
   }
 
+  renderSearchTags() {
+    return this.state.tags.map(tag =>
+      <Tag
+        key={tag}
+        color={TemplateHelpers.stringToColor(tag)}
+        afterClose={_.partial(this.removeTagFromSearch, tag)}
+        closable
+      >
+        {tag}
+      </Tag>,
+    );
+  }
+
   render() {
     const marginRight = { marginRight: 8 };
     const search = (
       <Search
         style={{ width: 200, float: "right" }}
-        onPressEnter={this.handleSearch}
+        onPressEnter={this.handleSearchPressEnter}
         onChange={this.handleSearch}
+        value={this.state.searchQuery}
       />
     );
 
@@ -355,6 +475,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent {
               {search}
             </div>}
         <h3>Explorative Annotations</h3>
+        {this.renderSearchTags()}
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
         {this.state.requestCount === 0

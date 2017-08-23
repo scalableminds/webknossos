@@ -3,7 +3,7 @@
  * @flow
  */
 
-import React from "react";
+import * as React from "react";
 import { Tabs } from "antd";
 import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
 import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
@@ -22,9 +22,7 @@ type Props = {
   viewMode: ModeType,
 };
 
-class RightMenuView extends React.PureComponent {
-  props: Props;
-
+class RightMenuView extends React.PureComponent<Props> {
   getTabs() {
     if (this.props.controlMode !== ControlModeEnum.VIEW) {
       if (Constants.MODES_SKELETON.includes(this.props.viewMode)) {

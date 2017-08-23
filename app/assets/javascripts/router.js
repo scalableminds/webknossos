@@ -17,9 +17,8 @@ import PaginationCollection from "admin/models/pagination_collection";
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
 
-import SpotlightView from "dashboard/views/spotlight/spotlight_view";
+import SpotlightView from "dashboard/views/spotlight_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
-import DatasetCollection from "admin/models/dataset/dataset_collection";
 
 // #####
 // This Router contains all the routes for views that have been
@@ -172,7 +171,7 @@ class Router extends BaseRouter {
 
   users() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const view = new ReactBackboneWrapper(admin.UserListView);
+      const view = new ReactBackboneWrapper(admin.UserListView, {});
       this.changeView(view);
     });
   }
@@ -286,12 +285,8 @@ class Router extends BaseRouter {
   }
 
   spotlight() {
-    const collection = new DatasetCollection();
-    const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
-    const view = new SpotlightView({ collection: paginatedCollection });
-
+    const view = new ReactBackboneWrapper(SpotlightView, {});
     this.changeView(view);
-    this.listenTo(collection, "sync", this.hideLoadingSpinner);
   }
 
   taskOverview() {

@@ -1,67 +1,193 @@
-import _ from "lodash";
-import app from "app";
-import Marionette from "backbone.marionette";
-import SortTableBehavior from "libs/behaviors/sort_table_behavior";
-import ProjectListItemView from "admin/views/project/project_list_item_view";
+// @flow
+/* eslint-disable jsx-a11y/href-no-hash */
 
-class ProjectListView extends Marionette.CompositeView {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<h3>Projects</h3>
-<table class="table table-striped table-details sortable-table" id="projectlist-table">
-  <thead>
-    <tr>
-      <th data-sort="name">Name</th>
-      <th data-sort="team">Team</th>
-      <th data-sort="priority">Priority</th>
-      <th data-sort="location">Location</th>
-      <th data-sort="owner.lastName">Owner</th>
-      <th data-sort="numberOfOpenAssignments">Open Assignments</th>
-      <th data-sort="expectedTime">Expected Time</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>
-<div id="modal-wrapper"></div>\
-`);
+import * as React from "react";
+import { Table, Tag, Icon, Spin, Button, Input } from "antd";
+import TemplateHelpers from "libs/template_helpers";
+import Utils from "libs/utils";
+import Request from "libs/request";
+import type { APIProjectType } from "admin/api_flow_types";
 
-    this.prototype.className = "container wide project-administration";
-    this.prototype.childView = ProjectListItemView;
-    this.prototype.childViewContainer = "tbody";
+const { Column } = Table;
+const { Search } = Input;
 
-    this.prototype.behaviors = {
-      SortTableBehavior: {
-        behaviorClass: SortTableBehavior,
-      },
-    };
+type State = {
+  isLoading: boolean,
+  projects: Array<APIProjectType>,
+  searchQuery: string,
+};
 
-    this.prototype.ui = { modalWrapper: "#modal-wrapper" };
+class ProjectListView extends React.PureComponent<{}, State> {
+  state = {
+    isLoading: true,
+    projects: [],
+    searchQuery: "",
+  };
 
-    this.prototype.behaviors = {
-      SortTableBehavior: {
-        behaviorClass: SortTableBehavior,
-      },
-    };
+  componentDidMount() {
+    this.fetchData();
   }
 
-  initialize() {
-    this.collection.fetch();
-    this.collection.setSorting("priority", "desc");
+  async fetchData(): Promise<void> {
+    const url = "/api/projects";
+    const projects = await Request.receiveJSON(url);
 
-    this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
-    this.listenTo(app.vent, "modal:destroy", this.render);
-    this.listenTo(app.vent, "paginationView:addElement", this.createProject);
+    this.setState({
+      isLoading: false,
+      projects,
+    });
   }
 
-  filterBySearch(searchQuery) {
-    return this.collection.setFilter(["name", "team", "priority", "location"], searchQuery);
-  }
+  handleSearch = (event: SyntheticInputEvent<>): void => {
+    this.setState({ searchQuery: event.target.value });
+  };
 
-  createProject() {
-    return app.router.navigate("/projects/create", { trigger: true });
+  deleteProject() {}
+
+  render() {
+    const marginRight = { marginRight: 20 };
+
+    if (this.state.isLoading) {
+      return (
+        <div className="text-center">
+          <Spin size="large" />
+        </div>
+      );
+    }
+
+    return (
+      <div className="container wide">
+        <div style={{ marginTag: 20 }}>
+          <div className="pull-right">
+            <a href="/projects/create">
+              <Button icon="plus" style={marginRight} type="primary">
+                Add Project
+              </Button>
+            </a>
+            <Search
+              style={{ width: 200 }}
+              onPressEnter={this.handleSearch}
+              onChange={this.handleSearch}
+            />
+          </div>
+          <h3>Projects</h3>
+          <div className="clearfix" style={{ margin: "20px 0px" }} />
+
+          <Table
+            dataSource={Utils.filterWithSearchQueryOR(
+              this.state.projects,
+              [
+                "name",
+                "team",
+                "priority",
+                "assignmentConfiguration",
+                "owner",
+                "numberOfOpenAssignments",
+              ],
+              this.state.searchQuery,
+            )}
+            rowKey="id"
+            pagination={{
+              defaultPageSize: 50,
+            }}
+            style={{ marginTop: 30, marginBotton: 30 }}
+          >
+            <Column
+              title="Name"
+              dataIndex="name"
+              key="name"
+              sorter={Utils.localeCompareBy("name")}
+            />
+            <Column
+              title="Team"
+              dataIndex="team"
+              key="team"
+              sorter={Utils.localeCompareBy("team")}
+            />
+            <Column
+              title="Priority"
+              dataIndex="priority"
+              key="priority"
+              sorter={Utils.localeCompareBy((project: APIProjectType) =>
+                project.priority.toString(),
+              )}
+              render={(priority, project: APIProjectType) =>
+                `${priority} ${project.paused ? "(paused)" : ""}`}
+            />
+            <Column
+              title="Location"
+              dataIndex="assignmentConfiguration"
+              key="assignmentConfiguration"
+              sorter={Utils.localeCompareBy(
+                (project: APIProjectType) => project.assignmentConfiguration.location,
+              )}
+              render={assignmentConfiguration =>
+                <Tag color={TemplateHelpers.stringToColor(assignmentConfiguration.location)}>
+                  {assignmentConfiguration.location}
+                </Tag>}
+            />
+            <Column
+              title="Owner"
+              dataIndex="owner"
+              key="owner"
+              sorter={Utils.localeCompareBy((project: APIProjectType) => project.owner.lastName)}
+              render={owner =>
+                owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"}
+            />
+            <Column
+              title="Open Assignments"
+              dataIndex="numberOfOpenAssignments"
+              key="numberOfOpenAssignments"
+              sorter={Utils.localeCompareBy((project: APIProjectType) =>
+                project.numberOfOpenAssignments.toString(),
+              )}
+            />
+            <Column
+              title="Expected Time"
+              dataIndex="expectedTime"
+              key="expectedTime"
+              sorter={Utils.localeCompareBy((project: APIProjectType) =>
+                project.expectedTime.toString(),
+              )}
+              render={expectedTime => `${parseInt(expectedTime / 60000)}m`}
+            />
+            <Column
+              title="Action"
+              key="actions"
+              render={(__, project: APIProjectType) =>
+                <span>
+                  <a
+                    href={`/annotations/CompoundProject/${project.name}`}
+                    title="View all Finished Tracings"
+                  >
+                    <Icon type="eye-o" />View
+                  </a>
+                  <br />
+                  <a href={`/projects/${project.name}/edit`} title="Edit Project">
+                    <Icon type="edit" />Edit
+                  </a>
+                  <br />
+                  <a href={`/projects/${project.name}/tasks`} title="View Tasks">
+                    <Icon type="book" />Tasks
+                  </a>
+                  <br />
+                  <a
+                    href={`/api/projects/${project.name}/download`}
+                    title="Download all Finished Tracings"
+                  >
+                    <Icon type="download" />Download
+                  </a>
+                  <br />
+                  <a href="#">
+                    <Icon type="delete" />Delete
+                  </a>
+                </span>}
+            />
+          </Table>
+        </div>
+      </div>
+    );
   }
 }
-ProjectListView.initClass();
 
 export default ProjectListView;

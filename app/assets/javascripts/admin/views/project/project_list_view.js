@@ -6,6 +6,7 @@ import { Table, Tag, Icon, Spin, Button, Input } from "antd";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import Request from "libs/request";
+import app from "app";
 import type { APIProjectType } from "admin/api_flow_types";
 
 const { Column } = Table;
@@ -178,9 +179,11 @@ class ProjectListView extends React.PureComponent<{}, State> {
                     <Icon type="download" />Download
                   </a>
                   <br />
-                  <a href="#">
-                    <Icon type="delete" />Delete
-                  </a>
+                  {project.owner.email === app.currentUser.email
+                    ? <a href="#">
+                        <Icon type="delete" />Delete
+                      </a>
+                    : null}
                 </span>}
             />
           </Table>

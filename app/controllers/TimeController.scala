@@ -52,7 +52,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     endDate.set(year, month - 1, endDate.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
     endDate.set(Calendar.MILLISECOND, 999)
 
-    val filteredListByPermission = users.filter(user => request.user.isAdminOf(user)||request.user.email == user.email)
+    val filteredListByPermission = users.filter(user => request.user.isAdminOf(user))
     val futureJsObjects = getUserWithWorkingHours(filteredListByPermission, startDate, endDate)
 
     for {

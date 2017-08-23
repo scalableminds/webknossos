@@ -21,7 +21,7 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
     return (
       <div>
         <Table
-          dataSource={Utils.filterWithSearchQuery(
+          dataSource={Utils.filterWithSearchQueryOR(
             this.props.datasets,
             ["name", "owningTeam", "description"],
             this.props.searchQuery,
@@ -101,7 +101,7 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             dataIndex="dataSource.dataLayers"
             render={(__, dataset) =>
               (dataset.dataSource.dataLayers || []).map(layer =>
-                <Tag key={`${layer.category} - ${layer.elementClass}`}>
+                <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
                 </Tag>,
               )}

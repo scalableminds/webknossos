@@ -44,6 +44,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
             onPressEnter={this.handleOnChange}
             style={{ width: "60%", margin: "0 10px" }}
             size="small"
+            autoFocus
           />
           <Icon type="check" style={iconStyle} onClick={this.handleOnChange} />
         </span>

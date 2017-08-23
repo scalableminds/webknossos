@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Row, Col, Modal, Card } from "antd";
 import Utils from "libs/utils";
+import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
 import type { DatasetType } from "dashboard/views/dataset_view";
@@ -60,9 +61,10 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
     let description;
     if (dataset.description) {
       description = (
-        <p style={{ whiteSpace: "pre-wrap" }}>
-          {dataset.description}
-        </p>
+        <Markdown
+          source={dataset.description}
+          options={{ html: false, breaks: true, linkify: true }}
+        />
       );
     } else {
       description = dataset.hasSegmentation
@@ -116,7 +118,7 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
   render() {
     return (
       <Row gutter={padding}>
-        {Utils.filterWithSearchQuery(
+        {Utils.filterWithSearchQueryAND(
           this.props.datasets.filter(ds => ds.isActive),
           ["name", "owningTeam", "description"],
           this.props.searchQuery,

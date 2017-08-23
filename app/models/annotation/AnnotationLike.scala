@@ -81,6 +81,8 @@ trait AnnotationLike extends AnnotationStatistics {
   }
 
   def isPublic: Boolean
+
+  def tags: Set[String]
 }
 
 object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
@@ -94,11 +96,20 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
     }
   }
 
+  def createTags(a: AnnotationLike): Future[Set[String]] = {
+    (for {
+      dataSetName <- a.dataSetName
+      content <- a.content
+    } yield {
+      Set(dataSetName, content.contentType)
+    }).getOrElse(Set.empty).map(_ ++ a.tags)
+  }
+
   def annotationLikeInfoWrites(a: AnnotationLike, user: Option[User], exclude: List[String])(implicit ctx: DBAccessContext): Fox[JsObject] = {
     JsonObjectWithFilter(exclude)(
       "version" +> a.version,
       "user" +> a.user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull),
-      "created" +> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(a.created),
+      "modified" +> a.content.futureBox.map(content => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(content.map(_.timestamp).openOr(a.created))),
       "stateLabel" +> stateLabel(a, user),
       "state" +> a.state,
       "id" +> a.id,
@@ -113,7 +124,8 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "contentType" +> a.content.map(_.contentType).getOrElse(""),
       "dataSetName" +> a.dataSetName,
       "tracingTime" +> a.tracingTime,
-      "isPublic" +> a.isPublic
+      "isPublic" +> a.isPublic,
+      "tags" +> createTags(a)
     )
   }
 }

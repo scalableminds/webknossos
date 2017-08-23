@@ -1,21 +1,23 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import * as React from "react";
 import Request from "libs/request";
 import TemplateHelpers from "libs/template_helpers";
 import type { APIDatasetType } from "admin/api_flow_types";
 import { Spin, Tag } from "antd";
 
-export default class DatasetAccessListView extends React.PureComponent {
-  props: {
-    dataset: APIDatasetType,
-  };
+type Props = {
+  dataset: APIDatasetType,
+};
 
-  state: {
-    datasetUsers: any,
-    isLoading: boolean,
-  } = {
+type State = {
+  datasetUsers: any,
+  isLoading: boolean,
+};
+
+export default class DatasetAccessListView extends React.PureComponent<Props, State> {
+  state = {
     datasetUsers: [],
     isLoading: false,
   };

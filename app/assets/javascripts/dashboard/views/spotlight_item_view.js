@@ -1,21 +1,25 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 
-import React from "react";
+import * as React from "react";
 import { Modal, Card } from "antd";
+import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { DatasetType } from "dashboard/views/dataset_view";
 
-class SpotlightItemView extends React.PureComponent {
+type Props = {
+  dataset: DatasetType,
+};
+
+type State = {
+  contentType: string,
+};
+
+class SpotlightItemView extends React.PureComponent<Props, State> {
   form: any;
-  props: {
-    dataset: APIDatasetType,
-  };
 
-  state: {
-    contentType: string,
-  } = {
+  state = {
     contentType: "",
   };
 
@@ -51,9 +55,7 @@ class SpotlightItemView extends React.PureComponent {
     let description;
     if (dataset.description) {
       description = (
-        <p style={{ whiteSpace: "pre-wrap" }}>
-          {dataset.description}
-        </p>
+        <Markdown source={dataset.description} options={{ html: false, breaks: true, linkify: true }} />
       );
     } else {
       description = dataset.hasSegmentation

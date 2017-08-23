@@ -1,9 +1,9 @@
 // @flow
 /* eslint-disable jsx-a11y/href-no-hash, react/prefer-stateless-function */
 
-import React from "react";
+import * as React from "react";
 import TemplateHelpers from "libs/template_helpers";
-import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
+import type { DatasetType } from "dashboard/views/dataset_view";
 import Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "./dataset_action_view";
@@ -12,18 +12,16 @@ import DatasetAccessListView from "./dataset_access_list_view";
 const { Column } = Table;
 
 type Props = {
-  datasets: Array<APIDatasetType>,
+  datasets: Array<DatasetType>,
   searchQuery: string,
 };
 
-class AdvancedDatasetView extends React.PureComponent {
-  props: Props;
-
+class AdvancedDatasetView extends React.PureComponent<Props> {
   render() {
     return (
       <div>
         <Table
-          dataSource={Utils.filterWithSearchQuery(
+          dataSource={Utils.filterWithSearchQueryOR(
             this.props.datasets,
             ["name", "owningTeam", "description"],
             this.props.searchQuery,
@@ -39,8 +37,8 @@ class AdvancedDatasetView extends React.PureComponent {
             dataIndex="name"
             key="name"
             sorter={Utils.localeCompareBy("name")}
-            render={(name, dataset: APIDatasetType) =>
-              <div title={dataset.dataSource.baseDir}>
+            render={(name, dataset: DatasetType) =>
+              <div>
                 {dataset.name}
                 <br />
                 <Tag color={TemplateHelpers.stringToColor(dataset.dataStore.name)}>
@@ -53,13 +51,13 @@ class AdvancedDatasetView extends React.PureComponent {
             dataIndex="created"
             key="created"
             sorter={Utils.localeCompareBy("formattedCreated")}
-            render={(__, dataset: APIDatasetType) => dataset.formattedCreated}
+            render={(__, dataset: DatasetType) => dataset.formattedCreated}
           />
           <Column
             title="Scale"
             dataIndex="scale"
             key="scale"
-            render={(__, dataset: APIDatasetType) =>
+            render={(__, dataset: DatasetType) =>
               TemplateHelpers.formatTuple(dataset.dataSource.scale)}
           />
 
@@ -67,7 +65,7 @@ class AdvancedDatasetView extends React.PureComponent {
             title="Allowed Teams"
             dataIndex="allowedTeams"
             key="allowedTeams"
-            render={(teams, dataset: APIDatasetType) =>
+            render={(teams, dataset: DatasetType) =>
               teams.map(team =>
                 <Tag
                   color={TemplateHelpers.stringToColor(team)}
@@ -103,7 +101,7 @@ class AdvancedDatasetView extends React.PureComponent {
             dataIndex="dataSource.dataLayers"
             render={(__, dataset) =>
               (dataset.dataSource.dataLayers || []).map(layer =>
-                <Tag key={`${layer.category} - ${layer.elementClass}`}>
+                <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
                 </Tag>,
               )}
@@ -113,7 +111,7 @@ class AdvancedDatasetView extends React.PureComponent {
             width={200}
             title="Actions"
             key="actions"
-            render={(__, dataset: APIUserType) => <DatasetActionView dataset={dataset} />}
+            render={(__, dataset: DatasetType) => <DatasetActionView dataset={dataset} />}
           />
         </Table>
       </div>

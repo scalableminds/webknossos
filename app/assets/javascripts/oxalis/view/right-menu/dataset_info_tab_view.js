@@ -62,17 +62,24 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
     let annotationTypeLabel;
 
     if (this.props.task != null) {
-      // In case we have a task display its id as well
+      // In case we have a task display its id
       annotationTypeLabel = (
         <span>
           {tracingType} : {this.props.task.id}
         </span>
       );
-    } else {
-      // Or display an explorative tracings name
+    } else if (!this.props.tracing.restrictions.allowUpdate) {
+      // For readonly tracings display the non-editable explorative tracing name
       annotationTypeLabel = (
         <span>
-          Explorational Tracing :
+          Explorational Tracing: {tracingName}
+        </span>
+      );
+    } else {
+      // Or display display the editable explorative tracing name
+      annotationTypeLabel = (
+        <span>
+          Explorational Tracing:
           <EditableTextLabel value={tracingName} onChange={this.setAnnotationName} />
         </span>
       );

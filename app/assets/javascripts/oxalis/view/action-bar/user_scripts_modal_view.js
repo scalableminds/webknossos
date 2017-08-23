@@ -32,12 +32,17 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
   };
 
   componentWillMount() {
-    Request.receiveJSON("/api/scripts").then(scripts => {
-      this.setState({ isLoading: false });
-      if (scripts.length) {
-        this.setState({ scripts });
-      }
-    });
+    Request.receiveJSON("/api/scripts", { doNotCatch: true })
+      .then(scripts => {
+        this.setState({ isLoading: false });
+        if (scripts.length) {
+          this.setState({ scripts });
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        this.setState({ isLoading: false });
+      });
   }
 
   handleCodeChange = (event: SyntheticInputEvent<>) => {

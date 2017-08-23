@@ -189,7 +189,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
       );
     }
 
-    if (isSkeletonMode) {
+    if (isSkeletonMode && app.currentUser != null) {
       elements.push(
         <Menu.Item key="merge-button">
           <div onClick={this.handleMergeOpen}>

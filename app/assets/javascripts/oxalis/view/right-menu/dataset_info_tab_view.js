@@ -2,12 +2,14 @@
  * dataset_info_view.js
  * @flow
  */
+import _ from "lodash";
 import React, { Component } from "react";
 import { connect } from "react-redux";
-import _ from "lodash";
+import Maybe from "data.maybe";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
 import { setAnnotationNameAction } from "oxalis/model/actions/annotation_actions";
@@ -59,6 +61,18 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
   render() {
     const { tracingType, name } = this.props.tracing;
     const tracingName = name || "<untitled>";
+    const treesMaybe = getSkeletonTracing(this.props.tracing).chain(tracing =>
+      Maybe.fromNullable(tracing.trees),
+    );
+    const treeCount = treesMaybe.map(trees => _.size(trees)).getOrElse(null);
+    const nodeCount = treesMaybe
+      // eslint-disable-next-line no-return-assign
+      .map(trees => _.reduce(trees, (sum, tree) => (sum += _.size(tree.nodes)), 0))
+      .getOrElse(null);
+    const branchPointCount = treesMaybe
+      // eslint-disable-next-line no-return-assign
+      .map(trees => _.reduce(trees, (sum, tree) => (sum += _.size(tree.branchPoints)), 0))
+      .getOrElse(null);
     let annotationTypeLabel;
 
     if (this.props.task != null) {
@@ -96,18 +110,26 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
           {annotationTypeLabel}
         </p>
         <p>
-          DataSet: {dataSetName}
+          Dataset: {dataSetName}
         </p>
         <p>
-          Viewport width: {this.chooseUnit(zoomLevel)}
+          Viewport Width: {this.chooseUnit(zoomLevel)}
         </p>
         <p>
-          Dataset resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}
+          Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}
         </p>
         {this.props.tracing.type === "skeleton"
-          ? <p>
-              Total number of trees: {_.size(this.props.tracing.trees)}
-            </p>
+          ? <div>
+              <p>
+                Number of Trees: {treeCount}
+              </p>
+              <p>
+                Number of Nodes: {nodeCount}
+              </p>
+              <p>
+                Number of Branch Points: {branchPointCount}
+              </p>
+            </div>
           : null}
         {isPublicViewMode
           ? <div>
@@ -122,19 +144,19 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
                   </tr>
                   <tr>
                     <td>Mousewheel or D and F</td>
-                    <td>Move along 3rd axis</td>
+                    <td>Move Along 3rd Axis</td>
                   </tr>
                   <tr>
-                    <td>Left Mouse drag or Arrow keys</td>
+                    <td>Left Mouse Drag or Arrow Keys</td>
                     <td>Move</td>
                   </tr>
                   <tr>
-                    <td>Right click drag in 3D View</td>
+                    <td>Right Click Drag in 3D View</td>
                     <td>Rotate 3D View</td>
                   </tr>
                   <tr>
                     <td>K,L</td>
-                    <td>Scale up/down viewports</td>
+                    <td>Scale Up/Down Viewports</td>
                   </tr>
                 </tbody>
               </table>

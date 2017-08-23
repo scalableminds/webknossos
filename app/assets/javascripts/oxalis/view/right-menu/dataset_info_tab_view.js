@@ -66,9 +66,11 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
     );
     const treeCount = treesMaybe.map(trees => _.size(trees)).getOrElse(null);
     const nodeCount = treesMaybe
+      // eslint-disable-next-line no-return-assign
       .map(trees => _.reduce(trees, (sum, tree) => (sum += _.size(tree.nodes)), 0))
       .getOrElse(null);
     const branchPointCount = treesMaybe
+      // eslint-disable-next-line no-return-assign
       .map(trees => _.reduce(trees, (sum, tree) => (sum += _.size(tree.branchPoints)), 0))
       .getOrElse(null);
     let annotationTypeLabel;

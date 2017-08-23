@@ -135,7 +135,7 @@ class SpotlightView extends React.PureComponent<{}, State> {
               <section>
                 <p>
                   For more information about our project, visit{" "}
-                  <a href="http://www.brainflight.net">http://www.brainflight.net</a> and
+                  <a href="http://www.brainflight.net">http://www.brainflight.net</a> and{" "}
                   <a href="http://www.brain.mpg.de/connectomics">
                     http://www.brain.mpg.de/connectomics
                   </a>

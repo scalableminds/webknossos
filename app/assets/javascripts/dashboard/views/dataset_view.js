@@ -39,19 +39,18 @@ function createThumbnailURL(datasetName: string, layers: Array<DataLayerType>): 
   return "";
 }
 
-export function transformDatasets(datasets: Array<DatasetType>): Array<DatasetType> {
+export function transformDatasets(datasets: Array<APIDatasetType>): Array<DatasetType> {
   return _.sortBy(
-    datasets.map(dataset => {
-      dataset.hasSegmentation = _.some(
-        dataset.dataSource.dataLayers,
-        layer => layer.category === "segmentation",
-      );
-
-      dataset.thumbnailURL = createThumbnailURL(dataset.name, dataset.dataSource.dataLayers);
-      dataset.formattedCreated = moment(dataset.created).format("YYYY-MM-DD HH:mm");
-
-      return dataset;
-    }),
+    datasets.map(dataset =>
+      Object.assign({}, dataset, {
+        hasSegmentation: _.some(
+          dataset.dataSource.dataLayers,
+          layer => layer.category === "segmentation",
+        ),
+        thumbnailURL: createThumbnailURL(dataset.name, dataset.dataSource.dataLayers),
+        formattedCreated: moment(dataset.created).format("YYYY-MM-DD HH:mm"),
+      }),
+    ),
     "created",
   );
 }
@@ -88,7 +87,9 @@ class DatasetView extends React.PureComponent<Props, State> {
   };
 
   renderGallery() {
-    return <GalleryDatasetView datasets={this.state.datasets} />;
+    return (
+      <GalleryDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
+    );
   }
 
   renderAdvanced() {

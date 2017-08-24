@@ -148,12 +148,11 @@ class SkeletonTracingService @Inject()(
 
     def unzip(file: File) = {
       val boxOfBoxes: Box[List[Box[SkeletonTracing]]] = ZipIO.withUnziped(file) {
-        case (filePath, is) => {
+        case (filePath, inputStream) => {
           val isNml = filePath.toString.toLowerCase.endsWith(".nml")
           if (!isNml) Empty
           else {
-            val nml = Source.fromInputStream(is).mkString
-            NmlParser.parse(createNewId, filePath.getFileName.toString, nml)
+            NmlParser.parse(createNewId, filePath.getFileName.toString, inputStream)
           }
         }
       }

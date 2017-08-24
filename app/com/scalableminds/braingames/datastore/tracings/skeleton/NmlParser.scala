@@ -3,6 +3,8 @@
  */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
+import java.io.InputStream
+
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements._
 import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.image.Color
@@ -32,9 +34,9 @@ object NmlParser extends LazyLogging {
 
   val DEFAULT_TIMESTAMP = 0L
 
-  def parse(id: String, name: String, nml: String): Box[SkeletonTracing] = {
+  def parse(id: String, name: String, nmlInputStream: InputStream): Box[SkeletonTracing] = {
     try {
-      val data = XML.loadString(nml)
+      val data = XML.load(nmlInputStream)
       for {
         parameters <- (data \ "parameters").headOption ?~ "No parameters section found"
         scale <- parseScale(parameters \ "scale") ?~ "Couldn't parse scale"

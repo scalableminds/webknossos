@@ -58,7 +58,7 @@ case class AbstractVolumeTracing(
 
 object AbstractVolumeTracing {
 
-  val defaultZoomLevel: Double = 2.0
+  val defaultZoomLevel: Double = 0.1
 
   implicit val abstractVolumeTracingFormat = Json.format[AbstractVolumeTracing]
 }

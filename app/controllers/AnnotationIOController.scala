@@ -2,27 +2,24 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.binary.models.datasource.DataSource
+import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.braingames.datastore.tracings.skeleton.NmlWriter
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{AnnotationType, _}
-import models.binary.DataSetDAO
+import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
-import net.liftweb.common.Box
 import org.apache.commons.io.FilenameUtils
-import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
+import oxalis.security.{Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
-import play.api.libs.json._
+import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
 
 import scala.concurrent.Future
@@ -34,58 +31,71 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     with FoxImplicits
     with LazyLogging {
 
-  private def nameForNMLs(fileNames: Seq[String]) =
+  private def nameForNmls(fileNames: Seq[String]) =
     if (fileNames.size == 1)
       fileNames.headOption.map(_.replaceAll("\\.nml$", ""))
     else
       None
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    //TODO: RocksDB
-    Fox.successful(JsonOk)
-//    def isZipFile(f: MultipartFormData.FilePart[TemporaryFile]): Boolean =
-//      f.contentType.contains("application/zip") || FilenameUtils.isExtension(f.filename, "zip")
-//
-//    def parseFile(f: MultipartFormData.FilePart[TemporaryFile]) = {
-//      if (isZipFile(f)) {
-//        NMLService.extractFromZip(f.ref.file, Some(f.filename))
-//      } else {
-//        val nml = NMLService.extractFromNML(f.ref.file, f.filename)
-//        NMLService.ZipParseResult(List(nml), Map.empty)
-//      }
-//    }
-//
-//    def returnError(parsedFiles: NMLService.ZipParseResult) = {
-//      if (parsedFiles.containsFailure) {
-//        val errors = parsedFiles.nmls.flatMap {
-//          case result: NMLService.NMLParseFailure =>
-//            Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
-//          case _                                  => None
-//        }
-//        Future.successful(JsonBadRequest(errors))
-//      } else {
-//        Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
-//      }
-//    }
-//
-//    val parsedFiles = request.body.files.foldLeft(NMLService.ZipParseResult()) {
-//      case (acc, next) => acc.combineWith(parseFile(next))
-//    }
-//    if (!parsedFiles.isEmpty) {
-//      val parseSuccess = parsedFiles.nmls.filter(_.succeeded)
-//      val fileNames = parseSuccess.map(_.fileName)
-//      val nmls = parseSuccess.flatMap(_.nml)
-//      val name = nameForNMLs(fileNames)
-//      for {
-//        annotation <- AnnotationService.createAnnotationFrom(
-//          request.user, nmls, parsedFiles.otherFiles, AnnotationType.Explorational, name)
-//      } yield JsonOk(
-//        Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-//        Messages("nml.file.uploadSuccess")
-//      )
-//    } else {
-//      returnError(parsedFiles)
-//    }
+    def isZipFile(f: MultipartFormData.FilePart[TemporaryFile]): Boolean =
+      f.contentType.contains("application/zip") || FilenameUtils.isExtension(f.filename, "zip")
+
+    def parseFile(f: MultipartFormData.FilePart[TemporaryFile]) = {
+      if (isZipFile(f)) {
+        NmlService.extractFromZip(f.ref.file, Some(f.filename))
+      } else {
+        val nml = NmlService.extractFromNml(f.ref.file, f.filename)
+        NmlService.ZipParseResult(List(nml), Map.empty)
+      }
+    }
+
+    def returnError(zipParseResult: NmlService.ZipParseResult) = {
+      if (zipParseResult.containsFailure) {
+        val errors = zipParseResult.parseResults.flatMap {
+          case result: NmlService.NmlParseFailure =>
+            Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
+          case _ => None
+        }
+        Future.successful(JsonBadRequest(errors))
+      } else {
+        Future.successful(JsonBadRequest(Messages("nml.file.noFile")))
+      }
+    }
+
+    def storeMergedSkeletonTracing(tracings: List[SkeletonTracing], dataSet: DataSet): Fox[TracingReference] = {
+      for {
+        newTracingReference <- dataSet.dataStore.mergeSkeletonTracingsByContents(tracings, persistTracing=true)
+      } yield {
+        newTracingReference
+      }
+    }
+
+    val parsedFiles = request.body.files.foldLeft(NmlService.ZipParseResult()) {
+      case (acc, next) => acc.combineWith(parseFile(next))
+    }
+    if (!parsedFiles.isEmpty) {
+      val parseSuccess = parsedFiles.parseResults.filter(_.succeeded)
+      val fileNames = parseSuccess.map(_.fileName)
+      val tracings = parseSuccess.flatMap(_.tracing)
+      val name = nameForNmls(fileNames)
+      if (tracings.exists(_.volumes.nonEmpty))
+        //TODO: RocksDB: process uploaded volume tracing
+        returnError(parsedFiles)
+      else {
+        for {
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(tracings.head.dataSetName).toFox
+          mergedTracingReference <- storeMergedSkeletonTracing(tracings.map(_.asInstanceOf[SkeletonTracing]), dataSet)
+          annotation <- AnnotationService.createFrom(
+            request.user, dataSet, mergedTracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(mergedTracingReference.typ), name)
+        } yield JsonOk(
+          Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+          Messages("nml.file.uploadSuccess")
+        )
+      }
+    } else {
+      returnError(parsedFiles)
+    }
   }
 
 

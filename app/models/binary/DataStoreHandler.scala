@@ -35,8 +35,11 @@ trait DataStoreHandlingStrategy {
   def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] =
     Fox.failure("DatStore doesn't support duplication of SkeletonTracings.")
 
-  def mergeSkeletonTracings(tracingSelectors: List[TracingReference], persistTracing: Boolean): Fox[TracingReference] =
-    Fox.failure("DataStore does't support merging of SkeletonTracings.")
+  def mergeSkeletonTracingsByIds(tracingSelectors: List[TracingReference], persistTracing: Boolean): Fox[TracingReference] =
+    Fox.failure("DataStore does't support merging of SkeletonTracings by ids.")
+
+  def mergeSkeletonTracingsByContents(tracings: List[SkeletonTracing], persistTracing: Boolean): Fox[TracingReference] =
+    Fox.failure("DataStore does't support merging of SkeletonTracings by contents.")
 
   def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support creation of VolumeTracings.")
@@ -89,13 +92,20 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
       .getWithJsonResponse[TracingReference]
   }
 
-  override def mergeSkeletonTracings(references: List[TracingReference], persistTracing: Boolean): Fox[TracingReference] = {
-    logger.debug("Called to merge SkeletonTracings. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
-    val route = if (persistTracing) "getMerged" else "createMergedFromIds"
+  override def mergeSkeletonTracingsByIds(references: List[TracingReference], persistTracing: Boolean): Fox[TracingReference] = {
+    logger.debug("Called to merge SkeletonTracings by ids. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/mergedFromIds")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("persist" -> persistTracing.toString)
       .postWithJsonResponse[List[TracingSelector], TracingReference](references.map(r => TracingSelector(r.id)))
+  }
+
+  override def mergeSkeletonTracingsByContents(tracings: List[SkeletonTracing], persistTracing: Boolean): Fox[TracingReference] = {
+    logger.debug("Called to merge SkeletonTracings by contents. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/mergedFromContents")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .withQueryString("persist" -> persistTracing.toString)
+      .postWithJsonResponse[List[SkeletonTracing], TracingReference](tracings)
   }
 
   override def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File]): Fox[TracingReference] = {

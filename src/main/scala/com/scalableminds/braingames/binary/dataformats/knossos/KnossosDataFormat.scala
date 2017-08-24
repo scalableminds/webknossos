@@ -34,7 +34,7 @@ object KnossosDataFormat extends DataSourceImporter {
         case Category.segmentation =>
           val mappings = exploreMappings(baseDir)
           val largestSegmentId = previous match {
-            case Some(l: KnossosSegmentationLayer) => l.largestSegmentId
+            case Some(l: SegmentationLayer) => l.largestSegmentId
             case _ => SegmentationLayer.defaultLargestSegmentId
           }
           KnossosSegmentationLayer(name, sections, elementClass, mappings, largestSegmentId)

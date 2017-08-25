@@ -61,7 +61,27 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def createFromNml(implicit request: AuthenticatedRequest[AnyContent]) = {
+  def create(`type`: String = "default") = Authenticated.async { implicit request =>
+    `type` match {
+      case "default" =>
+        request.body.asJson.toFox.flatMap { json =>
+          withJsonUsing(json, taskCompleteReads) { parsed =>
+            createSingleTask(parsed).futureBox.map{ result =>
+              val js = bulk2StatusJson(List(result))
+              JsonOk(js, Messages("task.bulk.processed"))
+            }
+          }
+        }
+      case "nml"     =>
+        createFromNml(request)
+      case "bulk"    =>
+        request.body.asJson
+          .toFox
+          .flatMap(json => bulkCreate(json))
+    }
+  }
+
+  private def createFromNml(implicit request: AuthenticatedRequest[AnyContent]) = {
     def parseJson(s: String) = {
       Json.parse(s).validate(taskNmlJsonReads) match {
         case JsSuccess(parsed, _) =>
@@ -108,7 +128,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
 
-  def createTaskWithoutAnnotationBase(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[Task] =
+  private def createTaskWithoutAnnotationBase(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[Task] =
     input match {
       case (taskTypeId, experience, status, team, projectName, scriptId, boundingBox, dataSetName, start, rotation) =>
         for {
@@ -123,7 +143,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
 
 
-  def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[JsObject] =
+  private def createSingleTask(input: (String, Experience, CompletionStatus, String, String, Option[String], Option[BoundingBox], String, Point3D, Vector3D))(implicit request: AuthenticatedRequest[_]): Fox[JsObject] =
     input match {
       case (taskTypeId, experience, status, team, projectName, scriptId, boundingBox, dataSetName, startPosition, startRotation) =>
         for {
@@ -138,7 +158,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
 
   //TODO: RocksDB
-  def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
+  private def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
 
     withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
 
@@ -159,25 +179,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def create(`type`: String = "default") = Authenticated.async { implicit request =>
-    `type` match {
-      case "default" =>
-        request.body.asJson.toFox.flatMap { json =>
-          withJsonUsing(json, taskCompleteReads) { parsed =>
-            createSingleTask(parsed).futureBox.map{ result =>
-              val js = bulk2StatusJson(List(result))
-              JsonOk(js, Messages("task.bulk.processed"))
-            }
-          }
-        }
-      case "nml"     =>
-        createFromNml(request)
-      case "bulk"    =>
-        request.body.asJson
-        .toFox
-        .flatMap(json => bulkCreate(json))
-    }
-  }
 
   // TODO: properly handle task update with amazon turk
   def update(taskId: String) = Authenticated.async(parse.json) { implicit request =>

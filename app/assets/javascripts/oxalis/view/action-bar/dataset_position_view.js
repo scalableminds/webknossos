@@ -8,14 +8,8 @@ import constants from "oxalis/constants";
 import Toast from "libs/toast";
 import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
-import {
-  setPositionAction,
-  setRotationAction
-} from "oxalis/model/actions/flycam_actions";
-import {
-  getPosition,
-  getRotation
-} from "oxalis/model/accessors/flycam_accessor";
+import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { Input, Tooltip } from "antd";
 import Vector3Input from "libs/vector3_input";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -23,7 +17,7 @@ import message from "messages";
 
 type Props = {
   flycam: FlycamType,
-  viewMode: ModeType
+  viewMode: ModeType,
 };
 
 class DatasetPositionView extends PureComponent<Props> {
@@ -50,22 +44,14 @@ class DatasetPositionView extends PureComponent<Props> {
   render() {
     const position = V3.floor(getPosition(this.props.flycam));
     const rotation = V3.round(getRotation(this.props.flycam));
-    const isArbitraryMode = constants.MODES_ARBITRARY.includes(
-      this.props.viewMode
-    );
+    const isArbitraryMode = constants.MODES_ARBITRARY.includes(this.props.viewMode);
 
     return (
       <div>
-        <Tooltip
-          title={message["tracing.copy_position"]}
-          placement="bottomLeft"
-        >
+        <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
           <div>
             <Input.Group compact size="large">
-              <ButtonComponent
-                onClick={this.copyPositionToClipboard}
-                size="large"
-              >
+              <ButtonComponent onClick={this.copyPositionToClipboard} size="large">
                 Position
               </ButtonComponent>
               <Vector3Input
@@ -77,16 +63,10 @@ class DatasetPositionView extends PureComponent<Props> {
           </div>
         </Tooltip>
         {isArbitraryMode
-          ? <Tooltip
-              title={message["tracing.copy_rotation"]}
-              placement="bottomLeft"
-            >
+          ? <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
               <div style={{ marginLeft: 10 }}>
                 <Input.Group compact size="large">
-                  <ButtonComponent
-                    onClick={this.copyRotationToClipboard}
-                    size="large"
-                  >
+                  <ButtonComponent onClick={this.copyRotationToClipboard} size="large">
                     Rotation
                   </ButtonComponent>
                   <Vector3Input
@@ -106,7 +86,7 @@ class DatasetPositionView extends PureComponent<Props> {
 function mapStateToProps(state: OxalisState) {
   return {
     flycam: state.flycam,
-    viewMode: state.temporaryConfiguration.viewMode
+    viewMode: state.temporaryConfiguration.viewMode,
   };
 }
 

@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import React, { Component } from "react";
+import * as React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { Collapse, Row, Col, Select } from "antd";
@@ -24,6 +24,7 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import Utils from "libs/utils";
+import Constants from "oxalis/constants";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
@@ -38,11 +39,7 @@ type DatasetSettingsProps = {
   ) => void,
 };
 
-class DatasetSettings extends Component<DatasetSettingsProps> {
-  shouldComponentUpdate(nextProps: DatasetSettingsProps) {
-    return this.props.datasetConfiguration !== nextProps.datasetConfiguration;
-  }
-
+class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
   getColorSettings = (layer: Object, layerName: string) =>
     <div key={layerName}>
       <Row>
@@ -101,11 +98,13 @@ class DatasetSettings extends Component<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.fourBit}
             onChange={_.partial(this.props.onChange, "fourBit")}
           />
-          <SwitchSetting
-            label="Interpolation"
-            value={this.props.datasetConfiguration.interpolation}
-            onChange={_.partial(this.props.onChange, "interpolation")}
-          />
+          {this.props.viewMode === Constants.MODE_PLANE_TRACING
+            ? <SwitchSetting
+                label="Interpolation"
+                value={this.props.datasetConfiguration.interpolation}
+                onChange={_.partial(this.props.onChange, "interpolation")}
+              />
+            : null}
           <DropdownSetting
             label="Quality"
             value={this.props.datasetConfiguration.quality}
@@ -123,6 +122,7 @@ class DatasetSettings extends Component<DatasetSettingsProps> {
 
 const mapStateToProps = (state: OxalisState) => ({
   datasetConfiguration: state.datasetConfiguration,
+  viewMode: state.temporaryConfiguration.viewMode,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

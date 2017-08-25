@@ -6,6 +6,8 @@ package com.scalableminds.braingames.datastore.controllers
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
+import com.scalableminds.util.json.JsonUtils.boxFormat
+import com.scalableminds.util.tools.Fox
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.Action
@@ -31,14 +33,16 @@ trait TracingController[T <: Tracing] extends Controller {
       }
   }
 
-  def saveMultiple = Action(validateJson[List[T]]) {
+  def saveMultiple = Action.async(validateJson[List[T]]) {
     implicit request => {
       AllowRemoteOrigin {
-        // TODO how do we handle failures?
         val tracings = request.body
-        tracings.foreach(tracing => tracingService.save(tracing, toCache = false))
-        val references = tracings.map(t => TracingReference("t.id", TracingType.skeleton))
-        Ok(Json.toJson(references))
+        val references = Fox.sequence(tracings.map { tracing =>
+          tracingService.save(tracing, toCache = false).map { _ =>
+            TracingReference(tracing.id, TracingType.skeleton)
+          }
+        })
+        references.map(x => Ok(Json.toJson(x)))
       }
     }
   }

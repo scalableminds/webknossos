@@ -5,11 +5,12 @@ import * as React from "react";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
-import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
-import TransferTaskModal from "./transfer_task_modal";
+import app from "app";
+import TransferTaskModal from "dashboard/views/transfer_task_modal";
+import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 
 const { Column } = Table;
 
@@ -115,6 +116,11 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
 
   renderActions = (task: APITaskWithAnnotationType) => {
     const annotation = task.annotation;
+    const isAdmin = task.annotation.user.teams
+      .filter(team => team.role.name === "admin")
+      .map(team => team.team)
+      .includes(task.team);
+
     return task.annotation.state.isFinished
       ? <div>
           <i className="fa fa-check" />
@@ -128,7 +134,7 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
               <strong>Trace</strong>
             </a>
           </li>
-          {this.props.isAdminView
+          {isAdmin
             ? <div>
                 <li>
                   <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
@@ -155,12 +161,13 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
                   </a>
                 </li>
               </div>
-            : <li>
-                <a href="#" onClick={() => this.confirmFinish(task)}>
-                  <i className="fa fa-check-circle-o" />
-                  Finish
-                </a>
-              </li>}
+            : null}
+          <li>
+            <a href="#" onClick={() => this.confirmFinish(task)}>
+              <i className="fa fa-check-circle-o" />
+              Finish
+            </a>
+          </li>
         </ul>;
   };
 

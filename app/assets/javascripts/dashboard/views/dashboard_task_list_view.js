@@ -121,6 +121,8 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
       .map(team => team.team)
       .includes(task.team);
 
+    const label = this.props.isAdminView ? "View" : "Trace";
+
     return task.annotation.state.isFinished
       ? <div>
           <i className="fa fa-check" />
@@ -131,7 +133,9 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
           <li>
             <a href={`/annotations/Task/${annotation.id}`}>
               <i className="fa fa-random" />
-              <strong>Trace</strong>
+              <strong>
+                {label}
+              </strong>
             </a>
           </li>
           {isAdmin
@@ -162,12 +166,14 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
                 </li>
               </div>
             : null}
-          <li>
-            <a href="#" onClick={() => this.confirmFinish(task)}>
-              <i className="fa fa-check-circle-o" />
-              Finish
-            </a>
-          </li>
+          {this.props.isAdminView
+            ? null
+            : <li>
+                <a href="#" onClick={() => this.confirmFinish(task)}>
+                  <i className="fa fa-check-circle-o" />
+                  Finish
+                </a>
+              </li>}
         </ul>;
   };
 

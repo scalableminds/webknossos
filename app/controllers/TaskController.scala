@@ -3,17 +3,14 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{Node, SkeletonTracing, Tree}
+import com.newrelic.api.agent.NewRelic
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
-import com.scalableminds.util.image.Color
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
 import models.annotation.{AnnotationService, _}
 import models.binary.DataSetDAO
 import models.project.{Project, ProjectDAO}
-import javax.inject.Inject
-
-import com.newrelic.api.agent.NewRelic
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
@@ -43,7 +40,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       (__ \ 'scriptId).readNullable[String] and
       (__ \ 'boundingBox).readNullable[BoundingBox]
 
-  val taskNMLJsonReads = baseJsonReads.tupled
+  val taskNmlJsonReads = baseJsonReads.tupled
 
   val taskCompleteReads =
     (baseJsonReads and
@@ -64,9 +61,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def createFromNML(implicit request: AuthenticatedRequest[AnyContent]) = {
-    /*def parseJson(s: String) = {
-      Json.parse(s).validate(taskNMLJsonReads) match {
+  def createFromNml(implicit request: AuthenticatedRequest[AnyContent]) = {
+    def parseJson(s: String) = {
+      Json.parse(s).validate(taskNmlJsonReads) match {
         case JsSuccess(parsed, _) =>
           Full(parsed)
         case errors: JsError =>
@@ -83,27 +80,23 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
       _ <- ensureTeamAdministration(request.user, team)
       result <- {
-        val nmls = NMLService.extractFromFile(nmlFile.ref.file, nmlFile.filename).nmls
+        val parseResults = NmlService.extractFromFile(nmlFile.ref.file, nmlFile.filename).parseResults
 
-        val futureResult: Future[List[Box[JsObject]]] = Fox.serialSequence(nmls){
-          case NMLService.NMLParseSuccess(fileName, nml) =>
-            val task = Task(
-              taskType._id,
-              team,
-              experience,
-              status.open,
-              _project = project.name,
-              _script = scriptId,
-              creationInfo = Some(fileName),
-              _id = BSONObjectID.generate)
-
+        val futureResult: Future[List[Box[JsObject]]] = Fox.serialSequence(parseResults){
+          case NmlService.NmlParseSuccess(fileName, tracing) =>
+            val task = Task(taskType._id, team, experience, status.open, _project = project.name,
+                            _script = scriptId, editPosition=tracing.editPosition,
+                            editRotation=tracing.editRotation, boundingBox=boundingBox)
+            val skeletonTracing = tracing.asInstanceOf[SkeletonTracing]
             for {
-              _ <- TaskService.insert(task, project)
-              _ <- AnnotationService.createAnnotationBase(task, request.user._id, boundingBox, taskType.settings, nml)
-              taskjs <- Task.transformToJson(task, request.userOpt)
+              dataSet <- DataSetDAO.findOneBySourceName(tracing.dataSetName).toFox ?~> Messages("datSet.notFound")
+              tracingReference <- dataSet.dataStore.saveSkeletonTracing(skeletonTracing) ?~> Messages("tracing.couldNotSave")
+              _ <- TaskService.insert(task, project) ?~> Messages("could not save task")
+              _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, taskType.settings, tracing.dataSetName) ?~> Messages("failed to create annotation base")
+              taskjs <- Task.transformToJson(task) ?~> Messages("failed to transform task to json")
             } yield taskjs
 
-          case NMLService.NMLParseFailure(fileName, error) =>
+          case NmlService.NmlParseFailure(fileName, error) =>
             Fox.failure(Messages("nml.file.invalid", fileName, error))
         }
         futureResult.map { results =>
@@ -111,8 +104,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           JsonOk(js, Messages("task.bulk.processed"))
         }
       }
-    } yield result*/
-    Fox.empty
+    } yield result
   }
 
 
@@ -179,7 +171,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           }
         }
       case "nml"     =>
-        createFromNML(request)
+        createFromNml(request)
       case "bulk"    =>
         request.body.asJson
         .toFox

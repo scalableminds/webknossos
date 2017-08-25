@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.braingames.datastore.controllers.JsonValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
@@ -18,6 +19,7 @@ trait Controller extends PlayController
   with ExtendedController
   with ProvidesSessionData
   with models.basics.Implicits
+  with JsonValidationHelpers
   with I18nSupport
   with LazyLogging {
 

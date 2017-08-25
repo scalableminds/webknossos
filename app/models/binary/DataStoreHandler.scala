@@ -14,6 +14,7 @@ import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTra
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import play.api.http.Status
@@ -30,6 +31,9 @@ trait DataStoreHandlingStrategy {
     Fox.failure("DataStore doesn't support getting SkeletonTracings")
 
   def saveSkeletonTracing(tracing: SkeletonTracing): Fox[TracingReference] =
+    Fox.failure("DataStore doesn't support saving SkeletonTracings.")
+
+  def saveSkeletonTracings(tracings: List[SkeletonTracing]): Fox[List[Box[TracingReference]]] =
     Fox.failure("DataStore doesn't support saving SkeletonTracings.")
 
   def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] =
@@ -82,6 +86,13 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/save")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .postWithJsonResponse[SkeletonTracing, TracingReference](tracing)
+  }
+
+  override def saveSkeletonTracings(tracings: List[SkeletonTracing]): Fox[List[Box[TracingReference]]] = {
+    logger.debug("Called to save SkeletonTracings. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/saveMultiple")
+      .withQueryString("token" -> DataTokenService.webKnossosToken)
+      .postWithJsonResponse[List[SkeletonTracing], List[Box[TracingReference]]](tracings)
   }
 
   override def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] = {

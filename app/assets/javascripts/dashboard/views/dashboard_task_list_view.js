@@ -116,7 +116,7 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
 
   renderActions = (task: APITaskWithAnnotationType) => {
     const annotation = task.annotation;
-    const isAdmin = task.annotation.user.teams
+    const isAdmin = app.currentUser.teams
       .filter(team => team.role.name === "admin")
       .map(team => team.team)
       .includes(task.team);
@@ -138,14 +138,16 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
               </strong>
             </a>
           </li>
+          {isAdmin || this.props.isAdminView
+            ? <li>
+                <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
+                  <i className="fa fa-share" />
+                  Transfer
+                </a>
+              </li>
+            : null}
           {isAdmin
             ? <div>
-                <li>
-                  <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
-                    <i className="fa fa-share" />
-                    Transfer
-                  </a>
-                </li>
                 <li>
                   <a href={`/annotations/Task/${annotation.id}/download`}>
                     <i className="fa fa-download" />

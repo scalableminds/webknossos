@@ -37,7 +37,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
 
     this.setState({
       isLoading: false,
-      projects,
+      projects: projects.filter(p => p.owner),
     });
   }
 

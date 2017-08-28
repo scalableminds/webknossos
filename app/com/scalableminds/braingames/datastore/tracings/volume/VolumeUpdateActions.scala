@@ -6,26 +6,34 @@ package com.scalableminds.braingames.datastore.tracings.volume
 import java.util.Base64
 
 import com.scalableminds.braingames.datastore.tracings.{UpdateAction, UpdateActionGroup}
-import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.geometry.{Point3D, Vector3D}
+import net.liftweb.common.{Box, Full}
 import play.api.libs.json._
 
 case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
 
   lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 
-  //def applyTo(tracing: VolumeTracing): VolumeTracing = {
-  //  tracing
-  //}
+  def applyTo(tracing: VolumeTracing): Box[VolumeTracing] = {
+    Full(tracing)
+  }
 }
 
 object UpdateBucketVolumeAction {
   implicit val updateBucketVolumeActionFormat = Json.format[UpdateBucketVolumeAction]
 }
 
-case class UpdateTracingVolumeAction(something: Int) extends VolumeUpdateAction {
-  //def applyOn(tracing: VolumeTracing): VolumeTracing = {
-  //  tracing
-  //}
+case class UpdateTracingVolumeAction(
+                                      activeSegmentId: Long,
+                                      editPosition: Point3D,
+                                      editRotation: Vector3D,
+                                      largestSegmentId: Long,
+                                      zoomLevel: Double
+                                    ) extends VolumeUpdateAction {
+
+  def applyTo(tracing: VolumeTracing): Box[VolumeTracing] = {
+    Full(tracing)
+  }
 }
 
 object UpdateTracingVolumeAction {

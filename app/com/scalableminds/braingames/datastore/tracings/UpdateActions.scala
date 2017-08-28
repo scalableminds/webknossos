@@ -7,7 +7,7 @@ import net.liftweb.common.{Box, Full}
 import play.api.libs.json.JsObject
 
 trait UpdateAction[T <: Tracing] {
-  def applyTo(tracing: T): Box[T] = Full(tracing)
+  def applyTo(tracing: T): Box[T]
 }
 
 trait UpdateActionGroup[T <: Tracing] {

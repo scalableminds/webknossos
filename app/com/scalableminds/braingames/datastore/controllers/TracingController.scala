@@ -71,7 +71,13 @@ trait TracingController[T <: Tracing] extends Controller {
     }
   }
 
-  // def withUpdateAllowed(tracingId: String, updateGroups: List[UpdateActionGroup[T]])() = {
+  def withAuthorizedUpdate(tracingId: String, updateGroups: List[UpdateActionGroup[T]]) = {
+    val timestamps = updateGroups.map(_.timestamp)
+    val latestStats = updateGroups.flatMap(_.stats).lastOption
+
+  }
+
+  // def withUpdateAllowed(, updateGroups: List[UpdateActionGroup[T]])() = {
 
   //}
 

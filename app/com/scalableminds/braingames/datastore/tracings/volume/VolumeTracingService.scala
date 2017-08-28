@@ -5,7 +5,9 @@ package com.scalableminds.braingames.datastore.tracings.volume
 
 import java.io.File
 
+import akka.actor.ActorSystem
 import com.google.inject.Inject
+import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingService, TracingType}
 import com.scalableminds.util.io.ZipIO
@@ -18,7 +20,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect._
 
 class VolumeTracingService @Inject()(
-                                      tracingDataStore: TracingDataStore
+                                      tracingDataStore: TracingDataStore,
+                                      @Named("braingames-binary") val system: ActorSystem
                                     ) extends TracingService[VolumeTracing] with VolumeTracingBucketHelper with WKWDataFormatHelper {
 
   implicit val volumeDataStore = tracingDataStore.volumeData

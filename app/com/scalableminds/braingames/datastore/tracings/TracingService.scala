@@ -5,8 +5,8 @@ package com.scalableminds.braingames.datastore.tracings
 
 import java.util.UUID
 
+import com.scalableminds.braingames.binary.storage.TemporaryStore
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
-import com.scalableminds.braingames.datastore.temporarystore.TemporaryStore
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Empty, Failure, Full}
@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
-trait TracingService[T <: Tracing] extends FoxImplicits {
+trait TracingService[T <: Tracing] extends TemporaryStore[String, T] with FoxImplicits {
 
   implicit val tracingFormat: Format[T]
 
@@ -45,7 +45,7 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
     }.orElse {
       if (useCache) {
         try {
-          TemporaryStore.getAs[T](tracingId)
+          find(tracingId)
         } catch {
           case e: NullPointerException => Fox.failure("Could not load temporary tracing")
         }
@@ -67,7 +67,7 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
         Fox.failure("tracing ID is already in use.")
       case Empty =>
         if (toCache) {
-          Fox.successful(TemporaryStore.set(tracing.id, tracing, temporaryStoreTimeout))
+          Fox.successful(insert(tracing.id, tracing, Some(temporaryStoreTimeout)))
         } else {
           tracingStore.putJson(tracing.id, tracing.version, tracing)
         }

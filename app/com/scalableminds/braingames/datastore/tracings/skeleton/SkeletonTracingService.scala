@@ -5,7 +5,9 @@ package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import java.io.File
 
+import akka.actor.ActorSystem
 import com.google.inject.Inject
+import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingService, TracingType}
@@ -20,7 +22,8 @@ import scala.reflect._
 
 
 class SkeletonTracingService @Inject()(
-                                        tracingDataStore: TracingDataStore
+                                        tracingDataStore: TracingDataStore,
+                                        @Named("braingames-binary") val system: ActorSystem
                                       ) extends TracingService[SkeletonTracing] with FoxImplicits with TextUtils {
 
   implicit val tracingFormat = SkeletonTracing.jsonFormat

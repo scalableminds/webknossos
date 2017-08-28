@@ -36,7 +36,7 @@ class VolumeTracingController @Inject()(
       AllowRemoteOrigin {
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          //_ <- withAuthorizedUpdate(tracing.version, request.body)(updates => volumeTracingService.update(tracing, updates.actions))
+          //_ <- withAuthorizedUpdate(tracingId, tracing.version, request.body)(updates => volumeTracingService.update(tracing, updates.actions))
         } yield {
           Ok
         }

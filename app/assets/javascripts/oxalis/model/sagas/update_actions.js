@@ -90,9 +90,11 @@ type UpdateSkeletonTracingUpdateAction = {
 type UpdateVolumeTracingUpdateAction = {
   name: "updateTracing",
   value: {
-    activeCell: number,
+    activeSegmentId: number,
     editPosition: Vector3,
-    nextCell: number,
+    editRotation: Vector3,
+    largestSegmentId: number,
+    zoomLevel: number,
   },
 };
 type UpdateTracingUpdateAction =
@@ -254,13 +256,17 @@ export function moveTreeComponent(
 export function updateVolumeTracing(
   tracing: VolumeTracingType,
   position: Vector3,
+  rotation: Vector3,
+  zoomLevel: number,
 ): UpdateVolumeTracingUpdateAction {
   return {
     name: "updateTracing",
     value: {
-      activeCell: tracing.activeCellId,
+      activeSegmentId: tracing.activeCellId,
       editPosition: position,
-      nextCell: tracing.maxCellId + 1,
+      editRotation: rotation,
+      largestSegmentId: tracing.maxCellId,
+      zoomLevel,
     },
   };
 }

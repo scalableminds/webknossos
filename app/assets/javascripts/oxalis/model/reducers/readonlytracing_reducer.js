@@ -20,7 +20,7 @@ function ReadOnlyTracingReducer(state: OxalisState, action: ActionType): OxalisS
         restrictions,
         name: action.annotation.name,
         tracingType: "View",
-        tracingId: action.tracing.id,
+        tracingId: action.annotation.content.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
         isPublic: action.annotation.isPublic,

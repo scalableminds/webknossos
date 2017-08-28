@@ -42,7 +42,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
         name: action.annotation.name,
         tracingType: action.annotation.typ,
-        tracingId: action.tracing.id,
+        tracingId: action.annotation.content.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
         isPublic: action.annotation.isPublic,

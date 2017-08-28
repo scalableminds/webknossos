@@ -95,7 +95,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         trees,
         name: action.annotation.name,
         tracingType: action.annotation.typ,
-        tracingId: action.tracing.id,
+        tracingId: action.annotation.content.id,
         version: action.tracing.version,
         boundingBox: convertBoundingBox(action.tracing.boundingBox),
         isPublic: action.annotation.isPublic,

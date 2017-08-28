@@ -61,28 +61,23 @@ type ServerSkeletonTracingTreeType = {
   nodes: Array<NodeType>,
 };
 
-export type ServerSkeletonTracingType = {
-  activeNodeId?: number,
+type ServerTracingBaseType = {
   boundingBox?: BoundingBoxObjectType,
   editPosition: Vector3,
   editRotation: Vector3,
-  id: string,
-  trees: Array<ServerSkeletonTracingTreeType>,
   version: number,
   zoomLevel: number,
 };
 
-export type ServerVolumeTracingType = {
+export type ServerSkeletonTracingType = ServerTracingBaseType & {
+  activeNodeId?: number,
+  trees: Array<ServerSkeletonTracingTreeType>,
+};
+
+export type ServerVolumeTracingType = ServerTracingBaseType & {
   activeSegmentId?: number,
-  boundingBox?: BoundingBoxObjectType,
   dataLayer: SegmentationDataLayerType,
-  editPosition: Vector3,
-  editRotation: Vector3,
   fallbackLayer?: string,
-  id: string,
-  version: number,
-  zoomLevel: number,
-  tags: Array<string>,
 };
 
 type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
@@ -320,7 +315,7 @@ export class OxalisModel {
   }
 
   getLayerInfos(tracing: ServerTracingType) {
-    // Overwrite or extend layers with userLayer
+    // Overwrite or extend layers with volumeTracingLayer
 
     const dataset = Store.getState().dataset;
     const layers = dataset == null ? [] : _.clone(dataset.dataLayers);

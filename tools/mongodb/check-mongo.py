@@ -1,55 +1,59 @@
+from __future__ import print_function
+from sets import Set
 import bson
-import sets
 import os
-
-root = "."
+import sys
 
 constraints = [
-  ("Datasets in volumeTracings should exist", "dataSets.name", "volumes.dataSetName"),
+  ("Datasets in volumeTracings should exist", "dataSets[].name", "volumes[].dataSetName"),
 ]
 
 def bson_files(root):
-  for root, dirs, files in os.walk('.', followlinks=True):
+  for root, dirs, files in os.walk(root, followlinks=True):
     for file in files:
       if file.endswith(".bson"):
-        print "Reading data from '%s' ..." % file,
+        print("Reading data from '%s' ..." % file, end="")
         yield os.path.join(root, file)
-        print " Done."
+        print(" Done.")
 
-def process_document(id, key, doc):
+def process_document(id, key, doc, value_sets):
   if type(doc) == dict:
     for k in doc:
-      process_document(id, key + "." + k, doc[k])
+      process_document(id, key + "." + k, doc[k], value_sets)
   elif type(doc) == list:
     for v in doc:
-      process_document(id, key + "[]", v)
+      process_document(id, key + "[]", v, value_sets)
   else:
-    if key in keys:
-      if not doc in data[key]:
-        data[key][doc] = []
-      data[key][doc].append(id)
+    if key in value_sets:
+      value_set = value_sets[key]
+      if not doc in value_set:
+        value_set[doc] = []
+      value_set[doc].append(id)
 
-# Initialization
-keys = sets.Set(map(lambda c: c[1], constraints) + map(lambda c: c[2], constraints))
-data = {}
-for key in keys:
-  data[key] = {}
+def main(root, constraints):
+  # Initialization
+  value_sets = {}
+  for key in Set(map(lambda c: c[1], constraints) + map(lambda c: c[2], constraints)):
+    value_sets[key] = {}
 
-# Read documents
-for bson_file in bson_files(root):
-  collection = os.path.basename(bson_file).replace(".bson", "")
-  with open(bson_file, "rb") as file:
-    for document in bson.decode_all(file.read()):
-      id = document["_id"]
-      process_document(id, collection, document)
+  # Read documents
+  for bson_file in bson_files(root):
+    collection = os.path.basename(bson_file).replace(".bson", "[]")
+    with open(bson_file, "rb") as file:
+      for document in bson.decode_all(file.read()):
+        id = document["_id"]
+        process_document(id, collection, document, value_sets)
 
-# Check constraints
-exit_code = 0
-for name, left, right in constraints:
-  missing_values = sets.Set(data[right].keys()).difference(sets.Set(data[left].keys()))
-  for value in missing_values:
-    exit_code = 1
-    for violated_document in data[right][value]:
-      print >> sys.stderr, "Constraint '%s' violated on document '%s': value '%s' from '%s' not found in '%s'" % (name, violated_document, value, right, left), out=std.err
+  # Check constraints
+  exit_code = 0
+  for name, left, right in constraints:
+    missing_values = Set(value_sets[right].keys()).difference(Set(value_sets[left].keys()))
+    for value in missing_values:
+      exit_code = 1
+      for violated_document in value_sets[right][value]:
+        print("Constraint '%s' violated for document '%s': value '%s' from '%s' not found in '%s'" % (name, violated_document, value, right, left), file=sys.stderr)
 
-exit(exit_code)
+  exit(exit_code)
+
+if __name__ == "__main__":
+  main(sys.argv[1], constraints)

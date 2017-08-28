@@ -96,8 +96,9 @@ class Router extends BaseRouter {
   }
 
   projects() {
-    this.showWithPagination("ProjectListView", "ProjectCollection", {
-      addButtonText: "Create New Project",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.ProjectListView, {});
+      this.changeView(view);
     });
   }
 

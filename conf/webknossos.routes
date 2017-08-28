@@ -131,7 +131,8 @@ POST          /api/queries                                                      
 GET           /api/descriptions/:element                                        controllers.QueryController.descriptions(element)
 
 GET           /api/tasks                                                        controllers.TaskController.list
-POST          /api/tasks                                                        controllers.TaskController.create(type: String)
+POST          /api/tasks                                                        controllers.TaskController.create
+POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFile
 GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)

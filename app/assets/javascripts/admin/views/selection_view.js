@@ -12,6 +12,7 @@ class SelectionView extends Marionette.CollectionView {
     return {
       name: this.options.name,
       required: this.options.required,
+      disabled: this.options.disabled,
     };
   }
 

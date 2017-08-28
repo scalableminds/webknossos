@@ -97,25 +97,26 @@ export type APIAnnotationType = {
   +tracingTime: null,
   +tags: Array<string>,
 };
+export type APITaskTypeType = {
+  +id: string,
+  +summary: string,
+  +description: string,
+  +team: string,
+  +settings: {
+    +allowedModes: ["orthogonal", "oblique", "flight"],
+    +branchPointsAllowed: boolean,
+    +somaClickingAllowed: boolean,
+    +advancedOptionsAllowed: boolean,
+    +preferredMode?: string,
+  },
+};
 
 export type APITaskWithAnnotationType = {
   +id: string,
   +team: string,
   +formattedHash: string,
   +projectName: string,
-  +type: {
-    +id: string,
-    +summary: string,
-    +description: string,
-    +team: string,
-    +settings: {
-      +allowedModes: ["orthogonal", "oblique", "flight"],
-      +branchPointsAllowed: boolean,
-      +somaClickingAllowed: boolean,
-      +advancedOptionsAllowed: boolean,
-    },
-    +fileName: null,
-  },
+  +type: APITaskTypeType,
   +dataSet: string,
   +editPosition: Vector3,
   +editRotation: Vector3,

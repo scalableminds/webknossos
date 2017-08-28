@@ -30,4 +30,5 @@ In order to restore the current window, a reload is necessary.`,
   "project.delete": "Do you really want to delete this project?",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
+  "taskType.delete": "Do you really want to delete this task type?",
 };

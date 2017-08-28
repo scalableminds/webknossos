@@ -1,4 +1,5 @@
 from __future__ import print_function
+from itertools import chain
 import bson
 import os
 import sys
@@ -32,7 +33,7 @@ def process_document(id, key, doc, value_sets):
 def main(root, constraints):
   # Initialization
   value_sets = {}
-  for key in set(map(lambda c: c[1], constraints) + map(lambda c: c[2], constraints)):
+  for key in set(chain(map(lambda c: c[1], constraints), map(lambda c: c[2], constraints))):
     value_sets[key] = {}
 
   # Read documents

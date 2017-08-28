@@ -128,3 +128,15 @@ export type APITaskWithAnnotationType = {
   +creationInfo: null,
   +annotation: APIAnnotationType,
 };
+
+export type APIProjectType = {
+  +id: string,
+  +name: string,
+  +team: string,
+  +owner: APIUserType,
+  +priority: number,
+  +paused: boolean,
+  +expectedTime: number,
+  +assignmentConfiguration: { "location": "webknossos" | "mturk" },
+  +numberOfOpenAssignments: number,
+};

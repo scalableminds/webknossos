@@ -1,5 +1,4 @@
 from __future__ import print_function
-from sets import Set
 import bson
 import os
 import sys
@@ -33,7 +32,7 @@ def process_document(id, key, doc, value_sets):
 def main(root, constraints):
   # Initialization
   value_sets = {}
-  for key in Set(map(lambda c: c[1], constraints) + map(lambda c: c[2], constraints)):
+  for key in set(map(lambda c: c[1], constraints) + map(lambda c: c[2], constraints)):
     value_sets[key] = {}
 
   # Read documents
@@ -47,7 +46,7 @@ def main(root, constraints):
   # Check constraints
   exit_code = 0
   for name, left, right in constraints:
-    missing_values = Set(value_sets[right].keys()).difference(Set(value_sets[left].keys()))
+    missing_values = set(value_sets[right].keys()).difference(set(value_sets[left].keys()))
     for value in missing_values:
       exit_code = 1
       for violated_document in value_sets[right][value]:

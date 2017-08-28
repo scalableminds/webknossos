@@ -10,9 +10,10 @@ import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { Input } from "antd";
+import { Input, Tooltip } from "antd";
 import Vector3Input from "libs/vector3_input";
 import ButtonComponent from "oxalis/view/components/button_component";
+import message from "messages";
 
 type Props = {
   flycam: FlycamType,
@@ -47,31 +48,35 @@ class DatasetPositionView extends PureComponent<Props> {
 
     return (
       <div>
-        <div>
-          <Input.Group compact size="large">
-            <ButtonComponent onClick={this.copyPositionToClipboard} size="large">
-              Position
-            </ButtonComponent>
-            <Vector3Input
-              value={position}
-              onChange={this.handleChangePosition}
-              style={{ width: "120px" }}
-            />
-          </Input.Group>
-        </div>
+        <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
+          <div>
+            <Input.Group compact size="large">
+              <ButtonComponent onClick={this.copyPositionToClipboard} size="large">
+                Position
+              </ButtonComponent>
+              <Vector3Input
+                value={position}
+                onChange={this.handleChangePosition}
+                style={{ width: "120px" }}
+              />
+            </Input.Group>
+          </div>
+        </Tooltip>
         {isArbitraryMode
-          ? <div style={{ marginLeft: 10 }}>
-              <Input.Group compact size="large">
-                <ButtonComponent onClick={this.copyRotationToClipboard} size="large">
-                  Rotation
-                </ButtonComponent>
-                <Vector3Input
-                  value={rotation}
-                  onChange={this.handleChangeRotation}
-                  style={{ width: "120px" }}
-                />
-              </Input.Group>
-            </div>
+          ? <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
+              <div style={{ marginLeft: 10 }}>
+                <Input.Group compact size="large">
+                  <ButtonComponent onClick={this.copyRotationToClipboard} size="large">
+                    Rotation
+                  </ButtonComponent>
+                  <Vector3Input
+                    value={rotation}
+                    onChange={this.handleChangeRotation}
+                    style={{ width: "120px" }}
+                  />
+                </Input.Group>
+              </div>
+            </Tooltip>
           : null}
       </div>
     );

@@ -42,8 +42,6 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield {
       Ok(js)
     }
-      //BadRequest(Json.obj("error" -> "No valid Emails").value)
-      //Future{Ok(Json.obj("error" -> "No valid Emails").value)}
   }
 
   //helper methods

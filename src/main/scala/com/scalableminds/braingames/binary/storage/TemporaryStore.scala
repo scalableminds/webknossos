@@ -7,6 +7,7 @@ import akka.actor.ActorSystem
 import akka.agent.Agent
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.duration.FiniteDuration
 
 trait TemporaryStore[K, V] {
 
@@ -26,8 +27,10 @@ trait TemporaryStore[K, V] {
   def removeAllExcept(l: Array[K]) =
     ts.send(_.filterKeys(l.contains))
 
-  def insert(id: K, t: V) =
+  def insert(id: K, t: V, to: Option[FiniteDuration] = None) = {
     ts.send(_ + (id -> t))
+    to.foreach(system.scheduler.scheduleOnce(_)(remove(id)))
+  }
 
   def insertAll(els: (K, V)*) =
     ts.send(_ ++ els)

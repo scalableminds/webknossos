@@ -73,6 +73,17 @@ class RocksDBIterator(it: RocksIterator, prefix: Option[String]) extends Iterato
   }
 }
 
+class RocksDBKeyIterator(it: RocksIterator, prefix: Option[String]) extends Iterator[String] {
+
+  override def hasNext: Boolean = it.isValid && prefix.forall(it.key().startsWith(_))
+
+  override def next: String = {
+    val value = new String(it.key().map(_.toChar))
+    it.next()
+    value
+  }
+}
+
 class RocksDBStore(db: RocksDB, handle: ColumnFamilyHandle) extends KeyValueStore with FoxImplicits {
 
   def get(key: String): Fox[Array[Byte]] = {
@@ -88,6 +99,12 @@ class RocksDBStore(db: RocksDB, handle: ColumnFamilyHandle) extends KeyValueStor
     val it = db.newIterator(handle)
     it.seek(key)
     new RocksDBIterator(it, prefix)
+  }
+
+  def scanKeys(key: String, prefix: Option[String] = None): Iterator[String] = {
+    val it = db.newIterator(handle)
+    it.seek(key)
+    new RocksDBKeyIterator(it, prefix)
   }
 
   def put(key: String, value: Array[Byte]): Fox[Unit] = {

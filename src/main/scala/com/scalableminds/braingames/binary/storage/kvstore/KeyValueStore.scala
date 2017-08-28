@@ -26,6 +26,8 @@ trait KeyValueStore extends FoxImplicits {
 
   def scan(key: String, prefix: Option[String] = None): Iterator[KeyValuePair[Array[Byte]]]
 
+  def scanKeys(key: String, prefix: Option[String] = None): Iterator[String]
+
   def put(key: String, value: Array[Byte]): Fox[Unit]
 
   def getJson[T : Reads](key: String): Fox[T] = {

@@ -64,6 +64,13 @@ class VersionedKeyValueStore(underlying: KeyValueStore) extends FoxImplicits {
   def getJson[T : Reads](key: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[T]] =
     scanVersionsJson(key, version).toStream.headOption
 
+  def getVersion(key: String, version: Option[Long] = None): Fox[Long] = {
+    val prefix = s"$key@"
+    underlying.scanKeys(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { versionedKey =>
+      VersionedKey(versionedKey).map(_.version)
+    }.toStream.headOption
+  }
+
   def scanVersions(key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] = {
     val prefix = s"$key@"
     underlying.scan(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>

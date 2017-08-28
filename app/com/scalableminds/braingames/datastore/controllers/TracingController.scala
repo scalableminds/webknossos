@@ -6,7 +6,7 @@ package com.scalableminds.braingames.datastore.controllers
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
-import com.scalableminds.util.json.JsonUtils.boxFormat
+import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.Fox
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json}

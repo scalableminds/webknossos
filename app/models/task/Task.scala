@@ -104,6 +104,14 @@ case class Task(
 object Task extends FoxImplicits {
   implicit val taskFormat = Json.format[Task]
 
+  def transformToJsonFoxed(taskFox: Fox[Task], otherFox: Fox[_])(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    for {
+      _ <- otherFox
+      task <- taskFox
+      js <- transformToJson(task)
+    } yield js
+  }
+
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       dataSetName <- task.annotationBase.map(_.dataSetName)

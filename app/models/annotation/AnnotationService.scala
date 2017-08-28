@@ -4,7 +4,7 @@ import java.io.{BufferedOutputStream, FileOutputStream}
 import java.util.UUID
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.braingames.datastore.tracings.skeleton.{NmlWriter}
+import com.scalableminds.braingames.datastore.tracings.skeleton.NmlWriter
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{Node, SkeletonTracing, Tree}
 import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTracing => VolumeTracing, AbstractVolumeTracingLayer => VolumeTracingLayer}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
@@ -20,13 +20,13 @@ import models.annotation.handler.SavedTracingInformationHandler
 import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
 import models.user.{UsedAnnotationDAO, User}
+import net.liftweb.common.Box
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 
-import scala.collection.immutable
 import scala.concurrent.Future
 
 /**
@@ -189,14 +189,17 @@ object AnnotationService
   }
 
   def createAnnotationBase(
-    task: Task,
+    taskFox: Fox[Task],
     userId: BSONObjectID,
-    tracingReference: TracingReference,
-    settings: AnnotationSettings,
+    tracingReferenceBox: Box[TracingReference],
     dataSetName: String
     )(implicit ctx: DBAccessContext) = {
+
     for {
-      _ <- Annotation(Some(userId), tracingReference, dataSetName, task.team, settings,
+      task <- taskFox
+      taskType <- task.taskType
+      tracingReference <- tracingReferenceBox.toFox
+      _ <- Annotation(Some(userId), tracingReference, dataSetName, task.team, taskType.settings,
           typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }

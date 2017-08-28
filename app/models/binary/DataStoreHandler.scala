@@ -13,6 +13,7 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.elements.Skeleto
 import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTracing => VolumeTracing}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64

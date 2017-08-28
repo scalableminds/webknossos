@@ -4,6 +4,7 @@ import java.util.UUID
 import javax.inject.Inject
 
 import com.newrelic.api.agent.NewRelic
+import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -18,9 +19,10 @@ import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.{Cont, Done, Input, Iteratee}
+import play.api.libs.iteratee._
 import play.api.libs.json.Json._
 import play.api.libs.json._
+import play.api.mvc.Result
 import play.twirl.api.Html
 
 import scala.concurrent.Future
@@ -33,7 +35,7 @@ case class TaskParameters(
                            projectName: String,
                            scriptId: Option[String],
                            boundingBox: Option[BoundingBox],
-                           dataSetName: String,
+                           dataSet: String,
                            editPosition: Point3D,
                            editRotation: Vector3D)
 
@@ -73,44 +75,77 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def create = Authenticated.async(validateJson[List[TaskParameters]]) { implicit request =>
     createTasks(request.body.map { params =>
-      val tracing = AnnotationService.createTracingBase(params.dataSetName, params.boundingBox, params.editPosition, params.editRotation)
+      val tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       (params, tracing)
-    }).map(JsonOk(_, Messages("task.bulk.processed")))
+    }, request.user)
   }
 
   def createFromFile = Authenticated.async { implicit request =>
-    Future.successful(Ok)
-  }
-
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)]): Future[JsObject] = {
-
-    def processGrouped[X, Y, K](items: List[X])(group: X => K)(process: (K, List[X]) => List[Y]): List[Y] = {
-      val itemGroups = items
-        .zipWithIndex
-        .groupBy(item => group(item._1))
-
-      val results = itemGroups.map { itemGroup =>
-        val key = itemGroup._1
-        val values = itemGroup._2.map(_._1)
-        val indices = itemGroup._2.map(_._2)
-        process(key, values).zip(indices)
-      }.toList.flatten
-
-      results.sortBy(_._2).map(_._1)
-    }
-
-    processGrouped(requestedTasks)(_._1.dataSetName){ (dataSetName, requestedTasks) =>
-      DataSetDAO.findOneBySourceName(dataSetName).futureBox.map {
-        case Full(dataSet) =>
-          dataSet.dataStore.saveSkeletonTracings(requestedTasks.map(_._2))
-        case _ =>
-          Fox.failure("geht nicht")
+    def parseJson[T: Reads](s: String) = {
+      Json.parse(s).validate[T] match {
+        case JsSuccess(parsed, _) =>
+          Full(parsed)
+        case errors: JsError =>
+          Failure(Messages("task.create.failed"))
       }
     }
+
+    for {
+      body <- request.body.asMultipartFormData ?~> Messages("invalid")
+      nmlFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
+      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
+      params <- parseJson[List[TaskParameters]](jsonString)
+    } yield {
+      Ok
+    }
+
+
+
+
+
+      Future.successful(Ok)
   }
 
+  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)], user: User)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
+    def assertAllOnSameDataset(): Fox[String] = {
+      def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)], dataSetName: String): Boolean = {
+        requestedTasksRest match {
+          case List() => true
+          case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
+        }
+      }
+      val firstDataSetName = requestedTasks.head._1.dataSet
+      if (allOnSameDatasetIter(requestedTasks, requestedTasks.head._1.dataSet))
+        Fox.successful(firstDataSetName)
+      else
+        Fox.failure("Cannot create tasks on multiple datasets in one go.")
+    }
 
-/*  private def createFromNml(implicit request: AuthenticatedRequest[AnyContent]) = {
+    for {
+      dataSetName <- assertAllOnSameDataset()
+      dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataset.notFound")
+      tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(requestedTasks.map(_._2))
+      taskObjects: List[Fox[Task]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
+      zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
+      annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
+                                                                taskFox = tuple._3,
+                                                                request.user._id,
+                                                                tracingReferenceBox=tuple._2,
+                                                                dataSetName))
+      zippedTasksAndAnnotations = taskObjects zip annotationBases
+      taskJsons = zippedTasksAndAnnotations.map(tuple => Task.transformToJsonFoxed(tuple._1, tuple._2))
+      result <- {
+        val taskJsonFuture: Future[List[Box[JsObject]]] = Fox.sequence(taskJsons)
+        taskJsonFuture.map {taskJsonBoxes =>
+          val js = bulk2StatusJson(taskJsonBoxes)
+          JsonOk(js, Messages("task.bulk.processed"))
+        }
+      }
+    } yield result
+  }
+
+/*
+  private def createFromNml(implicit request: AuthenticatedRequest[AnyContent]) = {
     def parseJson(s: String) = {
       Json.parse(s).validate(taskNmlJsonReads) match {
         case JsSuccess(parsed, _) =>
@@ -155,8 +190,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       }
     } yield result
   }
-
 */
+
 
   private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: AuthenticatedRequest[_]): Fox[Task] = {
     for {
@@ -179,12 +214,11 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   private def createSingleTask(params: TaskParameters)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(params.dataSetName).toFox ?~> Messages ("dataSet.notFound", params.dataSetName)
+      dataSet <- DataSetDAO.findOneBySourceName(params.dataSet).toFox ?~> Messages ("dataSet.notFound", params.dataSet)
       task <- createTaskWithoutAnnotationBase(params)
-      tracing = AnnotationService.createTracingBase(params.dataSetName, params.boundingBox, params.editPosition, params.editRotation)
+      tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       tracingReference <- dataSet.dataStore.saveSkeletonTracing(tracing) ?~> "Failed to save tracing base."
-      taskType <- task.taskType
-      _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, taskType.settings, params.dataSetName)
+      _ <- AnnotationService.createAnnotationBase(Fox.successful(task), request.user._id, Full(tracingReference), params.dataSet)
       taskjs <- Task.transformToJson(task)
     } yield taskjs
   }
@@ -235,8 +269,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         editRotation = params.editRotation)
       _ <- AnnotationService.updateAllOfTask(updatedTask, taskType.settings)
 
-      newTracingBase = AnnotationService.createTracingBase(params.dataSetName, params.boundingBox, params.editPosition,  params.editRotation)
-      dataSet <- DataSetDAO.findOneBySourceName(params.dataSetName).toFox ?~> Messages("dataSet.notFound", params.dataSetName)
+      newTracingBase = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition,  params.editRotation)
+      dataSet <- DataSetDAO.findOneBySourceName(params.dataSet).toFox ?~> Messages("dataSet.notFound", params.dataSet)
       newTracingBaseReference <- dataSet.dataStore.saveSkeletonTracing(newTracingBase) ?~> "Failed to save skeleton tracing."
        _ <- AnnotationService.updateAnnotationBase(updatedTask, newTracingBaseReference)
       json <- Task.transformToJson(updatedTask)

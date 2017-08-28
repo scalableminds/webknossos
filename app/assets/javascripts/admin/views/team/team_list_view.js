@@ -17,6 +17,7 @@ type State = {
   isLoading: boolean,
   teams: Array<APITeamType>,
   searchQuery: string,
+  isTeamCreationModalVisible: boolean,
 };
 
 class TeamListView extends React.PureComponent<{}, State> {

@@ -25,7 +25,7 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import { setRotationAction } from "oxalis/model/actions/flycam_actions";
+import { setDirectionAction } from "oxalis/model/actions/flycam_actions";
 import {
   getPosition,
   getRotationOrtho,
@@ -170,7 +170,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     // set the new trace direction
     activeNodeMaybe.map(activeNode =>
       Store.dispatch(
-        setRotationAction([
+        setDirectionAction([
           position[0] - activeNode.position[0],
           position[1] - activeNode.position[1],
           position[2] - activeNode.position[2],

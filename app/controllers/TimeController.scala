@@ -33,6 +33,8 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   //list user with working hours > 0 (only one user is also possible)
   def loggedTimeForMultipleUser(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
+    var users =  List[User]()
+
     for {
       usersList <- Fox.sequence(getUsersAsStringForEmail(userString.split(",").toList))
       users = usersList.flatten
@@ -40,6 +42,8 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield {
       Ok(js)
     }
+      //BadRequest(Json.obj("error" -> "No valid Emails").value)
+      //Future{Ok(Json.obj("error" -> "No valid Emails").value)}
   }
 
   //helper methods
@@ -80,7 +84,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
       if(js.nonEmpty)
         js.head.value.get("time") match {
           case Some(x) =>
-            if (x.toString().toInt == 0) None
+            if (isFormatedDurationZero(x.toString())) None
             else Some(Json.obj(
               "user" -> Json.toJson(user)(User.userCompactWrites),
               "timelogs" -> Json.toJson(js)))
@@ -120,7 +124,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
       project <- ProjectDAO.findOneByName(task._project)
     } yield {
       Json.obj(
-        "time" -> timeSpan.time,
+        "time" -> formatDuration(timeSpan.time),
         "timestamp" -> timeSpan.timestamp,
         "annotation" -> timeSpan.annotation,
         "_id" -> timeSpan._id.stringify,
@@ -150,5 +154,26 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield {
       UserService.findOneByEmail(email)
     }
+  }
+
+  def formatDuration(millis: Long): String = {
+  //example: P3Y6M4DT12H30M5S = 3 years + 9 month + 4 days + 12 hours + 30 min + 5 sec
+  // only hours, min and sec are important in this scenario
+    val h = (millis / 3600000)
+    val m = (millis / 60000) % 60
+    val s = (millis / 1000) % 60
+
+    var res = "PT"
+    if (h>0) res += h+"H"
+    if (m>0) res += m+"M"
+    res += s+"S"
+
+    res
+  }
+
+  def isFormatedDurationZero(d: String): Boolean = {
+    val d2 = "PT5M16S"
+    val digits = d2.filter(_.isDigit)
+    digits.toInt == 0
   }
 }

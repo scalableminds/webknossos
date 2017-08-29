@@ -28,4 +28,7 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "project.delete": "Do you really want to delete this project?",
+  "script.delete": "Do you really want to delete this script?",
+  "team.delete": "Do you really want to delete this team?",
+  "taskType.delete": "Do you really want to delete this task type?",
 };

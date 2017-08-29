@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
-import type { DataLayerType } from "oxalis/store";
+import type { DataLayerType, SettingsType } from "oxalis/store";
 
 type APIDataSourceType = {
   +id: {
@@ -97,25 +97,20 @@ export type APIAnnotationType = {
   +tracingTime: null,
   +tags: Array<string>,
 };
+export type APITaskTypeType = {
+  +id: string,
+  +summary: string,
+  +description: string,
+  +team: string,
+  +settings: SettingsType,
+};
 
 export type APITaskWithAnnotationType = {
   +id: string,
   +team: string,
   +formattedHash: string,
   +projectName: string,
-  +type: {
-    +id: string,
-    +summary: string,
-    +description: string,
-    +team: string,
-    +settings: {
-      +allowedModes: ["orthogonal", "oblique", "flight"],
-      +branchPointsAllowed: boolean,
-      +somaClickingAllowed: boolean,
-      +advancedOptionsAllowed: boolean,
-    },
-    +fileName: null,
-  },
+  +type: APITaskTypeType,
   +dataSet: string,
   +editPosition: Vector3,
   +editRotation: Vector3,
@@ -139,4 +134,11 @@ export type APIProjectType = {
   +expectedTime: number,
   +assignmentConfiguration: { "location": "webknossos" | "mturk" },
   +numberOfOpenAssignments: number,
+};
+
+export type APIScriptType = {
+  +id: string,
+  +name: string,
+  +owner: APIUserType,
+  +gist: string,
 };

@@ -1,74 +1,112 @@
-import _ from "lodash";
-import TeamModel from "admin/models/team/team_model";
-import TeamCollection from "admin/models/team/team_collection";
-import SelectionView from "admin/views/selection_view";
-import ModalView from "admin/views/modal_view";
+import * as React from "react";
+import { Modal, Input, Select, Spin, Button } from "antd";
+import Request from "libs/request";
+import type { APITeamType } from "admin/api_flow_types";
 
-class CreateTeamModalView extends ModalView {
-  static initClass() {
-    this.prototype.headerTemplate = "<h3>Add a New Team</h3>";
-    this.prototype.bodyTemplate = _.template(`\
-<form class="form-horizontal">
-  <div class="form-group">
-    <label class="col-sm-2 control-label" for="inputName">Name</label>
-    <div class="col-sm-10">
-      <input type="text" class="form-control" id="inputName" placeholder="Name" required autofocus>
-    </div>
-  </div>
-  <div class="form-group">
-    <label class="col-sm-2 control-label" for="inputName">Parent Team</label>
-    <div class="col-sm-10 parent-teams">
-      <input type="text" class="form-control" id="" placeholder="Name" required>
-    </div>
-  </div>
-</form>\
-`);
-    this.prototype.footerTemplate = `\
-<button type="submit" class="btn btn-primary">Add</button>
-<a href="#" class="btn btn-default" data-dismiss="modal">Close</a>\
-`;
+const { Option } = Select;
 
-    this.prototype.ui = { inputName: "#inputName" };
+type Props = {
+  onOk: Function,
+  onCancel: Function,
+  isVisible: boolean,
+};
 
-    this.prototype.events = {
-      "submit form": "addNewTeam",
-      "click .btn-primary": "addNewTeam",
-    };
+type State = {
+  newTeamName: string,
+  parentTeam: ?string,
+  teams: Array<APITeamType>,
+  isLoading: boolean,
+};
 
-    this.prototype.regions = { parentTeams: ".parent-teams" };
+class CreateTeamModalView extends React.PureComponent<Props, State> {
+  state = {
+    newTeamName: "",
+    parentTeam: undefined,
+    teams: [],
+    isLoading: true,
+  };
+
+  componentDidMount() {
+    this.fetchData();
   }
 
-  initialize(options) {
-    this.teamCollection = options.teamCollection;
+  async fetchData() {
+    const url = "/api/teams?isRoot=true";
+    const teams = await Request.receiveJSON(url);
 
-    this.teamSelectionView = new SelectionView({
-      collection: new TeamCollection(),
-      childViewOptions: {
-        modelValue() {
-          return `${this.model.get("name")}`;
-        },
-      },
-      data: "isRoot=true",
+    this.setState({
+      isLoading: false,
+      teams,
     });
   }
 
-  addNewTeam(evt) {
-    evt.preventDefault();
+  onOk = () => {
+    if (this.isInputValid()) {
+      const newTeam = {
+        name: this.state.newTeamName,
+        parent: this.state.parentTeam,
+        roles: [{ name: "admin" }, { name: "user" }],
+        isEditable: "true",
+      };
 
-    const team = new TeamModel({
-      name: this.ui.inputName.val(),
-      parent: this.$("select :selected").val(),
-    });
-    return this.teamCollection.create(team, {
-      wait: true,
-      success: _.bind(this.destroy, this),
-    });
+      const url = "/api/teams";
+      Request.sendJSONReceiveJSON(url, { data: newTeam }).then(team => {
+        this.setState({
+          newTeamName: "",
+          parentTeam: undefined,
+        });
+
+        this.props.onOk(team);
+      });
+    }
+  };
+
+  isInputValid(): boolean {
+    return this.state.newTeamName !== "" && this.state.parentTeam !== undefined;
   }
 
-  onRender() {
-    return this.showChildView("parentTeams", this.teamSelectionView);
+  render() {
+    return (
+      <Modal
+        title="Add a New Team"
+        visible={this.props.isVisible}
+        footer={
+          <div>
+            <Button onClick={this.props.onCancel}>Cancel</Button>
+            <Button type="primary" onClick={this.onOk} disabled={!this.isInputValid()}>
+              Ok
+            </Button>
+          </div>
+        }
+      >
+        <Spin spinning={this.state.isLoading} size="large">
+          <Input
+            value={this.state.newTeamName}
+            onChange={(event: SyntheticInputEvent) =>
+              this.setState({ newTeamName: event.target.value })}
+            icon="tag-o"
+            placeholder="Team Name"
+            autoFocus
+          />
+          <Select
+            showSearch
+            style={{ width: "100%", marginTop: 10 }}
+            placeholder="Select a parent team"
+            optionFilterProp="children"
+            onChange={(value: string) => this.setState({ parentTeam: value })}
+            value={this.state.parentTeam}
+            filterOption={(input, option) =>
+              option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+          >
+            {this.state.teams.map(team =>
+              <Option key={team.name} value={team.name}>
+                {team.name}
+              </Option>,
+            )}
+          </Select>
+        </Spin>
+      </Modal>
+    );
   }
 }
-CreateTeamModalView.initClass();
-
 export default CreateTeamModalView;

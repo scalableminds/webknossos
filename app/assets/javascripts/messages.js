@@ -14,6 +14,8 @@ In order to restore the current window, a reload is necessary.`,
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
+  "tracing.copy_position": "Click this button to copy the position.",
+  "tracing.copy_rotation": "Click this button to copy the rotation.",
   "tracing.no_more_branchpoints": "No more branchpoints",
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
@@ -25,4 +27,8 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.upload_success": "The dataset was uploaded successfully",
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
+  "project.delete": "Do you really want to delete this project?",
+  "script.delete": "Do you really want to delete this script?",
+  "team.delete": "Do you really want to delete this team?",
+  "taskType.delete": "Do you really want to delete this task type?",
 };

@@ -12,7 +12,7 @@ class TaskAnnotationView extends Marionette.View {
 
     this.prototype.template = _.template(`\
 <td><%- user.firstName %> <%- user.lastName %> (<%- user.email %>)</td>
-<td><%- moment(created).format("YYYY-MM-DD HH:SS") %></td>
+<td><%- moment(modified).format("YYYY-MM-DD HH:SS") %></td>
 <td><span><i class="fa fa-check-circle-o"></i><%- stateLabel %></span><br /><span><i class="fa fa-clock-o"></i><%- formattedTracingTime %></span></td>
 <td class="nowrap">
   <div class="btn-group">

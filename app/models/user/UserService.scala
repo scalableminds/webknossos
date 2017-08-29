@@ -28,7 +28,7 @@ object UserService extends FoxImplicits {
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
-  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser").get
+  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
 
   def defaultUser = {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)

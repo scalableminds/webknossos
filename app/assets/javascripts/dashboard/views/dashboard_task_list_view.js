@@ -5,11 +5,12 @@ import * as React from "react";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
-import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
-import TransferTaskModal from "./transfer_task_modal";
+import app from "app";
+import TransferTaskModal from "dashboard/views/transfer_task_modal";
+import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 
 const { Column } = Table;
 
@@ -115,6 +116,13 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
 
   renderActions = (task: APITaskWithAnnotationType) => {
     const annotation = task.annotation;
+    const isAdmin = app.currentUser.teams
+      .filter(team => team.role.name === "admin")
+      .map(team => team.team)
+      .includes(task.team);
+
+    const label = this.props.isAdminView ? "View" : "Trace";
+
     return task.annotation.state.isFinished
       ? <div>
           <i className="fa fa-check" />
@@ -125,17 +133,21 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
           <li>
             <a href={`/annotations/Task/${annotation.id}`}>
               <i className="fa fa-random" />
-              <strong>Trace</strong>
+              <strong>
+                {label}
+              </strong>
             </a>
           </li>
-          {this.props.isAdminView
+          {isAdmin || this.props.isAdminView
+            ? <li>
+                <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
+                  <i className="fa fa-share" />
+                  Transfer
+                </a>
+              </li>
+            : null}
+          {isAdmin
             ? <div>
-                <li>
-                  <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
-                    <i className="fa fa-share" />
-                    Transfer
-                  </a>
-                </li>
                 <li>
                   <a href={`/annotations/Task/${annotation.id}/download`}>
                     <i className="fa fa-download" />
@@ -155,6 +167,9 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
                   </a>
                 </li>
               </div>
+            : null}
+          {this.props.isAdminView
+            ? null
             : <li>
                 <a href="#" onClick={() => this.confirmFinish(task)}>
                   <i className="fa fa-check-circle-o" />

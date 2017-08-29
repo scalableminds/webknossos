@@ -212,8 +212,9 @@ class Router extends BaseRouter {
   }
 
   taskTypes() {
-    this.showWithPagination("TaskTypeListView", "TaskTypeCollection", {
-      addButtonText: "Create New TaskType",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.TaskTypeListView, {});
+      this.changeView(view);
     });
   }
 

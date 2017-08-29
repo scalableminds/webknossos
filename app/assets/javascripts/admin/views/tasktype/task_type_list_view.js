@@ -1,56 +1,194 @@
+// @flow
+/* eslint-disable jsx-a11y/href-no-hash */
+
 import _ from "lodash";
-import app from "app";
-import Marionette from "backbone.marionette";
-import TaskTypeListItemView from "admin/views/tasktype/task_type_list_item_view";
+import * as React from "react";
+import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
+import FormatUtils from "libs/format_utils";
+import Utils from "libs/utils";
+import Request from "libs/request";
+import messages from "messages";
+import type { APITaskTypeType } from "admin/api_flow_types";
 
-class TaskTypeListView extends Marionette.CompositeView {
-  constructor(...args) {
-    super(...args);
-    this.template = this.template.bind(this);
+const { Column } = Table;
+const { Search } = Input;
+
+type State = {
+  isLoading: boolean,
+  tasktypes: Array<APITaskTypeType>,
+  searchQuery: string,
+};
+
+class TaskTypeListView extends React.PureComponent<{}, State> {
+  state = {
+    isLoading: true,
+    tasktypes: [],
+    searchQuery: "",
+  };
+
+  componentDidMount() {
+    this.fetchData();
   }
 
-  static initClass() {
-    this.prototype.className = "container wide task-types-administration";
-    this.prototype.childView = TaskTypeListItemView;
-    this.prototype.childViewContainer = "tbody";
+  async fetchData(): Promise<void> {
+    const url = "/api/taskTypes";
+    const tasktypes = await Request.receiveJSON(url);
+
+    this.setState({
+      isLoading: false,
+      tasktypes,
+    });
   }
 
-  template() {
-    return _.template(`\
-<h3>Task Types</h3>
-<table class="table table-striped table-details" id="tasktype-table">
-  <thead>
-    <tr>
-      <th> # </th>
-      <th> Team </th>
-      <th> Summary </th>
-      <th> Description </th>
-      <th> Add-On Modes </th>
-      <th> Settings </th>
-      <th> Attached File </th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody></tbody>
-</table>\
-`);
-  }
+  handleSearch = (event: SyntheticInputEvent<>): void => {
+    this.setState({ searchQuery: event.target.value });
+  };
 
-  initialize() {
-    this.collection.fetch();
+  deleteTaskType = async (taskType: APITaskTypeType) => {
+    Modal.confirm({
+      title: messages["taskType.delete"],
+      onOk: () => {
+        this.setState({
+          isLoading: true,
+        });
 
-    this.listenTo(app.vent, "paginationView:filter", this.filterBySearch);
-    this.listenTo(app.vent, "paginationView:addElement", this.createNewTaskType);
-  }
+        const url = `/api/taskTypes/${taskType.id}`;
+        Request.receiveJSON(url, {
+          method: "DELETE",
+        }).then(() => {
+          this.setState({
+            isLoading: false,
+            tasktypes: this.state.tasktypes.filter(p => p.id !== taskType.id),
+          });
+        });
+      },
+    });
+  };
 
-  createNewTaskType() {
-    return app.router.navigate("/taskTypes/create", { trigger: true });
-  }
+  render() {
+    const marginRight = { marginRight: 20 };
 
-  filterBySearch(searchQuery) {
-    return this.collection.setFilter(["summary", "team", "description", "id"], searchQuery);
+    return (
+      <div className="container wide">
+        <div style={{ marginTag: 20 }}>
+          <div className="pull-right">
+            <a href="/taskTypes/create">
+              <Button icon="plus" style={marginRight} type="primary">
+                Add TaskType
+              </Button>
+            </a>
+            <Search
+              style={{ width: 200 }}
+              onPressEnter={this.handleSearch}
+              onChange={this.handleSearch}
+            />
+          </div>
+          <h3>Task Types</h3>
+          <div className="clearfix" style={{ margin: "20px 0px" }} />
+
+          <Spin spinning={this.state.isLoading} size="large">
+            <Table
+              dataSource={Utils.filterWithSearchQueryOR(
+                this.state.tasktypes,
+                ["id", "team", "summary", "description", "settings"],
+                this.state.searchQuery,
+              )}
+              rowKey="id"
+              pagination={{
+                defaultPageSize: 50,
+              }}
+              style={{ marginTop: 30, marginBotton: 30 }}
+            >
+              <Column
+                title="ID"
+                dataIndex="id"
+                key="id"
+                sorter={Utils.localeCompareBy("id")}
+                className="monospace-id"
+              />
+              <Column
+                title="Team"
+                dataIndex="team"
+                key="team"
+                sorter={Utils.localeCompareBy("team")}
+              />
+              <Column
+                title="Summary"
+                dataIndex="summary"
+                key="summary"
+                sorter={Utils.localeCompareBy("summary")}
+              />
+              <Column
+                title="Description"
+                dataIndex="description"
+                key="description"
+                sorter={Utils.localeCompareBy("description")}
+                render={description => FormatUtils.formatShortText(description, 250)}
+                width={300}
+              />
+              <Column
+                title="Add-On Modes"
+                dataIndex="settings"
+                key="allowedModes"
+                width={100}
+                render={settings =>
+                  settings.allowedModes.map(mode =>
+                    <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
+                      {mode}
+                    </Tag>,
+                  )}
+              />
+              <Column
+                title="Settings"
+                dataIndex="settings"
+                key="settings"
+                render={settings => {
+                  const elements = [];
+                  if (settings.branchPointsAllowed)
+                    elements.push(<Tag key="branchPointsAllowed">Branchpoints</Tag>);
+                  if (settings.somaClickingAllowed)
+                    elements.push(<Tag key="somaClickingAllowed">Soma clicking</Tag>);
+                  if (settings.advancedOptionsAllowed)
+                    elements.push(<Tag key="advancedOptionsAllowed">Advanced Options</Tag>);
+                  return elements;
+                }}
+                width={100}
+              />
+              <Column
+                title="Action"
+                key="actions"
+                render={(__, taskType: APITaskTypeType) =>
+                  <span>
+                    <a href={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
+                      <Icon type="edit" />Edit
+                    </a>
+                    <br />
+                    <a href={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
+                      <Icon type="eye-o" />View
+                    </a>
+                    <br />
+                    <a href={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
+                      <Icon type="book" />Tasks
+                    </a>
+                    <br />
+                    <a
+                      href={`/api/taskTypes/${taskType.id}/download`}
+                      title="Download all Finished Tracings"
+                    >
+                      <Icon type="download" />Download
+                    </a>
+                    <br />
+                    <a href="#" onClick={_.partial(this.deleteTaskType, taskType)}>
+                      <Icon type="delete" />Delete
+                    </a>
+                  </span>}
+              />
+            </Table>
+          </Spin>
+        </div>
+      </div>
+    );
   }
 }
-TaskTypeListView.initClass();
 
 export default TaskTypeListView;

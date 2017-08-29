@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Modal, Input, Select, Spin } from "antd";
+import { Modal, Input, Select, Spin, Button } from "antd";
 import Request from "libs/request";
 import type { APITeamType } from "admin/api_flow_types";
 
@@ -8,13 +8,12 @@ const { Option } = Select;
 type Props = {
   onOk: Function,
   onCancel: Function,
-  visible: boolean,
+  isVisible: boolean,
 };
 
 type State = {
   newTeamName: string,
   parentTeam: ?string,
-  visible: boolean,
   teams: Array<APITeamType>,
   isLoading: boolean,
 };
@@ -42,7 +41,7 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
   }
 
   onOk = () => {
-    if (this.state.newTeamName !== "" && this.state.parentTeam !== undefined) {
+    if (this.isInputValid()) {
       const newTeam = {
         name: this.state.newTeamName,
         parent: this.state.parentTeam,
@@ -62,13 +61,23 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
     }
   };
 
+  isInputValid(): boolean {
+    return this.state.newTeamName !== "" && this.state.parentTeam !== undefined;
+  }
+
   render() {
     return (
       <Modal
         title="Add a New Team"
-        onOk={this.onOk}
-        onCancel={this.props.onCancel}
-        visible={this.props.visible}
+        visible={this.props.isVisible}
+        footer={
+          <div>
+            <Button onClick={this.props.onCancel}>Cancel</Button>
+            <Button type="primary" onClick={this.onOk} disabled={!this.isInputValid()}>
+              Ok
+            </Button>
+          </div>
+        }
       >
         <Spin spinning={this.state.isLoading} size="large">
           <Input

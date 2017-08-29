@@ -35,7 +35,7 @@ class ScriptListView extends React.PureComponent<{}, State> {
 
     this.setState({
       isLoading: false,
-      scripts: scripts.filter(p => p.owner),
+      scripts,
     });
   }
 
@@ -102,7 +102,6 @@ class ScriptListView extends React.PureComponent<{}, State> {
                 title="ID"
                 dataIndex="id"
                 key="id"
-                class="monospace-id"
                 className="monospace-id"
                 sorter={Utils.localeCompareBy("id")}
               />

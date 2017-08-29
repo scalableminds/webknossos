@@ -96,8 +96,9 @@ class Router extends BaseRouter {
   }
 
   projects() {
-    this.showWithPagination("ProjectListView", "ProjectCollection", {
-      addButtonText: "Create New Project",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.ProjectListView, {});
+      this.changeView(view);
     });
   }
 
@@ -177,7 +178,10 @@ class Router extends BaseRouter {
   }
 
   teams() {
-    this.showWithPagination("TeamListView", "TeamCollection", { addButtonText: "Add New Team" });
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.TeamListView, {});
+      this.changeView(view);
+    });
   }
 
   taskQuery() {
@@ -208,14 +212,16 @@ class Router extends BaseRouter {
   }
 
   taskTypes() {
-    this.showWithPagination("TaskTypeListView", "TaskTypeCollection", {
-      addButtonText: "Create New TaskType",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.TaskTypeListView, {});
+      this.changeView(view);
     });
   }
 
   scripts() {
-    this.showWithPagination("ScriptListView", "ScriptCollection", {
-      addButtonText: "Create New Script",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.ScriptListView, {});
+      this.changeView(view);
     });
   }
 

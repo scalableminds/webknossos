@@ -4,6 +4,7 @@ import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import jsRoutes from "./jsRoutes";
 
 const requests = [];
+const minimumWait = 10;
 function waitForAllRequests() {
   return new Promise((resolve) => {
     let length = requests.length;
@@ -18,10 +19,16 @@ function waitForAllRequests() {
             return waitForAllRequests().then(tolerantWait);
           }
         },
-        10,
+        minimumWait,
       )
     }
-    Promise.all(requests).then(tolerantWait);
+    // Even if all promises are already resolved, we should wait
+    // for a few milliseconds. This can avoid race conditions (such as
+    // is-clicked classes disappearing when clicking a button)
+    setTimeout(
+      () => Promise.all(requests).then(tolerantWait),
+      minimumWait,
+    );
   })
 };
 
@@ -36,7 +43,7 @@ global.fetch = function fetchWrapper(url, options) {
   }
   const promise = fetch(newUrl, options);
   requests.push(promise);
-  console.log("newUrl", newUrl);
+  console.log("Fetching", newUrl);
   return promise;
 };
 global.Headers = Headers;

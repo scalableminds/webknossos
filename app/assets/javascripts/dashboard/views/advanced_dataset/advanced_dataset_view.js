@@ -19,7 +19,7 @@ type Props = {
 class AdvancedDatasetView extends React.PureComponent<Props> {
   render() {
     return (
-      <div>
+      <div className="test-AdvancedDatasetView">
         <Table
           dataSource={Utils.filterWithSearchQueryOR(
             this.props.datasets,

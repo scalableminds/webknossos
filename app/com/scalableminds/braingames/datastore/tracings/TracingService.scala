@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
-trait TracingService[T <: Tracing] extends TemporaryStore[String, T] with FoxImplicits {
+trait TracingService[T <: Tracing] extends FoxImplicits {
 
   implicit val tracingFormat: Format[T]
 
@@ -27,7 +27,7 @@ trait TracingService[T <: Tracing] extends TemporaryStore[String, T] with FoxImp
 
   def tracingStore: VersionedKeyValueStore
 
-  val temporaryTracingStore = new TemporaryTracingStore[T]()
+  def temporaryTracingStore: TemporaryTracingStore[T]
 
   // this should be longer than maxCacheTime in webknossos//AnnotationStore so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
@@ -47,7 +47,7 @@ trait TracingService[T <: Tracing] extends TemporaryStore[String, T] with FoxImp
     }.orElse {
       if (useCache) {
         try {
-          super[TemporaryStore].find(tracingId)
+          temporaryTracingStore.find(tracingId)
         } catch {
           case e: NullPointerException => Fox.failure("Could not load temporary tracing")
         }
@@ -69,7 +69,7 @@ trait TracingService[T <: Tracing] extends TemporaryStore[String, T] with FoxImp
         Fox.failure("tracing ID is already in use.")
       case Empty =>
         if (toCache) {
-          Fox.successful(super[TemporaryStore].insert(tracing.id, tracing, Some(temporaryStoreTimeout)))
+          Fox.successful(temporaryTracingStore.insert(tracing.id, tracing, Some(temporaryStoreTimeout)))
         } else {
           tracingStore.putJson(tracing.id, tracing.version, tracing)
         }

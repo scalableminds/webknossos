@@ -67,9 +67,11 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
         />
       );
     } else {
-      description = dataset.hasSegmentation
-        ? <p>Original data and segmentation</p>
-        : <p>Original data</p>;
+      description = dataset.hasSegmentation ? (
+        <p>Original data and segmentation</p>
+      ) : (
+        <p>Original data</p>
+      );
     }
 
     return (
@@ -85,19 +87,15 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
           <a href="#" title="Create skeleton tracing" onClick={this.handleSkeletonTraceClick}>
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>
-          {dataset.dataStore.typ !== "ndstore"
-            ? <a href="#" title="Create volume tracing" onClick={this.handleVolumeTraceClick}>
-                <img src="/assets/images/volume.svg" alt="Volume" />
-              </a>
-            : null}
+          {dataset.dataStore.typ !== "ndstore" ? (
+            <a href="#" title="Create volume tracing" onClick={this.handleVolumeTraceClick}>
+              <img src="/assets/images/volume.svg" alt="Volume" />
+            </a>
+          ) : null}
         </div>
         <div className="dataset-description">
-          <h3>
-            {dataset.name}
-          </h3>
-          <p>
-            Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}
-          </p>
+          <h3>{dataset.name}</h3>
+          <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
           {description}
         </div>
 
@@ -122,11 +120,11 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
           this.props.datasets.filter(ds => ds.isActive),
           ["name", "owningTeam", "description"],
           this.props.searchQuery,
-        ).map(ds =>
+        ).map(ds => (
           <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
             {this.renderCard(ds)}
-          </Col>,
-        )}
+          </Col>
+        ))}
       </Row>
     );
   }

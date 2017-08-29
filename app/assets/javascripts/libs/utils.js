@@ -185,18 +185,21 @@ const Utils = {
 
   getUrlParams(paramName: string): { [key: string]: string | boolean } {
     // Parse the URL parameters as objects and return it or just a single param
-    const params = window.location.search.substring(1).split("&").reduce((result, value): void => {
-      const parts = value.split("=");
-      if (parts[0]) {
-        const key = decodeURIComponent(parts[0]);
-        if (parts[1]) {
-          result[key] = decodeURIComponent(parts[1]);
-        } else {
-          result[key] = true;
+    const params = window.location.search
+      .substring(1)
+      .split("&")
+      .reduce((result, value): void => {
+        const parts = value.split("=");
+        if (parts[0]) {
+          const key = decodeURIComponent(parts[0]);
+          if (parts[1]) {
+            result[key] = decodeURIComponent(parts[1]);
+          } else {
+            result[key] = true;
+          }
         }
-      }
-      return result;
-    }, {});
+        return result;
+      }, {});
 
     if (paramName) {
       return params[paramName];

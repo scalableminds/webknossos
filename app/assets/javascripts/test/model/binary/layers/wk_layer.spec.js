@@ -64,7 +64,7 @@ test.serial("Initialization should set the attributes correctly", t => {
 function prepare() {
   const batch = [[0, 0, 0, 0], [1, 1, 1, 1]];
   const bucketData1 = _.range(0, 32 * 32 * 32).map(i => i % 256);
-  const bucketData2 = _.range(0, 32 * 32 * 32).map(i => 2 * i % 256);
+  const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
   const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
 
   RequestMock.sendArraybufferReceiveArraybuffer = sinon.stub();

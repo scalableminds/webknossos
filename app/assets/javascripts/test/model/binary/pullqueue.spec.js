@@ -57,7 +57,7 @@ test.beforeEach(t => {
 test("Successful pulling: should receive the correct data", t => {
   const { pullQueue, buckets, layer } = t.context;
   const bucketData1 = _.range(0, 32 * 32 * 32).map(i => i % 256);
-  const bucketData2 = _.range(0, 32 * 32 * 32).map(i => 2 * i % 256);
+  const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
   const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
   layer.requestFromStore = sinon.stub();
   layer.requestFromStore.returns(Promise.resolve(responseBuffer));

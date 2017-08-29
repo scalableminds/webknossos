@@ -99,11 +99,11 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
             onChange={this.handleScriptChange}
             placeholder="Select an existing user script"
           >
-            {this.state.scripts.map(script =>
+            {this.state.scripts.map(script => (
               <Select.Option key={script.id} value={script.id}>
                 {script.name}
-              </Select.Option>,
-            )}
+              </Select.Option>
+            ))}
           </Select>
           <Input
             type="textarea"

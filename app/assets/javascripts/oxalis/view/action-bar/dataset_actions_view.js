@@ -112,27 +112,29 @@ class DatasetActionsView extends PureComponent<Props, State> {
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.restrictions;
 
-    const saveButton = restrictions.allowUpdate
-      ? <SaveButton onClick={this.handleSave} />
-      : [
-          <ButtonComponent key="read-only-button" type="primary" disabled>
-            Read only
-          </ButtonComponent>,
-          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
-            Copy To My Account
-          </ButtonComponent>,
-        ];
+    const saveButton = restrictions.allowUpdate ? (
+      <SaveButton onClick={this.handleSave} />
+    ) : (
+      [
+        <ButtonComponent key="read-only-button" type="primary" disabled>
+          Read only
+        </ButtonComponent>,
+        <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+          Copy To My Account
+        </ButtonComponent>,
+      ]
+    );
 
     const finishAndNextTaskButton =
-      hasAdvancedOptions && restrictions.allowFinish && this.props.task
-        ? <ButtonComponent
-            key="next-button"
-            icon="verticle-left"
-            onClick={this.handleFinishAndGetNextTask}
-          >
-            Finish and Get Next Task
-          </ButtonComponent>
-        : null;
+      hasAdvancedOptions && restrictions.allowFinish && this.props.task ? (
+        <ButtonComponent
+          key="next-button"
+          icon="verticle-left"
+          onClick={this.handleFinishAndGetNextTask}
+        >
+          Finish and Get Next Task
+        </ButtonComponent>
+      ) : null;
 
     const elements = [];
     const modals = [];
@@ -207,11 +209,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
       );
     }
 
-    const menu = (
-      <Menu>
-        {elements}
-      </Menu>
-    );
+    const menu = <Menu>{elements}</Menu>;
 
     return (
       <div>

@@ -51,28 +51,24 @@ class MappingInfoView extends Component<Props> {
     return (
       <div id="volume-mapping-info">
         <div className="well">
-          {hasMapping
-            ? <div>
-                <p>
-                  ID without mapping: {idWithoutMapping}
-                </p>
-                <p>
-                  ID with mapping: {idWithMapping}
-                </p>
-              </div>
-            : <p>
-                ID at current position: {idWithoutMapping}
-              </p>}
-        </div>
-        {hasMapping
-          ? <div>
-              <SwitchSetting
-                value={cube.currentMapping != null}
-                onChange={this.handleChangeMappingEnabled}
-                label="Enable Mapping"
-              />
+          {hasMapping ? (
+            <div>
+              <p>ID without mapping: {idWithoutMapping}</p>
+              <p>ID with mapping: {idWithMapping}</p>
             </div>
-          : null}
+          ) : (
+            <p>ID at current position: {idWithoutMapping}</p>
+          )}
+        </div>
+        {hasMapping ? (
+          <div>
+            <SwitchSetting
+              value={cube.currentMapping != null}
+              onChange={this.handleChangeMappingEnabled}
+              label="Enable Mapping"
+            />
+          </div>
+        ) : null}
       </div>
     );
   }

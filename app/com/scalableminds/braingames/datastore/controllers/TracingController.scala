@@ -4,10 +4,12 @@
 package com.scalableminds.braingames.datastore.controllers
 
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.Fox
+import net.liftweb.common.{Failure, Full}
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.Action
@@ -21,6 +23,8 @@ trait TracingController[T <: Tracing] extends Controller {
   def dataSourceRepository: DataSourceRepository
 
   def tracingService: TracingService[T]
+
+  def webKnossosServer: WebKnossosServer
 
   def save = Action.async(validateJson[T]) {
     implicit request =>
@@ -74,7 +78,18 @@ trait TracingController[T <: Tracing] extends Controller {
   def withAuthorizedUpdate(tracingId: String, updateGroups: List[UpdateActionGroup[T]]) = {
     val timestamps = updateGroups.map(_.timestamp)
     val latestStats = updateGroups.flatMap(_.stats).lastOption
-
+    val currentVersion = tracingService.currentVersion(tracingId)
+    webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStats).flatMap { _ =>
+      updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
+        previousVersion.flatMap { version =>
+          if (version + 1 == updateGroup.version) {
+            tracingService.handleUpdateGroup(tracingId, updateGroup).map(updateGroup.version)
+          } else {
+            Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
+          }
+        }
+      }
+    }
   }
 
   // def withUpdateAllowed(, updateGroups: List[UpdateActionGroup[T]])() = {

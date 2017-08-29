@@ -35,6 +35,8 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
   def createNewId: String =
     UUID.randomUUID.toString
 
+  def currentVersion(tracingId: String): Fox[Long] = Fox.successful(1)
+
   def applyPendingUpdates(tracing: T, targetVersion: Option[Long]): Fox[T] =
     Fox.successful(tracing)
 

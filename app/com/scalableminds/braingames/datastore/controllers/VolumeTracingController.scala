@@ -5,6 +5,7 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracing, VolumeTracingService, VolumeUpdateActionGroup}
 import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingReference, TracingType}
 import play.api.i18n.{Messages, MessagesApi}
@@ -16,6 +17,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class VolumeTracingController @Inject()(
                                          val tracingService: VolumeTracingService,
                                          val dataSourceRepository: DataSourceRepository,
+                                         val webKnossosServer: WebKnossosServer,
                                          tracingDataStore: TracingDataStore,
                                          val messagesApi: MessagesApi
                                        ) extends TracingController[VolumeTracing] {

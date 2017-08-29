@@ -15,7 +15,7 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.Configuration
 import play.api.i18n.MessagesApi
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 
 import scala.concurrent.duration._
 
@@ -71,6 +71,10 @@ class WebKnossosServer @Inject()(
       .withQueryString("key" -> dataStoreKey)
       .withQueryString("token" -> token)
       .post(id)
+  }
+
+  def authorizeTracingUpdate(tracingIt: String, timestamps: List[Long], stats: Option[JsObject]): Fox[_] = {
+    Fox.successful(())
   }
 
   def requestUserAccess(token: String, dataSetName: String, dataLayerName: String): Fox[_] = {

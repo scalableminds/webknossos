@@ -5,6 +5,7 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.skeleton._
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
@@ -17,6 +18,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class SkeletonTracingController @Inject()(
                                            val tracingService: SkeletonTracingService,
                                            val dataSourceRepository: DataSourceRepository,
+                                           val webKnossosServer: WebKnossosServer,
                                            val messagesApi: MessagesApi
                                        ) extends TracingController[SkeletonTracing] {
 

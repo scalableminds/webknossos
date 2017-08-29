@@ -9,7 +9,7 @@ import Maybe from "data.maybe";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getSkeletonTracing, getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
 import { setAnnotationNameAction } from "oxalis/model/actions/annotation_actions";
@@ -61,18 +61,7 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
   render() {
     const { tracingType, name } = this.props.tracing;
     const tracingName = name || "<untitled>";
-    const treesMaybe = getSkeletonTracing(this.props.tracing).chain(tracing =>
-      Maybe.fromNullable(tracing.trees),
-    );
-    const treeCount = treesMaybe.map(trees => _.size(trees)).getOrElse(null);
-    const nodeCount = treesMaybe
-      // eslint-disable-next-line no-return-assign
-      .map(trees => _.reduce(trees, (sum, tree) => (sum += _.size(tree.nodes)), 0))
-      .getOrElse(null);
-    const branchPointCount = treesMaybe
-      // eslint-disable-next-line no-return-assign
-      .map(trees => _.reduce(trees, (sum, tree) => (sum += _.size(tree.branchPoints)), 0))
-      .getOrElse(null);
+    const stats = getStats(this.props.tracing);
     let annotationTypeLabel;
 
     if (this.props.task != null) {
@@ -114,13 +103,16 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
         {this.props.tracing.type === "skeleton"
           ? <div>
               <p>
-                Number of Trees: {treeCount}
+                Number of Trees: {stats.map(stats => stats.treeCount).getOrElse(null)}
               </p>
               <p>
-                Number of Nodes: {nodeCount}
+                Number of Nodes: {stats.map(stats => stats.nodeCount).getOrElse(null)}
               </p>
               <p>
-                Number of Branch Points: {branchPointCount}
+                Number of Edges: {stats.map(stats => stats.edgeCount).getOrElse(null)}
+              </p>
+              <p>
+                Number of Branch Points: {stats.map(stats => stats.branchPointCount).getOrElse(null)}
               </p>
             </div>
           : null}

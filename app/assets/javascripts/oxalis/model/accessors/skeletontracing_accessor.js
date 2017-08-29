@@ -10,6 +10,13 @@ import type {
   BranchPointType,
 } from "oxalis/store";
 
+type SkeletonTracingStatsType = {
+  treeCount: number,
+  nodeCount: number,
+  edgeCount: number,
+  branchPointCount: number,
+}
+
 export function getSkeletonTracing(tracing: TracingType): Maybe<SkeletonTracingType> {
   if (tracing.type === "skeleton") {
     return Maybe.Just(tracing);
@@ -124,4 +131,15 @@ export function getBranchPoints(tracing: TracingType): Maybe<Array<BranchPointTy
   return getSkeletonTracing(tracing).map(skeletonTracing =>
     _.flatMap(skeletonTracing.trees, tree => tree.branchPoints),
   );
+}
+
+export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> {
+  return getSkeletonTracing(tracing).chain(tracing =>
+    Maybe.fromNullable(tracing.trees),
+  ).map(trees => ({
+    treeCount: _.size(trees),
+    nodeCount: _.reduce(trees, (sum, tree) => (sum += _.size(tree.nodes)), 0),
+    edgeCount: _.reduce(trees, (sum, tree) => (sum += _.size(tree.edges)), 0),
+    branchPointCount: _.reduce(trees, (sum, tree) => (sum += _.size(tree.branchPoints)), 0),
+  }));
 }

@@ -5,6 +5,8 @@
 
 import update from "immutability-helper";
 import Date from "libs/date";
+import Utils from "libs/utils";
+import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 
@@ -18,6 +20,7 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
             version: -1,
             timestamp: Date.now(),
             actions: action.items,
+            stats: Utils.toNullable(getStats(state.tracing)),
           }] } },
         });
       }

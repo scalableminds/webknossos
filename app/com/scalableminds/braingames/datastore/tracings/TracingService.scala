@@ -27,6 +27,8 @@ trait TracingService[T <: Tracing] extends TemporaryStore[String, T] with FoxImp
 
   def tracingStore: VersionedKeyValueStore
 
+  val temporaryTracingStore = new TemporaryTracingStore[T]()
+
   // this should be longer than maxCacheTime in webknossos//AnnotationStore so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
 
@@ -45,7 +47,7 @@ trait TracingService[T <: Tracing] extends TemporaryStore[String, T] with FoxImp
     }.orElse {
       if (useCache) {
         try {
-          find(tracingId)
+          super[TemporaryStore].find(tracingId)
         } catch {
           case e: NullPointerException => Fox.failure("Could not load temporary tracing")
         }
@@ -67,7 +69,7 @@ trait TracingService[T <: Tracing] extends TemporaryStore[String, T] with FoxImp
         Fox.failure("tracing ID is already in use.")
       case Empty =>
         if (toCache) {
-          Fox.successful(insert(tracing.id, tracing, Some(temporaryStoreTimeout)))
+          Fox.successful(super[TemporaryStore].insert(tracing.id, tracing, Some(temporaryStoreTimeout)))
         } else {
           tracingStore.putJson(tracing.id, tracing.version, tracing)
         }

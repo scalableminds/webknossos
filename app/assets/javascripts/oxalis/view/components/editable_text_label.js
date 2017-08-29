@@ -52,9 +52,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
     } else {
       return (
         <span>
-          <span style={{ margin: "0 10px" }}>
-            {this.props.value}
-          </span>
+          <span style={{ margin: "0 10px" }}>{this.props.value}</span>
           <Icon type="edit" style={iconStyle} onClick={() => this.setState({ isEditing: true })} />
         </span>
       );

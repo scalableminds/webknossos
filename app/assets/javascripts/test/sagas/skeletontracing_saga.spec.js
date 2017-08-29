@@ -770,7 +770,9 @@ test("compactUpdateActions should detect a deleted tree", t => {
     .unpack();
 
   // Delete the tree
-  const newState = ChainReducer(testState).apply(SkeletonTracingReducer, deleteTreeAction).unpack();
+  const newState = ChainReducer(testState)
+    .apply(SkeletonTracingReducer, deleteTreeAction)
+    .unpack();
 
   const updateActions = [testDiffing(testState.tracing, newState.tracing, newState.flycam)];
   const simplifiedUpdateActions = compactUpdateActions(updateActions);

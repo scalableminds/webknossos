@@ -37,14 +37,15 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             dataIndex="name"
             key="name"
             sorter={Utils.localeCompareBy("name")}
-            render={(name, dataset: DatasetType) =>
+            render={(name, dataset: DatasetType) => (
               <div>
                 {dataset.name}
                 <br />
                 <Tag color={TemplateHelpers.stringToColor(dataset.dataStore.name)}>
                   {dataset.dataStore.name}
                 </Tag>
-              </div>}
+              </div>
+            )}
           />
           <Column
             title="Creation Date"
@@ -66,15 +67,15 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             dataIndex="allowedTeams"
             key="allowedTeams"
             render={(teams, dataset: DatasetType) =>
-              teams.map(team =>
+              teams.map(team => (
                 <Tag
                   color={TemplateHelpers.stringToColor(team)}
                   key={`allowed_teams_${dataset.name}_${team}`}
                 >
                   {team === dataset.owningTeam ? <i className="fa fa-lock" /> : null}
                   {team}
-                </Tag>,
-              )}
+                </Tag>
+              ))}
           />
           <Column
             title="Active"
@@ -100,11 +101,11 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             title="Data Layers"
             dataIndex="dataSource.dataLayers"
             render={(__, dataset) =>
-              (dataset.dataSource.dataLayers || []).map(layer =>
+              (dataset.dataSource.dataLayers || []).map(layer => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
-                </Tag>,
-              )}
+                </Tag>
+              ))}
           />
 
           <Column

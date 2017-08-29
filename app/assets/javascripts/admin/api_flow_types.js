@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
-import type { DataLayerType } from "oxalis/store";
+import type { DataLayerType, SettingsType } from "oxalis/store";
 
 type APIDataSourceType = {
   +id: {
@@ -102,13 +102,7 @@ export type APITaskTypeType = {
   +summary: string,
   +description: string,
   +team: string,
-  +settings: {
-    +allowedModes: ["orthogonal", "oblique", "flight"],
-    +branchPointsAllowed: boolean,
-    +somaClickingAllowed: boolean,
-    +advancedOptionsAllowed: boolean,
-    +preferredMode?: string,
-  },
+  +settings: SettingsType,
 };
 
 export type APITaskWithAnnotationType = {

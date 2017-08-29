@@ -9,9 +9,9 @@ import com.google.inject.name.Names
 import com.scalableminds.braingames.binary.api.{BinaryDataService, DataSourceService}
 import com.scalableminds.braingames.binary.helpers.{DataSourceRepository => AbstractDataSourceRepository}
 import com.scalableminds.braingames.datastore.services.{AccessTokenService, DataSourceRepository, WebKnossosServer}
-import com.scalableminds.braingames.datastore.tracings.{TemporaryTracingStore, TracingDataStore}
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracing
+import com.scalableminds.braingames.datastore.tracings.TracingDataStore
+import com.scalableminds.braingames.datastore.tracings.skeleton.SkeletonTracingService
+import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingService
 import play.api.{Configuration, Environment}
 
 class DataStoreModule(environment: Environment, configuration: Configuration) extends AbstractModule {
@@ -27,7 +27,7 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
     bind(classOf[DataSourceService]).asEagerSingleton()
     bind(classOf[TracingDataStore]).asEagerSingleton()
     bind(classOf[WebKnossosServer]).asEagerSingleton()
-    bind(classOf[TemporaryTracingStore[SkeletonTracing]]).asEagerSingleton()
-    bind(classOf[TemporaryTracingStore[VolumeTracing]]).asEagerSingleton()
+    bind(classOf[SkeletonTracingService]).asEagerSingleton()
+    bind(classOf[VolumeTracingService]).asEagerSingleton()
   }
 }

@@ -47,13 +47,8 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
       else
         Fox.successful(tracing)
     }.orElse {
-      if (useCache) {
-        try {
-          temporaryTracingStore.find(tracingId)
-        } catch {
-          case e: NullPointerException => Fox.failure("Could not load temporary tracing")
-        }
-      }
+      if (useCache)
+        temporaryTracingStore.find(tracingId)
       else
         Fox.empty
     }
@@ -65,7 +60,7 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
     }
   }
 
-  def save(tracing: T, toCache: Boolean = false): Fox[Unit] = {
+  def save(tracing: T, toCache: Boolean = false): Fox[_] = {
     find(tracing.id).futureBox.flatMap {
       case Full(_) =>
         Fox.failure("tracing ID is already in use.")

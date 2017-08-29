@@ -1,25 +1,28 @@
 // @flow
+/* eslint-disable import/first */
 // This needs to be the very first import
 import { createSnapshotable, waitForAllRequests, wait } from "./e2e-setup";
 import { mount } from "enzyme";
 import test from "ava";
 import mockRequire from "mock-require";
-import fs from "fs";
 import React from "react";
 // const ControlModeEnum = require("../../oxalis/constants").ControlModeEnum;
 
 // The upload component cannot be rendered by enzyme for some reason
 mockRequire("antd/lib/upload", () => <div />);
+mockRequire("c3", () => {});
+mockRequire("react-c3js", () => <div />);
 mockRequire("app", {});
+mockRequire("brace", {});
+mockRequire("brace/mode/javascript", {});
+mockRequire("brace/mode/json", {});
+mockRequire("brace/theme/clouds", {});
+mockRequire("bootstrap-multiselect", {});
 
+const ProjectListView = mockRequire.reRequire("admin/admin").ProjectListView;
 const Dashboard = mockRequire.reRequire("../../dashboard/views/dashboard_view").default;
 const UserListView = mockRequire.reRequire("../../admin/views/user/user_list_view").default;
 // const TracingLayoutView = mockRequire.reRequire("../../oxalis/view/tracing_layout_view").default;
-
-// import Store from "oxalis/store";
-// const Store = mockRequire.reRequire("../../oxalis/store").default;
-// const rootSaga = mockRequire.reRequire("oxalis/model/sagas/root_saga").default;
-
 
 test("Dashboard", async t => {
   const dashboard = mount(<Dashboard userID={null} isAdminView={false} />);
@@ -43,27 +46,20 @@ test("Dashboard", async t => {
   // Active explorative annotations tab
   dashboard.find(".ant-tabs-tab").at(2).simulate("click");
   await waitForAllRequests();
-  t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Explorative-Annotations"});
   t.is(dashboard.find(".test-explorative-annotations-view").length, 1);
+  t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Explorative-Annotations"});
 });
 
-test("User", async t => {
+test("Users", async t => {
   const userListView = mount(<UserListView />);
   await waitForAllRequests();
-  t.snapshot(createSnapshotable(userListView), { id: "UserListView"});
   t.is(userListView.find(".test-UserListView").length, 1);
+  t.snapshot(createSnapshotable(userListView), { id: "UserListView"});
 });
 
-// test("TracingLayoutView", async t => {
-//   const type = "TRACE";
-//   const id = "59a0447c5400008f26b5b0ef";
-
-//   const tracingLayoutView = mount(<TracingLayoutView
-//     initialTracingType={type}
-//     initialTracingId={id}
-//     initialControlmode={ControlModeEnum.TRACE}
-//   />);
-//   await waitForAllRequests();
-//   t.snapshot(createSnapshotable(tracingLayoutView), { id: "TracingLayoutView"});
-//   t.is(tracingLayoutView.find(".test-TracingLayoutView").length, 1);
-// })
+test("Projects", async t => {
+  const projectListView = mount(<ProjectListView />);
+  await waitForAllRequests();
+  t.is(projectListView.find(".test-ProjectListView").length, 1);
+  t.snapshot(createSnapshotable(projectListView), { id: "ProjectListView"});
+})

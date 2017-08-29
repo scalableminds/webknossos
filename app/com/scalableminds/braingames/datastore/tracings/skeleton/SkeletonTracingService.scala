@@ -21,7 +21,7 @@ import scala.io.Source
 import scala.reflect._
 
 
-class SkeletonTracingService @Inject()(@Named("braingames-binary") val system: ActorSystem)
+class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
                                         val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
                                       ) extends TracingService[SkeletonTracing] with FoxImplicits with TextUtils {

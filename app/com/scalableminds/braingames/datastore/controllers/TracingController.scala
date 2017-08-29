@@ -76,7 +76,7 @@ trait TracingController[T <: Tracing] extends Controller {
   }
 
   def withAuthorizedUpdate(tracingId: String, updateGroups: List[UpdateActionGroup[T]]) = {
-    val timestamps = updateGroups.map(_.timestamp)
+    /*val timestamps = updateGroups.map(_.timestamp)
     val latestStats = updateGroups.flatMap(_.stats).lastOption
     val currentVersion = tracingService.currentVersion(tracingId)
     webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStats).flatMap { _ =>
@@ -89,7 +89,7 @@ trait TracingController[T <: Tracing] extends Controller {
           }
         }
       }
-    }
+    }*/
   }
 
   // def withUpdateAllowed(, updateGroups: List[UpdateActionGroup[T]])() = {

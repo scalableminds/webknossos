@@ -17,6 +17,7 @@ import play.api.i18n.MessagesApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 case class DataStoreStatus(ok: Boolean, url: String)

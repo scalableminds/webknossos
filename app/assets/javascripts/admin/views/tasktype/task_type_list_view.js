@@ -52,7 +52,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
           isLoading: true,
         });
 
-        const url = `/api/tasktypes/${taskType.id}`;
+        const url = `/api/taskTypes/${taskType.id}`;
         Request.receiveJSON(url, {
           method: "DELETE",
         }).then(() => {

@@ -143,7 +143,7 @@ class TeamListView extends React.PureComponent<{}, State> {
           </Spin>
           <CreateTeamModal
             teams={this.state.teams}
-            visible={this.state.isTeamCreationModalVisible}
+            isVisible={this.state.isTeamCreationModalVisible}
             onOk={this.createTeam}
             onCancel={() => this.setState({ isTeamCreationModalVisible: false })}
           />

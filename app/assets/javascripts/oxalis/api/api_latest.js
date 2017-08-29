@@ -412,7 +412,7 @@ class TracingApi {
    * Returns the current camera position.
    *
    * @example
-   * const currentPosition = api.tracing.getPosition()
+   * const currentPosition = api.tracing.getCameraPosition()
    */
   getCameraPosition(): Vector3 {
     return getPosition(Store.getState().flycam);

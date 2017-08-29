@@ -35,7 +35,7 @@ class ScriptListView extends React.PureComponent<{}, State> {
 
     this.setState({
       isLoading: false,
-      scripts: scripts.filter(p => p.owner),
+      scripts,
     });
   }
 

@@ -178,7 +178,10 @@ class Router extends BaseRouter {
   }
 
   teams() {
-    this.showWithPagination("TeamListView", "TeamCollection", { addButtonText: "Add New Team" });
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.TeamListView, {});
+      this.changeView(view);
+    });
   }
 
   taskQuery() {

@@ -140,3 +140,10 @@ export type APIProjectType = {
   +assignmentConfiguration: { "location": "webknossos" | "mturk" },
   +numberOfOpenAssignments: number,
 };
+
+export type APIScriptType = {
+  +id: string,
+  +name: string,
+  +owner: APIUserType,
+  +gist: string,
+};

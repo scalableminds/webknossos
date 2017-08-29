@@ -215,8 +215,9 @@ class Router extends BaseRouter {
   }
 
   scripts() {
-    this.showWithPagination("ScriptListView", "ScriptCollection", {
-      addButtonText: "Create New Script",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.ScriptListView, {});
+      this.changeView(view);
     });
   }
 

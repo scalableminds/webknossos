@@ -77,11 +77,19 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
           <a href={`/datasets/${dataset.name}/view`} title="View dataset">
             <img src="/assets/images/eye.svg" alt="Eye" />
           </a>
-          <a href="#" title="Create skeleton tracing" onClick={(event) => this.submitForm(dataset.name, "skeletonTracing", event)}>
+          <a
+            href="#"
+            title="Create skeleton tracing"
+            onClick={event => this.submitForm(dataset.name, "skeletonTracing", event)}
+          >
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>
           {dataset.dataStore.typ !== "ndstore" ? (
-            <a href="#" title="Create volume tracing" onClick={(event) => this.submitForm(dataset.name, "volumeTracing", event)}>
+            <a
+              href="#"
+              title="Create volume tracing"
+              onClick={event => this.submitForm(dataset.name, "volumeTracing", event)}
+            >
               <img src="/assets/images/volume.svg" alt="Volume" />
             </a>
           ) : null}

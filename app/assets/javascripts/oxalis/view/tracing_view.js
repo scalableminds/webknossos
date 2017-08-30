@@ -29,14 +29,15 @@ class TracingView extends React.PureComponent<Props> {
     event.preventDefault();
   }
 
-  getRecordingSwitch = () =>
+  getRecordingSwitch = () => (
     <Switch
       id="flightmode-switch"
       checkedChildren="Recording"
       unCheckedChildren="Watching"
       checked={this.props.flightmodeRecording}
       onChange={this.props.onChangeFlightmodeRecording}
-    />;
+    />
+  );
 
   render() {
     const isArbitraryMode = Constants.MODES_ARBITRARY.includes(this.props.viewMode);

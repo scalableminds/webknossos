@@ -128,7 +128,7 @@ class ScriptListView extends React.PureComponent<{}, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, script: APIScriptType) =>
+                render={(__, script: APIScriptType) => (
                   <span>
                     <a href={`/scripts/${script.id}/edit`}>
                       <Icon type="edit" />Edit
@@ -137,7 +137,8 @@ class ScriptListView extends React.PureComponent<{}, State> {
                     <a href="#" onClick={_.partial(this.deleteScript, script)}>
                       <Icon type="delete" />Delete
                     </a>
-                  </span>}
+                  </span>
+                )}
               />
             </Table>
           </Spin>

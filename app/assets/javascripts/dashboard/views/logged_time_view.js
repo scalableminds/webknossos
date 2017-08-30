@@ -85,31 +85,31 @@ export default class LoggedTimeView extends React.PureComponent<Props, State> {
     return (
       <div>
         <h3>Tracked Time</h3>
-        {this.state.timeEntries.length === 0
-          ? <h4>
-              {"Sorry. We don't have any time logs for you. Trace something and come back later."}
-            </h4>
-          : <div>
-              <Row>
-                <Col span={18}>
-                  {this.renderGraph()}
-                </Col>
-                <Col span={6}>
-                  <Table dataSource={this.state.timeEntries} rowKey="interval">
-                    <Column
-                      title="Month"
-                      dataIndex="interval"
-                      render={interval => moment(interval).format("MM/YYYY")}
-                    />
-                    <Column
-                      title="Worked Hours"
-                      dataIndex="time"
-                      render={time => FormatUtils.formatSeconds(time.asSeconds())}
-                    />
-                  </Table>
-                </Col>
-              </Row>
-            </div>}
+        {this.state.timeEntries.length === 0 ? (
+          <h4>
+            {"Sorry. We don't have any time logs for you. Trace something and come back later."}
+          </h4>
+        ) : (
+          <div>
+            <Row>
+              <Col span={18}>{this.renderGraph()}</Col>
+              <Col span={6}>
+                <Table dataSource={this.state.timeEntries} rowKey="interval">
+                  <Column
+                    title="Month"
+                    dataIndex="interval"
+                    render={interval => moment(interval).format("MM/YYYY")}
+                  />
+                  <Column
+                    title="Worked Hours"
+                    dataIndex="time"
+                    render={time => FormatUtils.formatSeconds(time.asSeconds())}
+                  />
+                </Table>
+              </Col>
+            </Row>
+          </div>
+        )}
       </div>
     );
   }

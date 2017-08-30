@@ -168,16 +168,12 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
   }
 
   render() {
-    const teamsRoleComponents = this.state.selectedTeams.map(team =>
+    const teamsRoleComponents = this.state.selectedTeams.map(team => (
       <Row key={team.team}>
-        <Col span={12}>
-          {this.getTeamComponent(team)}
-        </Col>
-        <Col span={12}>
-          {this.getRoleComponent(team)}
-        </Col>
-      </Row>,
-    );
+        <Col span={12}>{this.getTeamComponent(team)}</Col>
+        <Col span={12}>{this.getRoleComponent(team)}</Col>
+      </Row>
+    ));
 
     return (
       <Modal

@@ -75,13 +75,13 @@ class TreesTabView extends React.Component<Props> {
   getTreesComponents() {
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
-    return _.orderBy(this.props.skeletonTracing.trees, [orderAttribute], ["asc"]).map(tree =>
+    return _.orderBy(this.props.skeletonTracing.trees, [orderAttribute], ["asc"]).map(tree => (
       <TreesTabItemView
         key={tree.treeId}
         tree={tree}
         activeTreeId={this.props.skeletonTracing.activeTreeId}
-      />,
-    );
+      />
+    ));
   }
 
   handleDropdownClick = ({ key }) => {
@@ -151,9 +151,7 @@ class TreesTabView extends React.Component<Props> {
           </Dropdown>
         </InputGroup>
 
-        <ul className="flex-overflow">
-          {this.getTreesComponents()}
-        </ul>
+        <ul className="flex-overflow">{this.getTreesComponents()}</ul>
       </div>
     );
   }

@@ -132,11 +132,11 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 key="allowedModes"
                 width={100}
                 render={settings =>
-                  settings.allowedModes.map(mode =>
+                  settings.allowedModes.map(mode => (
                     <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
                       {mode}
-                    </Tag>,
-                  )}
+                    </Tag>
+                  ))}
               />
               <Column
                 title="Settings"
@@ -157,7 +157,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, taskType: APITaskTypeType) =>
+                render={(__, taskType: APITaskTypeType) => (
                   <span>
                     <a href={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
                       <Icon type="edit" />Edit
@@ -181,7 +181,8 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                     <a href="#" onClick={_.partial(this.deleteTaskType, taskType)}>
                       <Icon type="delete" />Delete
                     </a>
-                  </span>}
+                  </span>
+                )}
               />
             </Table>
           </Spin>

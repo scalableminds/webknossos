@@ -109,23 +109,27 @@ class DatasetView extends React.PureComponent<Props, State> {
       />
     );
 
-    const adminHeader = Utils.isUserAdmin(this.props.user)
-      ? <div className="pull-right">
-          <a href="/datasets/upload" style={margin}>
-            <Button type="primary" icon="plus">
-              Add Dataset
-            </Button>
-          </a>
-          {isGallery
-            ? <Button onClick={this.showAdvancedView} icon="bars" style={margin}>
-                Show Advanced View
-              </Button>
-            : <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
-                Show Gallery View
-              </Button>}
-          {search}
-        </div>
-      : search;
+    const adminHeader = Utils.isUserAdmin(this.props.user) ? (
+      <div className="pull-right">
+        <a href="/datasets/upload" style={margin}>
+          <Button type="primary" icon="plus">
+            Add Dataset
+          </Button>
+        </a>
+        {isGallery ? (
+          <Button onClick={this.showAdvancedView} icon="bars" style={margin}>
+            Show Advanced View
+          </Button>
+        ) : (
+          <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
+            Show Gallery View
+          </Button>
+        )}
+        {search}
+      </div>
+    ) : (
+      search
+    );
 
     const content = (() => {
       if (this.state.isLoading) {
@@ -148,9 +152,7 @@ class DatasetView extends React.PureComponent<Props, State> {
         {adminHeader}
         <h3>Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-        <div>
-          {content}
-        </div>
+        <div>{content}</div>
       </div>
     );
   }

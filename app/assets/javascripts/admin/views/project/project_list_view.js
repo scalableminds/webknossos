@@ -136,10 +136,11 @@ class ProjectListView extends React.PureComponent<{}, State> {
                 sorter={Utils.localeCompareBy(
                   (project: APIProjectType) => project.assignmentConfiguration.location,
                 )}
-                render={assignmentConfiguration =>
+                render={assignmentConfiguration => (
                   <Tag color={TemplateHelpers.stringToColor(assignmentConfiguration.location)}>
                     {assignmentConfiguration.location}
-                  </Tag>}
+                  </Tag>
+                )}
               />
               <Column
                 title="Owner"
@@ -169,7 +170,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, project: APIProjectType) =>
+                render={(__, project: APIProjectType) => (
                   <span>
                     <a
                       href={`/annotations/CompoundProject/${project.name}`}
@@ -193,12 +194,13 @@ class ProjectListView extends React.PureComponent<{}, State> {
                       <Icon type="download" />Download
                     </a>
                     <br />
-                    {project.owner.email === app.currentUser.email
-                      ? <a href="#" onClick={_.partial(this.deleteProject, project)}>
-                          <Icon type="delete" />Delete
-                        </a>
-                      : null}
-                  </span>}
+                    {project.owner.email === app.currentUser.email ? (
+                      <a href="#" onClick={_.partial(this.deleteProject, project)}>
+                        <Icon type="delete" />Delete
+                      </a>
+                    ) : null}
+                  </span>
+                )}
               />
             </Table>
           </Spin>

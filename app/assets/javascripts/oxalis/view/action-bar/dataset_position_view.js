@@ -62,22 +62,22 @@ class DatasetPositionView extends PureComponent<Props> {
             </Input.Group>
           </div>
         </Tooltip>
-        {isArbitraryMode
-          ? <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
-              <div style={{ marginLeft: 10 }}>
-                <Input.Group compact size="large">
-                  <ButtonComponent onClick={this.copyRotationToClipboard} size="large">
-                    Rotation
-                  </ButtonComponent>
-                  <Vector3Input
-                    value={rotation}
-                    onChange={this.handleChangeRotation}
-                    style={{ width: "120px" }}
-                  />
-                </Input.Group>
-              </div>
-            </Tooltip>
-          : null}
+        {isArbitraryMode ? (
+          <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
+            <div style={{ marginLeft: 10 }}>
+              <Input.Group compact size="large">
+                <ButtonComponent onClick={this.copyRotationToClipboard} size="large">
+                  Rotation
+                </ButtonComponent>
+                <Vector3Input
+                  value={rotation}
+                  onChange={this.handleChangeRotation}
+                  style={{ width: "120px" }}
+                />
+              </Input.Group>
+            </div>
+          </Tooltip>
+        ) : null}
       </div>
     );
   }

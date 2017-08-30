@@ -98,11 +98,11 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
             filterOption={(input, option) =>
               option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
           >
-            {this.state.teams.map(team =>
+            {this.state.teams.map(team => (
               <Option key={team.name} value={team.name}>
                 {team.name}
-              </Option>,
-            )}
+              </Option>
+            ))}
           </Select>
         </Spin>
       </Modal>

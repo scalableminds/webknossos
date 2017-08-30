@@ -14,7 +14,7 @@ type Props = {
   onUploading?: Function,
 };
 
-class Upload extends React.PureComponent<Props> {
+class FileUpload extends React.PureComponent<Props> {
   fileInput: ?HTMLInputElement;
 
   upload = (event: SyntheticInputEvent<>) => {
@@ -60,4 +60,4 @@ class Upload extends React.PureComponent<Props> {
   }
 }
 
-export default Upload;
+export default FileUpload;

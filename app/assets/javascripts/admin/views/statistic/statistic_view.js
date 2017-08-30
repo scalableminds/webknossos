@@ -106,7 +106,7 @@ class StatisticView extends React.PureComponent<{}, State> {
         <Row gutter={16}>
           <Col span={16}>
             <Card title="Overall Weekly Tracing Time">
-              <Spin spinning={this.state.isTimeEntriesLoading} size="large">
+              <Spin spinning={this.state.isAchievementsLoading} size="large">
                 <C3Chart
                   data={{
                     x: "date",

@@ -3,18 +3,19 @@
 
 import * as React from "react";
 import TemplateHelpers from "libs/template_helpers";
-import type { DatasetType } from "dashboard/views/dataset_view";
 import Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "dashboard/views/advanced_dataset/dataset_action_view";
 import DatasetAccessListView from "dashboard/views/advanced_dataset/dataset_access_list_view";
 import TeamAssignmentModal from "dashboard/views/dataset/team_assignment_modal";
+import type { DatasetType } from "dashboard/views/dataset_view";
 
 const { Column } = Table;
 
 type Props = {
   datasets: Array<DatasetType>,
   searchQuery: string,
+  updateDatasets: Function,
 };
 
 type State = {
@@ -25,7 +26,7 @@ type State = {
 class AdvancedDatasetView extends React.PureComponent<Props, State> {
   state = {
     isTeamAssignmentModalVisible: false,
-    selectedDataset: null,
+    selectedDataset: {},
   };
 
   render() {
@@ -139,8 +140,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
               isTeamAssignmentModalVisible: false,
             })}
           onOk={(updatedDataset: DatasetType) => {
-            debugger;
-            this.state.selectedDataset = updatedDataset;
+            this.props.updateDatasets(updatedDataset);
             this.setState({
               isTeamAssignmentModalVisible: false,
             });

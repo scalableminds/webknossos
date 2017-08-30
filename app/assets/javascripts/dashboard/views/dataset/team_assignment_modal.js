@@ -4,6 +4,7 @@ import * as React from "react";
 import { Modal, Spin, Select } from "antd";
 import Request from "libs/request";
 import type { APITeamType } from "admin/api_flow_types";
+import type { DatasetType } from "dashboard/views/dataset_view";
 
 const { Option } = Select;
 

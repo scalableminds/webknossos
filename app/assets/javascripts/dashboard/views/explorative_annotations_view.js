@@ -154,18 +154,37 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     fileList: Array<Object>,
     event: SyntheticInputEvent<>,
   }) => {
-    const response = info.file.response;
     if (info.file.status === "uploading") {
       this.setState({ isUploadingNML: true });
     }
     if (info.file.status === "error") {
-      response.messages.map(m => Toast.error(m.error));
+      info.file.response.messages.map(m => Toast.error(m.error));
+      this.setState({ isUploadingNML: false });
     }
     if (info.file.status === "done") {
-      response.messages.map(m => Toast.success(m.success));
-      app.router.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`, {
-        trigger: true,
-      });
+      const areAllFilesUploaded = _.every(info.fileList, fileInfo => fileInfo.status === "done");
+
+      if (areAllFilesUploaded) {
+        // if all tracing were uploaded show success toasts
+        info.fileList.map(fileInfo => {
+          fileInfo.response.messages.map(m => Toast.success(`${m.success}: ${fileInfo.name}`));
+        });
+
+        // if only a single NML was uploaded do a redirect and open the tracing view
+        if (info.fileList.length === 1) {
+          const response = info.fileList[0].response;
+          app.router.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`, {
+            trigger: true,
+          });
+        } else {
+          // if several tracings were uploaded only update the table
+          const newTracings = info.fileList.map(fileInfo => fileInfo.response.annotation);
+          this.setState({
+            isUploadingNML: false,
+            unarchivedTracings: this.state.unarchivedTracings.concat(newTracings),
+          });
+        }
+      }
     }
   };
 
@@ -345,42 +364,41 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           title="Name"
           dataIndex="name"
           sorter={Utils.localeCompareBy("name")}
-          render={(name, tracing) => (
+          render={(name, tracing) =>
             <EditableTextLabel
               value={name}
               onChange={newName => this.renameTracing(tracing, newName)}
-            />
-          )}
+            />}
         />
         <Column
           title="Stats"
           render={(__, tracing) =>
-            tracing.stats && tracing.contentType === "skeletonTracing" ? (
-              <div>
-                <span title="Trees">
-                  <i className="fa fa-sitemap" />
-                  {tracing.stats.numberOfTrees}
-                </span>
-                <br />
-                <span title="Nodes">
-                  <i className="fa fa-bull" />
-                  {tracing.stats.numberOfNodes}
-                </span>
-                <br />
-                <span title="Edges">
-                  <i className="fa fa-arrows-h" />
-                  {tracing.stats.numberOfEdges}
-                </span>
-              </div>
-            ) : null}
+            tracing.stats && tracing.contentType === "skeletonTracing"
+              ? <div>
+                  <span title="Trees">
+                    <i className="fa fa-sitemap" />
+                    {tracing.stats.numberOfTrees}
+                  </span>
+                  <br />
+                  <span title="Nodes">
+                    <i className="fa fa-bull" />
+                    {tracing.stats.numberOfNodes}
+                  </span>
+                  <br />
+                  <span title="Edges">
+                    <i className="fa fa-arrows-h" />
+                    {tracing.stats.numberOfEdges}
+                  </span>
+                </div>
+              : null}
         />
         <Column
           title="Tags"
           dataIndex="tags"
           width={500}
-          render={(tags, tracing) => (
+          render={(tags, tracing) =>
             <div>
-              {tags.map(tag => (
+              {tags.map(tag =>
                 <Tag
                   key={tag}
                   color={TemplateHelpers.stringToColor(tag)}
@@ -392,16 +410,15 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
                   }
                 >
                   {tag}
-                </Tag>
-              ))}
-              {this.state.shouldShowArchivedTracings ? null : (
-                <EditableTextIcon
-                  icon="plus"
-                  onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
-                />
+                </Tag>,
               )}
-            </div>
-          )}
+              {this.state.shouldShowArchivedTracings
+                ? null
+                : <EditableTextIcon
+                    icon="plus"
+                    onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
+                  />}
+            </div>}
         />
         <Column
           title="Modification Date"
@@ -419,7 +436,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
   }
 
   renderSearchTags() {
-    return this.state.tags.map(tag => (
+    return this.state.tags.map(tag =>
       <Tag
         key={tag}
         color={TemplateHelpers.stringToColor(tag)}
@@ -427,8 +444,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         closable
       >
         {tag}
-      </Tag>
-    ));
+      </Tag>,
+    );
   }
 
   render() {
@@ -444,45 +461,41 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
 
     return (
       <div>
-        {this.props.isAdminView ? (
-          search
-        ) : (
-          <div className="pull-right">
-            <Upload
-              action="/admin/nml/upload"
-              accept=".nml, .zip"
-              name="nmlFile"
-              multiple
-              showUploadList={false}
-              onChange={this.handleNMLUpload}
-            >
-              <Button icon="upload" loading={this.state.isUploadingNML}>
-                Upload Annotation
+        {this.props.isAdminView
+          ? search
+          : <div className="pull-right">
+              <Upload
+                action="/admin/nml/upload"
+                accept=".nml, .zip"
+                name="nmlFile"
+                multiple
+                showUploadList={false}
+                onChange={this.handleNMLUpload}
+              >
+                <Button icon="upload" loading={this.state.isUploadingNML}>
+                  Upload Annotation
+                </Button>
+              </Upload>
+              <div className="divider-vertical" />
+              <Button onClick={this.toggleShowArchived} style={marginRight}>
+                Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings
               </Button>
-            </Upload>
-            <div className="divider-vertical" />
-            <Button onClick={this.toggleShowArchived} style={marginRight}>
-              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings
-            </Button>
-            {!this.state.shouldShowArchivedTracings ? (
-              <Button onClick={this.archiveAll} style={marginRight}>
-                Archive All
-              </Button>
-            ) : null}
-            {search}
-          </div>
-        )}
+              {!this.state.shouldShowArchivedTracings
+                ? <Button onClick={this.archiveAll} style={marginRight}>
+                    Archive All
+                  </Button>
+                : null}
+              {search}
+            </div>}
         <h3>Explorative Annotations</h3>
         {this.renderSearchTags()}
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
-        {this.state.requestCount === 0 ? (
-          this.renderTable()
-        ) : (
-          <div className="text-center">
-            <Spin size="large" />
-          </div>
-        )}
+        {this.state.requestCount === 0
+          ? this.renderTable()
+          : <div className="text-center">
+              <Spin size="large" />
+            </div>}
       </div>
     );
   }

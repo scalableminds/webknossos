@@ -43,9 +43,11 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         />
       );
     } else {
-      description = dataset.hasSegmentation
-        ? <p>Original data and segmentation</p>
-        : <p>Original data</p>;
+      description = dataset.hasSegmentation ? (
+        <p>Original data and segmentation</p>
+      ) : (
+        <p>Original data</p>
+      );
     }
 
     return (
@@ -59,29 +61,25 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             <img src="/assets/images/eye.svg" alt="Eye" />
           </a>
           <a
-            href={`/datasets/${dataset.name}/trace?type=skeletonTracing`}
+            href={`/datasets/${dataset.name}/trace?typ=skeletonTracing`}
             title="Create skeleton tracing"
             onClick={this.createTracing}
           >
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>
-          {dataset.dataStore.typ !== "ndstore"
-            ? <a
-                href={`/datasets/${dataset.name}/trace?type=volumeTracing`}
-                title="Create volume tracing"
-                onClick={this.createTracing}
-              >
-                <img src="/assets/images/volume.svg" alt="Volume" />
-              </a>
-            : null}
+          {dataset.dataStore.typ !== "ndstore" ? (
+            <a
+              href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+              title="Create volume tracing"
+              onClick={this.createTracing}
+            >
+              <img src="/assets/images/volume.svg" alt="Volume" />
+            </a>
+          ) : null}
         </div>
         <div className="dataset-description">
-          <h3>
-            {dataset.name}
-          </h3>
-          <p>
-            Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}
-          </p>
+          <h3>{dataset.name}</h3>
+          <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
           {description}
         </div>
       </Card>
@@ -95,11 +93,11 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           this.props.datasets.filter(ds => ds.isActive),
           ["name", "owningTeam", "description"],
           this.props.searchQuery,
-        ).map(ds =>
+        ).map(ds => (
           <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
             {this.renderCard(ds)}
-          </Col>,
-        )}
+          </Col>
+        ))}
       </Row>
     );
   }

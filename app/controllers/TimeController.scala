@@ -14,6 +14,7 @@ import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.AnyContent
+import play.api.i18n.{Messages, MessagesApi}
 
 import scala.concurrent.Future
 
@@ -33,11 +34,8 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   //list user with working hours > 0 (only one user is also possible)
   def loggedTimeForMultipleUser(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
-    var users =  List[User]()
-
-    for {
-      usersList <- Fox.sequence(getUsersAsStringForEmail(userString.split(",").toList))
-      users = usersList.flatten
+  for {
+      users <- Fox.combined(getUsersAsStringForEmail(userString.split(",").toList)) ?~> Messages("user.email.invalid")
       js <- loggedTimeForUserList(users, year, month)
     } yield {
       Ok(js)

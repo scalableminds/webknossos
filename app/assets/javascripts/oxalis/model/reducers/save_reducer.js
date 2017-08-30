@@ -13,15 +13,25 @@ import type { ActionType } from "oxalis/model/actions/actions";
 function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "PUSH_SAVE_QUEUE": {
+      // Only report tracing statistics, if a "real" update to the tracing happened
+      const stats = _.some(action.items, ua => ua.name !== "updateTracing")
+        ? Utils.toNullable(getStats(state.tracing))
+        : null;
       if (action.items.length > 0) {
         return update(state, {
-          save: { queue: { $push: [{
-            // Placeholder, the version number will be updated before sending to the server
-            version: -1,
-            timestamp: Date.now(),
-            actions: action.items,
-            stats: Utils.toNullable(getStats(state.tracing)),
-          }] } },
+          save: {
+            queue: {
+              $push: [
+                {
+                  // Placeholder, the version number will be updated before sending to the server
+                  version: -1,
+                  timestamp: Date.now(),
+                  actions: action.items,
+                  stats,
+                },
+              ],
+            },
+          },
         });
       }
       return state;

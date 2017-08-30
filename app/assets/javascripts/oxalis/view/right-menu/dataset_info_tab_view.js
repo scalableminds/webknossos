@@ -6,18 +6,17 @@ import React, { Component } from "react";
 import { connect } from "react-redux";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
 import { setAnnotationNameAction } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import type { OxalisState, TracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
+import type { OxalisState, TracingType, DatasetType, TaskType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
   tracing: TracingType,
   dataset: DatasetType,
-  flycam: FlycamType,
+  zoomStep: number,
   task: ?TaskType,
 };
 
@@ -26,13 +25,11 @@ type DatasetInfoTabProps = DatasetInfoTabStateProps & { setAnnotationName: strin
 class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
   calculateZoomLevel(): number {
     let width;
-    let zoom;
+    const zoom = this.props.zoomStep;
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     if (constants.MODES_PLANE.includes(viewMode)) {
-      zoom = getPlaneScalingFactor(this.props.flycam);
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
-      zoom = this.props.flycam.zoomStep;
       width = constants.ARBITRARY_WIDTH;
     } else {
       throw Error(`Model mode not recognized: ${viewMode}`);
@@ -86,78 +83,64 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
 
     return (
       <div className="flex-overflow">
-        <p>
-          {annotationTypeLabel}
-        </p>
-        <p>
-          Dataset: {dataSetName}
-        </p>
-        <p>
-          Viewport Width: {this.chooseUnit(zoomLevel)}
-        </p>
-        <p>
-          Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}
-        </p>
-        {this.props.tracing.type === "skeleton"
-          ? <div>
-              <p>
-                Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}
-              </p>
-              <p>
-                Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}
-              </p>
-              <p>
-                Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}
-              </p>
-              <p>
-                Number of Branch Points:{" "}
-                {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
-              </p>
+        <p>{annotationTypeLabel}</p>
+        <p>Dataset: {dataSetName}</p>
+        <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
+        <p>Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
+        {this.props.tracing.type === "skeleton" ? (
+          <div>
+            <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
+            <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
+            <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
+            <p>
+              Number of Branch Points:{" "}
+              {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
+            </p>
+          </div>
+        ) : null}
+        {isPublicViewMode ? (
+          <div>
+            <table className="table table-condensed table-nohead table-bordered">
+              <tbody>
+                <tr>
+                  <th colSpan="2">Controls</th>
+                </tr>
+                <tr>
+                  <td>I,O or Alt + Mousewheel</td>
+                  <td>Zoom in/out</td>
+                </tr>
+                <tr>
+                  <td>Mousewheel or D and F</td>
+                  <td>Move Along 3rd Axis</td>
+                </tr>
+                <tr>
+                  <td>Left Mouse Drag or Arrow Keys</td>
+                  <td>Move</td>
+                </tr>
+                <tr>
+                  <td>Right Click Drag in 3D View</td>
+                  <td>Rotate 3D View</td>
+                </tr>
+                <tr>
+                  <td>K,L</td>
+                  <td>Scale Up/Down Viewports</td>
+                </tr>
+              </tbody>
+            </table>
+            <div>
+              <img
+                className="img-50"
+                src="/assets/images/Max-Planck-Gesellschaft.svg"
+                alt="Max Plank Geselleschaft Logo"
+              />
+              <img
+                className="img-50"
+                src="/assets/images/MPI-brain-research.svg"
+                alt="Max Plank Institute of Brain Research Logo"
+              />
             </div>
-          : null}
-        {isPublicViewMode
-          ? <div>
-              <table className="table table-condensed table-nohead table-bordered">
-                <tbody>
-                  <tr>
-                    <th colSpan="2">Controls</th>
-                  </tr>
-                  <tr>
-                    <td>I,O or Alt + Mousewheel</td>
-                    <td>Zoom in/out</td>
-                  </tr>
-                  <tr>
-                    <td>Mousewheel or D and F</td>
-                    <td>Move Along 3rd Axis</td>
-                  </tr>
-                  <tr>
-                    <td>Left Mouse Drag or Arrow Keys</td>
-                    <td>Move</td>
-                  </tr>
-                  <tr>
-                    <td>Right Click Drag in 3D View</td>
-                    <td>Rotate 3D View</td>
-                  </tr>
-                  <tr>
-                    <td>K,L</td>
-                    <td>Scale Up/Down Viewports</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div>
-                <img
-                  className="img-50"
-                  src="/assets/images/Max-Planck-Gesellschaft.svg"
-                  alt="Max Plank Geselleschaft Logo"
-                />
-                <img
-                  className="img-50"
-                  src="/assets/images/MPI-brain-research.svg"
-                  alt="Max Plank Institute of Brain Research Logo"
-                />
-              </div>
-            </div>
-          : null}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -166,7 +149,7 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
 const mapStateToProps = (state: OxalisState): DatasetInfoTabStateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
-  flycam: state.flycam,
+  zoomStep: state.flycam.zoomStep,
   task: state.task,
 });
 

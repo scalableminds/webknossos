@@ -137,33 +137,23 @@ class StatisticView extends React.PureComponent<{}, State> {
                   <tbody>
                     <tr>
                       <td>Number of Users</td>
-                      <td>
-                        {this.state.achievements.numberOfUsers}
-                      </td>
+                      <td>{this.state.achievements.numberOfUsers}</td>
                     </tr>
                     <tr>
                       <td>Number of Datasets</td>
-                      <td>
-                        {this.state.achievements.numberOfDatasets}
-                      </td>
+                      <td>{this.state.achievements.numberOfDatasets}</td>
                     </tr>
                     <tr>
                       <td>Number of Annotations</td>
-                      <td>
-                        {this.state.achievements.numberOfAnnotations}
-                      </td>
+                      <td>{this.state.achievements.numberOfAnnotations}</td>
                     </tr>
                     <tr>
                       <td>Number of Trees</td>
-                      <td>
-                        {this.state.achievements.numberOfTrees}
-                      </td>
+                      <td>{this.state.achievements.numberOfTrees}</td>
                     </tr>
                     <tr>
                       <td>Number of Open Assignments</td>
-                      <td>
-                        {this.state.achievements.numberOfOpenAssignments}
-                      </td>
+                      <td>{this.state.achievements.numberOfOpenAssignments}</td>
                     </tr>
                   </tbody>
                 </table>

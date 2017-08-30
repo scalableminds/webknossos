@@ -72,8 +72,9 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       for {
         annotation <- AnnotationService.createAnnotationFrom(
           request.user, nmls, parsedFiles.otherFiles, AnnotationType.Explorational, name)
+        annotationJson <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(request.user), exclude = List("content"))
       } yield JsonOk(
-        Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+        Json.obj("annotation" -> annotationJson),
         Messages("nml.file.uploadSuccess")
       )
     } else {

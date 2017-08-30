@@ -147,15 +147,13 @@ export class OxalisModel {
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
     if (initialFetch) {
-      this.initializeModel(annotation, tracing);
+      this.initializeModel(tracing);
       if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
     }
     // There is no need to initialize the tracing if there is no tracing (View mode).
     if (annotation != null && tracing != null) {
       this.initializeTracing(annotation, tracing);
     }
-
-    return tracing;
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -241,7 +239,7 @@ export class OxalisModel {
     Store.dispatch(setDatasetAction(dataset));
   }
 
-  initializeModel(annotation: ?APIAnnotationType, tracing: ?ServerTracingType) {
+  initializeModel(tracing: ?ServerTracingType) {
     const { dataStore } = Store.getState().dataset;
 
     const LayerClass = (() => {
@@ -263,12 +261,7 @@ export class OxalisModel {
     this.binary = {};
     for (const layer of layers) {
       const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
-      this.binary[layer.name] = new Binary(
-        annotation != null ? annotation.content.typ : "skeleton",
-        layer,
-        maxLayerZoomStep,
-        this.connectionInfo,
-      );
+      this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
     }
 
     this.buildMappingsObject();

@@ -61,6 +61,7 @@ function* warnOfTooLowOpacity(): Generator<*, *, *> {
 }
 
 export function* editVolumeLayerAsync(): Generator<*, *, *> {
+  yield take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {

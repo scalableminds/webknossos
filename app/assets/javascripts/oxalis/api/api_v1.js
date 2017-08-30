@@ -54,14 +54,18 @@ class TracingApi_DEPRECATED {
   * Returns the id of the current active node.
   */
   getActiveNodeId(): ?number {
-    return getActiveNode(Store.getState().tracing).map(node => node.id).getOrElse(null);
+    return getActiveNode(Store.getState().tracing)
+      .map(node => node.id)
+      .getOrElse(null);
   }
 
   /**
   * Returns the id of the current active tree.
   */
   getActiveTreeId(): ?number {
-    return getActiveTree(Store.getState().tracing).map(tree => tree.treeId).getOrElse(null);
+    return getActiveTree(Store.getState().tracing)
+      .map(tree => tree.treeId)
+      .getOrElse(null);
   }
 
   /**

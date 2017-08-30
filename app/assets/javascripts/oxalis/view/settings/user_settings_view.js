@@ -225,9 +225,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           />
           <NumberSliderSetting
             label={
-              this.props.userConfiguration.overrideNodeRadius
-                ? "Particle Size"
-                : "Min. Particle Size"
+              this.props.userConfiguration.overrideNodeRadius ? (
+                "Particle Size"
+              ) : (
+                "Min. Particle Size"
+              )
             }
             min={Constants.MIN_PARTICLE_SIZE}
             max={Constants.MAX_PARTICLE_SIZE}
@@ -287,23 +289,25 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   };
 
   render() {
-    const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode)
-      ? <NumberSliderSetting
-          label="Move Value (nm/s)"
-          min={30}
-          max={1500}
-          step={10}
-          value={this.props.userConfiguration.moveValue3d}
-          onChange={this.onChangeUser.moveValue3d}
-        />
-      : <NumberSliderSetting
-          label="Move Value (nm/s)"
-          min={30}
-          max={14000}
-          step={10}
-          value={this.props.userConfiguration.moveValue}
-          onChange={this.onChangeUser.moveValue}
-        />;
+    const moveValueSetting = Constants.MODES_ARBITRARY.includes(this.props.viewMode) ? (
+      <NumberSliderSetting
+        label="Move Value (nm/s)"
+        min={30}
+        max={1500}
+        step={10}
+        value={this.props.userConfiguration.moveValue3d}
+        onChange={this.onChangeUser.moveValue3d}
+      />
+    ) : (
+      <NumberSliderSetting
+        label="Move Value (nm/s)"
+        min={30}
+        max={14000}
+        step={10}
+        value={this.props.userConfiguration.moveValue}
+        onChange={this.onChangeUser.moveValue}
+      />
+    );
 
     return (
       <Collapse defaultActiveKey={["1", "2", "3", "4"]}>

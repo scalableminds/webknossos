@@ -112,16 +112,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   getMessageComponents() {
-    const messageElements = this.state.messages.map((message, i) =>
+    const messageElements = this.state.messages.map((message, i) => (
       // eslint-disable-next-line react/no-array-index-key
-      <Alert key={i} message={Object.values(message)[0]} type={Object.keys(message)[0]} showIcon />,
-    );
+      <Alert key={i} message={Object.values(message)[0]} type={Object.keys(message)[0]} showIcon />
+    ));
 
-    return (
-      <div>
-        {messageElements}
-      </div>
-    );
+    return <div>{messageElements}</div>;
   }
 
   getEditModeComponents() {
@@ -160,14 +156,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         };
 
     const titleString = this.props.isEditingMode ? "Update" : "Import";
-    const content = this.state.dataLoaded
-      ? <Input.TextArea
-          value={datasetJson}
-          onChange={this.handleChangeJson}
-          rows={20}
-          style={textAreaStyle}
-        />
-      : <Spin size="large" />;
+    const content = this.state.dataLoaded ? (
+      <Input.TextArea
+        value={datasetJson}
+        onChange={this.handleChangeJson}
+        rows={20}
+        style={textAreaStyle}
+      />
+    ) : (
+      <Spin size="large" />
+    );
 
     return (
       <div className="container" id="dataset-import-view">
@@ -176,9 +174,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         </h3>
         <p>Please review your dataset&#39;s properties before importing it.</p>
         {this.getMessageComponents()}
-        <div className="content">
-          {content}
-        </div>
+        <div className="content">{content}</div>
         {this.getEditModeComponents()}
         <div>
           <Button

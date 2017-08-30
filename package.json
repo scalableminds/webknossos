@@ -46,7 +46,7 @@
     "less-loader": "^4.0.5",
     "mock-require": "^1.2.1",
     "node-fetch": "^1.7.1",
-    "prettier": "^1.5.3",
+    "prettier": "^1.6.1",
     "redux-mock-store": "^1.2.2",
     "sinon": "^1.17.3",
     "style-loader": "^0.18.2",
@@ -69,7 +69,8 @@
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
-    "pretty": "node_modules/.bin/prettier --write --trailing-comma all --print-width 100 \"app/assets/javascripts/**/*.js\"",
+    "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"app/assets/javascripts/**/*.js\"",
+    "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"app/assets/javascripts/**/*.js\"",
     "lint-fix": "node_modules/.bin/eslint --fix --quiet app/assets/javascripts/",
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
     "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"

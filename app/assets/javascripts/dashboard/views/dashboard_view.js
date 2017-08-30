@@ -53,11 +53,11 @@ class DashboardView extends React.PureComponent<Props, State> {
   getTabs(user: APIUserType) {
     const isAdmin = this.props.isAdminView;
     return [
-      !isAdmin
-        ? <TabPane tab="Datasets" key="datasets">
-            <DatasetView user={user} />
-          </TabPane>
-        : null,
+      !isAdmin ? (
+        <TabPane tab="Datasets" key="datasets">
+          <DatasetView user={user} />
+        </TabPane>
+      ) : null,
       <TabPane tab="Tasks" key="tasks">
         <DashboardTaskListView isAdminView={this.props.isAdminView} userID={this.props.userID} />
       </TabPane>,
@@ -67,11 +67,11 @@ class DashboardView extends React.PureComponent<Props, State> {
           userID={this.props.userID}
         />
       </TabPane>,
-      isAdmin
-        ? <TabPane tab="Tracked Time" key="trackedTime">
-            <LoggedTimeView userID={this.props.userID} />
-          </TabPane>
-        : null,
+      isAdmin ? (
+        <TabPane tab="Tracked Time" key="trackedTime">
+          <LoggedTimeView userID={this.props.userID} />
+        </TabPane>
+      ) : null,
     ];
   }
 
@@ -92,11 +92,11 @@ class DashboardView extends React.PureComponent<Props, State> {
       }
       this.setState({ activeTabKey });
     };
-    const userHeader = this.props.isAdminView
-      ? <h3>
-          User: {user.firstName} {user.lastName}
-        </h3>
-      : null;
+    const userHeader = this.props.isAdminView ? (
+      <h3>
+        User: {user.firstName} {user.lastName}
+      </h3>
+    ) : null;
 
     return (
       <div id="dashboard" className="container wide">

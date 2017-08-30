@@ -26,7 +26,6 @@ import {
   initializeSkeletonTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { initializeReadOnlyTracingAction } from "oxalis/model/actions/readonlytracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import {
   setPositionAction,
@@ -101,73 +100,60 @@ export class OxalisModel {
   ) {
     Store.dispatch(setControlModeAction(controlMode));
 
-    let infoUrl;
+    let annotation: ?APIAnnotationType;
+    let datasetName;
     if (controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
       const isReadOnly = window.location.pathname.endsWith("/readOnly");
       const readOnlyPart = isReadOnly ? "readOnly/" : "";
-      infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
-    } else {
-      infoUrl = `/annotations/${tracingType}/${annotationId}/info`;
-    }
+      const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+      annotation = await Request.receiveJSON(infoUrl);
+      datasetName = annotation.dataSetName;
 
-    const annotation: APIAnnotationType = await Request.receiveJSON(infoUrl);
-    const dataset: APIDatasetType = await Request.receiveJSON(
-      `/api/datasets/${annotation.dataSetName}`,
-    );
-
-    let error;
-    if (annotation.error) {
-      ({ error } = annotation);
-    } else if (!dataset) {
-      error = "Selected dataset doesn't exist";
-    } else if (!dataset.dataSource.dataLayers) {
-      const datasetName = annotation.dataSetName;
-      if (datasetName) {
-        error = `Please, double check if you have the dataset '${datasetName}' imported.`;
-      } else {
-        error = "Please, make sure you have a dataset imported.";
+      let error;
+      if (annotation.error) {
+        ({ error } = annotation);
+      } else if (!annotation.restrictions.allowAccess) {
+        error = "You are not allowed to access this tracing";
       }
+
+      if (error) {
+        Toast.error(error);
+        throw this.HANDLED_ERROR;
+      }
+
+      ErrorHandling.assertExtendContext({
+        task: annotation.id,
+      });
+
+      Store.dispatch(setTaskAction(annotation.task));
+    } else {
+      // In View mode, the annotationId is actually the dataSetName
+      // as there is no annotation and no tracing!
+      datasetName = annotationId;
     }
 
-    if (error) {
-      Toast.error(error);
-      throw this.HANDLED_ERROR;
-    }
+    await this.initializeDataset(datasetName);
 
-    if (!annotation.restrictions.allowAccess) {
-      error = "You are not allowed to access this tracing";
-      throw this.HANDLED_ERROR;
-    }
-
-    // Make sure subsequent fetch calls are always for the same dataset
-    if (!_.isEmpty(this.binary)) {
-      ErrorHandling.assert(
-        _.isEqual(dataset, Store.getState().dataset),
-        "Model.fetch was called for a task with another dataset, without reloading the page.",
+    // Fetch the actual tracing from the datastore, if there is an annotation
+    let tracing: ?ServerTracingType;
+    if (annotation != null) {
+      tracing = await Request.receiveJSON(
+        `${annotation.dataStore.url}/data/tracings/${annotation.content.typ}/${annotation.content
+          .id}`,
       );
     }
-
-    ErrorHandling.assertExtendContext({
-      task: annotation.id,
-      dataSet: dataset.dataSource.id.name,
-    });
-
-    Store.dispatch(setDatasetAction(dataset));
-    Store.dispatch(setTaskAction(annotation.task));
-
-    // Fetch the actual tracing from the datastore
-    const tracing = await Request.receiveJSON(
-      `${annotation.dataStore.url}/data/tracings/${annotation.content.typ}/${annotation.content
-        .id}`,
-    );
 
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
     if (initialFetch) {
-      this.initializeModel(annotation, tracing, dataset);
+      this.initializeModel(annotation, tracing);
+      if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
     }
-    this.initializeTracing(annotation, tracing, initialFetch);
+    // There is no need to initialize the tracing if there is no tracing (View mode).
+    if (annotation != null && tracing != null) {
+      this.initializeTracing(annotation, tracing);
+    }
 
     return tracing;
   }
@@ -192,11 +178,9 @@ export class OxalisModel {
     return { preferredMode, allowedModes };
   }
 
-  initializeTracing(
-    annotation: APIAnnotationType,
-    tracing: ServerTracingType,
-    initialFetch: boolean,
-  ) {
+  initializeTracing(annotation: APIAnnotationType, tracing: ServerTracingType) {
+    // This method is not called for the View mode
+    // TODO Maybe applyState should be called in View mode as well
     const { allowedModes, preferredMode } = this.determineAllowedModes(annotation.settings);
     _.extend(annotation.settings, { allowedModes, preferredMode });
 
@@ -214,14 +198,6 @@ export class OxalisModel {
         const skeletonTracing: ServerSkeletonTracingType = (tracing: any);
         Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }
-    } else {
-      const readOnlyTracing: ServerSkeletonTracingType = (tracing: any);
-      Store.dispatch(initializeReadOnlyTracingAction(annotation, readOnlyTracing));
-    }
-
-    if (initialFetch) {
-      // TODO remove default value
-      Store.dispatch(setZoomStepAction(tracing.zoomLevel != null ? tracing.zoomLevel : 2));
     }
 
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
@@ -235,12 +211,38 @@ export class OxalisModel {
     this.applyState(UrlManager.initialState, tracing);
   }
 
-  initializeModel(
-    annotation: APIAnnotationType,
-    tracing: ServerTracingType,
-    dataset: APIDatasetType,
-  ) {
-    const { dataStore } = dataset;
+  async initializeDataset(datasetName: string) {
+    const dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
+
+    let error;
+    if (!dataset) {
+      error = "Selected dataset doesn't exist";
+    } else if (!dataset.dataSource.dataLayers) {
+      error = `Please, double check if you have the dataset '${datasetName}' imported.`;
+    }
+
+    if (error) {
+      Toast.error(error);
+      throw this.HANDLED_ERROR;
+    }
+
+    // Make sure subsequent fetch calls are always for the same dataset
+    if (!_.isEmpty(this.binary)) {
+      ErrorHandling.assert(
+        _.isEqual(dataset, Store.getState().dataset),
+        "Model.fetch was called for a task with another dataset, without reloading the page.",
+      );
+    }
+
+    ErrorHandling.assertExtendContext({
+      dataSet: dataset.dataSource.id.name,
+    });
+
+    Store.dispatch(setDatasetAction(dataset));
+  }
+
+  initializeModel(annotation: ?APIAnnotationType, tracing: ?ServerTracingType) {
+    const { dataStore } = Store.getState().dataset;
 
     const LayerClass = (() => {
       switch (dataStore.typ) {
@@ -259,18 +261,14 @@ export class OxalisModel {
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
-
-    let maxZoomStep = -Infinity;
-
     for (const layer of layers) {
       const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
       this.binary[layer.name] = new Binary(
-        annotation.content.typ,
+        annotation != null ? annotation.content.typ : "skeleton",
         layer,
         maxLayerZoomStep,
         this.connectionInfo,
       );
-      maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep);
     }
 
     this.buildMappingsObject();
@@ -314,16 +312,22 @@ export class OxalisModel {
     return this.binary[name];
   }
 
-  getLayerInfos(tracing: ServerTracingType) {
+  getLayerInfos(tracing: ?ServerTracingType) {
     // Overwrite or extend layers with volumeTracingLayer
-
-    const dataset = Store.getState().dataset;
-    const layers = dataset == null ? [] : _.clone(dataset.dataLayers);
-    if (tracing.dataLayer == null) {
+    const layers = _.clone(Store.getState().dataset.dataLayers);
+    if (tracing == null || tracing.dataLayer == null) {
       return layers;
     }
 
-    const existingLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
+    // This code will only be executed for volume tracings as only those have a dataLayer.
+    // The dataLayer always contains the layer information for the user segmentation.
+    // layers (dataset.dataLayers) contains information about all existing layers of the dataset.
+    // Two possible cases:
+    // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer.
+    // 2) Segmentation exists: In that case layers already contains dataLayer and the fallbackLayer
+    //    property specifies its name, to be able to merge the two layers
+    const fallbackLayer = tracing.fallbackLayer != null ? tracing.fallbackLayer : null;
+    const existingLayerIndex = _.findIndex(layers, layer => layer.name === fallbackLayer);
     const existingLayer = layers[existingLayerIndex];
 
     if (existingLayer != null) {
@@ -367,13 +371,11 @@ export class OxalisModel {
   }
 
   applyState(state: UrlManagerState, tracing: ServerTracingType) {
-    // TODO remove default value
-    Store.dispatch(setPositionAction(state.position || tracing.editPosition || [0, 0, 0]));
+    Store.dispatch(setPositionAction(state.position || tracing.editPosition));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));
     }
-    // TODO remove default value
-    const rotation = state.rotation || tracing.editRotation || [0, 0, 0];
+    const rotation = state.rotation || tracing.editRotation;
     if (rotation != null) {
       Store.dispatch(setRotationAction(rotation));
     }

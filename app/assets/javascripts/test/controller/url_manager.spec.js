@@ -24,9 +24,4 @@ test("UrlManager should replace tracing in url", t => {
     ),
     "abc/def/annotations/newTracingType/newAnnotationId/readOnly",
   );
-
-  t.is(
-    updateTypeAndId("abc/def/datasets/annotationId/view/rest", "newTracingType", "newAnnotationId"),
-    "abc/def/datasets/newAnnotationId/view/rest",
-  );
 });

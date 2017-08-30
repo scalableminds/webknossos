@@ -109,14 +109,14 @@ class CommentTabView extends React.Component<Props, CommentTabStateType> {
     return _.values(this.props.skeletonTracing.trees)
       .sort(Utils.localeCompareBy("name", this.state.isSortedAscending))
       .filter(tree => tree.comments.length > 0)
-      .map(tree =>
+      .map(tree => (
         // one tree and its comments
         <TreeCommentList
           key={tree.treeId}
           tree={tree}
           isSortedAscending={this.state.isSortedAscending}
-        />,
-      );
+        />
+      ));
   }
 
   render() {

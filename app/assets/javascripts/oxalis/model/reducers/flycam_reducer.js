@@ -126,14 +126,7 @@ export function setRotationReducer(state: OxalisState, rotation: Vector3) {
     matrix = rotateOnAxis(matrix, -z * Math.PI / 180, [0, 0, 1]);
     matrix = rotateOnAxis(matrix, -y * Math.PI / 180, [0, 1, 0]);
     matrix = rotateOnAxis(matrix, -x * Math.PI / 180, [1, 0, 0]);
-    let newState = update(state, { flycam: { currentMatrix: { $set: matrix } } });
-    if (state.userConfiguration.dynamicSpaceDirection) {
-      const spaceDirectionOrtho = [0, 1, 2].map(index => (rotation[index] < 0 ? -1 : 1));
-      newState = update(newState, {
-        flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } },
-      });
-    }
-    return newState;
+    return update(state, { flycam: { currentMatrix: { $set: matrix } } });
   }
   return state;
 }
@@ -182,6 +175,17 @@ function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
 
     case "SET_ROTATION": {
       return setRotationReducer(state, action.rotation);
+    }
+
+    case "SET_DIRECTION": {
+      const direction = action.direction;
+      if (state.userConfiguration.dynamicSpaceDirection) {
+        const spaceDirectionOrtho = [0, 1, 2].map(index => (direction[index] < 0 ? -1 : 1));
+        return update(state, {
+          flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } },
+        });
+      }
+      return state;
     }
 
     case "MOVE_FLYCAM":

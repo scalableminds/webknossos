@@ -3,7 +3,7 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
-import type { DataLayerType } from "oxalis/store";
+import type { DataLayerType, SettingsType } from "oxalis/store";
 
 type APIDataSourceType = {
   +id: {
@@ -88,9 +88,9 @@ export type APISettingsType = {
 
 export type APIScriptType = {
   +gist: string,
-  +name: string,
   +id: string,
-  +owner: string,
+  +name: string,
+  +owner: APIUserType,
 };
 
 export type APITaskType = {
@@ -142,24 +142,20 @@ export type APIAnnotationType = {
   +typ: APITracingTypeTracingType,
 };
 
+export type APITaskTypeType = {
+  +id: string,
+  +summary: string,
+  +description: string,
+  +team: string,
+  +settings: SettingsType,
+};
+
 export type APITaskWithAnnotationType = {
   +id: string,
   +team: string,
   +formattedHash: string,
   +projectName: string,
-  +type: {
-    +id: string,
-    +summary: string,
-    +description: string,
-    +team: string,
-    +settings: {
-      +allowedModes: ["orthogonal", "oblique", "flight"],
-      +branchPointsAllowed: boolean,
-      +somaClickingAllowed: boolean,
-      +advancedOptionsAllowed: boolean,
-    },
-    +fileName: null,
-  },
+  +type: APITaskTypeType,
   +dataSet: string,
   +editPosition: Vector3,
   +editRotation: Vector3,
@@ -171,6 +167,18 @@ export type APITaskWithAnnotationType = {
   +tracingTime: null,
   +creationInfo: null,
   +annotation: APIAnnotationType,
+};
+
+export type APIProjectType = {
+  +id: string,
+  +name: string,
+  +team: string,
+  +owner: APIUserType,
+  +priority: number,
+  +paused: boolean,
+  +expectedTime: number,
+  +assignmentConfiguration: { location: "webknossos" | "mturk" },
+  +numberOfOpenAssignments: number,
 };
 
 export default {};

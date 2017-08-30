@@ -113,11 +113,11 @@ class UserListView extends React.PureComponent<{}, State> {
       );
     }
 
-    const activationFilterWarning = this.state.activationFilter.includes("true")
-      ? <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
-          Show Active User Only
-        </Tag>
-      : null;
+    const activationFilterWarning = this.state.activationFilter.includes("true") ? (
+      <Tag closable onClose={this.handleDismissActivationFilter} color="blue">
+        Show Active User Only
+      </Tag>
+    ) : null;
 
     const marginRight = { marginRight: 20 };
 
@@ -125,11 +125,9 @@ class UserListView extends React.PureComponent<{}, State> {
       <div className="user-administration-table container wide">
         <h3>Users</h3>
 
-        {hasRowsSelected
-          ? <span style={marginRight}>
-              {this.state.selectedUserIds.length} selected user(s)
-            </span>
-          : null}
+        {hasRowsSelected ? (
+          <span style={marginRight}>{this.state.selectedUserIds.length} selected user(s)</span>
+        ) : null}
         <Button
           onClick={() => this.setState({ isTeamRoleModalVisible: true })}
           icon="team"
@@ -194,11 +192,11 @@ class UserListView extends React.PureComponent<{}, State> {
             key="experiences"
             width={300}
             render={(experiences, user: APIUserType) =>
-              _.map(experiences, (value, domain) =>
+              _.map(experiences, (value, domain) => (
                 <Tag key={`experience_${user.id}_${domain}`}>
                   {domain} : {value}
-                </Tag>,
-              )}
+                </Tag>
+              ))}
           />
           <Column
             title="Teams - Role"
@@ -206,14 +204,14 @@ class UserListView extends React.PureComponent<{}, State> {
             key="teams_"
             width={300}
             render={(teams: Array<APITeamRoleType>, user: APIUserType) =>
-              teams.map(team =>
+              teams.map(team => (
                 <Tag
                   key={`team_role_${user.id}_${team.team}`}
                   color={TemplateHelpers.stringToColor(team.role.name)}
                 >
                   {team.team}: {team.role.name}
-                </Tag>,
-              )}
+                </Tag>
+              ))}
           />
           <Column
             title="Status"
@@ -234,7 +232,7 @@ class UserListView extends React.PureComponent<{}, State> {
           <Column
             title="Actions"
             key="actions"
-            render={(__, user: APIUserType) =>
+            render={(__, user: APIUserType) => (
               <span>
                 <a href={`/users/${user.id}/details`}>
                   <Icon type="user" />Show Tracings
@@ -247,14 +245,17 @@ class UserListView extends React.PureComponent<{}, State> {
                   <Icon type="download" />Download
                 </a>
                 <br />
-                {user.isActive
-                  ? <a href="#" onClick={() => this.deactivateUser(user)}>
-                      <Icon type="user-delete" />Deactivate User
-                    </a>
-                  : <a href="#" onClick={() => this.activateUser(user)}>
-                      <Icon type="user-add" />Activate User
-                    </a>}
-              </span>}
+                {user.isActive ? (
+                  <a href="#" onClick={() => this.deactivateUser(user)}>
+                    <Icon type="user-delete" />Deactivate User
+                  </a>
+                ) : (
+                  <a href="#" onClick={() => this.activateUser(user)}>
+                    <Icon type="user-add" />Activate User
+                  </a>
+                )}
+              </span>
+            )}
           />
         </Table>
         <ExperienceModalView

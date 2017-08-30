@@ -15,7 +15,6 @@ object Dependencies{
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
   val braingamesVersion = "11.2.3-SNAPSHOT"
-
   val twelvemonkeysVersion = "3.1.2"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"

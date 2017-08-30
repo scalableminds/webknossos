@@ -65,7 +65,7 @@ class ArbitraryCubeAdapter {
   getBucket = _.memoize((bucketIndex: number): ?ArbitraryBucketData => {
     let bucketAddress = [
       Math.floor(bucketIndex / this.sizeZY),
-      Math.floor(bucketIndex % this.sizeZY / this.sizeZ),
+      Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),
       bucketIndex % this.sizeZ,
       0,
     ];

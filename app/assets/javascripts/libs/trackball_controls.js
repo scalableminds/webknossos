@@ -160,7 +160,12 @@ function TrackballControls(object, domElement, target, updateCallback) {
       _eye.copy(_this.object.position).sub(_this.target);
 
       projection.copy(_this.object.up).setLength(mouseOnBall.y);
-      projection.add(objectUp.copy(_this.object.up).cross(_eye).setLength(mouseOnBall.x));
+      projection.add(
+        objectUp
+          .copy(_this.object.up)
+          .cross(_eye)
+          .setLength(mouseOnBall.x),
+      );
       projection.add(_eye.setLength(mouseOnBall.z));
 
       return projection;
@@ -229,7 +234,10 @@ function TrackballControls(object, domElement, target, updateCallback) {
       if (mouseChange.lengthSq()) {
         mouseChange.multiplyScalar(_eye.length() * _this.panSpeed);
 
-        pan.copy(_eye).cross(_this.object.up).setLength(mouseChange.x);
+        pan
+          .copy(_eye)
+          .cross(_this.object.up)
+          .setLength(mouseChange.x);
         pan.add(objectUp.copy(_this.object.up).setLength(mouseChange.y));
 
         _this.object.position.add(pan);

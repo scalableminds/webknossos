@@ -17,12 +17,10 @@ import Model from "oxalis/model";
 import {
   updateUserSettingAction,
   setFlightmodeRecordingAction,
-  setViewModeAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
   deleteNodeAction,
-  createTreeAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -124,9 +122,6 @@ class ArbitraryController extends React.PureComponent<Props> {
             (this.arbitraryView.width / constants.ARBITRARY_WIDTH);
           Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
         }
-      },
-      rightClick: (pos: Point2) => {
-        this.createBranchMarker(pos);
       },
       scroll: this.scroll,
     });
@@ -244,30 +239,6 @@ class ArbitraryController extends React.PureComponent<Props> {
       Store.dispatch(setFlightmodeRecordingAction(record));
       this.setWaypoint();
     }
-  }
-
-  createBranchMarker(pos: Point2): void {
-    Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
-    const f =
-      Store.getState().flycam.zoomStep / (this.arbitraryView.width / constants.ARBITRARY_WIDTH);
-    Store.dispatch(
-      moveFlycamAction([
-        -(pos.x - this.arbitraryView.width / 2) * f,
-        -(pos.y - this.arbitraryView.width / 2) * f,
-        0,
-      ]),
-    );
-    Store.dispatch(createTreeAction());
-    this.setWaypoint();
-    Store.dispatch(
-      moveFlycamAction([
-        (pos.x - this.arbitraryView.width / 2) * f,
-        (pos.y - this.arbitraryView.width / 2) * f,
-        0,
-      ]),
-    );
-    Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
-    this.moved();
   }
 
   nextNode(nextOne: boolean): void {

@@ -99,7 +99,7 @@ class WkLayer extends Layer {
         method: "POST",
         data,
         timeout: REQUEST_TIMEOUT,
-        compress: true,
+        compress: false,
         doNotCatch: true,
       },
     );

@@ -181,7 +181,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           const newTracings = info.fileList.map(fileInfo => fileInfo.response.annotation);
           this.setState({
             isUploadingNML: false,
-            unarchivedTracings: this.state.unarchivedTracings.concat(newTracings),
+            unarchivedTracings: newTracings.concat(this.state.unarchivedTracings),
           });
         }
       }

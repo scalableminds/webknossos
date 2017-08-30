@@ -16,7 +16,11 @@ type State = {
     numberOfTrees: number,
     numberOfOpenAssignments: number,
   },
-  timeEntries: Array<*>,
+  timeEntries: Array<{
+    start: string,
+    end: string,
+    tracingTime: number,
+  }>,
   isAchievementsLoading: boolean,
   isTimeEntriesLoading: boolean,
   startDate: moment$Moment,

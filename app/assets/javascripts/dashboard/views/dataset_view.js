@@ -86,6 +86,19 @@ class DatasetView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
+  updateDataset = (newDataset: DatasetType) => {
+    const newDatasets = this.state.datasets.map((dataset: DatasetType) => {
+      if (dataset.name === newDataset.name) {
+        return newDataset;
+      }
+      return dataset;
+    });
+
+    this.setState({
+      datasets: newDatasets,
+    });
+  };
+
   renderGallery() {
     return (
       <GalleryDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
@@ -94,7 +107,11 @@ class DatasetView extends React.PureComponent<Props, State> {
 
   renderAdvanced() {
     return (
-      <AdvancedDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
+      <AdvancedDatasetView
+        datasets={this.state.datasets}
+        searchQuery={this.state.searchQuery}
+        updateDataset={this.updateDataset}
+      />
     );
   }
 

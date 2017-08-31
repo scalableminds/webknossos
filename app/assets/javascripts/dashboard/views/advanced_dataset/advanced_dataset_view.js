@@ -15,18 +15,18 @@ const { Column } = Table;
 type Props = {
   datasets: Array<DatasetType>,
   searchQuery: string,
-  updateDatasets: Function,
+  updateDataset: DatasetType => void,
 };
 
 type State = {
   isTeamAssignmentModalVisible: boolean,
-  selectedDataset: DatasetType,
+  selectedDataset: ?DatasetType,
 };
 
 class AdvancedDatasetView extends React.PureComponent<Props, State> {
   state = {
     isTeamAssignmentModalVisible: false,
-    selectedDataset: {},
+    selectedDataset: null,
   };
 
   render() {
@@ -132,20 +132,22 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             render={(__, dataset: DatasetType) => <DatasetActionView dataset={dataset} />}
           />
         </Table>
-        <TeamAssignmentModal
-          isVisible={this.state.isTeamAssignmentModalVisible}
-          dataset={this.state.selectedDataset}
-          onCancel={() =>
-            this.setState({
-              isTeamAssignmentModalVisible: false,
-            })}
-          onOk={(updatedDataset: DatasetType) => {
-            this.props.updateDatasets(updatedDataset);
-            this.setState({
-              isTeamAssignmentModalVisible: false,
-            });
-          }}
-        />
+        {this.state.isTeamAssignmentModalVisible && this.state.selectedDataset
+          ? <TeamAssignmentModal
+              isVisible={this.state.isTeamAssignmentModalVisible}
+              dataset={this.state.selectedDataset}
+              onCancel={() =>
+                this.setState({
+                  isTeamAssignmentModalVisible: false,
+                })}
+              onOk={(updatedDataset: DatasetType) => {
+                this.props.updateDataset(updatedDataset);
+                this.setState({
+                  isTeamAssignmentModalVisible: false,
+                });
+              }}
+            />
+          : null}
       </div>
     );
   }

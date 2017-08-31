@@ -32,17 +32,12 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
     this.fetchData();
   }
 
-  componentWillReceiveProps(newProps: Props) {
-    this.setState({
-      selectedTeams: newProps.dataset ? newProps.dataset.allowedTeams : [],
-    });
-  }
-
   async fetchData() {
     const url = "/api/teams";
     const teams = await Request.receiveJSON(url);
     this.setState({
       isLoading: false,
+      selectedTeams: this.props.dataset ? this.props.dataset.allowedTeams : [],
       teams,
     });
   }

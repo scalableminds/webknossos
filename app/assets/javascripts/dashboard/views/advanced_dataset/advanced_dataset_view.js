@@ -49,14 +49,15 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="name"
             key="name"
             sorter={Utils.localeCompareBy("name")}
-            render={(name, dataset: DatasetType) =>
+            render={(name, dataset: DatasetType) => (
               <div>
                 {dataset.name}
                 <br />
                 <Tag color={TemplateHelpers.stringToColor(dataset.dataStore.name)}>
                   {dataset.dataStore.name}
                 </Tag>
-              </div>}
+              </div>
+            )}
           />
           <Column
             title="Creation Date"
@@ -79,7 +80,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             key="allowedTeams"
             width={150}
             render={(teams, dataset: DatasetType) =>
-              teams.map(team =>
+              teams.map(team => (
                 <Tag
                   color={TemplateHelpers.stringToColor(team)}
                   key={`allowed_teams_${dataset.name}_${team}`}
@@ -91,8 +92,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                 >
                   {team === dataset.owningTeam ? <i className="fa fa-lock" /> : null}
                   {team}
-                </Tag>,
-              )}
+                </Tag>
+              ))}
           />
           <Column
             title="Active"
@@ -118,11 +119,11 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Data Layers"
             dataIndex="dataSource.dataLayers"
             render={(__, dataset) =>
-              (dataset.dataSource.dataLayers || []).map(layer =>
+              (dataset.dataSource.dataLayers || []).map(layer => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
-                </Tag>,
-              )}
+                </Tag>
+              ))}
           />
 
           <Column
@@ -132,22 +133,22 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             render={(__, dataset: DatasetType) => <DatasetActionView dataset={dataset} />}
           />
         </Table>
-        {this.state.isTeamAssignmentModalVisible && this.state.selectedDataset
-          ? <TeamAssignmentModal
-              isVisible={this.state.isTeamAssignmentModalVisible}
-              dataset={this.state.selectedDataset}
-              onCancel={() =>
-                this.setState({
-                  isTeamAssignmentModalVisible: false,
-                })}
-              onOk={(updatedDataset: DatasetType) => {
-                this.props.updateDataset(updatedDataset);
-                this.setState({
-                  isTeamAssignmentModalVisible: false,
-                });
-              }}
-            />
-          : null}
+        {this.state.isTeamAssignmentModalVisible && this.state.selectedDataset ? (
+          <TeamAssignmentModal
+            isVisible={this.state.isTeamAssignmentModalVisible}
+            dataset={this.state.selectedDataset}
+            onCancel={() =>
+              this.setState({
+                isTeamAssignmentModalVisible: false,
+              })}
+            onOk={(updatedDataset: DatasetType) => {
+              this.props.updateDataset(updatedDataset);
+              this.setState({
+                isTeamAssignmentModalVisible: false,
+              });
+            }}
+          />
+        ) : null}
       </div>
     );
   }

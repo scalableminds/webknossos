@@ -5,7 +5,7 @@ import _ from "lodash";
 import * as React from "react";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
-import { Spin, Input, Table, Button, Upload, Modal, Tag } from "antd";
+import { Spin, Input, Table, Button, Modal, Tag } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
@@ -15,6 +15,7 @@ import app from "app";
 import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
+import FileUpload from "components/file_upload";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -149,24 +150,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     }
   };
 
-  handleNMLUpload = (info: {
-    file: { response: Object, status: "uploading" | "error" | "done" },
-    fileList: Array<Object>,
-    event: SyntheticInputEvent<>,
-  }) => {
-    const response = info.file.response;
-    if (info.file.status === "uploading") {
-      this.setState({ isUploadingNML: true });
-    }
-    if (info.file.status === "error") {
-      response.messages.map(m => Toast.error(m.error));
-    }
-    if (info.file.status === "done") {
-      response.messages.map(m => Toast.success(m.success));
-      app.router.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`, {
-        trigger: true,
-      });
-    }
+  handleNMLUpload = (response: Object) => {
+    response.messages.map(m => Toast.success(m.success));
+    app.router.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`, {
+      trigger: true,
+    });
   };
 
   renderActions = (tracing: APIAnnotationType) => {
@@ -448,18 +436,19 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           search
         ) : (
           <div className="pull-right">
-            <Upload
-              action="/admin/nml/upload"
+            <FileUpload
+              url="/admin/nml/upload"
               accept=".nml, .zip"
               name="nmlFile"
               multiple
-              showUploadList={false}
-              onChange={this.handleNMLUpload}
+              onSuccess={this.handleNMLUpload}
+              onUploading={() => this.setState({ isUploadingNML: true })}
+              onError={() => this.setState({ isUploadingNML: false })}
             >
               <Button icon="upload" loading={this.state.isUploadingNML}>
                 Upload Annotation
               </Button>
-            </Upload>
+            </FileUpload>
             <div className="divider-vertical" />
             <Button onClick={this.toggleShowArchived} style={marginRight}>
               Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings

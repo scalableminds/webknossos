@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import * as React from "react";
 import { Row, Col, Spin, Table, Card } from "antd";
 import moment from "moment";
@@ -7,6 +8,11 @@ import Utils from "libs/utils";
 import C3Chart from "react-c3js";
 
 const { Column } = Table;
+type TimeEntryType = {
+  start: string,
+  end: string,
+  tracingTime: number,
+};
 
 type State = {
   achievements: {
@@ -15,12 +21,9 @@ type State = {
     numberOfAnnotations: number,
     numberOfTrees: number,
     numberOfOpenAssignments: number,
+    tracingTimes: Array<TimeEntryType>,
   },
-  timeEntries: Array<{
-    start: string,
-    end: string,
-    tracingTime: number,
-  }>,
+  timeEntries: Array<TimeEntryType>,
   isAchievementsLoading: boolean,
   isTimeEntriesLoading: boolean,
   startDate: moment$Moment,
@@ -40,6 +43,7 @@ class StatisticView extends React.PureComponent<{}, State> {
       numberOfAnnotations: 0,
       numberOfTrees: 0,
       numberOfOpenAssignments: 0,
+      tracingTimes: [],
     },
   };
 
@@ -88,19 +92,21 @@ class StatisticView extends React.PureComponent<{}, State> {
   };
 
   render() {
-    const previousWeeks = this.state.timeEntries.map(item =>
+    const previousWeeks = this.state.achievements.tracingTimes.map(item =>
       parseInt(moment.duration(item.tracingTime).asHours()),
     );
     const currentWeek = previousWeeks.length - 1;
 
-    const dates = this.state.timeEntries.map(item => moment(item.start).format("YYYY-MM-DD"));
+    const dates = this.state.achievements.tracingTimes.map(item =>
+      moment(item.start).format("YYYY-MM-DD"),
+    );
 
     return (
       <div className="statistics container wide">
         <Row gutter={16}>
           <Col span={16}>
             <Card title="Overall Weekly Tracing Time">
-              <Spin spinning={this.state.isTimeEntriesLoading} size="large">
+              <Spin spinning={this.state.isAchievementsLoading} size="large">
                 <C3Chart
                   data={{
                     x: "date",
@@ -186,13 +192,13 @@ class StatisticView extends React.PureComponent<{}, State> {
                     title="Duration"
                     dataIndex="tracingTimes"
                     key="tracingTimes"
-                    render={tracingTimes =>
-                      tracingTimes.map(timeEntry => {
-                        const minutes = timeEntry.tracingTime / 1000 / 60;
-                        const hours = Utils.zeroPad(Math.floor(minutes / 60));
-                        const remainingMinutes = Utils.zeroPad(Math.floor(minutes % 60));
-                        return `${hours}h ${remainingMinutes}m`;
-                      })}
+                    render={tracingTimes => {
+                      const duration = _.sumBy(tracingTimes, timeEntry => timeEntry.tracingTime);
+                      const minutes = duration / 1000 / 60;
+                      const hours = Utils.zeroPad(Math.floor(minutes / 60));
+                      const remainingMinutes = Utils.zeroPad(Math.floor(minutes % 60));
+                      return `${hours}h ${remainingMinutes}m`;
+                    }}
                   />
                 </Table>
               </Spin>

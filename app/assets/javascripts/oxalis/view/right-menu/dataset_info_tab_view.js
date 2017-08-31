@@ -84,11 +84,7 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
       );
     } else if (!this.props.tracing.restrictions.allowUpdate) {
       // For readonly tracings display the non-editable explorative tracing name
-      annotationTypeLabel = (
-        <span>
-          Explorational Tracing: {tracingName}
-        </span>
-      );
+      annotationTypeLabel = <span>Explorational Tracing: {tracingName}</span>;
     } else {
       // Or display display the editable explorative tracing name
       annotationTypeLabel = (

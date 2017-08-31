@@ -62,16 +62,16 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
   };
 
   render() {
-    const publicCheckbox = this.props.restrictions.allowUpdate
-      ? <Checkbox
-          onChange={this.handleCheckboxChange}
-          checked={this.state.isPublic}
-          style={{ marginTop: 10, marginLeft: 1 }}
-        >
-          Share the tracing publicly. Everyone with this link can access the tracing without the
-          need for a user login.
-        </Checkbox>
-      : null;
+    const publicCheckbox = this.props.restrictions.allowUpdate ? (
+      <Checkbox
+        onChange={this.handleCheckboxChange}
+        checked={this.state.isPublic}
+        style={{ marginTop: 10, marginLeft: 1 }}
+      >
+        Share the tracing publicly. Everyone with this link can access the tracing without the need
+        for a user login.
+      </Checkbox>
+    ) : null;
 
     return (
       <Modal

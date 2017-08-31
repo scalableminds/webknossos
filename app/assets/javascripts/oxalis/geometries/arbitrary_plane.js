@@ -56,7 +56,7 @@ class ArbitraryPlane {
       });
     }
 
-    if (Math.log(this.width) / Math.LN2 % 1 === 1) {
+    if ((Math.log(this.width) / Math.LN2) % 1 === 1) {
       throw new Error("width needs to be a power of 2");
     }
 

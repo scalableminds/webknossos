@@ -28,21 +28,14 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
 
   state = {
     contentType: "",
+    dataset: "",
   };
 
-  handleSkeletonTraceClick = (event: Event) => {
-    this.submitForm("skeletonTracing", event);
-  };
-
-  handleVolumeTraceClick = (event: Event) => {
-    this.submitForm("volumeTracing", event);
-  };
-
-  submitForm(type: string, event: Event) {
+  submitForm(dataset: string, contentType: string, event: Event) {
     event.preventDefault();
 
     if (app.currentUser != null) {
-      this.setState({ contentType: type }, () => {
+      this.setState({ contentType, dataset }, () => {
         this.form.submit();
       });
     } else {
@@ -67,9 +60,11 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
         />
       );
     } else {
-      description = dataset.hasSegmentation
-        ? <p>Original data and segmentation</p>
-        : <p>Original data</p>;
+      description = dataset.hasSegmentation ? (
+        <p>Original data and segmentation</p>
+      ) : (
+        <p>Original data</p>
+      );
     }
 
     return (
@@ -82,25 +77,46 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
           <a href={`/datasets/${dataset.name}/view`} title="View dataset">
             <img src="/assets/images/eye.svg" alt="Eye" />
           </a>
-          <a href="#" title="Create skeleton tracing" onClick={this.handleSkeletonTraceClick}>
+          <a
+            href="#"
+            title="Create skeleton tracing"
+            onClick={event => this.submitForm(dataset.name, "skeletonTracing", event)}
+          >
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>
-          {dataset.dataStore.typ !== "ndstore"
-            ? <a href="#" title="Create volume tracing" onClick={this.handleVolumeTraceClick}>
-                <img src="/assets/images/volume.svg" alt="Volume" />
-              </a>
-            : null}
+          {dataset.dataStore.typ !== "ndstore" ? (
+            <a
+              href="#"
+              title="Create volume tracing"
+              onClick={event => this.submitForm(dataset.name, "volumeTracing", event)}
+            >
+              <img src="/assets/images/volume.svg" alt="Volume" />
+            </a>
+          ) : null}
         </div>
         <div className="dataset-description">
-          <h3>
-            {dataset.name}
-          </h3>
-          <p>
-            Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}
-          </p>
+          <h3>{dataset.name}</h3>
+          <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
           {description}
         </div>
+      </Card>
+    );
+  }
 
+  render() {
+    return (
+      <div>
+        <Row gutter={padding}>
+          {Utils.filterWithSearchQueryAND(
+            this.props.datasets.filter(ds => ds.isActive),
+            ["name", "owningTeam", "description"],
+            this.props.searchQuery,
+          ).map(ds => (
+            <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
+              {this.renderCard(ds)}
+            </Col>
+          ))}
+        </Row>
         <form
           action={jsRoutes.controllers.AnnotationController.createExplorational().url}
           method="POST"
@@ -108,26 +124,10 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
             this.form = form;
           }}
         >
-          <input type="hidden" name="dataSetName" value={dataset.name} />
+          <input type="hidden" name="dataSetName" value={this.state.dataset} />
           <input type="hidden" name="contentType" value={this.state.contentType} />
         </form>
-      </Card>
-    );
-  }
-
-  render() {
-    return (
-      <Row gutter={padding}>
-        {Utils.filterWithSearchQueryAND(
-          this.props.datasets.filter(ds => ds.isActive),
-          ["name", "owningTeam", "description"],
-          this.props.searchQuery,
-        ).map(ds =>
-          <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
-            {this.renderCard(ds)}
-          </Col>,
-        )}
-      </Row>
+      </div>
     );
   }
 }

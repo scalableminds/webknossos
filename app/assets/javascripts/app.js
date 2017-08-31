@@ -7,19 +7,12 @@ import Marionette from "backbone.marionette";
 import type Router from "router";
 import typeof OxalisController from "oxalis/controller";
 import window from "libs/window";
-
-type UserType = {
-  firstName: string,
-  lastName: string,
-  email: string,
-  isAnonymous: boolean,
-  id: string,
-};
+import type { APIUserType } from "admin/api_flow_types";
 
 class OxalisApplication extends Marionette.Application {
   router: Router;
   oxalis: ?OxalisController;
-  currentUser: UserType;
+  currentUser: APIUserType;
 }
 
 // eslint-disable-next-line no-unused-vars

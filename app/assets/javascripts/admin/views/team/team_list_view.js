@@ -134,10 +134,11 @@ class TeamListView extends React.PureComponent<{}, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, script: APITeamType) =>
+                render={(__, script: APITeamType) => (
                   <a href="#" onClick={_.partial(this.deleteTeam, script)}>
                     <Icon type="delete" />Delete
-                  </a>}
+                  </a>
+                )}
               />
             </Table>
           </Spin>

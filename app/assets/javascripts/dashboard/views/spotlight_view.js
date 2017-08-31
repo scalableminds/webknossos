@@ -44,9 +44,11 @@ class SpotlightView extends React.PureComponent<{}, State> {
           </div>
         </Header>
         <Content style={{ padding: 50 }}>
-          {this.state.isLoading
-            ? <Spin size="large" />
-            : <GalleryDatasetView datasets={this.state.datasets} />}
+          {this.state.isLoading ? (
+            <Spin size="large" />
+          ) : (
+            <GalleryDatasetView datasets={this.state.datasets} />
+          )}
           <div id="spotlight-footnote">
             Visit <a href="https://www.webknossos.org/">webknossos.org</a> to learn more about
             webKnossos.

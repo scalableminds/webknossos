@@ -1,8 +1,8 @@
-version: '2'
+version: '2.1'
 
 services:
   webknossos-datastore:
-    image: scalableminds/webknossos-datastore:$DOCKER_TAG
+    image: scalableminds/webknossos-datastore:${DOCKER_TAG:-master}
     ports:
       - "9090:9090"
 
@@ -10,9 +10,9 @@ services:
     image: scalableminds/sbt:$SBT_VERSION_TAG
     volumes:
       - ".:/project"
-      - "~/.m2:/root/.m2"
-      - "~/.ivy2:/root/.ivy2"
-      - "~/.sbt:/root/.sbt"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
 
   dev:
     extends:

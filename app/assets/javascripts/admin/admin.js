@@ -23,7 +23,6 @@ import ScriptCollection from "admin/models/scripts/script_collection";
 import ProjectCreateView from "admin/views/project/project_create_view";
 import ProjectModel from "admin/models/project/project_model";
 import ProjectEditView from "admin/views/project/project_edit_view";
-import TimeStatisticModel from "admin/models/statistic/time_statistic_model";
 import DatasetModel from "admin/models/dataset/dataset_model";
 import TaskQueryView from "admin/views/task/task_query_view";
 import TaskCreateView from "admin/views/task/task_create_view";
@@ -62,7 +61,6 @@ export {
   ProjectCreateView,
   ProjectModel,
   ProjectEditView,
-  TimeStatisticModel,
   DatasetModel,
   TaskQueryView,
   TaskCreateView,

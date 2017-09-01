@@ -22,10 +22,13 @@ export default class Request {
         url = `http://localhost:9000${url}`;
       }
 
-      return fetch(url, options).then(responseHandler).then(converter).catch(e => {
-        console.error(e);
-        return Promise.reject(e);
-      });
+      return fetch(url, options)
+        .then(responseHandler)
+        .then(converter)
+        .catch(e => {
+          console.error(e);
+          return Promise.reject(e);
+        });
     }
 
     function upload(url, options) {

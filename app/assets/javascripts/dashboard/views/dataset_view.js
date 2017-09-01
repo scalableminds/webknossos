@@ -86,6 +86,19 @@ class DatasetView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
+  updateDataset = (newDataset: DatasetType) => {
+    const newDatasets = this.state.datasets.map((dataset: DatasetType) => {
+      if (dataset.name === newDataset.name) {
+        return newDataset;
+      }
+      return dataset;
+    });
+
+    this.setState({
+      datasets: newDatasets,
+    });
+  };
+
   renderGallery() {
     return (
       <GalleryDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
@@ -94,7 +107,11 @@ class DatasetView extends React.PureComponent<Props, State> {
 
   renderAdvanced() {
     return (
-      <AdvancedDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
+      <AdvancedDatasetView
+        datasets={this.state.datasets}
+        searchQuery={this.state.searchQuery}
+        updateDataset={this.updateDataset}
+      />
     );
   }
 
@@ -109,23 +126,27 @@ class DatasetView extends React.PureComponent<Props, State> {
       />
     );
 
-    const adminHeader = Utils.isUserAdmin(this.props.user)
-      ? <div className="pull-right">
-          <a href="/datasets/upload" style={margin}>
-            <Button type="primary" icon="plus">
-              Add Dataset
-            </Button>
-          </a>
-          {isGallery
-            ? <Button onClick={this.showAdvancedView} icon="bars" style={margin}>
-                Show Advanced View
-              </Button>
-            : <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
-                Show Gallery View
-              </Button>}
-          {search}
-        </div>
-      : search;
+    const adminHeader = Utils.isUserAdmin(this.props.user) ? (
+      <div className="pull-right">
+        <a href="/datasets/upload" style={margin}>
+          <Button type="primary" icon="plus">
+            Add Dataset
+          </Button>
+        </a>
+        {isGallery ? (
+          <Button onClick={this.showAdvancedView} icon="bars" style={margin}>
+            Show Advanced View
+          </Button>
+        ) : (
+          <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
+            Show Gallery View
+          </Button>
+        )}
+        {search}
+      </div>
+    ) : (
+      search
+    );
 
     const content = (() => {
       if (this.state.isLoading) {
@@ -148,9 +169,7 @@ class DatasetView extends React.PureComponent<Props, State> {
         {adminHeader}
         <h3>Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-        <div>
-          {content}
-        </div>
+        <div>{content}</div>
       </div>
     );
   }

@@ -38,9 +38,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
     return (
       <Row className="settings-row">
         <Col span={8}>
-          <label className="setting-label">
-            {label}
-          </label>
+          <label className="setting-label">{label}</label>
         </Col>
         <Col span={8}>
           <Slider min={min} max={max} onChange={onChange} value={value} step={step} />
@@ -117,9 +115,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
     return (
       <Row className="settings-row">
         <Col span={8}>
-          <label className="setting-label">
-            {label}
-          </label>
+          <label className="setting-label">{label}</label>
         </Col>
         <Col span={8}>
           <Slider
@@ -158,9 +154,7 @@ export class SwitchSetting extends React.PureComponent<SwitchSettingProps> {
     return (
       <Row className="settings-row">
         <Col span={8}>
-          <label className="setting-label">
-            {label}
-          </label>
+          <label className="setting-label">{label}</label>
         </Col>
         <Col span={16}>
           <Switch onChange={onChange} checked={value} defaultChecked={value} />
@@ -192,9 +186,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
     return (
       <Row className="settings-row">
         <Col span={8}>
-          <label className="setting-label">
-            {label}
-          </label>
+          <label className="setting-label">{label}</label>
         </Col>
         <Col span={16}>
           <InputNumber min={min} max={max} onChange={onChange} value={value} step={step} />
@@ -291,9 +283,7 @@ export class Vector6InputSetting extends React.PureComponent<
     return (
       <Row className="settings-row">
         <Col span={8}>
-          <label className="setting-label">
-            {this.props.label}
-          </label>
+          <label className="setting-label">{this.props.label}</label>
         </Col>
         <Col span={16}>
           <Tooltip
@@ -331,9 +321,7 @@ export class ColorSetting extends React.PureComponent<ColorSettingPropTypes> {
     return (
       <Row className="settings-row">
         <Col span={8}>
-          <label className="setting-label">
-            {this.props.label}
-          </label>
+          <label className="setting-label">{this.props.label}</label>
         </Col>
         <Col span={16}>
           <input type="color" onChange={this.onColorChange} value={this.props.value} />
@@ -360,9 +348,7 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
     return (
       <Row className="settings-row">
         <Col span={8}>
-          <label className="setting-label">
-            {label}
-          </label>
+          <label className="setting-label">{label}</label>
         </Col>
         <Col span={16}>
           <Select onChange={onChange} value={value.toString()} defaultValue={value.toString()}>

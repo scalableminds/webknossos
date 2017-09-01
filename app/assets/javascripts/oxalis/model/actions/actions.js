@@ -9,6 +9,7 @@ import type { TaskActionType } from "oxalis/model/actions/task_actions";
 import type { SaveActionType } from "oxalis/model/actions/save_actions";
 import type { ViewModeActionType } from "oxalis/model/actions/view_mode_actions";
 import type { AnnotationActionTypes } from "oxalis/model/actions/annotation_actions";
+import type { FlycamActionType } from "oxalis/model/actions/flycam_actions";
 
 export type ActionType =
   | SkeletonTracingActionType
@@ -18,7 +19,8 @@ export type ActionType =
   | TaskActionType
   | SaveActionType
   | ViewModeActionType
-  | AnnotationActionTypes;
+  | AnnotationActionTypes
+  | FlycamActionType;
 
 export const wkReadyAction = () => ({
   type: "WK_READY",

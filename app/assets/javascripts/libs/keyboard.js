@@ -7,9 +7,8 @@
     var f;
     "undefined" != typeof window
       ? (f = window)
-      : "undefined" != typeof global
-        ? (f = global)
-        : "undefined" != typeof self && (f = self), (f.keyboardJS = e());
+      : "undefined" != typeof global ? (f = global) : "undefined" != typeof self && (f = self),
+      (f.keyboardJS = e());
   }
 })(function() {
   var define, module, exports;

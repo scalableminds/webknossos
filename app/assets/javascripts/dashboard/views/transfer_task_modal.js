@@ -79,11 +79,11 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
         filterOption={(input, option) =>
           option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
       >
-        {this.state.users.filter(u => u.id !== this.props.userID).map(user =>
+        {this.state.users.filter(u => u.id !== this.props.userID).map(user => (
           <Option key={user.id} value={user.id}>
             {`${user.lastName}, ${user.firstName} ${user.email}`}
-          </Option>,
-        )}
+          </Option>
+        ))}
       </Select>
     );
   }
@@ -113,11 +113,13 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
       >
         <div className="control-group">
           <div className="form-group">
-            {this.state.isLoading
-              ? <div className="text-center">
-                  <Spin size="large" />
-                </div>
-              : this.renderFormContent()}
+            {this.state.isLoading ? (
+              <div className="text-center">
+                <Spin size="large" />
+              </div>
+            ) : (
+              this.renderFormContent()
+            )}
           </div>
         </div>
       </Modal>

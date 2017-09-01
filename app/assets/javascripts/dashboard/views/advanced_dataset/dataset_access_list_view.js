@@ -47,30 +47,32 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
           </tr>
         </thead>
         <tbody>
-          {this.state.datasetUsers.map(user =>
+          {this.state.datasetUsers.map(user => (
             <tr key={user.id}>
               <td>
                 {user.firstName} {user.lastName}
               </td>
               <td>
-                {user.teams.map(team =>
+                {user.teams.map(team => (
                   <Tag color={TemplateHelpers.stringToColor(team.team)} key={team.team}>
                     {team.team}
-                  </Tag>,
-                )}
+                  </Tag>
+                ))}
               </td>
-            </tr>,
-          )}
+            </tr>
+          ))}
         </tbody>
       </table>
     );
   }
 
   render() {
-    return this.state.isLoading
-      ? <div className="text-center">
-          <Spin size="large" />
-        </div>
-      : this.renderTable();
+    return this.state.isLoading ? (
+      <div className="text-center">
+        <Spin size="large" />
+      </div>
+    ) : (
+      this.renderTable()
+    );
   }
 }

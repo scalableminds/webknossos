@@ -276,8 +276,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-
-
   def duplicate(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {

@@ -84,7 +84,8 @@ case class Annotation(
         "dataSetName" -> dataSetName,
         "dataStore" -> dataSet.dataStoreInfo,
         "settings" -> settings,
-        "tracingTime" -> tracingTime
+        "tracingTime" -> tracingTime,
+        "tags" -> tags
       )
     }
   }

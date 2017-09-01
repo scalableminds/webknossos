@@ -98,7 +98,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));
   t.is(withoutUpdateTracing(items).length, 0);
-  t.true(items[0].value.activeCell === ACTIVE_CELL_ID);
+  t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
   expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items)));
 });
 

@@ -56,7 +56,7 @@ test("Data API: labelVoxels should label a list of voxels", t => {
 
 test("Data API: getVolumeTracingLayerName should return the name of the volume tracing layer", t => {
   const api = t.context.api;
-  t.is(api.data.getVolumeTracingLayerName(), "64007765-cef9-4e31-b206-dba795b5be17");
+  t.is(api.data.getVolumeTracingLayerName(), "segmentation");
 });
 
 test("Data API: downloadRawDataCuboid should open a popup with the correct URL", async t => {
@@ -68,7 +68,7 @@ test("Data API: downloadRawDataCuboid should open a popup with the correct URL",
   t.true(window.open.calledOnce);
   t.true(
     window.open.calledWith(
-      "http://localhost:9000/data/datasets/2012-09-28_ex145_07x2/layers/color/data?resolution=0&token=secure-token&x=1&y=2&z=3&width=8&height=6&depth=4",
+      "http://localhost:9000/data/datasets/ROI2017_wkw/layers/color/data?resolution=0&token=secure-token&x=1&y=2&z=3&width=8&height=6&depth=4",
     ),
   );
 });

@@ -136,19 +136,14 @@ export function updateTypeAndId(
   tracingType: string,
   annotationId: string,
 ): string {
-  // Update the baseUrl with a potentially new tracing id and or tracing type.
-  // There are two possible routes (annotations or datasets) which will be handled
-  // both here. Chaining the replace function is possible, since they are mutually
-  // exclusive and thus can't apply both simultaneously.
-  return baseUrl
-    .replace(
-      /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
-      (all, base, type, id, rest) => `${base}/${tracingType}/${annotationId}${rest}`,
-    )
-    .replace(
-      /^(.*\/datasets)\/([^/]*)(\/.*)$/,
-      (all, base, id, rest) => `${base}/${annotationId}${rest}`,
-    );
+  // Update the baseUrl with a potentially new annotation id and or tracing type.
+  // There are two possible routes (/annotations or /datasets), but the annotation id
+  // will only ever be updated for the annotations route as the other route is for
+  // dataset viewing only
+  return baseUrl.replace(
+    /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
+    (all, base, type, id, rest) => `${base}/${tracingType}/${annotationId}${rest}`,
+  );
 }
 
 export default new UrlManager();

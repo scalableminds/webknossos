@@ -131,7 +131,7 @@ export class PingStrategy extends AbstractPingStrategy {
 }
 
 export class SkeletonPingStrategy extends PingStrategy {
-  contentTypes = ["skeleton"];
+  contentTypes = ["skeleton", "readonly"];
   name = "SKELETON";
   preloadingSlides = 2;
 }

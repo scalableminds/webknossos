@@ -8,6 +8,7 @@
 
 import test from "ava";
 import mockRequire from "mock-require";
+import Maybe from "data.maybe";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
 mockRequire.stopAll();
@@ -16,7 +17,11 @@ const TIMESTAMP = 1494695001688;
 const DateMock = {
   now: () => TIMESTAMP,
 };
+const AccessorMock = {
+  getStats: () => Maybe.Nothing(),
+};
 mockRequire("libs/date", DateMock);
+mockRequire("oxalis/model/accessors/skeletontracing_accessor", AccessorMock);
 
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const SaveReducer = mockRequire.reRequire("oxalis/model/reducers/save_reducer").default;

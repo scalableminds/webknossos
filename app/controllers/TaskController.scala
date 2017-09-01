@@ -8,8 +8,8 @@ import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TimeLogger}
-import models.annotation.AnnotationService
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
+import models.annotation.{AnnotationService, NmlService}
 import models.binary.DataSetDAO
 import models.project.{Project, ProjectDAO}
 import models.task._
@@ -77,36 +77,51 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     createTasks(request.body.map { params =>
       val tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       (params, tracing)
-    }, request.user)
+    })
   }
 
   def createFromFile = Authenticated.async { implicit request =>
-    def parseJson[T: Reads](s: String) = {
-      Json.parse(s).validate[T] match {
-        case JsSuccess(parsed, _) =>
-          Full(parsed)
-        case errors: JsError =>
-          Failure(Messages("task.create.failed"))
-      }
-    }
 
     for {
       body <- request.body.asMultipartFormData ?~> Messages("invalid")
-      nmlFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
+      inputFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
-      params <- parseJson[List[TaskParameters]](jsonString)
+      params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
+      taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
+      project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      _ <- ensureTeamAdministration(request.user, params.team)
+
+      parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
+      tracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
+      tracings <- Fox.combined(tracingFoxes) ?~> Messages("task.create.failed")
+      result <- createTasks(tracings.map(t => (buildFullParams(params, t), t)))
     } yield {
-      Ok
+      result
     }
 
-
-
-
-
-      Future.successful(Ok)
   }
 
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)], user: User)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
+  private def parseResultToSkeletonTracingFox(parseResult: NmlService.NmlParseResult): Fox[SkeletonTracing] = parseResult match {
+    case NmlService.NmlParseFailure(fileName, error) =>
+      Fox.failure(Messages("nml.file.invalid", fileName, error))
+    case NmlService.NmlParseSuccess(fileName, tracing) =>
+      Fox.successful(tracing.asInstanceOf[SkeletonTracing])
+  }
+
+  private def buildFullParams(nmlParams: NmlTaskParameters, tracing: SkeletonTracing) = {
+    TaskParameters( nmlParams.taskTypeId,
+      nmlParams.neededExperience,
+      nmlParams.status,
+      nmlParams.team,
+      nmlParams.projectName,
+      nmlParams.scriptId,
+      nmlParams.boundingBox,
+      tracing.dataSetName,
+      tracing.editPosition,
+      tracing.editRotation)
+  }
+
+  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
     def assertAllOnSameDataset(): Fox[String] = {
       def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)], dataSetName: String): Boolean = {
         requestedTasksRest match {
@@ -144,53 +159,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield result
   }
 
-/*
-  private def createFromNml(implicit request: AuthenticatedRequest[AnyContent]) = {
-    def parseJson(s: String) = {
-      Json.parse(s).validate(taskNmlJsonReads) match {
-        case JsSuccess(parsed, _) =>
-          Full(parsed)
-        case errors: JsError =>
-          Failure(Messages("task.create.failed"))
-      }
-    }
-
-    for {
-      body <- request.body.asMultipartFormData ?~> Messages("invalid")
-      nmlFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
-      stringifiedJson <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
-      (taskTypeId, experience, status, team, projectName, scriptId, boundingBox) <- parseJson(stringifiedJson).toFox
-      taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-      _ <- ensureTeamAdministration(request.user, team)
-      result <- {
-        val parseResults = NmlService.extractFromFile(nmlFile.ref.file, nmlFile.filename).parseResults
-
-        val futureResult: Future[List[Box[JsObject]]] = Fox.serialSequence(parseResults){
-          case NmlService.NmlParseSuccess(fileName, tracing) =>
-            val task = Task(taskType._id, team, experience, status.open, _project = project.name,
-                            _script = scriptId, editPosition=tracing.editPosition,
-                            editRotation=tracing.editRotation, boundingBox=boundingBox)
-            val skeletonTracing = tracing.asInstanceOf[SkeletonTracing]
-            for {
-              dataSet <- DataSetDAO.findOneBySourceName(tracing.dataSetName).toFox ?~> Messages("datSet.notFound")
-              tracingReference <- dataSet.dataStore.saveSkeletonTracing(skeletonTracing) ?~> Messages("tracing.couldNotSave")
-              _ <- TaskService.insert(task, project) ?~> Messages("could not save task")
-              _ <- AnnotationService.createAnnotationBase(task, request.user._id, tracingReference, taskType.settings, tracing.dataSetName) ?~> Messages("failed to create annotation base")
-              taskjs <- Task.transformToJson(task) ?~> Messages("failed to transform task to json")
-            } yield taskjs
-
-          case NmlService.NmlParseFailure(fileName, error) =>
-            Fox.failure(Messages("nml.file.invalid", fileName, error))
-        }
-        futureResult.map { results =>
-          val js = bulk2StatusJson(results)
-          JsonOk(js, Messages("task.bulk.processed"))
-        }
-      }
-    } yield result
-  }
-*/
 
 
   private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: AuthenticatedRequest[_]): Fox[Task] = {
@@ -211,39 +179,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       _ <- TaskService.insert(task, project)
     } yield task
   }
-
-  private def createSingleTask(params: TaskParameters)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
-    for {
-      dataSet <- DataSetDAO.findOneBySourceName(params.dataSet).toFox ?~> Messages ("dataSet.notFound", params.dataSet)
-      task <- createTaskWithoutAnnotationBase(params)
-      tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
-      tracingReference <- dataSet.dataStore.saveSkeletonTracing(tracing) ?~> "Failed to save tracing base."
-      _ <- AnnotationService.createAnnotationBase(Fox.successful(task), request.user._id, Full(tracingReference), params.dataSet)
-      taskjs <- Task.transformToJson(task)
-    } yield taskjs
-  }
-
-  //TODO: RocksDB
-  /*private def bulkCreate(json: JsValue)(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
-
-    withJsonUsing(json, Reads.list(taskCompleteReads)) { parsed =>
-
-      {
-        for {
-          tasks: List[Box[Task]] <- Fox.serialSequence(parsed) { p => createTaskWithoutAnnotationBase(p) }
-        } yield {
-          JsonOk("not implemented")
-          /*val jsResults = tasks.map(task => Task.transformToJson(task, request.userOpt))
-          tasks.map { results =>
-            val js = bulk2StatusJson(results)
-            JsonOk(js, Messages("task.bulk.processed"))
-          }*/
-        }
-
-
-      }
-    }
-  }*/
 
 
   // TODO: properly handle task update with amazon turk

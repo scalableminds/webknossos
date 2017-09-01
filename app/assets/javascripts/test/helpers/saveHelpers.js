@@ -4,6 +4,7 @@ export function createSaveQueueFromUpdateActions(updateActions, timestamp) {
   return updateActions.map(ua => ({
     version: -1,
     timestamp,
+    stats: null,
     actions: [].concat(ua),
   }));
 }

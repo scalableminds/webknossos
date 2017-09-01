@@ -13,7 +13,6 @@ import TaskReducer from "oxalis/model/reducers/task_reducer";
 import SaveReducer from "oxalis/model/reducers/save_reducer";
 import SkeletonTracingReducer from "oxalis/model/reducers/skeletontracing_reducer";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
-import ReadOnlyTracingReducer from "oxalis/model/reducers/readonlytracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
@@ -379,23 +378,19 @@ export const defaultState: OxalisState = {
   tracing: {
     annotationId: "",
     boundingBox: null,
-    type: "skeleton",
-    trees: {},
+    type: "readonly",
     name: "",
     version: 0,
     isPublic: false,
     tracingId: "",
-    tracingType: "Explorational",
-    activeTreeId: null,
-    activeNodeId: null,
-    cachedMaxNodeId: Constants.MIN_NODE_ID - 1,
+    tracingType: "View",
     restrictions: {
-      branchPointsAllowed: true,
-      allowUpdate: true,
-      allowFinish: true,
+      branchPointsAllowed: false,
+      allowUpdate: false,
+      allowFinish: false,
       allowAccess: true,
-      allowDownload: true,
-      somaClickingAllowed: true,
+      allowDownload: false,
+      somaClickingAllowed: false,
       advancedOptionsAllowed: true,
       allowedModes: ["orthogonal", "oblique", "flight"],
     },
@@ -439,7 +434,6 @@ const combinedReducers = reduceReducers(
   SettingsReducer,
   SkeletonTracingReducer,
   VolumeTracingReducer,
-  ReadOnlyTracingReducer,
   TaskReducer,
   SaveReducer,
   FlycamReducer,

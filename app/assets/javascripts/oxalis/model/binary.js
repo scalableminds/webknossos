@@ -63,13 +63,8 @@ class Binary {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(
-    tracingType: string,
-    layer: Layer,
-    maxZoomStep: number,
-    connectionInfo: ConnectionInfo,
-  ) {
-    this.tracingType = tracingType;
+  constructor(layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
+    this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
     _.extend(this, Backbone.Events);

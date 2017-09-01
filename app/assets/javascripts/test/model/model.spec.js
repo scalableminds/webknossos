@@ -109,11 +109,11 @@ test("Model Initialization: should throw an Error on unexpected failure", t => {
   t.plan(1);
   const { model } = t.context;
   Request.receiveJSON
-    .withArgs(`/annotations/${TRACING_TYPE}/${ANNOTATION_ID}/info`)
+    .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
     .returns(Promise.reject(new Error("errorMessage")));
 
   return model
-    .fetch(TRACING_TYPE, ANNOTATION_ID, "VIEW", true)
+    .fetch(TRACING_TYPE, ANNOTATION.dataSetName, "VIEW", true)
     .then(() => {
       t.fail("Promise should not have been resolved.");
     })

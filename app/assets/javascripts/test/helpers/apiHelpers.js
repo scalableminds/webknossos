@@ -93,7 +93,7 @@ export function setupOxalis(t, mode, apiVersion = 2) {
     )
     .returns(Promise.resolve(_.cloneDeep(modelData[mode].tracing)));
   Request.receiveJSON
-    .withArgs("/dataToken/generate?dataSetName=2012-09-28_ex145_07x2&dataLayerName=color")
+    .withArgs("/api/dataToken/generate?dataSetName=ROI2017_wkw&dataLayerName=color")
     .returns(Promise.resolve({ token: "secure-token" }));
   Request.receiveJSON.returns(Promise.resolve({}));
 

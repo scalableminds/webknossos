@@ -13,7 +13,9 @@ import {
   deleteNodeAction,
   createBranchPointAction,
   setNodeRadiusAction,
+  initializeSkeletonTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 
 mockRequire.stopAll();
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -32,9 +34,14 @@ test.before(t => {
   const viewport = 0;
   const resolution = 0;
 
+  tracing.trees = [];
+  delete tracing.activeNodeId;
+  Store.dispatch(initializeSkeletonTracingAction(annotation, tracing));
+
   // create 20 trees with 100 nodes each
   for (let i = 0; i < 2000; i++) {
-    if (i % 100 === 0) {
+    // The first tree is created automatically
+    if (i % 100 === 0 && i !== 0) {
       Store.dispatch(createTreeAction());
     }
     Store.dispatch(createNodeAction([i, i, i], rotation, viewport, resolution));

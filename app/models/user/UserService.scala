@@ -5,10 +5,12 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import java.util.UUID
 
+import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.impl.providers.CommonSocialProfile
 import oxalis.thirdparty.BrainTracing
 import play.api.{Application, Logger}
-import scala.concurrent.duration._
 
+import scala.concurrent.duration._
 import oxalis.user.UserCache
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
@@ -21,8 +23,11 @@ import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.mail.Send
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
+import net.liftweb.common.Box
 import play.api.libs.json.Json
 import reactivemongo.play.json.BSONFormats._
+
+import scala.concurrent.Future
 
 object UserService extends FoxImplicits {
   lazy val Mailer =
@@ -188,4 +193,8 @@ object UserService extends FoxImplicits {
     val expirationTime = System.currentTimeMillis + validDuration.toMillis
     LoginTokenDAO.insert(LoginToken(user._id, token, expirationTime)).map( _ => token)
   }
+
+  def retrieve(loginInfo:LoginInfo):Future[Option[User]] = UserDAO.find(loginInfo)
+  def save(user:User) = UserDAO.save(user)
+  def find(id:BSONObjectID) = UserDAO.findByIdQ(id)
 }

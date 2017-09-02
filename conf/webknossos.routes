@@ -30,19 +30,19 @@ POST          /auth/register                                                    
 GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 #new auth
-#GET           /auth/register                                                   controllers.Authentication.register
-#POST          /auth/register                                                   controllers.Authentication.handleRegistration
-# myabe another GET for email authentication
+GET           /auth/register                                                   controllers.Authentication.register2
+POST          /auth/register                                                   controllers.Authentication.handleRegistration2
+# maybe another GET for email authentication
 
-#GET           /auth/reset                                                      controllers.Authentication.startResetPassword
-#POST          /auth/reset                                                      controllers.Authentication.handleStartResetPassword
-#GET           /auth/reset                                                      controllers.Authentication.resetPassword(token:String)
-#POST          /auth/reset                                                      controllers.Authentication.handleResetPassword(token:String)
+GET           /auth/reset                                                      controllers.Authentication.startResetPassword
+POST          /auth/reset                                                      controllers.Authentication.handleStartResetPassword
+GET           /auth/reset                                                      controllers.Authentication.resetPassword(token:String)
+POST          /auth/reset                                                      controllers.Authentication.handleResetPassword(token:String)
 
-#GET           /auth/login                                                      controllers.Authentication.login(redirect: Option[String])
-#POST          /auth/authenticate                                               controllers.Authentication.authenticate
-#GET           /auth/logout                                                     controllers.Authentication.logout
-#GET           /auth/sso                                                        controllers.Authentication.singleSignOn(sso: String)
+#GET           /auth/login                                                      controllers.Authentication.login2(redirect: Option[String])
+#POST          /auth/authenticate                                               controllers.Authentication.authenticate2
+#GET           /auth/logout                                                     controllers.Authentication.logout2
+#GET           /auth/sso                                                        controllers.Authentication.singleSignOn2(sso: String)
 
 # Configurations
 GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default

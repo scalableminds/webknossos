@@ -42,6 +42,10 @@ object Dependencies{
   val resourceManager = "com.jsuereth" %% "scala-arm" % "2.0"
   val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
+  val ceedubs = "net.ceedubs" %% "ficus" % "1.1.2"
+  val scalaGuice = "net.codingwell" %% "scala-guice" % "4.0.0"
+  val webjars = "org.webjars" %% "webjars-play" % "2.4.0"
+  val bootstrap = "com.adrianhurt" %% "play-bootstrap3" % "0.4.4-P24"
 
   // Unfortunately, we need to list all mturk dependencies seperately since mturk is not published on maven but rather
   // added to the project as a JAR. To keep the number of JARs added to this repo as small as possible, everthing that
@@ -227,6 +231,10 @@ object ApplicationBuild extends Build {
     resourceManager,
     silhouette,
     silhouetteTestkit,
+    ceedubs,
+    scalaGuice,
+    webjars,
+    bootstrap,
     specs2 % Test) ++ tiff ++ mturk
 
   val dependencyResolvers = Seq(

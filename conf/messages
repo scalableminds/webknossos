@@ -223,3 +223,5 @@ time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mturk.qualification.invalid=The entered qualification is unknown
+
+mail.welcome.subject = Welcome to ScalableMinds

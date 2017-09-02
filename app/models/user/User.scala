@@ -1,8 +1,14 @@
 package models.user
 
+import java.util.UUID
+
+import com.mohiva.play.silhouette.api.LoginInfo
 import play.api.Play.current
 import com.scalableminds.util.security.SCrypt._
+import net.liftweb.common.Box
 import reactivemongo.api.commands.WriteResult
+
+import scala.concurrent.Future
 
 //import scala.collection.mutable.Stack
 //import play.api.libs.json.{Json, JsValue}
@@ -238,4 +244,12 @@ object UserDAO extends SecuredBaseDAO[User] {
       multi = true
     )
   }
+
+  // for new authentication
+  def find(loginInfo:LoginInfo)(implicit ctx: DBAccessContext):Future[Option[User]] =
+    findOneByEmail(loginInfo.providerKey).futureBox.map(_.toOption)
+
+  def save(user:User)(implicit ctx: DBAccessContext) =
+    insert(user)
+
 }

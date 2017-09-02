@@ -229,4 +229,4 @@ GET           /assets/*file                                                     
 
 #Timelogging
 GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int)
-GET           /api/time/userlist/:year/:month                                   controllers.TimeController.loggedTimeForMultipleUser(email: String, year: Int, month: Int)
+GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int)

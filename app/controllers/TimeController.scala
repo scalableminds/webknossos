@@ -9,6 +9,7 @@ import models.project.ProjectDAO
 import models.task.{Task, TaskService, TaskTypeDAO}
 import models.user.time.{TimeSpan, TimeSpanDAO}
 import models.user.{User, UserDAO, UserService}
+import net.liftweb.common.{Box, Full}
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
@@ -26,17 +27,19 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfAllUsers(year: Int, month: Int) = Authenticated.async { implicit request =>
     for {
       users <- UserDAO.findAll
-      js <- loggedTimeForUserList(users, year, month)
+      filteredUsers = users.filter(user => request.user.isAdminOf(user))
+      js <- loggedTimeForUserList(filteredUsers, year, month)
     } yield {
       Ok(js)
     }
   }
 
   //list user with working hours > 0 (only one user is also possible)
-  def loggedTimeForMultipleUser(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
-  for {
-      users <- Fox.combined(getUsersAsStringForEmail(userString.split(",").toList)) ?~> Messages("user.email.invalid")
-      js <- loggedTimeForUserList(users, year, month)
+  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
+    for {
+      users <- Fox.combined(userString.split(",").toList.map(email => UserService.findOneByEmail(email))) ?~> Messages("user.email.invalid")
+      filteredUsers = users.filter(user => request.user.isAdminOf(user))
+      js <- loggedTimeForUserList(filteredUsers, year, month)
     } yield {
       Ok(js)
     }
@@ -44,7 +47,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   //helper methods
 
-  def loggedTimeForUserList(users: List[User], year: Int, month: Int) (implicit request: AuthenticatedRequest[AnyContent]): Future[JsValue] =  {
+  def loggedTimeForUserList(users: List[User], year: Int, month: Int) (implicit request: AuthenticatedRequest[AnyContent]): Fox[JsValue] =  {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
     startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
@@ -52,36 +55,31 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     endDate.set(year, month - 1, endDate.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
     endDate.set(Calendar.MILLISECOND, 999)
 
-    val filteredListByPermission = users.filter(user => request.user.isAdminOf(user))
-    val futureJsObjects = getUserWithWorkingHours(filteredListByPermission, startDate, endDate)
+    val futureJsObjects = getUsersWithWorkingHours(users, startDate, endDate)
 
     for {
-      jsObjectList <- Fox.sequence(futureJsObjects)
+      jsObjectList <- Fox.combined(futureJsObjects)
     } yield {
-      Json.toJson(jsObjectList.flatten)
+      Json.toJson(jsObjectList)
     }
   }
 
-  def getUserWithWorkingHours(users: List[User], startDate: Calendar, endDate: Calendar)(implicit request: AuthenticatedRequest[AnyContent]): List[Fox[JsObject]] = {
-    for {
-      user <- users
-    } yield {
-      getUserHours(user, startDate, endDate)
-    }
+  def getUsersWithWorkingHours(users: List[User], startDate: Calendar, endDate: Calendar)(implicit request: AuthenticatedRequest[AnyContent]): List[Fox[JsObject]] = {
+    users.map(user => getUserHours(user, startDate, endDate))
   }
 
   def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: AuthenticatedRequest[AnyContent]): Fox[JsObject] = {
     for {
       timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
       timeListWithTask <- getOnlyTimeSpansWithTask(timeList)
-      boxJs <- Future.traverse(timeListWithTask)(timeWrites(_))
+      timeListGreaterZero = timeListWithTask.filter(ts => ts.time > 0)
+      boxJs <- Future.traverse(timeListGreaterZero)(timeWrites(_))
     } yield {
       val js = boxJs.flatten
       if(js.nonEmpty)
         js.head.value.get("time") match {
           case Some(x) =>
-            if (isFormatedDurationZero(x.toString())) None
-            else Some(Json.obj(
+            Some(Json.obj(
               "user" -> Json.toJson(user)(User.userCompactWrites),
               "timelogs" -> Json.toJson(js)))
           case _ => None
@@ -91,11 +89,11 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-  def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Future[List[TimeSpan]] = {
+  def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Fox[List[TimeSpan]] = {
     for {
-      list <- Fox.sequence(l.map(t => getTimeSpanOptionTask(t)))
+      list <- Fox.combined(l.map(t => getTimeSpanOptionTask(t)))
     } yield {
-      list.flatten.flatten
+      list.flatten
     }
   }
 
@@ -115,7 +113,8 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   def timeWrites(timeSpan: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Fox[JsObject] = {
     for {
-      task <- getTaskForTimeSpan(timeSpan)
+      annotation <- AnnotationDAO.findOneById(timeSpan.annotation.get)
+      task <- TaskService.findOneById(annotation._task.get.stringify)
       tasktype <- TaskTypeDAO.findOneById(task._taskType)
       project <- ProjectDAO.findOneByName(task._project)
     } yield {
@@ -128,27 +127,6 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
         "project_name" -> project.name,
         "tasktype_id" -> tasktype.id,
         "tasktype_summary" -> tasktype.summary)
-    }
-  }
-
-  def getTaskForTimeSpan(timeSpan: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Fox[Task] = {
-    for {
-      annotation <- AnnotationDAO.findOneById(timeSpan.annotation.get)
-      task <- TaskService.findOneById(annotation._task.get.stringify)
-    } yield {
-      task
-    }
-  }
-
-  def totalTimeOfUser(spans: List[TimeSpan]): Long = {
-    spans.foldLeft(0l)((_, span) => span.time)
-  }
-
-  def getUsersAsStringForEmail(emails: List[String]): List[Fox[User]] = {
-    for {
-      email <- emails
-    } yield {
-      UserService.findOneByEmail(email)
     }
   }
 
@@ -165,11 +143,5 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     res += s+"S"
 
     res
-  }
-
-  def isFormatedDurationZero(d: String): Boolean = {
-    val d2 = "PT5M16S"
-    val digits = d2.filter(_.isDigit)
-    digits.toInt == 0
   }
 }

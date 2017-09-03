@@ -3,14 +3,17 @@ package controllers
 import java.util.Calendar
 import javax.inject.Inject
 
+import com.scalableminds.util.mail.Send
 import com.scalableminds.util.tools.Fox
-import models.annotation.AnnotationDAO
-import models.project.ProjectDAO
+import models.annotation.{AnnotationDAO, AnnotationLike}
+import models.project.{Project, ProjectDAO}
 import models.task.{Task, TaskService, TaskTypeDAO}
 import models.user.time.{TimeSpan, TimeSpanDAO}
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.{Box, Full}
+import oxalis.mail.DefaultMails
 import oxalis.security.{AuthenticatedRequest, Secured}
+import oxalis.thirdparty.BrainTracing.Mailer
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -18,6 +21,7 @@ import play.api.mvc.AnyContent
 import play.api.i18n.{Messages, MessagesApi}
 
 import scala.concurrent.Future
+import scala.util.Failure
 
 class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
@@ -38,10 +42,14 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfUsers(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
     for {
       users <- Fox.combined(userString.split(",").toList.map(email => UserService.findOneByEmail(email))) ?~> Messages("user.email.invalid")
-      filteredUsers = users.filter(user => request.user.isAdminOf(user))
-      js <- loggedTimeForUserList(filteredUsers, year, month)
+      //filteredUsers = users.filter(user => request.user.isAdminOf(user))
+      js <- loggedTimeForUserList(users, year, month)
     } yield {
-      Ok(js)
+      if (users.exists(u => !request.user.isAdminOf(u))) {
+        Ok(Json.obj("error" -> Messages("user.notAuthorised")))
+      }else{
+        Ok(js)
+      }
     }
   }
 
@@ -72,11 +80,11 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     for {
       timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
       timeListWithTask <- getOnlyTimeSpansWithTask(timeList)
-      timeListGreaterZero = timeListWithTask.filter(ts => ts.time > 0)
+      timeListGreaterZero = timeListWithTask.filter(tuple => tuple._1.time > 0)
       boxJs <- Future.traverse(timeListGreaterZero)(timeWrites(_))
     } yield {
       val js = boxJs.flatten
-      if(js.nonEmpty)
+      if(js.nonEmpty) {
         js.head.value.get("time") match {
           case Some(x) =>
             Some(Json.obj(
@@ -84,12 +92,13 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
               "timelogs" -> Json.toJson(js)))
           case _ => None
         }
+      }
       else
         None
     }
   }
 
-  def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Fox[List[TimeSpan]] = {
+  def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Fox[List[(TimeSpan, Task)]] = {
     for {
       list <- Fox.combined(l.map(t => getTimeSpanOptionTask(t)))
     } yield {
@@ -97,33 +106,29 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-  def getTimeSpanOptionTask(t: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Fox[Option[TimeSpan]] = {
+  def getTimeSpanOptionTask(t: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Fox[Option[(TimeSpan,Task)]] = {
     t.annotation match {
       case Some(annotationId) => for {
         annotation <- AnnotationDAO.findOneById(annotationId)
+        task <- TaskService.findOneById(annotation._task.get.stringify)
       } yield {
-        annotation._task match {
-          case Some(_) => Some(t)
-          case None => None
-        }
+        Some((t, task))
       }
       case None => Fox(Future(None))
     }
   }
 
-  def timeWrites(timeSpan: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Fox[JsObject] = {
+  def timeWrites(tuple:(TimeSpan,Task))(implicit request: AuthenticatedRequest[AnyContent]): Fox[JsObject] = {
     for {
-      annotation <- AnnotationDAO.findOneById(timeSpan.annotation.get)
-      task <- TaskService.findOneById(annotation._task.get.stringify)
-      tasktype <- TaskTypeDAO.findOneById(task._taskType)
-      project <- ProjectDAO.findOneByName(task._project)
+      tasktype <- TaskTypeDAO.findOneById(tuple._2._taskType)
+      project <- ProjectDAO.findOneByName(tuple._2._project)
     } yield {
       Json.obj(
-        "time" -> formatDuration(timeSpan.time),
-        "timestamp" -> timeSpan.timestamp,
-        "annotation" -> timeSpan.annotation,
-        "_id" -> timeSpan._id.stringify,
-        "task_id" -> task.id,
+        "time" -> formatDuration(tuple._1.time),
+        "timestamp" -> tuple._1.timestamp,
+        "annotation" -> tuple._1.annotation,
+        "_id" -> tuple._1._id.stringify,
+        "task_id" -> tuple._2.id,
         "project_name" -> project.name,
         "tasktype_id" -> tasktype.id,
         "tasktype_summary" -> tasktype.summary)

@@ -291,7 +291,12 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
           dataIndex="type.description"
           sorter={Utils.localeCompareBy(t => t.type.description)}
           render={description => (
-            <Markdown source={description} options={{ html: false, breaks: true, linkify: true }} />
+            <div style={{ wordBreak: "break-word" }} className="task-type-description">
+              <Markdown
+                source={description}
+                options={{ html: false, breaks: true, linkify: true }}
+              />
+            </div>
           )}
           width={550}
         />

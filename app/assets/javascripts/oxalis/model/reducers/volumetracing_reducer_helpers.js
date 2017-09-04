@@ -11,7 +11,7 @@ import type { VolumeTraceOrMoveModeType, Vector3 } from "oxalis/constants";
 import Constants from "oxalis/constants";
 import update from "immutability-helper";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
-import { setRotationReducer } from "oxalis/model/reducers/flycam_reducer";
+import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 
 export function setModeReducer(
   state: OxalisState,
@@ -86,7 +86,7 @@ export function updateDirectionReducer(
 ) {
   let newState = state;
   if (volumeTracing.lastCentroid != null) {
-    newState = setRotationReducer(state, [
+    newState = setDirectionReducer(state, [
       centroid[0] - volumeTracing.lastCentroid[0],
       centroid[1] - volumeTracing.lastCentroid[1],
       centroid[2] - volumeTracing.lastCentroid[2],

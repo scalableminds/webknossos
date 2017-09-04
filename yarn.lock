@@ -474,9 +474,9 @@ ava-init@^0.2.0:
     read-pkg-up "^2.0.0"
     write-pkg "^3.1.0"
 
-"ava@git://github.com/philippotto/ava":
+"ava@git://github.com/philippotto/ava#b6a6cb24e0":
   version "0.22.0"
-  resolved "git://github.com/philippotto/ava#40ce6d66957569ffa3659dfc201a07f3147185f5"
+  resolved "git://github.com/philippotto/ava#b6a6cb24e0"
   dependencies:
     "@ava/babel-preset-stage-4" "^1.1.0"
     "@ava/babel-preset-transform-test-files" "^3.0.0"

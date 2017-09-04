@@ -12,7 +12,13 @@ import React from "react";
 mockRequire("antd/lib/upload", () => <div />);
 mockRequire("c3", () => {});
 mockRequire("react-c3js", () => <div />);
-mockRequire("app", {});
+
+mockRequire("app", {
+  currentUser: {
+    email: "scmboy@scalableminds.com",
+    teams: [{ role: { name: "admin" } }],
+  },
+});
 mockRequire("brace", {});
 mockRequire("brace/mode/javascript", {});
 mockRequire("brace/mode/json", {});

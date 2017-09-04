@@ -1,4 +1,5 @@
 // @flow
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // This needs to be the very first import
 import { createSnapshotable, waitForAllRequests, wait } from "./e2e-setup";
@@ -6,7 +7,6 @@ import { mount } from "enzyme";
 import test from "ava";
 import mockRequire from "mock-require";
 import React from "react";
-// const ControlModeEnum = require("../../oxalis/constants").ControlModeEnum;
 
 // The upload component cannot be rendered by enzyme for some reason
 mockRequire("antd/lib/upload", () => <div />);

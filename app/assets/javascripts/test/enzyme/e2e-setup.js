@@ -1,3 +1,4 @@
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
 import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
@@ -33,7 +34,7 @@ function wait(milliseconds: number) {
 global.fetch = function fetchWrapper(url, options) {
   let newUrl = url;
   if (url.indexOf("http:") === -1) {
-    newUrl = "http://localhost:9000" + url;
+    newUrl = `http://localhost:9000${url}`;
   }
   const promise = fetch(newUrl, options);
   requests.push(promise);
@@ -46,6 +47,7 @@ global.Response = Response;
 global.FetchError = FetchError;
 
 const { JSDOM } = require("jsdom");
+
 const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
 const { window } = jsdom;
 

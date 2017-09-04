@@ -1,3 +1,4 @@
+/* eslint-disable */
 // Copied from a server request. Since jsRoutes will go away soon anyway,
 // this should be okay as a temporary workaround
 

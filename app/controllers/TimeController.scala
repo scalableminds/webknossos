@@ -85,6 +85,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield {
       val js = boxJs.flatten
       if(js.nonEmpty) {
+        signalOverTime(user,timeListGreaterZero)
         js.head.value.get("time") match {
           case Some(x) =>
             Some(Json.obj(
@@ -110,6 +111,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     t.annotation match {
       case Some(annotationId) => for {
         annotation <- AnnotationDAO.findOneById(annotationId)
+        if(annotation._task.isDefined)
         task <- TaskService.findOneById(annotation._task.get.stringify)
       } yield {
         Some((t, task))
@@ -148,5 +150,24 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     res += s+"S"
 
     res
+  }
+
+  private def signalOverTime(user: User, list: List[(TimeSpan, Task)])(implicit request: AuthenticatedRequest[AnyContent]) = {
+    list.map {
+      case (timeSpan, task) =>
+        for {
+          p <- task.project
+          a <- AnnotationDAO.findOneById(list.head._1.annotation.getOrElse(""))
+          at <- a.tracingTime
+          pt <- p.expectedTime
+          if at >= pt && at - list.head._1.time < pt
+        }yield{
+          Mailer ! Send(DefaultMails.overLimitMail(
+            user,
+            p.name,
+            list.head._2.id,
+            "a.id"))
+        }
+    }
   }
 }

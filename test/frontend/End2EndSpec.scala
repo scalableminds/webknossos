@@ -38,7 +38,10 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
   "my application" should {
 
     "pass the e2e tests" in new WithServer(
-      app = FakeApplication(additionalConfiguration = argumentMap),
+      app = FakeApplication(
+        withoutPlugins = List("com.scalableminds.mongev.MongevPlugin"),
+        additionalConfiguration = argumentMap
+      ),
       port = testPort) {
 
       val resp = Await.result(WS.url(s"http://localhost:$testPort").get(), 2 seconds)

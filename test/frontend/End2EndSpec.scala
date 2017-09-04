@@ -21,7 +21,7 @@ import sys.process._
 
 import com.typesafe.scalalogging.LazyLogging
 
-class WebdriverIOSpec(arguments: Arguments) extends Specification with LazyLogging {
+class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
   val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "webknossos-testing")
@@ -37,7 +37,7 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with LazyLoggi
 
   "my application" should {
 
-    "pass the webdriverio e2e tests" in new WithServer(
+    "pass the e2e tests" in new WithServer(
       app = FakeApplication(additionalConfiguration = argumentMap),
       port = testPort) {
 

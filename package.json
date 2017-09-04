@@ -10,7 +10,7 @@
     "url": "git://github.com/scalableminds/webknossos.git"
   },
   "devDependencies": {
-    "ava": "^0.21.0",
+    "ava": "git://github.com/philippotto/ava",
     "babel-cli": "^6.24.1",
     "babel-core": "^6.24.1",
     "babel-eslint": "^7.2.3",
@@ -71,7 +71,7 @@
     "test-debug": "buildtools/test.sh test --debug",
     "test-prepare": "buildtools/test.sh prepare",
     "test-prepare-watch": "buildtools/test.sh prepare -w",
-    "test-e2e": "node_modules/.bin/wdio wdio.conf.js",
+    "test-e2e": "buildtools/test.sh test-e2e --timeout=30s",
     "test-help":
       "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "flow": "node_modules/.bin/flow",
@@ -136,12 +136,8 @@
     "whatwg-fetch": "^1.1.0"
   },
   "ava": {
-    "files": ["./public/test-bundle/test/**/*.spec.js"],
     "source": ["./public/test-bundle/**/*.{js,jsx}"],
-    "modules": true,
-    "failFast": true,
-    "failWithoutAssertions": false,
-    "powerAssert": true,
-    "require": []
+    "snapshotDir": "app/assets/javascripts/test/snapshots",
+    "babel": {}
   }
 }

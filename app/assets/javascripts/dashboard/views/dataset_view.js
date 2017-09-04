@@ -15,26 +15,23 @@ import type { DataLayerType } from "oxalis/store";
 const { Search } = Input;
 
 type Props = {
-  user: APIUserType
+  user: APIUserType,
 };
 
 export type DatasetType = APIDatasetType & {
   hasSegmentation: boolean,
   thumbnailURL: string,
-  formattedCreated: string
+  formattedCreated: string,
 };
 
 type State = {
   currentDataViewType: "gallery" | "advanced",
   datasets: Array<DatasetType>,
   searchQuery: string,
-  isLoading: boolean
+  isLoading: boolean,
 };
 
-function createThumbnailURL(
-  datasetName: string,
-  layers: Array<DataLayerType>
-): string {
+function createThumbnailURL(datasetName: string, layers: Array<DataLayerType>): string {
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
     return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
@@ -42,24 +39,19 @@ function createThumbnailURL(
   return "";
 }
 
-export function transformDatasets(
-  datasets: Array<APIDatasetType>
-): Array<DatasetType> {
+export function transformDatasets(datasets: Array<APIDatasetType>): Array<DatasetType> {
   return _.sortBy(
     datasets.map(dataset =>
       Object.assign({}, dataset, {
         hasSegmentation: _.some(
           dataset.dataSource.dataLayers,
-          layer => layer.category === "segmentation"
+          layer => layer.category === "segmentation",
         ),
-        thumbnailURL: createThumbnailURL(
-          dataset.name,
-          dataset.dataSource.dataLayers
-        ),
-        formattedCreated: moment(dataset.created).format("YYYY-MM-DD HH:mm")
-      })
+        thumbnailURL: createThumbnailURL(dataset.name, dataset.dataSource.dataLayers),
+        formattedCreated: moment(dataset.created).format("YYYY-MM-DD HH:mm"),
+      }),
     ),
-    "created"
+    "created",
   );
 }
 
@@ -68,7 +60,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     currentDataViewType: "gallery",
     datasets: [],
     searchQuery: "",
-    isLoading: false
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -83,7 +75,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     const transformedDatasets = transformDatasets(datasets);
     this.setState({
       datasets: transformedDatasets,
-      isLoading: false
+      isLoading: false,
     });
   }
 
@@ -103,16 +95,13 @@ class DatasetView extends React.PureComponent<Props, State> {
     });
 
     this.setState({
-      datasets: newDatasets
+      datasets: newDatasets,
     });
   };
 
   renderGallery() {
     return (
-      <GalleryDatasetView
-        datasets={this.state.datasets}
-        searchQuery={this.state.searchQuery}
-      />
+      <GalleryDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
     );
   }
 

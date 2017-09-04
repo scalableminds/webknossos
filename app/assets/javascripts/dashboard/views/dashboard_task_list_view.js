@@ -328,7 +328,9 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
           <div className="divider-vertical" />
           <Button onClick={this.toggleShowFinished}>Show {this.getFinishVerb()} Tasks Only</Button>
         </div>
-        <h3 id="tasksHeadline" className="test-tasksHeadline">Tasks</h3>
+        <h3 id="tasksHeadline" className="test-tasksHeadline">
+          Tasks
+        </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
         {this.state.isLoading ? (

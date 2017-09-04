@@ -4,7 +4,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
-import FormatUtils from "libs/format_utils";
+import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import Request from "libs/request";
 import messages from "messages";
@@ -123,7 +123,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 dataIndex="description"
                 key="description"
                 sorter={Utils.localeCompareBy("description")}
-                render={description => FormatUtils.formatShortText(description, 250)}
+                render={description => <Markdown source={description} options={{ html: false, breaks: true, linkify: true }} />}
                 width={300}
               />
               <Column

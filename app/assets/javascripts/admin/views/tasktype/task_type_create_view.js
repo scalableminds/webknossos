@@ -33,7 +33,7 @@ class TaskTypeCreateView extends Marionette.View {
         </div>
 
         <div class="form-group">
-          <label class="col-sm-2 control-label" for="description">Description</label>
+          <label class="col-sm-2 control-label" for="description">Description (Markdown enabled)</label>
           <div class="col-sm-9">
           <textarea id="description" name="description" class="form-control"><%- description %></textarea>
           </div>

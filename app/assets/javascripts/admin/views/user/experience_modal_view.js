@@ -18,7 +18,7 @@ type Props = {
 type State = {
   domain: ?string,
   level: ?string,
-}
+};
 
 class ExperienceModalView extends React.PureComponent<Props, State> {
   state = {

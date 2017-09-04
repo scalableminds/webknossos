@@ -40,12 +40,10 @@ type DatasetSettingsProps = {
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
-  getColorSettings = (layer: Object, layerName: string) =>
+  getColorSettings = (layer: Object, layerName: string) => (
     <div key={layerName}>
       <Row>
-        <Col span={24}>
-          Layer: {layerName}
-        </Col>
+        <Col span={24}>Layer: {layerName}</Col>
       </Row>
       <NumberSliderSetting
         label="Brightness"
@@ -69,7 +67,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
         onChange={_.partial(this.props.onChangeLayer, layerName, "color")}
         className="ant-btn"
       />
-    </div>;
+    </div>
+  );
 
   onChangeQuality = (propertyName: $Keys<DatasetConfigurationType>, value: string) => {
     this.props.onChange(propertyName, parseInt(value));
@@ -98,13 +97,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.fourBit}
             onChange={_.partial(this.props.onChange, "fourBit")}
           />
-          {this.props.viewMode === Constants.MODE_PLANE_TRACING
-            ? <SwitchSetting
-                label="Interpolation"
-                value={this.props.datasetConfiguration.interpolation}
-                onChange={_.partial(this.props.onChange, "interpolation")}
-              />
-            : null}
+          {this.props.viewMode === Constants.MODE_PLANE_TRACING ? (
+            <SwitchSetting
+              label="Interpolation"
+              value={this.props.datasetConfiguration.interpolation}
+              onChange={_.partial(this.props.onChange, "interpolation")}
+            />
+          ) : null}
           <DropdownSetting
             label="Quality"
             value={this.props.datasetConfiguration.quality}

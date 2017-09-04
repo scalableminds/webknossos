@@ -7,13 +7,14 @@ import Toast from "libs/toast";
 import InputComponent from "oxalis/view/components/input_component";
 import { setAnnotationPublicAction } from "oxalis/model/actions/annotation_actions";
 import messages from "messages";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, RestrictionsType, SettingsType } from "oxalis/store";
 
 type ShareModalPropType = {
   // eslint-disable-next-line react/no-unused-prop-types
   isPublic: boolean,
   isVisible: boolean,
   onOk: () => void,
+  restrictions: RestrictionsType & SettingsType,
   setAnnotationPublic: Function,
 };
 
@@ -61,6 +62,17 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
   };
 
   render() {
+    const publicCheckbox = this.props.restrictions.allowUpdate ? (
+      <Checkbox
+        onChange={this.handleCheckboxChange}
+        checked={this.state.isPublic}
+        style={{ marginTop: 10, marginLeft: 1 }}
+      >
+        Share the tracing publicly. Everyone with this link can access the tracing without the need
+        for a user login.
+      </Checkbox>
+    ) : null;
+
     return (
       <Modal
         title="Share"
@@ -74,14 +86,7 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
           </Button>
           <InputComponent style={{ width: "85%" }} value={this.getUrl()} />
         </Input.Group>
-        <Checkbox
-          onChange={this.handleCheckboxChange}
-          checked={this.state.isPublic}
-          style={{ marginTop: 10, marginLeft: 1 }}
-        >
-          Share the tracing publicly. Everyone with this link can access the tracing without the
-          need for a user login.
-        </Checkbox>
+        {publicCheckbox}
       </Modal>
     );
   }
@@ -90,6 +95,7 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
 const mapStateToProps = (state: OxalisState) => ({
   isPublic: state.tracing.isPublic,
   isDatasetPublic: state.dataset.isPublic,
+  restrictions: state.tracing.restrictions,
 });
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({

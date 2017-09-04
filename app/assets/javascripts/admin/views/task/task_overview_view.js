@@ -108,7 +108,9 @@ class TaskOverviewView extends Marionette.View {
       .startOf("day")
       .subtract(this.DEFAULT_TIME_PERIOD_TIME, this.DEFAULT_TIME_PERIOD_UNIT)
       .valueOf();
-    const defaultEndDate = moment().endOf("day").valueOf();
+    const defaultEndDate = moment()
+      .endOf("day")
+      .valueOf();
     this.fetchData(defaultStartDate, defaultEndDate);
 
     this.listenTo(this.collection, "change", this.renderRangeSlider);
@@ -373,7 +375,10 @@ class TaskOverviewView extends Marionette.View {
 
     // append the container for the svg node elements
     this.svgNodes = this.svgNodes.data(nodes, d => d.id);
-    const svgNodesContainer = this.svgNodes.enter().append("svg:g").attr("id", d => d.id);
+    const svgNodesContainer = this.svgNodes
+      .enter()
+      .append("svg:g")
+      .attr("id", d => d.id);
 
     // add the label to the svg node container
     svgNodesContainer
@@ -416,7 +421,10 @@ class TaskOverviewView extends Marionette.View {
       })
       .style("stroke", d => {
         if (d.color) {
-          return d3.rgb(d.color).darker().toString();
+          return d3
+            .rgb(d.color)
+            .darker()
+            .toString();
         } else {
           return "black";
         }

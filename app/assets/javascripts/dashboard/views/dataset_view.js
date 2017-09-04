@@ -15,23 +15,26 @@ import type { DataLayerType } from "oxalis/store";
 const { Search } = Input;
 
 type Props = {
-  user: APIUserType,
+  user: APIUserType
 };
 
 export type DatasetType = APIDatasetType & {
   hasSegmentation: boolean,
   thumbnailURL: string,
-  formattedCreated: string,
+  formattedCreated: string
 };
 
 type State = {
   currentDataViewType: "gallery" | "advanced",
   datasets: Array<DatasetType>,
   searchQuery: string,
-  isLoading: boolean,
+  isLoading: boolean
 };
 
-function createThumbnailURL(datasetName: string, layers: Array<DataLayerType>): string {
+function createThumbnailURL(
+  datasetName: string,
+  layers: Array<DataLayerType>
+): string {
   const colorLayer = _.find(layers, { category: "color" });
   if (colorLayer) {
     return `/api/datasets/${datasetName}/layers/${colorLayer.name}/thumbnail`;
@@ -39,19 +42,24 @@ function createThumbnailURL(datasetName: string, layers: Array<DataLayerType>): 
   return "";
 }
 
-export function transformDatasets(datasets: Array<APIDatasetType>): Array<DatasetType> {
+export function transformDatasets(
+  datasets: Array<APIDatasetType>
+): Array<DatasetType> {
   return _.sortBy(
     datasets.map(dataset =>
       Object.assign({}, dataset, {
         hasSegmentation: _.some(
           dataset.dataSource.dataLayers,
-          layer => layer.category === "segmentation",
+          layer => layer.category === "segmentation"
         ),
-        thumbnailURL: createThumbnailURL(dataset.name, dataset.dataSource.dataLayers),
-        formattedCreated: moment(dataset.created).format("YYYY-MM-DD HH:mm"),
-      }),
+        thumbnailURL: createThumbnailURL(
+          dataset.name,
+          dataset.dataSource.dataLayers
+        ),
+        formattedCreated: moment(dataset.created).format("YYYY-MM-DD HH:mm")
+      })
     ),
-    "created",
+    "created"
   );
 }
 
@@ -60,7 +68,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     currentDataViewType: "gallery",
     datasets: [],
     searchQuery: "",
-    isLoading: false,
+    isLoading: false
   };
 
   componentDidMount() {
@@ -75,7 +83,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     const transformedDatasets = transformDatasets(datasets);
     this.setState({
       datasets: transformedDatasets,
-      isLoading: false,
+      isLoading: false
     });
   }
 
@@ -86,15 +94,35 @@ class DatasetView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
+  updateDataset = (newDataset: DatasetType) => {
+    const newDatasets = this.state.datasets.map((dataset: DatasetType) => {
+      if (dataset.name === newDataset.name) {
+        return newDataset;
+      }
+      return dataset;
+    });
+
+    this.setState({
+      datasets: newDatasets
+    });
+  };
+
   renderGallery() {
     return (
-      <GalleryDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
+      <GalleryDatasetView
+        datasets={this.state.datasets}
+        searchQuery={this.state.searchQuery}
+      />
     );
   }
 
   renderAdvanced() {
     return (
-      <AdvancedDatasetView datasets={this.state.datasets} searchQuery={this.state.searchQuery} />
+      <AdvancedDatasetView
+        datasets={this.state.datasets}
+        searchQuery={this.state.searchQuery}
+        updateDataset={this.updateDataset}
+      />
     );
   }
 
@@ -109,23 +137,32 @@ class DatasetView extends React.PureComponent<Props, State> {
       />
     );
 
-    const adminHeader = Utils.isUserAdmin(this.props.user)
-      ? <div className="pull-right">
-          <a href="/datasets/upload" style={margin}>
-            <Button type="primary" icon="plus">
-              Add Dataset
-            </Button>
-          </a>
-          {isGallery
-            ? <Button onClick={this.showAdvancedView} icon="bars" style={margin} className="test-showAdvancedView">
-                Show Advanced View
-              </Button>
-            : <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
-                Show Gallery View
-              </Button>}
-          {search}
-        </div>
-      : search;
+    const adminHeader = Utils.isUserAdmin(this.props.user) ? (
+      <div className="pull-right">
+        <a href="/datasets/upload" style={margin}>
+          <Button type="primary" icon="plus">
+            Add Dataset
+          </Button>
+        </a>
+        {isGallery ? (
+          <Button
+            onClick={this.showAdvancedView}
+            icon="bars"
+            style={margin}
+            className="test-showAdvancedView"
+          >
+            Show Advanced View
+          </Button>
+        ) : (
+          <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
+            Show Gallery View
+          </Button>
+        )}
+        {search}
+      </div>
+    ) : (
+      search
+    );
 
     const content = (() => {
       if (this.state.isLoading) {
@@ -148,9 +185,7 @@ class DatasetView extends React.PureComponent<Props, State> {
         {adminHeader}
         <h3 className="test-datasetHeadline">Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-        <div>
-          {content}
-        </div>
+        <div>{content}</div>
       </div>
     );
   }

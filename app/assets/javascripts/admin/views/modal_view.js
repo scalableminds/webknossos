@@ -66,7 +66,12 @@ class ModalView extends Marionette.View {
 
   onRender() {
     // Make sure the first input field always gets autofocused
-    return this.$el.on("shown.bs.modal", () => this.$el.find(".modal-body :input").first().focus());
+    return this.$el.on("shown.bs.modal", () =>
+      this.$el
+        .find(".modal-body :input")
+        .first()
+        .focus(),
+    );
   }
 
   destroy() {

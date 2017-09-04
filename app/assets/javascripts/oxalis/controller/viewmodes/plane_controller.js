@@ -177,7 +177,10 @@ class PlaneController extends React.PureComponent<Props> {
 
     const rotation = THREE.Vector3.prototype.multiplyScalar.call(camera.rotation.clone(), -1);
     // reverse euler order
-    rotation.order = rotation.order.split("").reverse().join("");
+    rotation.order = rotation.order
+      .split("")
+      .reverse()
+      .join("");
 
     nmVector.applyEuler(rotation);
 

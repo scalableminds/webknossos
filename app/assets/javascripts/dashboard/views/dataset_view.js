@@ -15,6 +15,7 @@ import type { DataLayerType } from "oxalis/store";
 const { Search } = Input;
 
 type Props = {
+  dataViewType: "gallery" | "advanced",
   user: APIUserType,
 };
 
@@ -25,7 +26,6 @@ export type DatasetType = APIDatasetType & {
 };
 
 type State = {
-  currentDataViewType: "gallery" | "advanced",
   datasets: Array<DatasetType>,
   searchQuery: string,
   isLoading: boolean,
@@ -57,7 +57,6 @@ export function transformDatasets(datasets: Array<APIDatasetType>): Array<Datase
 
 class DatasetView extends React.PureComponent<Props, State> {
   state = {
-    currentDataViewType: "gallery",
     datasets: [],
     searchQuery: "",
     isLoading: false,
@@ -78,9 +77,6 @@ class DatasetView extends React.PureComponent<Props, State> {
       isLoading: false,
     });
   }
-
-  showAdvancedView = () => this.setState({ currentDataViewType: "advanced" });
-  showGalleryView = () => this.setState({ currentDataViewType: "gallery" });
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
     this.setState({ searchQuery: event.target.value });
@@ -116,7 +112,7 @@ class DatasetView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const isGallery = this.state.currentDataViewType === "gallery";
+    const isGallery = this.props.dataViewType === "gallery";
     const margin = { marginRight: 5 };
     const search = (
       <Search
@@ -133,15 +129,6 @@ class DatasetView extends React.PureComponent<Props, State> {
             Add Dataset
           </Button>
         </a>
-        {isGallery ? (
-          <Button onClick={this.showAdvancedView} icon="bars" style={margin}>
-            Show Advanced View
-          </Button>
-        ) : (
-          <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
-            Show Gallery View
-          </Button>
-        )}
         {search}
       </div>
     ) : (

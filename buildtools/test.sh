@@ -25,11 +25,11 @@ function ensureUpToDateTests {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-	export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $testBundlePath/test/**/*.spec.js -c 8 "$@"
+	export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $testBundlePath/test/**/*.spec.js "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
-  export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $testBundlePath/test/**/*.e2e.js -c 8 "$@"
+  export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $testBundlePath/test/**/*.e2e.js "$@"
 elif [ $cmd == "prepare" ]
 then
 	rm -rf $testBundlePath && BABEL_ENV=test babel $jsPath --out-dir $testBundlePath "$@"

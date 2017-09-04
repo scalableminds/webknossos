@@ -138,6 +138,7 @@
   "ava": {
     "source": ["./public/test-bundle/**/*.{js,jsx}"],
     "snapshotDir": "app/assets/javascripts/test/snapshots",
+    "concurrency": 8,
     "babel": {}
   }
 }

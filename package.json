@@ -71,7 +71,7 @@
     "test-debug": "buildtools/test.sh test --debug",
     "test-prepare": "buildtools/test.sh prepare",
     "test-prepare-watch": "buildtools/test.sh prepare -w",
-    "test-e2e": "buildtools/test.sh test-e2e --timeout=30s",
+    "test-e2e": "node wdio.conf.js && buildtools/test.sh test-e2e --timeout=30s",
     "test-help":
       "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "flow": "node_modules/.bin/flow",

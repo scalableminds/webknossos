@@ -54,12 +54,6 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
     result
   }
 
-  private def getProcessIO: ProcessIO = {
-    new ProcessIO(_ => (),
-      stdout => Source.fromInputStream(stdout).getLines().foreach(l => logger.info(l)),
-      stderr => Source.fromInputStream(stderr).getLines().foreach(l => logger.error(l)))
-  }
-
   private def parseCustomJavaArgs(arguments: Arguments) = {
     val argumentsString = arguments.commandLine.arguments
     val customArgumentsMap = argumentsString.filter(_.startsWith("-D")).map(_.split("="))

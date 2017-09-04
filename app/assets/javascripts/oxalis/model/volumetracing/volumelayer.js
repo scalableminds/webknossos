@@ -105,10 +105,6 @@ class VolumeLayer {
     }
   }
 
-  getSmoothedContourList() {
-    return Drawing.smoothLine(this.getContourList(), pos => this.updateArea(pos));
-  }
-
   finish(): void {
     if (!this.isEmpty()) {
       this.addContour(this.getContourList()[0]);
@@ -223,40 +219,6 @@ class VolumeLayer {
     }
 
     return res;
-  }
-
-  getQuadrantWithRespectToPoint(vertex: Vector2, point: Vector2): ?number {
-    const xDiff = vertex[0] - point[0];
-    const yDiff = vertex[1] - point[1];
-
-    if (xDiff === 0 && yDiff === 0) {
-      // Vertex and point have the same coordinates
-      return 0;
-    }
-
-    switch (false) {
-      case xDiff > 0 || yDiff <= 0:
-        return 1;
-      case xDiff > 0 || yDiff > 0:
-        return 2;
-      case xDiff <= 0 || yDiff > 0:
-        return 3;
-      case xDiff <= 0 || yDiff <= 0:
-        return 4;
-      default:
-        return null; // Cannot happen
-    }
-  }
-
-  calculateDistance(p1: Vector3, p2: Vector3): number {
-    const diff = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]];
-    return Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
-  }
-
-  interpolatePositions(pos1: Vector3, pos2: Vector3, f: number): Vector3 {
-    const sPos1 = [pos1[0] * (1 - f), pos1[1] * (1 - f), pos1[2] * (1 - f)];
-    const sPos2 = [pos2[0] * f, pos2[1] * f, pos2[2] * f];
-    return [sPos1[0] + sPos2[0], sPos1[1] + sPos2[1], sPos1[2] + sPos2[2]];
   }
 
   getCentroid(): Vector3 {

@@ -2,7 +2,6 @@
  * volumetracing_saga.js
  * @flow
  */
-import app from "app";
 import { call, select, put, take, race, takeEvery, fork } from "redux-saga/effects";
 import {
   updateDirectionAction,
@@ -72,22 +71,20 @@ export function* editVolumeLayerAsync(): Generator<*, *, *> {
     }
     const currentLayer = yield call(createVolumeLayer, startEditingAction.planeId);
 
-    let abortEditing = false;
     while (true) {
-      const { addToLayerAction, finishEditingAction, createCellAction } = yield race({
+      const { addToLayerAction, finishEditingAction } = yield race({
         addToLayerAction: take("ADD_TO_LAYER"),
         finishEditingAction: take("FINISH_EDITING"),
-        createCellAction: take("CREATE_CELL_ACTION"),
       });
 
-      // If a cell is created while drawing a contour, abort the editing process
-      if (createCellAction) abortEditing = true;
-      if (finishEditingAction || createCellAction) break;
+      if (finishEditingAction) break;
 
-      currentLayer.addContour(addToLayerAction.position);
+      // currentLayer.addContour(addToLayerAction.position);
+      const iterator = currentLayer.getCircleVoxelIterator();
+      const labelValue = yield select(state => state.tracing.activeCellId);
+      const binary = yield call([Model, Model.getSegmentationBinary]);
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
     }
-
-    if (abortEditing) continue;
 
     yield call(finishLayer, currentLayer);
   }
@@ -108,10 +105,9 @@ export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
   layer.finish();
   const iterator = layer.getVoxelIterator();
   const labelValue = yield select(state => state.tracing.activeCellId);
-  if (app.oxalis) {
-    const binary = yield call([Model, Model.getSegmentationBinary]);
-    yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
-  }
+  const binary = yield call([Model, Model.getSegmentationBinary]);
+  yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+
   console.log("Labeling time:", Date.now() - start);
 
   yield put(updateDirectionAction(layer.getCentroid()));

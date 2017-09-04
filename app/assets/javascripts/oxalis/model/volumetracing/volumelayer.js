@@ -172,6 +172,43 @@ class VolumeLayer {
     return iterator;
   }
 
+  getCircleVoxelIterator(): VoxelIterator {
+    if (this.isEmpty()) {
+      return VoxelIterator.finished();
+    }
+
+    const radius = 10;
+    const width = 2 * radius;
+    const height = width;
+
+    const map = new Array(width);
+    for (let x = 0; x < width; x++) {
+      map[x] = new Array(height);
+      for (let y = 0; y < height; y++) {
+        map[x][y] = false;
+      }
+    }
+    const coord = this.get2DCoordinate(this.getContourList().slice(-1)[0]);
+    const minCoord2d = [Math.floor(coord[0] - radius), Math.floor(coord[1] - radius)];
+
+    const setMap = function(x: number, y: number, value = true): void {
+      x = Math.floor(x);
+      y = Math.floor(y);
+      map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
+    };
+
+    Drawing.fillCircle(coord[0], coord[1], radius, (x, y) => setMap(x, y, true));
+
+    const iterator = new VoxelIterator(
+      map,
+      width,
+      height,
+      minCoord2d,
+      this.get3DCoordinate.bind(this),
+    );
+    return iterator;
+  }
+
   drawOutlineVoxels(setMap: (number, number) => void): void {
     let p1;
     let p2;

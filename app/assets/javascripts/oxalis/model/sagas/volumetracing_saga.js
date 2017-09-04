@@ -103,7 +103,7 @@ export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
 
   const start = Date.now();
   layer.finish();
-  const iterator = layer.getVoxelIterator();
+  const iterator = layer.getCircleVoxelIterator();
   const labelValue = yield select(state => state.tracing.activeCellId);
   const binary = yield call([Model, Model.getSegmentationBinary]);
   yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);

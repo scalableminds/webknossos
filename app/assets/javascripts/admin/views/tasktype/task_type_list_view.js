@@ -123,7 +123,12 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 dataIndex="description"
                 key="description"
                 sorter={Utils.localeCompareBy("description")}
-                render={description => <Markdown source={description} options={{ html: false, breaks: true, linkify: true }} />}
+                render={description => (
+                  <Markdown
+                    source={description}
+                    options={{ html: false, breaks: true, linkify: true }}
+                  />
+                )}
                 width={300}
               />
               <Column

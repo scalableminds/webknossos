@@ -1,15 +1,14 @@
 package models.annotation.handler
 
-import net.liftweb.common.{Box, Full}
-import oxalis.security.AuthenticatedRequest
-import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.Fox
+import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
 import models.basics.Implicits._
+import models.user.User
+import oxalis.security.AuthenticatedRequest
+import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.tools.Fox
-import models.user.User
 
 object AnnotationInformationHandler {
   val informationHandlers: Map[String, AnnotationInformationHandler] = Map(
@@ -42,9 +41,21 @@ trait AnnotationInformationHandler {
         case List() => true
         case head :: tail => head.dataSetName == dataSetName && allOnSameDatasetIter(tail, dataSetName)
       }
-    if (allOnSameDatasetIter(annotations, annotations.head.dataSetName))
-      Fox.successful(true)
-    else
-      Fox.failure("Cannot create compound annotation spanning multiple datasets")
+    annotations match {
+      case List() => Fox.successful(true)
+      case head :: tail => {
+        if (allOnSameDatasetIter(annotations, annotations.head.dataSetName))
+          Fox.successful(true)
+        else
+          Fox.failure("Cannot create compound annotation spanning multiple datasets")
+      }
+    }
+  }
+
+  def assertNonEmpty(annotations: List[Annotation]): Fox[Boolean] = {
+    annotations match {
+      case List() => Fox.failure("no annotations")
+      case _ => Fox.successful(true)
+    }
   }
 }

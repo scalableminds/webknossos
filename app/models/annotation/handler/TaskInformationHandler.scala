@@ -2,9 +2,8 @@ package models.annotation.handler
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.handler.ProjectInformationHandler.assertAllOnSameDataset
 import models.annotation.{Annotation, AnnotationMerger, AnnotationRestrictions, AnnotationType}
-import models.task.{Task, TaskDAO}
+import models.task.TaskDAO
 import models.team.Role
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
@@ -17,10 +16,11 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
       task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
       annotations <- task.annotations
       finishedAnnotations = annotations.filter(_.state.isFinished)
-      _ <- assertAllOnSameDataset(annotations)
+      _ <- assertAllOnSameDataset(finishedAnnotations)
+      _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user.map(_._id),
-        dataSetName, task.team, AnnotationType.CompoundTask, annotations) ?~> "Failed to merge annotations vor CompoundTask"
+        dataSetName, task.team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: String)(implicit ctx: DBAccessContext) =

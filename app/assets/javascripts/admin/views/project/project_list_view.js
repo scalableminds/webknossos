@@ -187,7 +187,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
                     </a>
                     <br />
                     <a
-                      href={`/api/projects/${project.id}/download`}
+                      href={`/annotations/CompoundProject/${project.id}/download`}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />Download

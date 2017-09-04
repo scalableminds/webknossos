@@ -300,10 +300,12 @@ class Auth @Inject() (
                        userTokenService: UserTokenService,
                        avatarService: AvatarService,
                        passwordHasher: PasswordHasher,
-                       configuration: Configuration,
-                       mailer: Mailer) extends Silhouette[User,CookieAuthenticator] {
+                       configuration: Configuration) extends Silhouette[User,CookieAuthenticator] {
 
   import AuthForms._
+
+  private lazy val Mailer =
+    Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
   val automaticUserActivation: Boolean =
     configuration.getBoolean("application.authentication.enableDevAutoVerify").getOrElse(false)
@@ -321,29 +323,29 @@ class Auth @Inject() (
 
   def handleStartSignUp = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm => Future.successful(BadRequest(views.html.auth.startSignUp(bogusForm))),
+      bogusForm => Future.successful(Redirect(routes.Application.index)), // the register.html has to be updated
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).flatMap{
           case Some(_) =>
-            Future.successful(Redirect(controllers.routes.Authentication.startSignUp()).flashing(
-              "error" -> Messages("error.userExists", signUpData.email)))
+            Future.successful(Redirect(routes.Authentication.startSignUp()).flashing("error" -> Messages("error.userExists", signUpData.email)))
           case None =>
             for {
-              user <- insert(
-                team, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration)
+              user <- UserService.insert(team, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration)
               brainDBResult <- BrainTracing.register(user)
             } yield {
+              /*
               Mailer ! Send(
                 DefaultMails.registerMail(user.name, emailAddress, brainDBResult))
               Mailer ! Send(
                 DefaultMails.registerAdminNotifyerMail(user, emailAddress, brainDBResult))
+                */
               if (automaticUserActivation) {
-                Redirect(controllers.routes.Application.index)
+                Future.successful(Redirect(routes.Application.index))
                 //.withSession(Secured.createSession(user))
               } else {
-                Redirect(controllers.routes.Authentication.login(None))
-                  .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
+                Future.successful(Redirect(routes.Authentication.login(None))
+                  .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon."))
               }
             }
             /*

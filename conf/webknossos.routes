@@ -30,7 +30,7 @@ POST          /auth/register                                                    
 GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 #new auth
-GET           /auth/register                                                   controllers.Authentication.register2
+GET           /auth/register2                                                   controllers.Authentication.register2
 POST          /auth/register                                                   controllers.Authentication.handleRegistration2
 # maybe another GET for email authentication
 

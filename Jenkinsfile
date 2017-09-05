@@ -42,7 +42,7 @@ wrap(repo: "scalableminds/webknossos") {
   }
 
 
-  dockerPublish { repo = "scalableminds/webknossos" }
+  dockerPublish(repo: "scalableminds/webknossos")
 
 
   stage("Build system packages") {

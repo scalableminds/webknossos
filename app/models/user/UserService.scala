@@ -97,6 +97,8 @@ object UserService extends FoxImplicits {
           _isAnonymous = Some(true),
           experiences = experience.toMap)
         _ <- UserDAO.insert(user)
+        //where to save the hashes:
+        //in the user object or in a seperate DB ?
       } yield user
     }
 

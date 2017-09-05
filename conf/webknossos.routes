@@ -31,7 +31,7 @@ GET           /auth/sso                                                         
 
 #new auth
 GET           /auth/register2                                                   controllers.Authentication.register2
-POST          /auth/register                                                   controllers.Authentication.handleRegistration2
+POST          /auth/register2                                                   controllers.Authentication.handleRegistration2
 # maybe another GET for email authentication
 
 GET           /auth/reset                                                      controllers.Authentication.startResetPassword

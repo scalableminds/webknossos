@@ -6,13 +6,13 @@ import javax.inject.Inject
 import scala.concurrent.Future
 import akka.actor.ActorRef
 import com.scalableminds.util.mail._
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.{Profile, User, UserToken}
 import models.team.{Role, TeamService}
 import models.user.UserService.{Mailer => _, _}
 import models.user._
-import net.liftweb.common.Full
+import net.liftweb.common.{Empty, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
@@ -37,6 +37,8 @@ import javax.inject.Inject
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
+
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import net.ceedubs.ficus.Ficus._
 
@@ -300,7 +302,7 @@ class Auth @Inject() (
                        userTokenService: UserTokenService,
                        avatarService: AvatarService,
                        passwordHasher: PasswordHasher,
-                       configuration: Configuration) extends Silhouette[User,CookieAuthenticator] {
+                       configuration: Configuration) extends Controller with Silhouette[User,CookieAuthenticator] {
 
   import AuthForms._
 
@@ -323,29 +325,25 @@ class Auth @Inject() (
 
   def handleStartSignUp = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm => Future.successful(Redirect(routes.Application.index)), // the register.html has to be updated
+      bogusForm => Fox.successful(BadRequest(views.html.auth.startSignUp(bogusForm))), // the register.html has to be updated
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
-        UserService.retrieve(loginInfo).flatMap{
-          case Some(_) =>
-            Future.successful(Redirect(routes.Authentication.startSignUp()).flashing("error" -> Messages("error.userExists", signUpData.email)))
-          case None =>
+        UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
+          case Full(_) =>
+            Fox.successful(Redirect(routes.Authentication.startSignUp()).flashing("error" -> Messages("error.userExists", signUpData.email)))
+          case Empty =>
             for {
-              user <- UserService.insert(team, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration)
-              brainDBResult <- BrainTracing.register(user)
+              user <- UserService.insert(team.toString, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration)
+              brainDBResult <- BrainTracing.register(user).toFox
             } yield {
-              /*
-              Mailer ! Send(
-                DefaultMails.registerMail(user.name, emailAddress, brainDBResult))
-              Mailer ! Send(
-                DefaultMails.registerAdminNotifyerMail(user, emailAddress, brainDBResult))
-                */
+              Mailer ! Send(DefaultMails.registerMail(user.name, emailAddress.toString, brainDBResult))
+              Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, emailAddress.toString, brainDBResult))
               if (automaticUserActivation) {
-                Future.successful(Redirect(routes.Application.index))
+                Redirect(routes.Application.index)
                 //.withSession(Secured.createSession(user))
               } else {
-                Future.successful(Redirect(routes.Authentication.login(None))
-                  .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon."))
+                Redirect(routes.Authentication.login(None))
+                  .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
               }
             }
             /*

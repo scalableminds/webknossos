@@ -42,11 +42,10 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfUsers(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
     for {
       users <- Fox.combined(userString.split(",").toList.map(email => UserService.findOneByEmail(email))) ?~> Messages("user.email.invalid")
-      //filteredUsers = users.filter(user => request.user.isAdminOf(user))
       js <- loggedTimeForUserList(users, year, month)
     } yield {
       if (users.exists(u => !request.user.isAdminOf(u))) {
-        Ok(Json.obj("error" -> Messages("user.notAuthorised")))
+        Ok(Json.obj("messages" -> Json.arr(Json.obj("error" -> Messages("user.notAuthorised")))))
       }else{
         Ok(js)
       }

@@ -4,6 +4,7 @@
 package com.scalableminds.braingames.binary.storage.kvstore
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import play.api.libs.json.{Reads, Writes}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -64,6 +65,9 @@ class VersionedKeyValueStore(underlying: KeyValueStore) extends FoxImplicits {
   def getJson[T : Reads](key: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[T]] =
     scanVersionsJson(key, version).toStream.headOption
 
+  def getPB[T <: GeneratedMessage](companion: GeneratedMessageCompanion[T with Message[T]])(key: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[T]] =
+    scanVersionsPB[T](companion)(key, version).toStream.headOption
+
   def getVersion(key: String, version: Option[Long] = None): Fox[Long] = {
     val prefix = s"$key@"
     underlying.scanKeys(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { versionedKey =>
@@ -85,6 +89,13 @@ class VersionedKeyValueStore(underlying: KeyValueStore) extends FoxImplicits {
     }
   }
 
+  def scanVersionsPB[T <: GeneratedMessage](companion: GeneratedMessageCompanion[T with Message[T]])(key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] = {
+    val prefix = s"$key@"
+    underlying.scanPB[T](companion)(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
+      VersionedKey(pair.key).map(VersionedKeyValuePair(_, pair.value))
+    }
+  }
+
   def scanKeys(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] =
     new VersionFilterIterator(underlying.scan(key, prefix), version)
 
@@ -96,4 +107,7 @@ class VersionedKeyValueStore(underlying: KeyValueStore) extends FoxImplicits {
 
   def putJson[T : Writes](key: String, version: Long, value: T): Fox[Unit] =
     underlying.putJson(VersionedKey(key, version).toString, value)
+
+  def putPB[T <: GeneratedMessage](key: String, version: Long, value: T): Fox[Unit] =
+    underlying.putPB(VersionedKey(key, version).toString, value)
 }

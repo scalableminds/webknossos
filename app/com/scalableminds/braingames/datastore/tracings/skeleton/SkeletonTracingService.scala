@@ -5,10 +5,8 @@ package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import java.io.File
 
-import akka.actor.ActorSystem
 import com.google.inject.Inject
-import com.google.inject.name.Named
-import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValuePair
+import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValuePair}
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.{TemporaryTracingStore, TracingDataStore, TracingService, TracingType}
 import com.scalableminds.util.geometry.BoundingBox
@@ -17,14 +15,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
-import scala.io.Source
 import scala.reflect._
 
 
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
                                         val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
-                                      ) extends TracingService[SkeletonTracing] with FoxImplicits with TextUtils {
+                                      ) extends TracingService[SkeletonTracing] with KeyValueStoreImplicits with FoxImplicits with TextUtils {
 
   implicit val tracingFormat = SkeletonTracing.jsonFormat
 
@@ -34,11 +31,11 @@ class SkeletonTracingService @Inject()(
 
   val tracingStore = tracingDataStore.skeletons
 
-  def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[Unit]] = {
+  def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[_]] = {
     Fox.combined(for {
       updateActionGroup <- updateActionGroups
     } yield {
-      tracingDataStore.skeletonUpdates.putJson(tracingId, updateActionGroup.version, updateActionGroup.actions)
+      tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions)
     })
   }
 
@@ -83,7 +80,7 @@ class SkeletonTracingService @Inject()(
 
     if (desiredVersion == existingVersion) List()
     else {
-      val versionIterator = tracingDataStore.skeletonUpdates.scanVersionsJson[List[SkeletonUpdateAction]](tracingId, Some(desiredVersion))
+      val versionIterator = tracingDataStore.skeletonUpdates.scanVersions(tracingId, Some(desiredVersion))(fromJson[List[SkeletonUpdateAction]])
       toListIter(versionIterator, List()).flatten
     }
   }

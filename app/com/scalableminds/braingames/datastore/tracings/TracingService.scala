@@ -5,19 +5,18 @@ package com.scalableminds.braingames.datastore.tracings
 
 import java.util.UUID
 
-import com.scalableminds.braingames.binary.storage.TemporaryStore
-import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValueStore}
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Empty, Failure, Full}
-import play.api.libs.json.Format
+import play.api.libs.json.{Format, Json}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
-trait TracingService[T <: Tracing] extends FoxImplicits {
+trait TracingService[T <: Tracing] extends KeyValueStoreImplicits with FoxImplicits {
 
   implicit val tracingFormat: Format[T]
 
@@ -29,7 +28,8 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
-  // this should be longer than maxCacheTime in webknossos//AnnotationStore so that the references saved there remain valid throughout their life
+  // this should be longer than maxCacheTime in webknossos/AnnotationStore
+  // so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
 
   def createNewId: String =
@@ -41,7 +41,7 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
     Fox.successful(tracing)
 
   def find(tracingId: String, version: Option[Long] = None, useCache: Boolean = true, applyUpdates: Boolean = false): Fox[T] = {
-    tracingStore.getJson(tracingId, version).map(_.value).flatMap { tracing =>
+    tracingStore.get(tracingId, version)(fromJson[T]).map(_.value).flatMap { tracing =>
       if (applyUpdates)
         applyPendingUpdates(tracing, version)
       else
@@ -68,7 +68,7 @@ trait TracingService[T <: Tracing] extends FoxImplicits {
         if (toCache) {
           Fox.successful(temporaryTracingStore.insert(tracing.id, tracing, Some(temporaryStoreTimeout)))
         } else {
-          tracingStore.putJson(tracing.id, tracing.version, tracing)
+          tracingStore.put(tracing.id, tracing.version, tracing)
         }
       case f: Failure =>
         Future.successful(f)

@@ -5,13 +5,13 @@ package com.scalableminds.braingames.datastore.tracings.volume
 
 import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.DataLayer
-import com.scalableminds.braingames.binary.storage.kvstore.VersionedKeyValueStore
+import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValueStore}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait VolumeTracingBucketHelper extends WKWMortonHelper with FoxImplicits {
+trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits {
 
   implicit def volumeDataStore: VersionedKeyValueStore
 
@@ -47,7 +47,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with FoxImplicits {
     volumeDataStore.get(key).futureBox.map(_.toStream.headOption.map(_.value))
   }
 
-  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Fox[Unit] = {
+  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Fox[_] = {
     val key = buildBucketKey(dataLayer.name, bucket)
     volumeDataStore.put(key, 0, data)
   }

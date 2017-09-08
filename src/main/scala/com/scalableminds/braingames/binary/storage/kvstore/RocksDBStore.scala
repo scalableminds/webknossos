@@ -86,7 +86,7 @@ class RocksDBKeyIterator(it: RocksIterator, prefix: Option[String]) extends Iter
 
 class RocksDBStore(db: RocksDB, handle: ColumnFamilyHandle) extends KeyValueStore with FoxImplicits {
 
-  def get(key: String): Fox[Array[Byte]] = {
+  def getImpl(key: String): Fox[Array[Byte]] = {
     tryo { db.get(handle, key) }.flatMap {
       case null =>
         Empty
@@ -95,19 +95,19 @@ class RocksDBStore(db: RocksDB, handle: ColumnFamilyHandle) extends KeyValueStor
     }
   }
 
-  def scan(key: String, prefix: Option[String]): Iterator[KeyValuePair[Array[Byte]]] = {
+  def scanImpl(key: String, prefix: Option[String]): Iterator[KeyValuePair[Array[Byte]]] = {
     val it = db.newIterator(handle)
     it.seek(key)
     new RocksDBIterator(it, prefix)
   }
 
-  def scanKeys(key: String, prefix: Option[String] = None): Iterator[String] = {
+  def scanKeysImpl(key: String, prefix: Option[String] = None): Iterator[String] = {
     val it = db.newIterator(handle)
     it.seek(key)
     new RocksDBKeyIterator(it, prefix)
   }
 
-  def put(key: String, value: Array[Byte]): Fox[Unit] = {
+  def putImpl(key: String, value: Array[Byte]): Fox[_] = {
     tryo(db.put(handle, key, value))
   }
 }

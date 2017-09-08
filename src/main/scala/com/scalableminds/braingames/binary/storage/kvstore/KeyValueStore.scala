@@ -3,8 +3,11 @@
  */
 package com.scalableminds.braingames.binary.storage.kvstore
 
+import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import net.liftweb.common.{Box, Full}
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -17,52 +20,46 @@ object BackupInfo {
   implicit val backupInfoFormat = Json.format[BackupInfo]
 }
 
-trait KeyValueStore extends FoxImplicits {
+trait KeyValueStoreImplicits extends BoxImplicits {
 
-  implicit protected def stringToByteArray(s: String): Array[Byte] = s.toCharArray.map(_.toByte)
+  implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.map(_.toByte)
 
-  def get(key: String): Fox[Array[Byte]]
+  implicit def toBox[T](x: T): Box[T] = Full(x)
 
-  def scan(key: String, prefix: Option[String] = None): Iterator[KeyValuePair[Array[Byte]]]
+  implicit def asJson[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.toCharArray.map(_.toByte)
 
-  def scanKeys(key: String, prefix: Option[String] = None): Iterator[String]
+  implicit def fromJson[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
 
-  def put(key: String, value: Array[Byte]): Fox[Unit]
+  implicit def asProto[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  def getJson[T : Reads](key: String): Fox[T] = {
-    get(key).flatMap(value => Json.parse(value).validate[T])
+  implicit def fromProto[T <: GeneratedMessage with Message[T]](a: Array[Byte])(implicit companion: GeneratedMessageCompanion[T]): Box[T] = tryo(companion.parseFrom(a))
+}
+
+trait KeyValueStore extends KeyValueStoreImplicits with FoxImplicits {
+
+  protected def getImpl(key: String): Fox[Array[Byte]]
+
+  protected def scanImpl(key: String, prefix: Option[String] = None): Iterator[KeyValuePair[Array[Byte]]]
+
+  protected def scanKeysImpl(key: String, prefix: Option[String] = None): Iterator[String]
+
+  protected def putImpl(key: String, value: Array[Byte]): Fox[_]
+
+  def get[T](key: String)(implicit fromByteArray: Array[Byte] => Box[T]): Fox[T] = {
+    getImpl(key).flatMap(fromByteArray(_))
   }
 
-  def getPB[T <: GeneratedMessage](companion: GeneratedMessageCompanion[T with Message[T]])(key: String): Fox[T] = {
-    get(key).flatMap(value => parsePBBytesToOption(companion)(value))
-  }
-
-  def scanJson[T : Reads](key: String, prefix: Option[String] = None): Iterator[KeyValuePair[T]] = {
-    scan(key, prefix).flatMap { pair =>
-      Json.parse(pair.value).validate[T].asOpt.map(KeyValuePair(pair.key, _))
+  def scan[T](key: String, prefix: Option[String] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Iterator[KeyValuePair[T]] = {
+    scanImpl(key).flatMap { pair =>
+      fromByteArray(pair.value).map(KeyValuePair(pair.key, _))
     }
   }
 
-  def scanPB[T <: GeneratedMessage](companion: GeneratedMessageCompanion[T with Message[T]])(key: String, prefix: Option[String] = None): Iterator[KeyValuePair[T]] = {
-    scan(key, prefix).flatMap { pair =>
-      parsePBBytesToOption[T](companion)(pair.value).map(KeyValuePair(pair.key, _))
-    }
+  def scanKeys(key: String, prefix: Option[String] = None): Iterator[String] = {
+    scanKeysImpl(key, prefix)
   }
 
-  def putJson[T : Writes](key: String, value: T): Fox[Unit] = {
-    put(key, Json.toJson(value).toString)
+  def put[T](key: String, value: T)(implicit toByteArray: T => Array[Byte]): Fox[_] = {
+    putImpl(key, value)
   }
-
-  def putPB[T <: GeneratedMessage](key: String, value: T): Fox[Unit] = {
-    put(key, value.toByteArray)
-  }
-
-  private def parsePBBytesToOption[T <: GeneratedMessage](companion: GeneratedMessageCompanion[T with Message[T]])(bytes: Array[Byte]): Option[T] = {
-    try {
-      Some(companion.parseFrom(bytes))
-    } catch {
-      case e: Exception => None
-    }
-  }
-
 }

@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.storage.kvstore
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import net.liftweb.common.Box
 import play.api.libs.json.{Reads, Writes}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -57,16 +57,10 @@ class VersionFilterIterator[T](it: Iterator[KeyValuePair[T]], version: Option[Lo
   }
 }
 
-class VersionedKeyValueStore(underlying: KeyValueStore) extends FoxImplicits {
+class VersionedKeyValueStore(val underlying: KeyValueStore) extends KeyValueStoreImplicits with FoxImplicits {
 
-  def get(key: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[Array[Byte]]] =
+  def get[T](key: String, version: Option[Long] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] =
     scanVersions(key, version).toStream.headOption
-
-  def getJson[T : Reads](key: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[T]] =
-    scanVersionsJson(key, version).toStream.headOption
-
-  def getPB[T <: GeneratedMessage](companion: GeneratedMessageCompanion[T with Message[T]])(key: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[T]] =
-    scanVersionsPB[T](companion)(key, version).toStream.headOption
 
   def getVersion(key: String, version: Option[Long] = None): Fox[Long] = {
     val prefix = s"$key@"
@@ -75,39 +69,16 @@ class VersionedKeyValueStore(underlying: KeyValueStore) extends FoxImplicits {
     }.toStream.headOption
   }
 
-  def scanVersions(key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] = {
+  def scanVersions[T](key: String, version: Option[Long] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Iterator[VersionedKeyValuePair[T]] = {
     val prefix = s"$key@"
-    underlying.scan(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
+    underlying.scan[T](version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
       VersionedKey(pair.key).map(VersionedKeyValuePair(_, pair.value))
     }
   }
 
-  def scanVersionsJson[T : Reads](key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] = {
-    val prefix = s"$key@"
-    underlying.scanJson(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
-      VersionedKey(pair.key).map(VersionedKeyValuePair(_, pair.value))
-    }
-  }
-
-  def scanVersionsPB[T <: GeneratedMessage](companion: GeneratedMessageCompanion[T with Message[T]])(key: String, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] = {
-    val prefix = s"$key@"
-    underlying.scanPB[T](companion)(version.map(VersionedKey(key, _).toString).getOrElse(prefix), Some(prefix)).flatMap { pair =>
-      VersionedKey(pair.key).map(VersionedKeyValuePair(_, pair.value))
-    }
-  }
-
-  def scanKeys(key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[Array[Byte]]] =
+  def scanKeys[T](key: String, prefix: Option[String] = None, version: Option[Long] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Iterator[VersionedKeyValuePair[T]] =
     new VersionFilterIterator(underlying.scan(key, prefix), version)
 
-  def scanKeysJson[T : Reads](key: String, prefix: Option[String] = None, version: Option[Long] = None): Iterator[VersionedKeyValuePair[T]] =
-    new VersionFilterIterator(underlying.scanJson(key, prefix), version)
-
-  def put(key: String, version: Long, value: Array[Byte]): Fox[Unit] =
+  def put[T](key: String, version: Long, value: Array[Byte])(implicit toByteArray: T => Array[Byte]): Fox[_] =
     underlying.put(VersionedKey(key, version).toString, value)
-
-  def putJson[T : Writes](key: String, version: Long, value: T): Fox[Unit] =
-    underlying.putJson(VersionedKey(key, version).toString, value)
-
-  def putPB[T <: GeneratedMessage](key: String, version: Long, value: T): Fox[Unit] =
-    underlying.putPB(VersionedKey(key, version).toString, value)
 }

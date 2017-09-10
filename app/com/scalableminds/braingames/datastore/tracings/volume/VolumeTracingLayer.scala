@@ -33,13 +33,12 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
 }
 
 case class VolumeTracingLayer(
-                               name: String,
                                boundingBox: BoundingBox,
                                elementClass: ElementClass.Value,
-                               largestSegmentId: Long,
-                               val resolutions: List[Int] = List(1),
-                               override val category: Category.Value = Category.segmentation
+                               largestSegmentId: Long
                              )(implicit val volumeDataStore: VersionedKeyValueStore) extends SegmentationLayer {
+
+  val name = "volume-tracing"
 
   def lengthOfUnderlyingCubes(resolution: Int): Int = DataLayer.bucketLength
 
@@ -48,26 +47,6 @@ case class VolumeTracingLayer(
   val bucketProvider: BucketProvider = new VolumeTracingBucketProvider(this)
 
   val mappings: Set[String] = Set.empty
-}
 
-object VolumeTracingLayer {
-  implicit def volumeTracingLayerFormat(implicit volumeDataStore: VersionedKeyValueStore) = Json.format[VolumeTracingLayer]
-}
-
-case class AbstractVolumeTracingLayer(
-                                       name: String,
-                                       boundingBox: BoundingBox,
-                                       elementClass: ElementClass.Value,
-                                       largestSegmentId: Long,
-                                       resolutions: List[Int] = List(1),
-                                       category: Category.Value = Category.segmentation
-                                     )
-
-object AbstractVolumeTracingLayer {
-
-  val defaultElementClass = ElementClass.uint32
-
-  val defaultLargestSegmentId = 0L
-
-  implicit val abstractVolumeTracingLayerFormat = Json.format[AbstractVolumeTracingLayer]
+  val resolutions: List[Int] = List(1)
 }

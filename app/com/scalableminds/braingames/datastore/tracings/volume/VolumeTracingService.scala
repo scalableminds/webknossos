@@ -5,31 +5,29 @@ package com.scalableminds.braingames.datastore.tracings.volume
 
 import java.io.File
 
-import akka.actor.ActorSystem
 import com.google.inject.Inject
-import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracingDepr
+import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource, ElementClass, SegmentationLayer}
+import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings.{TemporaryTracingStore, TracingDataStore, TracingService, TracingType}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.wrap.WKWFile
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Box, Failure}
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.reflect._
 
 class VolumeTracingService @Inject()(
                                       tracingDataStore: TracingDataStore,
                                       val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
-                                    ) extends TracingService[VolumeTracing] with VolumeTracingBucketHelper with WKWDataFormatHelper {
+                                    ) extends TracingService[VolumeTracing] with VolumeTracingBucketHelper with WKWDataFormatHelper with LazyLogging {
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
-  implicit val tracingFormat = VolumeTracing.volumeTracingFormat
-
-  implicit val tag = classTag[VolumeTracing]
+  implicit val tracingProtoCompanion = VolumeTracing
 
   val tracingType = TracingType.volume
 
@@ -40,20 +38,22 @@ class VolumeTracingService @Inject()(
       return Failure("Tracing has already been edited.")
     }
 
+    val dataLayer = volumeTracingLayer(tracing)
+
     ZipIO.withUnziped(initialData) {
       case (fileName, is) =>
         WKWFile.read(is) {
           case (header, buckets) =>
             if (header.numBlocksPerCube == 1) {
               parseWKWFilePath(fileName.toString).map { bucket =>
-                saveBucket(tracing.dataLayer, bucket, buckets.next())
+                saveBucket(dataLayer, bucket, buckets.next())
               }
             }
         }
     }
   }
 
-  def update(tracing: VolumeTracing, updates: List[VolumeUpdateAction]): Fox[_] = {
+  def update(tracing: VolumeTracingDepr, updates: List[VolumeUpdateAction]): Fox[_] = {
     /*updates.foldLeft[Fox[_]](Fox.successful(())) {
       case (_: Full[Unit], action: UpdateBucketVolumeAction) =>
         val resolution = math.pow(2, action.zoomStep).toInt
@@ -68,11 +68,36 @@ class VolumeTracingService @Inject()(
   }
 
   def data(tracing: VolumeTracing): Enumerator[Array[Byte]] = {
-    val layer = tracing.dataLayer
-    val buckets = new WKWBucketStreamSink(layer)(layer.bucketProvider.bucketStream(1))
+    val dataLayer = volumeTracingLayer(tracing)
+    val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1))
 
     Enumerator.outputStream { os =>
       ZipIO.zip(buckets.toList, os)
+    }
+  }
+
+  private def volumeTracingLayer(tracing: VolumeTracing): VolumeTracingLayer = {
+    val topLeft = tracing.dataLayer.boundingBox.topLeft
+    val boundingBox = BoundingBox(
+      Point3D(topLeft.x, topLeft.y, topLeft.z),
+      tracing.dataLayer.boundingBox.width,
+      tracing.dataLayer.boundingBox.height,
+      tracing.dataLayer.boundingBox.depth)
+    val elementClass = ElementClass.fromBytesPerElement(tracing.dataLayer.elementClass.value).get
+    VolumeTracingLayer(boundingBox, elementClass, tracing.dataLayer.largestSegmentId)
+  }
+
+  def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] = {
+    find(tracingId).map { tracing =>
+      val dataLayer = volumeTracingLayer(tracing)
+      tracing.fallbackLayer.flatMap(dataSource.getDataLayer).map {
+        case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
+          new FallbackLayerAdapter(dataLayer, layer)
+        case _ =>
+          logger.error(s"Fallback layer is not a segmentation layer and thus being ignored. " +
+            s"DataSource: ${dataSource.id}. DataLayer: $tracingId. FallbackLayer: ${tracing.fallbackLayer}.")
+          dataLayer
+      }.getOrElse(dataLayer)
     }
   }
 }

@@ -8,7 +8,7 @@ import java.util.UUID
 import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValueStore}
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.trueaccord.scalapb.{GeneratedMessage, Message}
+import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -18,13 +18,13 @@ import scala.reflect.ClassTag
 
 trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStoreImplicits with FoxImplicits {
 
-  implicit val tag: ClassTag[T]
-
   def tracingType: TracingType.Value
 
   def tracingStore: VersionedKeyValueStore
 
   def temporaryTracingStore: TemporaryTracingStore[T]
+
+  implicit def tracingProtoCompanion: GeneratedMessageCompanion[T]
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life

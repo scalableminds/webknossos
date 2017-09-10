@@ -5,7 +5,11 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.scalableminds.braingames.datastore.services.AccessTokenService
 import com.scalableminds.util.mvc.ExtendedController
+import com.trueaccord.scalapb.json.JsonFormat
+import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
+import net.liftweb.common.Box
+import net.liftweb.util.Helpers.tryo
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, Reads}
 import play.api.mvc.Results.BadRequest
@@ -18,7 +22,7 @@ trait Controller
   extends PlayController
     with ExtendedController
     with RemoteOriginHelpers
-    with JsonValidationHelpers
+    with ValidationHelpers
     with LazyLogging
 
 trait TokenSecuredController extends Controller {
@@ -83,9 +87,13 @@ trait RemoteOriginHelpers {
   }
 }
 
-trait JsonValidationHelpers {
+trait ValidationHelpers {
 
   def validateJson[A : Reads] = BodyParsers.parse.json.validate(
     _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
   )
+
+  def validateProto[A <: GeneratedMessage with Message[A]](implicit companion: GeneratedMessageCompanion[A]) = BodyParsers.parse.raw.validate { raw =>
+    Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x))).toRight[Result](BadRequest("invalid request body"))
+  }
 }

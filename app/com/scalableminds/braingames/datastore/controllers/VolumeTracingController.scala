@@ -5,8 +5,9 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
-import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracing, VolumeTracingService, VolumeUpdateActionGroup}
+import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateActionGroup}
 import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingReference, TracingType}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
@@ -29,7 +30,7 @@ class VolumeTracingController @Inject()(
           initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
           _ <- tracingService.initializeWithData(tracing, initialData)
-        } yield Ok(Json.toJson(TracingReference(tracing.id, TracingType.volume)))
+        } yield Ok(Json.toJson(TracingReference(tracingId, TracingType.volume)))
       }
   }
 

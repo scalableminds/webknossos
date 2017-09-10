@@ -242,7 +242,7 @@ class BinaryDataController @Inject()(
 
   private def getDataLayer(dataSource: DataSource, dataLayerName: String): Fox[DataLayer] = {
     dataSource.getDataLayer(dataLayerName).toFox.orElse(
-      volumeTracingService.find(dataLayerName).map(_.dataLayerWithFallback(dataSource)))
+      volumeTracingService.dataLayerForVolumeTracing(dataLayerName, dataSource))
   }
 
   private def getDataSourceAndDataLayer(dataSetName: String, dataLayerName: String): Fox[(DataSource, DataLayer)] = {

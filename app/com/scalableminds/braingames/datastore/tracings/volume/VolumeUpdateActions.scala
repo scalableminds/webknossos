@@ -14,7 +14,7 @@ case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: 
 
   lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 
-  def applyTo(tracing: VolumeTracing): Box[VolumeTracing] = {
+  def applyTo(tracing: VolumeTracingDepr): Box[VolumeTracingDepr] = {
     Full(tracing)
   }
 }
@@ -31,7 +31,7 @@ case class UpdateTracingVolumeAction(
                                       zoomLevel: Double
                                     ) extends VolumeUpdateAction {
 
-  def applyTo(tracing: VolumeTracing): Box[VolumeTracing] = {
+  def applyTo(tracing: VolumeTracingDepr): Box[VolumeTracingDepr] = {
     Full(tracing)
   }
 }
@@ -40,7 +40,7 @@ object UpdateTracingVolumeAction {
   implicit val updateTracingVolumeActionFormat = Json.format[UpdateTracingVolumeAction]
 }
 
-trait VolumeUpdateAction extends UpdateAction[VolumeTracing]
+trait VolumeUpdateAction extends UpdateAction[VolumeTracingDepr]
 
 object VolumeUpdateAction {
 
@@ -55,7 +55,7 @@ object VolumeUpdateAction {
   }
 }
 
-case class VolumeUpdateActionGroup(version: Long, timestamp: Long, actions: List[VolumeUpdateAction]) extends UpdateActionGroup[VolumeTracing]
+case class VolumeUpdateActionGroup(version: Long, timestamp: Long, actions: List[VolumeUpdateAction]) extends UpdateActionGroup[VolumeTracingDepr]
 
 object VolumeUpdateActionGroup {
   implicit val volumeUpdateActionGroupReads = Json.reads[VolumeUpdateActionGroup]

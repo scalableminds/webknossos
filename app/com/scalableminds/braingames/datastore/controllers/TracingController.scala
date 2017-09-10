@@ -11,7 +11,8 @@ import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.trueaccord.scalapb.{GeneratedMessage, Message}
+import com.trueaccord.scalapb.json.JsonFormat
+import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -26,7 +27,9 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
 
   def webKnossosServer: WebKnossosServer
 
-  def save = Action.async(validateJson[T]) {
+  implicit val tracingProtoCompanion: GeneratedMessageCompanion[T] = tracingService.tracingProtoCompanion
+
+  def save = Action.async(validateProto[T]) {
     implicit request =>
       AllowRemoteOrigin {
         val tracing = request.body
@@ -37,11 +40,12 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
       }
   }
 
-  def saveMultiple = Action.async(validateJson[List[T]]) {
+  def saveMultiple = Action.async(validateProto[T]) {
     implicit request => {
       AllowRemoteOrigin {
         val tracings = request.body
-        val references = Fox.sequence(tracings.map { tracing =>
+        // TODO switch back to multiple
+        val references = Fox.sequence(List(tracings).map { tracing =>
           val tracingId = UUID.randomUUID.toString
           tracingService.save(tracing, tracingId, 0, toCache = false).map { _ =>
             TracingReference(tracingId, TracingType.skeleton)
@@ -58,7 +62,7 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(Json.toJson(tracing))
+          Ok(JsonFormat.toJsonString(tracing))
         }
       }
     }
@@ -70,7 +74,8 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
         for {
           tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
         } yield {
-          Ok(Json.toJson(tracings))
+          // TODO support multiple
+          Ok(JsonFormat.toJsonString(tracings.head))
         }
       }
     }

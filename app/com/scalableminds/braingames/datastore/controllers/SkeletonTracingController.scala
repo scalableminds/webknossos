@@ -10,13 +10,13 @@ import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.skeleton._
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracingDepr
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class SkeletonTracingController @Inject()(
                                            val tracingService: SkeletonTracingService,
@@ -25,15 +25,16 @@ class SkeletonTracingController @Inject()(
                                            val messagesApi: MessagesApi
                                        ) extends TracingController[SkeletonTracing] {
 
-  def mergedFromContents(persist: Boolean) = Action.async(validateJson[List[SkeletonTracingDepr]]) {
+  def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracing]) {
     implicit request => {
       AllowRemoteOrigin {
         val tracings = request.body
-        val mergedTracing = tracingService.merge(tracings)
+        //val mergedTracing = tracingService.merge(tracings)
         val newId = UUID.randomUUID.toString
-        tracingService.save(mergedTracing, newId, mergedTracing.version, toCache = !persist).map { _ =>
-          Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
-        }
+        //tracingService.save(mergedTracing, newId, mergedTracing.version, toCache = !persist).map { _ =>
+        //  Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
+        //}
+        Future.successful(Ok)
       }
     }
   }

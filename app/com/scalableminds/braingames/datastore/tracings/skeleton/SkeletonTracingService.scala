@@ -19,11 +19,11 @@ class SkeletonTracingService @Inject()(
                                         val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
                                       ) extends TracingService[SkeletonTracing] with KeyValueStoreImplicits with FoxImplicits with TextUtils {
 
-  implicit val tag = classTag[SkeletonTracing]
-
   val tracingType = TracingType.skeleton
 
   val tracingStore = tracingDataStore.skeletons
+
+  implicit val tracingProtoCompanion = SkeletonTracing
 
   def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[_]] = {
     Fox.combined(for {

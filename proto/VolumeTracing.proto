@@ -1,0 +1,35 @@
+syntax = "proto2";
+
+package com.scalableminds.braingames.datastore;
+
+import "geometry.proto";
+
+message VolumeTracingLayer {
+    enum ElementClass {
+        uint8 = 1;
+        uint16 = 2;
+        uint24 = 3;
+        uint32 = 4;
+        uint64 = 8;
+    }
+
+    required BoundingBox boundingBox = 1;
+    required ElementClass elementClass = 2;
+    required int64 largestSegmentId = 3;
+}
+
+message VolumeTracing {
+    optional int64 activeSegmentId = 1;
+    required int64 createdTimestamp = 2;
+    required VolumeTracingLayer dataLayer = 3;
+    required string dataSetName = 4;
+    required Point3D editPosition = 5;
+    required Vector3D editRotation = 6;
+    optional string fallbackLayer = 7;
+    required int64 version = 8;
+    required double zoomLevel = 9;
+}
+
+message VolumeTracings {
+    repeated VolumeTracing tracings = 1;
+}

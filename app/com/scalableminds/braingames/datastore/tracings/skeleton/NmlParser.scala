@@ -69,11 +69,11 @@ object NmlParser extends LazyLogging {
     }
   }
 
-  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
+  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPointDepr], comments: Seq[CommentDepr]) = {
     validateTrees(parseTrees(treeNodes, branchPoints, comments)).map(transformTrees)
   }
 
-  def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
+  def validateTrees(trees: Seq[TreeDepr]): Box[Seq[TreeDepr]] = {
     val nodeIds = trees.flatMap(_.nodes).map(_.id)
     nodeIds.size == nodeIds.distinct.size match {
       case true  => Full(trees)
@@ -81,12 +81,12 @@ object NmlParser extends LazyLogging {
     }
   }
 
-  private def transformTrees(trees: Seq[Tree]): Seq[Tree] = {
+  private def transformTrees(trees: Seq[TreeDepr]): Seq[TreeDepr] = {
     createUniqueIds(trees.flatMap(splitIntoComponents))
   }
 
-  private def createUniqueIds(trees: Seq[Tree]) = {
-    trees.foldLeft(List[Tree]()) {
+  private def createUniqueIds(trees: Seq[TreeDepr]) = {
+    trees.foldLeft(List[TreeDepr]()) {
       case (l, t) =>
         if (!l.exists(_.treeId == t.treeId))
           t :: l
@@ -97,7 +97,7 @@ object NmlParser extends LazyLogging {
     }
   }
 
-  private def splitIntoComponents(tree: Tree): List[Tree] = {
+  private def splitIntoComponents(tree: TreeDepr): List[TreeDepr] = {
     def emptyTree = tree.copy(nodes = Set.empty, edges = Set.empty)
 
     val start = System.currentTimeMillis()
@@ -106,9 +106,9 @@ object NmlParser extends LazyLogging {
 
     @tailrec
     def buildTreeFromNode(
-      nodesToProcess: List[Node],
-      treeReminder: Tree,
-      component: Tree = emptyTree): (Tree, Tree) = {
+                           nodesToProcess: List[NodeDepr],
+                           treeReminder: TreeDepr,
+                           component: TreeDepr = emptyTree): (TreeDepr, TreeDepr) = {
 
       if (nodesToProcess.nonEmpty) {
         val node = nodesToProcess.head
@@ -116,8 +116,8 @@ object NmlParser extends LazyLogging {
         val connectedEdges = treeReminder.edges.filter(e => e.source == node.id || e.target == node.id)
 
         val connectedNodes = connectedEdges.flatMap {
-          case Edge(s, t) if s == node.id => nodeMap.get(t)
-          case Edge(s, t) if t == node.id => nodeMap.get(s)
+          case EdgeDepr(s, t) if s == node.id => nodeMap.get(t)
+          case EdgeDepr(s, t) if t == node.id => nodeMap.get(s)
         }
 
         val currentComponent = tree.copy(nodes = connectedNodes + node, edges = connectedEdges)
@@ -129,7 +129,7 @@ object NmlParser extends LazyLogging {
 
     var treeToProcess = tree
 
-    var components = List[Tree]()
+    var components = List[TreeDepr]()
 
     while (treeToProcess.nodes.nonEmpty) {
       val (treeReminder, component) = buildTreeFromNode(treeToProcess.nodes.head :: Nil, treeToProcess)
@@ -143,7 +143,7 @@ object NmlParser extends LazyLogging {
         treeId = tree.treeId))
   }
 
-  private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
+  private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPointDepr], comments: Seq[CommentDepr]) = {
     treeNodes.flatMap(treeNode => parseTree(treeNode, branchPoints, comments))
   }
 
@@ -179,7 +179,7 @@ object NmlParser extends LazyLogging {
         (branchPoint \ "@id").text.toIntOpt.map { nodeId =>
           val parsedTimestamp = (branchPoint \ "@time").text.toLongOpt
           val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
-          BranchPoint(nodeId, timestamp)
+          BranchPointDepr(nodeId, timestamp)
         }
     }
   }
@@ -229,9 +229,9 @@ object NmlParser extends LazyLogging {
   }
 
   private def parseTree(
-    tree: XMLNode,
-    branchPoints: Seq[BranchPoint],
-    comments: Seq[Comment]): Option[Tree] = {
+                         tree: XMLNode,
+                         branchPoints: Seq[BranchPointDepr],
+                         comments: Seq[CommentDepr]): Option[TreeDepr] = {
 
     (tree \ "@id").text.toIntOpt.flatMap {
       id =>
@@ -245,7 +245,7 @@ object NmlParser extends LazyLogging {
             val nodeIds = nodes.map(_.id)
             val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.id)).toList
             val treeComments = comments.filter(bp => nodeIds.contains(bp.node)).toList
-            Some(Tree(id, nodes, edges, color, treeBP, treeComments, name))
+            Some(TreeDepr(id, nodes, edges, color, treeBP, treeComments, name))
           case _                                   =>
             None
         }
@@ -258,7 +258,7 @@ object NmlParser extends LazyLogging {
       nodeId <- (comment \ "@node").text.toIntOpt
     } yield {
       val content = (comment \ "@content").text
-      Comment(nodeId, content)
+      CommentDepr(nodeId, content)
     }
   }
 
@@ -267,7 +267,7 @@ object NmlParser extends LazyLogging {
       source <- (edge \ "@source").text.toIntOpt
       target <- (edge \ "@target").text.toIntOpt
     } yield {
-      Edge(source, target)
+      EdgeDepr(source, target)
     }
   }
 
@@ -302,8 +302,8 @@ object NmlParser extends LazyLogging {
       val timestamp = parseTimestamp(node)
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
-      val rotation = parseRotation(node).getOrElse(Node.defaultRotation)
-      Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
+      val rotation = parseRotation(node).getOrElse(NodeDepr.defaultRotation)
+      NodeDepr(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
     }
   }
 

@@ -8,17 +8,15 @@ import java.util.UUID
 import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValueStore}
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.trueaccord.scalapb.{GeneratedMessage, Message}
 import net.liftweb.common.{Empty, Failure, Full}
-import play.api.libs.json.Format
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
-trait TracingService[T] extends KeyValueStoreImplicits with FoxImplicits {
-
-  implicit val tracingFormat: Format[T]
+trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStoreImplicits with FoxImplicits {
 
   implicit val tag: ClassTag[T]
 
@@ -41,7 +39,7 @@ trait TracingService[T] extends KeyValueStoreImplicits with FoxImplicits {
     Fox.successful(tracing)
 
   def find(tracingId: String, version: Option[Long] = None, useCache: Boolean = true, applyUpdates: Boolean = false): Fox[T] = {
-    tracingStore.get(tracingId, version)(fromJson[T]).map(_.value).flatMap { tracing =>
+    tracingStore.get(tracingId, version)(fromProto[T]).map(_.value).flatMap { tracing =>
       if (applyUpdates)
         applyPendingUpdates(tracing, tracingId, version)
       else

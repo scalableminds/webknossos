@@ -8,7 +8,7 @@ import com.scalableminds.util.mvc.ExtendedController
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, Reads}
-import play.api.mvc.Results.{BadRequest, Forbidden}
+import play.api.mvc.Results.BadRequest
 import play.api.mvc.{Controller => PlayController, _}
 import play.api.{Mode, Play}
 

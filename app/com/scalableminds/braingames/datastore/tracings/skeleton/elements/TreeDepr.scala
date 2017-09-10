@@ -11,13 +11,13 @@ import com.scalableminds.util.xml.{XMLWrites, Xml}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{JsObject, Json, OWrites, Writes}
 
-case class Tree(
+case class TreeDepr(
                  treeId: Int,
-                 nodes: Set[Node],
-                 edges: Set[Edge],
+                 nodes: Set[NodeDepr],
+                 edges: Set[EdgeDepr],
                  color: Option[Color],
-                 branchPoints: List[BranchPoint],
-                 comments: List[Comment],
+                 branchPoints: List[BranchPointDepr],
+                 comments: List[CommentDepr],
                  name: String = "") {
 
   def timestamp =
@@ -26,15 +26,15 @@ case class Tree(
     else
       nodes.minBy(_.timestamp).timestamp
 
-  def addNodes(ns: Set[Node]) = this.copy(nodes = nodes ++ ns)
+  def addNodes(ns: Set[NodeDepr]) = this.copy(nodes = nodes ++ ns)
 
-  def addEdges(es: Set[Edge]) = this.copy(edges = edges ++ es)
+  def addEdges(es: Set[EdgeDepr]) = this.copy(edges = edges ++ es)
 
-  def --(t: Tree) = {
+  def --(t: TreeDepr) = {
     this.copy(nodes = nodes -- t.nodes, edges = edges -- t.edges)
   }
 
-  def ++(t: Tree) = {
+  def ++(t: TreeDepr) = {
     this.copy(nodes = nodes ++ t.nodes, edges = edges ++ t.edges)
   }
 
@@ -60,7 +60,7 @@ case class Tree(
   }
 }
 
-object Tree {
+object TreeDepr {
 
   implicit class OWritesExt[A](owrites: OWrites[A]) {
     def withValue[B : Writes](key: String, value: A => B): OWrites[A] =
@@ -69,11 +69,11 @@ object Tree {
       }
   }
 
-  implicit val jsonWrites = Json.writes[Tree].withValue("timestamp", _.timestamp)
-  implicit val jsonReads = Json.reads[Tree]
+  implicit val jsonWrites = Json.writes[TreeDepr].withValue("timestamp", _.timestamp)
+  implicit val jsonReads = Json.reads[TreeDepr]
 
-  implicit object TreeLikeXMLWrites extends XMLWrites[Tree] with LazyLogging {
-    def writes(t: Tree)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
+  implicit object TreeLikeXMLWrites extends XMLWrites[TreeDepr] with LazyLogging {
+    def writes(t: TreeDepr)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
       Xml.withinElement("thing") {
         writer.writeAttribute("id", t.treeId.toString)
         writer.writeAttribute("color.r", t.color.map(_.r.toString).getOrElse(""))

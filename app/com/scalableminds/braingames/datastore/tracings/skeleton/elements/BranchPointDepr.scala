@@ -9,15 +9,15 @@ import com.scalableminds.util.xml.SynchronousXMLWrites
 import play.api.libs.json.Json
 
 
-case class BranchPoint(
+case class BranchPointDepr(
   id: Int,
   timestamp: Long)
 
-object BranchPoint {
-  implicit val jsonFormat = Json.format[BranchPoint]
+object BranchPointDepr {
+  implicit val jsonFormat = Json.format[BranchPointDepr]
 
-  implicit object BranchPointXMLWrites extends SynchronousXMLWrites[BranchPoint] {
-    def synchronousWrites(b: BranchPoint)(implicit writer: XMLStreamWriter): Boolean = {
+  implicit object BranchPointXMLWrites extends SynchronousXMLWrites[BranchPointDepr] {
+    def synchronousWrites(b: BranchPointDepr)(implicit writer: XMLStreamWriter): Boolean = {
       writer.writeStartElement("branchpoint")
       writer.writeAttribute("id", b.id.toString)
       writer.writeAttribute("time", b.timestamp.toString)

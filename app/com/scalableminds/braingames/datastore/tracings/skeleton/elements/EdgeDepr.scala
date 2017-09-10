@@ -8,15 +8,15 @@ import javax.xml.stream.XMLStreamWriter
 import com.scalableminds.util.xml.SynchronousXMLWrites
 import play.api.libs.json.Json
 
-case class Edge(
+case class EdgeDepr(
   source: Int,
   target: Int)
 
-object Edge {
-  implicit val jsonFormat = Json.format[Edge]
+object EdgeDepr {
+  implicit val jsonFormat = Json.format[EdgeDepr]
 
-  implicit object EdgeXMLWrites extends SynchronousXMLWrites[Edge] {
-    def synchronousWrites(e: Edge)(implicit writer: XMLStreamWriter): Boolean = {
+  implicit object EdgeXMLWrites extends SynchronousXMLWrites[EdgeDepr] {
+    def synchronousWrites(e: EdgeDepr)(implicit writer: XMLStreamWriter): Boolean = {
       writer.writeStartElement("edge")
       writer.writeAttribute("source", e.source.toString)
       writer.writeAttribute("target", e.target.toString)

@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.Tree
+import com.scalableminds.braingames.datastore.SkeletonTracing.Tree
 
 
 object TreeUtils {
@@ -25,28 +25,36 @@ object TreeUtils {
       nodes.map(_.id).max
   }
 
-  def maxTreeId(trees: List[Tree]) = {
+  def maxTreeId(trees: Seq[Tree]) = {
     if (trees.isEmpty)
       0
     else
       trees.map(_.treeId).max
   }
 
-  def mergeTrees(sourceTrees: List[Tree], targetTrees: List[Tree], nodeMapping: FunctionalNodeMapping) = {
+  def mergeTrees(sourceTrees: Seq[Tree], targetTrees: Seq[Tree], nodeMapping: FunctionalNodeMapping) = {
     val treeMaxId = maxTreeId(targetTrees)
 
     val mappedSourceTrees = sourceTrees.map(tree =>
-      tree.changeTreeId(tree.treeId + treeMaxId).applyNodeMapping(nodeMapping))
+      applyNodeMapping(tree.withTreeId(tree.treeId + treeMaxId), nodeMapping))
 
-    targetTrees ::: mappedSourceTrees
+    targetTrees ++ mappedSourceTrees
   }
 
-  def calculateNodeMapping(sourceTrees: List[Tree], targetTrees: List[Tree]) = {
+  def applyNodeMapping(tree: Tree, f: Int => Int) = {
+    tree
+      .withNodes(tree.nodes.map(node => node.withId(f(node.id))))
+      .withEdges(tree.edges.map(edge => edge.withSource(f(edge.source)).withTarget(f(edge.target))))
+      .withComments(tree.comments.map(comment => comment.withNodeId(f(comment.nodeId))))
+      .withBranchPoints(tree.branchPoints.map(bp => bp.withNodeId(f(bp.nodeId))))
+  }
+
+  def calculateNodeMapping(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) = {
     val nodeIdOffset = calculateNodeOffset(sourceTrees, targetTrees)
     (nodeId: Int) => nodeId + nodeIdOffset
   }
 
-  def calculateNodeOffset(sourceTrees: List[Tree], targetTrees: List[Tree]) = {
+  def calculateNodeOffset(sourceTrees: Seq[Tree], targetTrees: Seq[Tree]) = {
     if (targetTrees.isEmpty)
       0
     else {

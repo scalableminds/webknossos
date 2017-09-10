@@ -11,7 +11,7 @@ import com.scalableminds.util.image.Color
 import play.api.libs.json.Json
 
 case class SkeletonTracingDepr(dataSetName: String,
-                               override val trees: List[Tree] = SkeletonTracingDepr.defaultTrees,
+                               override val trees: List[TreeDepr] = SkeletonTracingDepr.defaultTrees,
                                timestamp: Long = SkeletonTracingDepr.defaultTimestamp,
                                boundingBox: Option[BoundingBox] = SkeletonTracingDepr.defaultBoundingBox,
                                activeNodeId: Option[Int] = SkeletonTracingDepr.defaultActiveNodeId,
@@ -20,16 +20,16 @@ case class SkeletonTracingDepr(dataSetName: String,
                                zoomLevel: Double = SkeletonTracingDepr.defaultZoomLevel,
                                version: Long = SkeletonTracingDepr.defaultVersion) extends Tracing {
 
-  def addTree(newTree: Tree): SkeletonTracingDepr =
+  def addTree(newTree: TreeDepr): SkeletonTracingDepr =
     this.copy(trees = newTree :: this.trees)
 
   def deleteTree(treeId: Long) =
     this.copy(trees = this.trees.filter(_.treeId != treeId))
 
   def updateTree(id: Int, updatedId: Option[Int], color: Option[Color],
-                 name: String, branchPoints: List[BranchPoint],
-                 comments: List[Comment]) = {
-    def treeTransform(tree: Tree) = tree.copy(
+                 name: String, branchPoints: List[BranchPointDepr],
+                 comments: List[CommentDepr]) = {
+    def treeTransform(tree: TreeDepr) = tree.copy(
                                         color = color orElse tree.color,
                                         treeId = updatedId getOrElse id,
                                         branchPoints = branchPoints,
@@ -40,7 +40,7 @@ case class SkeletonTracingDepr(dataSetName: String,
   }
 
   def mergeTree(sourceId: Int, targetId: Int) = {
-    def treeTransform(targetTree: Tree) = {
+    def treeTransform(targetTree: TreeDepr) = {
       val sourceTree = treeById(sourceId)
       targetTree.copy(nodes = targetTree.nodes.union(sourceTree.nodes),
                       edges = targetTree.edges.union(sourceTree.edges),
@@ -65,7 +65,7 @@ case class SkeletonTracingDepr(dataSetName: String,
                                         comments = movedC ::: targetTree.comments, nodes = targetTree.nodes.union(movedNodes),
                                         edges = targetTree.edges.union(movedEdges))
 
-    def selectTree(tree: Tree) =
+    def selectTree(tree: TreeDepr) =
       if (tree.treeId == sourceId)
         updatedSource
       else if (tree.treeId == targetId)
@@ -76,41 +76,41 @@ case class SkeletonTracingDepr(dataSetName: String,
   }
 
 
-  def addNodeToTree(newNode: Node, treeId: Int) = {
-    def treeTransform(tree: Tree) = tree.copy(nodes = tree.nodes + newNode)
+  def addNodeToTree(newNode: NodeDepr, treeId: Int) = {
+    def treeTransform(tree: TreeDepr) = tree.copy(nodes = tree.nodes + newNode)
 
     this.copy(trees = mapTrees(treeId, treeTransform))
   }
 
   def deleteNodeFromTree(nodeId: Int, treeId: Int) = {
-    def treeTransform(tree: Tree) =
+    def treeTransform(tree: TreeDepr) =
       tree.copy(nodes = tree.nodes.filter(_.id != nodeId),
                 edges = tree.edges.filter(e => e.source != nodeId && e.target != nodeId))
 
     this.copy(trees = mapTrees(treeId, treeTransform))
   }
 
-  def updateNodeInTree(newNode: Node, treeId: Int) = {
-    def treeTransform(tree: Tree) =
+  def updateNodeInTree(newNode: NodeDepr, treeId: Int) = {
+    def treeTransform(tree: TreeDepr) =
       tree.copy(nodes = tree.nodes.map(n => if (n.id == newNode.id) newNode else n))
 
     this.copy(trees = mapTrees(treeId, treeTransform))
   }
 
-  def addEdgeToTree(edge: Edge, treeId: Int) = {
-    def treeTransform(tree: Tree) = tree.copy(edges = tree.edges + edge)
+  def addEdgeToTree(edge: EdgeDepr, treeId: Int) = {
+    def treeTransform(tree: TreeDepr) = tree.copy(edges = tree.edges + edge)
 
     this.copy(trees = mapTrees(treeId, treeTransform))
   }
 
-  def deleteEdgeFromTree(edge: Edge, treeId: Int) = {
-    def treeTransform(tree: Tree) = tree.copy(edges = tree.edges.filter(_ != edge))
+  def deleteEdgeFromTree(edge: EdgeDepr, treeId: Int) = {
+    def treeTransform(tree: TreeDepr) = tree.copy(edges = tree.edges.filter(_ != edge))
 
     this.copy(trees = mapTrees(treeId, treeTransform))
   }
 
-  private def mapTrees(treeId: Int, transformTree: Tree => Tree): List[Tree] = {
-    this.trees.map((tree: Tree) => if (tree.treeId == treeId) transformTree(tree) else tree)
+  private def mapTrees(treeId: Int, transformTree: TreeDepr => TreeDepr): List[TreeDepr] = {
+    this.trees.map((tree: TreeDepr) => if (tree.treeId == treeId) transformTree(tree) else tree)
   }
 
   private def treeById(id: Int) =

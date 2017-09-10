@@ -3,86 +3,206 @@
  */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements._
-import com.scalableminds.util.geometry.{Point3D, Vector3D}
-import com.scalableminds.util.image.Color
+import com.scalableminds.braingames.datastore.SkeletonTracing._
+import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPointDepr, CommentDepr}
 import play.api.libs.json._
 
 trait SkeletonUpdateAction {
-  def applyOn(tracing: SkeletonTracingDepr): SkeletonTracingDepr
+  def applyOn(tracing: SkeletonTracing): SkeletonTracing
+
+  protected def mapTrees(tracing: SkeletonTracing, treeId: Int, transformTree: Tree => Tree): Seq[Tree] = {
+    tracing.trees.map((tree: Tree) => if (tree.treeId == treeId) transformTree(tree) else tree)
+  }
+
+  protected def treeById(tracing: SkeletonTracing, treeId: Int) =
+    tracing.trees.find(_.treeId == treeId)
+      .getOrElse(throw new NoSuchElementException("Tracing does not contain tree with requested id " + treeId))
+
+  protected def convertVector3D(aVector: com.scalableminds.util.geometry.Vector3D) =
+    Vector3D(aVector.x, aVector.y, aVector.z)
+  protected def convertPoint3D(aPoint: com.scalableminds.util.geometry.Point3D) =
+    Point3D(aPoint.x, aPoint.y, aPoint.z)
+  protected def convertColor(aColor: com.scalableminds.util.image.Color) =
+    Color(aColor.r, aColor.g, aColor.b, aColor.a)
+  protected def convertBranchPoint(aBranchPoint: BranchPointDepr) =
+    BranchPoint(aBranchPoint.id, aBranchPoint.timestamp)
+  protected def convertComment(aComment: CommentDepr) =
+    Comment(aComment.node, aComment.content)
+  protected def convertVector3DOpt(aVectorOpt: Option[com.scalableminds.util.geometry.Vector3D]) = aVectorOpt match {
+    case Some(aVector) => Some(Vector3D(aVector.x, aVector.y, aVector.z))
+    case None => None
+  }
+  protected def convertPoint3DOpt(aPointOpt: Option[com.scalableminds.util.geometry.Point3D]) = aPointOpt match {
+    case Some(aPoint) => Some(convertPoint3D(aPoint))
+    case None => None
+  }
+  protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]) = aColorOpt match {
+    case Some(aColor) => Some(convertColor(aColor))
+    case None => None
+  }
 }
 
-case class CreateTreeSkeletonAction(id: Int, color: Option[Color], name: String,
-                                    branchPoints: List[BranchPoint], comments: List[Comment]) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = {
-    val newTree = Tree(id, Set(), Set(), color, branchPoints, comments, name)
-    tracing.addTree(newTree)
+case class CreateTreeSkeletonAction(id: Int, color: Option[com.scalableminds.util.image.Color], name: String,
+                                    branchPoints: List[BranchPointDepr], comments: List[CommentDepr]) extends SkeletonUpdateAction {
+  override def applyOn(tracing: SkeletonTracing) = {
+    val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name)
+    tracing.withTrees(newTree +: tracing.trees)
   }
 }
 
 case class DeleteTreeSkeletonAction(id: Int) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = tracing.deleteTree(id)
+  override def applyOn(tracing: SkeletonTracing) = tracing.withTrees(tracing.trees.filter(_.treeId != id))
 }
 
-case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Option[Color], name: String,
-                                    branchPoints: List[BranchPoint], comments: List[Comment]) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) =
-    tracing.updateTree(id, updatedId, color, name, branchPoints, comments)
+case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Option[com.scalableminds.util.image.Color], name: String,
+                                    branchPoints: List[BranchPointDepr], comments: List[CommentDepr]) extends SkeletonUpdateAction {
+  override def applyOn(tracing: SkeletonTracing) = {
+    def treeTransform(tree: Tree) =
+      tree
+        .withColor(convertColorOpt(color) getOrElse tree.getColor)
+        .withTreeId(updatedId.getOrElse(tree.treeId))
+        .withBranchPoints(branchPoints.map(convertBranchPoint))
+        .withComments(comments.map(convertComment))
+        .withName(name)
+
+    tracing.withTrees(mapTrees(tracing, id, treeTransform))
+  }
 }
 
 case class MergeTreeSkeletonAction(sourceId: Int, targetId: Int) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = tracing.mergeTree(sourceId, targetId)
+  override def applyOn(tracing: SkeletonTracing) = {
+    def treeTransform(targetTree: Tree) = {
+      val sourceTree = treeById(tracing, sourceId)
+      targetTree
+        .withNodes(targetTree.nodes.union(sourceTree.nodes))
+        .withEdges(targetTree.edges.union(sourceTree.edges))
+        .withBranchPoints(targetTree.branchPoints ++ sourceTree.branchPoints)
+        .withComments(targetTree.comments ++ sourceTree.comments)
+    }
+
+    tracing.withTrees(mapTrees(tracing, targetId, treeTransform).filter(_.treeId != sourceId))
+  }
 }
 
 case class MoveTreeComponentSkeletonAction(nodeIds: List[Int], sourceId: Int, targetId: Int) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = tracing.moveTreeComponent(sourceId, targetId, nodeIds)
+  override def applyOn(tracing: SkeletonTracing) = {
+    val sourceTree = treeById(tracing, sourceId)
+    val targetTree = treeById(tracing, targetId)
+
+    val (movedNodes, remainingNodes) = sourceTree.nodes.partition(nodeIds contains _.id)
+    val (movedEdges, remainingEdges) = sourceTree.edges.partition(e => nodeIds.contains(e.source) && nodeIds.contains(e.target))
+    val (movedBp, remainingBp) = sourceTree.branchPoints.partition(bp => nodeIds.contains(bp.nodeId))
+    val (movedC, remainingC) = sourceTree.comments.partition(c => nodeIds.contains(c.nodeId))
+    val updatedSource = sourceTree.copy(branchPoints = remainingBp, comments = remainingC,
+      nodes = remainingNodes, edges = remainingEdges)
+    val updatedTarget = targetTree.copy(branchPoints = movedBp ++ targetTree.branchPoints,
+      comments = movedC ++ targetTree.comments, nodes = targetTree.nodes.union(movedNodes),
+      edges = targetTree.edges.union(movedEdges))
+
+    def selectTree(tree: Tree) =
+      if (tree.treeId == sourceId)
+        updatedSource
+      else if (tree.treeId == targetId)
+        updatedTarget
+      else tree
+
+    tracing.withTrees(tracing.trees.map(selectTree))
+  }
 }
 
 case class CreateEdgeSkeletonAction(source: Int, target: Int, treeId: Int) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = tracing.addEdgeToTree(Edge(source, target), treeId)
+  override def applyOn(tracing: SkeletonTracing) = {
+    def treeTransform(tree: Tree) = tree.withEdges(Edge(source, target) +: tree.edges)
+    tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
+  }
 }
 
 case class DeleteEdgeSkeletonAction(source: Int, target: Int, treeId: Int) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = tracing.deleteEdgeFromTree(Edge(source, target), treeId)
+  override def applyOn(tracing: SkeletonTracing) = {
+    def treeTransform(tree: Tree) = tree.copy(edges = tree.edges.filter(_ != Edge(source, target)))
+    tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
+  }
 }
 
 
-case class CreateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
+case class CreateNodeSkeletonAction(id: Int, position: com.scalableminds.util.geometry.Point3D,
+                                    rotation: Option[com.scalableminds.util.geometry.Vector3D], radius: Option[Float],
                                     viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
                                     interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = {
-    val newNode = Node.fromOptions(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation)
-    tracing.addNodeToTree(newNode, treeId)
+  override def applyOn(tracing: SkeletonTracing) = {
+
+    val newNode = Node(
+      id,
+      convertPoint3D(position),
+      convertVector3DOpt(rotation) getOrElse NodeDefaults.defaultRotation,
+      radius getOrElse NodeDefaults.defaultRadius,
+      viewport getOrElse NodeDefaults.defaultViewport,
+      resolution getOrElse NodeDefaults.defaultResolution,
+      bitDepth getOrElse NodeDefaults.defaultBitDepth,
+      interpolation getOrElse NodeDefaults.defaultInterpolation,
+      createdTimestamp = System.currentTimeMillis
+    )
+
+    def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
+
+    tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
+  }
+}
+
+
+case class UpdateNodeSkeletonAction(id: Int, position: com.scalableminds.util.geometry.Point3D,
+                                    rotation: Option[com.scalableminds.util.geometry.Vector3D], radius: Option[Float],
+                                    viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
+                                    interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction {
+  override def applyOn(tracing: SkeletonTracing) = {
+
+
+    val newNode = Node(
+      id,
+      convertPoint3D(position),
+      convertVector3DOpt(rotation) getOrElse NodeDefaults.defaultRotation,
+      radius getOrElse NodeDefaults.defaultRadius,
+      viewport getOrElse NodeDefaults.defaultViewport,
+      resolution getOrElse NodeDefaults.defaultResolution,
+      bitDepth getOrElse NodeDefaults.defaultBitDepth,
+      interpolation getOrElse NodeDefaults.defaultInterpolation,
+      createdTimestamp = System.currentTimeMillis
+    )
+
+    def treeTransform(tree: Tree) =
+      tree.withNodes(tree.nodes.map(n => if (n.id == newNode.id) newNode else n))
+
+    tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
 }
 
 case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = tracing.deleteNodeFromTree(nodeId, treeId)
-}
+  override def applyOn(tracing: SkeletonTracing) = {
 
-case class UpdateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
-                                    viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
-                                    interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = {
-    val newNode = Node.fromOptions(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation)
-    tracing.updateNodeInTree(newNode, treeId)
+    def treeTransform(tree: Tree) =
+      tree
+        .withNodes(tree.nodes.filter(_.id != nodeId))
+        .withEdges(tree.edges.filter(e => e.source != nodeId && e.target != nodeId))
+
+    tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
 }
 
-case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: Point3D,
-                                       editRotation: Vector3D, zoomLevel: Double) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) =
-    tracing.copy(
-      activeNodeId = activeNode.map(Some(_)).getOrElse(tracing.activeNodeId),
-      editPosition = editPosition,
-      editRotation = editRotation,
-      zoomLevel = zoomLevel)
+case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: com.scalableminds.util.geometry.Point3D,
+                                       editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double) extends SkeletonUpdateAction {
+  override def applyOn(tracing: SkeletonTracing) =
+    tracing
+      .withActiveNodeId(activeNode.getOrElse(tracing.getActiveNodeId))
+      .withEditPosition(convertPoint3D(editPosition))
+      .withEditRotation(convertVector3D(editRotation))
+      .withZoomLevel(zoomLevel)
 }
 
 
 
 case class RevertToVersionAction(sourceVersion: Long) extends SkeletonUpdateAction {
-  override def applyOn(tracing: SkeletonTracingDepr) = throw new Exception("RevertToVersionAction applied on unversioned tracing")
+  override def applyOn(tracing: SkeletonTracing) = throw new Exception("RevertToVersionAction applied on unversioned tracing")
 }
 
 

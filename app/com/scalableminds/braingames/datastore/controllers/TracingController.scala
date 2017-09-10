@@ -11,15 +11,14 @@ import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.boxFormat
+import com.trueaccord.scalapb.{GeneratedMessage, Message}
 import play.api.i18n.Messages
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Json
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait TracingController[T] extends Controller {
-
-  implicit val tracingFormat: Format[T] = tracingService.tracingFormat
+trait TracingController[T <: GeneratedMessage with Message[T]] extends Controller {
 
   def dataSourceRepository: DataSourceRepository
 

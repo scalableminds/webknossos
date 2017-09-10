@@ -3,16 +3,12 @@
  */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
-import java.io.File
-
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValuePair}
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracingDepr
-import com.scalableminds.braingames.datastore.tracings.{TemporaryTracingStore, TracingDataStore, TracingService, TracingType}
-import com.scalableminds.util.geometry.BoundingBox
-import com.scalableminds.util.io.ZipIO
+import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.reflect._
@@ -20,12 +16,10 @@ import scala.reflect._
 
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
-                                        val temporaryTracingStore: TemporaryTracingStore[SkeletonTracingDepr]
-                                      ) extends TracingService[SkeletonTracingDepr] with KeyValueStoreImplicits with FoxImplicits with TextUtils {
+                                        val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
+                                      ) extends TracingService[SkeletonTracing] with KeyValueStoreImplicits with FoxImplicits with TextUtils {
 
-  implicit val tracingFormat = SkeletonTracingDepr.jsonFormat
-
-  implicit val tag = classTag[SkeletonTracingDepr]
+  implicit val tag = classTag[SkeletonTracing]
 
   val tracingType = TracingType.skeleton
 
@@ -39,7 +33,7 @@ class SkeletonTracingService @Inject()(
     })
   }
 
-  override def applyPendingUpdates(tracing: SkeletonTracingDepr, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracingDepr] = {
+  override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {
     val existingVersion = tracing.version
     findDesiredOrNewestPossibleVersion(tracing, tracingId, desiredVersion).flatMap { newVersion =>
       if (newVersion > existingVersion) {
@@ -56,7 +50,7 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracingDepr, tracingId: String, desiredVersion: Option[Long]): Fox[Long] = {
+  private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[Long] = {
     (for {
       newestUpdate <- tracingDataStore.skeletonUpdates.get(tracingId)
     } yield {
@@ -85,8 +79,8 @@ class SkeletonTracingService @Inject()(
     }
   }
 
-  private def update(tracing: SkeletonTracingDepr, tracingId: String, updates: List[SkeletonUpdateAction], newVersion: Long): Fox[SkeletonTracingDepr] = {
-    def updateIter(tracingFox: Fox[SkeletonTracingDepr], remainingUpdates: List[SkeletonUpdateAction]): Fox[SkeletonTracingDepr] = {
+  private def update(tracing: SkeletonTracing, tracingId: String, updates: List[SkeletonUpdateAction], newVersion: Long): Fox[SkeletonTracing] = {
+    def updateIter(tracingFox: Fox[SkeletonTracing], remainingUpdates: List[SkeletonUpdateAction]): Fox[SkeletonTracing] = {
       tracingFox.futureBox.flatMap {
         case Empty => Fox.empty
         case Full(tracing) => {
@@ -108,71 +102,28 @@ class SkeletonTracingService @Inject()(
       case head :: tail => {
         for {
           updated <- updateIter(Some(tracing), updates)
-        } yield updated.copy(version = newVersion)
+        } yield updated.withVersion(newVersion)
       }
     }
   }
 
-  def duplicate(tracing: SkeletonTracingDepr): Fox[String] = {
-    val newTracing = tracing.copy(timestamp = System.currentTimeMillis(), version = 0)
+  def duplicate(tracing: SkeletonTracing): Fox[String] = {
+    val newTracing = tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
     val newTracingId = createNewId
     for {
       _ <- save(newTracing, createNewId, newTracing.version)
     } yield newTracingId
   }
 
-  private def mergeTwo(tracingA: SkeletonTracingDepr, tracingB: SkeletonTracingDepr) = {
-    def mergeBoundingBoxes(aOpt: Option[BoundingBox], bOpt: Option[BoundingBox]) =
-      for {
-        a <- aOpt
-        b <- bOpt
-      } yield a.combineWith(b)
-
+  private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
     val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping)
-    val mergedBoundingBoxes = mergeBoundingBoxes(tracingA.boundingBox, tracingB.boundingBox)
-    tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBoxes, version = 0)
+    val mergedBoundingBox = BoundingBoxUtils.mergeTwoOpt(tracingA.boundingBox, tracingB.boundingBox)
+    tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBox, version = 0)
   }
 
-  def merge(tracings: List[SkeletonTracingDepr], newId: String = createNewId): SkeletonTracingDepr =
+  def merge(tracings: List[SkeletonTracing], newId: String = createNewId): SkeletonTracing =
     tracings.reduceLeft(mergeTwo)
 
-  //TODO: move to wk
-  def extractAllFromZip(zipfile: Option[File]): Box[List[SkeletonTracingDepr]] = {
-    def isFailure[T](box: Box[T]) = {
-      box match {
-        case Failure(msg, _, _) => true
-        case _ => false
-      }
-    }
-    def findFailure[T](boxList: List[Box[T]]) = boxList.find(box => isFailure(box))
-
-    def unzip(file: File) = {
-      val boxOfBoxes: Box[List[Box[SkeletonTracingDepr]]] = ZipIO.withUnziped(file) {
-        case (filePath, inputStream) => {
-          val isNml = filePath.toString.toLowerCase.endsWith(".nml")
-          if (!isNml) Empty
-          else {
-            NmlParser.parse(filePath.getFileName.toString, inputStream)
-          }
-        }
-      }
-      boxOfBoxes match {
-        case Full(tracings: List[Box[SkeletonTracingDepr]]) => {
-          val firstFailure = findFailure(tracings)
-          firstFailure match {
-            case Some(Failure(msg, _, _)) => Failure("Failed to parse an NML in zipfile: " + msg)
-            case _ => Full(tracings.flatten)
-          }
-        }
-        case _ => Failure("Could not unpack zipfile")
-      }
-    }
-
-    zipfile match {
-      case None => Failure("Empty or No zipfile")
-      case Some(file) => unzip(file)
-    }
-  }
 
 }

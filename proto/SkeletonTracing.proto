@@ -12,7 +12,7 @@ message Node {
     required int32 viewport = 5;
     required int32 resolution = 6;
     required int32 bitDepth = 7;
-    required int32 interpolation = 8;
+    required bool interpolation = 8;
     required int64 createdTimestamp = 9;
 }
 
@@ -57,5 +57,9 @@ message SkeletonTracing {
     required Point3D editPosition = 6;
     required Vector3D editRotation = 7;
     required double zoomLevel = 8;
-    required int32 version = 9;
+    required int64 version = 9;
+}
+
+message SkeletonTracings {
+    repeated SkeletonTracing tracings = 1;
 }

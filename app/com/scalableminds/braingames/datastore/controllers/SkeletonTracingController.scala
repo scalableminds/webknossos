@@ -7,6 +7,7 @@ import java.util.UUID
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.skeleton._
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracingDepr
@@ -22,7 +23,7 @@ class SkeletonTracingController @Inject()(
                                            val dataSourceRepository: DataSourceRepository,
                                            val webKnossosServer: WebKnossosServer,
                                            val messagesApi: MessagesApi
-                                       ) extends TracingController[SkeletonTracingDepr] {
+                                       ) extends TracingController[SkeletonTracing] {
 
   def mergedFromContents(persist: Boolean) = Action.async(validateJson[List[SkeletonTracingDepr]]) {
     implicit request => {

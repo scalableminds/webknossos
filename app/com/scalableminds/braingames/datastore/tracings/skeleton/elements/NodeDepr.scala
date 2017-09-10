@@ -9,19 +9,19 @@ import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.xml.SynchronousXMLWrites
 import play.api.libs.json.Json
 
-case class Node(
-                 id: Int,
-                 position: Point3D,
-                 rotation: Vector3D = Node.defaultRotation,
-                 radius: Float = Node.defaultRadius,
-                 viewport: Int = Node.defaultViewport,
-                 resolution: Int = Node.defaultResolution,
-                 bitDepth: Int = Node.defaultBitDepth,
-                 interpolation: Boolean = Node.defaultInterpolation,
-                 timestamp: Long = System.currentTimeMillis)
+case class NodeDepr(
+                     id: Int,
+                     position: Point3D,
+                     rotation: Vector3D = NodeDepr.defaultRotation,
+                     radius: Float = NodeDepr.defaultRadius,
+                     viewport: Int = NodeDepr.defaultViewport,
+                     resolution: Int = NodeDepr.defaultResolution,
+                     bitDepth: Int = NodeDepr.defaultBitDepth,
+                     interpolation: Boolean = NodeDepr.defaultInterpolation,
+                     timestamp: Long = System.currentTimeMillis)
 
 
-object Node {
+object NodeDepr {
 
   val defaultRotation = Vector3D(0, 0, 0)
   val defaultRadius = 120
@@ -33,7 +33,7 @@ object Node {
   def fromOptions(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
                   viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
                   interpolation: Option[Boolean]) = {
-    Node(
+    NodeDepr(
       id,
       position,
       rotation getOrElse defaultRotation,
@@ -45,10 +45,10 @@ object Node {
     )
   }
 
-  implicit val jsonFormat = Json.format[Node]
+  implicit val jsonFormat = Json.format[NodeDepr]
 
-  implicit object NodeXMLWrites extends SynchronousXMLWrites[Node] {
-    def synchronousWrites(n: Node)(implicit writer: XMLStreamWriter): Boolean = {
+  implicit object NodeXMLWrites extends SynchronousXMLWrites[NodeDepr] {
+    def synchronousWrites(n: NodeDepr)(implicit writer: XMLStreamWriter): Boolean = {
       writer.writeStartElement("node")
       writer.writeAttribute("id", n.id.toString)
       writer.writeAttribute("radius", n.radius.toString)

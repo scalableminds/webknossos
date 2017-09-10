@@ -8,15 +8,15 @@ import javax.xml.stream.XMLStreamWriter
 import com.scalableminds.util.xml.SynchronousXMLWrites
 import play.api.libs.json.Json
 
-case class Comment(
+case class CommentDepr(
   node: Int,
   content: String)
 
-object Comment {
-  implicit val jsonFormat = Json.format[Comment]
+object CommentDepr {
+  implicit val jsonFormat = Json.format[CommentDepr]
 
-  implicit object CommentXMLWrites extends SynchronousXMLWrites[Comment] {
-    def synchronousWrites(n: Comment)(implicit writer: XMLStreamWriter): Boolean = {
+  implicit object CommentXMLWrites extends SynchronousXMLWrites[CommentDepr] {
+    def synchronousWrites(n: CommentDepr)(implicit writer: XMLStreamWriter): Boolean = {
       writer.writeStartElement("comment")
       writer.writeAttribute("node", n.node.toString)
       writer.writeAttribute("content", n.content)

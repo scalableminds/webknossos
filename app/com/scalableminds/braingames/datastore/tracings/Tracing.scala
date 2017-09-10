@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.datastore.tracings
 
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.Tree
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.TreeDepr
 import com.scalableminds.braingames.datastore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 
@@ -11,7 +11,7 @@ trait Tracing {
 
   def dataSetName: String
 
-  def trees: List[Tree] = Nil
+  def trees: List[TreeDepr] = Nil
 
   def volumes: List[Volume] = Nil
 

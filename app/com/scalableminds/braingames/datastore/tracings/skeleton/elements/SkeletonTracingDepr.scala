@@ -10,18 +10,17 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.image.Color
 import play.api.libs.json.Json
 
-case class SkeletonTracing(id: String = SkeletonTracing.defaultId,
-                           dataSetName: String,
-                           override val trees: List[Tree] = SkeletonTracing.defaultTrees,
-                           timestamp: Long = SkeletonTracing.defaultTimestamp,
-                           boundingBox: Option[BoundingBox] = SkeletonTracing.defaultBoundingBox,
-                           activeNodeId: Option[Int] = SkeletonTracing.defaultActiveNodeId,
-                           editPosition: Point3D = SkeletonTracing.defaultEditPosition,
-                           editRotation: Vector3D = SkeletonTracing.defaultEditRotation,
-                           zoomLevel: Double = SkeletonTracing.defaultZoomLevel,
-                           version: Long = SkeletonTracing.defaultVersion) extends Tracing {
+case class SkeletonTracingDepr(dataSetName: String,
+                               override val trees: List[Tree] = SkeletonTracingDepr.defaultTrees,
+                               timestamp: Long = SkeletonTracingDepr.defaultTimestamp,
+                               boundingBox: Option[BoundingBox] = SkeletonTracingDepr.defaultBoundingBox,
+                               activeNodeId: Option[Int] = SkeletonTracingDepr.defaultActiveNodeId,
+                               editPosition: Point3D = SkeletonTracingDepr.defaultEditPosition,
+                               editRotation: Vector3D = SkeletonTracingDepr.defaultEditRotation,
+                               zoomLevel: Double = SkeletonTracingDepr.defaultZoomLevel,
+                               version: Long = SkeletonTracingDepr.defaultVersion) extends Tracing {
 
-  def addTree(newTree: Tree): SkeletonTracing =
+  def addTree(newTree: Tree): SkeletonTracingDepr =
     this.copy(trees = newTree :: this.trees)
 
   def deleteTree(treeId: Long) =
@@ -134,8 +133,8 @@ case class SkeletonTracing(id: String = SkeletonTracing.defaultId,
   }
 }
 
-object SkeletonTracing {
-  implicit val jsonFormat = Json.format[SkeletonTracing]
+object SkeletonTracingDepr {
+  implicit val jsonFormat = Json.format[SkeletonTracingDepr]
 
   def defaultId = UUID.randomUUID.toString
   def defaultTrees = List()

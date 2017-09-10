@@ -34,7 +34,7 @@ object NmlParser extends LazyLogging {
 
   val DEFAULT_TIMESTAMP = 0L
 
-  def parse(id: String, name: String, nmlInputStream: InputStream): Box[SkeletonTracing] = {
+  def parse(name: String, nmlInputStream: InputStream): Box[SkeletonTracingDepr] = {
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -47,12 +47,12 @@ object NmlParser extends LazyLogging {
       } yield {
         val dataSetName = parseDataSetName(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
-        val editPosition = parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracing.defaultEditPosition)
-        val editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracing.defaultEditRotation)
-        val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracing.defaultZoomLevel)
+        val editPosition = parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracingDepr.defaultEditPosition)
+        val editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDepr.defaultEditRotation)
+        val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDepr.defaultZoomLevel)
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-        SkeletonTracing(id, dataSetName, trees.toList, time, None, activeNodeId,
+        SkeletonTracingDepr(dataSetName, trees.toList, time, None, activeNodeId,
           editPosition, editRotation, zoomLevel, version=0)
       }
     } catch {

@@ -9,14 +9,14 @@ import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplici
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Empty, Failure, Full}
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.reflect.ClassTag
 
-trait TracingService[T <: Tracing] extends KeyValueStoreImplicits with FoxImplicits {
+trait TracingService[T] extends KeyValueStoreImplicits with FoxImplicits {
 
   implicit val tracingFormat: Format[T]
 
@@ -37,13 +37,13 @@ trait TracingService[T <: Tracing] extends KeyValueStoreImplicits with FoxImplic
 
   def currentVersion(tracingId: String): Fox[Long] = Fox.successful(1)
 
-  def applyPendingUpdates(tracing: T, targetVersion: Option[Long]): Fox[T] =
+  def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] =
     Fox.successful(tracing)
 
   def find(tracingId: String, version: Option[Long] = None, useCache: Boolean = true, applyUpdates: Boolean = false): Fox[T] = {
     tracingStore.get(tracingId, version)(fromJson[T]).map(_.value).flatMap { tracing =>
       if (applyUpdates)
-        applyPendingUpdates(tracing, version)
+        applyPendingUpdates(tracing, tracingId, version)
       else
         Fox.successful(tracing)
     }.orElse {
@@ -60,15 +60,15 @@ trait TracingService[T <: Tracing] extends KeyValueStoreImplicits with FoxImplic
     }
   }
 
-  def save(tracing: T, toCache: Boolean = false): Fox[_] = {
-    find(tracing.id).futureBox.flatMap {
+  def save(tracing: T, tracingId: String, version: Long, toCache: Boolean = false): Fox[_] = {
+    find(tracingId).futureBox.flatMap {
       case Full(_) =>
         Fox.failure("tracing ID is already in use.")
       case Empty =>
         if (toCache) {
-          Fox.successful(temporaryTracingStore.insert(tracing.id, tracing, Some(temporaryStoreTimeout)))
+          Fox.successful(temporaryTracingStore.insert(tracingId, tracing, Some(temporaryStoreTimeout)))
         } else {
-          tracingStore.put(tracing.id, tracing.version, tracing)
+          tracingStore.put(tracingId, version, tracing)
         }
       case f: Failure =>
         Future.successful(f)

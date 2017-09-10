@@ -9,7 +9,7 @@ import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
+import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracingDepr
 import com.scalableminds.braingames.datastore.tracings.{TemporaryTracingStore, TracingDataStore, TracingService, TracingType}
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox

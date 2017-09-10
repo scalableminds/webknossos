@@ -6,11 +6,11 @@ package com.scalableminds.braingames.datastore.tracings
 import net.liftweb.common.{Box, Full}
 import play.api.libs.json.JsObject
 
-trait UpdateAction[T <: Tracing] {
+trait UpdateAction[T] {
   def applyTo(tracing: T): Box[T]
 }
 
-trait UpdateActionGroup[T <: Tracing] {
+trait UpdateActionGroup[T] {
 
   def version: Long
 

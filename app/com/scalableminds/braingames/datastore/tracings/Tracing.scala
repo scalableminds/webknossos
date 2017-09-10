@@ -9,8 +9,6 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 
 trait Tracing {
 
-  def id: String
-
   def dataSetName: String
 
   def trees: List[Tree] = Nil
@@ -28,6 +26,4 @@ trait Tracing {
   def version: Long
 
   def timestamp: Long
-
-  override def toString = s"<tracing $id>"
 }

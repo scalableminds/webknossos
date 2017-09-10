@@ -3,20 +3,21 @@
  */
 package com.scalableminds.braingames.datastore.controllers
 
+import java.util.UUID
+
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
-import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.Fox
-import net.liftweb.common.{Failure, Full}
+import com.scalableminds.util.tools.JsonHelper.boxFormat
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json}
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait TracingController[T <: Tracing] extends Controller {
+trait TracingController[T] extends Controller {
 
   implicit val tracingFormat: Format[T] = tracingService.tracingFormat
 
@@ -30,10 +31,10 @@ trait TracingController[T <: Tracing] extends Controller {
     implicit request =>
       AllowRemoteOrigin {
         val tracing = request.body
+        val tracingId = UUID.randomUUID.toString
         for {
-          _ <- dataSourceRepository.findUsableByName(tracing.dataSetName) ?~> Messages("dataSource.notUsable")
-          _ <- tracingService.save(tracing)
-        } yield Ok(Json.toJson(TracingReference(tracing.id, tracingService.tracingType)))
+          _ <- tracingService.save(tracing, tracingId, 0)
+        } yield Ok(Json.toJson(TracingReference(tracingId, tracingService.tracingType)))
       }
   }
 
@@ -42,8 +43,9 @@ trait TracingController[T <: Tracing] extends Controller {
       AllowRemoteOrigin {
         val tracings = request.body
         val references = Fox.sequence(tracings.map { tracing =>
-          tracingService.save(tracing, toCache = false).map { _ =>
-            TracingReference(tracing.id, TracingType.skeleton)
+          val tracingId = UUID.randomUUID.toString
+          tracingService.save(tracing, tracingId, 0, toCache = false).map { _ =>
+            TracingReference(tracingId, TracingType.skeleton)
           }
         })
         references.map(x => Ok(Json.toJson(x)))

@@ -18,7 +18,6 @@ import oxalis.security.{Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
 
@@ -127,7 +126,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
       tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO: RocksDB: what if it is a volume tracing?
       scale <- dataSet.dataSource.toUsable.map(_.scale)
-      nmlStream = Enumerator.outputStream { os => NmlWriter.toNml(tracing, os, scale).map(_ => os.close()) }
+      nmlStream = NmlWriter.toNmlStream(Left(tracing), scale)
     } yield {
       Ok.chunked(nmlStream).withHeaders(
         CONTENT_TYPE ->

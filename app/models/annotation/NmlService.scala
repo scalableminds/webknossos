@@ -9,8 +9,6 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.NmlParser
 import com.scalableminds.util.io.ZipIO
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
-import play.api
-import play.api.data
 import play.api.libs.Files.TemporaryFile
 
 
@@ -100,6 +98,7 @@ object NmlService extends LazyLogging {
     val exceptionText = "Splitting parsed tracings failed"
     val skeletons = skeletonsEither.map { case Left(s) => s; case _ => throw new Exception(exceptionText) }
     val volumes = volumesEither.map { case Right(v) => v; case _ => throw new Exception(exceptionText) }
+    (skeletons, volumes)
   }
 
 }

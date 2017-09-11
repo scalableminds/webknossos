@@ -135,12 +135,12 @@ case class CreateNodeSkeletonAction(id: Int, position: com.scalableminds.util.ge
     val newNode = Node(
       id,
       convertPoint3D(position),
-      convertVector3DOpt(rotation) getOrElse NodeDefaults.defaultRotation,
-      radius getOrElse NodeDefaults.defaultRadius,
-      viewport getOrElse NodeDefaults.defaultViewport,
-      resolution getOrElse NodeDefaults.defaultResolution,
-      bitDepth getOrElse NodeDefaults.defaultBitDepth,
-      interpolation getOrElse NodeDefaults.defaultInterpolation,
+      convertVector3DOpt(rotation) getOrElse NodeDefaults.rotation,
+      radius getOrElse NodeDefaults.radius,
+      viewport getOrElse NodeDefaults.viewport,
+      resolution getOrElse NodeDefaults.resolution,
+      bitDepth getOrElse NodeDefaults.bitDepth,
+      interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = System.currentTimeMillis
     )
 
@@ -161,12 +161,12 @@ case class UpdateNodeSkeletonAction(id: Int, position: com.scalableminds.util.ge
     val newNode = Node(
       id,
       convertPoint3D(position),
-      convertVector3DOpt(rotation) getOrElse NodeDefaults.defaultRotation,
-      radius getOrElse NodeDefaults.defaultRadius,
-      viewport getOrElse NodeDefaults.defaultViewport,
-      resolution getOrElse NodeDefaults.defaultResolution,
-      bitDepth getOrElse NodeDefaults.defaultBitDepth,
-      interpolation getOrElse NodeDefaults.defaultInterpolation,
+      convertVector3DOpt(rotation) getOrElse NodeDefaults.rotation,
+      radius getOrElse NodeDefaults.radius,
+      viewport getOrElse NodeDefaults.viewport,
+      resolution getOrElse NodeDefaults.resolution,
+      bitDepth getOrElse NodeDefaults.bitDepth,
+      interpolation getOrElse NodeDefaults.interpolation,
       createdTimestamp = System.currentTimeMillis
     )
 

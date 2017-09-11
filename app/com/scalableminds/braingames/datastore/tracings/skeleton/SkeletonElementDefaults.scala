@@ -3,13 +3,24 @@
  */
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
-import com.scalableminds.braingames.datastore.geometry.Vector3D
+import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
+
+object SkeletonTracingDefaults {
+  def trees = Seq()
+  def createdTimestamp = System.currentTimeMillis()
+  def boundingBox = None
+  def activeNodeId = None
+  def editPosition = Point3D(0, 0, 0)
+  def editRotation = Vector3D(0, 0, 0)
+  def zoomLevel = 2.0
+  def version = 0
+}
 
 object NodeDefaults {
-  val defaultRotation = Vector3D(0, 0, 0)
-  val defaultRadius = 120
-  val defaultViewport = 1
-  val defaultResolution = 1
-  val defaultBitDepth = 0
-  val defaultInterpolation = false
+  val rotation = Vector3D(0, 0, 0)
+  val radius = 120
+  val viewport = 1
+  val resolution = 1
+  val bitDepth = 0
+  val interpolation = false
 }

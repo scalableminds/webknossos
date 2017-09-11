@@ -63,4 +63,12 @@ object TreeUtils {
       math.max(targetNodeMaxId + 1 - sourceNodeMinId, 0)
     }
   }
+
+  def subtract(t1: Tree, t2: Tree) = {
+    t1.withNodes((t1.nodes.toSet -- t2.nodes.toSet).toSeq).withEdges((t1.edges.toSet -- t2.edges.toSet).toSeq)
+  }
+
+  def add(t1: Tree, t2: Tree) = {
+    t1.withNodes(t1.nodes ++ t2.nodes).withEdges(t1.edges ++ t2.edges)
+  }
 }

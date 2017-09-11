@@ -12,7 +12,7 @@ cmd=$1
 shift;
 
 function ensureUpToDateTests {
-	lastChangedSource=$($FIND $jsPath -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
+	lastChangedSource=$($FIND $jsPath -regex ".*\.js$" -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
 	lastChangedTests=$($FIND $testBundlePath -type f -printf '%T@ %p \n' | sort -n | tail -1 | awk -F'.' '{print $1}')
 
 	if [ $lastChangedSource -gt $lastChangedTests ]

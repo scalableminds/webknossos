@@ -3,6 +3,7 @@
 import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import jsRoutes from "./jsRoutes";
+import fs from "fs";
 
 const requests = [];
 const minimumWait = 10;
@@ -76,4 +77,12 @@ function createSnapshotable(wrapper: any) {
   return himalaya.parse(wrapper.debug());
 }
 
-export { waitForAllRequests, createSnapshotable, wait };
+function debugWrapper(wrapper: any, name: string) {
+  fs.writeFile(
+    `app/assets/javascripts/test/snapshots/debug-htmls/test-wk-snapshots-${name}.html`,
+    wrapper.debug(),
+    () => {},
+  );
+}
+
+export { waitForAllRequests, createSnapshotable, wait, debugWrapper };

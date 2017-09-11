@@ -15,6 +15,12 @@ object Xml {
     }
   }
 
+  def withinElementSync(name: String)(f: => Any)(implicit writer: XMLStreamWriter) = {
+    writer.writeStartElement(name)
+    f
+    writer.writeEndElement()
+  }
+
   def toXML[T](t: T)(implicit writer: XMLStreamWriter, w: XMLWrites[T]): Fox[Boolean] =
     w.writes(t)
 

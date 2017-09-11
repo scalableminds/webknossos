@@ -4,8 +4,8 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import com.scalableminds.braingames.datastore.SkeletonTracing._
-import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPointDepr, CommentDepr}
+import com.scalableminds.braingames.datastore.tracings.{Point3DUtils, Vector3DUtils}
 import play.api.libs.json._
 
 trait SkeletonUpdateAction {
@@ -19,24 +19,12 @@ trait SkeletonUpdateAction {
     tracing.trees.find(_.treeId == treeId)
       .getOrElse(throw new NoSuchElementException("Tracing does not contain tree with requested id " + treeId))
 
-  protected def convertVector3D(aVector: com.scalableminds.util.geometry.Vector3D) =
-    Vector3D(aVector.x, aVector.y, aVector.z)
-  protected def convertPoint3D(aPoint: com.scalableminds.util.geometry.Point3D) =
-    Point3D(aPoint.x, aPoint.y, aPoint.z)
   protected def convertColor(aColor: com.scalableminds.util.image.Color) =
     Color(aColor.r, aColor.g, aColor.b, aColor.a)
   protected def convertBranchPoint(aBranchPoint: BranchPointDepr) =
     BranchPoint(aBranchPoint.id, aBranchPoint.timestamp)
   protected def convertComment(aComment: CommentDepr) =
     Comment(aComment.node, aComment.content)
-  protected def convertVector3DOpt(aVectorOpt: Option[com.scalableminds.util.geometry.Vector3D]) = aVectorOpt match {
-    case Some(aVector) => Some(Vector3D(aVector.x, aVector.y, aVector.z))
-    case None => None
-  }
-  protected def convertPoint3DOpt(aPointOpt: Option[com.scalableminds.util.geometry.Point3D]) = aPointOpt match {
-    case Some(aPoint) => Some(convertPoint3D(aPoint))
-    case None => None
-  }
   protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]) = aColorOpt match {
     case Some(aColor) => Some(convertColor(aColor))
     case None => None
@@ -134,8 +122,8 @@ case class CreateNodeSkeletonAction(id: Int, position: com.scalableminds.util.ge
 
     val newNode = Node(
       id,
-      convertPoint3D(position),
-      convertVector3DOpt(rotation) getOrElse NodeDefaults.rotation,
+      Point3DUtils.convert(position),
+      Vector3DUtils.convertOpt(rotation) getOrElse NodeDefaults.rotation,
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
       resolution getOrElse NodeDefaults.resolution,
@@ -160,8 +148,8 @@ case class UpdateNodeSkeletonAction(id: Int, position: com.scalableminds.util.ge
 
     val newNode = Node(
       id,
-      convertPoint3D(position),
-      convertVector3DOpt(rotation) getOrElse NodeDefaults.rotation,
+      Point3DUtils.convert(position),
+      Vector3DUtils.convertOpt(rotation) getOrElse NodeDefaults.rotation,
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
       resolution getOrElse NodeDefaults.resolution,
@@ -194,8 +182,8 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: co
   override def applyOn(tracing: SkeletonTracing) =
     tracing
       .withActiveNodeId(activeNode.getOrElse(tracing.getActiveNodeId))
-      .withEditPosition(convertPoint3D(editPosition))
-      .withEditRotation(convertVector3D(editRotation))
+      .withEditPosition(Point3DUtils.convert(editPosition))
+      .withEditRotation(Vector3DUtils.convert(editRotation))
       .withZoomLevel(zoomLevel)
 }
 

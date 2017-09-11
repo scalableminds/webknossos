@@ -3,6 +3,7 @@ package com.scalableminds.util.rpc
 import java.io.File
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.Play.current
@@ -43,6 +44,12 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
     parseJsonResponse(performRequest)
   }
 
+  def getWithProtoResponse[T <: GeneratedMessage with Message[T]](companion: GeneratedMessageCompanion[T]): Fox[T] = {
+    request = request
+      .withMethod("GET")
+    parseProtoResponse(performRequest)(companion)
+  }
+
   def post(file: File): Fox[WSResponse] = {
     request = request
       .withBody(FileBody(file))
@@ -57,6 +64,13 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
     parseJsonResponse(performRequest)
   }
 
+  def postWithProtoResponse[T <: GeneratedMessage with Message[T]](file: File)(companion: GeneratedMessageCompanion[T]): Fox[T] = {
+    request = request
+      .withBody(FileBody(file))
+      .withMethod("POST")
+    parseProtoResponse(performRequest)(companion)
+  }
+
   def post[T : Writes](body: T = Json.obj()): Fox[WSResponse] = {
     request = request
       .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
@@ -69,6 +83,22 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
     request = request
       .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
       .withBody(Json.toJson(body))
+      .withMethod("POST")
+    parseJsonResponse(performRequest)
+  }
+
+  def postJsonWithProtoResponse[J: Writes, T <: GeneratedMessage with Message[T]](body: J = Json.obj())(companion: GeneratedMessageCompanion[T]): Fox[T] = {
+    request = request
+      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/json")
+      .withBody(Json.toJson(body))
+      .withMethod("POST")
+    parseProtoResponse(performRequest)(companion)
+  }
+
+  def postProtoWithJsonResponse[T <: GeneratedMessage with Message[T], J: Reads](body: T): Fox[J] = {
+    request = request
+      .withHeaders(HeaderNames.CONTENT_TYPE -> "application/x-protobuf")
+      .withBody(body.toByteArray)
       .withMethod("POST")
     parseJsonResponse(performRequest)
   }
@@ -123,6 +153,28 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
           val errorMsg = s"Request returned invalid JSON (ID: $id): $e"
           logger.error(errorMsg)
           Failure(errorMsg)
+      }
+    }
+  }
+
+  private def parseProtoResponse[T <: GeneratedMessage with Message[T]](r: Fox[WSResponse])(companion: GeneratedMessageCompanion[T]) = {
+    r.flatMap { response =>
+      if (response.status == OK) {
+        logger.debug(s"Successful request (ID: $id). " +
+          s"Body: '${response.body.take(100)}'")
+      } else {
+        logger.error(s"Failed to send WS request to $url (ID: $id). " +
+          s"RequestBody: '${requestBodyPreview}'. Status ${response.status}. " +
+          s"ResponseBody: '${response.body.take(100)}'")
+      }
+      try {
+        Full(companion.parseFrom(response.bodyAsBytes))
+      } catch {
+        case e: Exception => {
+          val errorMsg = s"Request returned invalid Protocol Buffer Data (ID: $id): $e"
+          logger.error(errorMsg)
+          Failure(errorMsg)
+        }
       }
     }
   }

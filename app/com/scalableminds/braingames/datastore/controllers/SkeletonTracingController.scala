@@ -7,16 +7,17 @@ import java.util.UUID
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.skeleton._
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
+import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
+import com.scalableminds.util.tools.JsonHelper.boxFormat
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class SkeletonTracingController @Inject()(
                                            val tracingService: SkeletonTracingService,
@@ -25,16 +26,42 @@ class SkeletonTracingController @Inject()(
                                            val messagesApi: MessagesApi
                                        ) extends TracingController[SkeletonTracing] {
 
-  def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracing]) {
+  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {
       AllowRemoteOrigin {
-        val tracings = request.body
-        //val mergedTracing = tracingService.merge(tracings)
+        for {
+          tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
+        } yield {
+          Ok(SkeletonTracings(tracings).toByteArray)
+        }
+      }
+    }
+  }
+
+  def saveMultiple = Action.async(validateProto[SkeletonTracings]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        val tracings = request.body.tracings
+        val references = Fox.sequence(tracings.toList.map { tracing =>
+          val tracingId = UUID.randomUUID.toString
+          tracingService.save(tracing, tracingId, 0, toCache = false).map { _ =>
+            TracingReference(tracingId, TracingType.skeleton)
+          }
+        })
+        references.map(x => Ok(Json.toJson(x)))
+      }
+    }
+  }
+
+  def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        val tracings = request.body.tracings
+        val mergedTracing = tracingService.merge(tracings)
         val newId = UUID.randomUUID.toString
-        //tracingService.save(mergedTracing, newId, mergedTracing.version, toCache = !persist).map { _ =>
-        //  Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
-        //}
-        Future.successful(Ok)
+        tracingService.save(mergedTracing, newId, mergedTracing.version, toCache = !persist).map { _ =>
+          Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
+        }
       }
     }
   }

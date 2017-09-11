@@ -122,7 +122,7 @@ class SkeletonTracingService @Inject()(
     tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBox, version = 0)
   }
 
-  def merge(tracings: List[SkeletonTracing], newId: String = createNewId): SkeletonTracing =
+  def merge(tracings: Seq[SkeletonTracing], newId: String = createNewId): SkeletonTracing =
     tracings.reduceLeft(mergeTwo)
 
 

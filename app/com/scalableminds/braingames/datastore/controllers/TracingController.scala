@@ -8,9 +8,6 @@ import java.util.UUID
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings._
-import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.trueaccord.scalapb.json.JsonFormat
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import play.api.i18n.Messages
@@ -40,22 +37,6 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
       }
   }
 
-  def saveMultiple = Action.async(validateProto[T]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        val tracings = request.body
-        // TODO switch back to multiple
-        val references = Fox.sequence(List(tracings).map { tracing =>
-          val tracingId = UUID.randomUUID.toString
-          tracingService.save(tracing, tracingId, 0, toCache = false).map { _ =>
-            TracingReference(tracingId, TracingType.skeleton)
-          }
-        })
-        references.map(x => Ok(Json.toJson(x)))
-      }
-    }
-  }
-
   def get(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
@@ -68,14 +49,13 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
     }
   }
 
-  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
+  def getProto(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
         for {
-          tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
+          tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          // TODO support multiple
-          Ok(JsonFormat.toJsonString(tracings.head))
+          Ok(tracing.toByteArray)
         }
       }
     }

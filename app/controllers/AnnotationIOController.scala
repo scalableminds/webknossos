@@ -2,9 +2,9 @@ package controllers
 
 import javax.inject.Inject
 
+import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.braingames.datastore.tracings.skeleton.NmlWriter
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -78,14 +78,15 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       val parseSuccess = parsedFiles.parseResults.filter(_.succeeded)
       val fileNames = parseSuccess.map(_.fileName)
       val tracings = parseSuccess.flatMap(_.tracing)
+      val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(fileNames)
-      if (tracings.exists(_.volumes.nonEmpty))
+      if (volumeTracings.nonEmpty)
         //TODO: RocksDB: process uploaded volume tracing
         returnError(parsedFiles)
       else {
         for {
-          dataSet: DataSet <- DataSetDAO.findOneBySourceName(tracings.head.dataSetName).toFox
-          mergedTracingReference <- storeMergedSkeletonTracing(tracings.map(_.asInstanceOf[SkeletonTracing]), dataSet)
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head.dataSetName).toFox
+          mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings, dataSet)
           annotation <- AnnotationService.createFrom(
             request.user, dataSet, mergedTracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(mergedTracingReference.typ), name)
         } yield JsonOk(

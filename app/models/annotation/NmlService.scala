@@ -2,13 +2,15 @@ package models.annotation
 
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, StandardCopyOption}
-import java.util.UUID
 
-import com.scalableminds.braingames.datastore.tracings.Tracing
+import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings.skeleton.NmlParser
 import com.scalableminds.util.io.ZipIO
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
+import play.api
+import play.api.data
 import play.api.libs.Files.TemporaryFile
 
 
@@ -17,12 +19,12 @@ object NmlService extends LazyLogging {
   sealed trait NmlParseResult {
     def fileName: String
 
-    def tracing: Option[Tracing] = None
+    def tracing: Option[Either[SkeletonTracing, VolumeTracing]] = None
 
     def succeeded: Boolean
   }
 
-  case class NmlParseSuccess(fileName: String, _tracing: Tracing) extends NmlParseResult {
+  case class NmlParseSuccess(fileName: String, _tracing: Either[SkeletonTracing, VolumeTracing]) extends NmlParseResult {
     def succeeded = true
 
     override def tracing = Some(_tracing)
@@ -46,7 +48,7 @@ object NmlService extends LazyLogging {
     }
 
     def containsFailure = {
-      parseResults.exists{
+      parseResults.exists {
         case _: NmlParseFailure => true
         case _ => false
       }
@@ -58,10 +60,10 @@ object NmlService extends LazyLogging {
   }
 
   def extractFromNml(inputStream: InputStream, name: String): NmlParseResult = {
-    NmlParser.parse(UUID.randomUUID.toString, name, inputStream) match {
-      case Full(tracing)          => NmlParseSuccess(name, tracing)
+    NmlParser.parse(name, inputStream) match {
+      case Full(tracing) => NmlParseSuccess(name, tracing)
       case Failure(msg, _, _) => NmlParseFailure(name, msg)
-      case Empty              => NmlParseEmpty(name)
+      case Empty => NmlParseEmpty(name)
     }
   }
 
@@ -92,4 +94,12 @@ object NmlService extends LazyLogging {
       ZipParseResult(List(parseResult), Map.empty)
     }
   }
+
+  def splitVolumeAndSkeletonTracings(tracings: List[Either[SkeletonTracing, VolumeTracing]]): (List[SkeletonTracing], List[VolumeTracing]) = {
+    val (skeletonsEither, volumesEither): (List[Either[SkeletonTracing, VolumeTracing]], List[Either[SkeletonTracing, VolumeTracing]]) = tracings.partition(_.isLeft)
+    val exceptionText = "Splitting parsed tracings failed"
+    val skeletons = skeletonsEither.map { case Left(s) => s; case _ => throw new Exception(exceptionText) }
+    val volumes = volumesEither.map { case Right(v) => v; case _ => throw new Exception(exceptionText) }
+  }
+
 }

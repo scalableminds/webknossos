@@ -6,11 +6,11 @@ package models.binary
 import java.io.File
 
 import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
+import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
 import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
-import com.scalableminds.braingames.datastore.tracings.volume.{AbstractVolumeTracing => VolumeTracing}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.tools.JsonHelper.boxFormat

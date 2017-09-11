@@ -4,8 +4,8 @@ import java.util.UUID
 import javax.inject.Inject
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.braingames.datastore.tracings.TracingReference
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.SkeletonTracing
+import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.braingames.datastore.tracings.{Point3DUtils, TracingReference, Vector3DUtils}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
@@ -117,8 +117,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       nmlParams.scriptId,
       nmlParams.boundingBox,
       tracing.dataSetName,
-      tracing.editPosition,
-      tracing.editRotation)
+      Point3DUtils.convertBack(tracing.editPosition),
+      Vector3DUtils.convertBack(tracing.editRotation))
   }
 
   def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: AuthenticatedRequest[_]): Fox[Result] = {

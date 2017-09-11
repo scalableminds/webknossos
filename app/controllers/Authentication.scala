@@ -5,10 +5,11 @@ import javax.inject.Inject
 
 import scala.concurrent.Future
 import akka.actor.ActorRef
+import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.{Profile, User, UserToken}
 import models.team.{Role, TeamService}
 import models.user.UserService.{Mailer => _, _}
 import models.user._
@@ -16,6 +17,8 @@ import net.liftweb.common.{Empty, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
+import oxalis.security.PasswordHasher
+import oxalis.security.CredentialsProvider
 import oxalis.view.ProvidesUnauthorizedSessionData
 import play.api.data.validation.Constraints
 //import oxalis.security.Secured // --------------------------------------------------
@@ -47,7 +50,6 @@ import com.mohiva.play.silhouette.api.{Environment,LoginInfo,Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
 import com.mohiva.play.silhouette.api.services.AvatarService
-import com.mohiva.play.silhouette.api.util.{Credentials,PasswordHasher}
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
 import com.mohiva.play.silhouette.impl.exceptions.IdentityNotFoundException
 import com.mohiva.play.silhouette.impl.providers._
@@ -69,7 +71,7 @@ import models.user.UserService
 import org.joda.time.DateTime
 
 
-
+/*
 class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: Configuration)
   extends Controller
     with Secured
@@ -111,7 +113,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: 
         "password" -> passwordField)(registerFormApply)(registerFormUnapply))
   }
 
-  def register = Action.async { implicit request =>
+  def register2 = Action.async { implicit request =>
     formHtml(registerForm).map(Ok(_))
   }
 
@@ -152,7 +154,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: 
   /**
     * Handle registration form submission.
     */
-  def handleRegistration = Action.async { implicit request =>
+  def handleRegistration2 = Action.async { implicit request =>
     val boundForm = registerForm.bindFromRequest
     boundForm.fold(
       formWithErrors =>
@@ -247,6 +249,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: 
       .flashing("success" -> Messages("user.logout.success"))
   }
 }
+*/
 
 
   //---------------------------------------------------------------------------------------------------------------------
@@ -297,7 +300,6 @@ class Auth @Inject() (
                        val messagesApi: MessagesApi,
                        val env:Environment[User,CookieAuthenticator],
                        socialProviderRegistry: SocialProviderRegistry,
-                       authInfoRepository: AuthInfoRepository,
                        credentialsProvider: CredentialsProvider,
                        userTokenService: UserTokenService,
                        avatarService: AvatarService,
@@ -316,104 +318,59 @@ class Auth @Inject() (
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
 
-  def startSignUp = UserAwareAction.async { implicit request =>
+  def register = UserAwareAction.async { implicit request =>
     Future.successful(request.identity match {
       case Some(user) => Redirect(routes.Application.index)
       case None => Ok(views.html.auth.startSignUp(signUpForm))
     })
   }
 
-  def handleStartSignUp = Action.async { implicit request =>
+  def handleRegistration(implicit ctx: DBAccessContext) = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
       bogusForm => Fox.successful(BadRequest(views.html.auth.startSignUp(bogusForm))), // the register.html has to be updated
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            Fox.successful(Redirect(routes.Authentication.startSignUp()).flashing("error" -> Messages("error.userExists", signUpData.email)))
+            Fox.successful(Redirect(routes.Authentication.register()).flashing("error" -> Messages("error.userExists", signUpData.email)))
           case Empty =>
             for {
-              user <- UserService.insert(team.toString, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration)
+              user <- UserService.insert(team.toString, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+                                         loginInfo, passwordHasher.hash(signUpData.password))
               brainDBResult <- BrainTracing.register(user).toFox
             } yield {
               Mailer ! Send(DefaultMails.registerMail(user.name, emailAddress.toString, brainDBResult))
               Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, emailAddress.toString, brainDBResult))
               if (automaticUserActivation) {
                 Redirect(routes.Application.index)
-                //.withSession(Secured.createSession(user))
+                .withSession(UserService.createSession(user))
               } else {
                 Redirect(routes.Authentication.login(None))
                   .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
               }
             }
-            /*
-            val user =
-              User(
-              email = signUpData.email,
-              firstName = signUpData.firstName,
-              lastName = signUpData.lastName,
-              loginInfo = loginInfo,
-              fullName = Some(s"${signUpData.firstName} ${signUpData.lastName}"),
-              passwordInfo = None,
-              oauth1Info = None)
-            for {
-              _ <- UserService.save(user) //use insert method from UserService: automaticly inserts it in teams (maybe remove self written method "save" in UserDAO)
-              _ <- authInfoRepository.add(loginInfo, passwordHasher.hash(signUpData.password))
-              token <- userTokenService.save(UserToken.create(user.id, signUpData.email, true))
-            } yield {
-              mailer.welcome(user, link = routes.Auth.signUp(token.id.toString).absoluteURL())
-              Ok(views.html.auth.finishSignUp(profile))
-              //an der alten implementierung orientieren
-            }
-            */
         }
       }
     )
   }
 
-  def signUp(tokenId:String) = Action.async { implicit request =>
-    val id = UUID.fromString(tokenId)
-    userTokenService.find(id).flatMap {
-      case None =>
-        Future.successful(NotFound(views.html.errors.notFound(request)))
-      case Some(token) if token.isSignUp && !token.isExpired =>
-        UserService.find(token.userId).flatMap {
-          case None => Future.failed(new IdentityNotFoundException(Messages("error.noUser")))
-          case Some(user) =>
-            val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
-            for {
-              authenticator <- env.authenticatorService.create(loginInfo)
-              value <- env.authenticatorService.init(authenticator)
-              _ <- UserService.confirm(loginInfo)
-              _ <- userTokenService.remove(id)
-              result <- env.authenticatorService.embed(value, Redirect(routes.Application.index()))
-            } yield result
-        }
-      case Some(token) =>
-        userTokenService.remove(id).map {_ => NotFound(views.html.errors.notFound(request))}
-    }
-  }
-
   def signIn = UserAwareAction.async { implicit request =>
     Future.successful(request.identity match {
-      case Some(user) => Redirect(routes.Application.index())
+      case Some(user) => Redirect(controllers.routes.Application.index())
       case None => Ok(views.html.auth.signIn(signInForm,socialProviderRegistry))
     })
   }
 
-  def authenticate = Action.async { implicit request =>
+  def authenticate(implicit ctx: DBAccessContext) = Action.async { implicit request =>
     signInForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(views.html.auth.signIn(bogusForm, socialProviderRegistry))),
       signInData => {
         val credentials = Credentials(signInData.email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
           UserService.retrieve(loginInfo).flatMap {
-            //change this to Box when it is working (need to change retrieve()...)
             case None =>
-              Future.successful(Redirect(routes.Auth.signIn()).flashing("error" -> Messages("error.noUser")))
-            case Some(user) if !user.profileFor(loginInfo).map(_.confirmed).getOrElse(false) =>
-              Future.successful(Redirect(routes.Auth.signIn()).flashing("error" -> Messages("error.unregistered", signInData.email)))
-            case Some(_) => for {
+              Future.successful(Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.noUser")))
+            case Some(user) => for {
               authenticator <- env.authenticatorService.create(loginInfo).map {
                 case authenticator if signInData.rememberMe =>
                   val c = configuration.underlying
@@ -443,13 +400,13 @@ class Auth @Inject() (
     Ok(views.html.auth.startResetPassword(emailForm))
   }
 
-  def handleStartResetPassword = Action.async { implicit request =>
+  def handleStartResetPassword(implicit ctx: DBAccessContext) = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(views.html.auth.startResetPassword(bogusForm))),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
         case None => Future.successful(Redirect(routes.Auth.startResetPassword()).flashing("error" -> Messages("error.noUser")))
         case Some(user) => for {
-          token <- userTokenService.save(UserToken.create(user.id, email, isSignUp = false))
+          token <- userTokenService.save(UserToken.create(user._id, email, isSignUp = false))
         } yield {
           Mailer ! Send(
             DefaultMails.changePasswordMail(email, user.name))
@@ -472,7 +429,7 @@ class Auth @Inject() (
     }
   }
 
-  def handleResetPassword(tokenId:String) = Action.async { implicit request =>
+  def handleResetPassword(tokenId:String)(implicit ctx: DBAccessContext) = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(views.html.auth.resetPassword(tokenId, bogusForm))),
       passwords => {
@@ -483,7 +440,7 @@ class Auth @Inject() (
           case Some(token) if !token.isSignUp && !token.isExpired =>
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
-              _ <- authInfoRepository.save(loginInfo, passwordHasher.hash(passwords._1))
+              _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords._1))
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               _ <- userTokenService.remove(id)
@@ -494,3 +451,70 @@ class Auth @Inject() (
     )
   }
 }
+
+/*
+todo:
+create LoginInfo: with 2 hashes cause Braintracing need md5 hash for their DB
+update auth methode form UserDAO
+update insert method of userService
+
+alle Klassen durchgehen und nach alten methoden suchen, die nicht meht benutzt werden !!!
+sso
+switch
+testing!!!
+
+_____________________________________________________________________________________________________________________
+
+
+make an overview of how and where the passwords are and should be saved:
+  examplecode:
+  userService saves Users: users consists of a UserID and a list of profiles
+                           profile consists of a loginInfo, email, name, ..., passwordInfo, oauthInfo
+                                loginInfo: id, key (key = email)
+                                passwortInfo consists of hasher: string, pw: string, salt:Option[string]=None
+                                ---oauth1Info = token:string, secret:string
+
+  AuthInfoReposity ist ein trait
+    gibt fertig implementierte Klasse DelagableAuthInfoRepo (ist zum finden, einfügen, updaten und ändern von authInfos vom Type T   T ist entweder passwordInfo oder oauthToken)
+        -> dann muss man mit loginInfo arbeiten
+
+        -> wahrscheinlich selbst implementieren BZW AuthInfoService fertigstellen => eigene DAOs verwenden, aber auch LoginInfo...
+
+  UserTeokenService leitet einfach nur die Sachen weiter
+      def find(id:UUID) = userTokenDao.find(id)
+      def save(token:UserToken) = userTokenDao.save(token)
+      def remove(id:UUID) = userTokenDao.remove(id)
+
+      userTokenDao ist trait (MongoUserTokenDAO) könnte man so verwenden
+
+  env.authenticatorService ???
+  authenticator: CookieAuthenticator
+
+  credentials:Credentials sind id:string, pw:string
+  credentialProvider prüft das PW !!! greift auf AuthInfoRepository zu; man muss gucken ob durch das "inject" die richtige klasse benutzt wird
+        (sonst selbst implementieren, da authInfoRepository benutzt wird. Allerdings einfach die Implementierung zu 99% übernehmen)
+_____________________________________________________________________________________________________________________
+
+userTokenDao ermöglicht die token für timetraking (zu token kann man sich nochmal signUp angucken)
+ich glaube und hoffe alles mit oauth brauch man nur für social-login
+
+
+wo werden die credentials gespeichert?
+was mach authInfo und was macht passwortInfo !!!
+
+userTokenService arbeitet mit id: nötig oder einfach anpassen?
+hash variable entfernen (jetztz in pwInfo). soll md5 hash auch in pwInfo?
+Johannes fragen, ob das ok ist, dass der hash jetzt in pwInfo gespeichert wird oder ob das mit den alten daten zu komplikationen führt?
+
+--- meine Version ---
+
+    userService speichert User: user bestehen aus email, ..., hash, md5, loginInfo, passwordInfo (der ursprüngliche hash muss am ende gelöscht werden: wird jetzt in passortInfo gespeichert)
+
+    authInfoRepo ???
+
+    UserTeokenService leitet einfach nur die Sachen weiter
+      def find(id:UUID) = userTokenDao.find(id)
+      def save(token:UserToken) = userTokenDao.save(token)
+      def remove(id:UUID) = userTokenDao.remove(id)
+    UserToken und UserTokenService wurden komplett übernommen
+ */

@@ -6,7 +6,8 @@ import play.api.libs.concurrent.Akka
 import java.util.UUID
 
 import com.mohiva.play.silhouette.api.LoginInfo
-import com.mohiva.play.silhouette.impl.providers.CommonSocialProfile
+import com.mohiva.play.silhouette.api.util.PasswordInfo
+import com.mohiva.play.silhouette.impl.providers.{CommonSocialProfile, CredentialsProvider}
 import oxalis.thirdparty.BrainTracing
 import play.api.{Application, Logger}
 
@@ -24,6 +25,7 @@ import com.scalableminds.util.mail.Send
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
 import net.liftweb.common.Box
+import oxalis.security.Secured.SessionInformationKey
 import play.api.libs.json.Json
 import reactivemongo.play.json.BSONFormats._
 
@@ -34,6 +36,8 @@ object UserService extends FoxImplicits {
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
+
+  val SessionInformationKey = "userId"
 
   def defaultUser = {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
@@ -69,11 +73,11 @@ object UserService extends FoxImplicits {
   }
 
   def insert(teamName: String, email: String, firstName: String,
-    lastName: String, password: String, isActive: Boolean, teamRole: Role = Role.User): Fox[User] =
+    lastName: String, password: String, isActive: Boolean, teamRole: Role = Role.User, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
     for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, teamRole)).toList
-      user = User(email, firstName, lastName, isActive = isActive, hashPassword(password), md5(password), teamMemberships)
+      user = User(email, firstName, lastName, isActive = isActive, hashPassword(password), md5(password), teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
       _ <- UserDAO.insert(user)(GlobalAccessContext)
     } yield user
 
@@ -95,10 +99,10 @@ object UserService extends FoxImplicits {
           md5hash = "",
           teams = teamMemberships,
           _isAnonymous = Some(true),
-          experiences = experience.toMap)
+          experiences = experience.toMap,
+          loginInfo = LoginInfo(CredentialsProvider.ID, email),
+          passwordInfo = PasswordInfo("SCrypt", ""))
         _ <- UserDAO.insert(user)
-        //where to save the hashes:
-        //in the user object or in a seperate DB ?
       } yield user
     }
 
@@ -144,6 +148,15 @@ object UserService extends FoxImplicits {
       result
     }
 
+  }
+
+  def changePasswordInfo(loginInfo:LoginInfo, passwordInfo:PasswordInfo)(implicit dBAccessContext: DBAccessContext) = {
+    for{
+      user <- findOneByEmail(loginInfo.providerKey)
+      _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)
+    }yield{
+      passwordInfo
+    }
   }
 
   def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
@@ -196,7 +209,9 @@ object UserService extends FoxImplicits {
     LoginTokenDAO.insert(LoginToken(user._id, token, expirationTime)).map( _ => token)
   }
 
-  def retrieve(loginInfo:LoginInfo):Future[Option[User]] = UserDAO.find(loginInfo)
-  def save(user:User) = UserDAO.save(user)
+  def retrieve(loginInfo:LoginInfo)(implicit ctx: DBAccessContext):Future[Option[User]] = UserDAO.find(loginInfo)
   def find(id:BSONObjectID) = UserDAO.findByIdQ(id)
+
+  def createSession(user: User): Tuple2[String, String] =
+    (SessionInformationKey -> user.id)
 }

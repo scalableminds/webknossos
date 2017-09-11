@@ -3,6 +3,8 @@ package models.user
 import java.util.UUID
 
 import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.api.util.PasswordInfo
+import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import play.api.Play.current
 import com.scalableminds.util.security.SCrypt._
 import net.liftweb.common.Box
@@ -44,11 +46,11 @@ case class User(
                  lastActivity: Long = System.currentTimeMillis,
                  _isAnonymous: Option[Boolean] = None,
                  _isSuperUser: Option[Boolean] = None,
-                 _id: BSONObjectID = BSONObjectID.generate) extends DBAccessContextPayload {
+                 _id: BSONObjectID = BSONObjectID.generate,
+                 loginInfo: LoginInfo,
+                 passwordInfo: PasswordInfo) extends DBAccessContextPayload {
 
   val dao = User
-
-  //lazy val teamTrees = TeamTreeDAO.findAllTeams(_groups)(GlobalAccessContext)
 
   def teamsWithRole(role: Role) = teams.filter(_.role == role)
 
@@ -116,10 +118,11 @@ case class User(
   def isAdminOf(user: User): Boolean ={
     !(user.teamNames.intersect(this.adminTeamNames).isEmpty)
   }
-
 }
 
 object User {
+
+  implicit val passwordInfoJsonFormat = Json.format[PasswordInfo]
   private[user] val userFormat = Json.format[User]
 
   def userPublicWrites(requestingUser: User): Writes[User] =
@@ -145,7 +148,7 @@ object User {
       (__ \ "teams").write[List[TeamMembership]])( u =>
       (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams))
 
-  val defaultDeactivatedUser = User("","","", teams = Nil)
+  val defaultDeactivatedUser = User("","","", teams = Nil, loginInfo = LoginInfo(CredentialsProvider.ID, ""), passwordInfo = PasswordInfo("SCrypt", ""))
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -153,6 +156,7 @@ object UserDAO extends SecuredBaseDAO[User] {
   val collectionName = "users"
 
   implicit val formatter = User.userFormat
+  implicit val passwordInfoFormatter = User.passwordInfoJsonFormat
 
   underlying.indexesManager.ensure(Index(Seq("email" -> IndexType.Ascending)))
 
@@ -228,6 +232,10 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def changePassword(_user: BSONObjectID, pswd: String)(implicit ctx: DBAccessContext) = {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("pwdHash" -> hashPassword(pswd))))
+  }
+
+  def changePasswordInfo(_user: BSONObjectID, pswdInfo: PasswordInfo)(implicit ctx: DBAccessContext) = {
+    update(findByIdQ(_user), Json.obj("$set" -> Json.obj("passwordInfo" -> pswdInfo)))
   }
 
   def findAllNonAnonymous(implicit ctx: DBAccessContext) = {

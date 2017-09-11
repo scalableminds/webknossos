@@ -6,7 +6,7 @@ package models.binary
 import java.io.File
 
 import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
-import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
 import com.scalableminds.braingames.datastore.tracings.TracingReference
@@ -28,13 +28,13 @@ trait DataStoreHandlingStrategy {
   def getSkeletonTracing(reference: TracingReference): Fox[SkeletonTracing] =
     Fox.failure("DataStore doesn't support getting SkeletonTracings")
 
-  def getSkeletonTracings(references: List[TracingReference]): Fox[List[SkeletonTracing]] =
+  def getSkeletonTracings(references: List[TracingReference]): Fox[SkeletonTracings] =
     Fox.failure("DataStore doesn't support getting SkeletonTracings")
 
   def saveSkeletonTracing(tracing: SkeletonTracing): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support saving SkeletonTracings.")
 
-  def saveSkeletonTracings(tracings: List[SkeletonTracing]): Fox[List[Box[TracingReference]]] =
+  def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[TracingReference]]] =
     Fox.failure("DataStore doesn't support saving SkeletonTracings.")
 
   def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] =
@@ -43,7 +43,7 @@ trait DataStoreHandlingStrategy {
   def mergeSkeletonTracingsByIds(tracingSelectors: List[TracingReference], persistTracing: Boolean): Fox[TracingReference] =
     Fox.failure("DataStore does't support merging of SkeletonTracings by ids.")
 
-  def mergeSkeletonTracingsByContents(tracings: List[SkeletonTracing], persistTracing: Boolean): Fox[TracingReference] =
+  def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[TracingReference] =
     Fox.failure("DataStore does't support merging of SkeletonTracings by contents.")
 
   def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[TracingReference] =
@@ -72,28 +72,28 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     logger.debug("Called to get SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${reference.id}")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .getWithJsonResponse[SkeletonTracing]
+      .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
   }
 
-  override def getSkeletonTracings(references: List[TracingReference]): Fox[List[SkeletonTracing]] = {
+  override def getSkeletonTracings(references: List[TracingReference]): Fox[SkeletonTracings] = {
     logger.debug("Called to get multiple SkeletonTracings. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/getMultiple")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .postWithJsonResponse[List[TracingSelector], List[SkeletonTracing]](references.map(r => TracingSelector(r.id)))
+      .postJsonWithProtoResponse[List[TracingSelector], SkeletonTracings](references.map(r => TracingSelector(r.id)))(SkeletonTracings)
   }
 
   override def saveSkeletonTracing(tracing: SkeletonTracing): Fox[TracingReference] = {
     logger.debug("Called to save SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/save")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .postWithJsonResponse[SkeletonTracing, TracingReference](tracing)
+      .postProtoWithJsonResponse[SkeletonTracing, TracingReference](tracing)
   }
 
-  override def saveSkeletonTracings(tracings: List[SkeletonTracing]): Fox[List[Box[TracingReference]]] = {
+  override def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[TracingReference]]] = {
     logger.debug("Called to save SkeletonTracings. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/saveMultiple")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
-      .postWithJsonResponse[List[SkeletonTracing], List[Box[TracingReference]]](tracings)
+      .postProtoWithJsonResponse[SkeletonTracings, List[Box[TracingReference]]](tracings)
   }
 
   override def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] = {
@@ -112,12 +112,12 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
       .postWithJsonResponse[List[TracingSelector], TracingReference](references.map(r => TracingSelector(r.id)))
   }
 
-  override def mergeSkeletonTracingsByContents(tracings: List[SkeletonTracing], persistTracing: Boolean): Fox[TracingReference] = {
+  override def mergeSkeletonTracingsByContents(tracings: SkeletonTracings, persistTracing: Boolean): Fox[TracingReference] = {
     logger.debug("Called to merge SkeletonTracings by contents. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/mergedFromContents")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("persist" -> persistTracing.toString)
-      .postWithJsonResponse[List[SkeletonTracing], TracingReference](tracings)
+      .postProtoWithJsonResponse[SkeletonTracings, TracingReference](tracings)
   }
 
   override def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File]): Fox[TracingReference] = {
@@ -125,7 +125,7 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     for {
       tracingReference <- RPC(s"${dataStoreInfo.url}/data/tracings/volume/save")
         .withQueryString("token" -> DataTokenService.webKnossosToken)
-        .postWithJsonResponse[VolumeTracing, TracingReference](tracing)
+        .postProtoWithJsonResponse[VolumeTracing, TracingReference](tracing)
       _ <- initialData match {
         case Some(file) =>
           RPC(s"${dataStoreInfo.url}/data/tracings/volume/${tracingReference.id}/initialData")

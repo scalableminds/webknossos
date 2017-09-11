@@ -1,13 +1,12 @@
 package models.annotation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
-import java.util.UUID
 
 import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.braingames.datastore.SkeletonTracing.{Color, Node, SkeletonTracing, Tree}
-import com.scalableminds.braingames.datastore.VolumeTracing.{VolumeTracing, VolumeTracingLayer}
-import com.scalableminds.braingames.datastore.tracings.skeleton.{NmlWriter, NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.braingames.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
+import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings._
+import com.scalableminds.braingames.datastore.tracings.skeleton.{NmlWriter, NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.mvc.BoxImplicits
@@ -39,7 +38,7 @@ object AnnotationService
     dataSetTeams.intersect(user.teamNames).head
   }
 
-  private def createVolumeTracing(dataSource: DataSource): VolumeTracing = {
+  private def createVolumeTracing(dataSource: DataSource): VolumeTracing = ??? /*{
     val fallbackLayer = dataSource.dataLayers.flatMap {
       case layer: SegmentationLayer => Some(layer)
       case _ => None
@@ -57,7 +56,7 @@ object AnnotationService
       tracingLayer,
       fallbackLayer.map(_.name),
       dataSource.boundingBox.center)
-  }
+  }*/
 
   def createExplorationalFor(
     user: User,
@@ -257,9 +256,9 @@ object AnnotationService
     def getTracings(dataSetName: String, tracingReferences: List[TracingReference]) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-        tracings <- dataSet.dataStore.getSkeletonTracings(tracingReferences)
+        tracingsContainer <- dataSet.dataStore.getSkeletonTracings(tracingReferences)
       } yield {
-        tracings
+        tracingsContainer.tracings.toList
       }
     }
 

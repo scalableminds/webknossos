@@ -4,7 +4,7 @@ import java.util.UUID
 import javax.inject.Inject
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.tracings.{Point3DUtils, TracingReference, Vector3DUtils}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -139,7 +139,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     for {
       dataSetName <- assertAllOnSameDataset()
       dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataset.notFound")
-      tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(requestedTasks.map(_._2))
+      tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       taskObjects: List[Fox[Task]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
       annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(

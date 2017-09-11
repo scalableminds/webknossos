@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.braingames.datastore.tracings.skeleton.NmlWriter
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -64,7 +64,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     def storeMergedSkeletonTracing(tracings: List[SkeletonTracing], dataSet: DataSet): Fox[TracingReference] = {
       for {
-        newTracingReference <- dataSet.dataStore.mergeSkeletonTracingsByContents(tracings, persistTracing=true)
+        newTracingReference <- dataSet.dataStore.mergeSkeletonTracingsByContents(SkeletonTracings(tracings), persistTracing=true)
       } yield {
         newTracingReference
       }

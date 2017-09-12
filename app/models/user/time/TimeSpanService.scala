@@ -6,7 +6,7 @@ package models.user.time
 import scala.collection.mutable
 import scala.concurrent.Future
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.task.TaskService
+import models.task.{Task, TaskService}
 import play.api.Play
 import play.api.libs.concurrent.Akka
 import akka.actor.{Actor, Props}
@@ -15,13 +15,19 @@ import models.annotation.{Annotation, AnnotationDAO, AnnotationLike, AnnotationS
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 
 import scala.concurrent.duration._
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Full}
 import reactivemongo.bson.BSONObjectID
 import akka.agent.Agent
+import com.scalableminds.util.mail.Send
 import com.typesafe.scalalogging.LazyLogging
+import models.project.Project
+import oxalis.mail.DefaultMails
+import oxalis.security.AuthenticatedRequest
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.thirdparty.BrainTracing
+import oxalis.thirdparty.BrainTracing.Mailer
+import play.api.mvc.AnyContent
 
 object TimeSpanService extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
@@ -135,13 +141,36 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       }
     }
 
+    def signalOverTime(time: Long, annotation: Option[AnnotationLike], user: User, task: Task, p: Project) = {
+      for {
+        a <- annotation
+        at <- a.tracingTime
+        pt <- p.expectedTime
+        if at >= pt && at - time < pt
+      }yield {
+        Mailer ! Send(DefaultMails.overLimitMail(
+          user,
+          p.name,
+          task.id,
+          a.id))
+      }
+    }
+
     private def logTimeToTask(
       duration: Long,
-      annotation: Option[AnnotationLike]) = {
+      annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext) = {
       // Log time to task
       annotation.flatMap(_._task) match {
         case Some(taskId) =>
           TaskService.logTime(duration, taskId)(GlobalAccessContext)
+
+          for {
+            user <- annotation.get.user
+            task <- annotation.get.task
+            project <- task.project
+          }yield{
+            signalOverTime(duration, annotation, user, task, project)
+          }
         case _ =>
           Fox.successful(true)
       }

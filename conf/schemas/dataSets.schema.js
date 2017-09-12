@@ -3,7 +3,17 @@ db.runCommand({
   validator: {
     $and: [
       {
-        dataStoreInfo: { $type: "object", $exists: true },
+        dataStoreInfo: {
+          $type: "object",
+          $exists: true,
+          $elemMatch: {
+            $and: [
+              { name: { $type: "string", $exists: true } },
+              { url: { $type: "string", $exists: true } },
+              { typ: { $type: "string", $exists: true } },
+            ],
+          },
+        },
       },
       {
         dataSource: { $type: "object", $exists: true },

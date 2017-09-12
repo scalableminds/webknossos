@@ -5,6 +5,7 @@ import * as React from "react";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
+import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
@@ -289,6 +290,14 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
           title="Description"
           dataIndex="type.description"
           sorter={Utils.localeCompareBy(t => t.type.description)}
+          render={description => (
+            <div style={{ wordBreak: "break-word" }} className="task-type-description">
+              <Markdown
+                source={description}
+                options={{ html: false, breaks: true, linkify: true }}
+              />
+            </div>
+          )}
           width={550}
         />
         <Column

@@ -8,7 +8,7 @@ import java.util.UUID
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings._
-import com.trueaccord.scalapb.json.JsonFormat
+import com.trueaccord.scalapb.json.Printer
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import org.json4s.JsonAST.{JArray, JNothing, JObject}
 import play.api.i18n.Messages
@@ -41,7 +41,7 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
 
   def toJsonWithEmptyTreeList(tracing: T) = {
     import org.json4s.jackson.JsonMethods.compact
-    val asJValue = JsonFormat.toJson(tracing)
+    val asJValue = new Printer(formattingLongAsNumber=true).toJson(tracing)
     if ((asJValue \ "trees") == JNothing) {
       compact(asJValue.merge(JObject("trees" -> JArray(List()))))
     } else {

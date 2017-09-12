@@ -50,7 +50,7 @@ trait KeyValueStore extends KeyValueStoreImplicits with FoxImplicits {
   }
 
   def scan[T](key: String, prefix: Option[String] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Iterator[KeyValuePair[T]] = {
-    scanImpl(key).flatMap { pair =>
+    scanImpl(key, prefix).flatMap { pair =>
       fromByteArray(pair.value).map(KeyValuePair(pair.key, _))
     }
   }

@@ -29,7 +29,11 @@ mockRequire("bootstrap-multiselect", {});
 // Antd makes use of fancy effects, which is why the rendering output is not reliable.
 // Mock these components to avoid this issue.
 mockRequire("antd/lib/spin", props => <div className="mock-spinner">{props.children}</div>);
-mockRequire("antd/lib/button", props => <div className="mock-button" {...props}>{props.children}</div>);
+mockRequire("antd/lib/button", props => (
+  <div className="mock-button" {...props}>
+    {props.children}
+  </div>
+));
 
 const ProjectListView = mockRequire.reRequire("admin/admin").ProjectListView;
 const Dashboard = mockRequire.reRequire("../../dashboard/views/dashboard_view").default;

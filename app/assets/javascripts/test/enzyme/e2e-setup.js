@@ -1,9 +1,9 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 // @flow
+import fs from "fs";
 import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import jsRoutes from "./jsRoutes";
-import fs from "fs";
 
 const requests = [];
 const minimumWait = 10;

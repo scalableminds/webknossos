@@ -3,32 +3,17 @@ db.runCommand({
   validator: {
     $and: [
       {
-        dataStoreInfo: { $type: "object", $exists: true },
+        name: { $type: "string", $exists: true }, // https://data1....
       },
       {
-        dataSource: { $type: "object", $exists: true },
+        url: { $type: "string", $exists: true}
       },
       {
-        allowedTeams: { $type: "array", $exists: true },
+        typ: { $in: ["webknossos-store", "ndstore"], $exists: true}
       },
       {
-        isActive: { $type: "bool", $exists: true },
-      },
-      {
-        isPublic: { $type: "bool", $exists: true },
-      },
-      {
-        $or: [{ description: { $type: "string" } }, { description: { $exists: false } }],
-      },
-      {
-        $or: [
-          { defaultConfiguration: { $type: "object" } },
-          { defaultConfiguration: { $exists: false } },
-        ],
-      },
-      {
-        created: { $type: "long", $exists: true },
-      },
+        key: { $type: "string", $exists: true}
+      }
     ],
   },
 });

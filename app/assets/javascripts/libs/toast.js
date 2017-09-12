@@ -13,6 +13,7 @@ function hashCode(s) {
 }
 
 function alertWithTimeout($this: JQuery, timeout = 3000) {
+  $this.alert();
   let timerId = -1;
 
   $this.hover(

@@ -10,11 +10,13 @@ import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings._
 import com.trueaccord.scalapb.json.JsonFormat
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import org.json4s.JsonAST.{JArray, JNothing, JObject}
 import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
+
 
 trait TracingController[T <: GeneratedMessage with Message[T]] extends Controller {
 
@@ -37,13 +39,23 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
       }
   }
 
+  def toJsonWithEmptyTreeList(tracing: T) = {
+    import org.json4s.jackson.JsonMethods.compact
+    val asJValue = JsonFormat.toJson(tracing)
+    if ((asJValue \ "trees") == JNothing) {
+      compact(asJValue.merge(JObject("trees" -> JArray(List()))))
+    } else {
+      compact(asJValue)
+    }
+  }
+
   def get(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(JsonFormat.toJsonString(tracing))
+          Ok(toJsonWithEmptyTreeList(tracing))
         }
       }
     }

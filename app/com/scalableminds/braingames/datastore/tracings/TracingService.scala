@@ -9,14 +9,14 @@ import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplici
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration._
-import scala.reflect.ClassTag
 
-trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStoreImplicits with FoxImplicits {
+trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStoreImplicits with FoxImplicits with LazyLogging {
 
   def tracingType: TracingType.Value
 
@@ -59,6 +59,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
   }
 
   def save(tracing: T, tracingId: String, version: Long, toCache: Boolean = false): Fox[_] = {
+    logger.debug("####### saving tracing at id " + tracingId)
     find(tracingId).futureBox.flatMap {
       case Full(_) =>
         Fox.failure("tracing ID is already in use.")

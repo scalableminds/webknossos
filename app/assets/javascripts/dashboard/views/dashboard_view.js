@@ -12,7 +12,7 @@ import LoggedTimeView from "./logged_time_view";
 
 const TabPane = Tabs.TabPane;
 
-const validTabKeys = ["datasets", "tasks", "explorativeAnnotations"];
+const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnnotations"];
 
 type Props = {
   userID: ?string,
@@ -54,8 +54,13 @@ class DashboardView extends React.PureComponent<Props, State> {
     const isAdmin = this.props.isAdminView;
     return [
       !isAdmin ? (
-        <TabPane tab="Datasets" key="datasets">
-          <DatasetView user={user} />
+        <TabPane tab="Dataset Gallery" key="datasets">
+          <DatasetView user={user} dataViewType="gallery" />
+        </TabPane>
+      ) : null,
+      !isAdmin ? (
+        <TabPane tab="Datasets" key="advanced-datasets">
+          <DatasetView user={user} dataViewType="advanced" />
         </TabPane>
       ) : null,
       <TabPane tab="Tasks" key="tasks">

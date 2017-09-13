@@ -18,8 +18,9 @@ import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
+import { VolumeToolEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoViewType } from "oxalis/constants";
+import type { OrthoViewType, VolumeToolType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 
 export function* updateIsosurface(): Generator<*, *, *> {
@@ -70,6 +71,7 @@ export function* editVolumeLayerAsync(): Generator<*, *, *> {
       continue;
     }
     const currentLayer = yield call(createVolumeLayer, startEditingAction.planeId);
+    const activeTool = yield select(state => state.tracing.activeTool);
 
     while (true) {
       const { addToLayerAction, finishEditingAction } = yield race({
@@ -79,14 +81,17 @@ export function* editVolumeLayerAsync(): Generator<*, *, *> {
 
       if (finishEditingAction) break;
 
-      // currentLayer.addContour(addToLayerAction.position);
-      const iterator = currentLayer.getCircleVoxelIterator();
-      const labelValue = yield select(state => state.tracing.activeCellId);
-      const binary = yield call([Model, Model.getSegmentationBinary]);
-      yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+      if (activeTool === VolumeToolEnum.TRACE) {
+        currentLayer.addContour(addToLayerAction.position);
+      } else if (activeTool === VolumeToolEnum.BRUSH) {
+        const iterator = currentLayer.getCircleVoxelIterator();
+        const labelValue = yield select(state => state.tracing.activeCellId);
+        const binary = yield call([Model, Model.getSegmentationBinary]);
+        yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+      }
     }
 
-    yield call(finishLayer, currentLayer);
+    yield call(finishLayer, currentLayer, activeTool);
   }
 }
 
@@ -96,14 +101,21 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
-export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
+export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Generator<*, *, *> {
   if (layer == null || layer.isEmpty()) {
     return;
   }
 
   const start = Date.now();
   layer.finish();
-  const iterator = layer.getCircleVoxelIterator();
+  let iterator;
+  if (activeTool === VolumeToolEnum.TRACE) {
+    iterator = layer.getVoxelIterator();
+  } else if (activeTool === VolumeToolEnum.BRUSH) {
+    iterator = layer.getCircleVoxelIterator();
+  } else {
+    throw Error("Unknown volume tool.");
+  }
   const labelValue = yield select(state => state.tracing.activeCellId);
   const binary = yield call([Model, Model.getSegmentationBinary]);
   yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);

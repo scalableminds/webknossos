@@ -7,7 +7,7 @@ import type { OxalisState, VolumeTracingType } from "oxalis/store";
 import type { VolumeTracingActionType } from "oxalis/model/actions/volumetracing_actions";
 import { getVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import {
-  setModeReducer,
+  setToolReducer,
   setActiveCellReducer,
   createCellReducer,
   updateDirectionReducer,
@@ -15,7 +15,7 @@ import {
   resetContourReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
-import Constants from "oxalis/constants";
+import { VolumeToolEnum } from "oxalis/constants";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {
   switch (action.type) {
@@ -42,7 +42,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         maxCellId,
         cells: {},
         restrictions,
-        volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
+        activeTool: VolumeToolEnum.MOVE,
         name: action.tracing.name,
         tracingType: action.tracing.typ,
         tracingId: action.tracing.id,
@@ -62,16 +62,16 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
   return getVolumeTracing(state.tracing)
     .map(volumeTracing => {
       switch (action.type) {
-        case "SET_MODE": {
-          return setModeReducer(state, volumeTracing, action.mode);
+        case "SET_TOOL": {
+          return setToolReducer(state, volumeTracing, action.tool);
         }
 
-        case "TOGGLE_MODE": {
-          const newMode =
-            volumeTracing.volumeTraceOrMoveMode === Constants.VOLUME_MODE_TRACE
-              ? Constants.VOLUME_MODE_MOVE
-              : Constants.VOLUME_MODE_TRACE;
-          return setModeReducer(state, volumeTracing, newMode);
+        case "TOGGLE_TOOL": {
+          const tools = Object.keys(VolumeToolEnum);
+          const currentToolIndex = tools.indexOf(volumeTracing.activeTool);
+          const newTool = tools[(currentToolIndex + 1) % tools.length];
+
+          return setToolReducer(state, volumeTracing, newTool);
         }
 
         case "SET_ACTIVE_CELL": {

@@ -10,7 +10,7 @@ import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_action
 import update from "immutability-helper";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import Maybe from "data.maybe";
-import Constants from "oxalis/constants";
+import { VolumeToolEnum } from "oxalis/constants";
 import type { TracingType, VolumeTracingType } from "oxalis/store";
 
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -22,7 +22,7 @@ const volumeTracing = {
   name: "",
   activeCellId: 0,
   cells: [],
-  volumeTraceOrMoveMode: Constants.VOLUME_MODE_MOVE,
+  activeTool: VolumeToolEnum.MOVE,
   maxCellId: 0,
   contourList: [],
   lastCentroid: null,
@@ -166,51 +166,58 @@ test("VolumeTracing should create cells and update the maxCellId", t => {
   });
 });
 
-test("VolumeTracing should set trace/view mode", t => {
-  const setModeAction = VolumeTracingActions.setModeAction(Constants.VOLUME_MODE_TRACE);
+test("VolumeTracing should set trace/view tool", t => {
+  const setToolAction = VolumeTracingActions.setToolAction(VolumeToolEnum.TRACE);
 
-  // Change mode to Trace
-  const newState = VolumeTracingReducer(initialState, setModeAction);
+  // Change tool to Trace
+  const newState = VolumeTracingReducer(initialState, setToolAction);
 
   t.not(newState, initialState);
   getVolumeTracing(newState.tracing).map(tracing => {
-    t.is(tracing.volumeTraceOrMoveMode, Constants.VOLUME_MODE_TRACE);
+    t.is(tracing.activeTool, VolumeToolEnum.TRACE);
   });
 });
 
-test("VolumeTracing should not allow to set trace mode if the zoomStep is > 1", t => {
-  const setModeAction = VolumeTracingActions.setModeAction(Constants.VOLUME_MODE_TRACE);
+test("VolumeTracing should not allow to set trace tool if the zoomStep is > 1", t => {
+  const setToolAction = VolumeTracingActions.setToolAction(VolumeToolEnum.TRACE);
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: { $set: 2 },
     },
   });
 
-  // Try to change mode to Trace
-  const newState = VolumeTracingReducer(alteredState, setModeAction);
+  // Try to change tool to Trace
+  const newState = VolumeTracingReducer(alteredState, setToolAction);
 
   t.is(alteredState, newState);
   getVolumeTracing(newState.tracing).map(tracing => {
-    // Mode should not be changed
-    t.is(tracing.volumeTraceOrMoveMode, Constants.VOLUME_MODE_MOVE);
+    // Tool should not be changed
+    t.is(tracing.activeTool, VolumeToolEnum.MOVE);
   });
 });
 
-test("VolumeTracing should toggle trace/view mode", t => {
-  const toggleModeAction = VolumeTracingActions.toggleModeAction();
+test("VolumeTracing should toggle trace/view/brush tool", t => {
+  const toggleToolAction = VolumeTracingActions.toggleToolAction();
 
-  // Toggle mode to Trace
-  let newState = VolumeTracingReducer(initialState, toggleModeAction);
+  // Toggle tool to Trace
+  let newState = VolumeTracingReducer(initialState, toggleToolAction);
 
   getVolumeTracing(newState.tracing).map(tracing => {
-    t.is(tracing.volumeTraceOrMoveMode, Constants.VOLUME_MODE_TRACE);
+    t.is(tracing.activeTool, VolumeToolEnum.TRACE);
   });
 
-  // Toggle mode back to View
-  newState = VolumeTracingReducer(newState, toggleModeAction);
+  // Toggle tool to Brush
+  newState = VolumeTracingReducer(newState, toggleToolAction);
 
   getVolumeTracing(newState.tracing).map(tracing => {
-    t.is(tracing.volumeTraceOrMoveMode, Constants.VOLUME_MODE_MOVE);
+    t.is(tracing.activeTool, VolumeToolEnum.BRUSH);
+  });
+
+  // Toggle tool back to MOVE
+  newState = VolumeTracingReducer(newState, toggleToolAction);
+
+  getVolumeTracing(newState.tracing).map(tracing => {
+    t.is(tracing.activeTool, VolumeToolEnum.MOVE);
   });
 });
 

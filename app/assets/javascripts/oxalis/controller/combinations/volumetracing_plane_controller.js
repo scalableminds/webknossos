@@ -7,7 +7,7 @@
 import _ from "lodash";
 import Store from "oxalis/store";
 import Utils from "libs/utils";
-import constants, { OrthoViews } from "oxalis/constants";
+import { OrthoViews, VolumeToolEnum } from "oxalis/constants";
 import {
   PlaneControllerClass,
   mapStateToProps,
@@ -18,15 +18,12 @@ import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
 import {
   createCellAction,
-  setModeAction,
+  setToolAction,
   startEditingAction,
   addToLayerAction,
   finishEditingAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import {
-  getActiveCellId,
-  getVolumeTraceOrMoveMode,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import { connect } from "react-redux";
@@ -61,7 +58,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   }
 
   simulateTracing = async (): Promise<void> => {
-    Store.dispatch(setModeAction(constants.VOLUME_MODE_TRACE));
+    Store.dispatch(setToolAction(VolumeToolEnum.TRACE));
 
     const controls = this.getPlaneMouseControls(OrthoViews.PLANE_XY);
     let pos = (x, y) => ({ x, y });
@@ -90,8 +87,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
 
-        const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
-        if (mode === constants.VOLUME_MODE_MOVE) {
+        const tool = getVolumeTool(Store.getState().tracing).get();
+        if (tool === VolumeToolEnum.MOVE) {
           const viewportScale = Store.getState().userConfiguration.scale;
           this.move([
             delta.x * mouseInversionX / viewportScale,
@@ -116,8 +113,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
-        const mode = getVolumeTraceOrMoveMode(Store.getState().tracing).get();
-        if (mode === constants.VOLUME_MODE_TRACE) {
+        const tool = getVolumeTool(Store.getState().tracing).get();
+        if (tool !== VolumeToolEnum.MOVE) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
       },

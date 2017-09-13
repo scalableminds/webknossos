@@ -25,7 +25,7 @@ import type {
   Vector3,
   Vector6,
   ModeType,
-  VolumeTraceOrMoveModeType,
+  VolumeToolType,
   ControlModeType,
   BoundingBoxType,
 } from "oxalis/constants";
@@ -181,7 +181,7 @@ export type VolumeTracingType = {
   +name: string,
   +version: number,
   +maxCellId: number,
-  +volumeTraceOrMoveMode: VolumeTraceOrMoveModeType,
+  +activeTool: VolumeToolType,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourList: Array<Vector3>,

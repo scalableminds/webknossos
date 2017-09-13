@@ -141,38 +141,39 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       }
     }
 
-    def signalOverTime(time: Long, annotation: Option[AnnotationLike], user: User, task: Task, p: Project) = {
+    def signalOverTime(time: Long, annotation: AnnotationLike, user: User, task: Task, p: Project): Fox[_] = {
       for {
-        a <- annotation
-        at <- a.tracingTime
+        at <- annotation.tracingTime
         pt <- p.expectedTime
         if at >= pt && at - time < pt
-      }yield {
+      } yield {
         Mailer ! Send(DefaultMails.overLimitMail(
           user,
           p.name,
           task.id,
-          a.id))
+          annotation.id))
       }
     }
 
     private def logTimeToTask(
       duration: Long,
-      annotation: Option[AnnotationLike])(implicit ctx: DBAccessContext) = {
+      annotationOpt: Option[AnnotationLike])(implicit ctx: DBAccessContext) = {
       // Log time to task
-      annotation.flatMap(_._task) match {
-        case Some(taskId) =>
-          TaskService.logTime(duration, taskId)(GlobalAccessContext)
-
-          for {
-            user <- annotation.get.user
-            task <- annotation.get.task
-            project <- task.project
-          }yield{
-            signalOverTime(duration, annotation, user, task, project)
-          }
-        case _ =>
-          Fox.successful(true)
+      annotationOpt.toFox.flatMap { annotation =>
+        annotation._task match {
+          case Some(taskId) =>
+            for {
+              user <- annotation.user
+              task <- annotation.task
+              project <- task.project
+              _ <- TaskService.logTime(duration, taskId)(GlobalAccessContext)
+              _ <- signalOverTime(duration, annotation, user, task, project)
+            } yield {
+              true
+            }
+          case _ =>
+            Fox.successful(true)
+        }
       }
     }
 

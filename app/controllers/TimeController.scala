@@ -77,18 +77,14 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   }
 
   def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Fox[List[(TimeSpan, Task)]] = {
-    for {
-      list <- Fox.combined(l.map(t => getTimeSpanOptionTask(t)))
-    } yield {
-      list
-    }
+    Fox.sequence(l.map(getTimeSpanOptionTask)).map(_.flatten)
   }
 
   def getTimeSpanOptionTask(t: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Fox[(TimeSpan,Task)] = {
     for {
       annotationId <- t.annotation.toFox
       annotation <- AnnotationDAO.findOneById(annotationId)
-      if(annotation._task.isDefined)
+      if (annotation._task.isDefined)
       task <- TaskService.findOneById(annotation._task.get.stringify)
     } yield {
       (t, task)
@@ -113,8 +109,8 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   }
 
   def formatDuration(millis: Long): String = {
-  //example: P3Y6M4DT12H30M5S = 3 years + 9 month + 4 days + 12 hours + 30 min + 5 sec
-  // only hours, min and sec are important in this scenario
+    // example: P3Y6M4DT12H30M5S = 3 years + 9 month + 4 days + 12 hours + 30 min + 5 sec
+    // only hours, min and sec are important in this scenario
     val h = millis / 3600000
     val m = (millis / 60000) % 60
     val s = (millis / 1000) % 60

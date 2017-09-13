@@ -214,4 +214,12 @@ object UserService extends FoxImplicits {
 
   def createSession(user: User): Tuple2[String, String] =
     (SessionInformationKey -> user.id)
+
+  def createLoginInfo(email: String): LoginInfo ={
+    LoginInfo(CredentialsProvider.ID, email)
+  }
+
+  def createPasswordInfo(pw: String): PasswordInfo ={
+    PasswordInfo("SCrypt", "")
+  }
 }

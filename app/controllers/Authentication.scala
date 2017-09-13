@@ -416,27 +416,27 @@ class Auth @Inject() (
     )
   }
 
-  def resetPassword(tokenId:String) = Action.async { implicit request =>
+  def resetPassword(tokenId:String)(implicit session: oxalis.view.SessionData) = Action.async { implicit request =>
     val id = UUID.fromString(tokenId)
     userTokenService.find(id).flatMap {
       case None =>
-        Future.successful(NotFound(views.html.errors.notFound(request)))
+        Future.successful(NotFound(views.html.error.defaultError("token not found", true))) //views.html.errors.notFound(request)
       case Some(token) if !token.isSignUp && !token.isExpired =>
         Future.successful(Ok(views.html.auth.resetPassword(tokenId, resetPasswordForm)))
       case _ => for {
         _ <- userTokenService.remove(id)
-      } yield NotFound(views.html.errors.notFound(request))
+      } yield NotFound(views.html.error.defaultError("token not found", true)) //views.html.errors.notFound(request)
     }
   }
 
-  def handleResetPassword(tokenId:String)(implicit ctx: DBAccessContext) = Action.async { implicit request =>
+  def handleResetPassword(tokenId:String)(implicit ctx: DBAccessContext, session: oxalis.view.SessionData) = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(views.html.auth.resetPassword(tokenId, bogusForm))),
       passwords => {
         val id = UUID.fromString(tokenId)
         userTokenService.find(id).flatMap {
           case None =>
-            Future.successful(NotFound(views.html.errors.notFound(request)))
+            Future.successful(NotFound(views.html.error.defaultError("token not found", true))) //views.html.errors.notFound(request)
           case Some(token) if !token.isSignUp && !token.isExpired =>
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
@@ -451,70 +451,3 @@ class Auth @Inject() (
     )
   }
 }
-
-/*
-todo:
-create LoginInfo: with 2 hashes cause Braintracing need md5 hash for their DB
-update auth methode form UserDAO
-update insert method of userService
-
-alle Klassen durchgehen und nach alten methoden suchen, die nicht meht benutzt werden !!!
-sso
-switch
-testing!!!
-
-_____________________________________________________________________________________________________________________
-
-
-make an overview of how and where the passwords are and should be saved:
-  examplecode:
-  userService saves Users: users consists of a UserID and a list of profiles
-                           profile consists of a loginInfo, email, name, ..., passwordInfo, oauthInfo
-                                loginInfo: id, key (key = email)
-                                passwortInfo consists of hasher: string, pw: string, salt:Option[string]=None
-                                ---oauth1Info = token:string, secret:string
-
-  AuthInfoReposity ist ein trait
-    gibt fertig implementierte Klasse DelagableAuthInfoRepo (ist zum finden, einfügen, updaten und ändern von authInfos vom Type T   T ist entweder passwordInfo oder oauthToken)
-        -> dann muss man mit loginInfo arbeiten
-
-        -> wahrscheinlich selbst implementieren BZW AuthInfoService fertigstellen => eigene DAOs verwenden, aber auch LoginInfo...
-
-  UserTeokenService leitet einfach nur die Sachen weiter
-      def find(id:UUID) = userTokenDao.find(id)
-      def save(token:UserToken) = userTokenDao.save(token)
-      def remove(id:UUID) = userTokenDao.remove(id)
-
-      userTokenDao ist trait (MongoUserTokenDAO) könnte man so verwenden
-
-  env.authenticatorService ???
-  authenticator: CookieAuthenticator
-
-  credentials:Credentials sind id:string, pw:string
-  credentialProvider prüft das PW !!! greift auf AuthInfoRepository zu; man muss gucken ob durch das "inject" die richtige klasse benutzt wird
-        (sonst selbst implementieren, da authInfoRepository benutzt wird. Allerdings einfach die Implementierung zu 99% übernehmen)
-_____________________________________________________________________________________________________________________
-
-userTokenDao ermöglicht die token für timetraking (zu token kann man sich nochmal signUp angucken)
-ich glaube und hoffe alles mit oauth brauch man nur für social-login
-
-
-wo werden die credentials gespeichert?
-was mach authInfo und was macht passwortInfo !!!
-
-userTokenService arbeitet mit id: nötig oder einfach anpassen?
-hash variable entfernen (jetztz in pwInfo). soll md5 hash auch in pwInfo?
-Johannes fragen, ob das ok ist, dass der hash jetzt in pwInfo gespeichert wird oder ob das mit den alten daten zu komplikationen führt?
-
---- meine Version ---
-
-    userService speichert User: user bestehen aus email, ..., hash, md5, loginInfo, passwordInfo (der ursprüngliche hash muss am ende gelöscht werden: wird jetzt in passortInfo gespeichert)
-
-    authInfoRepo ???
-
-    UserTeokenService leitet einfach nur die Sachen weiter
-      def find(id:UUID) = userTokenDao.find(id)
-      def save(token:UserToken) = userTokenDao.save(token)
-      def remove(id:UUID) = userTokenDao.remove(id)
-    UserToken und UserTokenService wurden komplett übernommen
- */

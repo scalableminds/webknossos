@@ -129,20 +129,6 @@ class DatasetView extends React.PureComponent<Props, State> {
             Add Dataset
           </Button>
         </a>
-        {isGallery ? (
-          <Button
-            className="test-showAdvancedView"
-            onClick={this.showAdvancedView}
-            icon="bars"
-            style={margin}
-          >
-            Show Advanced View
-          </Button>
-        ) : (
-          <Button onClick={this.showGalleryView} icon="appstore" style={margin}>
-            Show Gallery View
-          </Button>
-        )}
         {search}
       </div>
     ) : (

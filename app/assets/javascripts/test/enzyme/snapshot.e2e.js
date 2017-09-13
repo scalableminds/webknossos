@@ -50,8 +50,8 @@ test("Dashboard", async t => {
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Datasets" });
 
   dashboard
-    .find(".test-showAdvancedView")
-    .at(0)
+    .find(".ant-tabs-tab")
+    .at(1)
     .simulate("click");
   await waitForAllRequests();
 
@@ -62,7 +62,7 @@ test("Dashboard", async t => {
   // Active tasks tab
   dashboard
     .find(".ant-tabs-tab")
-    .at(1)
+    .at(2)
     .simulate("click");
   await waitForAllRequests();
   t.is(dashboard.find(".test-tasksHeadline").length, 1);
@@ -72,7 +72,7 @@ test("Dashboard", async t => {
   // Active explorative annotations tab
   dashboard
     .find(".ant-tabs-tab")
-    .at(2)
+    .at(3)
     .simulate("click");
   await waitForAllRequests();
   t.is(dashboard.find(".test-explorative-annotations-view").length, 1);

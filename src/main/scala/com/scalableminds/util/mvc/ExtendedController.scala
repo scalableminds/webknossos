@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+* Copyright (C) 20011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
 */
 package com.scalableminds.util.mvc
 
@@ -24,10 +24,21 @@ trait ResultBox extends I18nSupport{
       new JsonResult(statusCode)(Messages(msg))
     case ParamFailure(msg, _, _, messages: Seq[(String, String)]) =>
       new JsonResult(BAD_REQUEST)(jsonMessages(messages))
-    case Failure(msg, _, _) =>
-      new JsonResult(BAD_REQUEST)(Messages(msg))
+    case Failure(msg, _, chain) =>
+      new JsonResult(BAD_REQUEST)(Messages(msg), formatChainOpt(chain))
     case Empty =>
       new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
+  }
+
+  private def formatChainOpt(chain: Box[Failure]): Option[String] = chain match {
+    case Full(failure) => Some(formatChain(chain))
+    case _ => None
+  }
+
+  private def formatChain(chain: Box[Failure]): String = chain match {
+    case Full(failure) =>
+      " <~ " + Messages(failure.msg) + formatChain(failure.chain)
+    case _ => ""
   }
 
   def jsonMessages(messages: Seq[(String, String)]): JsObject =
@@ -112,14 +123,19 @@ class JsonResult(status: Int) extends Result(header = ResponseHeader(status), bo
   def apply(html: Html, messages: Seq[(String, String)]): Result =
     apply(html, Json.obj(), messages)
 
-  def apply(html: Html, message: String): Result =
-    apply(html, Seq(messageTypeFromStatus -> message))
+  def apply(html: Html, message: String, chain: Option[String]): Result =
+    apply(html, Seq(messageTypeFromStatus -> message) ++ namedChain(chain))
 
   def apply(html: Html): Result =
     apply(html, Seq.empty)
 
-  def apply(message: String): Result =
-    apply(Html(""), message)
+  def apply(message: String, chain: Option[String] = None): Result =
+    apply(Html(""), message, chain)
+
+  def namedChain(chainOpt: Option[String]) = chainOpt match {
+    case None => None
+    case Some(chain) => Some("chain" -> chain)
+  }
 
   def jsonHTMLResult(html: Html): JsObject = {
     val htmlJson = html.body match {

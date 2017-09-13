@@ -21,6 +21,8 @@ class Drawing {
 
   // Source: http://en.wikipedia.org/wiki/Bresenham's_line_algorithm#Simplification
   drawLine2d(x: number, y: number, x1: number, y1: number, draw: (number, number) => void) {
+    x = Math.round(x);
+    y = Math.round(y);
     let d;
     let mode;
     let dx = x1 - x;
@@ -119,7 +121,13 @@ class Drawing {
   }
 
   // https://en.wikipedia.org/wiki/Midpoint_circle_algorithm
-  fillCircle(x0: number, y0: number, radius: number, drawPixel: (number, number) => void) {
+  fillCircle(
+    x0: number,
+    y0: number,
+    radius: number,
+    scale: [number, number],
+    drawPixel: (number, number) => void,
+  ) {
     let x = radius - 1;
     let y = 0;
     let dx = 1;
@@ -127,10 +135,34 @@ class Drawing {
     // Decision criterion divided by 2 evaluated at x=r, y=0
     let decisionOver2 = dx - (radius << 1);
     while (x >= y) {
-      this.drawLine2d(x + x0, y + y0, -x + x0, y + y0, drawPixel);
-      this.drawLine2d(y + x0, x + y0, -y + x0, x + y0, drawPixel);
-      this.drawLine2d(-x + x0, -y + y0, x + x0, -y + y0, drawPixel);
-      this.drawLine2d(-y + x0, -x + y0, y + x0, -x + y0, drawPixel);
+      this.drawLine2d(
+        x * scale[0] + x0,
+        y * scale[1] + y0,
+        -x * scale[0] + x0,
+        y * scale[1] + y0,
+        drawPixel,
+      );
+      this.drawLine2d(
+        -y * scale[0] + x0,
+        -x * scale[1] + y0,
+        -y * scale[0] + x0,
+        x * scale[1] + y0,
+        drawPixel,
+      );
+      this.drawLine2d(
+        -x * scale[0] + x0,
+        -y * scale[1] + y0,
+        x * scale[0] + x0,
+        -y * scale[1] + y0,
+        drawPixel,
+      );
+      this.drawLine2d(
+        y * scale[0] + x0,
+        x * scale[1] + y0,
+        y * scale[0] + x0,
+        -x * scale[1] + y0,
+        drawPixel,
+      );
       if (decisionOver2 <= 0) {
         y++;
         // Change in decision criterion for y -> y+1

@@ -9,6 +9,7 @@ import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import { Vector3Indicies } from "oxalis/constants";
 import Store from "oxalis/store";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 
 export class VoxelIterator {
@@ -178,7 +179,7 @@ class VolumeLayer {
     }
 
     const radius = 10;
-    const width = 2 * radius;
+    const width = 2 * radius + 1;
     const height = width;
 
     const map = new Array(width);
@@ -197,7 +198,11 @@ class VolumeLayer {
       map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
     };
 
-    Drawing.fillCircle(coord[0], coord[1], radius, (x, y) => setMap(x, y, true));
+    // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
+    const baseVoxelFactors = this.get2DCoordinate(
+      getBaseVoxelFactors(Store.getState().dataset.scale),
+    );
+    Drawing.fillCircle(coord[0], coord[1], radius, baseVoxelFactors, (x, y) => setMap(x, y, true));
 
     const iterator = new VoxelIterator(
       map,

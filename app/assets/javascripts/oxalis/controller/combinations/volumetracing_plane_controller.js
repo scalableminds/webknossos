@@ -22,11 +22,15 @@ import {
   startEditingAction,
   addToLayerAction,
   finishEditingAction,
+  setBrushPositionAction,
+  hideBrushAction,
+  setBrushSizeAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OrthoViewType, Point2 } from "oxalis/constants";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import { connect } from "react-redux";
+import type { OrthoViewType, Point2 } from "oxalis/constants";
+import type { ModifierKeys } from "libs/input";
 
 class VolumeTracingPlaneController extends PlaneControllerClass {
   // See comment in Controller class on general controller architecture.
@@ -135,6 +139,25 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         );
 
         this.volumeTracingController.handleCellSelection(cellId);
+      },
+
+      mouseMove: (delta: Point2, position: Point2) => {
+        const tool = getVolumeTool(Store.getState().tracing).get();
+        if (tool === VolumeToolEnum.BRUSH) {
+          Store.dispatch(setBrushPositionAction([position.x, position.y]));
+        }
+      },
+
+      out: () => {
+        Store.dispatch(hideBrushAction());
+      },
+
+      scroll: (delta: number, type: ?ModifierKeys) => {
+        if (type === "shift") {
+          const currentSize = Store.getState().temporaryConfiguration.brushSize;
+          // Different browsers send different deltas, this way the behavior is comparable
+          Store.dispatch(setBrushSizeAction(currentSize + (delta > 0 ? 5 : -5)));
+        }
       },
     });
   }

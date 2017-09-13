@@ -2,7 +2,7 @@
  * volumetracing_actions.js
  * @flow
  */
-import type { Vector3, OrthoViewType, VolumeToolType } from "oxalis/constants";
+import type { Vector2, Vector3, OrthoViewType, VolumeToolType } from "oxalis/constants";
 import type { ServerTracing, VolumeContentDataType } from "oxalis/model";
 
 type InitializeVolumeTracingActionType = {
@@ -18,6 +18,9 @@ type SetToolActionType = { type: "SET_TOOL", tool: VolumeToolType };
 type ToggleToolActionType = { type: "TOGGLE_TOOL" };
 type UpdateDirectionActionType = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourActionType = { type: "RESET_CONTOUR" };
+type SetBrushPositionActionType = { type: "SET_BRUSH_POSITION", position: Vector2 };
+type HideBrushActionType = { type: "HIDE_BRUSH" };
+type SetBrushSizeActionType = { type: "SET_BRUSH_SIZE", brushSize: number };
 
 export type VolumeTracingActionType =
   | InitializeVolumeTracingActionType
@@ -29,7 +32,10 @@ export type VolumeTracingActionType =
   | SetToolActionType
   | ToggleToolActionType
   | UpdateDirectionActionType
-  | ResetContourActionType;
+  | ResetContourActionType
+  | SetBrushPositionActionType
+  | HideBrushActionType
+  | SetBrushSizeActionType;
 
 export const VolumeTracingSaveRelevantActions = ["CREATE_CELL", "SET_ACTIVE_CELL"];
 
@@ -80,4 +86,18 @@ export const updateDirectionAction = (centroid: Vector3): UpdateDirectionActionT
 
 export const resetContourAction = (): ResetContourActionType => ({
   type: "RESET_CONTOUR",
+});
+
+export const setBrushPositionAction = (position: Vector2): SetBrushPositionActionType => ({
+  type: "SET_BRUSH_POSITION",
+  position,
+});
+
+export const hideBrushAction = (): HideBrushActionType => ({
+  type: "HIDE_BRUSH",
+});
+
+export const setBrushSizeAction = (brushSize: number): SetBrushSizeActionType => ({
+  type: "SET_BRUSH_SIZE",
+  brushSize,
 });

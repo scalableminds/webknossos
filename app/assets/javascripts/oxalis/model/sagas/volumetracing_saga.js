@@ -106,21 +106,17 @@ export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Ge
     return;
   }
 
-  const start = Date.now();
-  layer.finish();
-  let iterator;
   if (activeTool === VolumeToolEnum.TRACE) {
-    iterator = layer.getVoxelIterator();
-  } else if (activeTool === VolumeToolEnum.BRUSH) {
-    iterator = layer.getCircleVoxelIterator();
-  } else {
-    throw Error("Unknown volume tool.");
-  }
-  const labelValue = yield select(state => state.tracing.activeCellId);
-  const binary = yield call([Model, Model.getSegmentationBinary]);
-  yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+    const start = Date.now();
 
-  console.log("Labeling time:", Date.now() - start);
+    layer.finish();
+    const iterator = layer.getVoxelIterator();
+    const labelValue = yield select(state => state.tracing.activeCellId);
+    const binary = yield call([Model, Model.getSegmentationBinary]);
+    yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+
+    console.log("Labeling time:", Date.now() - start);
+  }
 
   yield put(updateDirectionAction(layer.getCentroid()));
   yield put(resetContourAction());
@@ -128,7 +124,7 @@ export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Ge
 
 export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
   while (true) {
-    yield take(["SET_MODE", "TOGGLE_MODE"]);
+    yield take(["SET_TOOL", "TOGGLE_TOOL"]);
     if (yield select(state => isVolumeTracingDisallowed(state))) {
       Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
     }

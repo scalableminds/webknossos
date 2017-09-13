@@ -22,6 +22,7 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
 import type {
   OrthoViewType,
+  Vector2,
   Vector3,
   Vector6,
   ModeType,
@@ -259,6 +260,8 @@ export type TemporaryConfigurationType = {
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
+  +brushPosition: ?Vector2,
+  +brushSize: number,
 };
 
 export type ScriptType = {
@@ -383,6 +386,8 @@ export const defaultState: OxalisState = {
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
+    brushPosition: null,
+    brushSize: 50,
   },
   task: null,
   dataset: {

@@ -10,6 +10,7 @@ import Dimensions from "oxalis/model/dimensions";
 import { Vector3Indicies } from "oxalis/constants";
 import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 
 export class VoxelIterator {
@@ -178,7 +179,9 @@ class VolumeLayer {
       return VoxelIterator.finished();
     }
 
-    const radius = 10;
+    const radius = Math.round(
+      this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
+    );
     const width = 2 * radius + 1;
     const height = width;
 
@@ -283,6 +286,13 @@ class VolumeLayer {
     const cy = sumCy / 6 / area;
 
     return this.get3DCoordinate([cx, cy]);
+  }
+
+  pixelsToVoxels(pixels: number): number {
+    const state = Store.getState();
+    const zoomFactor = getPlaneScalingFactor(state.flycam);
+    const viewportScale = state.userConfiguration.scale;
+    return pixels / viewportScale * zoomFactor;
   }
 }
 

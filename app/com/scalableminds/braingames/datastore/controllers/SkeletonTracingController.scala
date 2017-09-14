@@ -10,11 +10,11 @@ import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.skeleton._
-import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
+import com.scalableminds.braingames.datastore.tracings.{ProtoJsonFormats, TracingReference, TracingType}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.JsonHelper.boxFormat
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
-import com.scalableminds.util.tools.JsonHelper.boxFormat
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -24,7 +24,9 @@ class SkeletonTracingController @Inject()(
                                            val dataSourceRepository: DataSourceRepository,
                                            val webKnossosServer: WebKnossosServer,
                                            val messagesApi: MessagesApi
-                                       ) extends TracingController[SkeletonTracing] {
+                                       ) extends TracingController[SkeletonTracing] with ProtoJsonFormats {
+
+  implicit val tracingFormat = skeletonTracingFormat
 
   def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
     implicit request => {

@@ -10,15 +10,14 @@ import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings._
 import com.trueaccord.scalapb.json.Printer
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
-import org.json4s.JsonAST.{JArray, JNothing, JObject}
 import play.api.i18n.Messages
-import play.api.libs.json.Json
+import play.api.libs.json.{Format, Json}
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-trait TracingController[T <: GeneratedMessage with Message[T]] extends Controller {
+trait TracingController[T <: GeneratedMessage with Message[T]] extends Controller with ProtoJsonFormats {
 
   def dataSourceRepository: DataSourceRepository
 
@@ -27,6 +26,10 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
   def webKnossosServer: WebKnossosServer
 
   implicit val tracingProtoCompanion: GeneratedMessageCompanion[T] = tracingService.tracingProtoCompanion
+
+  implicit val tracingFormat: Format[T]
+
+  lazy val protoJsonPrinter = new Printer(formattingLongAsNumber = true, includingEmptySeqFields = true)
 
   def save = Action.async(validateProto[T]) {
     implicit request =>
@@ -39,23 +42,13 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
       }
   }
 
-  def toJsonWithEmptyTreeList(tracing: T) = {
-    import org.json4s.jackson.JsonMethods.compact
-    val asJValue = new Printer(formattingLongAsNumber=true).toJson(tracing)
-    if ((asJValue \ "trees") == JNothing) {
-      compact(asJValue.merge(JObject("trees" -> JArray(List()))))
-    } else {
-      compact(asJValue)
-    }
-  }
-
   def get(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(toJsonWithEmptyTreeList(tracing))
+          Ok(Json.toJson(tracing))
         }
       }
     }

@@ -8,7 +8,7 @@ import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateActionGroup}
-import com.scalableminds.braingames.datastore.tracings.{TracingDataStore, TracingReference, TracingType}
+import com.scalableminds.braingames.datastore.tracings.{ProtoJsonFormats, TracingDataStore, TracingReference, TracingType}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -21,7 +21,9 @@ class VolumeTracingController @Inject()(
                                          val webKnossosServer: WebKnossosServer,
                                          tracingDataStore: TracingDataStore,
                                          val messagesApi: MessagesApi
-                                       ) extends TracingController[VolumeTracing] {
+                                       ) extends TracingController[VolumeTracing] with ProtoJsonFormats {
+
+  implicit val tracingFormat = volumeTracingFormat
 
   def initialData(tracingId: String) = Action.async {
     implicit request =>

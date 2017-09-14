@@ -12,7 +12,7 @@ db.runCommand({
         $or: [{ dataLayerName: { $type: "string" } }, { dataLayerName: { $exists: false } }],
       },
       {
-        token: { $type: "string", $exists: true },
+        token: { $regex: "^[a-z0-9]{26}$", $exists: true },
       },
       {
         expiration: { $type: "long", $exists: true },

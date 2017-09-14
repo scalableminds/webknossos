@@ -3,7 +3,7 @@ db.runCommand({
   validator: {
     $and: [
       {
-        name: { $type: "string", $exists: true },
+        name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true },
       },
       {
         $or: [{ parent: { $type: "string" } }, { parent: { $exists: false } }],

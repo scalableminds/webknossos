@@ -3,10 +3,10 @@ db.runCommand({
   validator: {
     $and: [
       {
-        name: { $type: "string", $exists: true }, // https://data1....
+        name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true }, // https://data1....
       },
       {
-        url: { $type: "string", $exists: true },
+        url: { $regex: "^(https?|ftp)://[^s/$.?#].[^s]*$@iS", $exists: true },
       },
       {
         typ: { $in: ["webknossos-store", "ndstore"], $exists: true },

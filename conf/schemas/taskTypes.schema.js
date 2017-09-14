@@ -12,7 +12,24 @@ db.runCommand({
         team: { $type: "string", $exists: true },
       },
       {
-        settings: { $type: "object", $exists: true },
+        settings: {
+          $type: "object",
+          $exists: true,
+          $elemMatch: {
+            $and: [
+              { allowedModes: { $type: "array", $exists: true } },
+              {
+                $or: [
+                  { preferredMode: { $type: "string" } },
+                  { preferredMode: { $exists: false } },
+                ],
+              },
+              { branchPointsAllowed: { $type: "bool", $exists: true } },
+              { somaClickingAllowed: { $type: "bool", $exists: true } },
+              { advancedOptionsAllowed: { $type: "bool", $exists: true } },
+            ],
+          },
+        },
       },
       {
         $or: [{ fileName: { $type: "string" } }, { fileName: { $exists: false } }],

@@ -6,7 +6,16 @@ db.runCommand({
         $or: [{ _user: { $type: "objectId" } }, { _user: { $exists: false } }],
       },
       {
-        content: { $type: "object", $exists: true },
+        content: {
+          $type: "object",
+          $exists: true,
+          $elemMatch: {
+            $and: [
+              { contentType: { $type: "string", $exists: true } },
+              { _id: { $type: "string", $exists: true } },
+            ],
+          },
+        },
       },
       {
         $or: [{ _task: { $type: "objectId" } }, { _task: { $exists: false } }],
@@ -15,10 +24,33 @@ db.runCommand({
         team: { $type: "string", $exists: true },
       },
       {
-        state: { $type: "object", $exists: true },
+        state: {
+          $type: "object",
+          $exists: true,
+          $elemMatch: {
+            $and: [
+              { isAssigned: { $type: "bool", $exists: true } },
+              { isFinished: { $type: "bool", $exists: true } },
+              { isInProgess: { $type: "bool", $exists: true } },
+            ],
+          },
+        },
       },
       {
-        typ: { $type: "string", $exists: true },
+        typ: {
+          $type: "string",
+          $exists: true,
+          $in: [
+            "Task",
+            "View",
+            "Explorational",
+            "CompoundTask",
+            "CompoundProject",
+            "CompoundTaskType",
+            "Tracing Base",
+            "Orphan",
+          ],
+        },
       },
       {
         version: { $type: "int", $exists: true },
@@ -45,7 +77,7 @@ db.runCommand({
         isPublic: { $type: "bool", $exists: true },
       },
       {
-        tags: { $type: "array", $exists: true },
+        tags: { $type: "array", $exists: true }, // $all -> $type: "string" TODO
       },
     ],
   },

@@ -15,7 +15,16 @@ db.runCommand({
         _project: { $type: "string", $exists: true },
       },
       {
-        neededExperience: { $type: "object", $exists: true },
+        neededExperience: {
+          $type: "object",
+          $exists: true,
+          $elemMatch: {
+            $and: [
+              { domain: { $regex: "^[A-Za-z0-9-_]+$", $exists: true } },
+              { value: { $type: "int", $exists: true } },
+            ],
+          },
+        },
       },
       {
         priority: { $type: "int", $exists: true },

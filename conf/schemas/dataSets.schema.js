@@ -8,18 +8,40 @@ db.runCommand({
           $exists: true,
           $elemMatch: {
             $and: [
-              { name: { $type: "string", $exists: true } },
-              { url: { $type: "string", $exists: true } },
-              { typ: { $type: "string", $exists: true } },
+              { name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true } },
+              { url: { $regex: "@^(https?|ftp)://[^s/$.?#].[^s]*$@iS", $exists: true } },
+              { typ: { $in: ["webknossos-store", "ndstore"], $exists: true } },
+              { $or: [{ accessToken: { $type: "string" } }, { accessToken: { $exists: false } }] },
             ],
           },
         },
       },
       {
-        dataSource: { $type: "object", $exists: true },
+        dataSource: {
+          $type: "object",
+          $exists: true,
+          $elemMatch: {
+            $and: [
+              {
+                id: {
+                  $type: "object",
+                  $exists: true,
+                  $elemMatch: {
+                    $and: [
+                      { name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true } },
+                      { team: { $type: "string", $exists: true } },
+                    ],
+                  },
+                },
+              },
+              { dataLayers: { $type: "array", $exists: true } },
+              { scale: { $type: "array", $exists: true } },
+            ],
+          },
+        },
       },
       {
-        allowedTeams: { $type: "array", $exists: true },
+        allowedTeams: { $type: "array", $exists: true }, //TODO
       },
       {
         isActive: { $type: "bool", $exists: true },
@@ -32,7 +54,7 @@ db.runCommand({
       },
       {
         $or: [
-          { defaultConfiguration: { $type: "object" } },
+          { defaultConfiguration: { $type: "object" } }, //TODO - no data existent
           { defaultConfiguration: { $exists: false } },
         ],
       },

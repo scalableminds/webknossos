@@ -3,10 +3,10 @@ db.runCommand({
   validator: {
     $and: [
       {
-        name: { $type: "string", $exists: true },
+        name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true },
       },
       {
-        gist: { $type: "string", $exists: true },
+        gist: { $regex: "@^(https?|ftp)://[^s/$.?#].[^s]*$@iS", $exists: true },
       },
       {
         _owner: { $type: "string", $exists: true },

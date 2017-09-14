@@ -12,10 +12,10 @@ db.runCommand({
         _project: { $type: "string", $exists: true },
       },
       {
-        hitId: { $type: "string", $exists: true },
+        hitId: { $type: "string", $exists: true }, //TODO
       },
       {
-        key: { $type: "string", $exists: true },
+        key: { $type: "string", $exists: true }, //TODO
       },
       {
         numberOfOpenAssignments: { $type: "int", $exists: true },
@@ -27,7 +27,7 @@ db.runCommand({
         created: { $type: long, $exists: true },
       },
       {
-        annotations: { $type: "array", $exists: true },
+        annotations: { $type: "array", $exists: true }, // TODO all -> object
       },
       {
         _id: { $type: "objectId", $exists: true },

@@ -6,7 +6,7 @@ db.runCommand({
         _project: { $type: "string", $exists: true },
       },
       {
-        hitTypeId: { $type: "string", $exists: true },
+        hitTypeId: { $type: "string", $exists: true }, //TODO
       },
       {
         team: { $type: "string", $exists: true },

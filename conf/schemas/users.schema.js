@@ -3,7 +3,10 @@ db.runCommand({
   validator: {
     $and: [
       {
-        email: { $type: "string", $exists: true },
+        email: {
+          $regex: "^[a-zA-Z0-9.!#$%&’*+/=?^_`{|}~-]+@[a-zA-Z0-9-]+(?:.[a-zA-Z0-9-]+)*$",
+          $exists: true,
+        },
       },
       {
         firstName: { $type: "string", $exists: true },
@@ -21,16 +24,20 @@ db.runCommand({
         md5hash: { $type: "string", $exists: true },
       },
       {
-        teams: { $type: "array", $exists: true },
+        teams: { $type: "array", $exists: true }, //TODO
       },
       {
-        userConfiguration: { $type: "object", $exists: true },
+        userConfiguration: {
+          $type: "object",
+          $exists: true,
+          $elemMatch: { configuration: { $type: "object", $exists: true } },
+        },
       },
       {
         dataSetConfigurations: { $type: "object", $exists: true },
       },
       {
-        experiences: { $type: "object", $exists: true },
+        experiences: { $type: "object", $exists: true }, //TODO
       },
       {
         lastActivity: { $type: "long", $exists: true },

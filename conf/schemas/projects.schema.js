@@ -3,7 +3,7 @@ db.runCommand({
   validator: {
     $and: [
       {
-        name: { $type: "string", $exists: true },
+        name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true },
       },
       {
         team: { $type: "string", $exists: true },
@@ -19,6 +19,13 @@ db.runCommand({
       },
       {
         $or: [{ expectedTime: { $type: "int" } }, { expectedTime: { $exists: false } }],
+      },
+      {
+        assignmentConfiguration: {
+          $type: "object",
+          $exists: true,
+          $elemMatch: { location: { $in: ["webknossos", "mturk"], $exists: true } },
+        },
       },
       {
         _id: { $type: "objectId", $exists: true },

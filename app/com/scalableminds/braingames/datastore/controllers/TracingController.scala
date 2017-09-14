@@ -29,8 +29,6 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
 
   implicit val tracingFormat: Format[T]
 
-  lazy val protoJsonPrinter = new Printer(formattingLongAsNumber = true, includingEmptySeqFields = true)
-
   def save = Action.async(validateProto[T]) {
     implicit request =>
       AllowRemoteOrigin {

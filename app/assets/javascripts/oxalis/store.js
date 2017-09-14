@@ -42,8 +42,8 @@ import type {
 } from "admin/api_flow_types";
 
 export type CommentType = {
-  +node: number,
   +content: string,
+  +nodeId: number,
 };
 
 export type EdgeType = {
@@ -63,8 +63,8 @@ export type NodeType = {
 };
 
 export type BranchPointType = {
-  +id: number,
-  +timestamp: number,
+  +createdTimestamp: number,
+  +nodeId: number,
 };
 
 export type NodeMapType = { +[number]: NodeType };

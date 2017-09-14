@@ -28,10 +28,33 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, NodeType } from "oxalis/store";
+import type { ServerNodeType } from "oxalis/model"
 import type { ActionType } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
 import ErrorHandling from "libs/error_handling";
+
+function serverNodeToNode(n: ServerNodeType): NodeType {
+  return {
+    id: n.id,
+    position: Utils.point3ToVector3(n.position),
+    rotation: Utils.point3ToVector3(n.rotation),
+    bitDepth: n.bitDepth,
+    viewport: n.viewport,
+    resolution: n.resolution,
+    radius: n.radius,
+    timestamp: n.createdTimestamp,
+  }
+}
+
+function serverColorToColor(c: ?ServerColorType): ?ServerColorType {
+  if (c === undefined) {
+    return undefined;
+  }
+  else {
+    return [c.r, c.g, c.b];
+  }
+}
 
 function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
@@ -45,8 +68,8 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const trees = _.keyBy(
         action.tracing.trees.map(tree =>
           update(tree, {
-            nodes: { $set: _.keyBy(tree.nodes, "id") },
-            color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId) },
+            nodes: { $set: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id") },
+            color: { $set: serverColorToColor(tree.color) || ColorGenerator.distinctColorForId(tree.treeId) },
             isVisible: { $set: true },
           }),
         ),

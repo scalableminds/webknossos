@@ -49,21 +49,40 @@ import update from "immutability-helper";
 import UrlManager from "oxalis/controller/url_manager";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
+
+export type ServerNodeType = {
+  id: number,
+  position: Point3,
+  rotation: Point3,
+  bitDepth: number,
+  viewport: number,
+  resolution: number,
+  radius: number,
+  createdTimestamp: number,
+};
+
+type ServerColorType = {
+  r: number,
+  g: number,
+  b: number,
+  a: number,
+};
+
 type ServerSkeletonTracingTreeType = {
-  treeId: number,
-  color: ?Vector3,
-  name: string,
-  timestamp: number,
-  comments: Array<CommentType>,
   branchPoints: Array<BranchPointType>,
+  color: ?ServerColorType,
+  comments: Array<CommentType>,
   edges: Array<EdgeType>,
-  nodes: Array<NodeType>,
+  name: string,
+  nodes: Array<ServerNodeType>,
+  treeId: number,
 };
 
 type ServerTracingBaseType = {
   boundingBox?: BoundingBoxObjectType,
-  editPosition: Vector3,
-  editRotation: Vector3,
+  createdTimestamp: number,
+  editPosition: Point3,
+  editRotation: Point3,
   version: number,
   zoomLevel: number,
 };
@@ -364,11 +383,11 @@ export class OxalisModel {
   }
 
   applyState(state: UrlManagerState, tracing: ServerTracingType) {
-    Store.dispatch(setPositionAction(state.position || tracing.editPosition));
+    Store.dispatch(setPositionAction(state.position || Utils.point3ToVector3(tracing.editPosition)));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));
     }
-    const rotation = state.rotation || tracing.editRotation;
+    const rotation = state.rotation || Utils.point3ToVector3(tracing.editRotation);
     if (rotation != null) {
       Store.dispatch(setRotationAction(rotation));
     }

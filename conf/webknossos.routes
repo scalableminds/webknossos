@@ -226,3 +226,7 @@ GET           /assets/javascripts/routes.js                                     
 
 # Map static resources from the /public folder to the /public path
 GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)
+
+#Timelogging
+GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int)
+GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int)

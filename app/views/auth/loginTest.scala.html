@@ -1,0 +1,36 @@
+@(form: Form[AuthForms.SignInData])(implicit session: oxalis.view.SessionData, messages: Messages)
+
+@import play.api.Play
+
+@main(){
+
+  <div class="container">
+    <div class="well space-top col-center col-sm-6">
+      @helper.form(routes.Authentication.authenticate, 'class -> "form-horizontal") {
+
+        <legend>Login</legend>
+        <div class="alert alert-info">
+          @Messages(Play.current.configuration.getString("customMessages.login").getOrElse("user.login.prompt"))
+        </div>
+
+        @form.globalError.map { error =>
+          <div class="alert alert-danger">
+            @Messages(error.message)
+          </div>
+        }
+
+        @helper.inputText(form("email"), 'type -> "email", 'class -> "form-control")
+        @helper.inputPassword(form("password"), 'class -> "form-control")
+        <input type="hidden" name="redirect" value="@form("redirect").value" />
+        <div class="form-group">
+          <div class="col-sm-offset-3 col-sm-5">
+            <button type="submit" class="form-control btn btn-primary">Login</button>
+          </div>
+          <div class="col-sm-4">
+            <a href="@routes.Authentication.register" class="form-control btn btn-default">Sign Up</a>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+}

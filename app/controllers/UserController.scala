@@ -255,6 +255,7 @@ trait UserAuthentication extends Secured with Dashboard with FoxImplicits { this
   /**
    * Reset password page
    */
+
   def resetPassword = Authenticated { implicit request =>
     Ok(html.user.reset_password(resetForm))
   }

@@ -258,7 +258,7 @@ class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: 
 object AuthForms {
 
   // Sign up
-  case class SignUpData(team:String, email:String, password:String, firstName:String, lastName:String)
+  case class SignUpData(team:String, email:String, firstName:String, lastName:String, password:String)
 
   val team: Mapping[String] = text verifying Constraints.nonEmpty
 
@@ -296,7 +296,7 @@ object AuthForms {
 }
 
 
-class Auth @Inject() (
+class Authentication @Inject() (
                        val messagesApi: MessagesApi,
                        val env:Environment[User,CookieAuthenticator],
                        socialProviderRegistry: SocialProviderRegistry,
@@ -304,9 +304,16 @@ class Auth @Inject() (
                        userTokenService: UserTokenService,
                        avatarService: AvatarService,
                        passwordHasher: PasswordHasher,
-                       configuration: Configuration) extends Controller with Silhouette[User,CookieAuthenticator] {
+                       configuration: Configuration)
+  extends Controller
+    with Silhouette[User,CookieAuthenticator]
+    with ProvidesUnauthorizedSessionData {
 
   import AuthForms._
+
+  //problem: two different "logger" (different types)
+  override lazy val logger = super[Controller].getLogger
+  //override lazy val logger = super[Controller].logger //super may not be used on lazy value logger
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -318,16 +325,22 @@ class Auth @Inject() (
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
 
-  def register = UserAwareAction.async { implicit request =>
-    Future.successful(request.identity match {
-      case Some(user) => Redirect(routes.Application.index)
-      case None => Ok(views.html.auth.startSignUp(signUpForm))
-    })
+  def formHtml(form: Form[AuthForms.SignUpData])(implicit session: SessionData) = {
+    for {
+      teams <- TeamService.rootTeams()
+    } yield views.html.auth.registerTest(form, teams)
   }
 
-  def handleRegistration(implicit ctx: DBAccessContext) = Action.async { implicit request =>
+  def register = UserAwareAction.async { implicit request =>
+    request.identity match {
+      case Some(user) => Fox.successful(Redirect(routes.Application.index))
+      case None => formHtml(signUpForm).map(Ok(_))
+    }
+  }
+
+  def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm => Fox.successful(BadRequest(views.html.auth.startSignUp(bogusForm))), // the register.html has to be updated
+      bogusForm =>  formHtml(bogusForm).map(BadRequest(_)),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
@@ -345,7 +358,7 @@ class Auth @Inject() (
                 Redirect(routes.Application.index)
                 .withSession(UserService.createSession(user))
               } else {
-                Redirect(routes.Authentication.login(None))
+                Redirect(routes.Authentication.signIn())
                   .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
               }
             }
@@ -357,13 +370,13 @@ class Auth @Inject() (
   def signIn = UserAwareAction.async { implicit request =>
     Future.successful(request.identity match {
       case Some(user) => Redirect(controllers.routes.Application.index())
-      case None => Ok(views.html.auth.signIn(signInForm,socialProviderRegistry))
+      case None => Ok(views.html.auth.loginTest(signInForm))
     })
   }
 
-  def authenticate(implicit ctx: DBAccessContext) = Action.async { implicit request =>
+  def authenticate = Action.async { implicit request =>
     signInForm.bindFromRequest.fold(
-      bogusForm => Future.successful(BadRequest(views.html.auth.signIn(bogusForm, socialProviderRegistry))),
+      bogusForm => Future.successful(BadRequest(views.html.auth.loginTest(bogusForm))),
       signInData => {
         val credentials = Credentials(signInData.email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
@@ -386,7 +399,7 @@ class Auth @Inject() (
             } yield result
           }
         }.recover {
-          case e:ProviderException => Redirect(routes.Auth.signIn()).flashing("error" -> Messages("error.invalidCredentials"))
+          case e:ProviderException => Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.invalidCredentials"))
         }
       }
     )
@@ -400,11 +413,11 @@ class Auth @Inject() (
     Ok(views.html.auth.startResetPassword(emailForm))
   }
 
-  def handleStartResetPassword(implicit ctx: DBAccessContext) = Action.async { implicit request =>
+  def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(views.html.auth.startResetPassword(bogusForm))),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
-        case None => Future.successful(Redirect(routes.Auth.startResetPassword()).flashing("error" -> Messages("error.noUser")))
+        //case None => Future.successful(Redirect(routes.Authentication.startResetPassword()).flashing("error" -> Messages("error.noUser")))
         case Some(user) => for {
           token <- userTokenService.save(UserToken.create(user._id, email, isSignUp = false))
         } yield {
@@ -416,7 +429,7 @@ class Auth @Inject() (
     )
   }
 
-  def resetPassword(tokenId:String)(implicit session: oxalis.view.SessionData) = Action.async { implicit request =>
+  def resetPassword(tokenId:String) = Action.async { implicit request =>
     val id = UUID.fromString(tokenId)
     userTokenService.find(id).flatMap {
       case None =>
@@ -429,7 +442,7 @@ class Auth @Inject() (
     }
   }
 
-  def handleResetPassword(tokenId:String)(implicit ctx: DBAccessContext, session: oxalis.view.SessionData) = Action.async { implicit request =>
+  def handleResetPassword(tokenId:String) = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(views.html.auth.resetPassword(tokenId, bogusForm))),
       passwords => {
@@ -449,5 +462,11 @@ class Auth @Inject() (
         }
       }
     )
+  }
+
+  def logout = Action {
+    Redirect(controllers.routes.Authentication.signIn)
+      .withNewSession
+      .flashing("success" -> Messages("user.logout.success"))
   }
 }

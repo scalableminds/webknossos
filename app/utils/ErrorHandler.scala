@@ -25,10 +25,10 @@ class ErrorHandler @Inject() (
     with SecuredErrorHandler with I18nSupport {
 
   override def onNotAuthenticated(request: RequestHeader, messages: Messages): Option[Future[Result]] =
-    Some(Future.successful(Redirect(routes.Authentication.login(None))))
+    Some(Future.successful(Redirect(routes.Authentication.signIn)))
 
   override def onNotAuthorized(request: RequestHeader, messages: Messages): Option[Future[Result]] =
-    Some(Future.successful(Redirect(routes.Authentication.login(None)).flashing("error" -> Messages("error.accessDenied")(messages))))
+    Some(Future.successful(Redirect(routes.Authentication.signIn).flashing("error" -> Messages("error.accessDenied")(messages))))
 
   /**
   override def onNotFound(request: RequestHeader, message: String): Future[Result] =

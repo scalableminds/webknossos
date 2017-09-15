@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.mohiva.play.silhouette.api._
 import com.mohiva.play.silhouette.api.exceptions.ConfigurationException
 import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
-import com.mohiva.play.silhouette.api.util.{Credentials, ExecutionContextProvider, PasswordHasher, PasswordInfo}
+import com.mohiva.play.silhouette.api.util.{Credentials, ExecutionContextProvider, PasswordInfo}
 import com.mohiva.play.silhouette.impl.exceptions.{IdentityNotFoundException, InvalidPasswordException}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider._
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -34,7 +34,7 @@ class CredentialsProvider @Inject() (
 
   override def id = ID
 
-  def authenticate(credentials: Credentials)(implicit ctx: DBAccessContext): Future[LoginInfo] = {
+  def authenticate(credentials: Credentials): Future[LoginInfo] = {
     loginInfo(credentials).flatMap { loginInfo =>
       UserService.retrieve(loginInfo).flatMap {
         case Some(user) => passwordHasherList.find(_.id == user.passwordInfo.hasher) match {

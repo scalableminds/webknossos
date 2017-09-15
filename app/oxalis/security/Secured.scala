@@ -188,11 +188,12 @@ trait Secured extends FoxImplicits with I18nSupport{
   /**
    * Redirect to login if the user in not authorized.
    */
+
   private def onUnauthorized(request: RequestHeader) =
     if (request.path.startsWith("/api/"))
       new JsonResult(FORBIDDEN)(Messages("notAllowed"))
     else {
-      Results.Redirect(routes.Authentication.login(Some(request.uri)))
+      Results.Redirect(routes.Authentication.signIn) //routes.Authentication.login(Some(request.uri))
     }
   // --
 

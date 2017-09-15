@@ -2,7 +2,7 @@ package models.user
 
 import java.util.UUID
 
-import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import play.api.Play.current
@@ -48,7 +48,7 @@ case class User(
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate,
                  loginInfo: LoginInfo,
-                 passwordInfo: PasswordInfo) extends DBAccessContextPayload {
+                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity{
 
   val dao = User
 

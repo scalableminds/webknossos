@@ -150,10 +150,10 @@ object UserService extends FoxImplicits {
 
   }
 
-  def changePasswordInfo(loginInfo:LoginInfo, passwordInfo:PasswordInfo)(implicit dBAccessContext: DBAccessContext) = {
+  def changePasswordInfo(loginInfo:LoginInfo, passwordInfo:PasswordInfo) = {
     for{
       user <- findOneByEmail(loginInfo.providerKey)
-      _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)
+      _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
     }yield{
       passwordInfo
     }
@@ -209,7 +209,8 @@ object UserService extends FoxImplicits {
     LoginTokenDAO.insert(LoginToken(user._id, token, expirationTime)).map( _ => token)
   }
 
-  def retrieve(loginInfo:LoginInfo)(implicit ctx: DBAccessContext):Future[Option[User]] = UserDAO.find(loginInfo)
+  def retrieve(loginInfo:LoginInfo):Future[Option[User]] = UserDAO.find(loginInfo)(GlobalAccessContext)
+
   def find(id:BSONObjectID) = UserDAO.findByIdQ(id)
 
   def createSession(user: User): Tuple2[String, String] =

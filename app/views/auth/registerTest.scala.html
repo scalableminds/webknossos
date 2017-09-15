@@ -1,4 +1,4 @@
-@(form: Form[(String, String, String, String, String)], teams: List[models.team.Team])(implicit session: oxalis.view.SessionData, messages: Messages)
+@(form: Form[AuthForms.SignUpData], teams: List[models.team.Team])(implicit session: oxalis.view.SessionData, messages: Messages)
 
 @import play.api.Play
 
@@ -40,7 +40,7 @@
       </div>
       <div class="row">
         <div class="col-sm-9 col-sm-offset-3">
-          <a href="@routes.Authentication.signIn">Already have an account? Go to Login.</a>
+          <a href="@routes.Authentication.login">Already have an account? Go to Login.</a>
         </div>
       </div>
     }

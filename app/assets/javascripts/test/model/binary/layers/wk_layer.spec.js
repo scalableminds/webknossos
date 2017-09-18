@@ -15,7 +15,8 @@ const RequestMock = {
 };
 const StoreMock = {
   getState: () => ({
-    dataset: { name: "dataSet", fourBit: false },
+    dataset: { name: "dataSet" },
+    datasetConfiguration: { fourBit: false },
   }),
 };
 

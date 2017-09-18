@@ -35,7 +35,7 @@ class BucketBuilder {
     if (options != null) {
       return Object.assign(bucket, options);
     } else {
-      return Object.assign(bucket, { fourBit: Store.getState().dataset.fourBit });
+      return Object.assign(bucket, { fourBit: Store.getState().datasetConfiguration.fourBit });
     }
   }
 

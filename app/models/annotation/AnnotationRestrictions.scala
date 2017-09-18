@@ -67,8 +67,6 @@ object AnnotationRestrictions {
   def readonlyAnnotation() =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
-      override def allowFinish(user: Option[User]) = true
-      override def allowDownload(user: Option[User]) = true
     }
 
   def updateableAnnotation() =
@@ -76,6 +74,5 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = true
       override def allowUpdate(user: Option[User]) = true
       override def allowFinish(user: Option[User]) = true
-      override def allowDownload(user: Option[User]) = true
     }
 }

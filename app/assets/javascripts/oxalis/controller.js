@@ -238,7 +238,7 @@ class Controller extends React.PureComponent<Props, State> {
         "ctrl + y": () => Store.dispatch(redoAction()),
 
         // In the long run this should probably live in a user script
-        "9": function toggleSegmentationOpacity() {
+        "3": function toggleSegmentationOpacity() {
           // Flow cannot infer the return type of getConfiguration :(
           // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
           const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));

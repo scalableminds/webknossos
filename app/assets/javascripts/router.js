@@ -132,14 +132,8 @@ class Router extends BaseRouter {
 
   statistics() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const StatisticView = admin.StatisticView;
-      const TimeStatisticModel = admin.TimeStatisticModel;
-
-      const model = new TimeStatisticModel();
-      const view = new StatisticView({ model });
-
+      const view = new ReactBackboneWrapper(admin.StatisticView, {});
       this.changeView(view);
-      this.listenTo(model, "sync", () => this.hideLoadingSpinner());
     });
   }
 

@@ -4,7 +4,7 @@
 package com.scalableminds.braingames.binary.models
 
 import com.scalableminds.braingames.binary.models.datasource.inbox.GenericInboxDataSource
-import com.scalableminds.util.geometry.{BoundingBox, Scale}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import play.api.libs.json._
 
 package object datasource {
@@ -21,6 +21,8 @@ package object datasource {
 
     def getDataLayer(name: String): Option[T] =
       dataLayers.find(_.name == name)
+
+    val center: Point3D = boundingBox.center
 
     lazy val boundingBox: BoundingBox =
       BoundingBox.combine(dataLayers.map(_.boundingBox))

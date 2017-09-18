@@ -124,7 +124,7 @@ export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Ge
 
 export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
   while (true) {
-    yield take(["SET_TOOL", "TOGGLE_TOOL"]);
+    yield take(["SET_TOOL", "CYCLE_TOOL"]);
     if (yield select(state => isVolumeTracingDisallowed(state))) {
       Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
     }

@@ -153,7 +153,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       },
 
       scroll: (delta: number, type: ?ModifierKeys) => {
-        if (type === "shift") {
+        const tool = getVolumeTool(Store.getState().tracing).get();
+        if (tool === VolumeToolEnum.BRUSH && type === "shift") {
           const currentSize = Store.getState().temporaryConfiguration.brushSize;
           // Different browsers send different deltas, this way the behavior is comparable
           Store.dispatch(setBrushSizeAction(currentSize + (delta > 0 ? 5 : -5)));

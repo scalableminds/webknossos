@@ -24,8 +24,8 @@ then
 		echo "Please run yarn test-prepare. The source files seem to be newer than the compiled ones."
 		exit 1
 	fi
-	
-	export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $testBundlePath/test/**/*.spec.js -c 8 "$@"
+
+	export NODE_PATH=$testBundlePath && BABEL_ENV=test ava  $(find $testBundlePath -name "*.spec.js") --verbose -c 8 "$@"
 elif [ $cmd == "prepare" ]
 then
 	rm -rf $testBundlePath && BABEL_ENV=test babel $jsPath --out-dir $testBundlePath "$@"

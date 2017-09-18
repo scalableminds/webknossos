@@ -13,6 +13,7 @@ import {
   updateDirectionReducer,
   addToLayerReducer,
   resetContourReducer,
+  hideBrushReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
 import { VolumeToolEnum } from "oxalis/constants";
@@ -66,12 +67,12 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
           return setToolReducer(state, volumeTracing, action.tool);
         }
 
-        case "TOGGLE_TOOL": {
+        case "CYCLE_TOOL": {
           const tools = Object.keys(VolumeToolEnum);
           const currentToolIndex = tools.indexOf(volumeTracing.activeTool);
           const newTool = tools[(currentToolIndex + 1) % tools.length];
 
-          return setToolReducer(state, volumeTracing, newTool);
+          return setToolReducer(hideBrushReducer(state), volumeTracing, newTool);
         }
 
         case "SET_ACTIVE_CELL": {
@@ -109,9 +110,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         }
 
         case "HIDE_BRUSH": {
-          return update(state, {
-            temporaryConfiguration: { brushPosition: { $set: null } },
-          });
+          return hideBrushReducer(state);
         }
 
         case "SET_BRUSH_SIZE": {

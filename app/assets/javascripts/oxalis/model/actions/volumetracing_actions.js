@@ -15,7 +15,7 @@ type AddToLayerActionType = { type: "ADD_TO_LAYER", position: Vector3 };
 type FinishEditingActionType = { type: "FINISH_EDITING" };
 type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
 type SetToolActionType = { type: "SET_TOOL", tool: VolumeToolType };
-type ToggleToolActionType = { type: "TOGGLE_TOOL" };
+type CycleToolActionType = { type: "CYCLE_TOOL" };
 type UpdateDirectionActionType = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourActionType = { type: "RESET_CONTOUR" };
 type SetBrushPositionActionType = { type: "SET_BRUSH_POSITION", position: Vector2 };
@@ -30,7 +30,7 @@ export type VolumeTracingActionType =
   | FinishEditingActionType
   | SetActiveCellActionType
   | SetToolActionType
-  | ToggleToolActionType
+  | CycleToolActionType
   | UpdateDirectionActionType
   | ResetContourActionType
   | SetBrushPositionActionType
@@ -75,8 +75,8 @@ export const setToolAction = (tool: VolumeToolType): SetToolActionType => ({
   tool,
 });
 
-export const toggleToolAction = (): ToggleToolActionType => ({
-  type: "TOGGLE_TOOL",
+export const cycleToolAction = (): CycleToolActionType => ({
+  type: "CYCLE_TOOL",
 });
 
 export const updateDirectionAction = (centroid: Vector3): UpdateDirectionActionType => ({

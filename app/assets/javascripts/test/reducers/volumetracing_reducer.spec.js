@@ -191,30 +191,30 @@ test("VolumeTracing should not allow to set trace tool if the zoomStep is > 1", 
 
   t.is(alteredState, newState);
   getVolumeTracing(newState.tracing).map(tracing => {
-    // Tool should not be changed
+    // Tool should not have changed
     t.is(tracing.activeTool, VolumeToolEnum.MOVE);
   });
 });
 
-test("VolumeTracing should toggle trace/view/brush tool", t => {
-  const toggleToolAction = VolumeTracingActions.toggleToolAction();
+test("VolumeTracing should cycle trace/view/brush tool", t => {
+  const cycleToolAction = VolumeTracingActions.cycleToolAction();
 
-  // Toggle tool to Trace
-  let newState = VolumeTracingReducer(initialState, toggleToolAction);
+  // Cycle tool to Trace
+  let newState = VolumeTracingReducer(initialState, cycleToolAction);
 
   getVolumeTracing(newState.tracing).map(tracing => {
     t.is(tracing.activeTool, VolumeToolEnum.TRACE);
   });
 
-  // Toggle tool to Brush
-  newState = VolumeTracingReducer(newState, toggleToolAction);
+  // Cycle tool to Brush
+  newState = VolumeTracingReducer(newState, cycleToolAction);
 
   getVolumeTracing(newState.tracing).map(tracing => {
     t.is(tracing.activeTool, VolumeToolEnum.BRUSH);
   });
 
-  // Toggle tool back to MOVE
-  newState = VolumeTracingReducer(newState, toggleToolAction);
+  // Cycle tool back to MOVE
+  newState = VolumeTracingReducer(newState, cycleToolAction);
 
   getVolumeTracing(newState.tracing).map(tracing => {
     t.is(tracing.activeTool, VolumeToolEnum.MOVE);

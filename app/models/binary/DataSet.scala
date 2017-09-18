@@ -34,12 +34,6 @@ case class DataSet(
   def isEditableBy(user: Option[User]) =
     user.exists(_.isAdminOf(owningTeam))
 
-  def defaultStart =
-    dataSource.toUsable.map(_.boundingBox.center).getOrElse(Point3D(0, 0, 0))
-
-  def defaultRotation =
-    Vector3D(0, 0, 0)
-
   lazy val dataStore: DataStoreHandlingStrategy =
     DataStoreHandlingStrategy(this)
 }

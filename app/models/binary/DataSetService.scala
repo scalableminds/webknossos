@@ -32,11 +32,13 @@ object DataSetService extends FoxImplicits with LazyLogging {
     findDataSource(name)(GlobalAccessContext).reverse
 
   def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
-    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map {
-      case Full(dataSet) =>
-        dataSet.defaultStart
-      case _             =>
-        Point3D(0, 0, 0)
+    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map { dataSetBox =>
+      (for {
+        dataSet <- dataSetBox
+        dataSource <- dataSet.dataSource.toUsable
+      } yield {
+        dataSource.center
+      }).getOrElse(Point3D(0, 0, 0))
     }
   }
 

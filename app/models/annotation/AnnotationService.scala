@@ -2,11 +2,12 @@ package models.annotation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
 
-import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.braingames.binary.models.datasource.{ElementClass, DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.braingames.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.{NmlWriter, NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.mvc.BoxImplicits
@@ -31,32 +32,34 @@ object AnnotationService
   extends BoxImplicits
   with FoxImplicits
   with TextUtils
-  with LazyLogging{
+  with ProtoGeometryImplicits
+  with LazyLogging {
 
   private def selectSuitableTeam(user: User, dataSet: DataSet): String = {
     val dataSetTeams = dataSet.owningTeam +: dataSet.allowedTeams
     dataSetTeams.intersect(user.teamNames).head
   }
 
-  private def createVolumeTracing(dataSource: DataSource): VolumeTracing = ??? /*{
+  private def createVolumeTracing(dataSource: DataSource): VolumeTracing = {
     val fallbackLayer = dataSource.dataLayers.flatMap {
       case layer: SegmentationLayer => Some(layer)
       case _ => None
     }.headOption
 
-    val tracingLayer = VolumeTracingLayer(
-      UUID.randomUUID.toString,
-      dataSource.boundingBox,
-      fallbackLayer.map(_.elementClass).getOrElse(VolumeTracingLayer.defaultElementClass),
-      fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingLayer.defaultLargestSegmentId)
-    )
-
     VolumeTracing(
+      None,
+      dataSource.boundingBox,
+      System.currentTimeMillis(),
       dataSource.id.name,
-      tracingLayer,
+      dataSource.center,
+      VolumeTracingDefaults.editRotation,
+      fallbackLayer.map(layer => elementClassToProto(layer.elementClass)).getOrElse(VolumeTracingDefaults.elementClass),
       fallbackLayer.map(_.name),
-      dataSource.boundingBox.center)
-  }*/
+      fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId),
+      0,
+      VolumeTracingDefaults.zoomLevel
+    )
+  }
 
   def createExplorationalFor(
     user: User,
@@ -67,8 +70,7 @@ object AnnotationService
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
         dataSet.dataStore.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name,
-                                                                                          editPosition = Point3DUtils.convert(dataSet.defaultStart),
-                                                                                          editRotation = Vector3DUtils.convert(dataSet.defaultRotation)))
+                                                                                          editPosition = Point3DUtils.convert(dataSource.center)))
       case TracingType.volume =>
         dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource))
     }
@@ -211,8 +213,6 @@ object AnnotationService
     }
   }
 
-
-
   def createFrom(
                 user: User,
                 dataSet: DataSet,
@@ -233,13 +233,8 @@ object AnnotationService
     } yield annotation
   }
 
-
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.logTime(time, _annotation)
-
-
-
-
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
     val tracingsNamesAndScalesAsTuples = getTracingsScalesAndNamesFor(annotations)

@@ -433,7 +433,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     );
 
     return (
-      <div className="test-explorative-annotations-view">
+      <div className="TestExplorativeAnnotationsView">
         {this.props.isAdminView ? (
           search
         ) : (

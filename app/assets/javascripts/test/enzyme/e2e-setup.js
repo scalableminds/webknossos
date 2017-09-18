@@ -6,26 +6,24 @@ import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import jsRoutes from "./jsRoutes";
 
 const requests = [];
-const minimumWait = 10;
-function waitForAllRequests() {
-  return new Promise(resolve => {
-    let length = requests.length;
-    const tolerantWait = function() {
-      // Add a small timeout so that other promise handlers get some execution time
-      setTimeout(() => {
-        if (length >= requests.length) {
-          return resolve();
-        } else {
-          length = requests.length;
-          return waitForAllRequests().then(tolerantWait);
-        }
-      }, minimumWait);
-    };
-    // Even if all promises are already resolved, we should wait
-    // for a few milliseconds. This can avoid race conditions (such as
-    // is-clicked classes disappearing when clicking a button)
-    setTimeout(() => Promise.all(requests).then(tolerantWait), minimumWait);
-  });
+const minimumWait = 10; // ms
+async function waitForAllRequests() {
+  let length = requests.length;
+  async function tolerantWait() {
+    // Add a small timeout so that other promise handlers get some execution time
+    await wait(minimumWait);
+    if (length < requests.length) {
+      // Retry if new requests were added
+      length = requests.length;
+      await waitForAllRequests().then(tolerantWait);
+    }
+  }
+  // Even if all promises are already resolved, we should wait
+  // for a few milliseconds. This can avoid race conditions (such as
+  // is-clicked classes disappearing when clicking a button)
+  // await wait(minimumWait);
+  await Promise.all(requests);
+  await tolerantWait();
 }
 
 function wait(milliseconds: number) {

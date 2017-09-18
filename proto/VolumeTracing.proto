@@ -4,7 +4,7 @@ package com.scalableminds.braingames.datastore;
 
 import "geometry.proto";
 
-message VolumeTracingLayer {
+message VolumeTracing {
     enum ElementClass {
         uint8 = 1;
         uint16 = 2;
@@ -13,21 +13,17 @@ message VolumeTracingLayer {
         uint64 = 8;
     }
 
-    required BoundingBox boundingBox = 1;
-    required ElementClass elementClass = 2;
-    required int64 largestSegmentId = 3;
-}
-
-message VolumeTracing {
     optional int64 activeSegmentId = 1;
-    required int64 createdTimestamp = 2;
-    required VolumeTracingLayer dataLayer = 3;
+    required BoundingBox boundingBox = 2;
+    required int64 createdTimestamp = 3;
     required string dataSetName = 4;
     required Point3D editPosition = 5;
     required Vector3D editRotation = 6;
-    optional string fallbackLayer = 7;
-    required int64 version = 8;
-    required double zoomLevel = 9;
+    required ElementClass elementClass = 7;
+    optional string fallbackLayer = 8;
+    required int64 largestSegmentId = 9;
+    required int64 version = 10;
+    required double zoomLevel = 11;
 }
 
 message VolumeTracings {

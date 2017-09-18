@@ -7,10 +7,9 @@ import java.io.File
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSource, ElementClass, SegmentationLayer}
+import com.scalableminds.braingames.binary.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.braingames.datastore.tracings.{TemporaryTracingStore, TracingDataStore, TracingService, TracingType}
-import com.scalableminds.util.geometry.{BoundingBox, Point3D}
+import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.util.io.ZipIO
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.wrap.WKWFile
@@ -23,7 +22,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class VolumeTracingService @Inject()(
                                       tracingDataStore: TracingDataStore,
                                       val temporaryTracingStore: TemporaryTracingStore[VolumeTracing]
-                                    ) extends TracingService[VolumeTracing] with VolumeTracingBucketHelper with WKWDataFormatHelper with LazyLogging {
+                                    )
+  extends TracingService[VolumeTracing]
+  with VolumeTracingBucketHelper
+  with WKWDataFormatHelper
+  with ProtoGeometryImplicits
+  with LazyLogging {
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
@@ -77,27 +81,22 @@ class VolumeTracingService @Inject()(
   }
 
   private def volumeTracingLayer(tracing: VolumeTracing): VolumeTracingLayer = {
-    val topLeft = tracing.dataLayer.boundingBox.topLeft
-    val boundingBox = BoundingBox(
-      Point3D(topLeft.x, topLeft.y, topLeft.z),
-      tracing.dataLayer.boundingBox.width,
-      tracing.dataLayer.boundingBox.height,
-      tracing.dataLayer.boundingBox.depth)
-    val elementClass = ElementClass.fromBytesPerElement(tracing.dataLayer.elementClass.value).get
-    VolumeTracingLayer(boundingBox, elementClass, tracing.dataLayer.largestSegmentId)
+    VolumeTracingLayer(tracing.boundingBox, tracing.elementClass, tracing.largestSegmentId)
+  }
+
+  private def volumeTracingLayerWithFallback(tracing: VolumeTracing, dataSource: DataSource): SegmentationLayer = {
+    val dataLayer = volumeTracingLayer(tracing)
+    tracing.fallbackLayer.flatMap(dataSource.getDataLayer).map {
+      case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
+        new FallbackLayerAdapter(dataLayer, layer)
+      case _ =>
+        logger.error(s"Fallback layer is not a segmentation layer and thus being ignored. " +
+          s"DataSource: ${dataSource.id}. FallbackLayer: ${tracing.fallbackLayer}.")
+        dataLayer
+    }.getOrElse(dataLayer)
   }
 
   def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] = {
-    find(tracingId).map { tracing =>
-      val dataLayer = volumeTracingLayer(tracing)
-      tracing.fallbackLayer.flatMap(dataSource.getDataLayer).map {
-        case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
-          new FallbackLayerAdapter(dataLayer, layer)
-        case _ =>
-          logger.error(s"Fallback layer is not a segmentation layer and thus being ignored. " +
-            s"DataSource: ${dataSource.id}. DataLayer: $tracingId. FallbackLayer: ${tracing.fallbackLayer}.")
-          dataLayer
-      }.getOrElse(dataLayer)
-    }
+    find(tracingId).map(volumeTracingLayerWithFallback(_, dataSource))
   }
 }

@@ -77,7 +77,7 @@ db.runCommand({
         isPublic: { $type: "bool", $exists: true },
       },
       {
-        tags: { $type: "array", $exists: true }, // $all -> $type: "string" TODO
+        tags: { $type: "array", $exists: true, $elemMatch: { $type: "string" } },
       },
     ],
   },

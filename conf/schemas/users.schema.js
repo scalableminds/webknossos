@@ -24,7 +24,18 @@ db.runCommand({
         md5hash: { $type: "string", $exists: true },
       },
       {
-        teams: { $type: "array", $exists: true }, //TODO
+        teams: {
+          $type: "array",
+          $exists: true,
+          $elemMatch: {
+            $and: [
+              { team: { $type: "string", $exists: true } },
+              {
+                role: { $type: "object", $exists: true, $elemMatch: { name: { $type: "string" } } },
+              },
+            ],
+          },
+        },
       },
       {
         userConfiguration: {

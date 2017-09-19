@@ -9,7 +9,11 @@ db.runCommand({
         $or: [{ parent: { $type: "string" } }, { parent: { $exists: false } }],
       },
       {
-        roles: { $type: "array", $exists: true },
+        roles: {
+          $type: "array",
+          $exists: true,
+          $elemMatch: { $elemMatch: { name: { $type: "string", $exists: true } } },
+        },
       },
       {
         $or: [{ owner: { $type: "objectId" } }, { owner: { $exists: false } }],

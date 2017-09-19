@@ -24,14 +24,27 @@ db.runCommand({
         numberOfInProgressAssignments: { $type: "int", $exists: true },
       },
       {
-        created: { $type: long, $exists: true },
+        created: { $type: "long", $exists: true },
       },
       {
-        annotations: { $type: "array", $exists: true }, // TODO all -> object
+        annotations: {
+          $type: "array",
+          $exists: true,
+          $elemMatch: {
+            $elemMatch: {
+              $and: [
+                { _annotation: { $type: "objectId", $exists: true } },
+                { _user: { $type: "objectId", $exists: true } },
+                { assignmentId: { $type: "string", $exists: true } },
+              ],
+            },
+          },
+        },
       },
       {
         _id: { $type: "objectId", $exists: true },
       },
     ],
   },
+  validationLevel: "strict",
 });

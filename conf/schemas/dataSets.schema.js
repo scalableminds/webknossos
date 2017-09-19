@@ -41,7 +41,7 @@ db.runCommand({
         },
       },
       {
-        allowedTeams: { $type: "array", $exists: true }, //TODO
+        allowedTeams: { $type: "array", $exists: true, $elemMatch: { $type: "string" } },
       },
       {
         isActive: { $type: "bool", $exists: true },

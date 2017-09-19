@@ -12,10 +12,10 @@ db.runCommand({
         $or: [{ activeNodeId: { $type: "int" } }, { activeNodeId: { $exists: false } }],
       },
       {
-        editPosition: { $type: "array", $exists: true }, //TODO
+        editPosition: { $type: "array", $exists: true, $elemMatch: { $type: "int" } },
       },
       {
-        editRotation: { $type: "array", $exists: true }, //TODO
+        editRotation: { $type: "array", $exists: true, $elemMatch: { $type: "double" } },
       },
       {
         zoomLevel: { $type: "double", $exists: true },
@@ -61,7 +61,7 @@ db.runCommand({
           $exists: true,
           $elemMatch: {
             $and: [
-              { allowedModes: { $type: "array", $exists: true } },
+              { allowedModes: { $type: "array", $exists: true, $elemMatch: { $type: "string" } } },
               {
                 $or: [
                   { preferredMode: { $type: "string" } },

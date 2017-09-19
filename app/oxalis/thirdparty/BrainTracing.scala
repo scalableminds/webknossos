@@ -95,7 +95,7 @@ object BrainTracing extends LazyLogging {
       Mailer ! Send(DefaultMails.overLimitMail(
         user,
         p.name,
-        task.map(_.id),
+        task.map(_.id).getOrElse(""),
         a.id))
     }
   }

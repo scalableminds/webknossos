@@ -18,12 +18,14 @@ import {
   createCommentAction,
   deleteNodeAction,
   setNodeRadiusAction,
+  setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   findTreeByNodeId,
   getNodeAndTree,
   getActiveNode,
   getActiveTree,
+  getTree,
   getSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
@@ -211,6 +213,37 @@ class TracingApi {
         return comment != null ? comment.content : null;
       })
       .getOrElse(null);
+  }
+
+  /**
+  * Sets the name for a tree. If no tree id is given, the active tree is used.
+  *
+  * @example
+  * api.tracing.setTreeName("Special tree", 1);
+  */
+  setTreeName(name: string, treeId: ?number) {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    getSkeletonTracing(tracing).map(skeletonTracing => {
+      if (treeId == null) {
+        treeId = skeletonTracing.activeTreeId;
+      }
+      Store.dispatch(setTreeNameAction(name, treeId));
+    });
+  }
+
+  /**
+  * Returns the name for a given tree id. If none is given, the name of the active tree is returned.
+  *
+  * @example
+  * api.tracing.getTreeName();
+  */
+  getTreeName(treeId?: number) {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getTree(tracing, treeId)
+      .map(activeTree => activeTree.name)
+      .get();
   }
 
   /**

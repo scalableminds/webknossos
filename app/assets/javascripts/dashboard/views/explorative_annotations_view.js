@@ -331,41 +331,42 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           title="Name"
           dataIndex="name"
           sorter={Utils.localeCompareBy("name")}
-          render={(name, tracing) =>
+          render={(name, tracing) => (
             <EditableTextLabel
               value={name}
               onChange={newName => this.renameTracing(tracing, newName)}
-            />}
+            />
+          )}
         />
         <Column
           title="Stats"
           render={(__, tracing) =>
-            tracing.stats && tracing.contentType === "skeleton"
-              ? <div>
-                  <span title="Trees">
-                    <i className="fa fa-sitemap" />
-                    {tracing.stats.numberOfTrees}
-                  </span>
-                  <br />
-                  <span title="Nodes">
-                    <i className="fa fa-bull" />
-                    {tracing.stats.numberOfNodes}
-                  </span>
-                  <br />
-                  <span title="Edges">
-                    <i className="fa fa-arrows-h" />
-                    {tracing.stats.numberOfEdges}
-                  </span>
-                </div>
-              : null}
+            tracing.stats && tracing.contentType === "skeleton" ? (
+              <div>
+                <span title="Trees">
+                  <i className="fa fa-sitemap" />
+                  {tracing.stats.numberOfTrees}
+                </span>
+                <br />
+                <span title="Nodes">
+                  <i className="fa fa-bull" />
+                  {tracing.stats.numberOfNodes}
+                </span>
+                <br />
+                <span title="Edges">
+                  <i className="fa fa-arrows-h" />
+                  {tracing.stats.numberOfEdges}
+                </span>
+              </div>
+            ) : null}
         />
         <Column
           title="Tags"
           dataIndex="tags"
           width={500}
-          render={(tags, tracing) =>
+          render={(tags, tracing) => (
             <div>
-              {tags.map(tag =>
+              {tags.map(tag => (
                 <Tag
                   key={tag}
                   color={TemplateHelpers.stringToColor(tag)}
@@ -377,15 +378,16 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
                   }
                 >
                   {tag}
-                </Tag>,
+                </Tag>
+              ))}
+              {this.state.shouldShowArchivedTracings ? null : (
+                <EditableTextIcon
+                  icon="plus"
+                  onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
+                />
               )}
-              {this.state.shouldShowArchivedTracings
-                ? null
-                : <EditableTextIcon
-                    icon="plus"
-                    onChange={_.partial(this.editTagFromAnnotation, tracing, true)}
-                  />}
-            </div>}
+            </div>
+          )}
         />
         <Column
           title="Modification Date"
@@ -403,7 +405,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
   }
 
   renderSearchTags() {
-    return this.state.tags.map(tag =>
+    return this.state.tags.map(tag => (
       <Tag
         key={tag}
         color={TemplateHelpers.stringToColor(tag)}
@@ -411,8 +413,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         closable
       >
         {tag}
-      </Tag>,
-    );
+      </Tag>
+    ));
   }
 
   render() {
@@ -428,43 +430,47 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
 
     return (
       <div>
-        {this.props.isAdminView
-          ? search
-          : <div className="pull-right">
-              <FileUpload
-                url="/admin/nml/upload"
-                accept=".nml, .zip"
-                name="nmlFile"
-                multiple
-                showUploadList={false}
-                onSuccess={this.handleNMLUpload}
-                onUploading={() => this.setState({ isUploadingNML: true })}
-                onError={() => this.setState({ isUploadingNML: false })}
-              >
-                <Button icon="upload" loading={this.state.isUploadingNML}>
-                  Upload Annotation
-                </Button>
-              </FileUpload>
-              <div className="divider-vertical" />
-              <Button onClick={this.toggleShowArchived} style={marginRight}>
-                Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings
+        {this.props.isAdminView ? (
+          search
+        ) : (
+          <div className="pull-right">
+            <FileUpload
+              url="/annotations/upload"
+              accept=".nml, .zip"
+              name="nmlFile"
+              multiple
+              showUploadList={false}
+              onSuccess={this.handleNMLUpload}
+              onUploading={() => this.setState({ isUploadingNML: true })}
+              onError={() => this.setState({ isUploadingNML: false })}
+            >
+              <Button icon="upload" loading={this.state.isUploadingNML}>
+                Upload Annotation
               </Button>
-              {!this.state.shouldShowArchivedTracings
-                ? <Button onClick={this.archiveAll} style={marginRight}>
-                    Archive All
-                  </Button>
-                : null}
-              {search}
-            </div>}
+            </FileUpload>
+            <div className="divider-vertical" />
+            <Button onClick={this.toggleShowArchived} style={marginRight}>
+              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings
+            </Button>
+            {!this.state.shouldShowArchivedTracings ? (
+              <Button onClick={this.archiveAll} style={marginRight}>
+                Archive All
+              </Button>
+            ) : null}
+            {search}
+          </div>
+        )}
         <h3>Explorative Annotations</h3>
         {this.renderSearchTags()}
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
-        {this.state.requestCount === 0
-          ? this.renderTable()
-          : <div className="text-center">
-              <Spin size="large" />
-            </div>}
+        {this.state.requestCount === 0 ? (
+          this.renderTable()
+        ) : (
+          <div className="text-center">
+            <Spin size="large" />
+          </div>
+        )}
       </div>
     );
   }

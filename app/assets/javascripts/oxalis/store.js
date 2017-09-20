@@ -63,7 +63,7 @@ export type NodeType = {
 };
 
 export type BranchPointType = {
-  +createdTimestamp: number,
+  +timestamp: number,
   +nodeId: number,
 };
 

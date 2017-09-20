@@ -207,7 +207,7 @@ class TracingApi {
           assertExists(tree, `Couldn't find node ${nodeId}.`);
         }
         // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
-        const comment = tree.comments.find(__ => __.node === nodeId);
+        const comment = tree.comments.find(__ => __.nodeId === nodeId);
         return comment != null ? comment.content : null;
       })
       .getOrElse(null);

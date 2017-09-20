@@ -105,6 +105,7 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
 test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
   saga.next();
+  saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   const startEditingSaga = execCall(t, saga.next(false));
@@ -115,6 +116,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
 
 test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
+  saga.next();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
@@ -131,6 +133,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
 test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
   saga.next();
+  saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
   saga.next(false);
@@ -143,6 +146,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
 
 test("VolumeTracingSaga should abort editing on cell creation (saga test)", t => {
   const saga = editVolumeLayerAsync();
+  saga.next();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);

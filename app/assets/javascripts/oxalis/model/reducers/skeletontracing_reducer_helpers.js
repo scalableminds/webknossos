@@ -230,7 +230,7 @@ export function deleteNode(
         // Write branchpoints into correct trees
         activeTree.branchPoints.forEach(branchpoint => {
           cutTrees.forEach(newTree => {
-            if (newTree.nodes[branchpoint.id]) {
+            if (newTree.nodes[branchpoint.nodeId]) {
               newTree.branchPoints.push(branchpoint);
             }
           });
@@ -239,7 +239,7 @@ export function deleteNode(
         // Write comments into correct trees
         activeTree.comments.forEach(comment => {
           cutTrees.forEach(newTree => {
-            if (newTree.nodes[comment.node]) {
+            if (newTree.nodes[comment.nodeId]) {
               newTree.comments.push(comment);
             }
           });
@@ -278,13 +278,13 @@ export function createBranchPoint(
   if (branchPointsAllowed && allowUpdate) {
     const doesBranchPointExistAlready = _.some(
       tree.branchPoints,
-      branchPoint => branchPoint.id === node.id,
+      branchPoint => branchPoint.nodeId === node.id,
     );
 
     if (!doesBranchPointExistAlready) {
       // create new branchpoint
       return Maybe.Just({
-        id: node.id,
+        nodeId: node.id,
         timestamp,
       });
     }
@@ -309,7 +309,7 @@ export function deleteBranchPoint(
     if (branchPoint) {
       // Delete branchpoint
       const newBranchPoints = _.without(skeletonTracing.trees[treeId].branchPoints, branchPoint);
-      return Maybe.Just([newBranchPoints, treeId, branchPoint.id]);
+      return Maybe.Just([newBranchPoints, treeId, branchPoint.nodeId]);
     }
   }
   return Maybe.Nothing();
@@ -433,10 +433,10 @@ export function createComment(
   if (allowUpdate) {
     // Gather all comments other than the activeNode's comments
     const comments = tree.comments;
-    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.node !== node.id);
+    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.nodeId !== node.id);
 
     const newComment: CommentType = {
-      node: node.id,
+      nodeId: node.id,
       content: commentText,
     };
 
@@ -456,7 +456,7 @@ export function deleteComment(
 
   if (allowUpdate) {
     const comments = tree.comments;
-    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.node !== node.id);
+    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.nodeId !== node.id);
 
     return Maybe.Just(commentsWithoutActiveNodeComment);
   }

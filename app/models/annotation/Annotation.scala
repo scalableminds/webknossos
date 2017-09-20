@@ -65,27 +65,29 @@ case class Annotation(
     created > 1470002400000L  // 1.8.2016, 00:00:00
   }
 
-  def toJson(user: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def toJson(requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       taskJson <- task.flatMap(t => Task.transformToJson(t)).getOrElse(JsNull)
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "Could not find DataSet for Annotation"
+      userJson <- user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
     } yield {
       Json.obj(
-        "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
+        "modified" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
         "state" -> state,
         "id" -> id,
         "name" -> name,
         "typ" -> typ,
         "task" -> taskJson,
         "stats" -> statistics,
-        "restrictions" -> AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), user),
+        "restrictions" -> AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser),
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracingReference,
         "dataSetName" -> dataSetName,
         "dataStore" -> dataSet.dataStoreInfo,
         "settings" -> settings,
         "tracingTime" -> tracingTime,
-        "tags" -> tags
+        "tags" -> tags,
+        "user" -> userJson
       )
     }
   }

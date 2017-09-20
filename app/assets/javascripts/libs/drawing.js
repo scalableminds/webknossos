@@ -23,6 +23,8 @@ class Drawing {
   drawLine2d(x: number, y: number, x1: number, y1: number, draw: (number, number) => void) {
     x = Math.round(x);
     y = Math.round(y);
+    x1 = Math.round(x1);
+    y1 = Math.round(y1);
     let d;
     let mode;
     let dx = x1 - x;
@@ -136,9 +138,9 @@ class Drawing {
     let decisionOver2 = dx - (radius << 1);
     while (x >= y) {
       this.drawLine2d(
-        x * scale[0] + x0,
-        y * scale[1] + y0,
         -x * scale[0] + x0,
+        y * scale[1] + y0,
+        x * scale[0] + x0,
         y * scale[1] + y0,
         drawPixel,
       );
@@ -158,9 +160,9 @@ class Drawing {
       );
       this.drawLine2d(
         y * scale[0] + x0,
-        x * scale[1] + y0,
-        y * scale[0] + x0,
         -x * scale[1] + y0,
+        y * scale[0] + x0,
+        x * scale[1] + y0,
         drawPixel,
       );
       if (decisionOver2 <= 0) {

@@ -2,6 +2,7 @@
 /* eslint-disable import/prefer-default-export */
 import type { BoundingBoxType } from "oxalis/constants";
 import type { BoundingBoxObjectType } from "oxalis/store";
+import _ from "lodash";
 import Maybe from "data.maybe";
 import Utils from "libs/utils";
 

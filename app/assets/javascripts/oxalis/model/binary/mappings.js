@@ -26,13 +26,16 @@ class Mappings {
       throw new Error("Dataset needs to be available.");
     }
     const datasetName = dataset.name;
-    this.mappings = _.transform(
-      layer.mappings,
-      (result, mappingName) => {
-        result[mappingName] = { name: mappingName };
-      },
-      {},
-    );
+    this.mappings =
+      layer.mappings != null
+        ? _.transform(
+            layer.mappings,
+            (result, mappingName) => {
+              result[mappingName] = { name: mappingName };
+            },
+            {},
+          )
+        : {};
     this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
     this.doWithToken = layer.doWithToken.bind(layer);
   }

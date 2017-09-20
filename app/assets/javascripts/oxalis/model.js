@@ -10,7 +10,6 @@ import type {
   SettingsType,
   EdgeType,
   CommentType,
-  SegmentationDataLayerType,
   TracingTypeTracingType,
   ElementClassType,
 } from "oxalis/store";
@@ -44,7 +43,6 @@ import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
-import update from "immutability-helper";
 import UrlManager from "oxalis/controller/url_manager";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
@@ -363,7 +361,8 @@ export class OxalisModel {
       },
       resolutions: [1],
       elementClass: tracing.elementClass,
-      mappings: existingLayer != null ? existingLayer.mappings : [],
+      mappings:
+        existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],
       largestSegmentId: tracing.largestSegmentId,
     };
 

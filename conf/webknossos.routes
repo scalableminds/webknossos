@@ -97,7 +97,7 @@ GET           /api/datasetToken/validate                                        
 
 # Annotations
 POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
-POST          /admin/nml/upload                                                 controllers.AnnotationIOController.upload
+POST          /annotations/upload                                               controllers.AnnotationIOController.upload
 
 GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
 POST          /annotations/:typ/:id/edit                                        controllers.AnnotationController.editAnnotation(typ: String, id: String)

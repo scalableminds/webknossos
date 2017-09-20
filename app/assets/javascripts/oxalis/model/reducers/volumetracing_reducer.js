@@ -28,8 +28,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
 
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
-      const maxCellId = action.tracing.dataLayer.largestSegmentId;
-
+      const maxCellId = action.tracing.largestSegmentId;
       const volumeTracing: VolumeTracingType = {
         annotationId: action.annotation.id,
         type: "volume",

@@ -12,6 +12,7 @@ import type {
   CommentType,
   SegmentationDataLayerType,
   TracingTypeTracingType,
+  ElementClassType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -81,6 +82,7 @@ type ServerSkeletonTracingTreeType = {
 };
 
 type ServerTracingBaseType = {
+  id: string,
   boundingBox?: BoundingBoxObjectType,
   createdTimestamp: number,
   editPosition: Point3,
@@ -96,8 +98,9 @@ export type ServerSkeletonTracingType = ServerTracingBaseType & {
 
 export type ServerVolumeTracingType = ServerTracingBaseType & {
   activeSegmentId?: number,
-  dataLayer: SegmentationDataLayerType,
+  elementClass: ElementClassType,
   fallbackLayer?: string,
+  largestSegmentId: number,
 };
 
 type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
@@ -163,6 +166,7 @@ export class OxalisModel {
         `${annotation.dataStore.url}/data/tracings/${annotation.content.typ}/${annotation.content
           .id}`,
       );
+      tracing.id = annotation.content.id;
     }
 
     // Only initialize the model once.
@@ -329,12 +333,12 @@ export class OxalisModel {
   getLayerInfos(tracing: ?ServerTracingType) {
     // Overwrite or extend layers with volumeTracingLayer
     const layers = _.clone(Store.getState().dataset.dataLayers);
-    if (tracing == null || tracing.dataLayer == null) {
+    if (tracing == null || tracing.elementClass == null) {
       return layers;
     }
 
     // This code will only be executed for volume tracings as only those have a dataLayer.
-    // The dataLayer always contains the layer information for the user segmentation.
+    // The tracing always contains the layer information for the user segmentation.
     // layers (dataset.dataLayers) contains information about all existing layers of the dataset.
     // Two possible cases:
     // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer.
@@ -344,14 +348,30 @@ export class OxalisModel {
     const existingLayerIndex = _.findIndex(layers, layer => layer.name === fallbackLayer);
     const existingLayer = layers[existingLayerIndex];
 
-    if (existingLayer != null) {
-      layers[existingLayerIndex] = update(tracing.dataLayer, {
-        $merge: { mappings: existingLayer.mappings },
-      });
-    } else {
-      layers.push(tracing.dataLayer);
-    }
+    const tracingLayer = {
+      name: tracing.id,
+      category: "segmentation",
+      boundingBox: {
+        topLeft: [
+          tracing.boundingBox.topLeft.x,
+          tracing.boundingBox.topLeft.y,
+          tracing.boundingBox.topLeft.z,
+        ],
+        width: tracing.boundingBox.width,
+        height: tracing.boundingBox.height,
+        depth: tracing.boundingBox.depth,
+      },
+      resolutions: [1],
+      elementClass: tracing.elementClass,
+      mappings: existingLayer != null ? existingLayer.mappings : [],
+      largestSegmentId: tracing.largestSegmentId,
+    };
 
+    if (existingLayer != null) {
+      layers[existingLayerIndex] = tracingLayer;
+    } else {
+      layers.push(tracingLayer);
+    }
     return layers;
   }
 

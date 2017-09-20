@@ -88,11 +88,10 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
       leftDownMove: (delta: Point2, pos: Point2) => {
-        const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
-        const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
-
         const tool = getVolumeTool(Store.getState().tracing).get();
         if (tool === VolumeToolEnum.MOVE) {
+          const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
+          const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
           const viewportScale = Store.getState().userConfiguration.scale;
           this.move([
             delta.x * mouseInversionX / viewportScale,
@@ -105,15 +104,13 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
-        if (event.shiftKey) {
-          this.volumeTracingController.enterDeleteMode();
+        if (!event.shiftKey) {
+          Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
-        Store.dispatch(startEditingAction(plane));
       },
 
       leftMouseUp: () => {
         Store.dispatch(finishEditingAction());
-        this.volumeTracingController.restoreAfterDeleteMode();
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
@@ -124,8 +121,10 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       },
 
       rightMouseDown: (pos: Point2, plane: OrthoViewType) => {
-        this.volumeTracingController.enterDeleteMode();
-        Store.dispatch(startEditingAction(plane));
+        if (!event.shiftKey) {
+          this.volumeTracingController.enterDeleteMode();
+          Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
+        }
       },
 
       rightMouseUp: () => {
@@ -133,12 +132,14 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      leftClick: (pos: Point2) => {
-        const cellId = Model.getSegmentationBinary().cube.getDataValue(
-          this.calculateGlobalPos(pos),
-        );
+      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
+        if (event.shiftKey) {
+          const cellId = Model.getSegmentationBinary().cube.getDataValue(
+            this.calculateGlobalPos(pos),
+          );
 
-        this.volumeTracingController.handleCellSelection(cellId);
+          this.volumeTracingController.handleCellSelection(cellId);
+        }
       },
 
       mouseMove: (delta: Point2, position: Point2) => {
@@ -158,6 +159,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
           const currentSize = Store.getState().temporaryConfiguration.brushSize;
           // Different browsers send different deltas, this way the behavior is comparable
           Store.dispatch(setBrushSizeAction(currentSize + (delta > 0 ? 5 : -5)));
+        } else {
+          this.scrollPlanes(delta, type);
         }
       },
     });

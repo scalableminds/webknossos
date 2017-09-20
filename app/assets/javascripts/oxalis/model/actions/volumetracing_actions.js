@@ -10,7 +10,7 @@ type InitializeVolumeTracingActionType = {
   tracing: ServerTracing<VolumeContentDataType>,
 };
 type CreateCellActionType = { type: "CREATE_CELL", cellId: ?number };
-type StartEditingActionType = { type: "START_EDITING", planeId: OrthoViewType };
+type StartEditingActionType = { type: "START_EDITING", position: Vector3, planeId: OrthoViewType };
 type AddToLayerActionType = { type: "ADD_TO_LAYER", position: Vector3 };
 type FinishEditingActionType = { type: "FINISH_EDITING" };
 type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
@@ -51,8 +51,12 @@ export const createCellAction = (cellId: ?number): CreateCellActionType => ({
   cellId,
 });
 
-export const startEditingAction = (planeId: OrthoViewType): StartEditingActionType => ({
+export const startEditingAction = (
+  position: Vector3,
+  planeId: OrthoViewType,
+): StartEditingActionType => ({
   type: "START_EDITING",
+  position,
   planeId,
 });
 

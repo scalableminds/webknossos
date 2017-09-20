@@ -23,12 +23,6 @@ const mockedVolumeLayer = {
   getCentroid: _.noop,
 };
 
-const mockedBinary = {
-  cube: {
-    labelVoxels: _.noop,
-  },
-};
-
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
@@ -71,7 +65,7 @@ const initialState = update(defaultState, {
 const ACTIVE_CELL_ID = 5;
 
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
-const startEditingAction = VolumeTracingActions.startEditingAction(OrthoViews.PLANE_XY);
+const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
 const resetContourAction = VolumeTracingActions.resetContourAction();
@@ -119,7 +113,6 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next(startEditingAction);
   const startEditingSaga = execCall(t, saga.next(false));
   startEditingSaga.next();
-  saga.next(VolumeToolEnum.TRACE);
   const layer = startEditingSaga.next([1, 1, 1]).value;
   t.is(layer.plane, OrthoViews.PLANE_XY);
 });
@@ -162,8 +155,6 @@ test("finishLayer saga should emit resetContourAction and then be done (saga tes
   // $FlowFixMe
   const saga = finishLayer(mockedVolumeLayer, VolumeToolEnum.TRACE);
   saga.next();
-  saga.next(ACTIVE_CELL_ID);
-  saga.next(mockedBinary);
   saga.next();
   const iterator = saga.next();
   expectValueDeepEqual(t, iterator, put(resetContourAction));

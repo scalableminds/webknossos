@@ -174,11 +174,7 @@ class VolumeLayer {
     return iterator;
   }
 
-  getCircleVoxelIterator(): VoxelIterator {
-    if (this.isEmpty()) {
-      return VoxelIterator.finished();
-    }
-
+  getCircleVoxelIterator(position: Vector3): VoxelIterator {
     const radius = Math.round(
       this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
     );
@@ -192,8 +188,8 @@ class VolumeLayer {
         map[x][y] = false;
       }
     }
-    const coord = this.get2DCoordinate(this.getContourList().slice(-1)[0]);
-    const minCoord2d = [Math.floor(coord[0] - radius), Math.floor(coord[1] - radius)];
+    const coord2d = this.get2DCoordinate(position);
+    const minCoord2d = [Math.floor(coord2d[0] - radius), Math.floor(coord2d[1] - radius)];
 
     const setMap = function(x: number, y: number, value = true): void {
       x = Math.floor(x);
@@ -205,7 +201,9 @@ class VolumeLayer {
     const baseVoxelFactors = this.get2DCoordinate(
       getBaseVoxelFactors(Store.getState().dataset.scale),
     );
-    Drawing.fillCircle(coord[0], coord[1], radius, baseVoxelFactors, (x, y) => setMap(x, y, true));
+    Drawing.fillCircle(coord2d[0], coord2d[1], radius, baseVoxelFactors, (x, y) =>
+      setMap(x, y, true),
+    );
 
     const iterator = new VoxelIterator(
       map,

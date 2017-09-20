@@ -73,6 +73,10 @@ export function* editVolumeLayerAsync(): Generator<*, *, *> {
     const currentLayer = yield call(createVolumeLayer, startEditingAction.planeId);
     const activeTool = yield select(state => state.tracing.activeTool);
 
+    if (activeTool === VolumeToolEnum.BRUSH) {
+      yield labelWithIterator(currentLayer.getCircleVoxelIterator(startEditingAction.position));
+    }
+
     while (true) {
       const { addToLayerAction, finishEditingAction } = yield race({
         addToLayerAction: take("ADD_TO_LAYER"),
@@ -84,10 +88,7 @@ export function* editVolumeLayerAsync(): Generator<*, *, *> {
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
-        const iterator = currentLayer.getCircleVoxelIterator();
-        const labelValue = yield select(state => state.tracing.activeCellId);
-        const binary = yield call([Model, Model.getSegmentationBinary]);
-        yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+        yield labelWithIterator(currentLayer.getCircleVoxelIterator(addToLayerAction.position));
       }
     }
 
@@ -101,6 +102,12 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
+function* labelWithIterator(iterator): Generator<*, *, *> {
+  const labelValue = yield select(state => state.tracing.activeCellId);
+  const binary = yield call([Model, Model.getSegmentationBinary]);
+  yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+}
+
 export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Generator<*, *, *> {
   if (layer == null || layer.isEmpty()) {
     return;
@@ -110,10 +117,7 @@ export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Ge
     const start = Date.now();
 
     layer.finish();
-    const iterator = layer.getVoxelIterator();
-    const labelValue = yield select(state => state.tracing.activeCellId);
-    const binary = yield call([Model, Model.getSegmentationBinary]);
-    yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+    yield labelWithIterator(layer.getVoxelIterator());
 
     console.log("Labeling time:", Date.now() - start);
   }

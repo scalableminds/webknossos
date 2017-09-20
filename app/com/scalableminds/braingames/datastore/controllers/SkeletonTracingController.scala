@@ -10,9 +10,7 @@ import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings.skeleton._
-import com.scalableminds.braingames.datastore.tracings.{ProtoJsonFormats, TracingReference, TracingType}
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.tools.JsonHelper.boxFormat
+import com.scalableminds.braingames.datastore.tracings._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -24,36 +22,17 @@ class SkeletonTracingController @Inject()(
                                            val dataSourceRepository: DataSourceRepository,
                                            val webKnossosServer: WebKnossosServer,
                                            val messagesApi: MessagesApi
-                                       ) extends TracingController[SkeletonTracing] with ProtoJsonFormats {
+                                       ) extends TracingController[SkeletonTracing, SkeletonTracings, SkeletonUpdateActionGroup] with ProtoJsonFormats {
 
   implicit val tracingFormat = skeletonTracingFormat
 
-  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
-        } yield {
-          Ok(SkeletonTracings(tracings).toByteArray)
-        }
-      }
-    }
-  }
+  implicit val tracingsCompanion = SkeletonTracings
 
-  def saveMultiple = Action.async(validateProto[SkeletonTracings]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        val tracings = request.body.tracings
-        val references = Fox.sequence(tracings.toList.map { tracing =>
-          val tracingId = UUID.randomUUID.toString
-          tracingService.save(tracing, tracingId, 0, toCache = false).map { _ =>
-            TracingReference(tracingId, TracingType.skeleton)
-          }
-        })
-        references.map(x => Ok(Json.toJson(x)))
-      }
-    }
-  }
+  implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings = SkeletonTracings(tracings)
+
+  implicit def unpackMultiple(tracings: SkeletonTracings): List[SkeletonTracing] = tracings.tracings.toList
+
+  implicit val updateReads = SkeletonUpdateActionGroup.jsonFormat
 
   def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) {
     implicit request => {

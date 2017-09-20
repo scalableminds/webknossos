@@ -3,14 +3,15 @@
  */
 package com.scalableminds.braingames.datastore.tracings
 
-import net.liftweb.common.{Box, Full}
-import play.api.libs.json.JsObject
+import com.scalableminds.util.tools.Fox
+import com.trueaccord.scalapb.{GeneratedMessage, Message}
+import play.api.libs.json._
 
-trait UpdateAction[T] {
-  def applyTo(tracing: T): Box[T]
+trait UpdateAction[T <: GeneratedMessage with Message[T]] {
+  def applyTo(tracing: T, service: TracingService[T]): Fox[T]
 }
 
-trait UpdateActionGroup[T] {
+trait UpdateActionGroup[T <: GeneratedMessage with Message[T]] {
 
   def version: Long
 
@@ -18,5 +19,5 @@ trait UpdateActionGroup[T] {
 
   def actions: List[UpdateAction[T]]
 
-  def stats: Option[JsObject] = None
+  def stats: Option[JsObject]
 }

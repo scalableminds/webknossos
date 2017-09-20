@@ -23,7 +23,7 @@ class SkeletonTracingService @Inject()(
 
   val tracingStore = tracingDataStore.skeletons
 
-  implicit val tracingProtoCompanion = SkeletonTracing
+  implicit val tracingCompanion = SkeletonTracing
 
   def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[_]] = {
     Fox.combined(for {

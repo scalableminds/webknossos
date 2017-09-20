@@ -5,10 +5,12 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.braingames.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
-import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateActionGroup}
-import com.scalableminds.braingames.datastore.tracings.{ProtoJsonFormats, TracingDataStore, TracingReference, TracingType}
+import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction, VolumeUpdateActionGroup}
+import com.scalableminds.braingames.datastore.tracings._
+import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc.Action
@@ -21,9 +23,17 @@ class VolumeTracingController @Inject()(
                                          val webKnossosServer: WebKnossosServer,
                                          tracingDataStore: TracingDataStore,
                                          val messagesApi: MessagesApi
-                                       ) extends TracingController[VolumeTracing] with ProtoJsonFormats {
+                                       ) extends TracingController[VolumeTracing, VolumeTracings, VolumeUpdateActionGroup] with ProtoJsonFormats {
 
   implicit val tracingFormat = volumeTracingFormat
+
+  implicit val tracingsCompanion = VolumeTracings
+
+  implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings = VolumeTracings(tracings)
+
+  implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
+
+  implicit val updateReads = VolumeUpdateActionGroup.volumeUpdateActionGroupReads
 
   def initialData(tracingId: String) = Action.async {
     implicit request =>
@@ -39,12 +49,10 @@ class VolumeTracingController @Inject()(
   def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateActionGroup]]) {
     implicit request => {
       AllowRemoteOrigin {
-        for {
-          tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          //_ <- withAuthorizedUpdate(tracingId, tracing.version, request.body)(updates => volumeTracingService.update(tracing, updates.actions))
-        } yield {
-          Ok
-        }
+        withAuthorizedUpdate(tracingId, request.body) { updates =>
+          Fox.successful(())
+          //tracingService.applyUpdates(tracing, updates)
+        }.map(_ => Ok)
       }
     }
   }

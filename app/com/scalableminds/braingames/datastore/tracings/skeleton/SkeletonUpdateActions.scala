@@ -4,11 +4,16 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import com.scalableminds.braingames.datastore.SkeletonTracing._
+import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPointDepr, CommentDepr}
-import com.scalableminds.braingames.datastore.tracings.{Point3DUtils, Vector3DUtils}
+import com.scalableminds.util.tools.Fox
 import play.api.libs.json._
 
-trait SkeletonUpdateAction {
+import scala.concurrent.ExecutionContext.Implicits.global
+
+trait SkeletonUpdateAction extends UpdateAction[SkeletonTracing] {
+  def applyTo(tracing: SkeletonTracing, service: TracingService[SkeletonTracing]): Fox[SkeletonTracing] = Fox.successful(tracing)
+
   def applyOn(tracing: SkeletonTracing): SkeletonTracing
 
   protected def mapTrees(tracing: SkeletonTracing, treeId: Int, transformTree: Tree => Tree): Seq[Tree] = {
@@ -261,5 +266,6 @@ object SkeletonUpdateAction {
   }
 }
 
-case class SkeletonUpdateActionGroup(version: Long, timestamp: Long, actions: List[SkeletonUpdateAction])
+case class SkeletonUpdateActionGroup(version: Long, timestamp: Long, actions: List[SkeletonUpdateAction], stats: Option[JsObject]) extends UpdateActionGroup[SkeletonTracing]
+
 object SkeletonUpdateActionGroup {implicit val jsonFormat = Json.format[SkeletonUpdateActionGroup]}

@@ -8,16 +8,18 @@ import java.util.UUID
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings._
-import com.trueaccord.scalapb.json.Printer
+import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import net.liftweb.common.Failure
 import play.api.i18n.Messages
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.{Format, Json, Reads}
 import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-
-trait TracingController[T <: GeneratedMessage with Message[T]] extends Controller with ProtoJsonFormats {
+trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts], U <: UpdateActionGroup[T]] extends Controller with ProtoJsonFormats {
 
   def dataSourceRepository: DataSourceRepository
 
@@ -25,9 +27,17 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
 
   def webKnossosServer: WebKnossosServer
 
-  implicit val tracingProtoCompanion: GeneratedMessageCompanion[T] = tracingService.tracingProtoCompanion
+  implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
+
+  implicit val tracingsCompanion: GeneratedMessageCompanion[Ts]
 
   implicit val tracingFormat: Format[T]
+
+  implicit def unpackMultiple(tracings: Ts): List[T]
+
+  implicit def packMultiple(tracings: List[T]): Ts
+
+  implicit val updateReads: Reads[U]
 
   def save = Action.async(validateProto[T]) {
     implicit request =>
@@ -40,6 +50,20 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
       }
   }
 
+  def saveMultiple = Action.async(validateProto[Ts]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        val references = Fox.sequence(request.body.map { tracing =>
+          val tracingId = UUID.randomUUID.toString
+          tracingService.save(tracing, tracingId, 0, toCache = false).map { _ =>
+            TracingReference(tracingId, TracingType.skeleton)
+          }
+        })
+        references.map(x => Ok(Json.toJson(x)))
+      }
+    }
+  }
+
   def get(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
@@ -47,6 +71,18 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
           Ok(Json.toJson(tracing))
+        }
+      }
+    }
+  }
+
+  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        for {
+          tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
+        } yield {
+          Ok(tracings.toByteArray)
         }
       }
     }
@@ -64,21 +100,33 @@ trait TracingController[T <: GeneratedMessage with Message[T]] extends Controlle
     }
   }
 
-  def withAuthorizedUpdate(tracingId: String, updateGroups: List[UpdateActionGroup[T]]) = {
-    /*val timestamps = updateGroups.map(_.timestamp)
+  def updateTest(tracingId: String) = Action.async(validateJson[List[U]]) {
+    implicit request => {
+      AllowRemoteOrigin {
+        //withAuthorizedUpdate(tracingId, request.body) { updates =>
+          //Fox.successful(())
+          //tracingService.applyUpdates(tracing, updates)
+        //}.map(_ => Ok)
+        Fox.successful(Ok)
+      }
+    }
+  }
+
+  def withAuthorizedUpdate(tracingId: String, updateGroups: List[UpdateActionGroup[T]])(fn: UpdateActionGroup[T] => Fox[_]) = {
+    val timestamps = updateGroups.map(_.timestamp)
     val latestStats = updateGroups.flatMap(_.stats).lastOption
     val currentVersion = tracingService.currentVersion(tracingId)
     webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStats).flatMap { _ =>
       updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
         previousVersion.flatMap { version =>
           if (version + 1 == updateGroup.version) {
-            tracingService.handleUpdateGroup(tracingId, updateGroup).map(updateGroup.version)
+            fn(updateGroup).map(_ => updateGroup.version)
           } else {
             Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
           }
         }
       }
-    }*/
+    }
   }
 
   // def withUpdateAllowed(, updateGroups: List[UpdateActionGroup[T]])() = {

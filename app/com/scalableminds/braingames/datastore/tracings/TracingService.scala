@@ -24,7 +24,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
-  implicit def tracingProtoCompanion: GeneratedMessageCompanion[T]
+  implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life
@@ -71,6 +71,12 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
         }
       case f: Failure =>
         Future.successful(f)
+    }
+  }
+
+  def applyUpdates(tracing: T, updateActions: List[UpdateAction[T]]): Fox[T] = {
+    updateActions.foldLeft(Fox.successful(tracing)) { (tracing, action) =>
+      tracing.flatMap(t => action.applyTo(t, this))
     }
   }
 }

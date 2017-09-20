@@ -31,7 +31,7 @@ class VolumeTracingService @Inject()(
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
-  implicit val tracingProtoCompanion = VolumeTracing
+  implicit val tracingCompanion = VolumeTracing
 
   val tracingType = TracingType.volume
 
@@ -55,20 +55,6 @@ class VolumeTracingService @Inject()(
             }
         }
     }
-  }
-
-  def update(tracing: VolumeTracingDepr, updates: List[VolumeUpdateAction]): Fox[_] = {
-    /*updates.foldLeft[Fox[_]](Fox.successful(())) {
-      case (_: Full[Unit], action: UpdateBucketVolumeAction) =>
-        val resolution = math.pow(2, action.zoomStep).toInt
-        val bucket = new BucketPosition(action.position.x, action.position.y, action.position.z, resolution)
-        saveBucket(tracing.dataLayer, bucket, action.data)
-      case (_: Full[Unit], _) =>
-        Failure("Unknown action.")
-      case (f, _) =>
-        f
-    }*/
-    Fox.successful(())
   }
 
   def data(tracing: VolumeTracing): Enumerator[Array[Byte]] = {

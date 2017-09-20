@@ -37,7 +37,7 @@ class Layer {
   elementClass: ElementClassType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  mappings: Array<MappingType>;
+  mappings: ?Array<MappingType>;
   boundingBox: BoundingBoxObjectType;
   resolutions: Array<number>;
 

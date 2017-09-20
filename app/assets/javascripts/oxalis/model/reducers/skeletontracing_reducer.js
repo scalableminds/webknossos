@@ -28,9 +28,10 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType, NodeType } from "oxalis/store";
-import type { ServerNodeType } from "oxalis/model"
+import type { OxalisState, SkeletonTracingType, NodeType, BranchPointType } from "oxalis/store";
+import type { ServerNodeType, ServerColorType, ServerBranchPointType } from "oxalis/model";
 import type { ActionType } from "oxalis/model/actions/actions";
+import type { Vector3 } from "oxalis/constants";
 import Maybe from "data.maybe";
 import ErrorHandling from "libs/error_handling";
 
@@ -44,14 +45,20 @@ function serverNodeToNode(n: ServerNodeType): NodeType {
     resolution: n.resolution,
     radius: n.radius,
     timestamp: n.createdTimestamp,
-  }
+  };
 }
 
-function serverColorToColor(c: ?ServerColorType): ?ServerColorType {
-  if (c === undefined) {
+function serverBranchPointToBranchPoint(b: ServerBranchPointType): BranchPointType {
+  return {
+    timestamp: b.createdTimestamp,
+    nodeId: b.nodeId,
+  };
+}
+
+function serverColorToColor(c: ?ServerColorType): ?Vector3 {
+  if (c == null) {
     return undefined;
-  }
-  else {
+  } else {
     return [c.r, c.g, c.b];
   }
 }
@@ -69,7 +76,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         action.tracing.trees.map(tree =>
           update(tree, {
             nodes: { $set: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id") },
-            color: { $set: serverColorToColor(tree.color) || ColorGenerator.distinctColorForId(tree.treeId) },
+            color: {
+              $set:
+                serverColorToColor(tree.color) || ColorGenerator.distinctColorForId(tree.treeId),
+            },
+            branchPoints: { $set: _.map(tree.branchPoints, serverBranchPointToBranchPoint) },
             isVisible: { $set: true },
           }),
         ),

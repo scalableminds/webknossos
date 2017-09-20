@@ -8,11 +8,8 @@ import Store from "oxalis/store";
 import type {
   BoundingBoxObjectType,
   SettingsType,
-  NodeType,
   EdgeType,
   CommentType,
-  BranchPointType,
-  SegmentationDataLayerType,
   TracingTypeTracingType,
   ElementClassType,
 } from "oxalis/store";
@@ -40,13 +37,12 @@ import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
-import type { Vector3, ControlModeType } from "oxalis/constants";
+import type { Vector3, Point3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
-import update from "immutability-helper";
 import UrlManager from "oxalis/controller/url_manager";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
@@ -61,7 +57,12 @@ export type ServerNodeType = {
   createdTimestamp: number,
 };
 
-type ServerColorType = {
+export type ServerBranchPointType = {
+  createdTimestamp: number,
+  nodeId: number,
+};
+
+export type ServerColorType = {
   r: number,
   g: number,
   b: number,
@@ -69,7 +70,7 @@ type ServerColorType = {
 };
 
 type ServerSkeletonTracingTreeType = {
-  branchPoints: Array<BranchPointType>,
+  branchPoints: Array<ServerBranchPointType>,
   color: ?ServerColorType,
   comments: Array<CommentType>,
   edges: Array<EdgeType>,
@@ -360,7 +361,8 @@ export class OxalisModel {
       },
       resolutions: [1],
       elementClass: tracing.elementClass,
-      mappings: existingLayer != null ? existingLayer.mappings : [],
+      mappings:
+        existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],
       largestSegmentId: tracing.largestSegmentId,
     };
 

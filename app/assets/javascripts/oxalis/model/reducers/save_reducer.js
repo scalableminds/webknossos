@@ -3,6 +3,7 @@
  * @flow
  */
 
+import _ from "lodash";
 import update from "immutability-helper";
 import Date from "libs/date";
 import Utils from "libs/utils";

@@ -274,7 +274,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (comments)", 
 
   t.is(updateActions[0].name, "updateTree");
   t.is(updateActions[0].value.id, 1);
-  t.deepEqual(updateActions[0].value.comments, [{ node: 1, content: "Hallo" }]);
+  t.deepEqual(updateActions[0].value.comments, [{ nodeId: 1, content: "Hallo" }]);
 });
 
 test("SkeletonTracingSaga shouldn't emit an updateTree update actions (comments)", t => {
@@ -295,7 +295,7 @@ test("SkeletonTracingSaga should emit an updateTree update actions (branchpoints
 
   t.is(updateActions[0].name, "updateTree");
   t.is(updateActions[0].value.id, 1);
-  t.deepEqual(updateActions[0].value.branchPoints, [{ id: 1, timestamp: 12345678 }]);
+  t.deepEqual(updateActions[0].value.branchPoints, [{ nodeId: 1, timestamp: 12345678 }]);
 });
 
 test("SkeletonTracingSaga should emit update actions on merge tree", t => {

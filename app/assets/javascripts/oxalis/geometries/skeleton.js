@@ -311,8 +311,8 @@ class Skeleton {
           const treeId = update.value.id;
           const tree = skeletonTracing.trees[treeId];
           const prevTree = this.prevTracing.trees[treeId];
-          const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.id);
-          const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.id);
+          const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.nodeId);
+          const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.nodeId);
           const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(
             oldBranchPoints,
             newBranchPoints,
@@ -413,7 +413,7 @@ class Skeleton {
       this.createNode(tree.treeId, node);
     }
     for (const branchpoint of tree.branchPoints) {
-      this.updateNodeType(tree.treeId, branchpoint.id, NodeTypes.BRANCH_POINT);
+      this.updateNodeType(tree.treeId, branchpoint.nodeId, NodeTypes.BRANCH_POINT);
     }
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];

@@ -63,7 +63,7 @@ export type NodeType = {
 };
 
 export type BranchPointType = {
-  +createdTimestamp: number,
+  +timestamp: number,
   +nodeId: number,
 };
 
@@ -117,11 +117,11 @@ export type DataLayerType = {
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<number>,
   +elementClass: ElementClassType,
+  +mappings?: Array<MappingType>,
 };
 
 export type SegmentationDataLayerType = DataLayerType & {
   +largestSegmentId: number,
-  +mappings: Array<MappingType>,
 };
 
 export type RestrictionsType = APIRestrictionsType;

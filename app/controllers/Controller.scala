@@ -21,10 +21,6 @@ trait Controller extends PlayController
   with I18nSupport
   with LazyLogging {
 
-  def messagesApi: MessagesApi
-
-  def getLogger() = logger
-
   implicit def AuthenticatedRequest2Request[T](r: AuthenticatedRequest[T]): Request[T] =
     r.request
 

@@ -24,15 +24,16 @@ import scala.concurrent.{ExecutionContext, Future}
   * algorithm and stores the auth info in the backing store.
   *
   * @param passwordHasher The default password hasher used by the application.
-  * @param passwordHasherList List of password hasher supported by the application.
+  * //@param passwordHasherList List of password hasher supported by the application.
   * @param executionContext The execution context to handle the asynchronous operations.
   */
-class CredentialsProvider @Inject() (
-                                      passwordHasher: PasswordHasher,
-                                      passwordHasherList: Seq[PasswordHasher])(implicit val executionContext: ExecutionContext)
+class CredentialsProvider @Inject() (passwordHasher: PasswordHasher)(implicit val executionContext: ExecutionContext)
   extends Provider with ExecutionContextProvider {
 
   override def id = ID
+
+  //can be extended in the future with different hasher
+  val passwordHasherList: List[PasswordHasher] = List(passwordHasher)
 
   def authenticate(credentials: Credentials): Future[LoginInfo] = {
     loginInfo(credentials).flatMap { loginInfo =>

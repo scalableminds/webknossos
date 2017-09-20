@@ -5,7 +5,11 @@ import javax.inject.Inject
 
 import scala.concurrent.Future
 import akka.actor.ActorRef
-import com.mohiva.play.silhouette.api.util.Credentials
+import com.google.inject.Provides
+import com.mohiva.play.silhouette.api.{Environment, EventBus}
+import com.mohiva.play.silhouette.api.services.{AuthenticatorService, IdentityService}
+import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
+import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
 import com.scalableminds.util.mail._
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -17,8 +21,7 @@ import net.liftweb.common.{Empty, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
-import oxalis.security.PasswordHasher
-import oxalis.security.CredentialsProvider
+import oxalis.security.{CredentialsProvider, EnvironmentOxalis, PasswordHasher}
 import oxalis.view.ProvidesUnauthorizedSessionData
 import play.api.data.validation.Constraints
 //import oxalis.security.Secured // --------------------------------------------------
@@ -33,7 +36,7 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Action
 import views.html
-
+import com.mohiva.play.silhouette.api.Environment
 
 import java.util.UUID
 import javax.inject.Inject
@@ -44,6 +47,7 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 import net.ceedubs.ficus.Ficus._
+import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 
 import com.mohiva.play.silhouette.api.Authenticator.Implicits._
 import com.mohiva.play.silhouette.api.{Environment,LoginInfo,Silhouette}
@@ -51,8 +55,10 @@ import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
 import com.mohiva.play.silhouette.api.services.AvatarService
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
+import com.mohiva.play.silhouette.impl.authenticators
 import com.mohiva.play.silhouette.impl.exceptions.IdentityNotFoundException
 import com.mohiva.play.silhouette.impl.providers._
+import com.mohiva.play.silhouette.impl.authenticators._
 
 import play.api._
 import play.api.data.Form
@@ -298,21 +304,27 @@ object AuthForms {
 
 class Authentication @Inject() (
                        val messagesApi: MessagesApi,
-                       val env:Environment[User,CookieAuthenticator],
-                       socialProviderRegistry: SocialProviderRegistry,
+                       //val env:Environment[User,CookieAuthenticator],
                        credentialsProvider: CredentialsProvider,
                        userTokenService: UserTokenService,
-                       avatarService: AvatarService,
                        passwordHasher: PasswordHasher,
                        configuration: Configuration)
   extends Controller
-    with Silhouette[User,CookieAuthenticator]
+    //with Silhouette[User,CookieAuthenticator]
     with ProvidesUnauthorizedSessionData {
 
   import AuthForms._
 
+  val silhouette = new Silhouette[User,CookieAuthenticator] {def env: Environment[User, CookieAuthenticator] = env; def messagesApi: MessagesApi = messagesApi}
+  //val controller = new Controller {def messagesApi: MessagesApi = messagesApi }
+
+
+  //val env = Environment.apply[User, CookieAuthenticator](UserService, CookieAuthenticatorService)
+  val env = new EnvironmentOxalis(configuration)
+
+
   //problem: two different "logger" (different types)
-  override lazy val logger = super[Controller].getLogger
+  //override lazy val logger = super[Controller].getLogger
   //override lazy val logger = super[Controller].logger //super may not be used on lazy value logger
 
   private lazy val Mailer =
@@ -331,7 +343,7 @@ class Authentication @Inject() (
     } yield views.html.auth.registerTest(form, teams)
   }
 
-  def register = UserAwareAction.async { implicit request =>
+  def register = silhouette.UserAwareAction.async { implicit request =>
     request.identity match {
       case Some(user) => Fox.successful(Redirect(routes.Application.index))
       case None => formHtml(signUpForm).map(Ok(_))
@@ -367,7 +379,7 @@ class Authentication @Inject() (
     )
   }
 
-  def signIn = UserAwareAction.async { implicit request =>
+  def signIn = silhouette.UserAwareAction.async { implicit request =>
     Future.successful(request.identity match {
       case Some(user) => Redirect(controllers.routes.Application.index())
       case None => Ok(views.html.auth.loginTest(signInForm))
@@ -405,7 +417,7 @@ class Authentication @Inject() (
     )
   }
 
-  def signOut = SecuredAction.async { implicit request =>
+  def signOut = silhouette.SecuredAction.async { implicit request =>
     env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index()))
   }
 
@@ -417,7 +429,7 @@ class Authentication @Inject() (
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(views.html.auth.startResetPassword(bogusForm))),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
-        //case None => Future.successful(Redirect(routes.Authentication.startResetPassword()).flashing("error" -> Messages("error.noUser")))
+        case None => Future.successful(Redirect(routes.Authentication.startResetPassword()).flashing("error" -> Messages("error.noUser")))
         case Some(user) => for {
           token <- userTokenService.save(UserToken.create(user._id, email, isSignUp = false))
         } yield {

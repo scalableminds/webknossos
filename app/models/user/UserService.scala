@@ -6,6 +6,7 @@ import play.api.libs.concurrent.Akka
 import java.util.UUID
 
 import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.api.services.IdentityService
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.impl.providers.{CommonSocialProfile, CredentialsProvider}
 import oxalis.thirdparty.BrainTracing
@@ -31,7 +32,7 @@ import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.Future
 
-object UserService extends FoxImplicits {
+object UserService extends FoxImplicits with IdentityService[User] {
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 

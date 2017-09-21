@@ -34,7 +34,6 @@ GET           /auth/register                                                    
 POST          /auth/register                                                    controllers.Authentication.handleRegistration
 GET           /auth/login                                                       controllers.Authentication.empty
 POST          /auth/login                                                       controllers.Authentication.authenticate
-GET           /auth/signout                                                     controllers.Authentication.signOut
 GET           /auth/reset                                                       controllers.Authentication.empty
 POST          /auth/reset                                                       controllers.Authentication.handleStartResetPassword
 GET           /auth/reset/:token                                                controllers.Authentication.resetPassword(token:String)

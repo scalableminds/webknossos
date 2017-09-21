@@ -11,17 +11,15 @@ import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
 
 
-class EnvironmentOxalis @Inject()(configuration: Configuration) extends Environment[User ,CookieAuthenticator]{
+class EnvironmentOxalis @Inject()(configuration: Configuration)(implicit val executionContext: ExecutionContext) extends Environment[User ,CookieAuthenticator]{
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
   val idGenerator = new SecureRandomIDGenerator()
   val eventBusObject = EventBus()
-  //val configuration = new Configuration(...)
   val config = configuration.underlying.as[CookieAuthenticatorSettings]("silhouette.authenticator")
-  //just to test it here; later should be done using silhouette.conf
-  //val cookieAuthenticatorSettings = CookieAuthenticatorSettings("authenticator", "/",None, false, true, true, true, None, Some(FiniteDuration.apply(30, "minute")), FiniteDuration.apply(12, "hours"))
   val authenticatorServiceObject = new CookieAuthenticatorService(config, None, fingerprintGenerator, idGenerator, Clock())
 
   override def identityService: IdentityService[User] = UserService
@@ -31,6 +29,4 @@ class EnvironmentOxalis @Inject()(configuration: Configuration) extends Environm
   override def requestProviders: Seq[RequestProvider] = Seq()
 
   override def eventBus: EventBus = eventBusObject
-
-  override implicit val executionContext: ExecutionContext = executionContext
 }

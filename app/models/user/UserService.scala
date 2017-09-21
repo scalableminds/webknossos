@@ -38,8 +38,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
 
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
 
-  val SessionInformationKey = "userId"
-
   def defaultUser = {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
   }
@@ -213,9 +211,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
   def retrieve(loginInfo:LoginInfo):Future[Option[User]] = UserDAO.find(loginInfo)(GlobalAccessContext)
 
   def find(id:BSONObjectID) = UserDAO.findByIdQ(id)
-
-  def createSession(user: User): Tuple2[String, String] =
-    (SessionInformationKey -> user.id)
 
   def createLoginInfo(email: String): LoginInfo ={
     LoginInfo(CredentialsProvider.ID, email)

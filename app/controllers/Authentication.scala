@@ -1,13 +1,5 @@
 package controllers
 
-import java.net.URLEncoder
-import javax.inject.Inject
-
-import scala.concurrent.Future
-import akka.actor.ActorRef
-import com.google.inject.Provides
-import com.mohiva.play.silhouette.api.{Environment, EventBus}
-import com.mohiva.play.silhouette.api.services.{AuthenticatorService, IdentityService}
 import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
 import com.scalableminds.util.mail._
@@ -22,21 +14,14 @@ import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
 import oxalis.security.{CredentialsProvider, EnvironmentOxalis, PasswordHasher}
-import oxalis.view.ProvidesUnauthorizedSessionData
 import play.api.data.validation.Constraints
-//import oxalis.security.Secured // --------------------------------------------------
+import play.twirl.api.Html
+import oxalis.security.Secured // --------------------------------------------------
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.{ProvidesUnauthorizedSessionData, SessionData}
-import play.api.Play.current
-import play.api._
-import play.api.data.Forms._
-import play.api.data._
-import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Action
-import views.html
-import com.mohiva.play.silhouette.api.Environment
 
 import java.util.UUID
 import javax.inject.Inject
@@ -52,13 +37,7 @@ import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import com.mohiva.play.silhouette.api.Authenticator.Implicits._
 import com.mohiva.play.silhouette.api.{Environment,LoginInfo,Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
-import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
-import com.mohiva.play.silhouette.api.services.AvatarService
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
-import com.mohiva.play.silhouette.impl.authenticators
-import com.mohiva.play.silhouette.impl.exceptions.IdentityNotFoundException
-import com.mohiva.play.silhouette.impl.providers._
-import com.mohiva.play.silhouette.impl.authenticators._
 
 import play.api._
 import play.api.data.Form
@@ -66,13 +45,9 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.mvc._
 import play.api.i18n.{I18nSupport,MessagesApi,Messages}
-import play.api.libs.concurrent.Execution.Implicits._
+import scala.concurrent.ExecutionContext.Implicits.global
 
 import models.user.UserService
-
-//import models.{Profile,User}
-//import services.{UserService,UserTokenService}
-//import utils.Mailer
 
 import org.joda.time.DateTime
 
@@ -266,10 +241,8 @@ object AuthForms {
   // Sign up
   case class SignUpData(team:String, email:String, firstName:String, lastName:String, password:String)
 
-  val team: Mapping[String] = text verifying Constraints.nonEmpty
-
   def signUpForm(implicit messages:Messages) = Form(mapping(
-    "team" -> team,
+    "team" -> text,
     "email" -> email,
     "password" -> tuple(
       "password1" -> nonEmptyText.verifying(minLength(6)),
@@ -304,28 +277,18 @@ object AuthForms {
 
 class Authentication @Inject() (
                        val messagesApi: MessagesApi,
-                       //val env:Environment[User,CookieAuthenticator],
                        credentialsProvider: CredentialsProvider,
                        userTokenService: UserTokenService,
                        passwordHasher: PasswordHasher,
                        configuration: Configuration)
   extends Controller
-    //with Silhouette[User,CookieAuthenticator]
-    with ProvidesUnauthorizedSessionData {
+    with ProvidesUnauthorizedSessionData
+    with Secured {
 
   import AuthForms._
 
   val silhouette = new Silhouette[User,CookieAuthenticator] {def env: Environment[User, CookieAuthenticator] = env; def messagesApi: MessagesApi = messagesApi}
-  //val controller = new Controller {def messagesApi: MessagesApi = messagesApi }
-
-
-  //val env = Environment.apply[User, CookieAuthenticator](UserService, CookieAuthenticatorService)
   val env = new EnvironmentOxalis(configuration)
-
-
-  //problem: two different "logger" (different types)
-  //override lazy val logger = super[Controller].getLogger
-  //override lazy val logger = super[Controller].logger //super may not be used on lazy value logger
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -337,30 +300,40 @@ class Authentication @Inject() (
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
 
+  /*
   def formHtml(form: Form[AuthForms.SignUpData])(implicit session: SessionData) = {
     for {
       teams <- TeamService.rootTeams()
     } yield views.html.auth.registerTest(form, teams)
   }
+*/
 
-  def register = silhouette.UserAwareAction.async { implicit request =>
-    request.identity match {
-      case Some(user) => Fox.successful(Redirect(routes.Application.index))
-      case None => formHtml(signUpForm).map(Ok(_))
-    }
+  def empty = Action { implicit request =>
+    Ok(views.html.main()(Html("")))
   }
+
+  /*
+  def register = Action.async { implicit request => //silhouette.UserAwareAchtion
+    //request.identity match {
+    //  case Some(user) => Fox.successful(Redirect(routes.Application.index))
+    //  case None => formHtml(signUpForm).map(Ok(_))
+    //}
+    formHtml(signUpForm).map(Ok(_))
+  }
+  */
 
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm =>  formHtml(bogusForm).map(BadRequest(_)),
+      bogusForm =>  Future.successful(JsonOk(Messages("auth.wrongForm", bogusForm))),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            Fox.successful(Redirect(routes.Authentication.register()).flashing("error" -> Messages("error.userExists", signUpData.email)))
+            //Fox.successful(Redirect(routes.Authentication.register()).flashing("error" -> Messages("error.userExists", signUpData.email)))
+            Fox.successful(JsonOk(Messages("error.userExists", signUpData.email)))
           case Empty =>
             for {
-              user <- UserService.insert(team.toString, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+              user <- UserService.insert(signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                                          loginInfo, passwordHasher.hash(signUpData.password))
               brainDBResult <- BrainTracing.register(user).toFox
             } yield {
@@ -368,10 +341,13 @@ class Authentication @Inject() (
               Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, emailAddress.toString, brainDBResult))
               if (automaticUserActivation) {
                 Redirect(routes.Application.index)
-                .withSession(UserService.createSession(user))
+                .withSession(Secured.createSession(user))
               } else {
+                /*
                 Redirect(routes.Authentication.signIn())
                   .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
+                */
+                JsonOk(Messages("user.accountCreated"))
               }
             }
         }
@@ -379,22 +355,27 @@ class Authentication @Inject() (
     )
   }
 
-  def signIn = silhouette.UserAwareAction.async { implicit request =>
-    Future.successful(request.identity match {
-      case Some(user) => Redirect(controllers.routes.Application.index())
-      case None => Ok(views.html.auth.loginTest(signInForm))
-    })
+  /*
+  def signIn = Action.async { implicit request => //silhouette.UserAwareAction.async
+    //Future.successful(request.identity match {
+      //case Some(user) => Redirect(controllers.routes.Application.index())
+      //case None => Ok(views.html.auth.loginTest(signInForm))
+    //})
+
+    Future.successful(Ok(views.html.auth.loginTest(signInForm)))
   }
+  */
 
   def authenticate = Action.async { implicit request =>
     signInForm.bindFromRequest.fold(
-      bogusForm => Future.successful(BadRequest(views.html.auth.loginTest(bogusForm))),
+      bogusForm => Future.successful(JsonOk(Messages("auth.wrongForm", bogusForm))),
       signInData => {
         val credentials = Credentials(signInData.email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
           UserService.retrieve(loginInfo).flatMap {
             case None =>
-              Future.successful(Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.noUser")))
+              //Future.successful(Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.noUser")))
+              Future.successful(JsonOk(Messages("error.noUser")))
             case Some(user) => for {
               authenticator <- env.authenticatorService.create(loginInfo).map {
                 case authenticator if signInData.rememberMe =>
@@ -411,7 +392,7 @@ class Authentication @Inject() (
             } yield result
           }
         }.recover {
-          case e:ProviderException => Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.invalidCredentials"))
+          case e:ProviderException => JsonOk(Messages("error.invalidCredentials"))//Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.invalidCredentials"))
         }
       }
     )
@@ -421,15 +402,17 @@ class Authentication @Inject() (
     env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index()))
   }
 
+  /*
   def startResetPassword = Action { implicit request =>
     Ok(views.html.auth.startResetPassword(emailForm))
   }
+  */
 
   def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(views.html.auth.startResetPassword(bogusForm))),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
-        case None => Future.successful(Redirect(routes.Authentication.startResetPassword()).flashing("error" -> Messages("error.noUser")))
+        case None => Future.successful(JsonOk(Messages("error.noUser")))//Future.successful(Redirect(routes.Authentication.startResetPassword()).flashing("error" -> Messages("error.noUser")))
         case Some(user) => for {
           token <- userTokenService.save(UserToken.create(user._id, email, isSignUp = false))
         } yield {
@@ -477,7 +460,7 @@ class Authentication @Inject() (
   }
 
   def logout = Action {
-    Redirect(controllers.routes.Authentication.signIn)
+    Redirect(controllers.routes.Application.index)//Autehntication.signIn
       .withNewSession
       .flashing("success" -> Messages("user.logout.success"))
   }

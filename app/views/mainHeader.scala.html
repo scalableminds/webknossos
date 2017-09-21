@@ -100,7 +100,7 @@
                 <a href="#"><i class="fa fa-edit"></i>Edit Profile</a>
               </li>-->
                 <li>
-                    <a href="@routes.UserController.resetPassword()"><i class="fa fa-key"></i>Reset password</a>
+                    <a href="/reset"><i class="fa fa-key"></i>Reset password</a>
                 </li>
                 <li>
                     <a href="@routes.Authentication.logout()"><i class="fa fa-power-off"></i>Logout</a>
@@ -109,7 +109,7 @@
             </li>
           </ul>
         }.getOrElse {
-            <a href="@controllers.routes.Authentication.register()" class="btn btn-default navbar-btn navbar-right">Sign up</a>
+            <a href="/signup" class="btn btn-default navbar-btn navbar-right">Sign up</a>
             <form action="/auth/login" method="POST" class="navbar-form navbar-right">
               <input type="email" id="email" name="email" placeholder="Email" class="form-control">
               <input type="password" id="password" name="password" placeholder="Password" class="form-control">

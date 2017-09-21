@@ -30,12 +30,12 @@ GET           /help/keyboardshortcuts                                           
 #GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 #new auth
-GET           /auth/register                                                   controllers.Authentication.register
-POST          /auth/register                                                   controllers.Authentication.handleRegistration
-GET           /auth/login                                                       controllers.Authentication.signIn
+GET           /auth/register                                                    controllers.Authentication.empty
+POST          /auth/register                                                    controllers.Authentication.handleRegistration
+GET           /auth/login                                                       controllers.Authentication.empty
 POST          /auth/login                                                       controllers.Authentication.authenticate
 GET           /auth/signout                                                     controllers.Authentication.signOut
-GET           /auth/reset                                                       controllers.Authentication.startResetPassword
+GET           /auth/reset                                                       controllers.Authentication.empty
 POST          /auth/reset                                                       controllers.Authentication.handleStartResetPassword
 GET           /auth/reset/:token                                                controllers.Authentication.resetPassword(token:String)
 POST          /auth/reset/:token                                                controllers.Authentication.handleResetPassword(token:String)

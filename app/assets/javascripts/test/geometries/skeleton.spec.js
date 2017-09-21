@@ -110,7 +110,8 @@ test.serial("Skeleton should initialize correctly using the store's state", t =>
       NodeShader.COLOR_TEXTURE_WIDTH * NodeShader.COLOR_TEXTURE_WIDTH * 4,
     );
     textureData.set(treeColors);
-    t.deepEqual(skeleton.treeColorTexture.image.data, textureData);
+    // Do not use t.deepEqual here, it's extremely slow and takes >15s
+    t.true(_.isEqual(skeleton.treeColorTexture.image.data, textureData));
   });
 });
 

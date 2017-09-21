@@ -6,16 +6,13 @@ db.runCommand({
         $or: [{ _user: { $type: "objectId" } }, { _user: { $exists: false } }],
       },
       {
-        content: {
-          $type: "object",
-          $exists: true,
-          $elemMatch: {
-            $and: [
-              { contentType: { $type: "string", $exists: true } },
-              { _id: { $type: "string", $exists: true } },
-            ],
-          },
-        },
+        _content: { $type: "object", $exists: true },
+      },
+      {
+        "_content.contentType": { $type: "string", $exists: true },
+      },
+      {
+        "_content._id": { $type: "string", $exists: true },
       },
       {
         $or: [{ _task: { $type: "objectId" } }, { _task: { $exists: false } }],
@@ -24,21 +21,19 @@ db.runCommand({
         team: { $type: "string", $exists: true },
       },
       {
-        state: {
-          $type: "object",
-          $exists: true,
-          $elemMatch: {
-            $and: [
-              { isAssigned: { $type: "bool", $exists: true } },
-              { isFinished: { $type: "bool", $exists: true } },
-              { isInProgess: { $type: "bool", $exists: true } },
-            ],
-          },
-        },
+        state: { $type: "object", $exists: true },
+      },
+      {
+        "state.isAssigned": { $type: "bool", $exists: true },
+      },
+      {
+        "state.isFinished": { $type: "bool", $exists: true },
+      },
+      {
+        "state.isInProgress": { $type: "bool", $exists: true },
       },
       {
         typ: {
-          $type: "string",
           $exists: true,
           $in: [
             "Task",
@@ -59,7 +54,7 @@ db.runCommand({
         $or: [{ _name: { $type: "string" } }, { _name: { $exists: false } }],
       },
       {
-        $or: [{ tracingTime: { $type: "long" } }, { tracingTime: { $exists: false } }],
+        $or: [{ tracingTime: { $type: "number" } }, { tracingTime: { $exists: false } }],
       },
       {
         created: { $type: "long", $exists: true },
@@ -77,7 +72,10 @@ db.runCommand({
         isPublic: { $type: "bool", $exists: true },
       },
       {
-        tags: { $type: "array", $exists: true, $elemMatch: { $type: "string" } },
+        tags: { $exists: true },
+      },
+      {
+        $or: [{ tags: { $type: "string" } }, { tags: { $size: 0 } }],
       },
     ],
   },

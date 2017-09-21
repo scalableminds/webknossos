@@ -3,7 +3,7 @@ db.runCommand({
   validator: {
     $and: [
       {
-        time: { $type: "long", $exists: true },
+        time: { $type: "number", $exists: true },
       },
       {
         timestamp: { $type: "long", $exists: true },
@@ -24,7 +24,7 @@ db.runCommand({
         _id: { $type: "objectId", $exists: true },
       },
       {
-        $or: [{ numberOfUpdates: { $type: "long" } }, { numberOfUpdates: { $exists: false } }],
+        $or: [{ numberOfUpdates: { $type: "number" } }, { numberOfUpdates: { $exists: false } }],
       },
     ],
   },

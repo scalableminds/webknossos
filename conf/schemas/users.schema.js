@@ -24,31 +24,26 @@ db.runCommand({
         md5hash: { $type: "string", $exists: true },
       },
       {
-        teams: {
-          $type: "array",
-          $exists: true,
-          $elemMatch: {
-            $and: [
-              { team: { $type: "string", $exists: true } },
-              {
-                role: { $type: "object", $exists: true, $elemMatch: { name: { $type: "string" } } },
-              },
-            ],
-          },
-        },
+        teams: { $type: "object", $exists: true },
+      },
+      { "teams.team": { $type: "string", $exists: true } },
+      {
+        "teams.role": { $type: "object", $exists: true },
       },
       {
-        userConfiguration: {
-          $type: "object",
-          $exists: true,
-          $elemMatch: { configuration: { $type: "object", $exists: true } },
-        },
+        "teams.role.name": { $type: "string" },
+      },
+      {
+        userConfiguration: { $type: "object", $exists: true },
+      },
+      {
+        "userConfiguration.configuration": { $type: "object", $exists: true },
       },
       {
         dataSetConfigurations: { $type: "object", $exists: true },
       },
       {
-        experiences: { $type: "object", $exists: true }, //TODO
+        experiences: { $type: "object", $exists: true },
       },
       {
         lastActivity: { $type: "long", $exists: true },

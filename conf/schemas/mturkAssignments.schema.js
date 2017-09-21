@@ -12,39 +12,45 @@ db.runCommand({
         _project: { $type: "string", $exists: true },
       },
       {
-        hitId: { $type: "string", $exists: true }, //TODO
+        hitId: { $type: "string", $exists: true },
       },
       {
-        key: { $type: "string", $exists: true }, //TODO
+        key: { $type: "string", $exists: true },
       },
       {
         numberOfOpenAssignments: { $type: "int", $exists: true },
       },
       {
-        numberOfInProgressAssignments: { $type: "int", $exists: true },
+        numberOfInProgressAssignments: { $type: "number", $exists: true },
       },
       {
         created: { $type: "long", $exists: true },
       },
       {
-        annotations: {
-          $type: "array",
-          $exists: true,
-          $elemMatch: {
-            $elemMatch: {
-              $and: [
-                { _annotation: { $type: "objectId", $exists: true } },
-                { _user: { $type: "objectId", $exists: true } },
-                { assignmentId: { $type: "string", $exists: true } },
-              ],
-            },
-          },
-        },
+        annotations: { $exists: true },
       },
+      {
+        $or: [
+          {
+            $and: [
+              {
+                "annotations._annotation": { $type: "objectId", $exists: true },
+              },
+              {
+                "annotations._user": { $type: "objectId", $exists: true },
+              },
+              {
+                "annotations.assignmentId": { $type: "string", $exists: true },
+              },
+            ],
+          },
+          { annotations: { $size: 0 } },
+        ],
+      },
+
       {
         _id: { $type: "objectId", $exists: true },
       },
     ],
   },
-  validationLevel: "strict",
 });

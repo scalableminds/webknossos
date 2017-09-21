@@ -21,12 +21,9 @@ db.runCommand({
         $or: [{ expectedTime: { $type: "int" } }, { expectedTime: { $exists: false } }],
       },
       {
-        assignmentConfiguration: {
-          $type: "object",
-          $exists: true,
-          $elemMatch: { location: { $in: ["webknossos", "mturk"], $exists: true } },
-        },
+        assignmentConfiguration: { $type: "object", $exists: true },
       },
+      { "assignmentConfiguration.location": { $in: ["webknossos", "mturk"], $exists: true } },
       {
         _id: { $type: "objectId", $exists: true },
       },

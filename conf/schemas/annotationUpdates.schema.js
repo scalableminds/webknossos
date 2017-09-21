@@ -12,7 +12,7 @@ db.runCommand({
         version: { $type: "int", $exists: true },
       },
       {
-        content: { $type: "array", $exists: true },
+        content: { $type: "object", $exists: true },
       },
       {
         $or: [{ deleted: { $type: "bool" } }, { deleted: { $exists: false } }],

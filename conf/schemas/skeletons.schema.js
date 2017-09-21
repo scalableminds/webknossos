@@ -12,10 +12,10 @@ db.runCommand({
         $or: [{ activeNodeId: { $type: "int" } }, { activeNodeId: { $exists: false } }],
       },
       {
-        editPosition: { $type: "array", $exists: true, $elemMatch: { $type: "int" } },
+        editPosition: { $type: "double", $exists: true },
       },
       {
-        editRotation: { $type: "array", $exists: true, $elemMatch: { $type: "double" } },
+        editRotation: { $type: "double", $exists: true },
       },
       {
         zoomLevel: { $type: "double", $exists: true },
@@ -23,17 +23,13 @@ db.runCommand({
       {
         $or: [
           {
-            boundingBox: {
-              $type: "object",
-              $elemMatch: {
-                $and: [
-                  { topLeft: { $type: "array", $exists: true } },
-                  { width: { $type: "int", $exists: true } },
-                  { height: { $type: "int", $exists: true } },
-                  { depth: { $type: "int", $exists: true } },
-                ],
-              },
-            },
+            $and: [
+              { boundingBox: { $type: "object" } },
+              { "boundingBox.topLeft": { $type: "double", $exists: true } },
+              { "boundingBox.width": { $type: "int", $exists: true } },
+              { "boundingBox.height": { $type: "int", $exists: true } },
+              { "boundingBox.depth": { $type: "int", $exists: true } },
+            ],
           },
           { boundingBox: { $exists: false } },
         ],
@@ -41,39 +37,47 @@ db.runCommand({
       {
         $or: [
           {
-            stats: {
-              $type: "object",
-              $elemMatch: {
+            $or: [
+              {
                 $and: [
-                  { numberOfNodes: { $type: "long", $exists: true } },
-                  { numberOfEdges: { $type: "long", $exists: true } },
-                  { numberOfTrees: { $type: "long", $exists: true } },
+                  { stats: { $type: "object" } },
+                  { "stats.numberOfNodes": { $type: "number", $exists: true } },
+                  { "stats.numberOfEdges": { $type: "number", $exists: true } },
+                  { "stats.numberOfTrees": { $type: "number", $exists: true } },
                 ],
               },
-            },
+              { stats: { $exists: false } },
+            ],
+            $and: [
+              { stats: { $type: "object" } },
+              { "stats.numberOfNodes": { $type: "number", $exists: true } },
+              { "stats.numberOfEdges": { $type: "number", $exists: true } },
+              { "stats.numberOfTrees": { $type: "number", $exists: true } },
+            ],
           },
           { stats: { $exists: false } },
         ],
       },
       {
-        settings: {
-          $type: "object",
-          $exists: true,
-          $elemMatch: {
-            $and: [
-              { allowedModes: { $type: "array", $exists: true, $elemMatch: { $type: "string" } } },
-              {
-                $or: [
-                  { preferredMode: { $type: "string" } },
-                  { preferredMode: { $exists: false } },
-                ],
-              },
-              { branchPointsAllowed: { $type: "bool", $exists: true } },
-              { somaClickingAllowed: { $type: "bool", $exists: true } },
-              { advancedOptionsAllowed: { $type: "bool", $exists: true } },
-            ],
-          },
-        },
+        settings: { $type: "object", $exists: true },
+      },
+      {
+        "settings.allowedModes": { $type: "string", $exists: true },
+      },
+      {
+        $or: [
+          { "settings.preferredMode": { $type: "string" } },
+          { "settings.preferredMode": { $exists: false } },
+        ],
+      },
+      {
+        "settings.branchPointsAllowed": { $type: "bool", $exists: true },
+      },
+      {
+        "settings.somaClickingAllowed": { $type: "bool", $exists: true },
+      },
+      {
+        "settings.advancedOptionsAllowed": { $type: "bool", $exists: true },
       },
       {
         _id: { $type: "objectId", $exists: true },

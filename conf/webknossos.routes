@@ -30,16 +30,15 @@ GET           /help/keyboardshortcuts                                           
 #GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 #new auth
-GET           /auth/register                                                    controllers.Authentication.empty
-POST          /auth/register                                                    controllers.Authentication.handleRegistration
-GET           /auth/login                                                       controllers.Authentication.empty
-POST          /auth/login                                                       controllers.Authentication.authenticate
-GET           /auth/signout                                                     controllers.Authentication.signOut
-GET           /auth/reset                                                       controllers.Authentication.empty
-POST          /auth/reset                                                       controllers.Authentication.handleStartResetPassword
+GET           /register                                                         controllers.Authentication.empty
+GET           /login                                                            controllers.Authentication.empty
+GET           /reset                                                            controllers.Authentication.empty
+POST          /api/register                                                     controllers.Authentication.handleRegistration
+POST          /api/login                                                        controllers.Authentication.authenticate
+POST          /api/reset                                                       controllers.Authentication.handleStartResetPassword
 GET           /auth/reset/:token                                                controllers.Authentication.resetPassword(token:String)
-POST          /auth/reset/:token                                                controllers.Authentication.handleResetPassword(token:String)
-GET           /auth/logout                                                      controllers.Authentication.logout
+POST          /api/reset/:token                                                 controllers.Authentication.handleResetPassword(token:String)
+GET           /api/logout                                                       controllers.Authentication.logout
 
 # Configurations
 GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default

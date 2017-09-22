@@ -200,7 +200,6 @@ class RegistrationView extends React.PureComponent<Props, State> {
                 rules: [
                   {
                     required: true,
-                    min: 8,
                     message: messages["auth.registration_password_confirm"],
                   },
                   {

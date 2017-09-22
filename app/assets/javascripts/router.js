@@ -20,6 +20,7 @@ import DashboardView from "dashboard/views/dashboard_view";
 import SpotlightView from "dashboard/views/spotlight_view";
 import LoginView from "admin/views/auth/login_view";
 import RegistrationView from "admin/views/auth/registration_view";
+import ResetPasswordView from "admin/views/auth/reset_password_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 
 // #####
@@ -61,6 +62,7 @@ class Router extends BaseRouter {
       "/tasks": "taskQuery",
       "/login": "login",
       "/register": "registration",
+      "/reset": "reset",
     };
   }
 
@@ -319,6 +321,11 @@ class Router extends BaseRouter {
 
   registration() {
     const view = new ReactBackboneWrapper(RegistrationView, {});
+    this.changeView(view);
+  }
+
+  reset() {
+    const view = new ReactBackboneWrapper(ResetPasswordView, {});
     this.changeView(view);
   }
 

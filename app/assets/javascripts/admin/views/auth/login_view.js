@@ -2,6 +2,7 @@
 import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
+import messages from "messages";
 
 const FormItem = Form.Item;
 
@@ -29,17 +30,23 @@ class LoginView extends React.PureComponent<Props> {
           <Form onSubmit={this.handleSubmit}>
             <FormItem>
               {getFieldDecorator("userName", {
-                rules: [{ required: true, message: "Please input your username!" }],
+                rules: [
+                  {
+                    required: true,
+                    type: "email",
+                    message: messages["auth.registration_email_input"],
+                  },
+                ],
               })(
                 <Input
-                  prefix={<Icon type="user" style={{ fontSize: 13 }} />}
-                  placeholder="Username"
+                  prefix={<Icon type="mail" style={{ fontSize: 13 }} />}
+                  placeholder="Email"
                 />,
               )}
             </FormItem>
             <FormItem>
               {getFieldDecorator("password", {
-                rules: [{ required: true, message: "Please input your Password!" }],
+                rules: [{ required: true, message: messages["auth.registration_password_input"] }],
               })(
                 <Input
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}

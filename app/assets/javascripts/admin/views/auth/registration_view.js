@@ -1,10 +1,13 @@
 // @flow
 
 import React from "react";
-import { Form, Input, Button } from "antd";
+import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
+import Request from "libs/request";
+import type { APITeamType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
+const Option = Select.Option;
 
 type Props = {
   form: Object,
@@ -12,19 +15,32 @@ type Props = {
 
 type State = {
   confirmDirty: boolean,
+  teams: Array<APITeamType>,
 };
 
 class RegistrationView extends React.PureComponent<Props, State> {
   state = {
     confirmDirty: false,
+    teams: [],
   };
 
-  handleSubmit = e => {
-    e.preventDefault();
+  componentDidMount() {
+    this.fetchData();
+  }
 
-    this.props.form.validateFieldsAndScroll((err, values) => {
+  async fetchData() {
+    const url = "/api/teams";
+    const teams = await Request.receiveJSON(url);
+
+    this.setState({ teams });
+  }
+
+  handleSubmit = (event: SyntheticInputEvent<>) => {
+    event.preventDefault();
+
+    this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        console.log("Received values of form: ", values);
+        Request.sendJSONReceiveJSON("/api/register", { data: formValues });
       }
     });
   };
@@ -53,78 +69,145 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-
-    const formItemLayout = {
-      labelCol: {
-        xs: { span: 24 },
-        sm: { span: 6 },
-      },
-      wrapperCol: {
-        xs: { span: 24 },
-        sm: { span: 14 },
-      },
-    };
-    const tailFormItemLayout = {
-      wrapperCol: {
-        xs: {
-          span: 24,
-          offset: 0,
-        },
-        sm: {
-          span: 14,
-          offset: 6,
-        },
-      },
-    };
+    const teamComponents =
+      this.state.teams.length > 0 ? (
+        <FormItem hasFeedback>
+          {getFieldDecorator("team", {
+            rules: [
+              {
+                required: true,
+                message: messages["auth.registration_team_input"],
+              },
+            ],
+          })(
+            <Select placeholder="Team">
+              {this.state.teams.map(team => (
+                <Option value={team.name} key={team.name}>
+                  {team.name}
+                </Option>
+              ))}
+            </Select>,
+          )}
+        </FormItem>
+      ) : (
+        <FormItem hasFeedback>{getFieldDecorator("team")(<input type="hidden" />)}</FormItem>
+      );
 
     return (
-      <Form onSubmit={this.handleSubmit}>
-        <FormItem {...formItemLayout} label="E-mail" hasFeedback>
-          {getFieldDecorator("email", {
-            rules: [
-              {
-                type: "email",
-                message: messages["auth.registration_email_invalid"],
-              },
-              {
-                required: true,
-                message: messages["auth.registration_email_input"],
-              },
-            ],
-          })(<Input />)}
-        </FormItem>
-        <FormItem {...formItemLayout} label="Password" hasFeedback>
-          {getFieldDecorator("password", {
-            rules: [
-              {
-                required: true,
-                message: messages["auth.registration_password_input"],
-              },
-              {
-                validator: this.checkConfirm,
-              },
-            ],
-          })(<Input type="password" />)}
-        </FormItem>
-        <FormItem {...formItemLayout} label="Confirm Password" hasFeedback>
-          {getFieldDecorator("confirm", {
-            rules: [
-              {
-                required: true,
-                message: messages["auth.registration_password_confirm"],
-              },
-              {
-                validator: this.checkPassword,
-              },
-            ],
-          })(<Input type="password" onBlur={this.handleConfirmBlur} />)}
-        </FormItem>
-        <FormItem {...tailFormItemLayout}>
-          <Button type="primary" htmlType="submit">
-            Register
-          </Button>
-        </FormItem>
-      </Form>
+      <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+        <Col span={8}>
+          <Card style={{ marginBottom: 24 }}>
+            Not a member of the listed teams?<br /> Contact webknossos@scalableminds.com to get more
+            information about how to get to use webKnossos.
+          </Card>
+          <Form onSubmit={this.handleSubmit}>
+            {teamComponents}
+            <FormItem hasFeedback>
+              {getFieldDecorator("email", {
+                rules: [
+                  {
+                    type: "email",
+                    message: messages["auth.registration_email_invalid"],
+                  },
+                  {
+                    required: true,
+                    message: messages["auth.registration_email_input"],
+                  },
+                ],
+              })(
+                <Input
+                  prefix={<Icon type="mail" style={{ fontSize: 13 }} />}
+                  placeholder="Email"
+                />,
+              )}
+            </FormItem>
+            <FormItem hasFeedback>
+              {getFieldDecorator("firstName", {
+                rules: [
+                  {
+                    required: true,
+                    message: messages["auth.registration_firstName_input"],
+                  },
+                ],
+              })(
+                <Input
+                  prefix={<Icon type="user" style={{ fontSize: 13 }} />}
+                  placeholder="First Name"
+                />,
+              )}
+            </FormItem>
+            <FormItem hasFeedback>
+              {getFieldDecorator("lastName", {
+                rules: [
+                  {
+                    required: true,
+                    message: messages["auth.registration_lastName_input"],
+                  },
+                ],
+              })(
+                <Input
+                  prefix={<Icon type="user" style={{ fontSize: 13 }} />}
+                  placeholder="Last Name"
+                />,
+              )}
+            </FormItem>
+            <FormItem hasFeedback>
+              {getFieldDecorator("password", {
+                rules: [
+                  {
+                    required: true,
+                    message: messages["auth.registration_password_input"],
+                  },
+                  {
+                    min: 8,
+                    message: messages["auth.registration_password_length"],
+                  },
+                  {
+                    validator: this.checkConfirm,
+                  },
+                ],
+              })(
+                <Input
+                  type="password"
+                  prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                  placeholder="Password"
+                />,
+              )}
+            </FormItem>
+            <FormItem hasFeedback>
+              {getFieldDecorator("confirm", {
+                rules: [
+                  {
+                    required: true,
+                    min: 8,
+                    message: messages["auth.registration_password_confirm"],
+                  },
+                  {
+                    min: 8,
+                    message: messages["auth.registration_password_length"],
+                  },
+                  {
+                    validator: this.checkPassword,
+                  },
+                ],
+              })(
+                <Input
+                  type="password"
+                  onBlur={this.handleConfirmBlur}
+                  prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
+                  placeholder="Confirm Password"
+                />,
+              )}
+            </FormItem>
+            <FormItem>
+              <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
+                Register
+              </Button>
+              Already have an account? <a href="/login">Login</a> instead.
+            </FormItem>
+          </Form>
+        </Col>
+      </Row>
     );
   }
 }

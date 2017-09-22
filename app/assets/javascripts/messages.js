@@ -36,4 +36,8 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_password_input": "Please input your password!",
   "auth.registration_password_confirm": "Please confirm your password!",
   "auth.registration_password_missmatch": "Passwords do not match!",
+  "auth.registration_password_length": "Passwords needs min. 8 characters.",
+  "auth.registration_firstName_input": "Please input your password!",
+  "auth.registration_lastName_input": "Please input your password!",
+  "auth.registration_team_input": "Please select a team!",
 };

@@ -40,4 +40,8 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_firstName_input": "Please input your password!",
   "auth.registration_lastName_input": "Please input your password!",
   "auth.registration_team_input": "Please select a team!",
+  "auth.reset_logout": "You will be logged out, after successfully changing your password.",
+  "auth.reset_old_password": "Please input your old password!",
+  "auth.reset_new_password": "Please input your new password!",
+  "auth.reset_new_password2": "Please repeat your new password!",
 };

@@ -18,6 +18,8 @@ import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
 
 import SpotlightView from "dashboard/views/spotlight_view";
+import LoginView from "admin/views/auth/login_view";
+import RegistrationView from "admin/views/auth/registration_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 
 // #####
@@ -57,6 +59,8 @@ class Router extends BaseRouter {
       "/admin/taskTypes": "hideLoadingSpinner",
       "/workload": "workload",
       "/tasks": "taskQuery",
+      "/login": "login",
+      "/register": "registration",
     };
   }
 
@@ -306,6 +310,16 @@ class Router extends BaseRouter {
       this.changeView(view);
       this.listenTo(collection, "sync", this.hideLoadingSpinner);
     });
+  }
+
+  login() {
+    const view = new ReactBackboneWrapper(LoginView, {});
+    this.changeView(view);
+  }
+
+  registration() {
+    const view = new ReactBackboneWrapper(RegistrationView, {});
+    this.changeView(view);
   }
 
   showWithPagination(view, collection, options = {}) {

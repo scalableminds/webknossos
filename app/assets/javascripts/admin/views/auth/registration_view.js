@@ -52,7 +52,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
   checkPassword = (rule, value, callback) => {
     const form = this.props.form;
-    if (value && value !== form.getFieldValue("password")) {
+    if (value && value !== form.getFieldValue("password1")) {
       callback(messages["auth.registration_password_missmatch"]);
     } else {
       callback();
@@ -69,29 +69,50 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-    const teamComponents =
-      this.state.teams.length > 0 ? (
-        <FormItem hasFeedback>
-          {getFieldDecorator("team", {
-            rules: [
-              {
-                required: true,
-                message: messages["auth.registration_team_input"],
-              },
-            ],
-          })(
-            <Select placeholder="Team">
-              {this.state.teams.map(team => (
-                <Option value={team.name} key={team.name}>
-                  {team.name}
-                </Option>
-              ))}
-            </Select>,
-          )}
-        </FormItem>
-      ) : (
-        <FormItem hasFeedback>{getFieldDecorator("team")(<input type="hidden" />)}</FormItem>
-      );
+    // const teamComponents =
+    //   this.state.teams.length > 0 ? (
+    //     <FormItem hasFeedback>
+    //       {getFieldDecorator("team", {
+    //         rules: [
+    //           {
+    //             required: true,
+    //             message: messages["auth.registration_team_input"],
+    //           },
+    //         ],
+    //       })(
+    //         <Select placeholder="Team">
+    //           {this.state.teams.map(team => (
+    //             <Option value={team.name} key={team.name}>
+    //               {team.name}
+    //             </Option>
+    //           ))}
+    //         </Select>,
+    //       )}
+    //     </FormItem>
+    //   ) : (
+    //     <FormItem hasFeedback>{getFieldDecorator("team")(<input type="hidden" />)}</FormItem>
+    //   );
+
+    const teamComponents = (
+      <FormItem hasFeedback>
+        {getFieldDecorator("team", {
+          rules: [
+            {
+              required: true,
+              message: messages["auth.registration_team_input"],
+            },
+          ],
+        })(
+          <Select placeholder="Team">
+            {this.state.teams.map(team => (
+              <Option value={team.name} key={team.name}>
+                {team.name}
+              </Option>
+            ))}
+          </Select>,
+        )}
+      </FormItem>
+    );
 
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
@@ -152,7 +173,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               )}
             </FormItem>
             <FormItem hasFeedback>
-              {getFieldDecorator("password", {
+              {getFieldDecorator("password1", {
                 rules: [
                   {
                     required: true,
@@ -175,7 +196,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               )}
             </FormItem>
             <FormItem hasFeedback>
-              {getFieldDecorator("confirm", {
+              {getFieldDecorator("password2", {
                 rules: [
                   {
                     required: true,
@@ -203,7 +224,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Register
               </Button>
-              Already have an account? <a href="/login">Login</a> instead.
+              <a href="/login">Already have an account? Logininstead.</a>
             </FormItem>
           </Form>
         </Col>

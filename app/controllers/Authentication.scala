@@ -16,40 +16,35 @@ import oxalis.mail.DefaultMails
 import oxalis.security.{CredentialsProvider, EnvironmentOxalis, PasswordHasher}
 import play.api.data.validation.Constraints
 import play.twirl.api.Html
-import oxalis.security.Secured // --------------------------------------------------
+import oxalis.security.Secured
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.{ProvidesUnauthorizedSessionData, SessionData}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Action
-
 import java.util.UUID
 import javax.inject.Inject
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import net.ceedubs.ficus.Ficus._
 import net.ceedubs.ficus.readers.ArbitraryTypeReader._
-
 import com.mohiva.play.silhouette.api.Authenticator.Implicits._
-import com.mohiva.play.silhouette.api.{Environment,LoginInfo,Silhouette}
+import com.mohiva.play.silhouette.api.{Environment, LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
-
 import play.api._
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.mvc._
-import play.api.i18n.{I18nSupport,MessagesApi,Messages}
+import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+
 import scala.concurrent.ExecutionContext.Implicits.global
-
 import models.user.UserService
-
 import org.joda.time.DateTime
+import play.api.mvc.Results.Redirect
 
 
 /*
@@ -324,7 +319,7 @@ class Authentication @Inject() (
 
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm =>  Future.successful(JsonOk(Messages("auth.wrongForm", bogusForm))),
+      bogusForm =>  Future.successful(JsonBadRequest(Messages("wrongForm"))),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
@@ -343,11 +338,8 @@ class Authentication @Inject() (
                 Redirect(routes.Application.index)
                 .withSession(Secured.createSession(user))
               } else {
-                /*
-                Redirect(routes.Authentication.signIn())
+                Redirect(Authentication.getLoginRoute)
                   .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
-                */
-                JsonOk(Messages("user.accountCreated"))
               }
             }
         }
@@ -368,13 +360,13 @@ class Authentication @Inject() (
 
   def authenticate = Action.async { implicit request =>
     signInForm.bindFromRequest.fold(
-      bogusForm => Future.successful(JsonOk(Messages("auth.wrongForm", bogusForm))),
+      bogusForm => Future.successful(JsonBadRequest(Messages("wrongForm"))),//Future.successful(Redirect(Authentication.getLoginRoute))
       signInData => {
         val credentials = Credentials(signInData.email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
           UserService.retrieve(loginInfo).flatMap {
             case None =>
-              //Future.successful(Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.noUser")))
+              Future.successful(Redirect("").flashing("error" -> Messages("error.noUser")))
               Future.successful(JsonOk(Messages("error.noUser")))
             case Some(user) => for {
               authenticator <- env.authenticatorService.create(loginInfo).map {
@@ -396,10 +388,6 @@ class Authentication @Inject() (
         }
       }
     )
-  }
-
-  def signOut = silhouette.SecuredAction.async { implicit request =>
-    env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index()))
   }
 
   /*
@@ -460,8 +448,14 @@ class Authentication @Inject() (
   }
 
   def logout = Action {
-    Redirect(controllers.routes.Application.index)//Autehntication.signIn
+    Redirect(Authentication.getLoginRoute)//Autehntication.signIn
       .withNewSession
       .flashing("success" -> Messages("user.logout.success"))
+  }
+}
+
+object Authentication {
+  def getLoginRoute() = {
+    "/login"
   }
 }

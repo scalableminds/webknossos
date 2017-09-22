@@ -37,6 +37,7 @@ import akka.actor.Props
 import akka.pattern.after
 import com.newrelic.api.agent.NewRelic
 import play.airbrake.Airbrake
+import controllers.Authentication.getLoginRoute
 
 class AuthenticatedRequest[A](
   val user: User, override val request: Request[A]
@@ -193,7 +194,7 @@ trait Secured extends FoxImplicits with I18nSupport{
     if (request.path.startsWith("/api/"))
       new JsonResult(FORBIDDEN)(Messages("notAllowed"))
     else {
-      new JsonResult(OK)("allowed") //Results.Redirect(routes.Authentication.signIn) //routes.Authentication.login(Some(request.uri))
+      Results.Redirect(getLoginRoute)
     }
   // --
 

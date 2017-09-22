@@ -30,6 +30,7 @@ GET           /help/keyboardshortcuts                                           
 #GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 #new auth
+
 GET           /register                                                         controllers.Authentication.empty
 GET           /login                                                            controllers.Authentication.empty
 GET           /reset                                                            controllers.Authentication.empty

@@ -32,8 +32,6 @@ format.json.invalid=Invalid Json format
 
 image.create.failed=Failed to create image
 
-auth.wrongForm=The Form is wrong
-
 team.created=Team got created
 team.name.alreadyTaken=The teams name is already in use.
 team.notAllowed=You are not part of this team. Project can''t be created.
@@ -43,6 +41,7 @@ team.noOwner=This action is restricted to the creator of the team.
 team.admin.notAllowed=You are not allowed to administrate team {0}.
 team.notFound=Team could not be found.
 
+user.automaticUserActivation=User was activated automatically
 user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
 user.activated={0} has been activated
 user.notFound=User not found

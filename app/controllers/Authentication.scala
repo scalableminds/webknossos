@@ -239,15 +239,13 @@ object AuthForms {
   def signUpForm(implicit messages:Messages) = Form(mapping(
     "team" -> text,
     "email" -> email,
-    "password" -> tuple(
-      "password1" -> nonEmptyText.verifying(minLength(6)),
-      "password2" -> nonEmptyText
-    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
+    "password1" -> nonEmptyText.verifying(minLength(8)),
+    "password2" -> nonEmptyText,//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
     "firstName" -> nonEmptyText,
     "lastName" -> nonEmptyText
   )
-  ((team, email, password, firstName, lastName) => SignUpData(team, email, password._1, firstName, lastName))
-  (signUpData => Some((signUpData.team, signUpData.email, ("",""), signUpData.firstName, signUpData.lastName)))
+  ((team, email, password1, password2, firstName, lastName) => SignUpData(team, email, firstName, lastName, password1))
+  (signUpData => Some((signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, "", "")))
   )
 
   // Sign in
@@ -319,7 +317,7 @@ class Authentication @Inject() (
 
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm =>  Future.successful(JsonBadRequest(Messages("wrongForm"))),
+      bogusForm =>  Future.successful(JsonBadRequest(bogusForm.errors.toList.map(error => (error.key, error.message)))),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
@@ -335,11 +333,13 @@ class Authentication @Inject() (
               Mailer ! Send(DefaultMails.registerMail(user.name, emailAddress.toString, brainDBResult))
               Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, emailAddress.toString, brainDBResult))
               if (automaticUserActivation) {
-                Redirect(routes.Application.index)
-                .withSession(Secured.createSession(user))
+                JsonOk(Messages("user.automaticUserActivation"))
+                //Redirect(routes.Application.index)
+                //.withSession(Secured.createSession(user))
               } else {
-                Redirect(Authentication.getLoginRoute)
-                  .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
+                JsonOk(Messages("user.accountCreated"))
+                //Redirect(Authentication.getLoginRoute)
+                //  .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
               }
             }
         }
@@ -360,7 +360,7 @@ class Authentication @Inject() (
 
   def authenticate = Action.async { implicit request =>
     signInForm.bindFromRequest.fold(
-      bogusForm => Future.successful(JsonBadRequest(Messages("wrongForm"))),//Future.successful(Redirect(Authentication.getLoginRoute))
+      bogusForm => Future.successful(JsonBadRequest(bogusForm.errors.toList.map(error => (error.key, error.message)))),//Future.successful(Redirect(Authentication.getLoginRoute))
       signInData => {
         val credentials = Credentials(signInData.email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>

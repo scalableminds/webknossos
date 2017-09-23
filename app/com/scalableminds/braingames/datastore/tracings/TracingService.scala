@@ -36,18 +36,12 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
     Fox.successful(tracing)
 
   def find(tracingId: String, version: Option[Long] = None, useCache: Boolean = true, applyUpdates: Boolean = false): Fox[T] = {
-    val f1 = System.currentTimeMillis()
     tracingStore.get(tracingId, version)(fromProto[T]).map(_.value).flatMap { tracing =>
-      val f2 = System.currentTimeMillis()
-      print(s"Finding tracing took ${f2 - f1}ms")
       if (applyUpdates) {
-        val t1 = System.currentTimeMillis()
-        val r = applyPendingUpdates(tracing, tracingId, version)
-        val t2 = System.currentTimeMillis()
-        print(s"Applying updates took ${t2 - t1}ms")
-        r
-      } else
+        applyPendingUpdates(tracing, tracingId, version)
+      } else {
         Fox.successful(tracing)
+      }
     }.orElse {
       if (useCache)
         temporaryTracingStore.find(tracingId)

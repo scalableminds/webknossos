@@ -11,9 +11,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
-import scala.reflect._
-
-
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
                                         val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
@@ -40,8 +37,8 @@ class SkeletonTracingService @Inject()(
         val pendingUpdates = findPendingUpdates(tracingId, existingVersion, newVersion)
         for {
           updatedTracing <- update(tracing, tracingId, pendingUpdates, newVersion)
+          _ <- save(updatedTracing, Some(tracingId), newVersion)
         } yield {
-          save(updatedTracing, tracingId, newVersion)
           updatedTracing
         }
       } else {
@@ -109,10 +106,7 @@ class SkeletonTracingService @Inject()(
 
   def duplicate(tracing: SkeletonTracing): Fox[String] = {
     val newTracing = tracing.withCreatedTimestamp(System.currentTimeMillis()).withVersion(0)
-    val newTracingId = createNewId
-    for {
-      _ <- save(newTracing, createNewId, newTracing.version)
-    } yield newTracingId
+    save(newTracing, None, newTracing.version)
   }
 
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
@@ -122,8 +116,5 @@ class SkeletonTracingService @Inject()(
     tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBox, version = 0)
   }
 
-  def merge(tracings: Seq[SkeletonTracing], newId: String = createNewId): SkeletonTracing =
-    tracings.reduceLeft(mergeTwo)
-
-
+  def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)
 }

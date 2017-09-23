@@ -30,9 +30,6 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
   // so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
 
-  def createNewId: String =
-    UUID.randomUUID.toString
-
   def currentVersion(tracingId: String): Fox[Long] = Fox.successful(1)
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] =
@@ -58,19 +55,13 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
     }
   }
 
-  def save(tracing: T, tracingId: String, version: Long, toCache: Boolean = false): Fox[_] = {
-    logger.debug("####### saving tracing at id " + tracingId)
-    find(tracingId).futureBox.flatMap {
-      case Full(_) =>
-        Fox.failure("tracing ID is already in use.")
-      case Empty =>
-        if (toCache) {
-          Fox.successful(temporaryTracingStore.insert(tracingId, tracing, Some(temporaryStoreTimeout)))
-        } else {
-          tracingStore.put(tracingId, version, tracing)
-        }
-      case f: Failure =>
-        Future.successful(f)
+  def save(tracing: T, tracingId: Option[String], version: Long, toCache: Boolean = false): Fox[String] = {
+    val id = tracingId.getOrElse(UUID.randomUUID.toString)
+    if (toCache) {
+      temporaryTracingStore.insert(id, tracing, Some(temporaryStoreTimeout))
+      Fox.successful(id)
+    } else {
+      tracingStore.put(id, version, tracing).map(_ => id)
     }
   }
 

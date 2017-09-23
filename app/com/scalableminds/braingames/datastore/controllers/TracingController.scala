@@ -43,10 +43,9 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     implicit request =>
       AllowRemoteOrigin {
         val tracing = request.body
-        val tracingId = UUID.randomUUID.toString
-        for {
-          _ <- tracingService.save(tracing, tracingId, 0)
-        } yield Ok(Json.toJson(TracingReference(tracingId, tracingService.tracingType)))
+        tracingService.save(tracing, None, 0).map { newId =>
+          Ok(Json.toJson(TracingReference(newId, tracingService.tracingType)))
+        }
       }
   }
 
@@ -54,9 +53,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     implicit request => {
       AllowRemoteOrigin {
         val references = Fox.sequence(request.body.map { tracing =>
-          val tracingId = UUID.randomUUID.toString
-          tracingService.save(tracing, tracingId, 0, toCache = false).map { _ =>
-            TracingReference(tracingId, TracingType.skeleton)
+          tracingService.save(tracing, None, 0, toCache = false).map { newId =>
+            TracingReference(newId, TracingType.skeleton)
           }
         })
         references.map(x => Ok(Json.toJson(x)))

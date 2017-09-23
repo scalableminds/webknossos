@@ -39,8 +39,7 @@ class SkeletonTracingController @Inject()(
       AllowRemoteOrigin {
         val tracings = request.body.tracings
         val mergedTracing = tracingService.merge(tracings)
-        val newId = UUID.randomUUID.toString
-        tracingService.save(mergedTracing, newId, mergedTracing.version, toCache = !persist).map { _ =>
+        tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist).map { newId =>
           Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
         }
       }
@@ -53,8 +52,7 @@ class SkeletonTracingController @Inject()(
         for {
           tracings <- tracingService.findMultiple(request.body, applyUpdates = true) ?~> Messages("tracing.notFound")
           mergedTracing = tracingService.merge(tracings)
-          newId = UUID.randomUUID.toString
-          _ <- tracingService.save(mergedTracing, newId, mergedTracing.version, toCache = !persist)
+          newId <- tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist)
         } yield {
           Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
         }
@@ -80,9 +78,9 @@ class SkeletonTracingController @Inject()(
       AllowRemoteOrigin {
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-          newTracingId <- tracingService.duplicate(tracing)
+          newId <- tracingService.duplicate(tracing)
         } yield {
-          Ok(Json.toJson(TracingReference(newTracingId, TracingType.skeleton)))
+          Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
         }
       }
     }

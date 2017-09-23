@@ -6,7 +6,7 @@ import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => 
 import com.scalableminds.braingames.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings._
-import com.scalableminds.braingames.datastore.tracings.skeleton.{NmlWriter, NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -16,6 +16,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler
+import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
 import models.user.{UsedAnnotationDAO, User}

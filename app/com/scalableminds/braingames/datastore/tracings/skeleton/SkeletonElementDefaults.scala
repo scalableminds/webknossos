@@ -4,10 +4,10 @@
 package com.scalableminds.braingames.datastore.tracings.skeleton
 
 import com.scalableminds.braingames.datastore.SkeletonTracing.{Node, SkeletonTracing}
-import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
+import com.scalableminds.braingames.datastore.tracings.ProtoGeometryImplicits
+import com.scalableminds.util.geometry.{Point3D, Vector3D}
 
-
-object SkeletonTracingDefaults {
+object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   val dataSetName = ""
   val trees = Seq()
   def createdTimestamp = System.currentTimeMillis()
@@ -25,7 +25,7 @@ object TreeDefaults {
 
 }
 
-object NodeDefaults {
+object NodeDefaults extends ProtoGeometryImplicits {
   val id = 0
   val rotation = Vector3D(0, 0, 0)
   val position = Point3D(0, 0, 0)

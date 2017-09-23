@@ -23,9 +23,7 @@ class VolumeTracingController @Inject()(
                                          val webKnossosServer: WebKnossosServer,
                                          tracingDataStore: TracingDataStore,
                                          val messagesApi: MessagesApi
-                                       ) extends TracingController[VolumeTracing, VolumeTracings, VolumeUpdateActionGroup] with ProtoJsonFormats {
-
-  implicit val tracingFormat = volumeTracingFormat
+                                       ) extends TracingController[VolumeTracing, VolumeTracings, VolumeUpdateActionGroup] {
 
   implicit val tracingsCompanion = VolumeTracings
 

@@ -17,9 +17,11 @@ import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json, Reads}
 import play.api.mvc.Action
 
+import com.trueaccord.scalapb.json.JsonFormat
+
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts], U <: UpdateActionGroup[T]] extends Controller with ProtoJsonFormats {
+trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts], U <: UpdateActionGroup[T]] extends Controller {
 
   def dataSourceRepository: DataSourceRepository
 
@@ -30,8 +32,6 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   implicit val tracingCompanion: GeneratedMessageCompanion[T] = tracingService.tracingCompanion
 
   implicit val tracingsCompanion: GeneratedMessageCompanion[Ts]
-
-  implicit val tracingFormat: Format[T]
 
   implicit def unpackMultiple(tracings: Ts): List[T]
 
@@ -68,7 +68,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(Json.toJson(tracing))
+          Ok(JsonFormat.toJsonString(tracing))
         }
       }
     }

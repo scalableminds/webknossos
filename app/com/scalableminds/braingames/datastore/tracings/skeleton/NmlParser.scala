@@ -7,8 +7,8 @@ import java.io.InputStream
 
 import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
-import com.scalableminds.util.geometry.Scale
+import com.scalableminds.braingames.datastore.tracings.ProtoGeometryImplicits
+import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
@@ -17,7 +17,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import scala.annotation.tailrec
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
-object NmlParser extends LazyLogging {
+object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   val DEFAULT_TIME = 0L
 

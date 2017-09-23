@@ -22,9 +22,7 @@ class SkeletonTracingController @Inject()(
                                            val dataSourceRepository: DataSourceRepository,
                                            val webKnossosServer: WebKnossosServer,
                                            val messagesApi: MessagesApi
-                                       ) extends TracingController[SkeletonTracing, SkeletonTracings, SkeletonUpdateActionGroup] with ProtoJsonFormats {
-
-  implicit val tracingFormat = skeletonTracingFormat
+                                       ) extends TracingController[SkeletonTracing, SkeletonTracings, SkeletonUpdateActionGroup] {
 
   implicit val tracingsCompanion = SkeletonTracings
 

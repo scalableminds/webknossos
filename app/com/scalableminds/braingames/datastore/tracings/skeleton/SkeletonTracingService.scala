@@ -7,6 +7,7 @@ import com.google.inject.Inject
 import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValuePair}
 import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.braingames.datastore.tracings._
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -14,7 +15,12 @@ import play.api.libs.concurrent.Execution.Implicits._
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
                                         val temporaryTracingStore: TemporaryTracingStore[SkeletonTracing]
-                                      ) extends TracingService[SkeletonTracing] with KeyValueStoreImplicits with FoxImplicits with TextUtils {
+                                      )
+  extends TracingService[SkeletonTracing]
+    with KeyValueStoreImplicits
+    with ProtoGeometryImplicits
+    with FoxImplicits
+    with TextUtils {
 
   val tracingType = TracingType.skeleton
 
@@ -112,7 +118,13 @@ class SkeletonTracingService @Inject()(
   private def mergeTwo(tracingA: SkeletonTracing, tracingB: SkeletonTracing) = {
     val nodeMapping = TreeUtils.calculateNodeMapping(tracingA.trees, tracingB.trees)
     val mergedTrees = TreeUtils.mergeTrees(tracingA.trees, tracingB.trees, nodeMapping)
-    val mergedBoundingBox = BoundingBoxUtils.mergeTwoOpt(tracingA.boundingBox, tracingB.boundingBox)
+    val mergedBoundingBox = for {
+      boundinBoxA <- tracingA.boundingBox
+      boundinBoxB <- tracingB.boundingBox
+    } yield {
+      BoundingBox.combine(List[BoundingBox](boundinBoxA, boundinBoxB))
+    }
+
     tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBox, version = 0)
   }
 

@@ -6,6 +6,7 @@ package com.scalableminds.braingames.datastore.tracings.skeleton
 import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPointDepr, CommentDepr}
+import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.tools.Fox
 import play.api.libs.json._
 
@@ -119,16 +120,15 @@ case class DeleteEdgeSkeletonAction(source: Int, target: Int, treeId: Int) exten
 }
 
 
-case class CreateNodeSkeletonAction(id: Int, position: com.scalableminds.util.geometry.Point3D,
-                                    rotation: Option[com.scalableminds.util.geometry.Vector3D], radius: Option[Float],
+case class CreateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
                                     viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
-                                    interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction {
+                                    interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) = {
-
+    val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
       id,
-      Point3DUtils.convert(position),
-      Vector3DUtils.convertOpt(rotation) getOrElse NodeDefaults.rotation,
+      position,
+      rotationOrDefault,
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
       resolution getOrElse NodeDefaults.resolution,
@@ -144,17 +144,16 @@ case class CreateNodeSkeletonAction(id: Int, position: com.scalableminds.util.ge
 }
 
 
-case class UpdateNodeSkeletonAction(id: Int, position: com.scalableminds.util.geometry.Point3D,
-                                    rotation: Option[com.scalableminds.util.geometry.Vector3D], radius: Option[Float],
+case class UpdateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
                                     viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
-                                    interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction {
+                                    interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) = {
 
-
+    val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
       id,
-      Point3DUtils.convert(position),
-      Vector3DUtils.convertOpt(rotation) getOrElse NodeDefaults.rotation,
+      position,
+      rotationOrDefault,
       radius getOrElse NodeDefaults.radius,
       viewport getOrElse NodeDefaults.viewport,
       resolution getOrElse NodeDefaults.resolution,
@@ -183,12 +182,12 @@ case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int) extends SkeletonUp
 }
 
 case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: com.scalableminds.util.geometry.Point3D,
-                                       editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double) extends SkeletonUpdateAction {
+                                       editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double) extends SkeletonUpdateAction with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) =
     tracing
       .withActiveNodeId(activeNode.getOrElse(tracing.getActiveNodeId))
-      .withEditPosition(Point3DUtils.convert(editPosition))
-      .withEditRotation(Vector3DUtils.convert(editRotation))
+      .withEditPosition(editPosition)
+      .withEditRotation(editRotation)
       .withZoomLevel(zoomLevel)
 }
 

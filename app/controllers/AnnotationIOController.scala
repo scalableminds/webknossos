@@ -4,10 +4,10 @@ import javax.inject.Inject
 
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.tracings.TracingReference
-import com.scalableminds.braingames.datastore.tracings.skeleton.NmlWriter
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.nml.{NmlService, NmlWriter}
 import models.annotation.{AnnotationType, _}
 import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}

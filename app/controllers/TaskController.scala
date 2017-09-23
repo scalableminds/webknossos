@@ -9,7 +9,8 @@ import com.scalableminds.braingames.datastore.tracings.{ProtoGeometryImplicits, 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
-import models.annotation.{AnnotationService, NmlService}
+import models.annotation.AnnotationService
+import models.annotation.nml.NmlService
 import models.binary.DataSetDAO
 import models.project.{Project, ProjectDAO}
 import models.task._

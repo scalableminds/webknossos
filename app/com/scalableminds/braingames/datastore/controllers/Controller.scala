@@ -3,6 +3,9 @@
 */
 package com.scalableminds.braingames.datastore.controllers
 
+import java.io.FileInputStream
+
+import com.google.protobuf.CodedInputStream
 import com.scalableminds.braingames.datastore.services.AccessTokenService
 import com.scalableminds.util.mvc.ExtendedController
 import com.trueaccord.scalapb.json.JsonFormat
@@ -94,6 +97,10 @@ trait ValidationHelpers {
   )
 
   def validateProto[A <: GeneratedMessage with Message[A]](implicit companion: GeneratedMessageCompanion[A]) = BodyParsers.parse.raw.validate { raw =>
-    Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x))).toRight[Result](BadRequest("invalid request body"))
+    if (raw.size < raw.memoryThreshold) {
+      Box(raw.asBytes()).flatMap(x => tryo(companion.parseFrom(x))).toRight[Result](BadRequest("invalid request body"))
+    } else {
+      tryo(companion.parseFrom(CodedInputStream.newInstance(new FileInputStream(raw.asFile)))).toRight[Result](BadRequest("invalid request body"))
+    }
   }
 }

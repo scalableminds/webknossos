@@ -94,11 +94,7 @@ object NmlService extends LazyLogging {
   }
 
   def splitVolumeAndSkeletonTracings(tracings: List[Either[SkeletonTracing, VolumeTracing]]): (List[SkeletonTracing], List[VolumeTracing]) = {
-    val (skeletonsEither, volumesEither): (List[Either[SkeletonTracing, VolumeTracing]], List[Either[SkeletonTracing, VolumeTracing]]) = tracings.partition(_.isLeft)
-    val exceptionText = "Splitting parsed tracings failed"
-    val skeletons = skeletonsEither.map { case Left(s) => s; case _ => throw new Exception(exceptionText) }
-    val volumes = volumesEither.map { case Right(v) => v; case _ => throw new Exception(exceptionText) }
-    (skeletons, volumes)
+    val (skeletons, volumes) = tracings.partition(_.isLeft)
+    (skeletons.map(_.left.get), volumes.map(_.right.get))
   }
-
 }

@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.braingames.datastore.tracings.{Point3DUtils, TracingReference, Vector3DUtils}
+import com.scalableminds.braingames.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
@@ -56,7 +56,7 @@ object NmlTaskParameters {
   implicit val nmlTaskParametersFormat = Json.format[NmlTaskParameters]
 }
 
-class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
+class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with Secured with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -109,7 +109,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
   private def buildFullParams(nmlParams: NmlTaskParameters, tracing: SkeletonTracing) = {
-    TaskParameters( nmlParams.taskTypeId,
+    TaskParameters(
+      nmlParams.taskTypeId,
       nmlParams.neededExperience,
       nmlParams.status,
       nmlParams.team,
@@ -117,8 +118,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       nmlParams.scriptId,
       nmlParams.boundingBox,
       tracing.dataSetName,
-      Point3DUtils.convertBack(tracing.editPosition),
-      Vector3DUtils.convertBack(tracing.editRotation))
+      tracing.editPosition,
+      tracing.editRotation)
   }
 
   def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: AuthenticatedRequest[_]): Fox[Result] = {

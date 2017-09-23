@@ -2,7 +2,7 @@ package models.annotation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
 
-import com.scalableminds.braingames.binary.models.datasource.{ElementClass, DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.braingames.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings._
@@ -69,8 +69,7 @@ object AnnotationService
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
-        dataSet.dataStore.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name,
-                                                                                          editPosition = Point3DUtils.convert(dataSource.center)))
+        dataSet.dataStore.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
       case TracingType.volume =>
         dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource))
     }
@@ -178,13 +177,13 @@ object AnnotationService
   }
 
   def createTracingBase(dataSetName: String, boundingBox: Option[BoundingBox], startPosition: Point3D, startRotation: Vector3D) = {
-    val initialNode = NodeDefaults.createInstance.withId(1).withPosition(Point3DUtils.convert(startPosition)).withRotation(Vector3DUtils.convert(startRotation))
+    val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
     val initialTree = Tree(1, Seq(initialNode), Seq(), Some(Color(1, 0, 0, 1)), Seq(), Seq(), "")
     SkeletonTracingDefaults.createInstance.copy(
       dataSetName = dataSetName,
-      boundingBox = BoundingBoxUtils.convertOpt(boundingBox),
-      editPosition = Point3DUtils.convert(startPosition),
-      editRotation = Vector3DUtils.convert(startRotation),
+      boundingBox = boundingBox,
+      editPosition = startPosition,
+      editRotation = startRotation,
       activeNodeId = Some(1),
       trees = Seq(initialTree))
   }

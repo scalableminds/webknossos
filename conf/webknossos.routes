@@ -87,8 +87,9 @@ GET           /spotlight                                                        
 # DataSets
 GET           /datasets                                                         controllers.DataSetController.empty
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
-GET           /datasets/:id/import                                                     controllers.DataSetController.emptyWithWildcard(id)
+GET           /datasets/:id/import                                              controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
+GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String)
 
 GET           /api/datasets                                                     controllers.DataSetController.list
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)
@@ -114,7 +115,6 @@ GET           /api/datasetToken/validate                                        
 # ->            /data/                                                            com.scalableminds.datastore.Routes
 
 # SkeletonTracing Stuff
-POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
 POST          /admin/nml/upload                                                 controllers.AnnotationIOController.upload
 PUT           /annotations/:typ/:id                                             controllers.AnnotationController.updateWithJson(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/edit                                        controllers.AnnotationController.editAnnotation(typ: String, id: String)
@@ -241,4 +241,4 @@ GET           /assets/*file                                                     
 
 #Timelogging
 GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int)
-GET           /api/time/userlist/:year/:month                                   controllers.TimeController.loggedTimeForMultipleUser(email: String, year: Int, month: Int)
+GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int)

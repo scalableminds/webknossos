@@ -4,7 +4,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
-import FormatUtils from "libs/format_utils";
+import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import Request from "libs/request";
 import messages from "messages";
@@ -123,7 +123,17 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 dataIndex="description"
                 key="description"
                 sorter={Utils.localeCompareBy("description")}
-                render={description => FormatUtils.formatShortText(description, 250)}
+                render={description => (
+                  <div
+                    style={{ wordBreak: "break-word", maxHeight: 100, overflowY: "auto" }}
+                    className="task-type-description"
+                  >
+                    <Markdown
+                      source={description}
+                      options={{ html: false, breaks: true, linkify: true }}
+                    />
+                  </div>
+                )}
                 width={300}
               />
               <Column
@@ -132,11 +142,11 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 key="allowedModes"
                 width={100}
                 render={settings =>
-                  settings.allowedModes.map(mode =>
+                  settings.allowedModes.map(mode => (
                     <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
                       {mode}
-                    </Tag>,
-                  )}
+                    </Tag>
+                  ))}
               />
               <Column
                 title="Settings"
@@ -157,7 +167,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
               <Column
                 title="Action"
                 key="actions"
-                render={(__, taskType: APITaskTypeType) =>
+                render={(__, taskType: APITaskTypeType) => (
                   <span>
                     <a href={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
                       <Icon type="edit" />Edit
@@ -181,7 +191,8 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                     <a href="#" onClick={_.partial(this.deleteTaskType, taskType)}>
                       <Icon type="delete" />Delete
                     </a>
-                  </span>}
+                  </span>
+                )}
               />
             </Table>
           </Spin>

@@ -41,14 +41,14 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
       ? this.props.tree.comments
           .slice(0)
           .sort(Utils.localeCompareBy("content", this.props.isSortedAscending))
-          .map(comment =>
+          .map(comment => (
             <Comment
               key={comment.node}
               data={comment}
               treeId={this.props.tree.treeId}
               isActive={comment.node === this.props.skeletonTracing.activeNodeId}
-            />,
-          )
+            />
+          ))
       : null;
 
     const liClassName = classNames({ bold: containsActiveNode });

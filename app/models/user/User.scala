@@ -116,7 +116,7 @@ case class User(
     other.hasAdminAccess && ( teams.isEmpty || teamNames.exists(other.isAdminOf))
 
   def isAdminOf(user: User): Boolean ={
-    !(user.teamNames.intersect(this.adminTeamNames).isEmpty)
+    user.teamNames.intersect(this.adminTeamNames).nonEmpty
   }
 }
 

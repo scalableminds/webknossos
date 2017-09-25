@@ -50,8 +50,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   def updateAll(name: String) = DataStoreAction(name)(parse.json) { implicit request =>
     request.body.validate[List[InboxDataSource]] match {
       case JsSuccess(dataSources, _) =>
-        // TODO jfrohnhofen what should happen to DataSources, that are no longer reported by the DataStore?
-        // Should they be assumed to be no longer available and be deleted / deactivated?
+        DataSetService.deactivateDataSources(request.dataStore.name)(GlobalAccessContext)
         DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
         JsonOk
       case e: JsError                =>

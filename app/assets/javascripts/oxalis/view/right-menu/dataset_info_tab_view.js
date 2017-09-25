@@ -76,17 +76,20 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
     let annotationTypeLabel;
 
     if (this.props.task != null) {
-      // In case we have a task display its id as well
+      // In case we have a task display its id
       annotationTypeLabel = (
         <span>
           {tracingType} : {this.props.task.id}
         </span>
       );
+    } else if (!this.props.tracing.restrictions.allowUpdate) {
+      // For readonly tracings display the non-editable explorative tracing name
+      annotationTypeLabel = <span>Explorational Tracing: {tracingName}</span>;
     } else {
-      // Or display an explorative tracings name
+      // Or display display the editable explorative tracing name
       annotationTypeLabel = (
         <span>
-          Explorational Tracing :
+          Explorational Tracing:
           <EditableTextLabel value={tracingName} onChange={this.setAnnotationName} />
         </span>
       );
@@ -99,74 +102,60 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
 
     return (
       <div className="flex-overflow">
-        <p>
-          {annotationTypeLabel}
-        </p>
-        <p>
-          Dataset: {dataSetName}
-        </p>
-        <p>
-          Viewport Width: {this.chooseUnit(zoomLevel)}
-        </p>
-        <p>
-          Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}
-        </p>
-        {this.props.tracing.type === "skeleton"
-          ? <div>
-              <p>
-                Number of Trees: {treeCount}
-              </p>
-              <p>
-                Number of Nodes: {nodeCount}
-              </p>
-              <p>
-                Number of Branch Points: {branchPointCount}
-              </p>
+        <p>{annotationTypeLabel}</p>
+        <p>Dataset: {dataSetName}</p>
+        <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
+        <p>Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
+        {this.props.tracing.type === "skeleton" ? (
+          <div>
+            <p>Number of Trees: {treeCount}</p>
+            <p>Number of Nodes: {nodeCount}</p>
+            <p>Number of Branch Points: {branchPointCount}</p>
+          </div>
+        ) : null}
+        {isPublicViewMode ? (
+          <div>
+            <table className="table table-condensed table-nohead table-bordered">
+              <tbody>
+                <tr>
+                  <th colSpan="2">Controls</th>
+                </tr>
+                <tr>
+                  <td>I,O or Alt + Mousewheel</td>
+                  <td>Zoom in/out</td>
+                </tr>
+                <tr>
+                  <td>Mousewheel or D and F</td>
+                  <td>Move Along 3rd Axis</td>
+                </tr>
+                <tr>
+                  <td>Left Mouse Drag or Arrow Keys</td>
+                  <td>Move</td>
+                </tr>
+                <tr>
+                  <td>Right Click Drag in 3D View</td>
+                  <td>Rotate 3D View</td>
+                </tr>
+                <tr>
+                  <td>K,L</td>
+                  <td>Scale Up/Down Viewports</td>
+                </tr>
+              </tbody>
+            </table>
+            <div>
+              <img
+                className="img-50"
+                src="/assets/images/Max-Planck-Gesellschaft.svg"
+                alt="Max Plank Geselleschaft Logo"
+              />
+              <img
+                className="img-50"
+                src="/assets/images/MPI-brain-research.svg"
+                alt="Max Plank Institute of Brain Research Logo"
+              />
             </div>
-          : null}
-        {isPublicViewMode
-          ? <div>
-              <table className="table table-condensed table-nohead table-bordered">
-                <tbody>
-                  <tr>
-                    <th colSpan="2">Controls</th>
-                  </tr>
-                  <tr>
-                    <td>I,O or Alt + Mousewheel</td>
-                    <td>Zoom in/out</td>
-                  </tr>
-                  <tr>
-                    <td>Mousewheel or D and F</td>
-                    <td>Move Along 3rd Axis</td>
-                  </tr>
-                  <tr>
-                    <td>Left Mouse Drag or Arrow Keys</td>
-                    <td>Move</td>
-                  </tr>
-                  <tr>
-                    <td>Right Click Drag in 3D View</td>
-                    <td>Rotate 3D View</td>
-                  </tr>
-                  <tr>
-                    <td>K,L</td>
-                    <td>Scale Up/Down Viewports</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div>
-                <img
-                  className="img-50"
-                  src="/assets/images/Max-Planck-Gesellschaft.svg"
-                  alt="Max Plank Geselleschaft Logo"
-                />
-                <img
-                  className="img-50"
-                  src="/assets/images/MPI-brain-research.svg"
-                  alt="Max Plank Institute of Brain Research Logo"
-                />
-              </div>
-            </div>
-          : null}
+          </div>
+        ) : null}
       </div>
     );
   }

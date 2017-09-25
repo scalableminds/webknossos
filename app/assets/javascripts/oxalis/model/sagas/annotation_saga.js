@@ -15,4 +15,5 @@ export function* pushAnnotationUpdateAsync(): Generator<*, *, *> {
 export function* watchAnnotationAsync(): Generator<*, *, *> {
   yield takeEvery("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
   yield takeEvery("SET_ANNOTATION_PUBLIC", pushAnnotationUpdateAsync);
+  yield takeEvery("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
 }

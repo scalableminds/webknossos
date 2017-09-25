@@ -6,6 +6,7 @@ import { Input, Icon } from "antd";
 type EditableTextLabelPropType = {
   value: string,
   onChange: Function,
+  rows?: number,
 };
 
 type State = {
@@ -14,6 +15,10 @@ type State = {
 };
 
 class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, State> {
+  static defaultProps = {
+    rows: 1,
+  };
+
   state = {
     isEditing: false,
     value: "",
@@ -45,6 +50,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
             style={{ width: "60%", margin: "0 10px" }}
             size="small"
             autoFocus
+            rows={this.props.rows}
           />
           <Icon type="check" style={iconStyle} onClick={this.handleOnChange} />
         </span>

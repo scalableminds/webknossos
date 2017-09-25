@@ -7,7 +7,7 @@ export function* pushAnnotationUpdateAsync(): Generator<*, *, *> {
   const url = `/annotations/${tracing.tracingType}/${tracing.tracingId}/edit`;
   yield [
     call(Request.sendJSONReceiveJSON, url, {
-      data: { name: tracing.name, isPublic: tracing.isPublic },
+      data: { name: tracing.name, isPublic: tracing.isPublic, description: tracing.description },
     }),
   ];
 }

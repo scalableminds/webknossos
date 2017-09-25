@@ -71,6 +71,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   render() {
     const { tracingType, name, description } = this.props.tracing;
     const tracingName = name || "<untitled>";
+    const tracingDescription = description || "<no comment>";
     const treesMaybe = getSkeletonTracing(this.props.tracing).chain(tracing =>
       Maybe.fromNullable(tracing.trees),
     );
@@ -120,9 +121,9 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
           <span>
             Description:
             <EditableTextLabel
-              value={description}
+              value={tracingDescription}
               onChange={this.setAnnotationDescription}
-              rows={10}
+              rows={4}
             />
           </span>
         </p>

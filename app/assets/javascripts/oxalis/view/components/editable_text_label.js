@@ -40,18 +40,24 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
   render() {
     const iconStyle = { cursor: "pointer" };
 
+    const inputComponentProps = {
+      value: this.state.value,
+      onChange: this.handleInputChange,
+      onPressEnter: this.handleOnChange,
+      style: { width: "60%", margin: "0 10px" },
+      size: "small",
+      autoFocus: true,
+      rows: this.props.rows,
+    };
+
     if (this.state.isEditing) {
       return (
         <span>
-          <Input
-            value={this.state.value}
-            onChange={this.handleInputChange}
-            onPressEnter={this.handleOnChange}
-            style={{ width: "60%", margin: "0 10px" }}
-            size="small"
-            autoFocus
-            rows={this.props.rows}
-          />
+          {this.props.rows === 1 ? (
+            <Input {...inputComponentProps} />
+          ) : (
+            <Input.TextArea {...inputComponentProps} />
+          )}
           <Icon type="check" style={iconStyle} onClick={this.handleOnChange} />
         </span>
       );

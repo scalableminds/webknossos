@@ -296,7 +296,7 @@ object AnnotationDAO
   def setDescription(_annotation: BSONObjectID, description: String)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj("_description" -> description)),
+      Json.obj("$set" -> Json.obj("description" -> description)),
       returnNew = true)
 
   def setIsPublic(_annotation: BSONObjectID, isPublic: Boolean)(implicit ctx: DBAccessContext) =

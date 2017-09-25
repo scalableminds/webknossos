@@ -4,11 +4,13 @@
 import * as React from "react";
 import Request from "libs/request";
 import { Spin, Tabs } from "antd";
-import type { APIUserType } from "admin/api_flow_types";
 import DatasetView from "./dataset_view";
 import DashboardTaskListView from "./dashboard_task_list_view";
 import ExplorativeAnnotationsView from "./explorative_annotations_view";
 import LoggedTimeView from "./logged_time_view";
+import app from "app";
+import Utils from "libs/utils";
+import type { APIUserType } from "admin/api_flow_types";
 
 const TabPane = Tabs.TabPane;
 
@@ -51,14 +53,16 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   getTabs(user: APIUserType) {
-    const isAdmin = this.props.isAdminView;
+    const isUserAdmin = Utils.isUserAdmin(app.currentUser);
+    const isAdminView = this.props.isAdminView;
+
     return [
-      !isAdmin ? (
+      !isAdminView ? (
         <TabPane tab="Dataset Gallery" key="datasets">
           <DatasetView user={user} dataViewType="gallery" />
         </TabPane>
       ) : null,
-      !isAdmin ? (
+      !isAdminView && isUserAdmin ? (
         <TabPane tab="Datasets" key="advanced-datasets">
           <DatasetView user={user} dataViewType="advanced" />
         </TabPane>
@@ -72,7 +76,7 @@ class DashboardView extends React.PureComponent<Props, State> {
           userID={this.props.userID}
         />
       </TabPane>,
-      isAdmin ? (
+      isAdminView ? (
         <TabPane tab="Tracked Time" key="trackedTime">
           <LoggedTimeView userID={this.props.userID} />
         </TabPane>

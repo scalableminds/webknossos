@@ -8,7 +8,7 @@ import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
-import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction, VolumeUpdateActionGroup}
+import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction}
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.util.tools.Fox
 import play.api.i18n.{Messages, MessagesApi}
@@ -23,15 +23,13 @@ class VolumeTracingController @Inject()(
                                          val webKnossosServer: WebKnossosServer,
                                          tracingDataStore: TracingDataStore,
                                          val messagesApi: MessagesApi
-                                       ) extends TracingController[VolumeTracing, VolumeTracings, VolumeUpdateActionGroup] {
+                                       ) extends TracingController[VolumeTracing, VolumeTracings] {
 
   implicit val tracingsCompanion = VolumeTracings
 
   implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings = VolumeTracings(tracings)
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
-
-  implicit val updateReads = VolumeUpdateActionGroup.volumeUpdateActionGroupReads
 
   def initialData(tracingId: String) = Action.async {
     implicit request =>

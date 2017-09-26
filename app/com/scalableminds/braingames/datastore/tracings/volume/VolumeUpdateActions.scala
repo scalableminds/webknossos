@@ -5,21 +5,12 @@ package com.scalableminds.braingames.datastore.tracings.volume
 
 import java.util.Base64
 
-import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.braingames.datastore.tracings.{TracingService, UpdateAction, UpdateActionGroup}
+import com.scalableminds.braingames.datastore.tracings.UpdateAction.VolumeUpdateAction
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
-import com.scalableminds.util.tools.Fox
 import play.api.libs.json._
 
-import scala.concurrent.ExecutionContext.Implicits.global
-
 case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String) extends VolumeUpdateAction {
-
   lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
-
-  def applyTo(tracing: VolumeTracing, service: TracingService[VolumeTracing]): Fox[VolumeTracing] = {
-    Fox.successful(tracing)
-  }
 }
 
 object UpdateBucketVolumeAction {
@@ -32,18 +23,11 @@ case class UpdateTracingVolumeAction(
                                       editRotation: Vector3D,
                                       largestSegmentId: Long,
                                       zoomLevel: Double
-                                    ) extends VolumeUpdateAction {
-
-  def applyTo(tracing: VolumeTracing, service: TracingService[VolumeTracing]): Fox[VolumeTracing] = {
-    Fox.successful(tracing)
-  }
-}
+                                    ) extends VolumeUpdateAction
 
 object UpdateTracingVolumeAction {
   implicit val updateTracingVolumeActionFormat = Json.format[UpdateTracingVolumeAction]
 }
-
-trait VolumeUpdateAction extends UpdateAction[VolumeTracing]
 
 object VolumeUpdateAction {
 
@@ -56,10 +40,4 @@ object VolumeUpdateAction {
       }
     }
   }
-}
-
-case class VolumeUpdateActionGroup(version: Long, timestamp: Long, actions: List[VolumeUpdateAction], stats: Option[JsObject]) extends UpdateActionGroup[VolumeTracing]
-
-object VolumeUpdateActionGroup {
-  implicit val volumeUpdateActionGroupReads = Json.reads[VolumeUpdateActionGroup]
 }

@@ -10,10 +10,9 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
+import play.api.libs.json.Reads
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStoreImplicits with FoxImplicits with LazyLogging {
@@ -26,13 +25,15 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
 
   implicit def tracingCompanion: GeneratedMessageCompanion[T]
 
+  implicit val updateActionReads: Reads[UpdateAction[T]]
+
   // this should be longer than maxCacheTime in webknossos/AnnotationStore
   // so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
 
   def currentVersion(tracingId: String): Fox[Long]
 
-  def handleUpdateGroup(updateGroup: UpdateActionGroup[T]): Fox[_] = Fox.successful()
+  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[T]): Fox[_]
 
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 
@@ -64,12 +65,6 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
       Fox.successful(id)
     } else {
       tracingStore.put(id, version, tracing).map(_ => id)
-    }
-  }
-
-  def applyUpdates(tracing: T, updateActions: List[UpdateAction[T]]): Fox[T] = {
-    updateActions.foldLeft(Fox.successful(tracing)) { (tracing, action) =>
-      tracing.flatMap(t => action.applyTo(t, this))
     }
   }
 }

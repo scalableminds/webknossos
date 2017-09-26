@@ -12,10 +12,7 @@ import play.api.libs.json._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait SkeletonUpdateAction extends UpdateAction[SkeletonTracing] {
-  def applyTo(tracing: SkeletonTracing, service: TracingService[SkeletonTracing]): Fox[SkeletonTracing] = Fox.successful(tracing)
-
-  def applyOn(tracing: SkeletonTracing): SkeletonTracing
+trait SkeletonUpdateActionHelper {
 
   protected def mapTrees(tracing: SkeletonTracing, treeId: Int, transformTree: Tree => Tree): Seq[Tree] = {
     tracing.trees.map((tree: Tree) => if (tree.treeId == treeId) transformTree(tree) else tree)
@@ -38,19 +35,19 @@ trait SkeletonUpdateAction extends UpdateAction[SkeletonTracing] {
 }
 
 case class CreateTreeSkeletonAction(id: Int, color: Option[com.scalableminds.util.image.Color], name: String,
-                                    branchPoints: List[BranchPointDepr], comments: List[CommentDepr]) extends SkeletonUpdateAction {
+                                    branchPoints: List[BranchPointDepr], comments: List[CommentDepr]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name)
     tracing.withTrees(newTree +: tracing.trees)
   }
 }
 
-case class DeleteTreeSkeletonAction(id: Int) extends SkeletonUpdateAction {
+case class DeleteTreeSkeletonAction(id: Int) extends UpdateAction.SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing) = tracing.withTrees(tracing.trees.filter(_.treeId != id))
 }
 
 case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Option[com.scalableminds.util.image.Color], name: String,
-                                    branchPoints: List[BranchPointDepr], comments: List[CommentDepr]) extends SkeletonUpdateAction {
+                                    branchPoints: List[BranchPointDepr], comments: List[CommentDepr]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(tree: Tree) =
       tree
@@ -64,7 +61,7 @@ case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Opti
   }
 }
 
-case class MergeTreeSkeletonAction(sourceId: Int, targetId: Int) extends SkeletonUpdateAction {
+case class MergeTreeSkeletonAction(sourceId: Int, targetId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(targetTree: Tree) = {
       val sourceTree = treeById(tracing, sourceId)
@@ -79,7 +76,7 @@ case class MergeTreeSkeletonAction(sourceId: Int, targetId: Int) extends Skeleto
   }
 }
 
-case class MoveTreeComponentSkeletonAction(nodeIds: List[Int], sourceId: Int, targetId: Int) extends SkeletonUpdateAction {
+case class MoveTreeComponentSkeletonAction(nodeIds: List[Int], sourceId: Int, targetId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     val sourceTree = treeById(tracing, sourceId)
     val targetTree = treeById(tracing, targetId)
@@ -105,14 +102,14 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int], sourceId: Int, ta
   }
 }
 
-case class CreateEdgeSkeletonAction(source: Int, target: Int, treeId: Int) extends SkeletonUpdateAction {
+case class CreateEdgeSkeletonAction(source: Int, target: Int, treeId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(tree: Tree) = tree.withEdges(Edge(source, target) +: tree.edges)
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
 }
 
-case class DeleteEdgeSkeletonAction(source: Int, target: Int, treeId: Int) extends SkeletonUpdateAction {
+case class DeleteEdgeSkeletonAction(source: Int, target: Int, treeId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(tree: Tree) = tree.copy(edges = tree.edges.filter(_ != Edge(source, target)))
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
@@ -122,7 +119,7 @@ case class DeleteEdgeSkeletonAction(source: Int, target: Int, treeId: Int) exten
 
 case class CreateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
                                     viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
-                                    interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction with ProtoGeometryImplicits {
+                                    interpolation: Option[Boolean], treeId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) = {
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
@@ -146,7 +143,7 @@ case class CreateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option
 
 case class UpdateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
                                     viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
-                                    interpolation: Option[Boolean], treeId: Int) extends SkeletonUpdateAction with ProtoGeometryImplicits {
+                                    interpolation: Option[Boolean], treeId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) = {
 
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
@@ -169,7 +166,7 @@ case class UpdateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option
   }
 }
 
-case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int) extends SkeletonUpdateAction {
+case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
 
     def treeTransform(tree: Tree) =
@@ -182,7 +179,7 @@ case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int) extends SkeletonUp
 }
 
 case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: com.scalableminds.util.geometry.Point3D,
-                                       editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double) extends SkeletonUpdateAction with ProtoGeometryImplicits {
+                                       editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double) extends UpdateAction.SkeletonUpdateAction with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) =
     tracing
       .withActiveNodeId(activeNode.getOrElse(tracing.getActiveNodeId))
@@ -193,7 +190,7 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: co
 
 
 
-case class RevertToVersionAction(sourceVersion: Long) extends SkeletonUpdateAction {
+case class RevertToVersionAction(sourceVersion: Long) extends UpdateAction.SkeletonUpdateAction {
   override def applyOn(tracing: SkeletonTracing) = throw new Exception("RevertToVersionAction applied on unversioned tracing")
 }
 
@@ -217,8 +214,8 @@ object RevertToVersionAction {implicit val jsonFormat = Json.format[RevertToVers
 
 object SkeletonUpdateAction {
 
-  implicit object SkeletonUpdateActionReads extends Reads[SkeletonUpdateAction] {
-    override def reads(json: JsValue): JsResult[SkeletonUpdateAction] = {
+  implicit object skeletonUpdateActionFormat extends Format[UpdateAction[SkeletonTracing]] {
+    override def reads(json: JsValue): JsResult[UpdateAction.SkeletonUpdateAction] = {
       val jsonValue = (json \ "value").as[JsObject]
       (json \ "name").as[String] match {
         case "createTree" => deserialize[CreateTreeSkeletonAction](jsonValue)
@@ -245,10 +242,8 @@ object SkeletonUpdateAction {
 
     private val positionTransform = (JsPath \ 'position).json.update(
       JsPath.read[List[Float]].map(position => Json.toJson(position.map(_.toInt))))
-  }
 
-  implicit object SkeletonUpdateActionWrites extends Writes[SkeletonUpdateAction] {
-    override def writes(a: SkeletonUpdateAction) = a match{
+    override def writes(a: UpdateAction[SkeletonTracing]) = a match{
       case s: CreateTreeSkeletonAction => Json.obj("name" -> "createTree", "value" -> Json.toJson(s)(CreateTreeSkeletonAction.jsonFormat))
       case s: DeleteTreeSkeletonAction => Json.obj("name" -> "deleteTree", "value" -> Json.toJson(s)(DeleteTreeSkeletonAction.jsonFormat))
       case s: UpdateTreeSkeletonAction => Json.obj("name" -> "updateTree", "value" -> Json.toJson(s)(UpdateTreeSkeletonAction.jsonFormat))
@@ -264,7 +259,3 @@ object SkeletonUpdateAction {
     }
   }
 }
-
-case class SkeletonUpdateActionGroup(version: Long, timestamp: Long, actions: List[SkeletonUpdateAction], stats: Option[JsObject]) extends UpdateActionGroup[SkeletonTracing]
-
-object SkeletonUpdateActionGroup {implicit val jsonFormat = Json.format[SkeletonUpdateActionGroup]}

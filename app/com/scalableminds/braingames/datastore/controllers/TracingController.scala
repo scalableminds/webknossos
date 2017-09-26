@@ -20,7 +20,7 @@ import com.trueaccord.scalapb.json.{JsonFormat, Printer}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts], U <: UpdateActionGroup[T]] extends Controller {
+trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]] extends Controller {
 
   def dataSourceRepository: DataSourceRepository
 
@@ -36,7 +36,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   implicit def packMultiple(tracings: List[T]): Ts
 
-  implicit val updateReads: Reads[U]
+  implicit val updateActionReads: Reads[UpdateAction[T]] = tracingService.updateActionReads
 
   lazy val protoJsonPrinter = new Printer(formattingLongAsNumber = true, includingEmptySeqFields = true)
 
@@ -99,7 +99,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[U]]) {
+  def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) {
     implicit request => {
       AllowRemoteOrigin {
         val updateGroups = request.body
@@ -109,40 +109,15 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStats).flatMap { _ =>
           updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
             previousVersion.flatMap { version =>
-              if (version + 1 == updateGroup.version) {
-                tracingService.handleUpdateGroup(updateGroup).map(_ => updateGroup.version)
-              } else {
-                Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
-              }
+              //if (version + 1 == updateGroup.version) {
+                tracingService.handleUpdateGroup(tracingId, updateGroup).map(_ => updateGroup.version)
+              //} else {
+              //  Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
+              //}
             }
           }
-        }
-
-        //withAuthorizedUpdate(tracingId, request.body) { updates =>
-          //Fox.successful(())
-          //tracingService.applyUpdates(tracing, updates)
-        //}.map(_ => Ok)
-        Fox.successful(Ok)
+        }.map(_ => Ok)
       }
     }
   }
-
-  /*def withAuthorizedUpdate(updateGroups: ): Box[Long] = {
-    val timestamps = updateGroups.map(_.timestamp)
-
-    // report timestamps, check, that update is allowed etc., get statistics, properly handle wrong version
-
-    updateGroups.foldLeft[Box[Long]](Full(currentVersion)) { (versionBox, updateGroup) =>
-      versionBox match {
-        case Full(version) if version + 1 == updateGroup.version =>
-          f(updateGroup).map(_ => updateGroup.version)
-        case Full(version) =>
-          Failure(s"Unexpected version: ${updateGroup.version}, expected: ${version + 1}.")
-        case Empty =>
-          Empty
-        case f: Failure =>
-          f
-      }
-    }
-  }*/
 }

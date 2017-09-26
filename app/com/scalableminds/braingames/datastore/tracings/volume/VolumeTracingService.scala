@@ -7,14 +7,15 @@ import java.io.File
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
+import com.scalableminds.braingames.binary.models.BucketPosition
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.wrap.WKWFile
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Failure}
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -27,17 +28,42 @@ class VolumeTracingService @Inject()(
   with VolumeTracingBucketHelper
   with WKWDataFormatHelper
   with ProtoGeometryImplicits
+  with FoxImplicits
   with LazyLogging {
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
   implicit val tracingCompanion = VolumeTracing
 
+  implicit val updateActionReads = VolumeUpdateAction.volumeUpdateActionReads
+
   val tracingType = TracingType.volume
 
   val tracingStore = tracingDataStore.volumes
 
   override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
+
+  def handleUpdateGroup(tracingId: String, updateGroup: UpdateActionGroup[VolumeTracing]): Fox[_] = {
+    updateGroup.actions.foldLeft(find(tracingId)) { (tracing, action) =>
+      tracing.futureBox.flatMap {
+        case Full(t) =>
+          action match {
+            case a: UpdateBucketVolumeAction =>
+              val resolution = math.pow(2, a.zoomStep).toInt
+              val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, resolution)
+              saveBucket(volumeTracingLayer(t), bucket, a.data).map(_ => t)
+            case a: UpdateTracingVolumeAction =>
+              Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel))
+            case _ =>
+              Fox.failure("Unknown action.")
+          }
+        case Empty =>
+          Fox.empty
+        case f: Failure =>
+          Fox.failure(f.msg)
+      }
+    }.map(t => save(t, Some(tracingId), updateGroup.version))
+  }
 
   def initializeWithData(tracing: VolumeTracing, initialData: File): Box[_] = {
     if (tracing.version != 0L) {

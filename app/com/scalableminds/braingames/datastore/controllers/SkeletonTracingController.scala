@@ -22,15 +22,13 @@ class SkeletonTracingController @Inject()(
                                            val dataSourceRepository: DataSourceRepository,
                                            val webKnossosServer: WebKnossosServer,
                                            val messagesApi: MessagesApi
-                                       ) extends TracingController[SkeletonTracing, SkeletonTracings, SkeletonUpdateActionGroup] {
+                                       ) extends TracingController[SkeletonTracing, SkeletonTracings] {
 
   implicit val tracingsCompanion = SkeletonTracings
 
   implicit def packMultiple(tracings: List[SkeletonTracing]): SkeletonTracings = SkeletonTracings(tracings)
 
   implicit def unpackMultiple(tracings: SkeletonTracings): List[SkeletonTracing] = tracings.tracings.toList
-
-  implicit val updateReads = SkeletonUpdateActionGroup.jsonFormat
 
   def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) {
     implicit request => {
@@ -53,19 +51,6 @@ class SkeletonTracingController @Inject()(
           newId <- tracingService.save(mergedTracing, None, mergedTracing.version, toCache = !persist)
         } yield {
           Ok(Json.toJson(TracingReference(newId, TracingType.skeleton)))
-        }
-      }
-    }
-  }
-
-  override def update(tracingId: String) = Action.async(validateJson[List[SkeletonUpdateActionGroup]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracing <- tracingService.find(tracingId, useCache = false) ?~> Messages("tracing.notFound")
-          _ <- tracingService.saveUpdates(tracingId, request.body)
-        } yield {
-          Ok
         }
       }
     }

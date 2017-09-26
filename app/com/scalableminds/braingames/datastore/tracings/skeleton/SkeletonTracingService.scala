@@ -11,6 +11,7 @@ import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Execution.Implicits._
+import com.scalableminds.braingames.datastore.tracings.UpdateAction.SkeletonUpdateAction
 
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
@@ -28,14 +29,12 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion = SkeletonTracing
 
+  implicit val updateActionReads = SkeletonUpdateAction.skeletonUpdateActionFormat
+
   def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId).getOrElse(0L)
 
-  def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[_]] = {
-    Fox.combined(for {
-      updateActionGroup <- updateActionGroups
-    } yield {
-      tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions)
-    })
+  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] = {
+    tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions)
   }
 
   override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {

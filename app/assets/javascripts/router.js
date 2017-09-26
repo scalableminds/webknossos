@@ -31,7 +31,9 @@ class Router extends BaseRouter {
       "/users": "users",
       "/teams": "teams",
       "/statistics": "statistics",
+      "/tasks": "tasks",
       "/tasks/create": "taskCreate",
+      "/tasks/overview": "taskOverview",
       "/tasks/:id/edit": "taskEdit",
       "/projects": "projects",
       "/projects/create": "projectCreate",
@@ -53,10 +55,8 @@ class Router extends BaseRouter {
       "/scripts/create": "scriptsCreate",
       "/scripts/:id/edit": "scriptsCreate",
       "/spotlight": "spotlight",
-      "/tasks/overview": "taskOverview",
       "/admin/taskTypes": "hideLoadingSpinner",
       "/workload": "workload",
-      "/tasks": "taskQuery",
     };
   }
 
@@ -178,11 +178,9 @@ class Router extends BaseRouter {
     });
   }
 
-  taskQuery() {
+  tasks() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskQueryView = admin.TaskQueryView;
-
-      const view = new TaskQueryView();
+      const view = new ReactBackboneWrapper(admin.TaskListView, {});
       this.changeView(view);
     });
   }

@@ -8,13 +8,14 @@ import type {
   APITaskTypeType,
   APITeamType,
   APIProjectType,
+  APITaskWithAnnotationType,
 } from "admin/api_flow_types";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
 function assertResponseLimit(collection) {
   if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
-    Toast.error(messages["request.max_item_count_alert"], true);
+    Toast.warning(messages["request.max_item_count_alert"], true);
   }
 }
 
@@ -117,4 +118,12 @@ export async function deleteProject(projectName: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",
   });
+}
+
+// ### Tasks
+export async function getTasks(): Promise<Array<APITaskWithAnnotationType>> {
+  const tasks = await Request.receiveJSON("/api/tasks");
+  assertResponseLimit(tasks);
+
+  return tasks;
 }

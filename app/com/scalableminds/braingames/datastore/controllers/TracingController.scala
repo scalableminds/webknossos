@@ -16,8 +16,7 @@ import net.liftweb.common.Failure
 import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json, Reads}
 import play.api.mvc.Action
-
-import com.trueaccord.scalapb.json.JsonFormat
+import com.trueaccord.scalapb.json.{JsonFormat, Printer}
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -38,6 +37,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
   implicit def packMultiple(tracings: List[T]): Ts
 
   implicit val updateReads: Reads[U]
+
+  lazy val protoJsonPrinter = new Printer(formattingLongAsNumber = true, includingEmptySeqFields = true)
 
   def save = Action.async(validateProto[T]) {
     implicit request =>
@@ -68,7 +69,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(JsonFormat.toJsonString(tracing))
+          Ok(protoJsonPrinter.print(tracing))
         }
       }
     }

@@ -44,17 +44,6 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[VolumeUpdateActionGroup]]) {
-    implicit request => {
-      AllowRemoteOrigin {
-        withAuthorizedUpdate(tracingId, request.body) { updates =>
-          Fox.successful(())
-          //tracingService.applyUpdates(tracing, updates)
-        }.map(_ => Ok)
-      }
-    }
-  }
-
   def getData(tracingId: String, version: Option[Long]) = Action.async {
     implicit request => {
       AllowRemoteOrigin {

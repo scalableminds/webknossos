@@ -58,7 +58,7 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[SkeletonUpdateActionGroup]]) {
+  override def update(tracingId: String) = Action.async(validateJson[List[SkeletonUpdateActionGroup]]) {
     implicit request => {
       AllowRemoteOrigin {
         for {

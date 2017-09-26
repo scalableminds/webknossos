@@ -28,6 +28,8 @@ class SkeletonTracingService @Inject()(
 
   implicit val tracingCompanion = SkeletonTracing
 
+  def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId).getOrElse(0L)
+
   def saveUpdates(tracingId: String, updateActionGroups: List[SkeletonUpdateActionGroup]): Fox[List[_]] = {
     Fox.combined(for {
       updateActionGroup <- updateActionGroups
@@ -55,11 +57,11 @@ class SkeletonTracingService @Inject()(
 
   private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[Long] = {
     (for {
-      newestUpdate <- tracingDataStore.skeletonUpdates.get(tracingId)
+      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId)
     } yield {
       desiredVersion match {
-        case None => newestUpdate.version
-        case Some(desiredSome) => math.min(desiredSome, newestUpdate.version)
+        case None => newestUpdateVersion
+        case Some(desiredSome) => math.min(desiredSome, newestUpdateVersion)
       }
     }).getOrElse(tracing.version) //if there are no updates at all, assume tracing was created from NML
   }

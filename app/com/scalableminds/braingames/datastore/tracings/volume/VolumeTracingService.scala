@@ -37,6 +37,8 @@ class VolumeTracingService @Inject()(
 
   val tracingStore = tracingDataStore.volumes
 
+  override def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.volumes.getVersion(tracingId).getOrElse(0L)
+
   def initializeWithData(tracing: VolumeTracing, initialData: File): Box[_] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")

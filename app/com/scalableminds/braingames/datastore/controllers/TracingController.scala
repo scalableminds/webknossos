@@ -98,9 +98,25 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def updateTest(tracingId: String) = Action.async(validateJson[List[U]]) {
+  def update(tracingId: String) = Action.async(validateJson[List[U]]) {
     implicit request => {
       AllowRemoteOrigin {
+        val updateGroups = request.body
+        val timestamps = updateGroups.map(_.timestamp)
+        val latestStats = updateGroups.flatMap(_.stats).lastOption
+        val currentVersion = tracingService.currentVersion(tracingId)
+        webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStats).flatMap { _ =>
+          updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
+            previousVersion.flatMap { version =>
+              if (version + 1 == updateGroup.version) {
+                tracingService.handleUpdateGroup(updateGroup).map(_ => updateGroup.version)
+              } else {
+                Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
+              }
+            }
+          }
+        }
+
         //withAuthorizedUpdate(tracingId, request.body) { updates =>
           //Fox.successful(())
           //tracingService.applyUpdates(tracing, updates)
@@ -109,27 +125,6 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
       }
     }
   }
-
-  def withAuthorizedUpdate(tracingId: String, updateGroups: List[UpdateActionGroup[T]])(fn: UpdateActionGroup[T] => Fox[_]) = {
-    val timestamps = updateGroups.map(_.timestamp)
-    val latestStats = updateGroups.flatMap(_.stats).lastOption
-    val currentVersion = tracingService.currentVersion(tracingId)
-    webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStats).flatMap { _ =>
-      updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
-        previousVersion.flatMap { version =>
-          if (version + 1 == updateGroup.version) {
-            fn(updateGroup).map(_ => updateGroup.version)
-          } else {
-            Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
-          }
-        }
-      }
-    }
-  }
-
-  // def withUpdateAllowed(, updateGroups: List[UpdateActionGroup[T]])() = {
-
-  //}
 
   /*def withAuthorizedUpdate(updateGroups: ): Box[Long] = {
     val timestamps = updateGroups.map(_.timestamp)

@@ -30,10 +30,11 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
   // so that the references saved there remain valid throughout their life
   private val temporaryStoreTimeout = 10 minutes
 
-  def currentVersion(tracingId: String): Fox[Long] = Fox.successful(1)
+  def currentVersion(tracingId: String): Fox[Long]
 
-  def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] =
-    Fox.successful(tracing)
+  def handleUpdateGroup(updateGroup: UpdateActionGroup[T]): Fox[_] = Fox.successful()
+
+  def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 
   def find(tracingId: String, version: Option[Long] = None, useCache: Boolean = true, applyUpdates: Boolean = false): Fox[T] = {
     tracingStore.get(tracingId, version)(fromProto[T]).map(_.value).flatMap { tracing =>

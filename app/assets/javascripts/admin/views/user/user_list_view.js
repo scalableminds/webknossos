@@ -117,7 +117,7 @@ class UserListView extends React.PureComponent<{}, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="user-administration-table container wide">
+      <div className="user-administration-table container wide test-UserListView">
         <h3>Users</h3>
 
         {hasRowsSelected ? (

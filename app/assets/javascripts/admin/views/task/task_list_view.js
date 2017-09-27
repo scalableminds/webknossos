@@ -166,7 +166,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                 key="editPosition"
                 render={(__, task: APITaskType) => (
                   <div className="nowrap">
-                    {task.editPosition} <br />
+                    {TemplateHelpers.formatTuple(task.editPosition)} <br />
                     <span>{TemplateHelpers.formatTuple(task.boundingBox)}</span>
                   </div>
                 )}
@@ -247,7 +247,6 @@ class TaskListView extends React.PureComponent<Props, State> {
                     <a href="#" onClick={_.partial(this.deleteTask, task)}>
                       <Icon type="delete" />Delete
                     </a>
-                    )
                   </span>
                 )}
               />

@@ -4,12 +4,12 @@
 import * as React from "react";
 import Request from "libs/request";
 import { Spin, Tabs } from "antd";
-import DatasetView from "./dataset_view";
-import DashboardTaskListView from "./dashboard_task_list_view";
-import ExplorativeAnnotationsView from "./explorative_annotations_view";
-import LoggedTimeView from "./logged_time_view";
 import app from "app";
 import Utils from "libs/utils";
+import DatasetView from "dashboard/views/dataset_view";
+import DashboardTaskListView from "dashboard/views/dashboard_task_list_view";
+import ExplorativeAnnotationsView from "dashboard/views/explorative_annotations_view";
+import LoggedTimeView from "dashboard/views/logged_time_view";
 import type { APIUserType } from "admin/api_flow_types";
 
 const TabPane = Tabs.TabPane;

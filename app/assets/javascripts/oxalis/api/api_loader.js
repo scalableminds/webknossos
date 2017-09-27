@@ -41,14 +41,16 @@ class Api {
   * });
   */
   apiReady(version: number = 1): Promise<Object> {
-    if (version !== latestVersion) {
-      console.warn(`
-        Attention! You requested api version: ${version} which is
-        deprecated. The latest version is ${latestVersion}. Please upgrade your
-        script to the latest API as soon as possible.
-      `);
-    } else {
-      console.log("Requested api version:", version, "which is the latest version.");
+    if (process.env.BABEL_ENV !== "test") {
+      if (version !== latestVersion) {
+        console.warn(`
+          Attention! You requested api version: ${version} which is
+          deprecated. The latest version is ${latestVersion}. Please upgrade your
+          script to the latest API as soon as possible.
+        `);
+      } else {
+        console.log("Requested api version:", version, "which is the latest version.");
+      }
     }
     return this.readyPromise.then(() => {
       if (version === 1) {

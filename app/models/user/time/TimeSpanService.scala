@@ -6,7 +6,7 @@ package models.user.time
 import scala.collection.mutable
 import scala.concurrent.Future
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.task.TaskService
+import models.task.{Task, TaskService}
 import play.api.Play
 import play.api.libs.concurrent.Akka
 import akka.actor.{Actor, Props}
@@ -15,13 +15,18 @@ import models.annotation.{Annotation, AnnotationDAO, AnnotationLike, AnnotationS
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 
 import scala.concurrent.duration._
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Full}
 import reactivemongo.bson.BSONObjectID
 import akka.agent.Agent
+import com.scalableminds.util.mail.Send
 import com.typesafe.scalalogging.LazyLogging
+import models.project.Project
+import oxalis.mail.DefaultMails
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import oxalis.thirdparty.BrainTracing
+import oxalis.thirdparty.BrainTracing.Mailer
+import play.api.mvc.AnyContent
 
 object TimeSpanService extends FoxImplicits with LazyLogging {
   private val MaxTracingPause =
@@ -135,25 +140,37 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       }
     }
 
-    private def logTimeToTask(
-      duration: Long,
-      annotation: Option[AnnotationLike]) = {
-      // Log time to task
-      annotation.flatMap(_._task) match {
-        case Some(taskId) =>
-          TaskService.logTime(duration, taskId)(GlobalAccessContext)
-        case _ =>
-          Fox.successful(true)
+    def signalOverTime(time: Long, annotationOpt: Option[AnnotationLike])(implicit ctx: DBAccessContext): Fox[_] = {
+      for {
+        annotation <- annotationOpt.toFox
+        user <- annotation.user
+        task <- annotation.task
+        project <- task.project
+        annotationTime <- annotation.tracingTime
+        timeLimit <- project.expectedTime
+      } yield {
+        if (annotationTime >= timeLimit && annotationTime - time < timeLimit) {
+          Mailer ! Send(DefaultMails.overLimitMail(
+            user,
+            project.name,
+            task.id,
+            annotation.id))
+        }
       }
     }
 
-    private def logTimeToUser(
-      duration: Long,
-      annotation: Option[AnnotationLike],
-      _user: BSONObjectID) = {
-      // Log time to user
-      UserDAO.findOneById(_user)(GlobalAccessContext).flatMap{ user =>
-        BrainTracing.logTime(user, duration, annotation)(GlobalAccessContext)
+    private def logTimeToTask(
+                               duration: Long,
+                               annotation: Option[AnnotationLike]) = {
+      // Log time to task
+      annotation.flatMap(_._task) match {
+        case Some(taskId) =>
+          for {
+            _ <- TaskService.logTime(duration, taskId)(GlobalAccessContext)
+            _ <- signalOverTime(duration, annotation)(GlobalAccessContext)
+          } yield {}
+        case _ =>
+          Fox.successful(())
       }
     }
 
@@ -176,9 +193,8 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       val updateResult = for {
         annotation <- getAnnotation(updated.annotation)
         _ <- TimeSpanDAO.update(updated._id, updated)(ctx)
-        _ <- logTimeToTask(duration, annotation)
         _ <- logTimeToAnnotation(duration, annotation)
-        _ <- logTimeToUser(duration, annotation, updated._user)
+        _ <- logTimeToTask(duration, annotation)
       } yield {}
 
       updateResult.onComplete{ x =>

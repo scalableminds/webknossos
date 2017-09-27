@@ -186,12 +186,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }(securedRequestToUserAwareRequest)
   }
 
-  def createExplorational = SecuredAction.async(parse.urlFormEncoded) { implicit request =>
+  def createExplorational(dataSetName: String, typ: String) = SecuredAction.async { implicit request =>
     for {
-      dataSetName <- postParameter("dataSetName") ?~> Messages("dataSet.notSupplied")
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      contentType <- postParameter("contentType") ?~> Messages("annotation.contentType.notSupplied")
-      annotation <- AnnotationService.createExplorationalFor(request.identity, dataSet, contentType) ?~> Messages("annotation.create.failed")
+      annotation <- AnnotationService.createExplorationalFor(request.identity, dataSet, typ) ?~> Messages("annotation.create.failed")
     } yield {
       Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
     }

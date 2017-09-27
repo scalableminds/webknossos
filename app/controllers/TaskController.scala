@@ -229,7 +229,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {
     AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen =>
-      if (numberOfOpen < MAX_OPEN_TASKS)
+      if (numberOfOpen < MAX_OPEN_TASKS || user.hasAdminAccess)
         Fox.successful(numberOfOpen)
       else
         Fox.failure(Messages("task.tooManyOpenOnes"))

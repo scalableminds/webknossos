@@ -5,11 +5,13 @@ import * as React from "react";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
-import type { APITaskWithAnnotationType } from "admin/api_flow_types";
+import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
-import TransferTaskModal from "./transfer_task_modal";
+import app from "app";
+import TransferTaskModal from "dashboard/views/transfer_task_modal";
+import type { APITaskWithAnnotationType } from "admin/api_flow_types";
 
 const { Column } = Table;
 
@@ -115,53 +117,67 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
 
   renderActions = (task: APITaskWithAnnotationType) => {
     const annotation = task.annotation;
-    return task.annotation.state.isFinished
-      ? <div>
-          <i className="fa fa-check" />
-          <span> Finished</span>
-          <br />
-        </div>
-      : <ul>
+    const isAdmin = app.currentUser.teams
+      .filter(team => team.role.name === "admin")
+      .map(team => team.team)
+      .includes(task.team);
+
+    const label = this.props.isAdminView ? "View" : "Trace";
+
+    return task.annotation.state.isFinished ? (
+      <div>
+        <i className="fa fa-check" />
+        <span> Finished</span>
+        <br />
+      </div>
+    ) : (
+      <ul>
+        <li>
+          <a href={`/annotations/Task/${annotation.id}`}>
+            <i className="fa fa-random" />
+            <strong>{label}</strong>
+          </a>
+        </li>
+        {isAdmin || this.props.isAdminView ? (
           <li>
-            <a href={`/annotations/Task/${annotation.id}`}>
-              <i className="fa fa-random" />
-              <strong>Trace</strong>
+            <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
+              <i className="fa fa-share" />
+              Transfer
             </a>
           </li>
-          {this.props.isAdminView
-            ? <div>
-                <li>
-                  <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
-                    <i className="fa fa-share" />
-                    Transfer
-                  </a>
-                </li>
-                <li>
-                  <a href={`/annotations/Task/${annotation.id}/download`}>
-                    <i className="fa fa-download" />
-                    Download
-                  </a>
-                </li>
-                <li>
-                  <a href="#" onClick={() => this.resetTask(annotation.id)}>
-                    <i className="fa fa-undo" />
-                    Reset
-                  </a>
-                </li>
-                <li>
-                  <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
-                    <i className="fa fa-trash-o" />
-                    Cancel
-                  </a>
-                </li>
-              </div>
-            : <li>
-                <a href="#" onClick={() => this.confirmFinish(task)}>
-                  <i className="fa fa-check-circle-o" />
-                  Finish
-                </a>
-              </li>}
-        </ul>;
+        ) : null}
+        {isAdmin ? (
+          <div>
+            <li>
+              <a href={`/annotations/Task/${annotation.id}/download`}>
+                <i className="fa fa-download" />
+                Download
+              </a>
+            </li>
+            <li>
+              <a href="#" onClick={() => this.resetTask(annotation.id)}>
+                <i className="fa fa-undo" />
+                Reset
+              </a>
+            </li>
+            <li>
+              <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
+                <i className="fa fa-trash-o" />
+                Cancel
+              </a>
+            </li>
+          </div>
+        ) : null}
+        {this.props.isAdminView ? null : (
+          <li>
+            <a href="#" onClick={() => this.confirmFinish(task)}>
+              <i className="fa fa-check-circle-o" />
+              Finish
+            </a>
+          </li>
+        )}
+      </ul>
+    );
   };
 
   resetTask(annotationId: string) {
@@ -274,18 +290,21 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
           title="Description"
           dataIndex="type.description"
           sorter={Utils.localeCompareBy(t => t.type.description)}
+          render={description => (
+            <div style={{ wordBreak: "break-word" }} className="task-type-description">
+              <Markdown
+                source={description}
+                options={{ html: false, breaks: true, linkify: true }}
+              />
+            </div>
+          )}
           width={550}
         />
         <Column
           title="Modes"
           dataIndex="type.settings.allowedModes"
           sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
-          render={modes =>
-            modes.map(mode =>
-              <Tag key={mode}>
-                {mode}
-              </Tag>,
-            )}
+          render={modes => modes.map(mode => <Tag key={mode}>{mode}</Tag>)}
         />
         <Column
           title="Creation Date"
@@ -306,26 +325,28 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
     return (
       <div>
         <div className="pull-right">
-          {this.props.isAdminView && this.props.userID
-            ? <a href={`/api/users/${this.props.userID}/annotations/download`}>
-                <Button icon="download">Download All Finished Tracings</Button>
-              </a>
-            : <AsyncButton type="primary" icon="file-add" onClick={() => this.confirmGetNewTask()}>
-                Get a New Task
-              </AsyncButton>}
+          {this.props.isAdminView && this.props.userID ? (
+            <a href={`/api/users/${this.props.userID}/annotations/download`}>
+              <Button icon="download">Download All Finished Tracings</Button>
+            </a>
+          ) : (
+            <AsyncButton type="primary" icon="file-add" onClick={() => this.confirmGetNewTask()}>
+              Get a New Task
+            </AsyncButton>
+          )}
           <div className="divider-vertical" />
-          <Button onClick={this.toggleShowFinished}>
-            Show {this.getFinishVerb()} Tasks Only
-          </Button>
+          <Button onClick={this.toggleShowFinished}>Show {this.getFinishVerb()} Tasks Only</Button>
         </div>
         <h3>Tasks</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
-        {this.state.isLoading
-          ? <div className="text-center">
-              <Spin size="large" />
-            </div>
-          : this.renderTable()}
+        {this.state.isLoading ? (
+          <div className="text-center">
+            <Spin size="large" />
+          </div>
+        ) : (
+          this.renderTable()
+        )}
 
         <TransferTaskModal
           visible={this.state.isTransferModalVisible}

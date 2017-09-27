@@ -4,7 +4,6 @@ import javax.inject.Inject
 
 import akka.util.Timeout
 import com.scalableminds.braingames.datastore.tracings.TracingType
-import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{Annotation, _}
@@ -13,17 +12,13 @@ import models.task.TaskDAO
 import models.user.time._
 import models.user.{UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
-import oxalis.security.{AuthenticatedRequest, Secured}
+import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsArray, JsObject, _}
-import play.api.mvc.Action
+import play.api.libs.json.{JsArray, _}
 import play.twirl.api.Html
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.util.Try
 
 /**
  * Company: scalableminds
@@ -287,7 +282,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    //TODO: RocksDB: why cannot I inline this (type inference, fox implicits?)
     for {
       dataSet <- DataSetDAO.findOneBySourceName(
         annotation.dataSetName).toFox ?~> Messages("dataSet.notFound", annotation.dataSetName)

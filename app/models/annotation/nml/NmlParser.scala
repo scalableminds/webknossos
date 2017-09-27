@@ -247,7 +247,8 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
             val nodeIds = nodes.map(_.id)
             val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.nodeId)).toList
             val treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
-            Some(Tree(id, nodes, edges, color, treeBP, treeComments, name))
+            val createdTimestamp = if (nodes.isEmpty) System.currentTimeMillis() else parsedNodes.minBy(_.createdTimestamp).createdTimestamp
+            Some(Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp))
           case _ =>
             None
         }

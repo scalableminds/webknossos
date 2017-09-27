@@ -101,14 +101,13 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
   def download(typ: String, id: String) = UserAwareAction.async { implicit request =>
     logger.trace(s"Requested download for annotation: $typ/$id")
-    //TODO: RocksDB: prettier dispatch?
     request.userOpt match {
-      case Some(user) => {
-        if (typ == AnnotationType.View.toString) Fox.failure("Cannot download View annotation")
-        else if (typ == AnnotationType.CompoundProject.toString) downloadProject(id, user)
-        else if (typ == AnnotationType.CompoundTask.toString) downloadTask(id, user)
-        else if (typ == AnnotationType.CompoundTaskType.toString) downloadTaskType(id, user)
-        else downloadExplorational(id, typ, request.userOpt)
+      case Some(user) => typ match {
+        case AnnotationType.View => Fox.failure("Cannot download View annotation")
+        case AnnotationType.CompoundProject => downloadProject(id, user)
+        case AnnotationType.CompoundTask => downloadTask(id, user)
+        case AnnotationType.CompoundTaskType => downloadTaskType(id, user)
+        case _ => downloadExplorational(id, typ, request.userOpt)
       }
       case None => {
         if (typ == AnnotationType.Explorational.toString) downloadExplorational(id, typ, request.userOpt)

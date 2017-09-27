@@ -82,6 +82,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             },
             branchPoints: { $set: _.map(tree.branchPoints, serverBranchPointToBranchPoint) },
             isVisible: { $set: true },
+            timestamp: { $set: tree.createdTimestamp },
           }),
         ),
         "treeId",

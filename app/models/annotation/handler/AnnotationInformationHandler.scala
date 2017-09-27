@@ -12,7 +12,6 @@ import scala.concurrent.Future
 
 object AnnotationInformationHandler {
   val informationHandlers: Map[String, AnnotationInformationHandler] = Map(
-    AnnotationType.View.toString             -> DataSetInformationHandler,
     AnnotationType.CompoundProject.toString  -> ProjectInformationHandler,
     AnnotationType.CompoundTask.toString     -> TaskInformationHandler,
     AnnotationType.CompoundTaskType.toString -> TaskTypeInformationHandler)

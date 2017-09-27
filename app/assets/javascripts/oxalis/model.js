@@ -77,6 +77,7 @@ type ServerSkeletonTracingTreeType = {
   name: string,
   nodes: Array<ServerNodeType>,
   treeId: number,
+  createdTimestamp: number,
 };
 
 type ServerTracingBaseType = {

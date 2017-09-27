@@ -1,4 +1,3 @@
-// @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 // Integration tests for skeleton.js
@@ -169,7 +168,7 @@ test.serial("Skeleton should update node types for branchpoints", async t => {
   );
 });
 
-test.serial("Skeleton should update node radius", t => {
+test.serial.cb("Skeleton should update node radius", t => {
   const skeleton = new Skeleton();
 
   getSkeletonTracing(Store.getState().tracing).map(async skeletonTracing => {
@@ -181,10 +180,11 @@ test.serial("Skeleton should update node radius", t => {
     const id = skeleton.combineIds(activeNodeId, activeTreeId);
     const index = skeleton.nodes.idToBufferPosition.get(id).index;
     t.is(skeleton.nodes.buffers[0].geometry.attributes.radius.array[index], 2);
+    t.end();
   });
 });
 
-test.serial("Skeleton should update tree colors upon tree creation", t => {
+test.serial.cb("Skeleton should update tree colors upon tree creation", t => {
   const skeleton = new Skeleton();
 
   Store.dispatch(createTreeAction());
@@ -198,5 +198,6 @@ test.serial("Skeleton should update tree colors upon tree creation", t => {
         new Float32Array(skeleton.getTreeRGBA(activeTree.color, activeTree.isVisible)),
       );
     }
+    t.end();
   });
 });

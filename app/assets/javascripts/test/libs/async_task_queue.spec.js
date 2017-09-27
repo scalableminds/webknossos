@@ -75,7 +75,7 @@ test("AsyncTaskQueue should seralize task execution", async t => {
   t.deepEqual(taskLog, [1, 2]);
 });
 
-test("AsyncTaskQueue should retry failed tasks (1/2)", async t => {
+test.serial("AsyncTaskQueue should retry failed tasks (1/2)", async t => {
   t.plan(3);
   const result = new Error("foo");
   const queue = new AsyncTaskQueue(3, 1);
@@ -103,7 +103,7 @@ test("AsyncTaskQueue should retry failed tasks (1/2)", async t => {
   }
 });
 
-test("AsyncTaskQueue should retry failed tasks (2/2)", async t => {
+test.serial("AsyncTaskQueue should retry failed tasks (2/2)", async t => {
   t.plan(1);
   const result = new Error("foo");
   const queue = new AsyncTaskQueue(3, 1);

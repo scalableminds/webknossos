@@ -1,5 +1,4 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-// @flow
 import test from "ava";
 import _ from "lodash";
 import { OrthoViews } from "oxalis/constants";

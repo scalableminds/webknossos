@@ -33,12 +33,11 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
 }
 
 case class VolumeTracingLayer(
+                               name: String,
                                boundingBox: BoundingBox,
                                elementClass: ElementClass.Value,
                                largestSegmentId: Long
                              )(implicit val volumeDataStore: VersionedKeyValueStore) extends SegmentationLayer {
-
-  val name = "volume-tracing"
 
   def lengthOfUnderlyingCubes(resolution: Int): Int = DataLayer.bucketLength
 

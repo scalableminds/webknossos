@@ -51,7 +51,7 @@ class VolumeTracingService @Inject()(
             case a: UpdateBucketVolumeAction =>
               val resolution = math.pow(2, a.zoomStep).toInt
               val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, resolution)
-              saveBucket(volumeTracingLayer(t), bucket, a.data).map(_ => t)
+              saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data).map(_ => t)
             case a: UpdateTracingVolumeAction =>
               Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel))
             case _ =>
@@ -65,12 +65,12 @@ class VolumeTracingService @Inject()(
     }.map(t => save(t, Some(tracingId), updateGroup.version))
   }
 
-  def initializeWithData(tracing: VolumeTracing, initialData: File): Box[_] = {
+  def initializeWithData(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
 
-    val dataLayer = volumeTracingLayer(tracing)
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
 
     ZipIO.withUnziped(initialData) {
       case (fileName, is) =>
@@ -85,8 +85,8 @@ class VolumeTracingService @Inject()(
     }
   }
 
-  def data(tracing: VolumeTracing): Enumerator[Array[Byte]] = {
-    val dataLayer = volumeTracingLayer(tracing)
+  def data(tracingId: String, tracing: VolumeTracing): Enumerator[Array[Byte]] = {
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
     val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1))
 
     Enumerator.outputStream { os =>
@@ -94,12 +94,12 @@ class VolumeTracingService @Inject()(
     }
   }
 
-  private def volumeTracingLayer(tracing: VolumeTracing): VolumeTracingLayer = {
-    VolumeTracingLayer(tracing.boundingBox, tracing.elementClass, tracing.largestSegmentId)
+  private def volumeTracingLayer(tracingId: String, tracing: VolumeTracing): VolumeTracingLayer = {
+    VolumeTracingLayer(tracingId, tracing.boundingBox, tracing.elementClass, tracing.largestSegmentId)
   }
 
-  private def volumeTracingLayerWithFallback(tracing: VolumeTracing, dataSource: DataSource): SegmentationLayer = {
-    val dataLayer = volumeTracingLayer(tracing)
+  private def volumeTracingLayerWithFallback(tracingId: String, tracing: VolumeTracing, dataSource: DataSource): SegmentationLayer = {
+    val dataLayer = volumeTracingLayer(tracingId, tracing)
     tracing.fallbackLayer.flatMap(dataSource.getDataLayer).map {
       case layer: SegmentationLayer if dataLayer.elementClass == layer.elementClass =>
         new FallbackLayerAdapter(dataLayer, layer)
@@ -111,6 +111,6 @@ class VolumeTracingService @Inject()(
   }
 
   def dataLayerForVolumeTracing(tracingId: String, dataSource: DataSource): Fox[SegmentationLayer] = {
-    find(tracingId).map(volumeTracingLayerWithFallback(_, dataSource))
+    find(tracingId).map(volumeTracingLayerWithFallback(tracingId, _, dataSource))
   }
 }

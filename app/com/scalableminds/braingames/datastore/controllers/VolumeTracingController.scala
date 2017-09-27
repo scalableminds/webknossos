@@ -37,7 +37,7 @@ class VolumeTracingController @Inject()(
         for {
           initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          _ <- tracingService.initializeWithData(tracing, initialData)
+          _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
         } yield Ok(Json.toJson(TracingReference(tracingId, TracingType.volume)))
       }
   }
@@ -48,7 +48,7 @@ class VolumeTracingController @Inject()(
         for {
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
         } yield {
-          Ok.chunked(tracingService.data(tracing))
+          Ok.chunked(tracingService.data(tracingId, tracing))
         }
       }
     }

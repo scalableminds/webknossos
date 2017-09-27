@@ -7,10 +7,7 @@ import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPointDepr, CommentDepr}
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
-import com.scalableminds.util.tools.Fox
 import play.api.libs.json._
-
-import scala.concurrent.ExecutionContext.Implicits.global
 
 trait SkeletonUpdateActionHelper {
 
@@ -35,9 +32,9 @@ trait SkeletonUpdateActionHelper {
 }
 
 case class CreateTreeSkeletonAction(id: Int, color: Option[com.scalableminds.util.image.Color], name: String,
-                                    branchPoints: List[BranchPointDepr], comments: List[CommentDepr]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+                                    branchPoints: List[BranchPointDepr], timestamp: Long, comments: List[CommentDepr]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
-    val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name)
+    val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name, timestamp)
     tracing.withTrees(newTree +: tracing.trees)
   }
 }
@@ -119,7 +116,7 @@ case class DeleteEdgeSkeletonAction(source: Int, target: Int, treeId: Int) exten
 
 case class CreateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
                                     viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
-                                    interpolation: Option[Boolean], treeId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper with ProtoGeometryImplicits {
+                                    interpolation: Option[Boolean], treeId: Int, timestamp: Long) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) = {
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
     val newNode = Node(
@@ -131,7 +128,7 @@ case class CreateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = System.currentTimeMillis
+      createdTimestamp = timestamp
     )
 
     def treeTransform(tree: Tree) = tree.withNodes(newNode +: tree.nodes)
@@ -143,7 +140,7 @@ case class CreateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option
 
 case class UpdateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option[Vector3D], radius: Option[Float],
                                     viewport: Option[Int], resolution: Option[Int], bitDepth: Option[Int],
-                                    interpolation: Option[Boolean], treeId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper with ProtoGeometryImplicits {
+                                    interpolation: Option[Boolean], treeId: Int, timestamp: Long) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) = {
 
     val rotationOrDefault = rotation getOrElse NodeDefaults.rotation
@@ -156,7 +153,7 @@ case class UpdateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option
       resolution getOrElse NodeDefaults.resolution,
       bitDepth getOrElse NodeDefaults.bitDepth,
       interpolation getOrElse NodeDefaults.interpolation,
-      createdTimestamp = System.currentTimeMillis
+      createdTimestamp = timestamp
     )
 
     def treeTransform(tree: Tree) =

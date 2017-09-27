@@ -46,6 +46,7 @@ message Tree {
      repeated BranchPoint branchPoints = 5;
      repeated Comment comments = 6;
      required string name = 7;
+     required int64 createdTimestamp = 8;
 }
 
 message SkeletonTracing {

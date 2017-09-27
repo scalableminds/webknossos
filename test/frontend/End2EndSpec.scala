@@ -21,7 +21,7 @@ import sys.process._
 
 import com.typesafe.scalalogging.LazyLogging
 
-class WebdriverIOSpec(arguments: Arguments) extends Specification with LazyLogging {
+class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
   val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "webknossos-testing")
@@ -33,11 +33,14 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with LazyLoggi
                   "mongodb.url"  -> mongoHost,
                   "mongodb.port" -> mongoPort,
                   "http.port"    -> testPort,
-                  "mongodb.evolution.mongoCmd" -> s"mongo $mongoHost:$mongoPort/$mongoDb")
+                  "mongodb.evolution.mongoCmd" -> s"mongo $mongoHost:$mongoPort/$mongoDb",
+                  "play.modules.disabled" -> List("com.scalableminds.braingames.datastore.DataStoreModule"),
+                  "play.http.router" -> "webknossos.Routes",
+                  "datastore.enabled" -> false)
 
   "my application" should {
 
-    "pass the webdriverio e2e tests" in new WithServer(
+    "pass the e2e tests" in new WithServer(
       app = FakeApplication(
         withoutPlugins = List("com.scalableminds.mongev.MongevPlugin"),
         additionalConfiguration = argumentMap
@@ -55,12 +58,6 @@ class WebdriverIOSpec(arguments: Arguments) extends Specification with LazyLoggi
   private def runWebdriverTests: Int = {
     val result = "npm run test-e2e".run().exitValue()
     result
-  }
-
-  private def getProcessIO: ProcessIO = {
-    new ProcessIO(_ => (),
-      stdout => Source.fromInputStream(stdout).getLines().foreach(l => logger.info(l)),
-      stderr => Source.fromInputStream(stderr).getLines().foreach(l => logger.error(l)))
   }
 
   private def parseCustomJavaArgs(arguments: Arguments) = {

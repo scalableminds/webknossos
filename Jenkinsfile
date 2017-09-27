@@ -32,7 +32,9 @@ wrap(repo: "scalableminds/webknossos") {
     sh "docker-compose run frontend-linting"
     sh "docker-compose run frontend-flow"
     sh "docker-compose run frontend-tests"
-    // sh "docker-compose run e2e-tests"
+    retry (3) {
+      sh "docker-compose run e2e-tests"
+    }
     sh """
       DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &
       sleep 10
@@ -74,7 +76,6 @@ wrap(repo: "scalableminds/webknossos") {
     sh "echo ${env.BRANCH_NAME} > .git/REAL_BRANCH"
     withEnv(["JOB_NAME=oxalis"]) {
       sh "./buildtools/publish_deb.py"
-      sh "./buildtools/salt-redeploy-dev.sh"
     }
   }
 }

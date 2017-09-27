@@ -52,3 +52,5 @@ flow-coverage/
 public/docs/frontend-api
 dev-db/
 docker-compose.override.yml
+app/assets/javascripts/test/snapshots/debug-htmls/*
+!app/assets/javascripts/test/snapshots/debug-htmls/.gitkeep

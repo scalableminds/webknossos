@@ -48,8 +48,8 @@ import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
 export type ServerNodeType = {
   id: number,
-  position: Point3,
-  rotation: Point3,
+  position: Vector3,
+  rotation: Vector3,
   bitDepth: number,
   viewport: number,
   resolution: number,
@@ -62,16 +62,9 @@ export type ServerBranchPointType = {
   nodeId: number,
 };
 
-export type ServerColorType = {
-  r: number,
-  g: number,
-  b: number,
-  a: number,
-};
-
 type ServerSkeletonTracingTreeType = {
   branchPoints: Array<ServerBranchPointType>,
-  color: ?ServerColorType,
+  color: ?Vector3,
   comments: Array<CommentType>,
   edges: Array<EdgeType>,
   name: string,
@@ -406,12 +399,12 @@ export class OxalisModel {
 
   applyState(state: UrlManagerState, tracing: ServerTracingType) {
     Store.dispatch(
-      setPositionAction(state.position || Utils.point3ToVector3(tracing.editPosition)),
+      setPositionAction(state.position || tracing.editPosition),
     );
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));
     }
-    const rotation = state.rotation || Utils.point3ToVector3(tracing.editRotation);
+    const rotation = state.rotation || tracing.editRotation;
     if (rotation != null) {
       Store.dispatch(setRotationAction(rotation));
     }

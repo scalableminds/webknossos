@@ -135,10 +135,6 @@ const Utils = {
     return [a[0], a[1], a[2], b[0], b[1], b[2]];
   },
 
-  point3ToVector3(point: Point3): Vector3 {
-    return [point.x, point.y, point.z];
-  },
-
   numberArrayToVector3(array: Array<number>): Vector3 {
     const output = [0, 0, 0];
     for (let i = 0; i < Math.min(3, array.length); i++) {

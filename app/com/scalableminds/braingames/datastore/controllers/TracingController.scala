@@ -6,6 +6,8 @@ package com.scalableminds.braingames.datastore.controllers
 import java.util.UUID
 
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
+import com.scalableminds.braingames.datastore.SkeletonTracing.Color
+import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
 import com.scalableminds.braingames.datastore.services.WebKnossosServer
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
@@ -17,6 +19,7 @@ import play.api.i18n.Messages
 import play.api.libs.json.{Format, Json, Reads}
 import play.api.mvc.Action
 import com.trueaccord.scalapb.json.{JsonFormat, Printer}
+import org.json4s.JsonAST._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -38,7 +41,13 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
 
   implicit val updateActionReads: Reads[UpdateAction[T]] = tracingService.updateActionReads
 
-  lazy val protoJsonPrinter = new Printer(formattingLongAsNumber = true, includingEmptySeqFields = true)
+  lazy val protoJsonPrinter = new Printer(
+    formattingLongAsNumber = true,
+    includingEmptySeqFields = true,
+    formatRegistry = JsonFormat.DefaultRegistry
+      .registerWriter[Point3D](p => JArray(List(JInt(p.x), JInt(p.y), JInt(p.z))), json => Point3D(0, 0, 0))
+      .registerWriter[Vector3D](v => JArray(List(JDouble(v.x), JDouble(v.y), JDouble(v.z))), json => Vector3D(0.0, 0.0, 0.0))
+      .registerWriter[Color](c => JArray(List(JDouble(c.r), JDouble(c.g), JDouble(c.b))), json => Color(0.0, 0.0, 0.0, 1.0)))
 
   def save = Action.async(validateProto[T]) {
     implicit request =>

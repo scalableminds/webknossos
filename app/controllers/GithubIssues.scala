@@ -6,7 +6,6 @@ import com.ning.http.client.Realm
 import com.scalableminds.util.mail.Send
 import models.user.User
 import oxalis.mail.DefaultMails
-import oxalis.security.Secured
 import play.api.Play.current
 import play.api.i18n.{MessagesApi, Messages}
 import play.api.libs.concurrent.Akka
@@ -17,10 +16,11 @@ import play.api.libs.json._
 import play.api.{Logger, Play}
 import views.html
 import scala.concurrent.Future
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 
 case class GithubAuth(user: String, key: String)
 
-class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
+class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller{
 
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -41,7 +41,7 @@ class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller w
   if (authentication.isEmpty)
     Logger.warn("Github authentication configuration is missing.")
 
-  def index = Authenticated { implicit request =>
+  def index = SecuredAction { implicit request =>
     Ok(html.issue.index())
   }
 
@@ -69,12 +69,12 @@ class GithubIssues @Inject() (val messagesApi: MessagesApi) extends Controller w
     }
   }
 
-  def submit = Authenticated.async(parse.urlFormEncoded) { implicit request =>
+  def submit = SecuredAction.async(parse.urlFormEncoded) { implicit request =>
     for {
       summary <- postParameter("summary") ?~> Messages("issue.summary.notSupplied")
       description <- postParameter("description") ?~> Messages("issue.description.notSupplied")
       issueType <- postParameter("type") ?~> Messages("issue.type.notSupplied")
-      success <- createGithubIssue(request.user, summary, description, issueType)
+      success <- createGithubIssue(request.identity, summary, description, issueType)
     } yield {
       val message = Messages(if (success) "issue.submit.success" else "issue.submit.failure")
       Ok(html.issue.close(success, message))

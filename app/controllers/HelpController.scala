@@ -2,18 +2,18 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.Secured
+import oxalis.security.silhouetteOxalis._
 import play.api.i18n.MessagesApi
 import views.html
 
 
-class HelpController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured {
+class HelpController @Inject() (val messagesApi: MessagesApi) extends Controller{
 
-  def faq = Authenticated { implicit request =>
+  def faq = SecuredAction { implicit request =>
     Ok(html.help.faq())
   }
 
-  def keyboardShortcuts = Authenticated { implicit request =>
+  def keyboardShortcuts = SecuredAction { implicit request =>
     Ok(html.help.keyboardshortcuts())
   }
 

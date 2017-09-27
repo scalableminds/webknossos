@@ -12,13 +12,13 @@ import models.basics.{QuerySupportedDAO, SecuredBaseDAO}
 import models.task.{Task, TaskDAO, info}
 import models.user.{User, UserDAO}
 import net.liftweb.common.Failure
-import oxalis.security.Secured
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.{Configuration, Logger}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, JsValue, Json}
 
-class QueryController  @Inject() (val messagesApi: MessagesApi,  val configuration: Configuration) extends Controller with Secured with FoxImplicits{
+class QueryController  @Inject() (val messagesApi: MessagesApi,  val configuration: Configuration) extends Controller with FoxImplicits{
 
   lazy val systemLimit = configuration.getInt("oxalis.query.maxResults").getOrElse(100)
 
@@ -33,16 +33,16 @@ class QueryController  @Inject() (val messagesApi: MessagesApi,  val configurati
       Fox.failure("Invalid query type")
   }
 
-  def empty = Authenticated { implicit request =>
+  def empty = SecuredAction { implicit request =>
     Ok(JsArray())
   }
 
-  def query(`type`: String, userDefinedLimit: Int) = Authenticated.async(parse.json) { implicit request =>
+  def query(`type`: String, userDefinedLimit: Int) = SecuredAction.async(parse.json) { implicit request =>
     for{
-      _ <- request.user.hasAdminAccess ?~> "query.notAllowed"
+      _ <- request.identity.hasAdminAccess ?~> "query.notAllowed"
       query <- request.body.asOpt[JsObject] ?~> "query.invalid.object"
       limit = math.min(userDefinedLimit, systemLimit)
-      result <- handleQuery(`type`, query, limit, request.userOpt)
+      result <- handleQuery(`type`, query, limit, Some(request.identity))
     } yield {
       Ok(result)
     }
@@ -67,7 +67,7 @@ class QueryController  @Inject() (val messagesApi: MessagesApi,  val configurati
           .map( ann => ann.tree.children.last.productElement(0).asInstanceOf[Constant].value.toString)))
   }
 
-  def descriptions(element: String) = Authenticated{ implicit request =>
+  def descriptions(element: String) = SecuredAction{ implicit request =>
     val description = element match {
       case "task" =>
         Some(Json.toJson(infoAnnotationsOf[Task].map(a => a.name -> a).toMap))

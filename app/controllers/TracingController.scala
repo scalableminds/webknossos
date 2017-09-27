@@ -6,14 +6,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.annotation.handler.AnnotationInformationHandler
 import models.annotation.{AnnotationIdentifier, AnnotationLike, AnnotationStore}
-import oxalis.security.{AuthenticatedRequest, Secured, UserAwareRequest}
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 
 class TracingController @Inject() (val messagesApi: MessagesApi)
   extends Controller
-    with Secured
     with TracingInformationProvider
 
 trait TracingInformationProvider
@@ -50,7 +49,7 @@ trait TracingInformationProvider
   }
 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationLike] = {
-    AnnotationStore.requestAnnotation(annotationId, request.userOpt)
+    AnnotationStore.requestAnnotation(annotationId, request.identity)
   }
 
   def withMergedAnnotation[T](
@@ -58,7 +57,7 @@ trait TracingInformationProvider
     id: String,
     mergedId: String,
     mergedTyp: String,
-    readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: AuthenticatedRequest[_]): Fox[T] = {
+    readOnly: Boolean)(f: AnnotationLike => Fox[T])(implicit request: SecuredRequest[_]): Fox[T] = {
 
     mergeAnnotation(AnnotationIdentifier(typ, id), AnnotationIdentifier(mergedTyp, mergedId), readOnly).flatMap(f)
   }
@@ -66,12 +65,12 @@ trait TracingInformationProvider
   def mergeAnnotation(
     annotationId: AnnotationIdentifier,
     mergedAnnotationId: AnnotationIdentifier,
-    readOnly: Boolean)(implicit request: AuthenticatedRequest[_]): Fox[AnnotationLike] = {
+    readOnly: Boolean)(implicit request: SecuredRequest[_]): Fox[AnnotationLike] = {
 
-    val annotation = AnnotationStore.requestAnnotation(annotationId, request.userOpt)
-    val annotationSec = AnnotationStore.requestAnnotation(mergedAnnotationId, request.userOpt)
+    val annotation = AnnotationStore.requestAnnotation(annotationId, Some(request.identity))
+    val annotationSec = AnnotationStore.requestAnnotation(mergedAnnotationId, Some(request.identity))
 
-    AnnotationStore.mergeAnnotation(annotation, annotationSec, readOnly, request.user)
+    AnnotationStore.mergeAnnotation(annotation, annotationSec, readOnly, request.identity)
   }
 
   def nameAnnotation(annotation: AnnotationLike)(implicit request: UserAwareRequest[_]): Fox[String] = {
@@ -85,11 +84,11 @@ trait TracingInformationProvider
     annotation: AnnotationLike,
     readOnly: Boolean)(implicit request: UserAwareRequest[_]): Fox[JsValue] = {
     for {
-      _ <- annotation.restrictions.allowAccess(request.userOpt) ?~> Messages("notAllowed") ~> BAD_REQUEST
+      _ <- annotation.restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
       json <- if(readOnly)
-                annotation.makeReadOnly.annotationInfo(request.userOpt)
+                annotation.makeReadOnly.annotationInfo(request.identity)
               else
-                annotation.annotationInfo(request.userOpt)
+                annotation.annotationInfo(request.identity)
     } yield json
   }
 }

@@ -1,54 +1,29 @@
 package oxalis.security
 
-import scala.concurrent.{Future, Promise}
-
-import com.scalableminds.util.mvc.JsonResult
-import models.user.{User, UserService}
-import play.api.mvc._
-import play.api.mvc.BodyParsers
-import play.api.mvc.Results._
-import play.api.i18n.{I18nSupport, Messages}
+import play.api.i18n._
 import play.api.mvc.Request
-import play.api.{Logger, Play}
-import play.api.Play.current
-import controllers.routes
-import play.api.libs.concurrent.Akka
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import play.api.{Configuration, Logger, Play}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import controllers.routes
 import models.user.{User, UserService}
 import net.liftweb.common.{Empty, Full}
-import oxalis.user.{ActivityMonitor, UserActivity}
-import oxalis.view.AuthedSessionData
-import play.api.Play
 import play.api.Play.current
-import play.api.i18n.Messages
-import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.mvc.Results._
-import play.api.mvc.{Request, _}
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import models.team.Role
-import play.api.http.Status._
-import scala.concurrent.duration._
-import scala.util.Success
 
-import akka.actor.Props
-import akka.pattern.after
-import com.newrelic.api.agent.NewRelic
-import play.airbrake.Airbrake
-import controllers.Authentication.getLoginRoute
+import com.mohiva.play.silhouette.api.{Environment, SecuredErrorHandler, Silhouette}
+import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
 
+/*
 class AuthenticatedRequest[A](
-  val user: User, override val request: Request[A]
-  ) extends UserAwareRequest(Some(user), request)
+                               override val identity: User, override val request: Request[A]
+  ) extends UserAwareRequest(Some(identity), request)
 
 class UserAwareRequest[A](
-  val userOpt: Option[User], val request: Request[A]
+                           val identity: Option[User], val request: Request[A]
   ) extends WrappedRequest(request)
 
 
-object Secured {
+object Secured{
   /**
    * Key used to store authentication information in the client cookie
    */
@@ -145,17 +120,17 @@ trait Secured extends FoxImplicits with I18nSupport{
    *
    */
   trait AuthHelpers {
-    def executeAndEnsureSession[A](user: User, request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]): Future[Result] =
+    def executeAndEnsureSession[A](user: User, request: Request[A], block: (SecuredRequest[A]) => Future[Result]): Future[Result] =
       if (request.session.get(Secured.SessionInformationKey).contains(user.id))
-        block(new AuthenticatedRequest(user, request))
+        block(new SecuredRequest(user, request))
       else
-        block(new AuthenticatedRequest(user, request)).map { r =>
+        block(new SecuredRequest(user, request)).map { r =>
           r.withSession(Secured.createSession(user))
         }
   }
 
-  object Authenticated extends ActionBuilder[AuthenticatedRequest] with AuthHelpers{
-    def invokeBlock[A](request: Request[A], block: (AuthenticatedRequest[A]) => Future[Result]) = {
+  object Authenticated extends ActionBuilder[SecuredRequest] with AuthHelpers{
+    def invokeBlock[A](request: Request[A], block: (SecuredRequest[A]) => Future[Result]) = {
       withLongRunningOpTracking {
         maybeUser(request).flatMap { user =>
           Secured.ActivityMonitor ! UserActivity(user, System.currentTimeMillis)
@@ -208,3 +183,18 @@ trait Secured extends FoxImplicits with I18nSupport{
     *}
    */
 }
+*/
+
+object silhouetteOxalis extends Silhouette[User, CookieAuthenticator] with FoxImplicits{
+
+  val config = Play.configuration
+  val lang = new DefaultLangs(config)
+  val messagesAPIEnvironment  = play.api.Environment.simple()
+
+  val environment = new EnvironmentOxalis(config)
+
+  override protected def env: Environment[User, CookieAuthenticator] = environment
+
+  override def messagesApi: MessagesApi = new DefaultMessagesApi(messagesAPIEnvironment, config, lang)
+}
+

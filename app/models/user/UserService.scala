@@ -26,7 +26,6 @@ import com.scalableminds.util.mail.Send
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
 import net.liftweb.common.Box
-import oxalis.security.Secured.SessionInformationKey
 import play.api.libs.json.Json
 import reactivemongo.play.json.BSONFormats._
 

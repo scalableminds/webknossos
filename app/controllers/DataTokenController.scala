@@ -11,13 +11,13 @@ import com.scalableminds.util.tools.Fox
 import models.binary._
 import models.tracing.volume.VolumeTracingDAO
 import models.user.User
-import oxalis.security.Secured
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.api.mvc.Action
 
-class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
+class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Controller{
 
   private def ensureAccessToLayer(
     dataSet: DataSet,
@@ -32,9 +32,9 @@ class DataTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
     implicit request =>
       dataSetNameOpt match {
         case Some(dataSetName) =>
-          generateUserAndDataSetToken(dataSetName, dataLayerName: Option[String], request.userOpt)
+          generateUserAndDataSetToken(dataSetName, dataLayerName: Option[String], request.identity)
         case _ =>
-          generateUserToken(request.userOpt)
+          generateUserToken(request.identity)
       }
   }
 

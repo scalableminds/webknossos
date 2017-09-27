@@ -6,7 +6,7 @@ import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.security.SCrypt._
 import models.user._
 import models.user.time._
-import oxalis.security.Secured
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.data.Forms._
 import play.api.data._
 import play.api.i18n.{Messages, MessagesApi}
@@ -31,54 +31,53 @@ import scala.text
 class UserController @Inject()(val messagesApi: MessagesApi)
   extends Controller
   with UserAuthentication
-  with Secured
   with Dashboard
   with FoxImplicits {
 
   val defaultAnnotationLimit = 1000
 
-  def empty = Authenticated { implicit request =>
+  def empty = SecuredAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
   // TODO: find a better way to ignore parameters
-  def emptyWithWildcard(param: String) = Authenticated { implicit request =>
+  def emptyWithWildcard(param: String) = SecuredAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
-  def current = Authenticated { implicit request =>
-    Ok(Json.toJson(request.user)(User.userPublicWrites(request.user)))
+  def current = SecuredAction { implicit request =>
+    Ok(Json.toJson(request.identity)(User.userPublicWrites(request.identity)))
   }
 
-  def user(userId: String) = Authenticated.async { implicit request =>
+  def user(userId: String) = SecuredAction.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
+      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
     } yield {
-      Ok(Json.toJson(user)(User.userPublicWrites(request.user)))
+      Ok(Json.toJson(user)(User.userPublicWrites(request.identity)))
     }
   }
 
-  def annotations(isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
+  def annotations(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      content <- dashboardExploratoryAnnotations(request.user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
+      content <- dashboardExploratoryAnnotations(request.identity, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
   }
 
-  def tasks(isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
+  def tasks(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      content <- dashboardTaskAnnotations(request.user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
+      content <- dashboardTaskAnnotations(request.identity, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
   }
 
-  def userLoggedTime(userId: String) = Authenticated.async { implicit request =>
+  def userLoggedTime(userId: String) = SecuredAction.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
+      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
       loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
@@ -93,13 +92,13 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     (timeSpan.annotation.getOrElse("<none>"), TimeSpan.groupByDay(timeSpan))
   }
 
-  def usersLoggedTime = Authenticated.async(parse.json) { implicit request =>
+  def usersLoggedTime = SecuredAction.async(parse.json) { implicit request =>
     request.body.validate[TimeSpanRequest] match {
       case JsSuccess(timeSpanRequest, _) =>
         Fox.combined(timeSpanRequest.users.map { userId =>
           for {
             user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-            _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
+            _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
             result <- TimeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(timeSpanRequest.start), Some(timeSpanRequest.end))
           } yield {
             Json.obj(
@@ -126,29 +125,29 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
+  def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
-      content <- dashboardExploratoryAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
+      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
+      content <- dashboardExploratoryAnnotations(user, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
   }
 
-  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = Authenticated.async { implicit request =>
+  def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-        _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
-      content <- dashboardTaskAnnotations(user, request.user, isFinished, limit getOrElse defaultAnnotationLimit)
+        _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
+      content <- dashboardTaskAnnotations(user, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
     }
   }
 
-  def loggedTime = Authenticated.async { implicit request =>
+  def loggedTime = SecuredAction.async { implicit request =>
     for {
-      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(request.user, TimeSpan.groupByMonth)
+      loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(request.identity, TimeSpan.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
         loggedTimeAsMap.map { case (paymentInterval, duration) =>
@@ -159,25 +158,25 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   }
 
   // REST API
-  def list = Authenticated.async{ implicit request =>
+  def list = SecuredAction.async{ implicit request =>
     UsingFilters(
       Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
-      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.user) == value),
+      Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.identity) == value),
       Filter("isAdmin", (value: Boolean, el: User) => el.hasAdminAccess == value)
     ) { filter =>
       for {
         users <- UserDAO.findAll
         filtered = filter.applyOn(users)
       } yield {
-        Ok(Writes.list(User.userPublicWrites(request.user)).writes(filtered.sortBy(_.lastName.toLowerCase)))
+        Ok(Writes.list(User.userPublicWrites(request.identity)).writes(filtered.sortBy(_.lastName.toLowerCase)))
       }
     }
   }
 
-  def logTime(userId: String, time: String, note: String) = Authenticated.async { implicit request =>
+  def logTime(userId: String, time: String, note: String) = SecuredAction.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
+      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
       time <- TimeSpan.parseTime(time) ?~> Messages("time.invalidFormat")
     } yield {
       TimeSpanService.logTime(user, time, Some(note))
@@ -210,13 +209,13 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     })
   }
 
-  def update(userId: String) = Authenticated.async(parse.json) { implicit request =>
-    val issuingUser = request.user
+  def update(userId: String) = SecuredAction.async(parse.json) { implicit request =>
+    val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
       case (firstName, lastName, activated, assignedMemberships, experiences) =>
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-          _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
+          _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext) ?~> Messages("team.notFound")))
           allTeams <- Fox.serialSequence(user.teams)(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext)).map(_.flatten)
           teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isAdminOf(t.team))
@@ -228,13 +227,13 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
           updatedUser <- UserService.update(user, firstName.trim, lastName.trim, activated, updatedTeams, trimmedExperiences)
         } yield {
-          Ok(User.userPublicWrites(request.user).writes(updatedUser))
+          Ok(User.userPublicWrites(request.identity).writes(updatedUser))
         }
     }
   }
 }
 
-trait UserAuthentication extends Secured with Dashboard with FoxImplicits { this: Controller =>
+trait UserAuthentication extends Dashboard with FoxImplicits { this: Controller =>
   val resetForm: Form[(String, String)] = {
 
     def resetFormApply(oldPassword: String, password: (String, String)) =
@@ -256,17 +255,17 @@ trait UserAuthentication extends Secured with Dashboard with FoxImplicits { this
    * Reset password page
    */
 
-  def resetPassword = Authenticated { implicit request =>
+  def resetPassword = SecuredAction { implicit request =>
     Ok(html.user.reset_password(resetForm))
   }
 
-  def handleResetPassword = Authenticated.async { implicit request =>
+  def handleResetPassword = SecuredAction.async { implicit request =>
 
     resetForm.bindFromRequest.fold(
     formWithErrors =>
       Future.successful(BadRequest(html.user.reset_password(formWithErrors))), {
       case (oldPassword, newPassword) => {
-        val email = request.user.email.toLowerCase
+        val email = request.identity.email.toLowerCase
         for {
           user <- UserService.auth(email, oldPassword).getOrElse(User.defaultDeactivatedUser)
           ok <- if (user.isActive) UserService.changePassword(user, newPassword).map(_.ok) else Fox.successful(false)

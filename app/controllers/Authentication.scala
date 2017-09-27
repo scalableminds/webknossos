@@ -4,7 +4,7 @@ import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGener
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
 import com.scalableminds.util.mail._
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Converter, Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.team.{Role, TeamService}
 import models.user.UserService.{Mailer => _, _}
@@ -13,10 +13,10 @@ import net.liftweb.common.{Empty, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
-import oxalis.security.{CredentialsProvider, EnvironmentOxalis, PasswordHasher}
+import oxalis.security._
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.data.validation.Constraints
 import play.twirl.api.Html
-import oxalis.security.Secured
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.{ProvidesUnauthorizedSessionData, SessionData}
 import play.api.libs.concurrent.Akka
@@ -262,7 +262,7 @@ object AuthForms {
 
   // Passord recovery
   def resetPasswordForm(implicit messages:Messages) = Form(tuple(
-    "password1" -> nonEmptyText.verifying(minLength(6)),
+    "password1" -> nonEmptyText.verifying(minLength(8)),
     "password2" -> nonEmptyText
   ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2))
 }
@@ -275,13 +275,14 @@ class Authentication @Inject() (
                        passwordHasher: PasswordHasher,
                        configuration: Configuration)
   extends Controller
-    with ProvidesUnauthorizedSessionData
-    with Secured {
+    with ProvidesUnauthorizedSessionData {
 
   import AuthForms._
 
-  val silhouette = new Silhouette[User,CookieAuthenticator] {def env: Environment[User, CookieAuthenticator] = env; def messagesApi: MessagesApi = messagesApi}
-  val env = new EnvironmentOxalis(configuration)
+  //val silhouette = new Silhouette[User,CookieAuthenticator] {def env: Environment[User, CookieAuthenticator] = env; def messagesApi: MessagesApi = messagesApi}
+  //val env = new EnvironmentOxalis(configuration)
+
+  val env = silhouetteOxalis.environment
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -412,6 +413,7 @@ class Authentication @Inject() (
     )
   }
 
+/*
   def resetPassword(tokenId:String) = Action.async { implicit request =>
     val id = UUID.fromString(tokenId)
     userTokenService.find(id).flatMap {
@@ -424,6 +426,7 @@ class Authentication @Inject() (
       } yield NotFound(views.html.error.defaultError("token not found", true)) //views.html.errors.notFound(request)
     }
   }
+  */
 
   def handleResetPassword(tokenId:String) = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
@@ -446,11 +449,16 @@ class Authentication @Inject() (
       }
     )
   }
-
+/*
   def logout = Action {
     Redirect(Authentication.getLoginRoute)//Autehntication.signIn
       .withNewSession
       .flashing("success" -> Messages("user.logout.success"))
+  }
+  */
+
+  def logout = SecuredAction.async { implicit request =>
+    env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index()))
   }
 }
 

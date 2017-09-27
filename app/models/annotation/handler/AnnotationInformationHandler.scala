@@ -1,7 +1,7 @@
 package models.annotation.handler
 
 import net.liftweb.common.Box
-import oxalis.security.AuthenticatedRequest
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import models.annotation.{AnnotationType, AnnotationLike}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.basics.Implicits._
@@ -38,8 +38,8 @@ trait AnnotationInformationHandler {
     Future.successful(t.id)
   }
 
-  def withAnnotation[A](identifier: String)(f: AType => A)(implicit request: AuthenticatedRequest[_]): Fox[A] = {
-    provideAnnotation(identifier, Some(request.user)).map(f)
+  def withAnnotation[A](identifier: String)(f: AType => A)(implicit request: SecuredRequest[_]): Fox[A] = {
+    provideAnnotation(identifier, Some(request.identity)).map(f)
   }
 
 }

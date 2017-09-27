@@ -8,7 +8,6 @@ import models.annotation.{AnnotationType, _}
 import models.task.{Task, _}
 import models.user._
 import oxalis.nml._
-import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -22,10 +21,10 @@ import org.apache.commons.io.{FileUtils, FilenameUtils}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.iteratee.Enumerator
 import play.api.mvc.MultipartFormData
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 
 class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   extends Controller
-    with Secured
     with TracingInformationProvider
     with LazyLogging {
 
@@ -35,7 +34,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     else
       None
 
-  def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
+  def upload = SecuredAction.async(parse.multipartFormData) { implicit request =>
     def isZipFile(f: MultipartFormData.FilePart[TemporaryFile]): Boolean =
       f.contentType.contains("application/zip") || FilenameUtils.isExtension(f.filename, "zip")
 
@@ -71,7 +70,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       val name = nameForNMLs(fileNames)
       for {
         annotation <- AnnotationService.createAnnotationFrom(
-          request.user, nmls, parsedFiles.otherFiles, AnnotationType.Explorational, name)
+          request.identity, nmls, parsedFiles.otherFiles, AnnotationType.Explorational, name)
       } yield JsonOk(
         Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
         Messages("nml.file.uploadSuccess")
@@ -88,7 +87,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         logger.trace(s"Requested download for tracing: $typ/$id")
         for {
           name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
-          _ <- annotation.restrictions.allowDownload(request.userOpt) ?~> Messages("annotation.download.notAllowed")
+          _ <- annotation.restrictions.allowDownload(request.identity) ?~> Messages("annotation.download.notAllowed")
           annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
           content <- annotation.content ?~> Messages("annotation.content.empty")
           stream <- content.toDownloadStream(name)
@@ -102,7 +101,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def projectDownload(projectName: String) = Authenticated.async { implicit request =>
+  def projectDownload(projectName: String) = SecuredAction.async { implicit request =>
     def createProjectZip(project: Project) =
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
@@ -112,14 +111,14 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-      _ <- request.user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
+      _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)
     }
   }
 
-  def taskDownload(taskId: String) = Authenticated.async { implicit request =>
+  def taskDownload(taskId: String) = SecuredAction.async { implicit request =>
     def createTaskZip(task: Task) = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state.isFinished)
       AnnotationService.zipAnnotations(finished, task.id + "_nmls.zip")
@@ -127,12 +126,12 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.user, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }
 
-  def taskTypeDownload(taskTypeId: String) = Authenticated.async { implicit request =>
+  def taskTypeDownload(taskTypeId: String) = SecuredAction.async { implicit request =>
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
@@ -142,15 +141,15 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       tasktype <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, tasktype.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, tasktype.team) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }
 
-  def userDownload(userId: String) = Authenticated.async { implicit request =>
+  def userDownload(userId: String) = SecuredAction.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
+      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
       annotations <- AnnotationService.findTasksOf(user, isFinished = Some(true), limit = Int.MaxValue)
       zipped <- AnnotationService.zipAnnotations(annotations, user.abreviatedName + "_nmls.zip")
     } yield {

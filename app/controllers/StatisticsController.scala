@@ -11,10 +11,9 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationService}
 import models.task.{TaskService, TaskType}
 import models.task.OpenAssignmentService
-import oxalis.security.Secured
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.Secured
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -30,8 +29,7 @@ import models.project.Project
 
 class StatisticsController @Inject()(val messagesApi: MessagesApi)
   extends Controller
-  with UserAssignments
-  with Secured {
+  with UserAssignments {
 
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
@@ -46,11 +44,11 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     )
   }
 
-  def empty = Authenticated { implicit request =>
+  def empty = SecuredAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
-  def oxalis(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
+  def oxalis(interval: String, start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
@@ -76,7 +74,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = Authenticated.async { implicit request =>
+  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
       users <- UserDAO.findAll
@@ -94,7 +92,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
   }
 }
 
-trait UserAssignments extends Secured with Dashboard with FoxImplicits { this: Controller =>
+trait UserAssignments extends Dashboard with FoxImplicits { this: Controller =>
   private case class UserWithTaskInfos(
     user: User,
     taskTypes: List[TaskType],
@@ -112,7 +110,7 @@ trait UserAssignments extends Secured with Dashboard with FoxImplicits { this: C
         (u.user, u.taskTypes, u.projects, u.futureTaskType, u.workingTime))
   }
 
-  def assignmentStatistics(start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
+  def assignmentStatistics(start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
 
     def getUserInfos(users: List[User]) = {
 
@@ -147,7 +145,7 @@ trait UserAssignments extends Secured with Dashboard with FoxImplicits { this: C
       users <- UserService.findAllNonAnonymous()
       userInfos <- getUserInfos(users)
     } yield {
-      Ok(Writes.list(UserWithTaskInfos.userInfosPublicWrites(request.user)).writes(userInfos))
+      Ok(Writes.list(UserWithTaskInfos.userInfosPublicWrites(request.identity)).writes(userInfos))
     }
   }
 }

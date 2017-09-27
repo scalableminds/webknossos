@@ -12,17 +12,17 @@ import scala.util.Success
 import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.{Annotation, AnnotationDAO}
 import models.task.{Task, TaskDAO}
-import oxalis.security.{Secured, UserAwareRequest}
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 
-class SearchController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
+class SearchController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
-  def find(q: String, typ: String) = Authenticated.async {
+  def find(q: String, typ: String) = SecuredAction.async {
     implicit request =>
       typ match {
-        case "id" => findById(q)
+        case "id" => findById(q)(securedRequestToUserAwareRequest)
         case _    => Future.successful(JsonBadRequest("query.type.invalid"))
       }
   }
@@ -31,7 +31,7 @@ class SearchController @Inject()(val messagesApi: MessagesApi) extends Controlle
     BSONObjectID.parse(id) match {
       case Success(oid) =>
 
-        val task = TaskDAO.findOneById(oid).flatMap(t => future2Fox(Task.transformToJson(t, request.userOpt)))
+        val task = TaskDAO.findOneById(oid).flatMap(t => future2Fox(Task.transformToJson(t, request.identity)))
 
         val foundAnnotation = () => AnnotationDAO.findOneById(oid).flatMap(a => future2Fox(Annotation.transformToJson(a)))
 

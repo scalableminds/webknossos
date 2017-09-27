@@ -4,19 +4,20 @@ import com.scalableminds.util.security._
 import oxalis.security._
 import play.api.mvc.Request
 import com.typesafe.scalalogging.LazyLogging
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 
 trait ProvidesSessionData extends FlashMessages {
 
   implicit def sessionDataUserAware(implicit request: UserAwareRequest[_]): SessionData = {
-    SessionData(request.userOpt, request.flash)
+    SessionData(request.identity, request.flash)
   }
 
-  implicit def sessionDataAuthenticated(implicit request: AuthenticatedRequest[_]): AuthedSessionData = {
-    AuthedSessionData(request.user, request.flash)
+  implicit def sessionDataAuthenticated(implicit request: SecuredRequest[_]): AuthedSessionData = {
+    AuthedSessionData(request.identity, request.flash)
   }
 
   implicit def FlashMessageToSessionData(flash: FlashMessage)(implicit request: UserAwareRequest[_]) = {
-    SessionData(request.userOpt, request.flash + (flash.messageType -> flash.message))
+    SessionData(request.identity, request.flash + (flash.messageType -> flash.message))
   }
 
   implicit def FlashToTuple(flash: FlashMessage): (String, String) =

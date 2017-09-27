@@ -345,9 +345,9 @@ export class OxalisModel {
       category: "segmentation",
       boundingBox: {
         topLeft: [
-          tracing.boundingBox.topLeft.x,
-          tracing.boundingBox.topLeft.y,
-          tracing.boundingBox.topLeft.z,
+          tracing.boundingBox.topLeft[0],
+          tracing.boundingBox.topLeft[1],
+          tracing.boundingBox.topLeft[2],
         ],
         width: tracing.boundingBox.width,
         height: tracing.boundingBox.height,
@@ -398,9 +398,7 @@ export class OxalisModel {
   }
 
   applyState(state: UrlManagerState, tracing: ServerTracingType) {
-    Store.dispatch(
-      setPositionAction(state.position || tracing.editPosition),
-    );
+    Store.dispatch(setPositionAction(state.position || tracing.editPosition));
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));
     }

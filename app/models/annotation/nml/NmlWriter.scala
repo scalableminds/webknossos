@@ -25,7 +25,16 @@ object NmlWriter {
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(outputStream))
 
     tracing match {
-      case Right(volumeTracing) => throw new Exception("VolumeTracing toNML not yet implemented")
+      case Right(volumeTracing) =>
+        Xml.withinElementSync("things") {
+          Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, scale))
+          Xml.withinElementSync("volume") {
+            writer.writeAttribute("id", "1")
+            writer.writeAttribute("location", "data.zip")
+          }
+        }
+        writer.writeEndDocument()
+        writer.close()
       case Left(skeletonTracing) => {
         Xml.withinElementSync("things") {
           Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, scale))
@@ -40,6 +49,38 @@ object NmlWriter {
   }
 
   def writeParametersAsXml(tracing: SkeletonTracing, scale: Scale)(implicit writer: XMLStreamWriter) = {
+    Xml.withinElementSync("experiment") {
+      writer.writeAttribute("name", tracing.dataSetName)
+    }
+    Xml.withinElementSync("scale") {
+      writer.writeAttribute("x", scale.x.toString)
+      writer.writeAttribute("y", scale.y.toString)
+      writer.writeAttribute("z", scale.z.toString)
+    }
+    Xml.withinElementSync("offset") {
+      writer.writeAttribute("x", "0")
+      writer.writeAttribute("y", "0")
+      writer.writeAttribute("z", "0")
+    }
+    Xml.withinElementSync("time") {
+      writer.writeAttribute("ms", tracing.createdTimestamp.toString)
+    }
+    Xml.withinElementSync("editPosition") {
+      writer.writeAttribute("x", tracing.editPosition.x.toString)
+      writer.writeAttribute("y", tracing.editPosition.y.toString)
+      writer.writeAttribute("z", tracing.editPosition.z.toString)
+    }
+    Xml.withinElementSync("editRotation") {
+      writer.writeAttribute("xRot", tracing.editRotation.x.toString)
+      writer.writeAttribute("yRot", tracing.editRotation.y.toString)
+      writer.writeAttribute("zRot", tracing.editRotation.z.toString)
+    }
+    Xml.withinElementSync("zoomLevel") {
+      writer.writeAttribute("zoom", tracing.zoomLevel.toString)
+    }
+  }
+
+  def writeParametersAsXml(tracing: VolumeTracing, scale: Scale)(implicit writer: XMLStreamWriter) = {
     Xml.withinElementSync("experiment") {
       writer.writeAttribute("name", tracing.dataSetName)
     }

@@ -16,12 +16,12 @@ object NmlService extends LazyLogging {
   sealed trait NmlParseResult {
     def fileName: String
 
-    def tracing: Option[Either[SkeletonTracing, VolumeTracing]] = None
+    def tracing: Option[Either[SkeletonTracing, (VolumeTracing, String)]] = None
 
     def succeeded: Boolean
   }
 
-  case class NmlParseSuccess(fileName: String, _tracing: Either[SkeletonTracing, VolumeTracing]) extends NmlParseResult {
+  case class NmlParseSuccess(fileName: String, _tracing: Either[SkeletonTracing, (VolumeTracing, String)]) extends NmlParseResult {
     def succeeded = true
 
     override def tracing = Some(_tracing)
@@ -92,7 +92,7 @@ object NmlService extends LazyLogging {
     }
   }
 
-  def splitVolumeAndSkeletonTracings(tracings: List[Either[SkeletonTracing, VolumeTracing]]): (List[SkeletonTracing], List[VolumeTracing]) = {
+  def splitVolumeAndSkeletonTracings(tracings: List[Either[SkeletonTracing, (VolumeTracing, String)]]): (List[SkeletonTracing], List[(VolumeTracing, String)]) = {
     val (skeletons, volumes) = tracings.partition(_.isLeft)
     (skeletons.map(_.left.get), volumes.map(_.right.get))
   }

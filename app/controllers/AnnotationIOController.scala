@@ -3,7 +3,8 @@ package controllers
 import javax.inject.Inject
 
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.braingames.datastore.tracings.TracingReference
+import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
+import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -18,6 +19,7 @@ import oxalis.security.{Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 import play.api.mvc.MultipartFormData
 
@@ -73,16 +75,24 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     val parsedFiles = request.body.files.foldLeft(NmlService.ZipParseResult()) {
       case (acc, next) => acc.combineWith(parseFile(next))
     }
+
     if (!parsedFiles.isEmpty) {
       val parseSuccess = parsedFiles.parseResults.filter(_.succeeded)
       val fileNames = parseSuccess.map(_.fileName)
       val tracings = parseSuccess.flatMap(_.tracing)
       val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(fileNames)
-      if (volumeTracings.nonEmpty)
-        //TODO: RocksDB: process uploaded volume tracing
-        returnError(parsedFiles)
-      else {
+      if (volumeTracings.nonEmpty && volumeTracings.size > 1) {
+        for {
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(volumeTracings.head._1.dataSetName).toFox
+          tracingReference <- dataSet.dataStore.saveVolumeTracing(volumeTracings.head._1, parsedFiles.otherFiles.get(volumeTracings.head._2).map(_.file))
+          annotation <- AnnotationService.createFrom(
+            request.user, dataSet, tracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(tracingReference.typ), name)
+        } yield JsonOk(
+          Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+          Messages("nml.file.uploadSuccess")
+        )
+      } else if (skeletonTracings.nonEmpty) {
         for {
           dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head.dataSetName).toFox
           mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings, dataSet)
@@ -92,12 +102,13 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
           Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
           Messages("nml.file.uploadSuccess")
         )
+      } else {
+        returnError(parsedFiles)
       }
     } else {
       returnError(parsedFiles)
     }
   }
-
 
   def download(typ: String, id: String) = UserAwareAction.async { implicit request =>
     logger.trace(s"Requested download for annotation: $typ/$id")
@@ -117,21 +128,53 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
   def downloadExplorational(annotationId: String, typ: String, user: Option[User])(implicit request: UserAwareRequest[_]) = {
+
+    def skeletonToDownloadStream(dataSet: DataSet, tracingReference: TracingReference, name: String) = {
+      for {
+        tracing <- dataSet.dataStore.getSkeletonTracing(tracingReference)
+        scale <- dataSet.dataSource.toUsable.map(_.scale)
+      } yield {
+        (NmlWriter.toNmlStream(Left(tracing), scale), name + ".nml")
+      }
+    }
+
+    def volumeToDownloadStream(dataSet: DataSet, tracingReference: TracingReference, name: String) = {
+      for {
+        (tracing, data) <- dataSet.dataStore.getVolumeTracing(tracingReference)
+        scale <- dataSet.dataSource.toUsable.map(_.scale)
+      } yield {
+        (Enumerator.outputStream { outputStream =>
+          ZipIO.zip(
+            List(
+              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(Right(tracing), scale)),
+              new NamedEnumeratorStream("data.zip", data)
+            ), outputStream)
+        }, name + ".zip")
+      }
+    }
+
+    def tracingToDownloadStream(dataSet: DataSet, tracingReference: TracingReference, name: String) = {
+      tracingReference.typ match {
+        case TracingType.skeleton =>
+          skeletonToDownloadStream(dataSet, tracingReference, name)
+        case TracingType.volume =>
+          volumeToDownloadStream(dataSet, tracingReference, name)
+      }
+    }
+
     for {
       annotation <- findAnnotation(AnnotationIdentifier(typ, annotationId))
       name <- nameForAnnotation(annotation) ?~> Messages("annotation.name.impossible")
       restrictions <- restrictionsFor(AnnotationIdentifier(typ, annotationId))
       _ <- restrictions.allowDownload(user) ?~> Messages("annotation.download.notAllowed")
       dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> Messages("dataSet.notFound", annotation.dataSetName)
-      tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference) //TODO: RocksDB: what if it is a volume tracing?
-      scale <- dataSet.dataSource.toUsable.map(_.scale)
-      nmlStream = NmlWriter.toNmlStream(Left(tracing), scale)
+      (downloadStream, fileName) <- tracingToDownloadStream(dataSet, annotation.tracingReference, name)
     } yield {
-      Ok.chunked(nmlStream).withHeaders(
+      Ok.chunked(downloadStream).withHeaders(
         CONTENT_TYPE ->
           "application/octet-stream",
         CONTENT_DISPOSITION ->
-          s"filename=${'"'}${name}.nml${'"'}")
+          s"filename=${'"'}$fileName${'"'}")
     }
   }
 

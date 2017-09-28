@@ -20,6 +20,7 @@ import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import play.api.http.Status
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Enumerator
 import play.api.libs.ws.{WS, WSResponse}
 import play.api.mvc.Codec
 
@@ -49,6 +50,9 @@ trait DataStoreHandlingStrategy {
   def saveVolumeTracing(tracing: VolumeTracing, initialData: Option[File] = None): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support creation of VolumeTracings.")
 
+  def getVolumeTracing(reference: TracingReference): Fox[(VolumeTracing, Enumerator[Array[Byte]])] =
+    Fox.failure("DataStore doesn't support getting VolumeTracings")
+
   def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] =
     Fox.failure("DataStore doesn't support thumbnail creation.")
 
@@ -70,7 +74,7 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
 
   override def getSkeletonTracing(reference: TracingReference): Fox[SkeletonTracing] = {
     logger.debug("Called to get SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${reference.id}")
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${reference.id}/getProto")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
   }
@@ -132,10 +136,24 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
             .withQueryString("token" -> DataTokenService.webKnossosToken)
             .post(file)
         case _ =>
-          Fox.successful()
+          Fox.successful(())
       }
     } yield {
       tracingReference
+    }
+  }
+
+  override def getVolumeTracing(reference: TracingReference): Fox[(VolumeTracing, Enumerator[Array[Byte]])] = {
+    logger.debug("Called to get VolumeTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
+    for {
+      tracing <- RPC(s"${dataStoreInfo.url}/data/tracings/volume/${reference.id}/getProto")
+        .withQueryString("token" -> DataTokenService.webKnossosToken)
+        .getWithProtoResponse[VolumeTracing](VolumeTracing)
+      data <- RPC(s"${dataStoreInfo.url}/data/tracings/volume/${reference.id}/data")
+        .withQueryString("token" -> DataTokenService.webKnossosToken)
+        .getStream.map(_._2)
+    } yield {
+      (tracing, data)
     }
   }
 

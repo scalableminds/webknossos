@@ -36,7 +36,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   val DEFAULT_TIMESTAMP = 0L
 
-  def parse(name: String, nmlInputStream: InputStream): Box[Either[SkeletonTracing, VolumeTracing]] = {
+  def parse(name: String, nmlInputStream: InputStream): Box[Either[SkeletonTracing, (VolumeTracing, String)]] = {
     try {
       val data = XML.load(nmlInputStream)
       for {

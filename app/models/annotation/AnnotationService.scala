@@ -301,7 +301,7 @@ object AnnotationService
     def addToZip(nmls: List[(Enumerator[Array[Byte]],String)]): Future[Boolean] = {
       nmls match {
         case head :: tail =>
-          zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream(head._1, "").writeTo).flatMap(_ => addToZip(tail))
+          zipper.withFile(head._2 + ".nml")(NamedEnumeratorStream("", head._1).writeTo).flatMap(_ => addToZip(tail))
         case _            =>
           Future.successful(true)
       }

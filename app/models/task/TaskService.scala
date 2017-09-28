@@ -26,8 +26,8 @@ object TaskService
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     TaskDAO.findOneById(id)
 
-  def findNextAssignment(user: User)(implicit ctx: DBAccessContext) =
-    OpenAssignmentService.findNextOpenAssignments(user)
+  def findNextAssignment(user: User, teams: List[String])(implicit ctx: DBAccessContext) =
+    OpenAssignmentService.findNextOpenAssignments(user, teams)
 
   def findAllAssignments(implicit ctx: DBAccessContext) =
     OpenAssignmentService.findAllOpenAssignments
@@ -109,7 +109,7 @@ object TaskService
     .flatMap { users =>
       Fox.serialSequence(users){ user =>
         for{
-          tasks <- TaskService.allNextTasksForUser(user).getOrElse(Nil)
+          tasks <- TaskService.allNextTasksForUser(user, user.teamNames).getOrElse(Nil)
           taskCount = tasks.size
           projects <- TaskService.getProjectsFor(tasks)
         } yield (user, (taskCount, projects))

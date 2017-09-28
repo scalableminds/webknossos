@@ -2,12 +2,10 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.duration._
 import akka.util.Timeout
 import com.scalableminds.util.mvc.JsonResult
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
-import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
@@ -18,10 +16,10 @@ import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsArray, JsObject, _}
-import play.api.mvc.Action
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 
+import scala.concurrent.duration._
 import scala.util.Try
 
 /**

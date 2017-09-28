@@ -57,6 +57,7 @@ object NMLParser extends LazyLogging {
           volumes = extractVolumes(data \ "volume")
         } yield {
           val dataSetName = parseDataSetName(parameters \ "experiment")
+          val description = parseDescription(parameters \ "experiment")
           val activeNodeId = parseActiveNode(parameters \ "activeNode")
           val editPosition = parseEditPosition(parameters \ "editPosition")
           // STARTPOS
@@ -64,7 +65,7 @@ object NMLParser extends LazyLogging {
           val zoomLevel = parseZoomLevel(parameters \ "zoomLevel")
 
           logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-          NML(name, dataSetName, trees.toList, volumes.toList, time, activeNodeId,
+          NML(name, dataSetName, description, trees.toList, volumes.toList, time, activeNodeId,
             scale, editPosition, editRotation, zoomLevel)
         }
       } catch {
@@ -167,6 +168,10 @@ object NMLParser extends LazyLogging {
       val rawDataSetName = (node \ "@name").text
       val magRx = "_mag[0-9]*$".r
       magRx.replaceAllIn(rawDataSetName, "")
+    }
+
+    private def parseDescription(node: NodeSeq) = {
+      (node \ "@description").text
     }
 
     private def parseActiveNode(node: NodeSeq) = {

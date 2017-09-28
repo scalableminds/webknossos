@@ -45,7 +45,7 @@ trait AnnotationContent {
 
   def contentType: String
 
-  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]]
+  def toDownloadStream(name: String, a: AnnotationLike)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]]
 
   def downloadFileExtension: String
 
@@ -87,8 +87,9 @@ object AnnotationContent extends FoxImplicits {
   }
 
   def writeParametersAsXML(
-    ac: AnnotationContent,
-    writer: XMLStreamWriter)(implicit ctx: DBAccessContext): Fox[Boolean] = {
+                            ac: AnnotationContent,
+                            a: AnnotationLike,
+                            writer: XMLStreamWriter)(implicit ctx: DBAccessContext): Fox[Boolean] = {
 
     for {
       dataSet <- DataSetDAO.findOneBySourceName(ac.dataSetName)
@@ -96,6 +97,7 @@ object AnnotationContent extends FoxImplicits {
     } yield {
       writer.writeStartElement("experiment")
       writer.writeAttribute("name", dataSet.name)
+      writer.writeAttribute("description", a.description)
       writer.writeEndElement()
       writer.writeStartElement("scale")
       writer.writeAttribute("x", dataSource.scale.x.toString)

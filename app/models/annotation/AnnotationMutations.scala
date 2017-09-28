@@ -1,16 +1,17 @@
 package models.annotation
 
-import com.scalableminds.util.io.{NamedFileStream, NamedStream}
+import com.scalableminds.util.io.NamedStream
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project.{Project, WebknossosAssignmentConfig}
-import models.user.{UsedAnnotationDAO, User}
 import models.task.{OpenAssignmentService, Task}
 import models.tracing.skeleton.SkeletonTracing
+import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsValue, Json}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 /**
  * Company: scalableminds
@@ -68,8 +69,14 @@ class AnnotationMutations(val annotation: Annotation)
     AnnotationDAO.reopen(annotation._id)
   }
 
+  def update(field: String, value: JsValue)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.update(Json.obj("_id" -> annotation._id), Json.obj(field -> value))
+
   def rename(name: String)(implicit ctx: DBAccessContext) =
     AnnotationDAO.rename(annotation._id, name)
+
+  def setDescription(description: String)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.setDescription(annotation._id, description)
 
   def setIsPublic(isPublic: Boolean)(implicit ctx: DBAccessContext) =
     AnnotationDAO.setIsPublic(annotation._id, isPublic)

@@ -127,3 +127,9 @@ export async function getTasks(): Promise<Array<APITaskWithAnnotationType>> {
 
   return tasks;
 }
+
+export async function deleteTask(taskId: string): Promise<void> {
+  return Request.receiveJSON(`/api/tasks/${taskId}`, {
+    method: "DELETE",
+  });
+}

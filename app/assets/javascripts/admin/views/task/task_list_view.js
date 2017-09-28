@@ -2,10 +2,11 @@
 
 import _ from "lodash";
 import React from "react";
-import { Table, Tag, Spin, Button, Input, Modal, Icon } from "antd";
+import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import AnonymousTaskLinkModal from "admin/views/task/anonymous_task_link_modal";
+import TaskSearchForm from "admin/views/task/task_search_form";
 import messages from "messages";
 import { deleteTask } from "admin/admin_rest_api";
 import TemplateHelpers from "libs/template_helpers";
@@ -24,15 +25,6 @@ type State = {
   searchQuery: string,
 };
 
-/*
-/ Search Criteria
-/ - task
-/ - taskType
-/ - user
-/ - project
-/ - (date?)
-*/
-
 class TaskListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: false,
@@ -41,14 +33,13 @@ class TaskListView extends React.PureComponent<Props, State> {
   };
 
   componentDidMount() {
-    this.fetchData();
-  }
-
-  async fetchData() {
     const queryObject = {
       _id: { $oid: "598d8780cd682fff03a3b26a" },
     };
+    this.fetchData(queryObject);
+  }
 
+  async fetchData(queryObject) {
     const responses = await Request.sendJSONReceiveJSON("/api/queries", {
       params: { type: "task" },
       data: queryObject,
@@ -122,6 +113,10 @@ class TaskListView extends React.PureComponent<Props, State> {
           <h3>Tasks</h3>
           <div className="clearfix" style={{ margin: "20px 0px" }} />
 
+          <Card title="Search for Tasks">
+            <TaskSearchForm onChange={this.fetchData} />
+          </Card>
+
           <Spin spinning={this.state.isLoading} size="large">
             <Table
               dataSource={Utils.filterWithSearchQueryAND(
@@ -161,7 +156,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                 sorter={Utils.localeCompareBy("dataSet")}
               />
               <Column
-                title="Edit position / Bounding Box"
+                title="Edit Position / Bounding Box"
                 dataIndex="editPosition"
                 key="editPosition"
                 render={(__, task: APITaskType) => (

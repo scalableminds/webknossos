@@ -5,36 +5,26 @@ import { connect } from "react-redux";
 import { Button } from "antd";
 import Constants, { OrthoViews } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
+import type { OrthoViewType } from "oxalis/constants";
 import api from "oxalis/api/internal_api";
 
 const ButtonGroup = Button.Group;
 
 type Props = {
   scale: number,
+  activeViewport: OrthoViewType,
 };
 
-type State = {
-  activeInputCatcher: string,
-};
+type State = {};
 
 class InputCatchers extends React.PureComponent<Props, State> {
-  state = {
-    activeInputCatcher: "",
-  };
-
-  handleMouseOver = (event: SyntheticInputEvent<>) => {
-    this.setState({
-      activeInputCatcher: event.target.dataset.value,
-    });
-  };
-
   render() {
     const width = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
     const TDButtonStyle = {
       width: width / 4 - 0.5,
     };
 
-    const activeInputCatcher = this.state.activeInputCatcher;
+    const activeInputCatcher = this.props.activeViewport;
 
     return (
       <div id="inputcatchers">
@@ -42,7 +32,6 @@ class InputCatchers extends React.PureComponent<Props, State> {
           id="inputcatcher_PLANE_XY"
           data-value={OrthoViews.PLANE_XY}
           className="inputcatcher"
-          onMouseOver={this.handleMouseOver}
           style={{
             width,
             height: width,
@@ -53,7 +42,6 @@ class InputCatchers extends React.PureComponent<Props, State> {
           id="inputcatcher_PLANE_YZ"
           data-value={OrthoViews.PLANE_YZ}
           className="inputcatcher"
-          onMouseOver={this.handleMouseOver}
           style={{
             width,
             height: width,
@@ -64,7 +52,6 @@ class InputCatchers extends React.PureComponent<Props, State> {
           id="inputcatcher_PLANE_XZ"
           data-value={OrthoViews.PLANE_XZ}
           className="inputcatcher"
-          onMouseOver={this.handleMouseOver}
           style={{
             width,
             height: width,
@@ -75,7 +62,6 @@ class InputCatchers extends React.PureComponent<Props, State> {
           id="inputcatcher_TDView"
           data-value={OrthoViews.TDView}
           className="inputcatcher"
-          onMouseOver={this.handleMouseOver}
           style={{
             width,
             height: width,
@@ -104,6 +90,7 @@ class InputCatchers extends React.PureComponent<Props, State> {
 
 const mapStateToProps = (state: OxalisState) => ({
   scale: state.userConfiguration.scale,
+  activeViewport: state.viewModeData.plane.activeViewport,
 });
 
 export default connect(mapStateToProps)(InputCatchers);

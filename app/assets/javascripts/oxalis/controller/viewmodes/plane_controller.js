@@ -149,6 +149,7 @@ class PlaneController extends React.PureComponent<Props> {
       over: () => {
         Store.dispatch(setViewportAction(planeId));
       },
+      pinch: delta => this.zoom(delta, false),
     };
   }
 

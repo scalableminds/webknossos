@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import type { Point3, Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
+import type { Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import window from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";

@@ -93,9 +93,6 @@ GET           /api/dataToken/validate                                           
 GET           /api/dataToken/generate                                           controllers.DataTokenController.generateToken(dataSetName: Option[String], dataLayerName: Option[String])
 GET           /api/datasetToken/validate                                        controllers.DataTokenController.validateDataSetToken(token: String, dataSetName: String)
 
-# Datstore Route Forwarding
-->            /data/                                                            com.scalableminds.datastore.Routes
-
 # Annotations
 POST          /annotations/upload                                               controllers.AnnotationIOController.upload
 GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)

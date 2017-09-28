@@ -174,6 +174,7 @@ export type SkeletonTracingType = {
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
+  +description: string,
 };
 
 export type VolumeTracingType = {
@@ -192,6 +193,7 @@ export type VolumeTracingType = {
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
+  +description: string,
 };
 
 export type ReadOnlyTracingType = {
@@ -204,6 +206,7 @@ export type ReadOnlyTracingType = {
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
+  +description: string,
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
@@ -418,6 +421,7 @@ export const defaultState: OxalisState = {
       allowedModes: ["orthogonal", "oblique", "flight"],
     },
     tags: [],
+    description: "",
   },
   save: {
     queue: [],

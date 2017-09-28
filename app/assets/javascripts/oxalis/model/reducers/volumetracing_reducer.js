@@ -50,6 +50,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
         isPublic: action.tracing.isPublic,
         tags: action.tracing.tags,
+        description: action.tracing.description,
       };
 
       const newState = update(state, { tracing: { $set: volumeTracing } });

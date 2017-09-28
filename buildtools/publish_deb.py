@@ -17,7 +17,7 @@ prod_deb_packages = [deb for deb in deb_packages if not deb.endswith("-dev.deb")
 dev_deb_packages = [deb for deb in deb_packages if not  deb.endswith("-prod.deb")]
 
 def publish_deb_packages(mode, packages):
-  prefix_path = "dists/stable/%s/binary-amd64" % os.environ["JOB_NAME"]
+  prefix_path = "dists/stable/%s/binary-amd64/" % os.environ["JOB_NAME"]
 
   def create_package_info(mode, packages):
     os.chdir(archive_dir)

@@ -31,7 +31,7 @@ case class NamedFunctionStream(name: String, writer: OutputStream => Future[Unit
   def writeTo(out: OutputStream) = writer(out)
 }
 
-case class NamedEnumeratorStream(enumerator: Enumerator[Array[Byte]], name: String) extends NamedStream {
+case class NamedEnumeratorStream(name: String, enumerator: Enumerator[Array[Byte]]) extends NamedStream {
   def writeTo(out: OutputStream) = {
     val iteratee = Iteratee.foreach[Array[Byte]] { bytes =>
       out.write(bytes)

@@ -40,7 +40,7 @@ case class NamedEnumeratorStream(enumerator: Enumerator[Array[Byte]], name: Stri
   }
 }
 
-case class NamedFileStream(file: File, name: String) extends NamedStream{
+case class NamedFileStream(name: String, file: File) extends NamedStream{
   def stream(): InputStream =  new FileInputStream(file)
 
   def writeTo(out: OutputStream): Future[Unit] = {

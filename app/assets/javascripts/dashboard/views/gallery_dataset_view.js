@@ -61,7 +61,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             <img src="/assets/images/eye.svg" alt="Eye" />
           </a>
           <a
-            href={`/datasets/${dataset.name}/trace?typ=skeletonTracing`}
+            href={`/datasets/${dataset.name}/trace?typ=skeleton`}
             title="Create skeleton tracing"
             onClick={this.createTracing}
           >
@@ -69,7 +69,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           </a>
           {dataset.dataStore.typ !== "ndstore" ? (
             <a
-              href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+              href={`/datasets/${dataset.name}/trace?typ=volume`}
               title="Create volume tracing"
               onClick={this.createTracing}
             >

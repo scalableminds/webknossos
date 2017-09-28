@@ -171,6 +171,8 @@ export class OxalisModel {
     if (annotation != null && tracing != null) {
       this.initializeTracing(annotation, tracing);
     }
+
+    this.applyState(UrlManager.initialState, tracing);
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -195,7 +197,6 @@ export class OxalisModel {
 
   initializeTracing(annotation: APIAnnotationType, tracing: ServerTracingType) {
     // This method is not called for the View mode
-    // TODO Maybe applyState should be called in View mode as well
     const { allowedModes, preferredMode } = this.determineAllowedModes(annotation.settings);
     _.extend(annotation.settings, { allowedModes, preferredMode });
 
@@ -222,8 +223,6 @@ export class OxalisModel {
       const mode = preferredMode || UrlManager.initialState.mode || allowedModes[0];
       Store.dispatch(setViewModeAction(mode));
     }
-
-    this.applyState(UrlManager.initialState, tracing);
   }
 
   async initializeDataset(datasetName: string) {
@@ -397,12 +396,26 @@ export class OxalisModel {
     }
   }
 
-  applyState(state: UrlManagerState, tracing: ServerTracingType) {
-    Store.dispatch(setPositionAction(state.position || tracing.editPosition));
+  getDatasetCenter(): Vector3 {
+    return [
+      (this.lowerBoundary[0] + this.upperBoundary[0]) / 2,
+      (this.lowerBoundary[1] + this.upperBoundary[1]) / 2,
+      (this.lowerBoundary[2] + this.upperBoundary[2]) / 2,
+    ];
+  }
+
+  applyState(state: UrlManagerState, tracing: ?ServerTracingType) {
+    // If there is no editPosition (e.g. when viewing a dataset), compute the center of the dataset
+    const editPosition = tracing != null ? tracing.editPosition : this.getDatasetCenter();
+    const position = state.position || editPosition;
+    Store.dispatch(setPositionAction(position));
+
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));
     }
-    const rotation = state.rotation || tracing.editRotation;
+
+    const editRotation = tracing != null ? tracing.editRotation : null;
+    const rotation = state.rotation || editRotation;
     if (rotation != null) {
       Store.dispatch(setRotationAction(rotation));
     }

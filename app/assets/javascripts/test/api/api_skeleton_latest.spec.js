@@ -173,13 +173,13 @@ test("Calling a volume api function in a skeleton tracing should throw an error"
 test("getTreeName should get the name of a tree", t => {
   const api = t.context.api;
   const name = api.tracing.getTreeName(2);
-  t.is(name, "explorative_2017-02-08_SCM_Boy_002");
+  t.is(name, "explorative_2017-08-09_SCM_Boy_002");
 });
 
 test("getTreeName should get the name of the active tree if no treeId is specified", t => {
   const api = t.context.api;
   const name = api.tracing.getTreeName();
-  t.is(name, "explorative_2017-02-08_SCM_Boy_001");
+  t.is(name, "explorative_2017-08-09_SCM_Boy_001");
 });
 
 test("getTreeName should throw an error if the supplied treeId doesn't exist", t => {

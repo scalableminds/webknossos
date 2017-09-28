@@ -30,6 +30,7 @@ GET         /datasets/:dataSetName                                              
 POST        /tracings/volume/save                                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.save
 POST        /tracings/volume/:tracingId/initialData                                            @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.initialData(tracingId: String)
 GET         /tracings/volume/:tracingId                                                        @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.get(tracingId: String, version: Option[Long])
+GET         /tracings/volume/:tracingId/getProto                                               @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.getProto(tracingId: String, version: Option[Long])
 POST        /tracings/volume/:tracingId/update                                                 @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(tracingId: String)
 GET         /tracings/volume/:tracingId/data                                                   @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.getData(tracingId: String, version: Option[Long])
 
@@ -41,6 +42,7 @@ POST        /tracings/skeleton/mergedFromContents                               
 POST        /tracings/skeleton/mergedFromIds                                                   @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.mergedFromIds(persist: Boolean)
 
 GET         /tracings/skeleton/:tracingId                                                      @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.get(tracingId: String, version: Option[Long])
+GET         /tracings/skeleton/:tracingId/getProto                                             @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.getProto(tracingId: String, version: Option[Long])
 POST        /tracings/skeleton/getMultiple                                                     @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.getMultiple
 
 POST        /tracings/skeleton/:tracingId/update                                               @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.update(tracingId: String)
@@ -51,4 +53,4 @@ GET         /triggers/checkInbox                                                
 GET         /triggers/backup                                                                   @com.scalableminds.braingames.datastore.controllers.Application.backup
 
 # Debugging
-GET         /tracings/skeleton/:tracingId/getProto                                             @com.scalableminds.braingames.datastore.controllers.SkeletonTracingController.getProto(tracingId: String, version: Option[Long])
+

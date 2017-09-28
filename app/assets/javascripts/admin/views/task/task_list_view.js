@@ -39,7 +39,7 @@ class TaskListView extends React.PureComponent<Props, State> {
     this.fetchData(queryObject);
   }
 
-  async fetchData(queryObject) {
+  async fetchData(queryObject: Object) {
     const responses = await Request.sendJSONReceiveJSON("/api/queries", {
       params: { type: "task" },
       data: queryObject,
@@ -114,7 +114,7 @@ class TaskListView extends React.PureComponent<Props, State> {
           <div className="clearfix" style={{ margin: "20px 0px" }} />
 
           <Card title="Search for Tasks">
-            <TaskSearchForm onChange={this.fetchData} />
+            <TaskSearchForm onChange={queryObject => this.fetchData(queryObject)} />
           </Card>
 
           <Spin spinning={this.state.isLoading} size="large">

@@ -31,7 +31,6 @@ import Constants from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, NodeType, BranchPointType } from "oxalis/store";
 import type { ServerNodeType, ServerBranchPointType } from "oxalis/model";
 import type { ActionType } from "oxalis/model/actions/actions";
-import type { Vector3 } from "oxalis/constants";
 import Maybe from "data.maybe";
 import ErrorHandling from "libs/error_handling";
 

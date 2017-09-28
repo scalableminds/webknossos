@@ -90,13 +90,11 @@ object BrainTracing extends LazyLogging with FoxImplicits {
       at <- a.tracingTime
       pt <- p.expectedTime
       if at >= pt && at - time < pt
-    } {
-      Mailer ! Send(DefaultMails.overLimitMail(
+    } Mailer ! Send(DefaultMails.overLimitMail(
         user,
         p.name,
-        task.map(_.id),
+        task.toOption.map(_.id).getOrElse(""),
         a.id))
-    }
   }
 
   def logTime(user: User, time: Long, annotation: Option[Annotation])(implicit ctx: DBAccessContext): Future[Boolean] = {

@@ -102,6 +102,10 @@ case class User(
   def isEditableBy(other: User) =
     other.hasAdminAccess && ( teams.isEmpty || teamNames.exists(other.isAdminOf))
 
+  def isAdminOf(user: User): Boolean ={
+    user.teamNames.intersect(this.adminTeamNames).nonEmpty
+  }
+
 }
 
 object User {

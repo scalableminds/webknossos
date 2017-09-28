@@ -71,6 +71,7 @@ GET           /datasets/:id/edit                                                
 GET           /datasets/:id/import                                              controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
 GET           /datasets/upload                                                  controllers.DataSetController.empty
+GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String)
 
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
@@ -96,9 +97,7 @@ GET           /api/datasetToken/validate                                        
 ->            /data/                                                            com.scalableminds.datastore.Routes
 
 # Annotations
-POST          /annotations/createExplorational                                  controllers.AnnotationController.createExplorational
 POST          /annotations/upload                                               controllers.AnnotationIOController.upload
-
 GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
 POST          /annotations/:typ/:id/edit                                        controllers.AnnotationController.editAnnotation(typ: String, id: String)
 
@@ -192,3 +191,7 @@ GET           /api/statistics/assignments                                       
 
 # Map static resources from the /public folder to the /public path
 GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)
+
+#Timelogging
+GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int)
+GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int)

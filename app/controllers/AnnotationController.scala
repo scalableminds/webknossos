@@ -131,12 +131,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def createExplorational = Authenticated.async(parse.urlFormEncoded) { implicit request =>
+  def createExplorational(dataSetName: String, typ: String) = Authenticated.async { implicit request =>
     for {
-      dataSetName <- postParameter("dataSetName").toFox ?~> Messages("dataSet.notSupplied")
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      contentTypeString <- postParameter("contentType").toFox
-      contentType <- TracingType.values.find(_.toString == contentTypeString).toFox
+      contentType <- TracingType.values.find(_.toString == typ).toFox
       annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
     } yield {
       Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))

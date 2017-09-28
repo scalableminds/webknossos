@@ -10,7 +10,7 @@ export function convertBoundingBox(boundingBox: ?BoundingBoxObjectType): ?Boundi
     .map(bb =>
       Utils.computeBoundingBoxFromArray(
         Utils.concatVector3(bb.topLeft, [bb.width, bb.height, bb.depth]),
-      )
+      ),
     )
     .getOrElse(null);
 }

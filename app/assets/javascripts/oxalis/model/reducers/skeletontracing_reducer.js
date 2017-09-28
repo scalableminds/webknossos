@@ -68,8 +68,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           update(tree, {
             nodes: { $set: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id") },
             color: {
-              $set:
-                tree.color || ColorGenerator.distinctColorForId(tree.treeId),
+              $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
             },
             branchPoints: { $set: _.map(tree.branchPoints, serverBranchPointToBranchPoint) },
             isVisible: { $set: true },

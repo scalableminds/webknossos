@@ -6,6 +6,7 @@ import Utils from "libs/utils";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import app from "app";
+import messages from "messages";
 import type { DatasetType } from "dashboard/views/dataset_view";
 
 const padding = 16;
@@ -15,34 +16,16 @@ type Props = {
   searchQuery: string,
 };
 
-type State = {
-  contentType: string,
-};
-
-class GalleryDatasetView extends React.PureComponent<Props, State> {
-  form: any;
-
+class GalleryDatasetView extends React.PureComponent<Props> {
   static defaultProps = {
     searchQuery: "",
   };
 
-  state = {
-    contentType: "",
-    dataset: "",
-  };
-
-  submitForm(dataset: string, contentType: string, event: Event) {
-    event.preventDefault();
-
-    if (app.currentUser != null) {
-      this.setState({ contentType, dataset }, () => {
-        this.form.submit();
-      });
-    } else {
-      const loginNotice = `For dataset annotation, please log in or create an account. For dataset viewing, no account is required.
-        Do you wish to sign up now?`;
+  createTracing(event: Event) {
+    if (app.currentUser === undefined) {
+      event.preventDefault();
       Modal.confirm({
-        content: loginNotice,
+        content: messages["dataset.confirm_signup"],
         onOk: () => {
           window.location.href = "/auth/register";
         },
@@ -60,9 +43,11 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
         />
       );
     } else {
-      description = dataset.hasSegmentation
-        ? <p>Original data and segmentation</p>
-        : <p>Original data</p>;
+      description = dataset.hasSegmentation ? (
+        <p>Original data and segmentation</p>
+      ) : (
+        <p>Original data</p>
+      );
     }
 
     return (
@@ -76,29 +61,25 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
             <img src="/assets/images/eye.svg" alt="Eye" />
           </a>
           <a
-            href="#"
+            href={`/datasets/${dataset.name}/trace?typ=skeletonTracing`}
             title="Create skeleton tracing"
-            onClick={event => this.submitForm(dataset.name, "skeleton", event)}
+            onClick={this.createTracing}
           >
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>
-          {dataset.dataStore.typ !== "ndstore"
-            ? <a
-                href="#"
-                title="Create volume tracing"
-                onClick={event => this.submitForm(dataset.name, "volume", event)}
-              >
-                <img src="/assets/images/volume.svg" alt="Volume" />
-              </a>
-            : null}
+          {dataset.dataStore.typ !== "ndstore" ? (
+            <a
+              href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+              title="Create volume tracing"
+              onClick={this.createTracing}
+            >
+              <img src="/assets/images/volume.svg" alt="Volume" />
+            </a>
+          ) : null}
         </div>
         <div className="dataset-description">
-          <h3>
-            {dataset.name}
-          </h3>
-          <p>
-            Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}
-          </p>
+          <h3>{dataset.name}</h3>
+          <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
           {description}
         </div>
       </Card>
@@ -107,29 +88,17 @@ class GalleryDatasetView extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <div>
-        <Row gutter={padding}>
-          {Utils.filterWithSearchQueryAND(
-            this.props.datasets.filter(ds => ds.isActive),
-            ["name", "owningTeam", "description"],
-            this.props.searchQuery,
-          ).map(ds =>
-            <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
-              {this.renderCard(ds)}
-            </Col>,
-          )}
-        </Row>
-        <form
-          action="/annotations/createExplorational"
-          method="POST"
-          ref={form => {
-            this.form = form;
-          }}
-        >
-          <input type="hidden" name="dataSetName" value={this.state.dataset} />
-          <input type="hidden" name="contentType" value={this.state.contentType} />
-        </form>
-      </div>
+      <Row gutter={padding}>
+        {Utils.filterWithSearchQueryAND(
+          this.props.datasets.filter(ds => ds.isActive),
+          ["name", "owningTeam", "description"],
+          this.props.searchQuery,
+        ).map(ds => (
+          <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
+            {this.renderCard(ds)}
+          </Col>
+        ))}
+      </Row>
     );
   }
 }

@@ -31,7 +31,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <div>
+      <div className="TestAdvancedDatasetView">
         <Table
           dataSource={Utils.filterWithSearchQueryOR(
             this.props.datasets,

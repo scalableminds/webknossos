@@ -1,30 +1,14 @@
 package models.annotation
 
-<<<<<<< HEAD
 import com.scalableminds.braingames.datastore.tracings.TracingType
-import com.scalableminds.util.io.NamedStream
-||||||| merged common ancestors
-import com.scalableminds.util.io.{NamedFileStream, NamedStream}
-=======
-import com.scalableminds.util.io.NamedStream
->>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project.{Project, WebknossosAssignmentConfig}
 import models.task.{OpenAssignmentService, Task}
-<<<<<<< HEAD
 import models.user.User
-||||||| merged common ancestors
-import models.tracing.skeleton.SkeletonTracing
-=======
-import models.tracing.skeleton.SkeletonTracing
-import models.user.User
->>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json}
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 
 /**
  * Company: scalableminds

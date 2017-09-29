@@ -1,16 +1,30 @@
 package models.annotation
 
+<<<<<<< HEAD
 import com.scalableminds.braingames.datastore.tracings.TracingType
 import com.scalableminds.util.io.NamedStream
+||||||| merged common ancestors
+import com.scalableminds.util.io.{NamedFileStream, NamedStream}
+=======
+import com.scalableminds.util.io.NamedStream
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project.{Project, WebknossosAssignmentConfig}
 import models.task.{OpenAssignmentService, Task}
+<<<<<<< HEAD
 import models.user.User
+||||||| merged common ancestors
+import models.tracing.skeleton.SkeletonTracing
+=======
+import models.tracing.skeleton.SkeletonTracing
+import models.user.User
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsValue, Json}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 /**
  * Company: scalableminds
@@ -49,8 +63,14 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     AnnotationDAO.reopen(annotation._id)
   }
 
+  def update(field: String, value: JsValue)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.update(Json.obj("_id" -> annotation._id), Json.obj(field -> value))
+
   def rename(name: String)(implicit ctx: DBAccessContext) =
     AnnotationDAO.rename(annotation._id, name)
+
+  def setDescription(description: String)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.setDescription(annotation._id, description)
 
   def setIsPublic(isPublic: Boolean)(implicit ctx: DBAccessContext) =
     AnnotationDAO.setIsPublic(annotation._id, isPublic)

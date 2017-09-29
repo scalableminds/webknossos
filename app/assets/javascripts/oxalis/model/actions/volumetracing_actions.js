@@ -2,7 +2,7 @@
  * volumetracing_actions.js
  * @flow
  */
-import type { Vector3, OrthoViewType, VolumeTraceOrMoveModeType } from "oxalis/constants";
+import type { Vector2, Vector3, OrthoViewType, VolumeToolType } from "oxalis/constants";
 import type { ServerVolumeTracingType } from "oxalis/model";
 import type { APIAnnotationType } from "admin/api_flow_types";
 
@@ -12,14 +12,17 @@ type InitializeVolumeTracingActionType = {
   tracing: ServerVolumeTracingType,
 };
 type CreateCellActionType = { type: "CREATE_CELL", cellId: ?number };
-type StartEditingActionType = { type: "START_EDITING", planeId: OrthoViewType };
+type StartEditingActionType = { type: "START_EDITING", position: Vector3, planeId: OrthoViewType };
 type AddToLayerActionType = { type: "ADD_TO_LAYER", position: Vector3 };
 type FinishEditingActionType = { type: "FINISH_EDITING" };
 type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
-type SetModeActionType = { type: "SET_MODE", mode: VolumeTraceOrMoveModeType };
-type ToggleModeActionType = { type: "TOGGLE_MODE" };
+type SetToolActionType = { type: "SET_TOOL", tool: VolumeToolType };
+type CycleToolActionType = { type: "CYCLE_TOOL" };
 type UpdateDirectionActionType = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourActionType = { type: "RESET_CONTOUR" };
+type SetBrushPositionActionType = { type: "SET_BRUSH_POSITION", position: Vector2 };
+type HideBrushActionType = { type: "HIDE_BRUSH" };
+type SetBrushSizeActionType = { type: "SET_BRUSH_SIZE", brushSize: number };
 
 export type VolumeTracingActionType =
   | InitializeVolumeTracingActionType
@@ -28,10 +31,13 @@ export type VolumeTracingActionType =
   | AddToLayerActionType
   | FinishEditingActionType
   | SetActiveCellActionType
-  | SetModeActionType
-  | ToggleModeActionType
+  | SetToolActionType
+  | CycleToolActionType
   | UpdateDirectionActionType
-  | ResetContourActionType;
+  | ResetContourActionType
+  | SetBrushPositionActionType
+  | HideBrushActionType
+  | SetBrushSizeActionType;
 
 export const VolumeTracingSaveRelevantActions = ["CREATE_CELL", "SET_ACTIVE_CELL"];
 
@@ -49,8 +55,12 @@ export const createCellAction = (cellId: ?number): CreateCellActionType => ({
   cellId,
 });
 
-export const startEditingAction = (planeId: OrthoViewType): StartEditingActionType => ({
+export const startEditingAction = (
+  position: Vector3,
+  planeId: OrthoViewType,
+): StartEditingActionType => ({
   type: "START_EDITING",
+  position,
   planeId,
 });
 
@@ -68,13 +78,13 @@ export const setActiveCellAction = (cellId: number): SetActiveCellActionType => 
   cellId,
 });
 
-export const setModeAction = (mode: VolumeTraceOrMoveModeType): SetModeActionType => ({
-  type: "SET_MODE",
-  mode,
+export const setToolAction = (tool: VolumeToolType): SetToolActionType => ({
+  type: "SET_TOOL",
+  tool,
 });
 
-export const toggleModeAction = (): ToggleModeActionType => ({
-  type: "TOGGLE_MODE",
+export const cycleToolAction = (): CycleToolActionType => ({
+  type: "CYCLE_TOOL",
 });
 
 export const updateDirectionAction = (centroid: Vector3): UpdateDirectionActionType => ({
@@ -84,4 +94,18 @@ export const updateDirectionAction = (centroid: Vector3): UpdateDirectionActionT
 
 export const resetContourAction = (): ResetContourActionType => ({
   type: "RESET_CONTOUR",
+});
+
+export const setBrushPositionAction = (position: Vector2): SetBrushPositionActionType => ({
+  type: "SET_BRUSH_POSITION",
+  position,
+});
+
+export const hideBrushAction = (): HideBrushActionType => ({
+  type: "HIDE_BRUSH",
+});
+
+export const setBrushSizeAction = (brushSize: number): SetBrushSizeActionType => ({
+  type: "SET_BRUSH_SIZE",
+  brushSize,
 });

@@ -2,7 +2,6 @@
  * volumetracing_saga.js
  * @flow
  */
-import app from "app";
 import { call, select, put, take, race, takeEvery, fork } from "redux-saga/effects";
 import {
   updateDirectionAction,
@@ -19,8 +18,9 @@ import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
+import { VolumeToolEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoViewType } from "oxalis/constants";
+import type { OrthoViewType, VolumeToolType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 
 export function* updateIsosurface(): Generator<*, *, *> {
@@ -72,25 +72,28 @@ export function* editVolumeLayerAsync(): Generator<*, *, *> {
       continue;
     }
     const currentLayer = yield call(createVolumeLayer, startEditingAction.planeId);
+    const activeTool = yield select(state => state.tracing.activeTool);
 
-    let abortEditing = false;
-    while (true) {
-      const { addToLayerAction, finishEditingAction, createCellAction } = yield race({
-        addToLayerAction: take("ADD_TO_LAYER"),
-        finishEditingAction: take("FINISH_EDITING"),
-        createCellAction: take("CREATE_CELL_ACTION"),
-      });
-
-      // If a cell is created while drawing a contour, abort the editing process
-      if (createCellAction) abortEditing = true;
-      if (finishEditingAction || createCellAction) break;
-
-      currentLayer.addContour(addToLayerAction.position);
+    if (activeTool === VolumeToolEnum.BRUSH) {
+      yield labelWithIterator(currentLayer.getCircleVoxelIterator(startEditingAction.position));
     }
 
-    if (abortEditing) continue;
+    while (true) {
+      const { addToLayerAction, finishEditingAction } = yield race({
+        addToLayerAction: take("ADD_TO_LAYER"),
+        finishEditingAction: take("FINISH_EDITING"),
+      });
 
-    yield call(finishLayer, currentLayer);
+      if (finishEditingAction) break;
+
+      if (activeTool === VolumeToolEnum.TRACE) {
+        currentLayer.addContour(addToLayerAction.position);
+      } else if (activeTool === VolumeToolEnum.BRUSH) {
+        yield labelWithIterator(currentLayer.getCircleVoxelIterator(addToLayerAction.position));
+      }
+    }
+
+    yield call(finishLayer, currentLayer, activeTool);
   }
 }
 
@@ -100,20 +103,25 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
-export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
+function* labelWithIterator(iterator): Generator<*, *, *> {
+  const labelValue = yield select(state => state.tracing.activeCellId);
+  const binary = yield call([Model, Model.getSegmentationBinary]);
+  yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+}
+
+export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Generator<*, *, *> {
   if (layer == null || layer.isEmpty()) {
     return;
   }
 
-  const start = Date.now();
-  layer.finish();
-  const iterator = layer.getVoxelIterator();
-  const labelValue = yield select(state => state.tracing.activeCellId);
-  if (app.oxalis) {
-    const binary = yield call([Model, Model.getSegmentationBinary]);
-    yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+  if (activeTool === VolumeToolEnum.TRACE) {
+    const start = Date.now();
+
+    layer.finish();
+    yield labelWithIterator(layer.getVoxelIterator());
+
+    console.log("Labeling time:", Date.now() - start);
   }
-  console.log("Labeling time:", Date.now() - start);
 
   yield put(updateDirectionAction(layer.getCentroid()));
   yield put(resetContourAction());
@@ -121,7 +129,7 @@ export function* finishLayer(layer: VolumeLayer): Generator<*, *, *> {
 
 export function* disallowVolumeTracingWarning(): Generator<*, *, *> {
   while (true) {
-    yield take(["SET_MODE", "TOGGLE_MODE"]);
+    yield take(["SET_TOOL", "CYCLE_TOOL"]);
     if (yield select(state => isVolumeTracingDisallowed(state))) {
       Toast.warning("Volume tracing is not possible at this zoom level. Please zoom in further.");
     }

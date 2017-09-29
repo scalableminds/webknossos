@@ -2,14 +2,17 @@
  * dataset_info_view.js
  * @flow
  */
-import React, { Component } from "react";
+import React from "react";
 import { connect } from "react-redux";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
-import { setAnnotationNameAction } from "oxalis/model/actions/annotation_actions";
+import {
+  setAnnotationNameAction,
+  setAnnotationDescriptionAction,
+} from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import type { OxalisState, TracingType, DatasetType, TaskType } from "oxalis/store";
 
@@ -20,9 +23,12 @@ type DatasetInfoTabStateProps = {
   task: ?TaskType,
 };
 
-type DatasetInfoTabProps = DatasetInfoTabStateProps & { setAnnotationName: string => void };
+type DatasetInfoTabProps = DatasetInfoTabStateProps & {
+  setAnnotationName: string => void,
+  setAnnotationDescription: string => void,
+};
 
-class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
+class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   calculateZoomLevel(): number {
     let width;
     const zoom = this.props.zoomStep;
@@ -53,9 +59,14 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
     this.props.setAnnotationName(newName);
   };
 
+  setAnnotationDescription = (newDescription: string) => {
+    this.props.setAnnotationDescription(newDescription);
+  };
+
   render() {
-    const { tracingType, name } = this.props.tracing;
+    const { tracingType, name, description } = this.props.tracing;
     const tracingName = name || "<untitled>";
+    const tracingDescription = description || "<no comment>";
     const statsMaybe = getStats(this.props.tracing);
     let annotationTypeLabel;
 
@@ -90,6 +101,16 @@ class DatasetInfoTabView extends Component<DatasetInfoTabProps> {
         <p>Dataset: {dataSetName}</p>
         <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
         <p>Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
+        <p>
+          <span>
+            Description:
+            <EditableTextLabel
+              value={tracingDescription}
+              onChange={this.setAnnotationDescription}
+              rows={4}
+            />
+          </span>
+        </p>
         {this.props.tracing.type === "skeleton" ? (
           <div>
             <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
@@ -159,6 +180,9 @@ const mapStateToProps = (state: OxalisState): DatasetInfoTabStateProps => ({
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setAnnotationName(tracingName: string) {
     dispatch(setAnnotationNameAction(tracingName));
+  },
+  setAnnotationDescription(comment: string) {
+    dispatch(setAnnotationDescriptionAction(comment));
   },
 });
 

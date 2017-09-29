@@ -10,7 +10,15 @@ type SetAnnotationPubliceActionType = {
   isPublic: boolean,
 };
 
-export type AnnotationActionTypes = SetAnnotationNameActionType | SetAnnotationPubliceActionType;
+type SetAnnotationDescriptionActionType = {
+  type: "SET_ANNOTATION_DESCRIPTION",
+  description: string,
+};
+
+export type AnnotationActionTypes =
+  | SetAnnotationNameActionType
+  | SetAnnotationPubliceActionType
+  | SetAnnotationDescriptionActionType;
 
 export const setAnnotationNameAction = (name: string): SetAnnotationNameActionType => ({
   type: "SET_ANNOTATION_NAME",
@@ -20,4 +28,11 @@ export const setAnnotationNameAction = (name: string): SetAnnotationNameActionTy
 export const setAnnotationPublicAction = (isPublic: boolean): SetAnnotationPubliceActionType => ({
   type: "SET_ANNOTATION_PUBLIC",
   isPublic,
+});
+
+export const setAnnotationDescriptionAction = (
+  description: string,
+): SetAnnotationDescriptionActionType => ({
+  type: "SET_ANNOTATION_DESCRIPTION",
+  description,
 });

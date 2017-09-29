@@ -233,21 +233,64 @@ object AnnotationService
     } yield annotation
   }
 
+<<<<<<< HEAD
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationDAO.logTime(time, _annotation)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
     val tracingsNamesAndScalesAsTuples = getTracingsScalesAndNamesFor(annotations)
+||||||| merged common ancestors
+  def createFrom(
+    user: User,
+    content: AnnotationContent,
+    annotationType: AnnotationType,
+    name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
+=======
+  def createFrom(
+    user: User,
+    content: AnnotationContent,
+    annotationType: AnnotationType,
+    name: Option[String],
+    description: String)(implicit messages: Messages, ctx: DBAccessContext) = {
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 
     for {
+<<<<<<< HEAD
       tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
       nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
+||||||| merged common ancestors
+      dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
+      annotation = Annotation(
+        Some(user._id),
+        ContentReference.createFor(content),
+        team = selectSuitableTeam(user, dataSet),
+        _name = name,
+        typ = annotationType)
+      _ <- AnnotationDAO.insert(annotation)
+    } yield {
+      annotation
+    }
+=======
+      dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
+      annotation = Annotation(
+        Some(user._id),
+        ContentReference.createFor(content),
+        team = selectSuitableTeam(user, dataSet),
+        _name = name,
+        description = description,
+        typ = annotationType)
+      _ <- AnnotationDAO.insert(annotation)
+    } yield {
+      annotation
+    }
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
   }
 
   private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext) = {
 
+<<<<<<< HEAD
     def getTracings(dataSetName: String, tracingReferences: List[TracingReference]) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
@@ -256,6 +299,34 @@ object AnnotationService
         tracingsContainer.tracings.toList
       }
     }
+||||||| merged common ancestors
+    val annotation = Annotation(
+      temporary._user,
+      ContentReference.createFor(content),
+      temporary._task,
+      temporary.team,
+      temporary.state,
+      temporary.typ,
+      temporary.version,
+      temporary._name,
+      None,
+      temporary.created,
+      id)
+=======
+    val annotation = Annotation(
+      temporary._user,
+      ContentReference.createFor(content),
+      temporary._task,
+      temporary.team,
+      temporary.state,
+      temporary.typ,
+      temporary.version,
+      temporary._name,
+      temporary.description,
+      None,
+      temporary.created,
+      id)
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 
     def getScales(annotations: List[Annotation]) = {
       val foxes = annotations.map(annotation =>
@@ -290,6 +361,23 @@ object AnnotationService
           }
         }
       }
+<<<<<<< HEAD
+||||||| merged common ancestors
+    }
+    for {
+      content <- createContent()
+      annotation <- AnnotationService.createFrom(user, content, typ, name) ?~> Messages("annotation.create.fromFailed")
+    } yield annotation
+  }
+=======
+    }
+    for {
+      content <- createContent()
+      description <- nmls.headOption.map(_.description).toFox
+      annotation <- AnnotationService.createFrom(user, content, typ, name, description) ?~> Messages("annotation.create.fromFailed")
+    } yield annotation
+  }
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 
     Fox.combined(foxOfListsTuples).map(_.flatten)
   }

@@ -21,10 +21,11 @@ import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_mid
 import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
 import type {
   OrthoViewType,
+  Vector2,
   Vector3,
   Vector6,
   ModeType,
-  VolumeTraceOrMoveModeType,
+  VolumeToolType,
   ControlModeType,
   BoundingBoxType,
 } from "oxalis/constants";
@@ -159,6 +160,7 @@ export type SkeletonTracingType = {
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
+  +description: string,
 };
 
 export type VolumeTracingType = {
@@ -167,7 +169,7 @@ export type VolumeTracingType = {
   +name: string,
   +version: number,
   +maxCellId: number,
-  +volumeTraceOrMoveMode: VolumeTraceOrMoveModeType,
+  +activeTool: VolumeToolType,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
   +contourList: Array<Vector3>,
@@ -178,6 +180,7 @@ export type VolumeTracingType = {
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
+  +description: string,
 };
 
 export type ReadOnlyTracingType = {
@@ -191,6 +194,7 @@ export type ReadOnlyTracingType = {
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
+  +description: string,
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
@@ -246,6 +250,8 @@ export type TemporaryConfigurationType = {
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
+  +brushPosition: ?Vector2,
+  +brushSize: number,
 };
 
 export type ScriptType = APIScriptType;
@@ -362,6 +368,8 @@ export const defaultState: OxalisState = {
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
+    brushPosition: null,
+    brushSize: 50,
   },
   task: null,
   dataset: {
@@ -395,6 +403,7 @@ export const defaultState: OxalisState = {
       allowedModes: ["orthogonal", "oblique", "flight"],
     },
     tags: [],
+    description: "",
   },
   save: {
     queue: [],

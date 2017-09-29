@@ -111,6 +111,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
   def download(typ: String, id: String) = UserAwareAction.async { implicit request =>
+<<<<<<< HEAD
     logger.trace(s"Requested download for annotation: $typ/$id")
     request.userOpt match {
       case Some(user) => typ match {
@@ -124,6 +125,41 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         if (typ == AnnotationType.Explorational.toString) downloadExplorational(id, typ, request.userOpt)
         else Fox.failure("Failed to download annotation")
       }
+||||||| merged common ancestors
+    withAnnotation(AnnotationIdentifier(typ, id)) {
+      annotation =>
+        logger.trace(s"Requested download for tracing: $typ/$id")
+        for {
+          name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
+          _ <- annotation.restrictions.allowDownload(request.userOpt) ?~> Messages("annotation.download.notAllowed")
+          annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
+          content <- annotation.content ?~> Messages("annotation.content.empty")
+          stream <- content.toDownloadStream(name)
+        } yield {
+          Ok.chunked(stream).withHeaders(
+            CONTENT_TYPE ->
+              "application/octet-stream",
+            CONTENT_DISPOSITION ->
+              s"filename=${'"'}${name + content.downloadFileExtension}${'"'}")
+        }
+=======
+    withAnnotation(AnnotationIdentifier(typ, id)) {
+      annotation =>
+        logger.trace(s"Requested download for tracing: $typ/$id")
+        for {
+          name <- nameAnnotation(annotation) ?~> Messages("annotation.name.impossible")
+          _ <- annotation.restrictions.allowDownload(request.userOpt) ?~> Messages("annotation.download.notAllowed")
+          annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
+          content <- annotation.content ?~> Messages("annotation.content.empty")
+          stream <- content.toDownloadStream(name, annotation)
+        } yield {
+          Ok.chunked(stream).withHeaders(
+            CONTENT_TYPE ->
+              "application/octet-stream",
+            CONTENT_DISPOSITION ->
+              s"filename=${'"'}${name + content.downloadFileExtension}${'"'}")
+        }
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
     }
   }
 

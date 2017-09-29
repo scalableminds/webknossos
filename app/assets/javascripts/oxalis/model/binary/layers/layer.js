@@ -16,6 +16,7 @@ import type {
   DataLayerType,
   MappingType,
 } from "oxalis/store";
+import type { DataBucket } from "oxalis/model/binary/bucket";
 
 export type BucketRequestOptions = {
   fourBit: boolean,
@@ -102,12 +103,9 @@ class Layer {
     );
   }
 
-  // Sends the batch to the store. `getBucketData(zoomedAddress) -> Uint8Array`
-  // converts bucket addresses to the data to send to the server.
-  sendToStore(batch: Array<Vector4>, getBucketData: Vector4 => Uint8Array): Promise<void> {
-    return this.doWithToken(token =>
-      this.sendToStoreImpl(this.buildBuckets(batch), getBucketData, token),
-    );
+  // Sends the batch to the store.
+  sendToStore(batch: Array<DataBucket>): Promise<void> {
+    return this.doWithToken(token => this.sendToStoreImpl(batch, token));
   }
 
   /* eslint-disable no-unused-vars */
@@ -119,11 +117,7 @@ class Layer {
     throw new Error("Subclass responsibility");
   }
 
-  sendToStoreImpl(
-    batch: Array<BucketInfo>,
-    getBucketData: Vector4 => Uint8Array,
-    token: string,
-  ): Promise<void> {
+  sendToStoreImpl(batch: Array<DataBucket>, token: string): Promise<void> {
     throw new Error("Subclass responsibility");
   }
   /* eslint-enable no-unused-vars */

@@ -1,6 +1,14 @@
 package models.annotation
 
+<<<<<<< HEAD
 import com.scalableminds.braingames.datastore.tracings.TracingReference
+||||||| merged common ancestors
+import scala.concurrent.Future
+
+import com.scalableminds.util.geometry.BoundingBox
+=======
+import com.scalableminds.util.geometry.BoundingBox
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}
@@ -15,7 +23,14 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
+<<<<<<< HEAD
 import reactivemongo.play.json.BSONFormats._
+||||||| merged common ancestors
+=======
+import reactivemongo.play.json.BSONFormats._
+
+import scala.concurrent.Future
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -25,7 +40,18 @@ case class Annotation(
                        settings: AnnotationSettings,
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
+<<<<<<< HEAD
                        state: AnnotationState = AnnotationState.InProgress,
+||||||| merged common ancestors
+                       version: Int = 0,
+                       _name: Option[String] = None,
+                       tracingTime: Option[Long] = None,
+=======
+                       version: Int = 0,
+                       _name: Option[String] = None,
+                       description: String = "",
+                       tracingTime: Option[Long] = None,
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
                        created : Long = System.currentTimeMillis,
                        tracingTime: Option[Long] = None,
                        _name: Option[String] = None,
@@ -42,8 +68,24 @@ case class Annotation(
 
   lazy val muta = new AnnotationMutations(this)
 
+<<<<<<< HEAD
   def user: Fox[User] =
     _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))
+||||||| merged common ancestors
+  /**
+   * Easy access methods
+   */
+
+  val name = _name getOrElse ""
+
+  def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
+=======
+  /**
+   * Easy access methods
+   */
+
+  def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
+>>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
 
   def task: Fox[Task] =
     _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
@@ -269,6 +311,12 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("_name" -> name)),
+      returnNew = true)
+
+  def setDescription(_annotation: BSONObjectID, description: String)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("description" -> description)),
       returnNew = true)
 
   def setIsPublic(_annotation: BSONObjectID, isPublic: Boolean)(implicit ctx: DBAccessContext) =

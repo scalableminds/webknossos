@@ -124,6 +124,7 @@ export type APIAnnotationType = {
   +created: string,
   +dataSetName: string,
   +dataStore: APIDataStoreType,
+  +description: string,
   +formattedHash: string,
   +id: string,
   +isPublic: boolean,

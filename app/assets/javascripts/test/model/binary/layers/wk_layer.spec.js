@@ -3,29 +3,20 @@ import test from "ava";
 import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
+import Base64 from "base64-js";
+import { DataBucket } from "oxalis/model/binary/bucket";
 
 mockRequire.stopAll();
-const MultipartData = require("libs/multipart_data").default;
-// FileReader is not available in node context
-// -> Mock MultipartData to just return the data string
-MultipartData.prototype.dataPromise = function() {
-  return Promise.resolve(this.data);
-};
-
-// Mock random boundary
-MultipartData.prototype.randomBoundary = function() {
-  return "--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--";
-};
-mockRequire("libs/multipart_data", MultipartData);
 
 const RequestMock = {
   always: (promise, func) => promise.then(func, func),
-  sendArraybufferReceiveArraybuffer: sinon.stub(),
+  sendJSONReceiveArraybuffer: sinon.stub(),
   receiveJSON: sinon.stub(),
 };
 const StoreMock = {
   getState: () => ({
     dataset: { name: "dataSet" },
+    datasetConfiguration: { fourBit: false },
   }),
 };
 
@@ -67,8 +58,8 @@ function prepare() {
   const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
   const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
 
-  RequestMock.sendArraybufferReceiveArraybuffer = sinon.stub();
-  RequestMock.sendArraybufferReceiveArraybuffer.returns(Promise.resolve(responseBuffer));
+  RequestMock.sendJSONReceiveArraybuffer = sinon.stub();
+  RequestMock.sendJSONReceiveArraybuffer.returns(Promise.resolve(responseBuffer));
   return { batch, responseBuffer };
 }
 
@@ -88,8 +79,8 @@ test.serial("requestFromStore: Token Handling should request a token first", t =
 test.serial("requestFromStore: Token Handling should re-request a token when it's invalid", t => {
   const { layer } = t.context;
   const { batch, responseBuffer } = prepare();
-  RequestMock.sendArraybufferReceiveArraybuffer = sinon.stub();
-  RequestMock.sendArraybufferReceiveArraybuffer
+  RequestMock.sendJSONReceiveArraybuffer = sinon.stub();
+  RequestMock.sendJSONReceiveArraybuffer
     .onFirstCall()
     .returns(Promise.reject({ status: 403 }))
     .onSecondCall()
@@ -106,12 +97,12 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
     .then(result => {
       t.deepEqual(result, responseBuffer);
 
-      t.is(RequestMock.sendArraybufferReceiveArraybuffer.callCount, 2);
+      t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
 
-      const url = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args[0];
+      const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];
       t.is(url, "url/data/datasets/dataSet/layers/layername/data?token=token");
 
-      const url2 = RequestMock.sendArraybufferReceiveArraybuffer.getCall(1).args[0];
+      const url2 = RequestMock.sendJSONReceiveArraybuffer.getCall(1).args[0];
       t.is(url2, "url/data/datasets/dataSet/layers/layername/data?token=token2");
 
       return layer.tokenPromise;
@@ -129,26 +120,17 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
   const expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token";
   const expectedOptions = {
     data: [
-      "----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n",
-      'X-Bucket: {"position":[0,0,0],"zoomStep":0,"cubeSize":32,"fourBit":true}\r\n',
-      "\r\n",
-      "\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n",
-      'X-Bucket: {"position":[64,64,64],"zoomStep":1,"cubeSize":32,"fourBit":true}\r\n',
-      "\r\n",
-      "\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n",
+      { position: [0, 0, 0], zoomStep: 0, cubeSize: 32, fourBit: true },
+      { position: [64, 64, 64], zoomStep: 1, cubeSize: 32, fourBit: true },
     ],
-    headers: {
-      "Content-Type": "multipart/mixed; boundary=--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--",
-    },
     timeout: 30000,
-    compress: true,
     doNotCatch: true,
   };
 
   return layer.requestFromStore(batch).then(() => {
-    t.is(RequestMock.sendArraybufferReceiveArraybuffer.callCount, 1);
+    t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 1);
 
-    const [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args;
+    const [url, options] = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args;
     t.is(url, expectedUrl);
     t.deepEqual(options, expectedOptions);
   });
@@ -156,45 +138,54 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
 
 test.serial("sendToStore: Request Handling should send the correct request parameters", t => {
   const { layer } = t.context;
-  const batch = [[0, 0, 0, 0], [1, 1, 1, 1]];
-  RequestMock.sendArraybufferReceiveArraybuffer = sinon.stub();
-  RequestMock.sendArraybufferReceiveArraybuffer.returns(Promise.resolve());
-
+  layer.setFourBit(false);
   const data = new Uint8Array(2);
+  const bucket1 = new DataBucket(8, [0, 0, 0, 0], null);
+  bucket1.data = data;
+  const bucket2 = new DataBucket(8, [1, 1, 1, 1], null);
+  bucket2.data = data;
+  const batch = [bucket1, bucket2];
+  RequestMock.sendJSONReceiveJSON = sinon.stub();
+  RequestMock.sendJSONReceiveJSON.returns(Promise.resolve());
+
   const getBucketData = sinon.stub();
   getBucketData.returns(data);
 
-  const expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token";
+  const expectedUrl = "url/data/tracings/volumes/layername?dataSetName=dataSet&token=token";
   const expectedOptions = {
-    method: "PUT",
+    method: "POST",
     data: [
-      "----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n",
-      'X-Bucket: {"position":[0,0,0],"zoomStep":0,"cubeSize":32,"fourBit":false}\r\n',
-      "\r\n",
-      data,
-      "\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n",
-      'X-Bucket: {"position":[64,64,64],"zoomStep":1,"cubeSize":32,"fourBit":false}\r\n',
-      "\r\n",
-      data,
-      "\r\n----multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--\r\n",
+      {
+        action: "labelVolume",
+        value: {
+          position: [0, 0, 0],
+          zoomStep: 0,
+          cubeSize: 32,
+          fourBit: false,
+          base64Data: Base64.fromByteArray(data),
+        },
+      },
+      {
+        action: "labelVolume",
+        value: {
+          position: [64, 64, 64],
+          zoomStep: 1,
+          cubeSize: 32,
+          fourBit: false,
+          base64Data: Base64.fromByteArray(data),
+        },
+      },
     ],
-    headers: {
-      "Content-Type": "multipart/mixed; boundary=--multipart-boundary--xxxxxxxxxxxxxxxxxxxxxxxx--",
-    },
     timeout: 30000,
     compress: true,
     doNotCatch: true,
   };
 
-  return layer.sendToStore(batch, getBucketData).then(() => {
-    t.is(RequestMock.sendArraybufferReceiveArraybuffer.callCount, 1);
+  return layer.sendToStore(batch).then(() => {
+    t.is(RequestMock.sendJSONReceiveJSON.callCount, 1);
 
-    const [url, options] = RequestMock.sendArraybufferReceiveArraybuffer.getCall(0).args;
+    const [url, options] = RequestMock.sendJSONReceiveJSON.getCall(0).args;
     t.is(url, expectedUrl);
     t.deepEqual(options, expectedOptions);
-
-    t.is(getBucketData.callCount, 2);
-    t.deepEqual(getBucketData.getCall(0).args[0], [0, 0, 0, 0]);
-    t.deepEqual(getBucketData.getCall(1).args[0], [1, 1, 1, 1]);
   });
 });

@@ -44,7 +44,7 @@ const UserListView = mockRequire.reRequire("../../admin/views/user/user_list_vie
 test("Dashboard", async t => {
   const dashboard = mount(<Dashboard userID={null} isAdminView={false} />);
   await waitForAllRequests();
-  t.is(dashboard.find(".test-datasetHeadline").length, 1);
+  t.is(dashboard.find(".TestDatasetHeadline").length, 1);
 
   debugWrapper(dashboard, "Dashboard-1");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Datasets" });
@@ -55,7 +55,7 @@ test("Dashboard", async t => {
     .simulate("click");
   await waitForAllRequests();
 
-  t.is(dashboard.find(".test-AdvancedDatasetView").length, 1);
+  t.is(dashboard.find(".TestAdvancedDatasetView").length, 1);
   debugWrapper(dashboard, "Dashboard-2");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Datasets-Advanced" });
 
@@ -65,7 +65,7 @@ test("Dashboard", async t => {
     .at(2)
     .simulate("click");
   await waitForAllRequests();
-  t.is(dashboard.find(".test-tasksHeadline").length, 1);
+  t.is(dashboard.find(".TestTasksHeadline").length, 1);
   debugWrapper(dashboard, "Dashboard-3");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Tasks" });
 
@@ -75,7 +75,7 @@ test("Dashboard", async t => {
     .at(3)
     .simulate("click");
   await waitForAllRequests();
-  t.is(dashboard.find(".test-explorative-annotations-view").length, 1);
+  t.is(dashboard.find(".TestExplorativeAnnotationsView").length, 1);
   debugWrapper(dashboard, "Dashboard-4");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Explorative-Annotations" });
 });
@@ -91,7 +91,7 @@ test("Users", async t => {
 test("Projects", async t => {
   const projectListView = mount(<ProjectListView />);
   await waitForAllRequests();
-  t.is(projectListView.find(".test-ProjectListView").length, 1);
+  t.is(projectListView.find(".TestProjectListView").length, 1);
 
   debugWrapper(projectListView, "ProjectListView");
   t.snapshot(createSnapshotable(projectListView), { id: "ProjectListView" });

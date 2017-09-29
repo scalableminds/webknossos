@@ -154,7 +154,7 @@ class DatasetView extends React.PureComponent<Props, State> {
     return (
       <div>
         {adminHeader}
-        <h3 className="test-datasetHeadline">Datasets</h3>
+        <h3 className="TestDatasetHeadline">Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
         <div>{content}</div>
       </div>

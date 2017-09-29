@@ -28,6 +28,8 @@ import org.joda.time.format.DateTimeFormat
 trait AnnotationLike extends AnnotationStatistics {
   def _name: Option[String]
 
+  def description: String
+
   def _user: Option[BSONObjectID]
 
   def user: Fox[User] =
@@ -59,6 +61,8 @@ trait AnnotationLike extends AnnotationStatistics {
   // def incrementVersion: AnnotationLike
 
   def dataSetName = content.map(_.dataSetName) getOrElse ""
+
+  def name = _name getOrElse ""
 
   def annotationInfo(user: Option[User])(implicit ctx: DBAccessContext): Fox[JsObject] =
     AnnotationLike.annotationLikeInfoWrites(this, user, Nil)
@@ -113,7 +117,8 @@ object AnnotationLike extends FoxImplicits with FilterableJson with UrlHelper{
       "stateLabel" +> stateLabel(a, user),
       "state" +> a.state,
       "id" +> a.id,
-      "name" +> a._name.getOrElse(""),
+      "name" +> a.name,
+      "description" +> a.description,
       "typ" +> a.typ,
       "task" +> a.task.flatMap(t => Task.transformToJson(t, user)).getOrElse(JsNull),
       "stats" +> a.statisticsForAnnotation().map(_.writeAsJson).getOrElse(JsNull),

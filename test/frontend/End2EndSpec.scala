@@ -33,7 +33,10 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
                   "mongodb.url"  -> mongoHost,
                   "mongodb.port" -> mongoPort,
                   "http.port"    -> testPort,
-                  "mongodb.evolution.mongoCmd" -> s"mongo $mongoHost:$mongoPort/$mongoDb")
+                  "mongodb.evolution.mongoCmd" -> s"mongo $mongoHost:$mongoPort/$mongoDb",
+                  "play.modules.disabled" -> List("com.scalableminds.braingames.datastore.DataStoreModule"),
+                  "play.http.router" -> "webknossos.Routes",
+                  "datastore.enabled" -> false)
 
   "my application" should {
 
@@ -53,7 +56,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
   }
 
   private def runWebdriverTests: Int = {
-    val result = "npm run test-e2e".run().exitValue()
+    val result = "yarn test-e2e".run().exitValue()
     result
   }
 

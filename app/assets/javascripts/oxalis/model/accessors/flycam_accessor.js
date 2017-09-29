@@ -1,3 +1,4 @@
+// @flow
 import type {
   Vector2,
   Vector3,

@@ -2,7 +2,6 @@ package models.tracing.volume
 
 import javax.xml.stream.XMLStreamWriter
 
-
 import com.scalableminds.braingames.binary.models.datasource.{AbstractSegmentationLayer, Category, DataLayerLike, ElementClass}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, NamedFunctionStream, ZipIO}
@@ -10,7 +9,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.XMLWrites
-import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationSettings}
+import models.annotation.{AnnotationContent, AnnotationContentService, AnnotationLike, AnnotationSettings}
 import models.basics.SecuredBaseDAO
 import models.binary._
 import models.tracing.CommonTracingService
@@ -82,7 +81,7 @@ case class VolumeTracing(
 
   def contentType: String = VolumeTracing.contentType
 
-  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
+  def toDownloadStream(name: String, a: AnnotationLike)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
 
     def createStream(url: String): Fox[Enumerator[Array[Byte]]] = {
       val futureResponse = RPC(url)
@@ -108,7 +107,7 @@ case class VolumeTracing(
         ZipIO.zip(
           List(
             new NamedEnumeratorStream(inputStream, "data.zip"),
-            new NamedFunctionStream(name + ".nml", os => NMLService.toNML(this, os)(VolumeTracingXMLWrites).futureBox.map(_ => Unit))
+            new NamedFunctionStream(name + ".nml", os => NMLService.toNML(this, a, os)(VolumeTracingXMLWrites).futureBox.map(_ => Unit))
           ), outputStream)
       }
     }
@@ -202,14 +201,14 @@ object VolumeTracing extends FoxImplicits{
 
   val defaultZoomLevel = 0.0
 
-  implicit object VolumeTracingXMLWrites extends XMLWrites[VolumeTracing] with GlobalDBAccess {
-    def writes(e: VolumeTracing)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
+  implicit object VolumeTracingXMLWrites extends XMLWrites[(VolumeTracing, AnnotationLike)] with GlobalDBAccess {
+    def writes(e: (VolumeTracing, AnnotationLike))(implicit writer: XMLStreamWriter): Fox[Boolean] = {
       writer.writeStartElement("things")
       writer.writeStartElement("parameters")
       for{
-        _ <- AnnotationContent.writeParametersAsXML(e, writer)
+        _ <- AnnotationContent.writeParametersAsXML(e._1, e._2, writer)
       } yield {
-        e.activeCellId.foreach{id =>
+        e._1.activeCellId.foreach{ id =>
           writer.writeStartElement("activeNodeId")
           writer.writeAttribute("id" , id.toString)
           writer.writeEndElement()

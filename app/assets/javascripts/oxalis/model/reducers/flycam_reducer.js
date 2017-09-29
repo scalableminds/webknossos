@@ -119,6 +119,16 @@ export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
   });
 }
 
+export function setDirectionReducer(state: OxalisState, direction: Vector3) {
+  if (state.userConfiguration.dynamicSpaceDirection) {
+    const spaceDirectionOrtho = [0, 1, 2].map(index => (direction[index] < 0 ? -1 : 1));
+    return update(state, {
+      flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } },
+    });
+  }
+  return state;
+}
+
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
@@ -176,14 +186,7 @@ function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
     }
 
     case "SET_DIRECTION": {
-      const direction = action.direction;
-      if (state.userConfiguration.dynamicSpaceDirection) {
-        const spaceDirectionOrtho = [0, 1, 2].map(index => (direction[index] < 0 ? -1 : 1));
-        return update(state, {
-          flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } },
-        });
-      }
-      return state;
+      return setDirectionReducer(state, action.direction);
     }
 
     case "MOVE_FLYCAM":

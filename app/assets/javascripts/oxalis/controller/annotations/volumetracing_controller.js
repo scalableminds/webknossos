@@ -9,7 +9,7 @@ import $ from "jquery";
 import Backbone from "backbone";
 import { InputKeyboardNoLoop } from "libs/input";
 import Store from "oxalis/store";
-import { toggleModeAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { cycleToolAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 
 class VolumeTracingController {
@@ -37,10 +37,10 @@ class VolumeTracingController {
     // Keyboard shortcuts
     this.keyboardNoLoop = new InputKeyboardNoLoop({
       w: () => {
-        Store.dispatch(toggleModeAction());
+        Store.dispatch(cycleToolAction());
       },
       "1": () => {
-        Store.dispatch(toggleModeAction());
+        Store.dispatch(cycleToolAction());
       },
     });
 

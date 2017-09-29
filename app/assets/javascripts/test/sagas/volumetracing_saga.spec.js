@@ -8,7 +8,7 @@ import test from "ava";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
-import { OrthoViews } from "oxalis/constants";
+import { OrthoViews, VolumeToolEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import update from "immutability-helper";
 import { take, put, race, call } from "redux-saga/effects";
@@ -41,6 +41,7 @@ const volumeTracing = {
   type: "volume",
   tracingType: "Explorational",
   name: "",
+  activeTool: VolumeToolEnum.TRACE,
   activeCellId: 0,
   cells: [],
   viewMode: 0,
@@ -64,8 +65,7 @@ const initialState = update(defaultState, {
 const ACTIVE_CELL_ID = 5;
 
 const setActiveCellAction = VolumeTracingActions.setActiveCellAction(ACTIVE_CELL_ID);
-const createCellAction = VolumeTracingActions.createCellAction();
-const startEditingAction = VolumeTracingActions.startEditingAction(OrthoViews.PLANE_XY);
+const startEditingAction = VolumeTracingActions.startEditingAction([0, 0, 0], OrthoViews.PLANE_XY);
 const addToLayerActionFn = VolumeTracingActions.addToLayerAction;
 const finishEditingAction = VolumeTracingActions.finishEditingAction();
 const resetContourAction = VolumeTracingActions.resetContourAction();
@@ -125,6 +125,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
+  saga.next(VolumeToolEnum.TRACE);
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   saga.next({ addToLayerAction: addToLayerActionFn([2, 3, 4]) });
   saga.next({ addToLayerAction: addToLayerActionFn([3, 4, 5]) });
@@ -140,29 +141,21 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
+  saga.next(VolumeToolEnum.TRACE);
   saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
   // Validate that finishLayer was called
-  expectValueDeepEqual(t, saga.next({ finishEditingAction }), call(finishLayer, volumeLayer));
-});
-
-test("VolumeTracingSaga should abort editing on cell creation (saga test)", t => {
-  const saga = editVolumeLayerAsync();
-  saga.next();
-  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
-  saga.next(startEditingAction);
-  saga.next(false);
-  saga.next();
-  saga.next({ createCellAction });
-  saga.next();
-  // Saga should be at the beginning again
-  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
+  expectValueDeepEqual(
+    t,
+    saga.next({ finishEditingAction }),
+    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE),
+  );
 });
 
 test("finishLayer saga should emit resetContourAction and then be done (saga test)", t => {
   // $FlowFixMe
-  const saga = finishLayer(mockedVolumeLayer);
+  const saga = finishLayer(mockedVolumeLayer, VolumeToolEnum.TRACE);
   saga.next();
-  saga.next(ACTIVE_CELL_ID);
+  saga.next();
   const iterator = saga.next();
   expectValueDeepEqual(t, iterator, put(resetContourAction));
   t.true(saga.next().done);

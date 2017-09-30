@@ -17,17 +17,17 @@ import play.api.libs.iteratee.Enumerator
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], scale: Scale) = {
-    Enumerator.outputStream {os => toNml(tracing, os, scale); os.close()}
+  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], description: String, scale: Scale) = {
+    Enumerator.outputStream {os => toNml(tracing, description, os, scale); os.close()}
   }
 
-  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], outputStream: OutputStream, scale: Scale) = {
+  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], description: String, outputStream: OutputStream, scale: Scale) = {
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(outputStream))
 
     tracing match {
       case Right(volumeTracing) =>
         Xml.withinElementSync("things") {
-          Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, scale))
+          Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, description, scale))
           Xml.withinElementSync("volume") {
             writer.writeAttribute("id", "1")
             writer.writeAttribute("location", "data.zip")
@@ -37,7 +37,7 @@ object NmlWriter {
         writer.close()
       case Left(skeletonTracing) => {
         Xml.withinElementSync("things") {
-          Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, scale))
+          Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, description, scale))
           writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
           Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
           Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))
@@ -48,9 +48,10 @@ object NmlWriter {
     }
   }
 
-  def writeParametersAsXml(tracing: SkeletonTracing, scale: Scale)(implicit writer: XMLStreamWriter) = {
+  def writeParametersAsXml(tracing: SkeletonTracing, description: String, scale: Scale)(implicit writer: XMLStreamWriter) = {
     Xml.withinElementSync("experiment") {
       writer.writeAttribute("name", tracing.dataSetName)
+      writer.writeAttribute("description", description)
     }
     Xml.withinElementSync("scale") {
       writer.writeAttribute("x", scale.x.toString)
@@ -80,9 +81,10 @@ object NmlWriter {
     }
   }
 
-  def writeParametersAsXml(tracing: VolumeTracing, scale: Scale)(implicit writer: XMLStreamWriter) = {
+  def writeParametersAsXml(tracing: VolumeTracing, description: String, scale: Scale)(implicit writer: XMLStreamWriter) = {
     Xml.withinElementSync("experiment") {
       writer.writeAttribute("name", tracing.dataSetName)
+      writer.writeAttribute("description", description)
     }
     Xml.withinElementSync("scale") {
       writer.writeAttribute("x", scale.x.toString)

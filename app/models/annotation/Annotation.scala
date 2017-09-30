@@ -31,8 +31,6 @@ case class Annotation(
                        description: String = "",
                        tracingTime: Option[Long] = None,
                        created : Long = System.currentTimeMillis,
-                       tracingTime: Option[Long] = None,
-                       _name: Option[String] = None,
                        _task: Option[BSONObjectID] = None,
                        _id: BSONObjectID = BSONObjectID.generate,
                        isActive: Boolean = true,
@@ -40,22 +38,18 @@ case class Annotation(
                        tags: Set[String] = Set.empty
                      ) extends FoxImplicits {
 
-  val name = _name getOrElse ""
-
-  lazy val id = _id.stringify
-
   lazy val muta = new AnnotationMutations(this)
 
   /**
    * Easy access methods
    */
 
-  def user: Fox[User] =
-    _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))
-
   val name = _name getOrElse ""
 
-  def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
+  lazy val id = _id.stringify
+
+  def user: Fox[User] =
+    _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))
 
   def task: Fox[Task] =
     _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
@@ -88,6 +82,7 @@ case class Annotation(
         "state" -> state,
         "id" -> id,
         "name" -> name,
+        "description" -> description,
         "typ" -> typ,
         "task" -> taskJson,
         "stats" -> statistics,
@@ -278,10 +273,17 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       returnNew = true)
 
   def rename(_annotation: BSONObjectID, name: String)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj("_name" -> name)),
-      returnNew = true)
+    if (name == "") {
+      findAndModify(
+        Json.obj("_id" -> _annotation),
+        Json.obj("$unset" -> Json.obj("_name" -> 1)),
+        returnNew = true)
+    } else {
+      findAndModify(
+        Json.obj("_id" -> _annotation),
+        Json.obj("$set" -> Json.obj("_name" -> name)),
+        returnNew = true)
+    }
 
   def setDescription(_annotation: BSONObjectID, description: String)(implicit ctx: DBAccessContext) =
     findAndModify(

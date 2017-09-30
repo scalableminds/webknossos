@@ -47,9 +47,6 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     AnnotationDAO.reopen(annotation._id)
   }
 
-  def update(field: String, value: JsValue)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.update(Json.obj("_id" -> annotation._id), Json.obj(field -> value))
-
   def rename(name: String)(implicit ctx: DBAccessContext) =
     AnnotationDAO.rename(annotation._id, name)
 

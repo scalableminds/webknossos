@@ -288,7 +288,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
       newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
       clonedAnnotation <- AnnotationService.createFrom(
-        user, dataSet, newTracingReference, AnnotationType.Explorational, annotation.settings, None) ?~> Messages("annotation.create.failed")
+        user, dataSet, newTracingReference, AnnotationType.Explorational, annotation.settings, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }
 }

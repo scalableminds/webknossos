@@ -219,7 +219,8 @@ object AnnotationService
                 tracingReference: TracingReference,
                 annotationType: AnnotationType,
                 settings: AnnotationSettings,
-                name: Option[String])(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+                name: Option[String],
+                description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     val annotation = Annotation(
       Some(user._id),
       tracingReference,
@@ -227,6 +228,7 @@ object AnnotationService
       team = selectSuitableTeam(user, dataSet),
       settings = settings,
       _name = name,
+      description = description,
       typ = annotationType)
     for {
       _ <- annotation.saveToDB
@@ -241,7 +243,7 @@ object AnnotationService
 
     for {
       tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._3), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), "", tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }

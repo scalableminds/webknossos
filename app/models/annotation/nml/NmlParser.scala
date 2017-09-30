@@ -5,11 +5,12 @@ package models.annotation.nml
 
 import java.io.InputStream
 
+import com.scalableminds.braingames.binary.models.datasource.ElementClass
 import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings.ProtoGeometryImplicits
 import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeUtils}
-import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
@@ -58,7 +59,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
         if (volumes.size >= 1) {
-          (Right(VolumeTracing(None, )), description)
+          (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, None, 0, zoomLevel)), description)
         } else {
           (Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
             editPosition, editRotation, zoomLevel, version=0)), description)

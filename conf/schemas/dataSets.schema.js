@@ -26,7 +26,7 @@ db.runCommand({
         "dataSource.id": { $type: "object", $exists: true },
       },
       {
-        "dataSource.id.name": { $regex: "^[A-Za-z0-9-_.]+$", $exists: true }, 
+        "dataSource.id.name": { $regex: "^[A-Za-z0-9-_.]+$", $exists: true },
       },
       {
         "dataSource.id.team": { $type: "string", $exists: true },
@@ -61,7 +61,11 @@ db.runCommand({
         isPublic: { $type: "bool", $exists: true },
       },
       {
-        $or: [{ description: { $type: "string" } }, { description: { $exists: false }, { description: { $type: "null" } } }], //type null occured
+        $or: [
+          { description: { $type: "string" } },
+          { description: { $exists: false } },
+          { description: { $type: "null" } },
+        ], //type null occured
       },
       {
         $or: [

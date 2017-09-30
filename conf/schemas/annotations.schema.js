@@ -57,7 +57,7 @@ db.runCommand({
         $or: [{ tracingTime: { $type: "number" } }, { tracingTime: { $exists: false } }],
       },
       {
-        $or: [{created: { $type: "number"}},{created: {$exists: false}}] //only 175 docs; 3052659 not
+        $or: [{ created: { $type: "number" } }, { created: { $exists: false } }], //only 175 docs; 3052659 not
       },
       {
         _id: { $type: "objectId", $exists: true },

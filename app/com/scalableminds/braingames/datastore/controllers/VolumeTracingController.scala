@@ -37,7 +37,8 @@ class VolumeTracingController @Inject()(
         for {
           initialData <- request.body.asRaw.map(_.asFile) ?~> Messages("zipFile.notFound")
           tracing <- tracingService.find(tracingId) ?~> Messages("tracing.notFound")
-          _ <- tracingService.initializeWithData(tracingId, tracing, initialData)
+          dataSource <- dataSourceRepository.findUsableByName(tracing.dataSetName) ?~> Messages("dataSet.notFound")
+          _ <- tracingService.initializeWithData(tracingId, tracing, dataSource, initialData)
         } yield Ok(Json.toJson(TracingReference(tracingId, TracingType.volume)))
       }
   }

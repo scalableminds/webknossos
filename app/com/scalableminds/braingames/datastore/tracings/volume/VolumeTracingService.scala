@@ -65,10 +65,23 @@ class VolumeTracingService @Inject()(
     }.map(t => save(t, Some(tracingId), updateGroup.version))
   }
 
-  def initializeWithData(tracingId: String, tracing: VolumeTracing, initialData: File): Box[_] = {
+  def initializeWithData(tracingId: String, tracing: VolumeTracing, dataSource: DataSource, initialData: File): Box[_] = {
     if (tracing.version != 0L) {
       return Failure("Tracing has already been edited.")
     }
+
+    val fallbackLayer = dataSource.dataLayers.flatMap {
+      case layer: SegmentationLayer => Some(layer)
+      case _ => None
+    }.headOption
+
+    val newTracing = tracing.copy(
+      boundingBox = dataSource.boundingBox,
+      elementClass = fallbackLayer.map(layer => elementClassToProto(layer.elementClass)).getOrElse(VolumeTracingDefaults.elementClass),
+      fallbackLayer = fallbackLayer.map(_.name),
+      largestSegmentId = fallbackLayer.map(_.largestSegmentId).getOrElse(VolumeTracingDefaults.largestSegmentId))
+
+    save(newTracing, Some(tracingId), 0)
 
     val dataLayer = volumeTracingLayer(tracingId, tracing)
 

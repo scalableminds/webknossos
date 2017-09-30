@@ -12,8 +12,10 @@ db.runCommand({
         team: { $type: "string", $exists: true },
       },
       {
-        numberOfOpenAssignments: { $type: "int", $exists: true },
+        numberOfOpenAssignments: { $type: "number", $exists: true },
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

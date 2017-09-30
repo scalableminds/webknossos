@@ -24,14 +24,23 @@ db.runCommand({
         md5hash: { $type: "string", $exists: true },
       },
       {
-        teams: { $type: "object", $exists: true },
-      },
-      { "teams.team": { $type: "string", $exists: true } },
-      {
-        "teams.role": { $type: "object", $exists: true },
-      },
-      {
-        "teams.role.name": { $type: "string" },
+        $or: [
+          { teams: { $size: 0 } },
+          {
+            $and: [
+              {
+                teams: { $type: "object", $exists: true },
+              },
+              { "teams.team": { $type: "string", $exists: true } },
+              {
+                "teams.role": { $type: "object", $exists: true },
+              },
+              {
+                "teams.role.name": { $type: "string" },
+              },
+            ],
+          },
+        ],
       },
       {
         userConfiguration: { $type: "object", $exists: true },
@@ -46,7 +55,7 @@ db.runCommand({
         experiences: { $type: "object", $exists: true },
       },
       {
-        lastActivity: { $type: "long", $exists: true },
+        lastActivity: { $type: "number", $exists: true },
       },
       {
         $or: [{ _isAnonymous: { $type: "bool" } }, { _isAnonymous: { $exists: false } }],
@@ -59,4 +68,6 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

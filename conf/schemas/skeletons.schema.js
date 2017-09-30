@@ -6,32 +6,33 @@ db.runCommand({
         dataSetName: { $type: "string", $exists: true },
       },
       {
-        timestamp: { $type: "long", $exists: true },
+        timestamp: { $type: "number", $exists: true },
       },
       {
-        $or: [{ activeNodeId: { $type: "int" } }, { activeNodeId: { $exists: false } }],
+        $or: [{ activeNodeId: { $type: "number" } }, { activeNodeId: { $exists: false } }],
       },
       {
-        editPosition: { $type: "double", $exists: true },
+        editPosition: { $type: "number", $exists: true },
       },
       {
-        editRotation: { $type: "double", $exists: true },
+        editRotation: { $type: "number", $exists: true },
       },
       {
-        zoomLevel: { $type: "double", $exists: true },
+        zoomLevel: { $type: "number", $exists: true },
       },
       {
         $or: [
           {
             $and: [
               { boundingBox: { $type: "object" } },
-              { "boundingBox.topLeft": { $type: "double", $exists: true } },
-              { "boundingBox.width": { $type: "int", $exists: true } },
-              { "boundingBox.height": { $type: "int", $exists: true } },
-              { "boundingBox.depth": { $type: "int", $exists: true } },
+              { "boundingBox.topLeft": { $type: "number", $exists: true } },
+              { "boundingBox.width": { $type: "number", $exists: true } },
+              { "boundingBox.height": { $type: "number", $exists: true } },
+              { "boundingBox.depth": { $type: "number", $exists: true } },
             ],
           },
           { boundingBox: { $exists: false } },
+          { boundingBox: { $type: "null" } }, // boundingBox null - maybe replace
         ],
       },
       {
@@ -84,4 +85,7 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });
+//no errors

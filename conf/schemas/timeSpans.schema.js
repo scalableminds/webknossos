@@ -6,10 +6,10 @@ db.runCommand({
         time: { $type: "number", $exists: true },
       },
       {
-        timestamp: { $type: "long", $exists: true },
+        timestamp: { $type: "number", $exists: true },
       },
       {
-        lastUpdate: { $type: "long", $exists: true },
+        lastUpdate: { $type: "number", $exists: true },
       },
       {
         _user: { $type: "objectId", $exists: true },
@@ -28,4 +28,8 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });
+
+//no errors

@@ -12,10 +12,11 @@ db.runCommand({
         value: { $type: "object", $exists: true },
       },
       {
-        timestamp: { $type: "long", $exists: true },
+        timestamp: { $type: "number", $exists: true },
       },
     ],
   },
   validationAction: "warn",
   validationLevel: "strict",
 });
+//no errors

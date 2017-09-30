@@ -48,7 +48,7 @@ db.runCommand({
         },
       },
       {
-        version: { $type: "int", $exists: true },
+        version: { $type: "number", $exists: true },
       },
       {
         $or: [{ _name: { $type: "string" } }, { _name: { $exists: false } }],
@@ -57,7 +57,7 @@ db.runCommand({
         $or: [{ tracingTime: { $type: "number" } }, { tracingTime: { $exists: false } }],
       },
       {
-        created: { $type: "long", $exists: true },
+        $or: [{created: { $type: "number"}},{created: {$exists: false}}] //only 175 docs; 3052659 not
       },
       {
         _id: { $type: "objectId", $exists: true },
@@ -79,4 +79,6 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

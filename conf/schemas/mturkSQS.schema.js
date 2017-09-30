@@ -10,4 +10,6 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

@@ -9,10 +9,10 @@ db.runCommand({
         dataStoreContent: { $type: "object", $exists: true },
       },
       {
-        $or: [{ activeCellId: { $type: "int" } }, { activeCellId: { $exists: false } }],
+        $or: [{ activeCellId: { $type: "number" } }, { activeCellId: { $exists: false } }],
       },
       {
-        timestamp: { $type: "long", $exists: true },
+        timestamp: { $type: "number", $exists: true },
       },
       {
         editPosition: { $type: "array", $exists: true },
@@ -21,13 +21,13 @@ db.runCommand({
         editRotation: { $type: "array", $exists: true },
       },
       {
-        zoomLevel: { $type: "double", $exists: true },
+        zoomLevel: { $type: "number", $exists: true },
       },
       {
-        nextCellId: { $type: "long", $exists: true },
+        nextCellId: { $type: "number", $exists: true },
       },
       {
-        $or: [{ activeCellId: { $type: "int" } }, { activeCellId: { $exists: false } }],
+        $or: [{ activeCellId: { $type: "number" } }, { activeCellId: { $exists: false } }],
       },
       {
         settings: { $type: "object", $exists: true },

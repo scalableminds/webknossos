@@ -3,7 +3,7 @@ db.runCommand({
   validator: {
     $and: [
       {
-        instances: { $type: "int", $exists: true },
+        instances: { $type: "number", $exists: true },
       },
       {
         _task: { $type: "objectId", $exists: true },
@@ -18,20 +18,23 @@ db.runCommand({
         neededExperience: { $type: "object", $exists: true },
       },
       {
-        "neededExperience.domain": { $regex: "^[A-Za-z0-9-_]+$", $exists: true },
+        "neededExperience.domain": { $regex: "^.{3,}$", $exists: true },  //empty domains
+      },                                                                         
+      {                                                                           
+        "neededExperience.value": { $type: "number", $exists: true },
       },
       {
-        "neededExperience.value": { $type: "int", $exists: true },
+        priority: { $type: "number", $exists: true },
       },
       {
-        priority: { $type: "int", $exists: true },
-      },
-      {
-        created: { $type: "long", $exists: true },
+        created: { $type: "number", $exists: true },
       },
       {
         _id: { $type: "objectId", $exists: true },
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });
+//single instance no errors

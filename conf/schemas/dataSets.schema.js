@@ -5,10 +5,10 @@ db.runCommand({
       {
         dataStoreInfo: { $type: "object", $exists: true },
       },
-      { "dataStoreInfo.name": { $regex: "^[A-Za-z0-9-_]+$", $exists: true } },
+      { "dataStoreInfo.name": { $regex: "^[A-Za-z0-9-_.]+$", $exists: true } },
       {
         "dataStoreInfo.url": {
-          $regex: "^https?:/{2}[a-z0-9.]+(.[a-z]{2,3})?(:[0-9]+)?$",
+          $regex: "^https?:/{2}[a-z0-9.-]+(.[a-z]{2,3})?(:[0-9]+)?$",
           $exists: true,
         },
       },
@@ -26,7 +26,7 @@ db.runCommand({
         "dataSource.id": { $type: "object", $exists: true },
       },
       {
-        "dataSource.id.name": { $regex: "^[A-Za-z0-9-_]+$", $exists: true },
+        "dataSource.id.name": { $regex: "^[A-Za-z0-9-_.]+$", $exists: true }, 
       },
       {
         "dataSource.id.team": { $type: "string", $exists: true },
@@ -35,12 +35,14 @@ db.runCommand({
         $or: [
           { "dataSource.dataLayers": { $type: "object" } },
           { "dataSource.dataLayers": { $exists: false } },
+          { "dataSource.dataLayers": { $size: 0 } },
         ],
       },
       {
         $or: [
-          { "dataSource.scale": { $type: "double" } },
+          { "dataSource.scale": { $type: "number" } },
           { "dataSource.scale": { $exists: false } },
+          { "dataSource.scale": { $size: 0 } },
         ],
       },
       {
@@ -59,7 +61,7 @@ db.runCommand({
         isPublic: { $type: "bool", $exists: true },
       },
       {
-        $or: [{ description: { $type: "string" } }, { description: { $exists: false } }],
+        $or: [{ description: { $type: "string" } }, { description: { $exists: false }, { description: { $type: "null" } } }], //type null occured
       },
       {
         $or: [
@@ -68,8 +70,10 @@ db.runCommand({
         ],
       },
       {
-        created: { $type: "long", $exists: true },
+        created: { $type: "number", $exists: true },
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

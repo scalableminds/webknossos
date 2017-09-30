@@ -12,19 +12,19 @@ db.runCommand({
         neededExperience: { $type: "object", $exists: true },
       },
       {
-        "neededExperience.domain": { $regex: "^[A-Za-z0-9-_]+$", $exists: true },
+        "neededExperience.domain": { $regex: "^.{3,}$", $exists: true },
       },
       {
-        "neededExperience.value": { $type: "int", $exists: true },
+        "neededExperience.value": { $type: "number", $exists: true },
       },
       {
-        instances: { $type: "int", $exists: true },
+        instances: { $type: "number", $exists: true },
       },
       {
-        $or: [{ tracingTime: { $type: "long" } }, { tracingTime: { $exists: false } }],
+        $or: [{ tracingTime: { $type: "number" } }, { tracingTime: { $exists: false } }],
       },
       {
-        created: { $type: "long", $exists: true },
+        created: { $type: "number", $exists: true },
       },
       {
         isActive: { $type: "bool", $exists: true },
@@ -33,7 +33,11 @@ db.runCommand({
         _project: { $type: "string", $exists: true },
       },
       {
-        $or: [{ _script: { $type: "string" } }, { _script: { $exists: false } }],
+        $or: [
+          { _script: { $type: "string" } },
+          { _script: { $exists: false } },
+          { _script: { $type: "null" } },
+        ], //1000 x script null - maybe replace
       },
       {
         $or: [{ creationInfo: { $type: "string" } }, { creationInfo: { $exists: false } }], //TODO
@@ -43,4 +47,6 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

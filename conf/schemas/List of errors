@@ -1,0 +1,17 @@
+List of errors
+
+annotations
+typ: "Trainings Sample" - 2x
+
+dataSets
+dataSource.id.name: space - 1x
+
+dataTokens
+token: not 26characters - 31x
+
+openAssignments
+neededExperience.domain: only 2 characters - 1x
+
+tasks
+neededExperience.domain: only 2 characters - 10x
+neededExperience.domain: empty - 6x

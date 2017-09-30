@@ -15,8 +15,10 @@ db.runCommand({
         token: { $regex: "^[a-z0-9]{26}$", $exists: true },
       },
       {
-        expiration: { $type: "long", $exists: true },
+        expiration: { $type: "number", $exists: true },
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

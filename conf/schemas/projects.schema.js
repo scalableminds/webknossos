@@ -3,7 +3,7 @@ db.runCommand({
   validator: {
     $and: [
       {
-        name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true },
+        name: { $regex: "^.{3,}$", $exists: true },
       },
       {
         team: { $type: "string", $exists: true },
@@ -12,13 +12,13 @@ db.runCommand({
         _owner: { $type: "objectId", $exists: true },
       },
       {
-        priority: { $type: "int", $exists: true },
+        priority: { $type: "number", $exists: true },
       },
       {
         paused: { $type: "bool", $exists: true },
       },
       {
-        $or: [{ expectedTime: { $type: "int" } }, { expectedTime: { $exists: false } }],
+        $or: [{ expectedTime: { $type: "number" } }, { expectedTime: { $exists: false } }],
       },
       {
         assignmentConfiguration: { $type: "object", $exists: true },
@@ -29,4 +29,7 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });
+//no errors

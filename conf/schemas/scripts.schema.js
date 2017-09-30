@@ -3,7 +3,7 @@ db.runCommand({
   validator: {
     $and: [
       {
-        name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true },
+        name: { $regex: "^[A-Za-z0-9-_]+$", $exists: true }, //one doc named astroConnectMode.js
       },
       {
         gist: { $regex: "^https?:/{2}[a-z0-9.]+/?([a-z0-9]/?)*(:[0-9]+)?$", $exists: true },
@@ -16,4 +16,6 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

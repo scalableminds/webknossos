@@ -18,13 +18,13 @@ db.runCommand({
         key: { $type: "string", $exists: true },
       },
       {
-        numberOfOpenAssignments: { $type: "int", $exists: true },
+        numberOfOpenAssignments: { $type: "number", $exists: true },
       },
       {
         numberOfInProgressAssignments: { $type: "number", $exists: true },
       },
       {
-        created: { $type: "long", $exists: true },
+        created: { $type: "number", $exists: true },
       },
       {
         annotations: { $exists: true },
@@ -53,4 +53,6 @@ db.runCommand({
       },
     ],
   },
+  validationAction: "warn",
+  validationLevel: "strict",
 });

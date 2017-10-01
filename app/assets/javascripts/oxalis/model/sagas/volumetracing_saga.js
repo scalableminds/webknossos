@@ -23,7 +23,6 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { OrthoViewType, VolumeToolType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 import api from "oxalis/api/internal_api";
-import { getBaseVoxel } from "oxalis/model/scaleinfo";
 
 export function* updateIsosurface(): Generator<*, *, *> {
   const shouldDisplayIsosurface = yield select(state => state.userConfiguration.isosurfaceDisplay);

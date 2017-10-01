@@ -18,10 +18,12 @@ import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
-import { VolumeToolEnum } from "oxalis/constants";
+import Constants, { VolumeToolEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { OrthoViewType, VolumeToolType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
+import api from "oxalis/api/internal_api";
+import { getBaseVoxel } from "oxalis/model/scaleinfo";
 
 export function* updateIsosurface(): Generator<*, *, *> {
   const shouldDisplayIsosurface = yield select(state => state.userConfiguration.isosurfaceDisplay);
@@ -41,6 +43,7 @@ export function* updateIsosurface(): Generator<*, *, *> {
 export function* watchVolumeTracingAsync(): Generator<*, *, *> {
   yield take("WK_READY");
   yield takeEvery(["FINISH_EDITING"], updateIsosurface);
+  yield takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
   yield fork(warnOfTooLowOpacity);
 }
 
@@ -106,6 +109,68 @@ function* labelWithIterator(iterator): Generator<*, *, *> {
   const labelValue = yield select(state => state.tracing.activeCellId);
   const binary = yield call([Model, Model.getSegmentationBinary]);
   yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+}
+
+function* copySegmentationLayer(): Generator<*, *, *> {
+  const activeViewport = yield select(state => state.viewModeData.plane.activeViewport);
+  if (activeViewport === "TDView") {
+    // Cannot copy labels from 3D view
+    return;
+  }
+
+  const binary = yield call([Model, Model.getSegmentationBinary]);
+  const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
+  const zoom = yield select(state => state.flycam.zoomStep);
+  const delta = Math.round(Constants.VIEWPORT_WIDTH / 2 * zoom);
+  const activeCellId = yield select(state => state.tracing.activeCellId);
+
+  const copyVoxelLabel = function(voxelTemplateAddress, voxelTargetAddress) {
+    const templateLabelValue = binary.cube.getDataValue(voxelTemplateAddress);
+
+    // Only copy voxels from the previous layer which belong to the current cell
+    if (templateLabelValue === activeCellId) {
+      const currentLabelValue = binary.cube.getDataValue(voxelTargetAddress);
+
+      // Do not overwrite already labelled voxels
+      if (currentLabelValue === 0) {
+        api.data.labelVoxels([voxelTargetAddress], templateLabelValue);
+      }
+    }
+  };
+
+  switch (activeViewport) {
+    case "PLANE_XY": {
+      const z = position[2];
+      for (let x = position[0] - delta; x < position[0] + delta; x++) {
+        for (let y = position[1] - delta; y < position[1] + delta; y++) {
+          copyVoxelLabel([x, y, position[2] - 1], [x, y, z]);
+        }
+      }
+      break;
+    }
+
+    case "PLANE_YZ": {
+      const x = position[0];
+      for (let y = position[1] - delta; y < position[1] + delta; y++) {
+        for (let z = position[2] - delta; z < position[2] + delta; z++) {
+          copyVoxelLabel([position[0] - 1, y, z], [x, y, z]);
+        }
+      }
+      break;
+    }
+
+    case "PLANE_XZ": {
+      const y = position[1];
+      for (let x = position[0] - delta; x < position[0] + delta; x++) {
+        for (let z = position[2] - delta; z < position[2] + delta; z++) {
+          copyVoxelLabel([x, position[1] - 1, z], [x, y, z]);
+        }
+      }
+      break;
+    }
+
+    default:
+  }
 }
 
 export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Generator<*, *, *> {

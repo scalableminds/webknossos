@@ -313,6 +313,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       muta = annotation.muta
       _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
+      _ <- (request.body \ "description").asOpt[String].map(muta.setDescription).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
       _ <- (request.body \ "isPublic").asOpt[Boolean].map(muta.setIsPublic).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
       _ <- (request.body \ "tags").asOpt[List[String]].map(muta.setTags).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
     } yield {
@@ -378,7 +379,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         dataSet <- DataSetDAO.findOneBySourceName(
           content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
         clonedAnnotation <- AnnotationService.createFrom(
-          request.user, clonedContent, AnnotationType.Explorational, None) ?~> Messages("annotation.create.failed")
+          request.user, clonedContent, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
       } yield {
         Redirect(routes.AnnotationController.trace(clonedAnnotation.typ, clonedAnnotation.id))
       }

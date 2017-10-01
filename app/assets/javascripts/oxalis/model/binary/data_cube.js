@@ -339,7 +339,7 @@ class DataCube {
         // Push bucket if it's loaded, otherwise, TemporalBucketManager will push
         // it once it is.
         if (bucket.isLoaded()) {
-          this.pushQueue.insert(address);
+          this.pushQueue.insert(bucket);
         }
       }
     }

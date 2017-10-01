@@ -30,6 +30,7 @@ case class TemporaryAnnotation(
                                 state: AnnotationState = AnnotationState.Finished,
                                 typ: AnnotationType = AnnotationType.CompoundProject,
                                 _name: Option[String] = None,
+                                description: String = "",
                                 restrictions: AnnotationRestrictions = AnnotationRestrictions.restrictEverything,
                                 version: Int = 0,
                                 created: Long = System.currentTimeMillis,
@@ -70,7 +71,7 @@ case class TemporaryAnnotation(
 object TemporaryAnnotationService {
   def createFrom(a: Annotation, id: String, _content: AnnotationContent): TemporaryAnnotation = {
     val content = () => Fox.successful(_content)
-    TemporaryAnnotation(id, a._user, content, a._task, a.team, a.relativeDownloadUrl, a.state, a.typ, a._name, a.restrictions, a.version, a.created)
+    TemporaryAnnotation(id, a._user, content, a._task, a.team, a.relativeDownloadUrl, a.state, a.typ, a._name, a.description, a.restrictions, a.version, a.created)
   }
 }
 

@@ -4,7 +4,6 @@
  */
 
 export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
-export type VolumeTraceOrMoveModeType = 0 | 1; // VOLUME_MODE_MOVE | VOLUME_MODE_TRACE
 export type ModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
@@ -61,6 +60,13 @@ export const ControlModeEnum = {
 };
 export type ControlModeType = $Keys<typeof ControlModeEnum>;
 
+export const VolumeToolEnum = {
+  MOVE: "MOVE",
+  TRACE: "TRACE",
+  BRUSH: "BRUSH",
+};
+export type VolumeToolType = $Keys<typeof VolumeToolEnum>;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 
@@ -71,9 +77,6 @@ const Constants = {
   MODES_PLANE: ["orthogonal", "volume"],
   MODES_ARBITRARY: ["flight", "oblique"],
   MODES_SKELETON: ["orthogonal", "flight", "oblique"],
-
-  VOLUME_MODE_MOVE: 0,
-  VOLUME_MODE_TRACE: 1,
 
   DEFAULT_SEG_ALPHA: 20,
 

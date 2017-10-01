@@ -9,6 +9,8 @@ import Utils from "libs/utils";
 import Dimensions from "oxalis/model/dimensions";
 import { Vector3Indicies } from "oxalis/constants";
 import Store from "oxalis/store";
+import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 
 export class VoxelIterator {
@@ -105,10 +107,6 @@ class VolumeLayer {
     }
   }
 
-  getSmoothedContourList() {
-    return Drawing.smoothLine(this.getContourList(), pos => this.updateArea(pos));
-  }
-
   finish(): void {
     if (!this.isEmpty()) {
       this.addContour(this.getContourList()[0]);
@@ -176,6 +174,47 @@ class VolumeLayer {
     return iterator;
   }
 
+  getCircleVoxelIterator(position: Vector3): VoxelIterator {
+    const radius = Math.round(
+      this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
+    );
+    const width = 2 * radius + 1;
+    const height = width;
+
+    const map = new Array(width);
+    for (let x = 0; x < width; x++) {
+      map[x] = new Array(height);
+      for (let y = 0; y < height; y++) {
+        map[x][y] = false;
+      }
+    }
+    const coord2d = this.get2DCoordinate(position);
+    const minCoord2d = [Math.floor(coord2d[0] - radius), Math.floor(coord2d[1] - radius)];
+
+    const setMap = function(x: number, y: number, value = true): void {
+      x = Math.floor(x);
+      y = Math.floor(y);
+      map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
+    };
+
+    // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
+    const baseVoxelFactors = this.get2DCoordinate(
+      getBaseVoxelFactors(Store.getState().dataset.scale),
+    );
+    Drawing.fillCircle(coord2d[0], coord2d[1], radius, baseVoxelFactors, (x, y) =>
+      setMap(x, y, true),
+    );
+
+    const iterator = new VoxelIterator(
+      map,
+      width,
+      height,
+      minCoord2d,
+      this.get3DCoordinate.bind(this),
+    );
+    return iterator;
+  }
+
   drawOutlineVoxels(setMap: (number, number) => void): void {
     let p1;
     let p2;
@@ -225,40 +264,6 @@ class VolumeLayer {
     return res;
   }
 
-  getQuadrantWithRespectToPoint(vertex: Vector2, point: Vector2): ?number {
-    const xDiff = vertex[0] - point[0];
-    const yDiff = vertex[1] - point[1];
-
-    if (xDiff === 0 && yDiff === 0) {
-      // Vertex and point have the same coordinates
-      return 0;
-    }
-
-    switch (false) {
-      case xDiff > 0 || yDiff <= 0:
-        return 1;
-      case xDiff > 0 || yDiff > 0:
-        return 2;
-      case xDiff <= 0 || yDiff > 0:
-        return 3;
-      case xDiff <= 0 || yDiff <= 0:
-        return 4;
-      default:
-        return null; // Cannot happen
-    }
-  }
-
-  calculateDistance(p1: Vector3, p2: Vector3): number {
-    const diff = [p1[0] - p2[0], p1[1] - p2[1], p1[2] - p2[2]];
-    return Math.sqrt(diff[0] * diff[0] + diff[1] * diff[1] + diff[2] * diff[2]);
-  }
-
-  interpolatePositions(pos1: Vector3, pos2: Vector3, f: number): Vector3 {
-    const sPos1 = [pos1[0] * (1 - f), pos1[1] * (1 - f), pos1[2] * (1 - f)];
-    const sPos2 = [pos2[0] * f, pos2[1] * f, pos2[2] * f];
-    return [sPos1[0] + sPos2[0], sPos1[1] + sPos2[1], sPos1[2] + sPos2[2]];
-  }
-
   getCentroid(): Vector3 {
     // Formula:
     // https://en.wikipedia.org/wiki/Centroid#Centroid_of_polygon
@@ -279,6 +284,13 @@ class VolumeLayer {
     const cy = sumCy / 6 / area;
 
     return this.get3DCoordinate([cx, cy]);
+  }
+
+  pixelsToVoxels(pixels: number): number {
+    const state = Store.getState();
+    const zoomFactor = getPlaneScalingFactor(state.flycam);
+    const viewportScale = state.userConfiguration.scale;
+    return pixels / viewportScale * zoomFactor;
   }
 }
 

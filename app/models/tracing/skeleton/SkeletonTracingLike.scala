@@ -7,7 +7,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalDBAccess}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.xml.{XMLWrites, Xml}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.{AnnotationContent, AnnotationSettings}
+import models.annotation.{AnnotationContent, AnnotationLike, AnnotationSettings}
 import models.tracing.skeleton.SkeletonTracingLike.SkeletonTracingLikeXMLWrites
 import org.apache.commons.io.IOUtils
 import oxalis.nml._
@@ -47,10 +47,10 @@ trait SkeletonTracingLike extends AnnotationContent with LazyLogging {
 
   def stats: Option[SkeletonTracingStatistics]
 
-  def toDownloadStream(name: String)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
+  def toDownloadStream(name: String, a: AnnotationLike)(implicit ctx: DBAccessContext): Fox[Enumerator[Array[Byte]]] = {
     logger.trace("Download stream for skeleton content requested")
     Fox.successful(Enumerator.outputStream { os =>
-      NMLService.toNML(this, os)(SkeletonTracingLikeXMLWrites).map(_ => os.close())
+      NMLService.toNML(this, a, os)(SkeletonTracingLikeXMLWrites).map(_ => os.close())
     })
   }
 
@@ -60,12 +60,12 @@ trait SkeletonTracingLike extends AnnotationContent with LazyLogging {
 
 object SkeletonTracingLike extends FoxImplicits with LazyLogging {
 
-  implicit object SkeletonTracingLikeXMLWrites extends XMLWrites[SkeletonTracingLike] with GlobalDBAccess {
-    def writes(e: SkeletonTracingLike)(implicit writer: XMLStreamWriter): Fox[Boolean] = {
+  implicit object SkeletonTracingLikeXMLWrites extends XMLWrites[(SkeletonTracingLike, AnnotationLike)] with GlobalDBAccess {
+    def writes(e: (SkeletonTracingLike, AnnotationLike))(implicit writer: XMLStreamWriter): Fox[Boolean] = {
       Xml.withinElement("things") {
         for {
-          _ <- Xml.withinElement("parameters")(AnnotationContent.writeParametersAsXML(e, writer))
-          trees <- e.trees
+          _ <- Xml.withinElement("parameters")(AnnotationContent.writeParametersAsXML(e._1, e._2, writer))
+          trees <- e._1.trees
           _ <- Xml.toXML(trees.filterNot(_.nodes.isEmpty))
           _ <- Xml.withinElement("branchpoints")(Xml.toXML(trees.flatMap(_.branchPoints).sortBy(-_.timestamp)))
           _ <- Xml.withinElement("comments")(Xml.toXML(trees.flatMap(_.comments)))

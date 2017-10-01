@@ -7,7 +7,7 @@ export function* pushAnnotationUpdateAsync(): Generator<*, *, *> {
   const url = `/annotations/${tracing.tracingType}/${tracing.tracingId}/edit`;
   yield [
     call(Request.sendJSONReceiveJSON, url, {
-      data: { name: tracing.name, isPublic: tracing.isPublic },
+      data: { name: tracing.name, isPublic: tracing.isPublic, description: tracing.description },
     }),
   ];
 }
@@ -15,4 +15,5 @@ export function* pushAnnotationUpdateAsync(): Generator<*, *, *> {
 export function* watchAnnotationAsync(): Generator<*, *, *> {
   yield takeEvery("SET_ANNOTATION_NAME", pushAnnotationUpdateAsync);
   yield takeEvery("SET_ANNOTATION_PUBLIC", pushAnnotationUpdateAsync);
+  yield takeEvery("SET_ANNOTATION_DESCRIPTION", pushAnnotationUpdateAsync);
 }

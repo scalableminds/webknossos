@@ -29,7 +29,7 @@ class LoginView extends React.PureComponent<Props> {
         <Col span={8}>
           <Form onSubmit={this.handleSubmit}>
             <FormItem>
-              {getFieldDecorator("userName", {
+              {getFieldDecorator("email", {
                 rules: [
                   {
                     required: true,

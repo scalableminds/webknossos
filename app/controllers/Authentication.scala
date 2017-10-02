@@ -249,11 +249,10 @@ object AuthForms {
   )
 
   // Sign in
-  case class SignInData(email:String, password:String, rememberMe:Boolean)
+  case class SignInData(email:String, password:String)
   val signInForm = Form(mapping(
     "email" -> email,
-    "password" -> nonEmptyText,
-    "rememberMe" -> boolean
+    "password" -> nonEmptyText
   )(SignInData.apply)(SignInData.unapply)
   )
 
@@ -347,16 +346,7 @@ class Authentication @Inject() (
               Future.successful(Redirect("").flashing("error" -> Messages("error.noUser")))
               Future.successful(JsonOk(Messages("error.noUser")))
             case Some(user) => for {
-              authenticator <- env.authenticatorService.create(loginInfo).map {
-                case authenticator if signInData.rememberMe =>
-                  val c = configuration.underlying
-                  authenticator.copy(
-                    expirationDateTime = new DateTime() + c.as[FiniteDuration]("silhouette.authenticator.rememberMe.authenticatorExpiry"),
-                    idleTimeout = c.getAs[FiniteDuration]("silhouette.authenticator.rememberMe.authenticatorIdleTimeout"),
-                    cookieMaxAge = c.getAs[FiniteDuration]("silhouette.authenticator.rememberMe.cookieMaxAge")
-                  )
-                case authenticator => authenticator
-              }
+              authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Redirect(routes.Application.index()))
             } yield result
@@ -369,7 +359,7 @@ class Authentication @Inject() (
   }
 
   def switchTo(email: String) = SecuredAction.async { implicit request =>
-    if(request.identity._isSuperUser.openOr(false)){ 
+    if(request.identity._isSuperUser.openOr(false)){
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- findOneByEmail(email) ?~> Messages("user.notFound")

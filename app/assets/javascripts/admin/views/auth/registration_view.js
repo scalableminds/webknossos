@@ -29,7 +29,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const url = "/api/teams";
+    const url = "/api/allTeams";
     const teams = await Request.receiveJSON(url);
 
     this.setState({ teams });

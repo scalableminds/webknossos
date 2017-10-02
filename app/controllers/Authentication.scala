@@ -306,15 +306,6 @@ class Authentication @Inject() (
     Ok(views.html.main()(Html("")))
   }
 
-  /*
-  def register = Action.async { implicit request => //silhouette.UserAwareAchtion
-    //request.identity match {
-    //  case Some(user) => Fox.successful(Redirect(routes.Application.index))
-    //  case None => formHtml(signUpForm).map(Ok(_))
-    //}
-    formHtml(signUpForm).map(Ok(_))
-  }
-  */
 
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
@@ -323,7 +314,6 @@ class Authentication @Inject() (
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            //Fox.successful(Redirect(routes.Authentication.register()).flashing("error" -> Messages("error.userExists", signUpData.email)))
             Fox.successful(JsonOk(Messages("error.userExists", signUpData.email)))
           case Empty =>
             for {
@@ -335,8 +325,6 @@ class Authentication @Inject() (
               Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, emailAddress.toString, brainDBResult))
               if (automaticUserActivation) {
                 JsonOk(Messages("user.automaticUserActivation"))
-                //Redirect(routes.Application.index)
-                //.withSession(Secured.createSession(user))
               } else {
                 JsonOk(Messages("user.accountCreated"))
                 //Redirect(Authentication.getLoginRoute)
@@ -347,17 +335,6 @@ class Authentication @Inject() (
       }
     )
   }
-
-  /*
-  def signIn = Action.async { implicit request => //silhouette.UserAwareAction.async
-    //Future.successful(request.identity match {
-      //case Some(user) => Redirect(controllers.routes.Application.index())
-      //case None => Ok(views.html.auth.loginTest(signInForm))
-    //})
-
-    Future.successful(Ok(views.html.auth.loginTest(signInForm)))
-  }
-  */
 
   def authenticate = Action.async { implicit request =>
     signInForm.bindFromRequest.fold(
@@ -391,11 +368,34 @@ class Authentication @Inject() (
     )
   }
 
-  /*
-  def startResetPassword = Action { implicit request =>
-    Ok(views.html.auth.startResetPassword(emailForm))
+  def switchTo(email: String) = SecuredAction.async { implicit request =>
+    if(request.identity._isSuperUser.openOr(false)){ 
+      val loginInfo = LoginInfo(CredentialsProvider.ID, email)
+      for {
+        _ <- findOneByEmail(email) ?~> Messages("user.notFound")
+        _ <- env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index())) //to logout the admin
+        authenticator <- env.authenticatorService.create(loginInfo)
+        value <- env.authenticatorService.init(authenticator)
+        result <- env.authenticatorService.embed(value, Redirect(routes.Application.index())) //to login the new user
+      } yield result
+    }else{
+      Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
+      //Future.successful(Redirect(routes.Application.index()).flashing("error" -> Messages("user.notAuthorised"))) //what to do in this case ?
+      Future.successful(JsonOk(Messages("user.notAuthorised")))
+    }
+    /*if (request.user.isSuperUser) {
+     findOneByEmail(email).map { user =>
+       Logger.info(s"[Superuser] user switch (${request.user.email} -> $email)")
+       Redirect(controllers.routes.Application.index).withSession(Secured.createSession(user))
+     }
+   } else {
+     Logger.warn(s"User tried to switch (${request.user.email} -> $email) but is no Superuser!")
+     Future.successful(
+       BadRequest(html.user.login(loginForm.withGlobalError("user.login.failed"))(sessionDataAuthenticated(request), request2Messages(request))))
+   }
+   */
   }
-  */
+
 
   def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
@@ -413,20 +413,7 @@ class Authentication @Inject() (
     )
   }
 
-/*
-  def resetPassword(tokenId:String) = Action.async { implicit request =>
-    val id = UUID.fromString(tokenId)
-    userTokenService.find(id).flatMap {
-      case None =>
-        Future.successful(NotFound(views.html.error.defaultError("token not found", true))) //views.html.errors.notFound(request)
-      case Some(token) if !token.isSignUp && !token.isExpired =>
-        Future.successful(Ok(views.html.auth.resetPassword(tokenId, resetPasswordForm)))
-      case _ => for {
-        _ <- userTokenService.remove(id)
-      } yield NotFound(views.html.error.defaultError("token not found", true)) //views.html.errors.notFound(request)
-    }
-  }
-  */
+
 
   def handleResetPassword(tokenId:String) = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
@@ -449,13 +436,6 @@ class Authentication @Inject() (
       }
     )
   }
-/*
-  def logout = Action {
-    Redirect(Authentication.getLoginRoute)//Autehntication.signIn
-      .withNewSession
-      .flashing("success" -> Messages("user.logout.success"))
-  }
-  */
 
   def logout = SecuredAction.async { implicit request =>
     env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index()))

@@ -293,14 +293,6 @@ class Authentication @Inject() (
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
 
-  /*
-  def formHtml(form: Form[AuthForms.SignUpData])(implicit session: SessionData) = {
-    for {
-      teams <- TeamService.rootTeams()
-    } yield views.html.auth.registerTest(form, teams)
-  }
-*/
-
   def empty = Action { implicit request =>
     Ok(views.html.main()(Html("")))
   }
@@ -345,11 +337,12 @@ class Authentication @Inject() (
             case None =>
               Future.successful(Redirect("").flashing("error" -> Messages("error.noUser")))
               Future.successful(JsonOk(Messages("error.noUser")))
-            case Some(user) => for {
+            case Some(user) if(user.isActive) => for {
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Redirect(routes.Application.index()))
             } yield result
+            case Some(user) => Future.successful(BadRequest(Messages("user.deactivated"))) //I want to stay on this site but show the error "user is deactivated"
           }
         }.recover {
           case e:ProviderException => JsonOk(Messages("error.invalidCredentials"))//Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.invalidCredentials"))
@@ -370,20 +363,8 @@ class Authentication @Inject() (
       } yield result
     }else{
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
-      //Future.successful(Redirect(routes.Application.index()).flashing("error" -> Messages("user.notAuthorised"))) //what to do in this case ?
-      Future.successful(JsonOk(Messages("user.notAuthorised")))
+      Future.successful(BadRequest(Messages("user.notAuthorised")))
     }
-    /*if (request.user.isSuperUser) {
-     findOneByEmail(email).map { user =>
-       Logger.info(s"[Superuser] user switch (${request.user.email} -> $email)")
-       Redirect(controllers.routes.Application.index).withSession(Secured.createSession(user))
-     }
-   } else {
-     Logger.warn(s"User tried to switch (${request.user.email} -> $email) but is no Superuser!")
-     Future.successful(
-       BadRequest(html.user.login(loginForm.withGlobalError("user.login.failed"))(sessionDataAuthenticated(request), request2Messages(request))))
-   }
-   */
   }
 
 
@@ -396,7 +377,7 @@ class Authentication @Inject() (
           token <- userTokenService.save(UserToken.create(user._id, email, isSignUp = false))
         } yield {
           Mailer ! Send(
-            DefaultMails.changePasswordMail(email, user.name))
+            DefaultMails.changePasswordMail(user.name, email))
           Ok(views.html.auth.resetPasswordInstructions(email))
         }
       }

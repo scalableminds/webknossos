@@ -21,6 +21,7 @@ import SpotlightView from "dashboard/views/spotlight_view";
 import LoginView from "admin/views/auth/login_view";
 import RegistrationView from "admin/views/auth/registration_view";
 import ResetPasswordView from "admin/views/auth/reset_password_view";
+import StartResetPasswordView from "admin/views/auth/start_reset_password_view"
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 
 // #####
@@ -319,7 +320,7 @@ class Router extends BaseRouter {
   }
 
   reset() {
-    const view = new ReactBackboneWrapper(ResetPasswordView, {});
+    const view = new ReactBackboneWrapper(StartResetPasswordView, {});
     this.changeView(view);
   }
 

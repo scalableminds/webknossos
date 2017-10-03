@@ -1,7 +1,7 @@
 // flow
 /* eslint-disable jsx-a11y/href-no-hash */
 import * as React from "react";
-import { Row, Col, Modal, Card } from "antd";
+import { Row, Col, Modal, Card, Dropdown, Menu } from "antd";
 import Utils from "libs/utils";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
@@ -50,6 +50,37 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       );
     }
 
+    const menu = (
+      <Menu>
+        <Menu.Item key="existing">
+          <a
+            href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+            onClick={this.createTracing}
+            title="Create volume tracing"
+          >
+            Use Existing Segmentation Layer
+          </a>
+        </Menu.Item>
+        <Menu.Item key="new">
+          <a
+            href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+            onClick={this.createTracing}
+            title="Create volume tracing"
+          >
+            Use a New Segmentation Layer
+          </a>
+        </Menu.Item>
+      </Menu>
+    );
+
+    const createVolumeTracingMenu = (
+      <Dropdown overlay={menu} trigger={["click"]}>
+        <a href="#" title="Create volume tracing">
+          <img src="/assets/images/volume.svg" alt="Volume" />
+        </a>
+      </Dropdown>
+    );
+
     return (
       <Card
         bodyStyle={{ padding: 0 }}
@@ -67,15 +98,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           >
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>
-          {dataset.dataStore.typ !== "ndstore" ? (
-            <a
-              href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
-              title="Create volume tracing"
-              onClick={this.createTracing}
-            >
-              <img src="/assets/images/volume.svg" alt="Volume" />
-            </a>
-          ) : null}
+          {dataset.dataStore.typ !== "ndstore" ? createVolumeTracingMenu : null}
         </div>
         <div className="dataset-description">
           <h3>{dataset.name}</h3>

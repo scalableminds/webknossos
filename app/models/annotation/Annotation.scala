@@ -26,10 +26,11 @@ case class Annotation(
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
                        state: AnnotationState = AnnotationState.InProgress,
-                       description: String = "",
-                       created : Long = System.currentTimeMillis,
-                       tracingTime: Option[Long] = None,
+                       version: Int = 0,
                        _name: Option[String] = None,
+                       description: String = "",
+                       tracingTime: Option[Long] = None,
+                       created : Long = System.currentTimeMillis,
                        _task: Option[BSONObjectID] = None,
                        _id: BSONObjectID = BSONObjectID.generate,
                        isActive: Boolean = true,
@@ -37,11 +38,15 @@ case class Annotation(
                        tags: Set[String] = Set.empty
                      ) extends FoxImplicits {
 
+  lazy val muta = new AnnotationMutations(this)
+
+  /**
+   * Easy access methods
+   */
+
   val name = _name getOrElse ""
 
   lazy val id = _id.stringify
-
-  lazy val muta = new AnnotationMutations(this)
 
   def user: Fox[User] =
     _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))
@@ -268,10 +273,17 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       returnNew = true)
 
   def rename(_annotation: BSONObjectID, name: String)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj("_name" -> name)),
-      returnNew = true)
+    if (name == "") {
+      findAndModify(
+        Json.obj("_id" -> _annotation),
+        Json.obj("$unset" -> Json.obj("_name" -> 1)),
+        returnNew = true)
+    } else {
+      findAndModify(
+        Json.obj("_id" -> _annotation),
+        Json.obj("$set" -> Json.obj("_name" -> name)),
+        returnNew = true)
+    }
 
   def setDescription(_annotation: BSONObjectID, description: String)(implicit ctx: DBAccessContext) =
     findAndModify(

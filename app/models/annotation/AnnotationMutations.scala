@@ -9,7 +9,6 @@ import models.task.{OpenAssignmentService, Task}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsValue, Json}
-import reactivemongo.play.json.BSONFormats._
 
 /**
  * Company: scalableminds
@@ -47,9 +46,6 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   def reopen()(implicit ctx: DBAccessContext) = {
     AnnotationDAO.reopen(annotation._id)
   }
-
-  def update(field: String, value: JsValue)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.update(Json.obj("_id" -> annotation._id), Json.obj(field -> value))
 
   def rename(name: String)(implicit ctx: DBAccessContext) =
     AnnotationDAO.rename(annotation._id, name)

@@ -5,11 +5,13 @@ package models.annotation.nml
 
 import java.io.InputStream
 
+import com.scalableminds.braingames.binary.models.datasource.ElementClass
 import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings.ProtoGeometryImplicits
 import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeUtils}
-import com.scalableminds.util.geometry.{Point3D, Scale, Vector3D}
+import com.scalableminds.braingames.datastore.tracings.volume.Volume
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
@@ -36,7 +38,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   val DEFAULT_TIMESTAMP = 0L
 
-  def parse(name: String, nmlInputStream: InputStream): Box[Either[SkeletonTracing, (VolumeTracing, String)]] = {
+  def parse(name: String, nmlInputStream: InputStream): Box[(Either[SkeletonTracing, (VolumeTracing, String)], String)] = {
     try {
       val data = XML.load(nmlInputStream)
       for {
@@ -46,16 +48,23 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         comments = parseComments(data \ "comments")
         branchPoints = parseBranchPoints(data \ "branchpoints", time)
         trees <- extractTrees(data \ "thing", branchPoints, comments)
+        volumes = extractVolumes(data \ "volume")
       } yield {
         val dataSetName = parseDataSetName(parameters \ "experiment")
+        val description = parseDescription(parameters \ "experiment")
         val activeNodeId = parseActiveNode(parameters \ "activeNode")
         val editPosition = parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracingDefaults.editPosition)
         val editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
 
-        logger.debug(s"Parsed NML file. Trees: ${trees.size}")
-        Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
-          editPosition, editRotation, zoomLevel, version=0))
+        logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
+
+        if (volumes.size >= 1) {
+          (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel), volumes.head.location), description)
+        } else {
+          (Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
+            editPosition, editRotation, zoomLevel, version=0)), description)
+        }
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
@@ -73,6 +82,10 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
     validateTrees(parseTrees(treeNodes, branchPoints, comments)).map(transformTrees)
+  }
+
+  def extractVolumes(volumeNodes: NodeSeq) = {
+    volumeNodes.map(node => Volume((node \ "@location").text))
   }
 
   def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
@@ -153,6 +166,10 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     val rawDataSetName = (node \ "@name").text
     val magRx = "_mag[0-9]*$".r
     magRx.replaceAllIn(rawDataSetName, "")
+  }
+
+  private def parseDescription(node: NodeSeq) = {
+    (node \ "@description").text
   }
 
   private def parseActiveNode(node: NodeSeq) = {

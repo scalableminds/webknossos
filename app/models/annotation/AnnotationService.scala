@@ -228,8 +228,8 @@ object AnnotationService
       team = selectSuitableTeam(user, dataSet),
       settings = settings,
       _name = name,
-      typ = annotationType,
-      description = description)
+      description = description,
+      typ = annotationType)
     for {
       _ <- annotation.saveToDB
     } yield annotation
@@ -243,7 +243,7 @@ object AnnotationService
 
     for {
       tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._3), tuple._2))
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), "", tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }

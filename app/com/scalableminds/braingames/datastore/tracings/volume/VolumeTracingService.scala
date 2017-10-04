@@ -24,11 +24,13 @@ class VolumeTracingService @Inject()(
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
-  def create(dataSource: DataSource, initialContent: Option[File]): VolumeTracing = {
-    val fallbackLayer = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer => Some(layer)
-      case _ => None
-    }.headOption
+  def create(dataSource: DataSource, initialContent: Option[File], withFallback: Boolean): VolumeTracing = {
+    val fallbackLayer = if (withFallback) {
+      dataSource.dataLayers.flatMap {
+        case layer: SegmentationLayer => Some(layer)
+        case _ => None
+      }.headOption
+    } else None
 
     val tracingLayer = VolumeTracingLayer(
       UUID.randomUUID.toString,

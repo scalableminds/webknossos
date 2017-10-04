@@ -24,14 +24,14 @@ class VolumeTracingController @Inject()(
 
   implicit val volumeDataStore = tracingDataStore.volumeData
 
-  def create(dataSetName: String) = Action.async {
+  def create(dataSetName: String, withFallback: Boolean) = Action.async {
     implicit request => {
       AllowRemoteOrigin {
         for {
           dataSource <- dataSourceRepository.findUsableByName(dataSetName).toFox ?~> Messages("dataSource.notFound")
         } yield {
           val initialContent = request.body.asRaw.map(_.asFile)
-          val tracing = volumeTracingService.create(dataSource, initialContent)
+          val tracing = volumeTracingService.create(dataSource, initialContent, withFallback)
           Ok(Json.toJson(tracing))
         }
       }

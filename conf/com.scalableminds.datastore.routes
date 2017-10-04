@@ -27,7 +27,7 @@ POST        /datasets/:dataSetName                                              
 GET         /datasets/:dataSetName                                                             @com.scalableminds.braingames.datastore.controllers.DataSourceController.explore(dataSetName: String)
 
 # Volume tracings
-POST        /tracings/volumes                                                                  @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.create(dataSetName: String)
+POST        /tracings/volumes                                                                  @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.create(dataSetName: String, withFallback: Boolean)
 POST        /tracings/volumes/:tracingId                                                       @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.update(dataSetName: String, tracingId: String)
 GET         /tracings/volumes/:tracingId/download                                              @com.scalableminds.braingames.datastore.controllers.VolumeTracingController.download(dataSetName: String, tracingId: String)
 

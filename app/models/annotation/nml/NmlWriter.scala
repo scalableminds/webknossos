@@ -17,6 +17,7 @@ import play.api.libs.iteratee.Enumerator
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
+  //TODO: RocksDB include description in NML
   def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], scale: Scale) = {
     Enumerator.outputStream {os => toNml(tracing, os, scale); os.close()}
   }

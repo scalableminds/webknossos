@@ -273,25 +273,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def duplicate(typ: String, id: String) = Authenticated.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-<<<<<<< HEAD
         newAnnotation <- duplicateAnnotation(annotation, request.user)
-||||||| merged common ancestors
-        content <- annotation.content
-        temp <- content.temporaryDuplicate(BSONObjectID.generate().stringify)
-        clonedContent <- temp.saveToDB
-        dataSet <- DataSetDAO.findOneBySourceName(
-          content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
-        clonedAnnotation <- AnnotationService.createFrom(
-          request.user, clonedContent, AnnotationType.Explorational, None) ?~> Messages("annotation.create.failed")
-=======
-        content <- annotation.content
-        temp <- content.temporaryDuplicate(BSONObjectID.generate().stringify)
-        clonedContent <- temp.saveToDB
-        dataSet <- DataSetDAO.findOneBySourceName(
-          content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
-        clonedAnnotation <- AnnotationService.createFrom(
-          request.user, clonedContent, AnnotationType.Explorational, None, annotation.description) ?~> Messages("annotation.create.failed")
->>>>>>> da38c0316c08f6c66a7826a05eb00434c446eca3
       } yield {
         Redirect(routes.AnnotationController.empty(newAnnotation.typ, newAnnotation.id))
       }
@@ -306,7 +288,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
       newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(oldTracingReference) ?~> "Failed to create skeleton tracing."
       clonedAnnotation <- AnnotationService.createFrom(
-        user, dataSet, newTracingReference, AnnotationType.Explorational, annotation.settings, None) ?~> Messages("annotation.create.failed")
+        user, dataSet, newTracingReference, AnnotationType.Explorational, annotation.settings, None, annotation.description) ?~> Messages("annotation.create.failed")
     } yield clonedAnnotation
   }
 }

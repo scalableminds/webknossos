@@ -54,7 +54,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       <Menu>
         <Menu.Item key="existing">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=true`}
             onClick={this.createTracing}
             title="Create volume tracing"
           >
@@ -63,7 +63,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         </Menu.Item>
         <Menu.Item key="new">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=false`}
             onClick={this.createTracing}
             title="Create volume tracing"
           >

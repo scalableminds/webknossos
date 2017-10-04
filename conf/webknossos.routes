@@ -77,7 +77,7 @@ GET           /datasets                                                         
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:id/import                                              controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
-GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String)
+GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean])
 
 GET           /api/datasets                                                     controllers.DataSetController.list
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)

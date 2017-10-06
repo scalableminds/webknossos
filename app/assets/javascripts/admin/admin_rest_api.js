@@ -2,14 +2,16 @@
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
+import Utils from "libs/utils";
 import type {
   APIUserType,
   APIScriptType,
   APITaskTypeType,
   APITeamType,
   APIProjectType,
-  APITaskWithAnnotationType,
+  APITaskType,
 } from "admin/api_flow_types";
+import type { QueryObjectType } from "admin/views/task/task_search_form";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -121,15 +123,38 @@ export async function deleteProject(projectName: string): Promise<void> {
 }
 
 // ### Tasks
-export async function getTasks(): Promise<Array<APITaskWithAnnotationType>> {
-  const tasks = await Request.receiveJSON("/api/tasks");
-  assertResponseLimit(tasks);
-
-  return tasks;
-}
-
 export async function deleteTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}`, {
     method: "DELETE",
   });
+}
+
+export async function getTasksByQuery(queryObject: QueryObjectType): Promise<Array<APITaskType>> {
+  const responses = await Request.sendJSONReceiveJSON("/api/queries", {
+    params: { type: "task" },
+    data: queryObject,
+  });
+
+  const tasks = responses.map(response => {
+    // apply some defaults
+    response.type = {
+      summary: Utils.__guard__(response.type, x => x.summary) || "<deleted>",
+      id: Utils.__guard__(response.type, x1 => x1.id) || "",
+    };
+
+    if (response.tracingTime == null) {
+      response.tracingTime = 0;
+    }
+    // convert bounding box
+    if (response.boundingBox != null) {
+      const { topLeft, width, height, depth } = response.boundingBox;
+      response.boundingBoxVec6 = topLeft.concat([width, height, depth]);
+    } else {
+      response.boundingBoxVec6 = [];
+    }
+
+    return response;
+  });
+
+  return tasks;
 }

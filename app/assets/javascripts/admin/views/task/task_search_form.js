@@ -19,6 +19,14 @@ type State = {
   taskTypes: Array<APITaskTypeType>,
 };
 
+type BSONIdType = { $oid: string };
+
+export type QueryObjectType = {
+  _taskType?: BSONIdType,
+  _id?: Array<BSONIdType> | { $in: Array<BSONIdType> },
+  _project?: string,
+};
+
 class TaskSearchForm extends React.Component<Props, State> {
   state = {
     users: [],
@@ -51,7 +59,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     }
 
     this.props.form.validateFields((err, formValues) => {
-      const queryObject = {};
+      const queryObject: QueryObjectType = {};
 
       if (formValues.taskId) {
         const taskIds = formValues.taskId

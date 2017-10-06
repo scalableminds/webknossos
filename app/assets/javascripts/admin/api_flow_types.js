@@ -2,7 +2,7 @@
  * api_flow_types.js
  * @flow
  */
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import type { DataLayerType, SettingsType, BoundingBoxObjectType } from "oxalis/store";
 
 type APIDataSourceType = {
@@ -136,6 +136,7 @@ export type APIScriptType = {
 
 export type APITaskType = {
   +boundingBox: BoundingBoxObjectType,
+  +boundingBoxVec6: Vector6,
   +created: string,
   +creationInfo: ?string,
   +dataSet: string,

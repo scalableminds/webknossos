@@ -1,4 +1,5 @@
 // @flow
+/* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
 import React from "react";
@@ -17,7 +18,7 @@ import Request from "libs/request";
 const { Column } = Table;
 const { Search } = Input;
 
-type Props = {};
+type Props = { initialFieldValues: Object };
 
 type State = {
   isLoading: boolean,
@@ -114,7 +115,10 @@ class TaskListView extends React.PureComponent<Props, State> {
           <div className="clearfix" style={{ margin: "20px 0px" }} />
 
           <Card title="Search for Tasks">
-            <TaskSearchForm onChange={queryObject => this.fetchData(queryObject)} />
+            <TaskSearchForm
+              onChange={queryObject => this.fetchData(queryObject)}
+              initialFieldValues={this.props.initialFieldValues}
+            />
           </Card>
 
           <Spin spinning={this.state.isLoading} size="large">

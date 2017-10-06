@@ -186,16 +186,24 @@ class Router extends BaseRouter {
   }
 
   projectTasks(projectName) {
-    this.showWithPagination("TaskListView", "TaskCollection", {
-      projectName,
-      addButtonText: "Create New Task",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.TaskListView, {
+        // See format for `mapPropsToFields`
+        // https://ant.design/components/form/#Form.create(options)
+        initialFieldValues: { projectName },
+      });
+      this.changeView(view);
     });
   }
 
   taskTypesTasks(taskTypeId) {
-    this.showWithPagination("TaskListView", "TaskCollection", {
-      taskTypeId,
-      addButtonText: "Create New Task",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.TaskListView, {
+        // See format for `mapPropsToFields`
+        // https://ant.design/components/form/#Form.create(options)
+        initialFieldValues: { taskTypeId },
+      });
+      this.changeView(view);
     });
   }
 

@@ -10,6 +10,7 @@ const Option = Select.Option;
 type Props = {
   form: Object,
   onChange: Function,
+  initialFieldValues?: Object,
 };
 
 type State = {
@@ -27,6 +28,13 @@ class TaskSearchForm extends React.Component<Props, State> {
 
   componentDidMount() {
     this.fetchData();
+
+    // initialize form with default values when navigation from
+    // project / taskType list views
+    if (this.props.initialFieldValues) {
+      this.props.form.setFieldsValue(this.props.initialFieldValues);
+      this.handleFormSubmit();
+    }
   }
 
   async fetchData() {
@@ -37,11 +45,13 @@ class TaskSearchForm extends React.Component<Props, State> {
     });
   }
 
-  handleFormSubmit = (event: SyntheticInputEvent<*>) => {
-    event.preventDefault();
+  handleFormSubmit = (event: ?SyntheticInputEvent<*>) => {
+    if (event) {
+      event.preventDefault();
+    }
 
     this.props.form.validateFields((err, formValues) => {
-      let queryObject = {};
+      const queryObject = {};
 
       if (formValues.taskId) {
         const taskIds = formValues.taskId
@@ -164,5 +174,10 @@ class TaskSearchForm extends React.Component<Props, State> {
     );
   }
 }
+
+// const mapPropsToFields = props => {
+//   debugger;
+//   return props.initialFieldValues;
+// };
 
 export default Form.create()(TaskSearchForm);

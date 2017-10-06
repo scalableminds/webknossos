@@ -35,7 +35,7 @@ GET           /register                                                         
 GET           /login                                                            controllers.Authentication.empty
 GET           /reset                                                            controllers.Authentication.empty
 GET           /finishreset                                                      controllers.Authentication.empty
-GET           /api/changepassword                                                   controllers.Authentication.empty
+GET           /api/changepassword                                               controllers.Authentication.empty
 POST          /api/register                                                     controllers.Authentication.handleRegistration
 POST          /api/login                                                        controllers.Authentication.authenticate
 GET           /api/switch                                                       controllers.Authentication.switchTo(to: String)

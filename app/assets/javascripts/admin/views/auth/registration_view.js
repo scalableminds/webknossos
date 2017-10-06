@@ -40,7 +40,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/register", { data: formValues });
+        Request.sendJSONReceiveJSON("/api/register", { data: formValues }).then(() => app.router.navigate("/finishreset", {trigger: true}));
       }
     });
   };

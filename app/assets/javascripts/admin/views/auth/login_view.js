@@ -3,6 +3,7 @@ import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
+import app from "app";
 
 const FormItem = Form.Item;
 
@@ -16,7 +17,7 @@ class LoginView extends React.PureComponent<Props> {
 
     this.props.form.validateFields((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/login", { data: formValues });
+        Request.sendJSONReceiveJSON("/api/login", { data: formValues }).then(()=>app.router.navigate("/dashboard", {trigger: true}));
       }
     });
   };

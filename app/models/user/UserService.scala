@@ -148,7 +148,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
 
   }
-  
+
 
   def changePasswordInfo(loginInfo:LoginInfo, passwordInfo:PasswordInfo) = {
     for{

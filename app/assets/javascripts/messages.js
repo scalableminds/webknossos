@@ -46,4 +46,6 @@ In order to restore the current window, a reload is necessary.`,
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",
   "auth.reset_new_password2": "Please repeat your new password!",
+  "auth.reset_email_notification": "An email with instructions to reset your password has been send to you.",
+  "auth.reset_reset_pw_confirmation": "Your password was successfully changed"
 };

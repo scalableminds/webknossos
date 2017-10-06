@@ -158,12 +158,12 @@ class Authentication @Inject() (
             case Some(user) if(user.isActive) => for {
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
-              result <- env.authenticatorService.embed(value, Redirect(routes.Application.index()))
-            } yield result
-            case Some(user) => Future.successful(JsonOk(Messages("user.deactivated")))
+              result <- env.authenticatorService.embed(value, Ok)
+            } yield result//Ok
+            case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
         }.recover {
-          case e:ProviderException => JsonOk(Messages("error.invalidCredentials"))
+          case e:ProviderException => BadRequest(Messages("error.invalidCredentials"))
         }
       }
     )
@@ -174,14 +174,14 @@ class Authentication @Inject() (
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- findOneByEmail(email) ?~> Messages("user.notFound")
-        _ <- env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index())) //to logout the admin
+        _ <- env.authenticatorService.discard(request.authenticator, Ok) //to logout the admin
         authenticator <- env.authenticatorService.create(loginInfo)
         value <- env.authenticatorService.init(authenticator)
-        result <- env.authenticatorService.embed(value, Redirect(routes.Application.index())) //to login the new user
+        result <- env.authenticatorService.embed(value, Ok) //to login the new user
       } yield result
     }else{
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
-      Future.successful(JsonOk(Messages("user.notAuthorised")))
+      Future.successful(BadRequest(Messages("user.notAuthorised")))
     }
   }
 
@@ -190,12 +190,12 @@ class Authentication @Inject() (
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(JsonBadRequest(bogusForm.errors.toList.map(error => (error.key, error.message)))),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
-        case None => Future.successful(JsonOk(Messages("error.noUser")))
+        case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => for {
           token <- userTokenService.save(UserToken.create(user._id, email, isSignUp = false))
         } yield {
           Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email, token.id.toString))
-          JsonOk("/finishreset")
+          Ok
         }
       }
     )
@@ -214,11 +214,11 @@ class Authentication @Inject() (
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
               _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
-              authenticator <- env.authenticatorService.create(loginInfo)
-              value <- env.authenticatorService.init(authenticator)
-              _ <- userTokenService.remove(id)
-              result <- env.authenticatorService.embed(value, Redirect(routes.Application.index()))
-            } yield result
+              //authenticator <- env.authenticatorService.create(loginInfo)
+              //value <- env.authenticatorService.init(authenticator)
+              //_ <- userTokenService.remove(id)
+              //result <- env.authenticatorService.embed(value, Ok)
+            } yield Ok //result
         }
       }
     )
@@ -233,23 +233,23 @@ class Authentication @Inject() (
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
           UserService.retrieve(loginInfo).flatMap {
             case None =>
-              Future.successful(JsonOk(Messages("error.noUser")))
+              Future.successful(BadRequest(Messages("error.noUser")))
             case Some(user) => val loginInfo = LoginInfo(CredentialsProvider.ID, request.identity.email)
               for {
                 _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
               //should the user be logge out or automatically stay login with the new credentials ?
-                _ <- env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index())) //in case he should be logged out
+                _ <- env.authenticatorService.discard(request.authenticator, Ok) //in case he should be logged out
                 //authenticator <- env.authenticatorService.create(loginInfo) //in case he should stay logged in
                 //value <- env.authenticatorService.init(authenticator) //in case he should stay logged in
                 //result <- env.authenticatorService.embed(value, Redirect(Authentication.getLoginRoute())) //in case he should stay logged in
               } yield {
                 Mailer ! Send(DefaultMails.changePasswordMail(user.name, request.identity.email))
-                JsonOk("/login")
+                Ok
                 //result //in case he should stay logged in
               }
           }
         }.recover {
-          case e:ProviderException => JsonOk(Messages("error.invalidCredentials"))
+          case e:ProviderException => BadRequest(Messages("error.invalidCredentials"))
         }
       }
     )

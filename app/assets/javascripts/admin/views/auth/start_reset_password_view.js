@@ -3,6 +3,7 @@ import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
+import Toast from "libs/toast";
 
 const FormItem = Form.Item;
 
@@ -16,7 +17,10 @@ class StartResetPasswordView extends React.PureComponent<Props> {
 
     this.props.form.validateFields((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/reset", { data: formValues });
+        Request.sendJSONReceiveJSON("/api/reset", { data: formValues }).then(()=>{
+          Toast.success(messages["auth.reset_email_notification"])
+          app.router.navigate("/finishreset", {trigger: true})
+        });
       }
     });
   };

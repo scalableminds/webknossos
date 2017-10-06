@@ -76,7 +76,6 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       case (acc, next) => acc.combineWith(parseFile(next))
     }
 
-    //TODO: RocksDB read description from NML
     if (!parsedFiles.isEmpty) {
       val parseSuccess = parsedFiles.parseResults.filter(_.succeeded)
       val fileNames = parseSuccess.map(_.fileName)

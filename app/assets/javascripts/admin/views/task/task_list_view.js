@@ -5,10 +5,10 @@ import _ from "lodash";
 import React from "react";
 import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
 import Utils from "libs/utils";
+import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
-import AnonymousTaskLinkModal from "admin/views/task/anonymous_task_link_modal";
-import TaskSearchForm from "admin/views/task/task_search_form";
 import messages from "messages";
+import TaskSearchForm from "admin/views/task/task_search_form";
 import { deleteTask, getTasksByQuery } from "admin/admin_rest_api";
 import TemplateHelpers from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
@@ -16,7 +16,7 @@ import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 
 const { Column } = Table;
-const { Search } = Input;
+const { Search, TextArea } = Input;
 
 type Props = { initialFieldValues: Object };
 
@@ -24,6 +24,7 @@ type State = {
   isLoading: boolean,
   tasks: Array<APITaskType>,
   searchQuery: string,
+  isAnonymousTaskLinkModalVisible: boolean,
 };
 
 class TaskListView extends React.PureComponent<Props, State> {
@@ -31,9 +32,11 @@ class TaskListView extends React.PureComponent<Props, State> {
     isLoading: false,
     tasks: [],
     searchQuery: "",
+    isAnonymousTaskLinkModalVisible: Utils.getUrlParams("showAnonymousLinks") !== undefined,
   };
 
   async fetchData(queryObject: QueryObjectType) {
+    debugger;
     this.setState({
       tasks: await getTasksByQuery(queryObject),
     });
@@ -217,50 +220,36 @@ class TaskListView extends React.PureComponent<Props, State> {
                 )}
               />
             </Table>
+            {this.getAnonymousTaskLinkModal()}
           </Spin>
         </div>
       </div>
     );
   }
+
+  getAnonymousTaskLinkModal() {
+    const anonymousTaskId = Utils.getUrlParams("showAnonymousLinks");
+    if (!this.state.isAnonymousTaskLinkModalVisible) {
+      return null;
+    }
+    const tasksString = this.state.tasks
+      .filter(t => t.id === anonymousTaskId)
+      .map(t => t.directLinks)
+      .join("\n");
+    return (
+      <Modal
+        title={`Anonymous Task Links for Task ${anonymousTaskId}`}
+        visible={this.state.isAnonymousTaskLinkModalVisible}
+        onOk={() => {
+          Clipboard.copy(tasksString).then(() => Toast.success("Links copied to clipboard"));
+          this.setState({ isAnonymousTaskLinkModalVisible: false });
+        }}
+        onCancel={() => this.setState({ isAnonymousTaskLinkModalVisible: false })}
+      >
+        <TextArea autosize={{ minRows: 2, maxRows: 10 }} defaultValue={tasksString} />
+      </Modal>
+    );
+  }
 }
-
-// createNewTask() {
-//   let urlParam;
-//   const id = this.collection.fullCollection.taskTypeId;
-//   const name = this.collection.fullCollection.projectName;
-//   if (name) {
-//     urlParam = `?projectName=${name}`;
-//   } else if (id) {
-//     urlParam = `?taskType=${id}`;
-//   } else {
-//     urlParam = "";
-//   }
-
-//   // The trailing '#' is important for routing
-//   app.router.navigate(`/tasks/create${urlParam}#`, { trigger: true });
-// }
-
-// showAnonymousLinks() {
-//   const anonymousTaskId = Utils.getUrlParams("showAnonymousLinks");
-//   if (!anonymousTaskId) {
-//     return;
-//   }
-
-//   const task = this.collection.findWhere({ id: anonymousTaskId });
-//   if (task && task.get("directLinks")) {
-//     this.showModal(task);
-//   } else {
-//     Toast.error(`Unable to find anonymous links for task ${anonymousTaskId}.`);
-//   }
-// }
-
-// showModal(task) {
-//   const modalView = new AnonymousTaskLinkModal({ model: task });
-//   modalView.render();
-//   this.ui.modalWrapper.html(modalView.el);
-
-//   modalView.show();
-//   this.modalView = modalView;
-// }
 
 export default TaskListView;

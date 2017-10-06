@@ -137,7 +137,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
   }
 
-  /*
+
   def changePassword(user: User, newPassword: String)(implicit ctx: DBAccessContext) = {
     if (user.isActive)
       Mailer ! Send(DefaultMails.changePasswordMail(user.name, user.email))
@@ -148,7 +148,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
 
   }
-  */
+  
 
   def changePasswordInfo(loginInfo:LoginInfo, passwordInfo:PasswordInfo) = {
     for{

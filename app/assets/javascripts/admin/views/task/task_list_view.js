@@ -62,6 +62,30 @@ class TaskListView extends React.PureComponent<Props, State> {
     });
   };
 
+  getAnonymousTaskLinkModal() {
+    const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
+    if (!this.state.isAnonymousTaskLinkModalVisible) {
+      return null;
+    }
+    const tasksString = this.state.tasks
+      .filter(t => t.id === anonymousTaskId)
+      .map(t => t.directLinks)
+      .join("\n");
+    return (
+      <Modal
+        title={`Anonymous Task Links for Task ${anonymousTaskId}`}
+        visible={this.state.isAnonymousTaskLinkModalVisible}
+        onOk={() => {
+          Clipboard.copy(tasksString).then(() => Toast.success("Links copied to clipboard"));
+          this.setState({ isAnonymousTaskLinkModalVisible: false });
+        }}
+        onCancel={() => this.setState({ isAnonymousTaskLinkModalVisible: false })}
+      >
+        <TextArea autosize={{ minRows: 2, maxRows: 10 }} defaultValue={tasksString} />
+      </Modal>
+    );
+  }
+
   render() {
     const marginRight = { marginRight: 20 };
 
@@ -223,30 +247,6 @@ class TaskListView extends React.PureComponent<Props, State> {
           </Spin>
         </div>
       </div>
-    );
-  }
-
-  getAnonymousTaskLinkModal() {
-    const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
-    if (!this.state.isAnonymousTaskLinkModalVisible) {
-      return null;
-    }
-    const tasksString = this.state.tasks
-      .filter(t => t.id === anonymousTaskId)
-      .map(t => t.directLinks)
-      .join("\n");
-    return (
-      <Modal
-        title={`Anonymous Task Links for Task ${anonymousTaskId}`}
-        visible={this.state.isAnonymousTaskLinkModalVisible}
-        onOk={() => {
-          Clipboard.copy(tasksString).then(() => Toast.success("Links copied to clipboard"));
-          this.setState({ isAnonymousTaskLinkModalVisible: false });
-        }}
-        onCancel={() => this.setState({ isAnonymousTaskLinkModalVisible: false })}
-      >
-        <TextArea autosize={{ minRows: 2, maxRows: 10 }} defaultValue={tasksString} />
-      </Modal>
     );
   }
 }

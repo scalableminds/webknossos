@@ -20,8 +20,9 @@ import DashboardView from "dashboard/views/dashboard_view";
 import SpotlightView from "dashboard/views/spotlight_view";
 import LoginView from "admin/views/auth/login_view";
 import RegistrationView from "admin/views/auth/registration_view";
-import ResetPasswordView from "admin/views/auth/reset_password_view";
-import StartResetPasswordView from "admin/views/auth/start_reset_password_view"
+import StartResetPasswordView from "admin/views/auth/start_reset_password_view";
+import FinishResetPasswordView from "admin/views/auth/finish_reset_password_view";
+import ChangePasswordView from "admin/views/auth/change_password_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 
 // #####
@@ -64,6 +65,8 @@ class Router extends BaseRouter {
       "/login": "login",
       "/register": "registration",
       "/reset": "reset",
+      "/finishreset": "finishreset",
+      "/api/changepassword": "changepassword",
     };
   }
 
@@ -321,6 +324,16 @@ class Router extends BaseRouter {
 
   reset() {
     const view = new ReactBackboneWrapper(StartResetPasswordView, {});
+    this.changeView(view);
+  }
+
+  finishreset() {
+    const view = new ReactBackboneWrapper(FinishResetPasswordView, {});
+    this.changeView(view);
+  }
+
+  changepassword() {
+    const view = new ReactBackboneWrapper(ChangePasswordView, {});
     this.changeView(view);
   }
 

@@ -14,7 +14,7 @@ type State = {
   confirmDirty: boolean,
 };
 
-class ResetPasswordView extends React.PureComponent<Props, State> {
+class ChangePasswordView extends React.PureComponent<Props, State> {
   state = {
     confirmDirty: false,
   };
@@ -24,7 +24,7 @@ class ResetPasswordView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/reset", { data: formValues });
+        Request.sendJSONReceiveJSON("/api/changepw", { data: formValues });
       }
     });
   };
@@ -115,7 +115,7 @@ class ResetPasswordView extends React.PureComponent<Props, State> {
             </FormItem>
             <FormItem>
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
-                Reset Password
+                Change Password
               </Button>
             </FormItem>
           </Form>
@@ -125,4 +125,4 @@ class ResetPasswordView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(ResetPasswordView);
+export default Form.create()(ChangePasswordView);

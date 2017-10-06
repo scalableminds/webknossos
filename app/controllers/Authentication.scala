@@ -9,12 +9,12 @@ import com.typesafe.scalalogging.LazyLogging
 import models.team.{Role, TeamService}
 import models.user.UserService.{Mailer => _, _}
 import models.user._
-import net.liftweb.common.{Empty, Full}
+import net.liftweb.common.{Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
 import oxalis.security._
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import play.api.data.validation.Constraints
 import play.twirl.api.Html
 import oxalis.thirdparty.BrainTracing
@@ -260,10 +260,21 @@ object AuthForms {
   val emailForm = Form(single("email" -> email))
 
   // Passord recovery
-  def resetPasswordForm(implicit messages:Messages) = Form(tuple(
+  case class ResetPasswordData(token: String, password1: String, password2: String)
+  def resetPasswordForm(implicit messages:Messages) = Form(mapping(
+    "token" -> text,
     "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText
-  ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2))
+    "password2" -> nonEmptyText//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
+  )(ResetPasswordData.apply)(ResetPasswordData.unapply)
+  )
+
+  case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
+  def changePasswordForm(implicit messages:Messages) = Form(mapping(
+    "oldPassword" -> nonEmptyText,
+    "password1" -> nonEmptyText.verifying(minLength(8)),
+    "password2" -> nonEmptyText//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
+  )(ChangePasswordData.apply)(ChangePasswordData.unapply)
+  )
 }
 
 
@@ -322,6 +333,7 @@ class Authentication @Inject() (
                 //  .flashing("modal" -> "Your account has been created. An administrator is going to unlock you soon.")
               }
             }
+          case f: Failure => Fox.failure(f.msg)
         }
       }
     )
@@ -367,42 +379,77 @@ class Authentication @Inject() (
     }
   }
 
-
+  // if a user has forgotten his password
   def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
-      bogusForm => Future.successful(BadRequest(views.html.auth.startResetPassword(bogusForm))),
+      bogusForm => Future.successful(JsonOk("wrong Form")), //this needs to be changed //Future.successful(BadRequest(views.html.auth.startResetPassword(bogusForm))),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
         case None => Future.successful(JsonOk(Messages("error.noUser")))//Future.successful(Redirect(routes.Authentication.startResetPassword()).flashing("error" -> Messages("error.noUser")))
         case Some(user) => for {
           token <- userTokenService.save(UserToken.create(user._id, email, isSignUp = false))
         } yield {
-          Mailer ! Send(
-            DefaultMails.changePasswordMail(user.name, email))
-          Ok(views.html.auth.resetPasswordInstructions(email))
+          Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email, token.id.toString))
+          //Mailer ! Send(DefaultMails.changePasswordMail(user.name, email))
+          //Redirect("/finishreset")
+          Redirect(routes.Application.index()) //why do these Redirect not work?
+          //Ok(views.html.auth.resetPasswordInstructions(email))
         }
       }
     )
   }
 
 
-
-  def handleResetPassword(tokenId:String) = Action.async { implicit request =>
+  // if a user has forgotten his password
+  def handleResetPassword = Action.async { implicit request => //(tokenId:String)
     resetPasswordForm.bindFromRequest.fold(
-      bogusForm => Future.successful(BadRequest(views.html.auth.resetPassword(tokenId, bogusForm))),
+      bogusForm => Future.successful(BadRequest("from form (handleResetPassword)")),//Future.successful(BadRequest(views.html.auth.resetPassword(tokenId, bogusForm))),
       passwords => {
-        val id = UUID.fromString(tokenId)
+        val id = UUID.fromString(passwords.token)
         userTokenService.find(id).flatMap {
           case None =>
             Future.successful(NotFound(views.html.error.defaultError("token not found", true))) //views.html.errors.notFound(request)
           case Some(token) if !token.isSignUp && !token.isExpired =>
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
-              _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords._1))
+              _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               _ <- userTokenService.remove(id)
-              result <- env.authenticatorService.embed(value, Ok(views.html.auth.resetPasswordDone()))
+              result <- env.authenticatorService.embed(value, Redirect(routes.Application.index()))
             } yield result
+        }
+      }
+    )
+  }
+
+  // a user who is logged in can change his password
+  def changePassword = SecuredAction.async { implicit request =>
+    changePasswordForm.bindFromRequest.fold(
+      bogusForm => Future.successful(BadRequest("from form (handleResetPassword)")),//Future.successful(BadRequest(views.html.auth.resetPassword(tokenId, bogusForm))),
+      passwords => {
+        val credentials = Credentials(request.identity.email, passwords.oldPassword)
+        credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
+          UserService.retrieve(loginInfo).flatMap {
+            case None =>
+              Future.successful(Redirect("").flashing("error" -> Messages("error.noUser")))
+              Future.successful(JsonOk(Messages("error.noUser")))
+            case Some(user) => val loginInfo = LoginInfo(CredentialsProvider.ID, request.identity.email)
+              for {
+                _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
+              //should the user be logge out or automatically stay login with the new credentials ?
+                _ <- env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index())) //in case he should be logged out
+                //authenticator <- env.authenticatorService.create(loginInfo) //in case he should stay logged in
+                //value <- env.authenticatorService.init(authenticator) //in case he should stay logged in
+                //result <- env.authenticatorService.embed(value, Redirect(Authentication.getLoginRoute())) //in case he should stay logged in
+              } yield {
+                Redirect(Authentication.getLoginRoute()) //in case he should be logged out
+                //result //in case he should stay logged in
+
+                //the ridirect still does not work
+              }
+          }
+        }.recover {
+          case e:ProviderException => JsonOk(Messages("error.invalidCredentials"))//Redirect(routes.Authentication.signIn()).flashing("error" -> Messages("error.invalidCredentials"))
         }
       }
     )

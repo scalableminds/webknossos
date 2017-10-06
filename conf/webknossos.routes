@@ -34,12 +34,16 @@ GET           /help/keyboardshortcuts                                           
 GET           /register                                                         controllers.Authentication.empty
 GET           /login                                                            controllers.Authentication.empty
 GET           /reset                                                            controllers.Authentication.empty
+GET           /finishreset                                                      controllers.Authentication.empty
+GET           /api/changepassword                                                   controllers.Authentication.empty
 POST          /api/register                                                     controllers.Authentication.handleRegistration
 POST          /api/login                                                        controllers.Authentication.authenticate
 GET           /api/switch                                                       controllers.Authentication.switchTo(to: String)
 POST          /api/reset                                                        controllers.Authentication.handleStartResetPassword
+POST          /api/changepw                                                     controllers.Authentication.changePassword
 #GET           /auth/reset/:token                                                controllers.Authentication.resetPassword(token:String)
-POST          /api/reset/:token                                                 controllers.Authentication.handleResetPassword(token:String)
+#POST          /api/reset/:token                                                 controllers.Authentication.handleResetPassword(token:String)
+POST          /api/resetPassword                                                 controllers.Authentication.handleResetPassword
 GET           /api/logout                                                       controllers.Authentication.logout
 
 # Configurations

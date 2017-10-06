@@ -1,9 +1,0 @@
-@(title: String, tab: String = "")(content: Html)(implicit messages:Messages, session: oxalis.view.SessionData)
-
-@navbarContent = {
-  <ul class="nav navbar-nav">
-    <li><a href="@routes.Application.index">@Messages("navbar.index")</a></li>
-  </ul>
-}
-
-@main(true)(content)

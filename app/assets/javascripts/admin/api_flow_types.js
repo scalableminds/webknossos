@@ -154,6 +154,7 @@ export type APITaskType = {
   +team: string,
   +tracingTime: number,
   +type: APITaskTypeType,
+  +directLinks?: Array<string>,
 };
 
 export type APIProjectType = {

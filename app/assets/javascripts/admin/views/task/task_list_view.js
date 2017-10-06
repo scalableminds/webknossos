@@ -32,11 +32,10 @@ class TaskListView extends React.PureComponent<Props, State> {
     isLoading: false,
     tasks: [],
     searchQuery: "",
-    isAnonymousTaskLinkModalVisible: Utils.getUrlParams("showAnonymousLinks") !== undefined,
+    isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
   };
 
   async fetchData(queryObject: QueryObjectType) {
-    debugger;
     this.setState({
       tasks: await getTasksByQuery(queryObject),
     });
@@ -228,7 +227,7 @@ class TaskListView extends React.PureComponent<Props, State> {
   }
 
   getAnonymousTaskLinkModal() {
-    const anonymousTaskId = Utils.getUrlParams("showAnonymousLinks");
+    const anonymousTaskId = Utils.getUrlParamValue("showAnonymousLinks");
     if (!this.state.isAnonymousTaskLinkModalVisible) {
       return null;
     }

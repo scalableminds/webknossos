@@ -407,9 +407,12 @@ export class InputMouse {
     if (delta != null && (delta.x !== 0 || delta.y !== 0)) {
       this.leftMouseButton.handleMouseMove(event, delta);
       this.rightMouseButton.handleMouseMove(event, delta);
-
-      this.lastPosition = this.position;
+      if (this.isHit(event)) {
+        this.trigger("mouseMove", delta, this.position, this.id, event);
+      }
     }
+
+    this.lastPosition = this.position;
   };
 
   mouseEnter = (): void => {

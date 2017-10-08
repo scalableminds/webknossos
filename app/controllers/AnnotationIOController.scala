@@ -91,7 +91,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
           _ <- annotation.restrictions.allowDownload(request.userOpt) ?~> Messages("annotation.download.notAllowed")
           annotationDAO <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
           content <- annotation.content ?~> Messages("annotation.content.empty")
-          stream <- content.toDownloadStream(name)
+          stream <- content.toDownloadStream(name, annotation)
         } yield {
           Ok.chunked(stream).withHeaders(
             CONTENT_TYPE ->

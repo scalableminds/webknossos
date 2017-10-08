@@ -4,6 +4,7 @@
  */
 
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import Store from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 
@@ -33,8 +34,9 @@ class BucketBuilder {
 
     if (options != null) {
       return Object.assign(bucket, options);
+    } else {
+      return Object.assign(bucket, { fourBit: Store.getState().datasetConfiguration.fourBit });
     }
-    return bucket;
   }
 
   bucketToZoomedAddress(bucket: BucketInfo): Vector4 {

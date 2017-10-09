@@ -71,3 +71,4 @@ db.runCommand({
   validationAction: "warn",
   validationLevel: "strict",
 });
+//_typeHint

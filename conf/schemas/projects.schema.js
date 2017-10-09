@@ -33,3 +33,4 @@ db.runCommand({
   validationLevel: "strict",
 });
 //no errors
+//_typeHint

@@ -61,11 +61,7 @@ db.runCommand({
         isPublic: { $type: "bool", $exists: true },
       },
       {
-        $or: [
-          { description: { $type: "string" } },
-          { description: { $exists: false } },
-          { description: { $type: "null" } },
-        ], //type null occured
+        $or: [{ description: { $type: "string" } }, { description: { $exists: false } }],
       },
       {
         $or: [

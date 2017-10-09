@@ -18,7 +18,7 @@ db.runCommand({
         neededExperience: { $type: "object", $exists: true },
       },
       {
-        "neededExperience.domain": { $regex: "^.{3,}$", $exists: true }, //empty domains
+        "neededExperience.domain": { $regex: "^.{2,}$", $exists: true },
       },
       {
         "neededExperience.value": { $type: "number", $exists: true },

@@ -12,7 +12,7 @@ db.runCommand({
         neededExperience: { $type: "object", $exists: true },
       },
       {
-        "neededExperience.domain": { $regex: "^.{3,}$", $exists: true },
+        "neededExperience.domain": { $regex: "^.{2,}$", $exists: true },
       },
       {
         "neededExperience.value": { $type: "number", $exists: true },
@@ -33,11 +33,7 @@ db.runCommand({
         _project: { $type: "string", $exists: true },
       },
       {
-        $or: [
-          { _script: { $type: "string" } },
-          { _script: { $exists: false } },
-          { _script: { $type: "null" } },
-        ], //1000 x script null - maybe replace
+        $or: [{ _script: { $type: "string" } }, { _script: { $exists: false } }],
       },
       {
         $or: [{ creationInfo: { $type: "string" } }, { creationInfo: { $exists: false } }], //TODO
@@ -50,3 +46,4 @@ db.runCommand({
   validationAction: "warn",
   validationLevel: "strict",
 });
+//_typeHint,assignedInstances,priority,seedIdHeidelberg,directLinks,openedInstances

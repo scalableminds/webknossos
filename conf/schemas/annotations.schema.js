@@ -82,3 +82,6 @@ db.runCommand({
   validationAction: "warn",
   validationLevel: "strict",
 });
+
+//manualTracingTimeUpdate,summedUpByHand,_typeHint,review,isFinished,
+//isInProgress,manuelIntervention,manualIntervention

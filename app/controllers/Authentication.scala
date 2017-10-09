@@ -214,11 +214,7 @@ class Authentication @Inject() (
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
               _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
-              //authenticator <- env.authenticatorService.create(loginInfo)
-              //value <- env.authenticatorService.init(authenticator)
-              //_ <- userTokenService.remove(id)
-              //result <- env.authenticatorService.embed(value, Ok)
-            } yield Ok //result
+            } yield Ok
         }
       }
     )
@@ -237,15 +233,10 @@ class Authentication @Inject() (
             case Some(user) => val loginInfo = LoginInfo(CredentialsProvider.ID, request.identity.email)
               for {
                 _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
-              //should the user be logge out or automatically stay login with the new credentials ?
-                _ <- env.authenticatorService.discard(request.authenticator, Ok) //in case he should be logged out
-                //authenticator <- env.authenticatorService.create(loginInfo) //in case he should stay logged in
-                //value <- env.authenticatorService.init(authenticator) //in case he should stay logged in
-                //result <- env.authenticatorService.embed(value, Redirect(Authentication.getLoginRoute())) //in case he should stay logged in
+                _ <- env.authenticatorService.discard(request.authenticator, Ok)
               } yield {
                 Mailer ! Send(DefaultMails.changePasswordMail(user.name, request.identity.email))
                 Ok
-                //result //in case he should stay logged in
               }
           }
         }.recover {

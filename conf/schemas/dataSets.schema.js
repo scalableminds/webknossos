@@ -65,7 +65,7 @@ db.runCommand({
       },
       {
         $or: [
-          { defaultConfiguration: { $type: "object" } }, //TODO - no data existent
+          { defaultConfiguration: { $type: "object" } },
           { defaultConfiguration: { $exists: false } },
         ],
       },

@@ -36,7 +36,7 @@ db.runCommand({
         $or: [{ _script: { $type: "string" } }, { _script: { $exists: false } }],
       },
       {
-        $or: [{ creationInfo: { $type: "string" } }, { creationInfo: { $exists: false } }], //TODO
+        $or: [{ creationInfo: { $type: "string" } }, { creationInfo: { $exists: false } }],
       },
       {
         _id: { $type: "objectId", $exists: true },
@@ -46,4 +46,3 @@ db.runCommand({
   validationAction: "warn",
   validationLevel: "strict",
 });
-//_typeHint,assignedInstances,priority,seedIdHeidelberg,directLinks,openedInstances

@@ -16,4 +16,3 @@ db.runCommand({
   validationAction: "warn",
   validationLevel: "strict",
 });
-// no errors

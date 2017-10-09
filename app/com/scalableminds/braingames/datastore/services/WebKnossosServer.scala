@@ -17,7 +17,6 @@ import play.api.i18n.MessagesApi
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
 case class DataStoreStatus(ok: Boolean, url: String)
@@ -74,8 +73,10 @@ class WebKnossosServer @Inject()(
       .post(id)
   }
 
-  def authorizeTracingUpdate(tracingIt: String, timestamps: List[Long], stats: Option[JsObject]): Fox[_] = {
-    Fox.successful(())
+  def authorizeTracingUpdate(tracingId: String, timestamps: List[Long], statistics: Option[JsObject]): Fox[_] = {
+    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/authorizeTracingUpdates")
+      .withQueryString("key" -> dataStoreKey)
+      .post(Json.obj("timestamps" -> timestamps, "statistics" -> statistics, "tracingId" -> tracingId))
   }
 
   def requestUserAccess(token: String, dataSetName: String, dataLayerName: String): Fox[_] = {

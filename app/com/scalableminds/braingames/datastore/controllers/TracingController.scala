@@ -3,8 +3,6 @@
  */
 package com.scalableminds.braingames.datastore.controllers
 
-import java.util.UUID
-
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.Color
 import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
@@ -13,13 +11,12 @@ import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
-import net.liftweb.common.Failure
-import play.api.i18n.Messages
-import play.api.libs.json.{Format, Json, Reads}
-import play.api.mvc.Action
 import com.trueaccord.scalapb.json.{JsonFormat, Printer}
+import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import org.json4s.JsonAST._
+import play.api.i18n.Messages
+import play.api.libs.json.{Json, Reads}
+import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -113,9 +110,9 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
       AllowRemoteOrigin {
         val updateGroups = request.body
         val timestamps = updateGroups.map(_.timestamp)
-        val latestStats = updateGroups.flatMap(_.stats).lastOption
+        val latestStatistics = updateGroups.flatMap(_.stats).lastOption
         val currentVersion = tracingService.currentVersion(tracingId)
-        webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStats).flatMap { _ =>
+        webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStatistics).flatMap { _ =>
           updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
             previousVersion.flatMap { version =>
               //if (version + 1 == updateGroup.version) {

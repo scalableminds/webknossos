@@ -120,25 +120,22 @@ class Authentication @Inject() (
 
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm =>  Future.successful(JsonBadRequest(bogusForm.errors.toList.map(error => (error.key, error.message)))),
+      bogusForm =>  Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            Fox.successful(JsonOk(Messages("error.userExists", signUpData.email)))
+            Fox.successful(BadRequest(Messages("error.userExists", signUpData.email)))
           case Empty =>
             for {
               user <- UserService.insert(signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                                          loginInfo, passwordHasher.hash(signUpData.password))
               brainDBResult <- BrainTracing.register(user).toFox
             } yield {
-              Mailer ! Send(DefaultMails.registerMail(user.name, emailAddress.toString, brainDBResult))
-              Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, emailAddress.toString, brainDBResult))
-              if (automaticUserActivation) {
-                JsonOk(Messages("user.automaticUserActivation"))
-              } else {
-                JsonOk(Messages("user.accountCreated"))
-              }
+              Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
+              Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
+              Ok
+             // if (automaticUserActivation) { JsonOk(Messages("user.automaticUserActivation")) } else {JsonOk(Messages("user.accountCreated")) }
             }
           case f: Failure => Fox.failure(f.msg)
         }
@@ -154,7 +151,7 @@ class Authentication @Inject() (
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
           UserService.retrieve(loginInfo).flatMap {
             case None =>
-              Future.successful(JsonOk(Messages("error.noUser")))
+              Future.successful(BadRequest(Messages("error.noUser")))
             case Some(user) if(user.isActive) => for {
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
@@ -223,7 +220,7 @@ class Authentication @Inject() (
   // a user who is logged in can change his password
   def changePassword = SecuredAction.async { implicit request =>
     changePasswordForm.bindFromRequest.fold(
-      bogusForm => Future.successful(JsonBadRequest(bogusForm.errors.toList.map(error => (error.key, error.message)))),
+      bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
         val credentials = Credentials(request.identity.email, passwords.oldPassword)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>

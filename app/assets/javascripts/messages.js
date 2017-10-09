@@ -48,5 +48,7 @@ In order to restore the current window, a reload is necessary.`,
   "auth.reset_new_password2": "Please repeat your new password!",
   "auth.reset_token": "Please input the token!",
   "auth.reset_email_notification": "An email with instructions to reset your password has been send to you.",
-  "auth.reset_reset_pw_confirmation": "Your password was successfully changed"
+  "auth.reset_reset_pw_confirmation": "Your password was successfully changed",
+  "auth.account_created": "Your account has been created. An administrator is going to unlock you soon.",
+  "auth.automatic_user_activation": "User was activated automatically"
 };

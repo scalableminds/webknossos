@@ -32,8 +32,8 @@ class CredentialsProvider @Inject() (passwordHasher: PasswordHasher)(implicit va
 
   override def id = ID
 
-  //can be extended in the future with different hasher
-  val passwordHasherList: List[PasswordHasher] = List(passwordHasher)
+  //can be expanded in the future with different hasher
+  val passwordHasherList: List[com.mohiva.play.silhouette.api.util.PasswordHasher] = List(passwordHasher)
 
   def authenticate(credentials: Credentials): Future[LoginInfo] = {
     loginInfo(credentials).flatMap { loginInfo =>

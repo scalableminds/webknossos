@@ -5,6 +5,7 @@ import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
 import Request from "libs/request";
 import type { APITeamType } from "admin/api_flow_types";
+import Toast from "libs/toast";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -40,7 +41,13 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/register", { data: formValues }).then(() => app.router.navigate("/finishreset", {trigger: true}));
+        Request.sendJSONReceiveJSON("/api/register", { data: formValues }).then(()=>{
+           //if(...)
+           Toast.success(messages["auth.account_created"])
+           //else
+           //Toast.success(messages["auth.automatic_user_activation"])
+           app.router.navigate("/login", {trigger: true})
+        });
       }
     });
   };

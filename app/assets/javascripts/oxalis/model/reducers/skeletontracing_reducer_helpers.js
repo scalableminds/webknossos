@@ -18,6 +18,7 @@ import {
   getSkeletonTracing,
   getActiveNodeFromTree,
   findTreeByNodeId,
+  getNodeToEdgesMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type {
@@ -142,20 +143,7 @@ export function deleteNode(
         // Use split-algorithmus. If we delete a node which is only connected via one edge,
         // this algorithmus will only produce one tree (which reuses the old oen)
 
-        // Build a hashmap which contains for each node all edges leading/leaving into/from the node
-        const nodeToEdgesMap: { [number]: Array<EdgeType> } = {};
-        activeTree.edges.forEach(edge => {
-          if (nodeToEdgesMap[edge.source]) {
-            nodeToEdgesMap[edge.source].push(edge);
-          } else {
-            nodeToEdgesMap[edge.source] = [edge];
-          }
-          if (nodeToEdgesMap[edge.target]) {
-            nodeToEdgesMap[edge.target].push(edge);
-          } else {
-            nodeToEdgesMap[edge.target] = [edge];
-          }
-        });
+        const nodeToEdgesMap = getNodeToEdgesMap(activeTree);
 
         // Traverse from active node in all directions (i.e., use each edge) and
         // remember which edges were already visited

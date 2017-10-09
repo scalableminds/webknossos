@@ -4,6 +4,7 @@ error.minLength=Please use at least 3 characters.
 error.unknown=Unknown error
 error.invalidCredentials=Email or Password is wrong
 error.noUser=There is no user to this email
+error.invalidToken=The token is invalid
 
 notAllowed=You are not allowed to view this resource
 

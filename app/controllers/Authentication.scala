@@ -72,7 +72,7 @@ object AuthForms {
   // Start password recovery
   val emailForm = Form(single("email" -> email))
 
-  // Passord recovery
+  // Password recovery
   case class ResetPasswordData(token: String, password1: String, password2: String)
   def resetPasswordForm(implicit messages:Messages) = Form(mapping(
     "token" -> text,
@@ -148,7 +148,7 @@ class Authentication @Inject() (
 
   def authenticate = Action.async { implicit request =>
     signInForm.bindFromRequest.fold(
-      bogusForm => Future.successful(JsonBadRequest(bogusForm.errors.toList.map(error => (error.key, error.message)))),
+      bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signInData => {
         val credentials = Credentials(signInData.email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
@@ -159,7 +159,7 @@ class Authentication @Inject() (
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
-            } yield result//Ok
+            } yield result
             case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
         }.recover {
@@ -188,7 +188,7 @@ class Authentication @Inject() (
   // if a user has forgotten his password
   def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
-      bogusForm => Future.successful(JsonBadRequest(bogusForm.errors.toList.map(error => (error.key, error.message)))),
+      bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => for {
@@ -202,14 +202,14 @@ class Authentication @Inject() (
   }
 
   // if a user has forgotten his password
-  def handleResetPassword = Action.async { implicit request => //(tokenId:String)
+  def handleResetPassword = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
-      bogusForm => Future.successful(JsonBadRequest(bogusForm.errors.toList.map(error => (error.key, error.message)))),
+      bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
         val id = UUID.fromString(passwords.token)
         userTokenService.find(id).flatMap {
           case None =>
-            Future.successful(NotFound(views.html.error.defaultError("token not found", true)))
+            Future.successful(BadRequest(Messages("error.invalidToken")))
           case Some(token) if !token.isSignUp && !token.isExpired =>
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {

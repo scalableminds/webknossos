@@ -134,6 +134,7 @@ export function getBranchPoints(tracing: TracingType): Maybe<Array<BranchPointTy
 }
 
 export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> {
+  return Maybe.fromNullable(null);
   return getSkeletonTracing(tracing)
     .chain(skeletonTracing => Maybe.fromNullable(skeletonTracing.trees))
     .map(trees => ({

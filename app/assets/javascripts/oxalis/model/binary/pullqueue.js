@@ -78,6 +78,7 @@ class PullQueue {
   }
 
   async pullBatch(batch: Array<Vector4>): Promise<void> {
+    return;
     // Loading a bunch of buckets
     this.batchCount++;
 
@@ -85,6 +86,7 @@ class PullQueue {
     const roundTripBeginTime = new Date();
 
     try {
+      // throw new Error();
       const responseBuffer = await this.layer.requestFromStore(batch);
       let bucketData;
       this.connectionInfo.log(

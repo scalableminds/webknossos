@@ -45,7 +45,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       } yield {
         request.userOpt.foreach { user =>
           UsedAnnotationDAO.use(user, annotationId)
-          TimeSpanService.logUserInteraction(user, Some(annotation))            // log time when a user starts working
+          TimeSpanService.logUserInteraction(user, annotation)            // log time when a user starts working
         }
         Ok(js)
       }
@@ -154,7 +154,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
       (updated, message) <- annotation.muta.finishAnnotation(user, restrictions)
     } yield {
-      TimeSpanService.logUserInteraction(user, Some(annotation))         // log time on a tracings end
+      TimeSpanService.logUserInteraction(user, annotation)         // log time on a tracings end
       (updated, message)
     }
   }

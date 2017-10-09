@@ -65,10 +65,10 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
                 rules: [
                   {
                     required: true,
-                    message: messages["auth.reset_old_password"],
+                    message: messages["auth.reset_token"],
                   },
                 ],
-              })(<Input type="text" placeholder="token" />)}
+              })(<Input type="text" placeholder="Token" />)}
             </FormItem>
             <FormItem hasFeedback>
               {getFieldDecorator("password1", {

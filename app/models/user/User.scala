@@ -198,11 +198,6 @@ object UserDAO extends SecuredBaseDAO[User] {
   def authRemote(email: String, loginType: String)(implicit ctx: DBAccessContext) =
     findOne(Json.obj("email" -> email, "loginType" -> loginType))
 
-  def auth(email: String, password: String)(implicit ctx: DBAccessContext): Fox[User] =
-    findOneByEmail(email).filter { user =>
-      verifyPassword(password, user.pwdHash)
-    }
-
   def update(_user: BSONObjectID, firstName: String, lastName: String, activated: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
     findAndModify(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
@@ -230,10 +225,6 @@ object UserDAO extends SecuredBaseDAO[User] {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("teams" -> teams)))
   }
 
-  def changePassword(_user: BSONObjectID, pswd: String)(implicit ctx: DBAccessContext) = {
-    update(findByIdQ(_user), Json.obj("$set" -> Json.obj("pwdHash" -> hashPassword(pswd))))
-  }
-
   def changePasswordInfo(_user: BSONObjectID, pswdInfo: PasswordInfo)(implicit ctx: DBAccessContext) = {
     update(findByIdQ(_user), Json.obj("$set" -> Json.obj("passwordInfo" -> pswdInfo)))
   }
@@ -253,7 +244,6 @@ object UserDAO extends SecuredBaseDAO[User] {
     )
   }
 
-  // for new authentication
   def find(loginInfo:LoginInfo)(implicit ctx: DBAccessContext):Future[Option[User]] =
     findOneByEmail(loginInfo.providerKey).futureBox.map(_.toOption)
 

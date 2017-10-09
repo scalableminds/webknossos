@@ -137,19 +137,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
   }
 
-
-  def changePassword(user: User, newPassword: String)(implicit ctx: DBAccessContext) = {
-    if (user.isActive)
-      Mailer ! Send(DefaultMails.changePasswordMail(user.name, user.email))
-
-    UserDAO.changePassword(user._id, newPassword).map { result =>
-      UserCache.invalidateUser(user.id)
-      result
-    }
-
-  }
-
-
   def changePasswordInfo(loginInfo:LoginInfo, passwordInfo:PasswordInfo) = {
     for{
       user <- findOneByEmail(loginInfo.providerKey)
@@ -192,9 +179,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
         result
     }
   }
-
-  def auth(email: String, password: String): Fox[User] =
-    UserDAO.auth(email, password)(GlobalAccessContext)
 
   def authByToken(token: String)(implicit ctx: DBAccessContext): Fox[User] = {
     Logger.warn("Trying to auth with token: " + token)

@@ -3,7 +3,7 @@ import test from "ava";
 import "backbone.marionette";
 import sinon from "sinon";
 import mockRequire from "mock-require";
-import Constants from "oxalis/constants";
+import { VolumeToolEnum } from "oxalis/constants";
 import { setupOxalis } from "test/helpers/apiHelpers";
 import VOLUMETRACING_OBJECT from "../fixtures/volumetracing_object";
 
@@ -21,24 +21,24 @@ test("setActiveCell should set the active cell id", t => {
   t.is(api.tracing.getActiveCellId(), 27);
 });
 
-test("getVolumeMode should get the current mode", t => {
+test("getVolumeTool should get the current tool", t => {
   const api = t.context.api;
-  t.is(api.tracing.getVolumeMode(), Constants.VOLUME_MODE_MOVE);
+  t.is(api.tracing.getVolumeTool(), VolumeToolEnum.MOVE);
 });
 
-test("setVolumeMode should set the current mode", t => {
+test("setVolumeTool should set the current tool", t => {
   const api = t.context.api;
-  api.tracing.setVolumeMode(Constants.VOLUME_MODE_TRACE);
-  t.is(api.tracing.getVolumeMode(), Constants.VOLUME_MODE_TRACE);
-  api.tracing.setVolumeMode(Constants.VOLUME_MODE_MOVE);
-  t.is(api.tracing.getVolumeMode(), Constants.VOLUME_MODE_MOVE);
+  api.tracing.setVolumeTool(VolumeToolEnum.TRACE);
+  t.is(api.tracing.getVolumeTool(), VolumeToolEnum.TRACE);
+  api.tracing.setVolumeTool(VolumeToolEnum.BRUSH);
+  t.is(api.tracing.getVolumeTool(), VolumeToolEnum.BRUSH);
 });
 
-test("setVolumeMode should throw an error for an invalid mode", t => {
+test("setVolumeTool should throw an error for an invalid tool", t => {
   const api = t.context.api;
-  t.throws(() => api.tracing.setVolumeMode(67));
-  t.throws(() => api.tracing.setVolumeMode("myMode"));
-  t.throws(() => api.tracing.setVolumeMode());
+  t.throws(() => api.tracing.setVolumeTool(67));
+  t.throws(() => api.tracing.setVolumeTool("myTool"));
+  t.throws(() => api.tracing.setVolumeTool());
 });
 
 test("Data API: labelVoxels should label a list of voxels", t => {

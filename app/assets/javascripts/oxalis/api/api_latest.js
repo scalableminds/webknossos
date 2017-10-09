@@ -18,20 +18,19 @@ import {
   createCommentAction,
   deleteNodeAction,
   setNodeRadiusAction,
+  setTreeNameAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import {
   findTreeByNodeId,
   getNodeAndTree,
   getActiveNode,
   getActiveTree,
+  getTree,
   getSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
-import { setActiveCellAction, setModeAction } from "oxalis/model/actions/volumetracing_actions";
-import {
-  getActiveCellId,
-  getVolumeTraceOrMoveMode,
-} from "oxalis/model/accessors/volumetracing_accessor";
-import type { Vector3, VolumeTraceOrMoveModeType, ControlModeType } from "oxalis/constants";
+import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
+import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import type { Vector3, VolumeToolType, ControlModeType } from "oxalis/constants";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type {
   NodeType,
@@ -47,7 +46,7 @@ import Request from "libs/request";
 import app from "app";
 import window from "libs/window";
 import Utils from "libs/utils";
-import { ControlModeEnum, OrthoViews } from "oxalis/constants";
+import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import TWEEN from "tween.js";
@@ -211,6 +210,37 @@ class TracingApi {
         return comment != null ? comment.content : null;
       })
       .getOrElse(null);
+  }
+
+  /**
+  * Sets the name for a tree. If no tree id is given, the active tree is used.
+  *
+  * @example
+  * api.tracing.setTreeName("Special tree", 1);
+  */
+  setTreeName(name: string, treeId: ?number) {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    getSkeletonTracing(tracing).map(skeletonTracing => {
+      if (treeId == null) {
+        treeId = skeletonTracing.activeTreeId;
+      }
+      Store.dispatch(setTreeNameAction(name, treeId));
+    });
+  }
+
+  /**
+  * Returns the name for a given tree id. If none is given, the name of the active tree is returned.
+  *
+  * @example
+  * api.tracing.getTreeName();
+  */
+  getTreeName(treeId?: number) {
+    const tracing = Store.getState().tracing;
+    assertSkeleton(tracing);
+    return getTree(tracing, treeId)
+      .map(activeTree => activeTree.name)
+      .get();
   }
 
   /**
@@ -448,31 +478,28 @@ class TracingApi {
   }
 
   /**
-  * Returns the current volume mode which is either
-  * 0 for "Move" or
-  * 1 for "Trace".
+  * Returns the active volume tool which is either
+  * "MOVE", "TRACE" or "BRUSH".
   * _Volume tracing only!_
   */
-  getVolumeMode(): ?VolumeTraceOrMoveModeType {
+  getVolumeTool(): ?VolumeToolType {
     const tracing = Store.getState().tracing;
     assertVolume(tracing);
-    return Utils.toNullable(getVolumeTraceOrMoveMode(tracing));
+    return Utils.toNullable(getVolumeTool(tracing));
   }
 
   /**
-  * Sets the current volume mode which is either
-  * 0 for "Move" or
-  * 1 for "Trace".
+  * Sets the active volume tool which should be either
+  * "MOVE", "TRACE" or "BRUSH".
   * _Volume tracing only!_
   */
-  setVolumeMode(mode: VolumeTraceOrMoveModeType) {
+  setVolumeTool(tool: VolumeToolType) {
     assertVolume(Store.getState().tracing);
-    assertExists(mode, "Volume mode is missing.");
-    // TODO: Use an Enum for VolumeTraceOrMoveModeType and replace this ugly check - postponed to avoid merge conflicts
-    if (mode !== 0 && mode !== 1) {
-      throw Error("Volume mode has to be either 0 or 1.");
+    assertExists(tool, "Volume tool is missing.");
+    if (VolumeToolEnum[tool] == null) {
+      throw Error(`Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`);
     }
-    Store.dispatch(setModeAction(mode));
+    Store.dispatch(setToolAction(tool));
   }
 }
 

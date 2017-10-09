@@ -109,6 +109,7 @@ export type ServerTracing<T> = {
   version: number,
   isPublic: boolean,
   tags: Array<string>,
+  description: string,
 };
 
 // TODO: Non-reactive

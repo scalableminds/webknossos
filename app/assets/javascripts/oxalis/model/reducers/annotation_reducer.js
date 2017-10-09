@@ -23,6 +23,14 @@ function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState 
       });
     }
 
+    case "SET_ANNOTATION_DESCRIPTION": {
+      return update(state, {
+        tracing: {
+          description: { $set: action.description },
+        },
+      });
+    }
+
     default:
       return state;
   }

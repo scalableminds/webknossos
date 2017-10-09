@@ -49,7 +49,7 @@ type CreateTreeActionType = { type: "CREATE_TREE", timestamp: number };
 type DeleteTreeActionType = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type SetActiveTreeActionType = { type: "SET_ACTIVE_TREE", treeId: number };
 type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
-type SetTreeNameActionType = { type: "SET_TREE_NAME", treeId?: number, name: ?string };
+type SetTreeNameActionType = { type: "SET_TREE_NAME", name: ?string, treeId: ?number };
 type SelectNextTreeActionType = { type: "SELECT_NEXT_TREE", forward: ?boolean };
 type ShuffleTreeColorActionType = { type: "SHUFFLE_TREE_COLOR", treeId?: number };
 type CreateCommentActionType = {
@@ -224,7 +224,7 @@ export const mergeTreesAction = (
 
 export const setTreeNameAction = (
   name: ?string = null,
-  treeId?: number,
+  treeId: ?number,
 ): SetTreeNameActionType => ({
   type: "SET_TREE_NAME",
   name,

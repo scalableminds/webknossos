@@ -9,6 +9,7 @@ import type Layer from "oxalis/model/binary/layers/layer";
 import AsyncTaskQueue from "libs/async_task_queue";
 import type { Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/binary/data_cube";
+import type { DataBucket } from "oxalis/model/binary/bucket";
 import Toast from "libs/toast";
 
 const BATCH_SIZE = 32;
@@ -21,7 +22,7 @@ class PushQueue {
   tracingId: string;
   taskQueue: AsyncTaskQueue;
   sendData: boolean;
-  queue: Array<Vector4>;
+  queue: Set<DataBucket>;
 
   constructor(
     cube: DataCube,
@@ -35,7 +36,7 @@ class PushQueue {
     this.tracingId = tracingId;
     this.taskQueue = taskQueue;
     this.sendData = sendData;
-    this.queue = [];
+    this.queue = new Set();
 
     const autoSaveFailureMessage = "Auto-Save failed!";
     this.taskQueue.on("failure", () => {
@@ -50,33 +51,19 @@ class PushQueue {
 
   stateSaved(): boolean {
     return (
-      this.queue.length === 0 &&
+      this.queue.size === 0 &&
       this.cube.temporalBucketManager.getCount() === 0 &&
       !this.taskQueue.isBusy()
     );
   }
 
-  insert(bucketAddress: Vector4): void {
-    this.queue.push(bucketAddress);
-    this.removeDuplicates();
+  insert(bucket: DataBucket): void {
+    this.queue.add(bucket);
     this.push();
   }
 
   clear(): void {
-    this.queue = [];
-  }
-
-  removeDuplicates(): void {
-    this.queue.sort(this.comparePositions);
-
-    let i = 0;
-    while (i < this.queue.length - 1) {
-      if (this.comparePositions(this.queue[i], this.queue[i + 1]) === 0) {
-        this.queue.splice(i, 1);
-      } else {
-        i++;
-      }
-    }
+    this.queue.clear();
   }
 
   comparePositions([x1, y1, z1]: Vector4, [x2, y2, z2]: Vector4): number {
@@ -93,9 +80,16 @@ class PushQueue {
       return;
     }
 
-    while (this.queue.length) {
-      const batchSize = Math.min(BATCH_SIZE, this.queue.length);
-      const batch = this.queue.splice(0, batchSize);
+    while (this.queue.size) {
+      let batchSize = Math.min(BATCH_SIZE, this.queue.size);
+      const batch = [];
+      for (const bucket of this.queue) {
+        if (batchSize <= 0) break;
+
+        this.queue.delete(bucket);
+        batch.push(bucket);
+        batchSize--;
+      }
       // fire and forget
       this.taskQueue.scheduleTask(() => this.pushBatch(batch));
     }
@@ -109,9 +103,8 @@ class PushQueue {
 
   push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
-  pushBatch(batch: Array<Vector4>): Promise<void> {
-    const getBucketData = bucket => this.cube.getBucket(bucket).getData();
-    return this.layer.sendToStore(batch, getBucketData);
+  pushBatch(batch: Array<DataBucket>): Promise<void> {
+    return this.layer.sendToStore(batch);
   }
 }
 

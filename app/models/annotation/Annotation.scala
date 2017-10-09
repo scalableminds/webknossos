@@ -30,7 +30,8 @@ case class Annotation(
                        _name: Option[String] = None,
                        description: String = "",
                        tracingTime: Option[Long] = None,
-                       created : Long = System.currentTimeMillis,
+                       createdTimestamp: Long = System.currentTimeMillis,
+                       modifiedTimestamp: Long = System.currentTimeMillis,
                        _task: Option[BSONObjectID] = None,
                        _id: BSONObjectID = BSONObjectID.generate,
                        isActive: Boolean = true,
@@ -66,9 +67,9 @@ case class Annotation(
 
   def isRevertPossible: Boolean = {
     // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
-    // hence we need a way to decide if a tracing can safely be revert. We will use the created date of the
+    // hence we need a way to decide if a tracing can safely be reverted. We will use the created date of the
     // annotation to do so
-    created > 1470002400000L  // 1.8.2016, 00:00:00
+    createdTimestamp > 1470002400000L  // 1.8.2016, 00:00:00
   }
 
   def toJson(requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
@@ -78,7 +79,7 @@ case class Annotation(
       userJson <- user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
     } yield {
       Json.obj(
-        "modified" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
+        "modified" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(modifiedTimestamp),
         "state" -> state,
         "id" -> id,
         "name" -> name,
@@ -317,6 +318,12 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("state" -> state)),
+      returnNew = true)
+
+  def updateModifiedTimestamp(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("modifiedTimestamp" -> System.currentTimeMillis)),
       returnNew = true)
 
   def updateTracingRefernce(_annotation: BSONObjectID, tracingReference: TracingReference)(implicit ctx: DBAccessContext) =

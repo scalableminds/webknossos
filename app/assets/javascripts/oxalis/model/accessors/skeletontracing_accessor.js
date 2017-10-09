@@ -11,7 +11,7 @@ import type {
   BranchPointType,
 } from "oxalis/store";
 
-type SkeletonTracingStatsType = {
+export type SkeletonTracingStatsType = {
   treeCount: number,
   nodeCount: number,
   edgeCount: number,

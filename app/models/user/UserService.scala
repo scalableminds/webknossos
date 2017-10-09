@@ -75,7 +75,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
     for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, teamRole)).toList
-      user = User(email, firstName, lastName, isActive = isActive, hashPassword(password), md5(password), teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
+      user = User(email, firstName, lastName, isActive = isActive, md5(password), teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
       _ <- UserDAO.insert(user)(GlobalAccessContext)
     } yield user
 
@@ -93,7 +93,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
           email,
           "mturk", workerId,
           isActive = true,
-          pwdHash = "",
           md5hash = "",
           teams = teamMemberships,
           _isAnonymous = Some(true),

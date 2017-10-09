@@ -37,7 +37,6 @@ case class User(
                  firstName: String,
                  lastName: String,
                  isActive: Boolean = false,
-                 pwdHash: String = "",
                  md5hash: String = "",
                  teams: List[TeamMembership],
                  userConfiguration: UserConfiguration = UserConfiguration.default,

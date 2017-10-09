@@ -235,6 +235,13 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         Json.obj("state.isAssigned" -> true),
         Json.obj("state.isFinished" -> true))))
 
+  def findByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    findOne(Json.obj(
+      "tracingReference.id" -> tracingId
+      )
+    )
+  }
+
   def countUnfinishedByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(Json.obj(
       "_task" -> _task,
@@ -317,6 +324,13 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
         "tracingReference" -> tracingReference)),
+      returnNew = true)
+
+  def updateStatistics(_annotation: BSONObjectID, statistics: JsObject)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj(
+        "statistics" -> statistics)),
       returnNew = true)
 
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =

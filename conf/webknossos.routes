@@ -59,8 +59,6 @@ GET           /user/tasks/request                                               
 GET           /user/tasks/peek                                                  controllers.TaskController.peekNext(limit: Int ?= 10)
 GET           /users/:id/details                                                controllers.UserController.emptyWithWildcard(id)
 GET           /users                                                            controllers.UserController.empty
-GET           /user/password/reset                                              controllers.UserController.resetPassword
-POST          /user/password/reset                                              controllers.UserController.handleResetPassword
 
 GET           /api/users                                                        controllers.UserController.list
 GET           /api/user                                                         controllers.UserController.current

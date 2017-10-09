@@ -30,7 +30,6 @@ import scala.text
 
 class UserController @Inject()(val messagesApi: MessagesApi)
   extends Controller
-  with UserAuthentication
   with Dashboard
   with FoxImplicits {
 
@@ -231,53 +230,4 @@ class UserController @Inject()(val messagesApi: MessagesApi)
         }
     }
   }
-}
-
-trait UserAuthentication extends Dashboard with FoxImplicits { this: Controller =>
-  val resetForm: Form[(String, String)] = {
-
-    def resetFormApply(oldPassword: String, password: (String, String)) =
-      (oldPassword, password._1)
-
-    def resetFormUnapply(user: (String, String)) =
-      Some(user._1, ("", ""))
-
-    val passwordField = tuple("main" -> nonEmptyText, "validation" -> nonEmptyText)
-                        .verifying("user.password.nomatch", pw => pw._1 == pw._2)
-                        .verifying("user.password.tooshort", pw => pw._1.length >= 6)
-
-    Form(mapping(
-      "password_old" -> nonEmptyText,
-      "password" -> passwordField)(resetFormApply)(resetFormUnapply))
-  }
-
-  /**
-   * Reset password page
-   */
-
-  def resetPassword = SecuredAction { implicit request =>
-    Ok(html.user.reset_password(resetForm))
-  }
-
-  def handleResetPassword = SecuredAction.async { implicit request =>
-
-    resetForm.bindFromRequest.fold(
-    formWithErrors =>
-      Future.successful(BadRequest(html.user.reset_password(formWithErrors))), {
-      case (oldPassword, newPassword) => {
-        val email = request.identity.email.toLowerCase
-        for {
-          user <- UserService.auth(email, oldPassword).getOrElse(User.defaultDeactivatedUser)
-          ok <- if (user.isActive) UserService.changePassword(user, newPassword).map(_.ok) else Fox.successful(false)
-        } yield {
-          if (ok) {
-            Redirect(controllers.routes.Authentication.logout).flashing(FlashSuccess(Messages("user.resetPassword.success")))
-          } else
-              BadRequest(html.user.reset_password(resetForm.bindFromRequest.withGlobalError("user.resetPassword.failed")))
-        }
-      }
-    }
-    )
-  }
-
 }

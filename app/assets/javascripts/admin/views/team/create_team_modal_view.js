@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Modal, Input, Select, Spin, Button } from "antd";
-import Request from "libs/request";
+import { getRootTeams, createTeam } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
 
 const { Option } = Select;
@@ -31,8 +31,7 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const url = "/api/teams?isRoot=true";
-    const teams = await Request.receiveJSON(url);
+    const teams = await getRootTeams();
 
     this.setState({
       isLoading: false,
@@ -40,7 +39,7 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
     });
   }
 
-  onOk = () => {
+  onOk = async () => {
     if (this.isInputValid()) {
       const newTeam = {
         name: this.state.newTeamName,
@@ -49,14 +48,10 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
         isEditable: "true",
       };
 
-      const url = "/api/teams";
-      Request.sendJSONReceiveJSON(url, { data: newTeam }).then(team => {
-        this.setState({
-          newTeamName: "",
-          parentTeam: undefined,
-        });
-
-        this.props.onOk(team);
+      await createTeam(newTeam);
+      this.setState({
+        newTeamName: "",
+        parentTeam: undefined,
       });
     }
   };

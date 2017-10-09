@@ -87,6 +87,7 @@ POST          /api/datastores/:name/datasource                                  
 POST          /api/datastores/:name/datasources                                 controllers.WKDataStoreController.updateAll(name: String)
 POST          /api/datastores/:name/status                                      controllers.WKDataStoreController.statusUpdate(name: String)
 POST          /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String, token: String)
+POST          /api/datastores/:name/authorizeTracingUpdates                     controllers.WKDataStoreController.authorizeTracingUpdates(name: String)
 
 # Data Tokens
 GET           /api/dataToken/validate                                           controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)

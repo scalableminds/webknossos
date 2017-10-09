@@ -9,12 +9,14 @@ import com.scalableminds.braingames.binary.models.datasource.DataSourceId
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.braingames.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.{Annotation, AnnotationDAO}
 import models.binary._
+import models.user.time.TimeSpanService
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsError, JsSuccess}
+import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
 
 import scala.concurrent.Future
@@ -66,6 +68,24 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       case e: JsError               =>
         logger.warn("Data store reported invalid json for data source.")
         JsonBadRequest(JsError.toFlatJson(e))
+    }
+  }
+
+  def authorizeTracingUpdates(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
+    for {
+      tracingId <- (request.body \ "tracingId").asOpt[String].toFox
+      annotation: Annotation <- AnnotationDAO.findByTracingId(tracingId)(GlobalAccessContext)
+      user <- annotation.user
+      timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
+      statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
+      _ <- statisticsOpt match {
+        case Some(statistics) => AnnotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
+        case None => Fox.successful()
+      }
+      _ <- AnnotationDAO.updateModifiedTimestamp(annotation._id)(GlobalAccessContext)
+    } yield {
+      TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext)
+      Ok
     }
   }
 }

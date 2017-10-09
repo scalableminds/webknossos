@@ -6,8 +6,8 @@ import * as React from "react";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import Markdown from "react-remarkable";
 import Utils from "libs/utils";
-import Request from "libs/request";
 import messages from "messages";
+import { getTaskTypes, deleteTaskType } from "admin/admin_rest_api";
 import type { APITaskTypeType } from "admin/api_flow_types";
 
 const { Column } = Table;
@@ -31,8 +31,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = "/api/taskTypes";
-    const tasktypes = await Request.receiveJSON(url);
+    const tasktypes = await getTaskTypes();
 
     this.setState({
       isLoading: false,
@@ -44,22 +43,18 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteTaskType = async (taskType: APITaskTypeType) => {
+  deleteTaskType = (taskType: APITaskTypeType) => {
     Modal.confirm({
       title: messages["taskType.delete"],
-      onOk: () => {
+      onOk: async () => {
         this.setState({
           isLoading: true,
         });
 
-        const url = `/api/taskTypes/${taskType.id}`;
-        Request.receiveJSON(url, {
-          method: "DELETE",
-        }).then(() => {
-          this.setState({
-            isLoading: false,
-            tasktypes: this.state.tasktypes.filter(p => p.id !== taskType.id),
-          });
+        await deleteTaskType(taskType.id);
+        this.setState({
+          isLoading: false,
+          tasktypes: this.state.tasktypes.filter(p => p.id !== taskType.id),
         });
       },
     });

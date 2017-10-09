@@ -162,7 +162,8 @@ object AnnotationService
           state = AnnotationState.InProgress,
           typ = AnnotationType.Task,
           _id = BSONObjectID.generate,
-          created = System.currentTimeMillis)
+          createdTimestamp = System.currentTimeMillis,
+          modifiedTimestamp = System.currentTimeMillis)
         _ <- newAnnotation.saveToDB
       } yield {
         newAnnotation

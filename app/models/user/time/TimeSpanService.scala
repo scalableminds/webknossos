@@ -30,12 +30,12 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   private lazy val timeSpanTracker = Akka.system.actorOf(Props[TimeSpanTracker])
 
-  def logUserInteraction(user: User, annotation: Option[Annotation])(implicit ctx: DBAccessContext): Unit = {
+  def logUserInteraction(user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Unit = {
     val timestamp = System.currentTimeMillis
     logUserInteraction(Seq(timestamp), user, annotation)
   }
 
-  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: Option[Annotation])(implicit ctx: DBAccessContext): Unit = {
+  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Unit = {
     timeSpanTracker ! TrackTime(timestamps, user._id, annotation, ctx)
   }
 
@@ -104,9 +104,9 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   }
 
 
-  protected case class TrackTime(timestamps: Seq[Long], _user: BSONObjectID, annotation: Option[Annotation], ctx: DBAccessContext)
+  protected case class TrackTime(timestamps: Seq[Long], _user: BSONObjectID, annotation: Annotation, ctx: DBAccessContext)
 
-  protected class TimeSpanTracker extends Actor{
+  protected class TimeSpanTracker extends Actor {
     private val lastUserActivity = mutable.HashMap.empty[BSONObjectID, TimeSpan]
 
     private def isNotInterrupted(current: Long, last: TimeSpan) = {
@@ -204,7 +204,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     def receive = {
       case TrackTime(timestamps, _user, _annotation, ctx) =>
         // Only if the annotation belongs to the user, we are going to log the time on the annotation
-        val annotation = _annotation.filter(_._user.contains(_user))
+        val annotation = if (_annotation._user.contains(_user)) Some(_annotation) else None
         val start = timestamps.head
 
         var current = lastUserActivity.get(_user).flatMap(last => {

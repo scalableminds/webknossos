@@ -4,12 +4,12 @@
 import _ from "lodash";
 import * as React from "react";
 import { Table, Tag, Icon, Spin, Button, Input } from "antd";
-import Request from "libs/request";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
-import type { APIUserType, APITeamRoleType } from "admin/api_flow_types";
+import { getEditableUsers, updateUser } from "admin/admin_rest_api";
+import type { APIUserType, APITeamRoleType, ExperienceMapType } from "admin/api_flow_types";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -40,8 +40,7 @@ class UserListView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = "/api/users?isEditable=true";
-    const users = await Request.receiveJSON(url);
+    const users = await getEditableUsers();
 
     this.setState({
       isLoading: false,
@@ -54,11 +53,7 @@ class UserListView extends React.PureComponent<{}, State> {
       if (selectedUser.id === user.id) {
         const newUser = Object.assign({}, user, { isActive });
 
-        const url = `/api/users/${user.id}`;
-        Request.sendJSONReceiveJSON(url, {
-          data: newUser,
-        });
-
+        updateUser(newUser);
         return newUser;
       }
 
@@ -191,7 +186,7 @@ class UserListView extends React.PureComponent<{}, State> {
             dataIndex="experiences"
             key="experiences"
             width={300}
-            render={(experiences, user: APIUserType) =>
+            render={(experiences: ExperienceMapType, user: APIUserType) =>
               _.map(experiences, (value, domain) => (
                 <Tag key={`experience_${user.id}_${domain}`}>
                   {domain} : {value}

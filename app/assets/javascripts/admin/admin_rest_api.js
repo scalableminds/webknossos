@@ -129,9 +129,8 @@ export async function deleteTask(taskId: string): Promise<void> {
   });
 }
 
-export async function getTasksByQuery(queryObject: QueryObjectType): Promise<Array<APITaskType>> {
-  const responses = await Request.sendJSONReceiveJSON("/api/queries", {
-    params: { type: "task" },
+export async function getTasks(queryObject: QueryObjectType): Promise<Array<APITaskType>> {
+  const responses = await Request.sendJSONReceiveJSON("/api/tasks/list", {
     data: queryObject,
   });
 

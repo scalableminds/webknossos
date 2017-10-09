@@ -19,12 +19,11 @@ type State = {
   taskTypes: Array<APITaskTypeType>,
 };
 
-type BSONIdType = { $oid: string };
-
 export type QueryObjectType = {
-  _taskType?: BSONIdType,
-  _id?: Array<BSONIdType> | { $in: Array<BSONIdType> },
-  _project?: string,
+  taskType?: string,
+  ids?: Array<string>,
+  project?: string,
+  user?: string,
 };
 
 class TaskSearchForm extends React.Component<Props, State> {
@@ -66,28 +65,21 @@ class TaskSearchForm extends React.Component<Props, State> {
           .trim()
           .replace(/,?\s+,?/g, ",") // replace remaining whitespaces with commata
           .split(",")
-          .filter((taskId: string) => taskId.length > 0)
-          .map((taskId: string) => ({
-            $oid: taskId,
-          }));
+          .filter((taskId: string) => taskId.length > 0);
 
-        if (taskIds.length === 1) {
-          queryObject._id = taskIds[0];
-        } else {
-          queryObject._id = { $in: taskIds };
-        }
+        queryObject.ids = taskIds;
       }
 
       if (formValues.taskTypeId) {
-        queryObject._taskType = { $oid: formValues.taskTypeId };
+        queryObject.taskType = formValues.taskTypeId;
       }
 
       if (formValues.userId) {
-        queryObject._user = { $oid: formValues.userId };
+        queryObject.user = formValues.userId;
       }
 
       if (formValues.projectName) {
-        queryObject._project = formValues.projectName;
+        queryObject.project = formValues.projectName;
       }
 
       this.props.onChange(queryObject);

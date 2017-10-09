@@ -9,7 +9,7 @@ import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import messages from "messages";
 import TaskSearchForm from "admin/views/task/task_search_form";
-import { deleteTask, getTasksByQuery } from "admin/admin_rest_api";
+import { deleteTask, getTasks } from "admin/admin_rest_api";
 import TemplateHelpers from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
 import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
@@ -36,9 +36,11 @@ class TaskListView extends React.PureComponent<Props, State> {
   };
 
   async fetchData(queryObject: QueryObjectType) {
-    this.setState({
-      tasks: await getTasksByQuery(queryObject),
-    });
+    if (!_.isEmpty(queryObject)) {
+      this.setState({
+        tasks: await getTasks(queryObject),
+      });
+    }
   }
 
   handleSearch = (event: SyntheticInputEvent<>): void => {

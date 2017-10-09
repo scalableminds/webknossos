@@ -22,7 +22,7 @@ trait SkeletonUpdateActionHelper {
   protected def convertColor(aColor: com.scalableminds.util.image.Color) =
     Color(aColor.r, aColor.g, aColor.b, aColor.a)
   protected def convertBranchPoint(aBranchPoint: BranchPointDepr) =
-    BranchPoint(aBranchPoint.id, aBranchPoint.timestamp)
+    BranchPoint(aBranchPoint.nodeId, aBranchPoint.timestamp)
   protected def convertComment(aComment: CommentDepr) =
     Comment(aComment.node, aComment.content)
   protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]) = aColorOpt match {

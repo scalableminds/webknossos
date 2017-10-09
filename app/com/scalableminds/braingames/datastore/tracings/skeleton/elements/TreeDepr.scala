@@ -51,7 +51,7 @@ case class TreeDepr(
       nodes = nodes.map(node => node.copy(id = f(node.id))),
       edges = edges.map(edge => edge.copy(source = f(edge.source), target = f(edge.target))),
       comments = comments.map(comment => comment.copy(node = f(comment.node))),
-      branchPoints = branchPoints.map(bp => bp.copy(id = f(bp.id)))
+      branchPoints = branchPoints.map(bp => bp.copy(nodeId = f(bp.nodeId)))
     )
   }
 

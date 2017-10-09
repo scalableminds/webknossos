@@ -10,8 +10,8 @@ import play.api.libs.json.Json
 
 
 case class BranchPointDepr(
-  id: Int,
-  timestamp: Long)
+                            nodeId: Int,
+                            timestamp: Long)
 
 object BranchPointDepr {
   implicit val jsonFormat = Json.format[BranchPointDepr]
@@ -19,7 +19,7 @@ object BranchPointDepr {
   implicit object BranchPointXMLWrites extends SynchronousXMLWrites[BranchPointDepr] {
     def synchronousWrites(b: BranchPointDepr)(implicit writer: XMLStreamWriter): Boolean = {
       writer.writeStartElement("branchpoint")
-      writer.writeAttribute("id", b.id.toString)
+      writer.writeAttribute("id", b.nodeId.toString)
       writer.writeAttribute("time", b.timestamp.toString)
       writer.writeEndElement()
       true

@@ -34,5 +34,5 @@ In order to restore the current window, a reload is necessary.`,
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type?",
   "request.max_item_count_alert":
-    "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reseaons.",
+    "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
 };

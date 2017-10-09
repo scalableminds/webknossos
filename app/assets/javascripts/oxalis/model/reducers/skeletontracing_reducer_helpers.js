@@ -168,22 +168,30 @@ export function deleteNode(
           visitedEdges[getEdgeHash(deletedEdge)] = true;
         });
 
-        const traverseTree = (nodeId: number, newTree: TemporaryMutableTreeType) => {
-          const edges = nodeToEdgesMap[nodeId];
+        const traverseTree = (inputNodeId: number, newTree: TemporaryMutableTreeType) => {
+          const nodeQueue = [inputNodeId];
+          while (nodeQueue.length !== 0) {
+            const nodeId = nodeQueue.shift();
+            const edges = nodeToEdgesMap[nodeId];
 
-          if (nodeId !== node.id) {
-            newTree.nodes[nodeId] = activeTree.nodes[nodeId];
-          }
-          for (const edge of edges) {
-            const edgeHash = getEdgeHash(edge);
-            if (visitedEdges[edgeHash]) {
-              continue;
+            if (nodeId !== node.id) {
+              newTree.nodes[nodeId] = activeTree.nodes[nodeId];
             }
-            visitedEdges[edgeHash] = true;
-            newTree.edges.push(edge);
 
-            traverseTree(edge.source, newTree);
-            traverseTree(edge.target, newTree);
+            for (const edge of edges) {
+              const edgeHash = getEdgeHash(edge);
+              if (visitedEdges[edgeHash]) {
+                continue;
+              }
+              visitedEdges[edgeHash] = true;
+              newTree.edges.push(edge);
+
+              if (nodeId === edge.target) {
+                nodeQueue.push(edge.source);
+              } else {
+                nodeQueue.push(edge.target);
+              }
+            }
           }
         };
 

@@ -82,6 +82,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         case Some(statistics) => AnnotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
         case None => Fox.successful()
       }
+      _ <- AnnotationDAO.updateModifiedTimestamp(annotation._id)(GlobalAccessContext)
     } yield {
       TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext)
       Ok

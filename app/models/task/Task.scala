@@ -202,7 +202,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     }
 
     val taskTypeFilter = taskTypeOpt match {
-      case Some(taskType) => Json.obj(("taskType") -> Json.toJson(taskType))
+      case Some(taskType) => Json.obj(("_taskType") -> Json.obj("$oid" -> taskType))
       case None => Json.obj()
     }
 

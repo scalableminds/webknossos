@@ -143,7 +143,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                 title="Type"
                 dataIndex="type"
                 key="type"
-                sorter={Utils.localeCompareBy((taskType: APITaskTypeType) => taskType.summary)}
+                sorter={Utils.localeCompareBy((task: APITaskType) => task.type.summary)}
                 render={(taskType: APITaskTypeType) => (
                   <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
                 )}

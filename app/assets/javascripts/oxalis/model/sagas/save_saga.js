@@ -96,10 +96,11 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
   const { version, type, tracingId } = yield select(state => state.tracing);
   const dataStoreUrl = yield select(state => state.dataset.dataStore.url);
   compactBatch = addVersionNumbers(compactBatch, version);
+
   try {
     yield call(
       Request.sendJSONReceiveJSON,
-      `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update`,
+      `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=my-token`,
       {
         method: "POST",
         headers: { "X-Date": timestamp },

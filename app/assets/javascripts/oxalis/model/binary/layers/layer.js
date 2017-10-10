@@ -70,11 +70,9 @@ class Layer {
     }
 
     const datasetName = this.getDatasetName();
-    this.tokenRequestPromise = Request.receiveJSON(
-      `/api/dataToken/generate?dataSetName=${datasetName}&dataLayerName=${this.name}`,
-    ).then(dataStore => {
+    this.tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
       this.tokenRequestPromise = null;
-      return dataStore.token;
+      return tokenObj.token;
     });
 
     return this.tokenRequestPromise;

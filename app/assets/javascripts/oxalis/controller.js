@@ -99,7 +99,7 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    app.router.on("beforeunload", () => {
+    app.history.block(() => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());

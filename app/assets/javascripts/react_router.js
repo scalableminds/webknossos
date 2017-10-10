@@ -178,7 +178,7 @@ class ReactRouter extends React.Component {
       <TracingLayoutView
         initialTracingType={match.params.type}
         initialTracingId={match.params.id}
-        initialControlmode={ControlModeEnum.VIEW}
+        initialControlmode={ControlModeEnum.TRACE}
       />
     );
   }

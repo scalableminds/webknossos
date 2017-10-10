@@ -111,7 +111,7 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
   } catch (error) {
     yield call(toggleErrorHighlighting, true);
     if (error.status >= 400 && error.status < 500) {
-      app.router.off("beforeunload");
+      // app.router.off("beforeunload");
       // HTTP Code 409 'conflict' for dirty state
       if (error.status === 409) {
         yield call(alert, messages["save.failed_simultaneous_tracing"]);

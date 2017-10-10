@@ -14,7 +14,7 @@ import com.scalableminds.braingames.binary.models.datasource.{DataLayer, DataSou
 import com.scalableminds.braingames.binary.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.braingames.datastore.models.DataRequestCollection._
 import com.scalableminds.braingames.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
-import com.scalableminds.braingames.datastore.services.AccessTokenService
+import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
@@ -38,7 +38,7 @@ class BinaryDataController @Inject()(
   def requestViaWebKnossos(
                             dataSetName: String,
                             dataLayerName: String
-                          ) = TokenSecuredAction(dataSetName, dataLayerName).async(validateJson[List[WebKnossosDataRequest]]) {
+                          ) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)).async(validateJson[List[WebKnossosDataRequest]]) {
     implicit request =>
       AllowRemoteOrigin {
         requestData(dataSetName, dataLayerName, request.body).map(Ok(_))
@@ -59,7 +59,7 @@ class BinaryDataController @Inject()(
                            depth: Int,
                            resolution: Int,
                            halfByte: Boolean
-                         ) = TokenSecuredAction(dataSetName, dataLayerName).async {
+                         ) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)).async {
     implicit request =>
       AllowRemoteOrigin {
         val request = DataRequest(
@@ -97,7 +97,7 @@ class BinaryDataController @Inject()(
                          resolution: Int,
                          x: Int, y: Int, z: Int,
                          cubeSize: Int
-                       ) = TokenSecuredAction(dataSetName, dataLayerName).async {
+                       ) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)).async {
     implicit request =>
       AllowRemoteOrigin {
         val request = DataRequest(
@@ -125,7 +125,7 @@ class BinaryDataController @Inject()(
                           z: Int,
                           resolution: Int,
                           halfByte: Boolean
-                        ) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                        ) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         val request = DataRequest(
@@ -158,7 +158,7 @@ class BinaryDataController @Inject()(
                     z: Int,
                     resolution: Int,
                     halfByte: Boolean,
-                    blackAndWhite: Boolean) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                    blackAndWhite: Boolean) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         val request = DataRequest(
@@ -185,7 +185,7 @@ class BinaryDataController @Inject()(
                                  dataSetName: String,
                                  dataLayerName: String,
                                  width: Int,
-                                 height: Int) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                                 height: Int) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
@@ -206,7 +206,7 @@ class BinaryDataController @Inject()(
                                  dataLayerName: String,
                                  width: Int,
                                  height: Int
-                               ) = TokenSecuredAction(dataSetName, dataLayerName).async(parse.raw) {
+                               ) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
@@ -226,7 +226,7 @@ class BinaryDataController @Inject()(
                       dataSetName: String,
                       dataLayerName: String,
                       mappingName: String
-                    ) = TokenSecuredAction(dataSetName, dataLayerName).async {
+                    ) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)).async {
     implicit request =>
       AllowRemoteOrigin {
         for {

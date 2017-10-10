@@ -6,7 +6,7 @@ package com.scalableminds.braingames.datastore.controllers
 import java.io.FileInputStream
 
 import com.google.protobuf.CodedInputStream
-import com.scalableminds.braingames.datastore.services.AccessTokenService
+import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.util.mvc.ExtendedController
 import com.trueaccord.scalapb.json.JsonFormat
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
@@ -32,40 +32,27 @@ trait TokenSecuredController extends Controller {
 
   def accessTokenService: AccessTokenService
 
-  case class TokenSecuredAction(dataSetName: String, dataLayerName: String) extends ActionBuilder[Request] {
+  case class TokenSecuredAction(accessRequest: UserAccessRequest) extends ActionBuilder[Request] {
 
     val debugModeEnabled = Play.current.configuration.getBoolean("datastore.debugMode").getOrElse(false)
 
+    private def hasUserAccess[A](implicit request: Request[A]): Future[Boolean] = {
+      if (debugModeEnabled && Play.mode(Play.current) != Mode.Prod) {
+        return Future.successful(true)
+      }
+
+      request.getQueryString("token").map { token =>
+        accessTokenService.hasUserAccess(token, accessRequest)
+      }.getOrElse(Future.successful(false))
+    }
+
     def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
       hasUserAccess(request).flatMap {
-        // TODO: remove
-        case _ =>
-          block(request)
         case true =>
           block(request)
-        case _ if debugModeEnabled && Play.mode(Play.current) != Mode.Prod =>
-          // If we are in development mode, lets skip tokens
-          block(request)
         case false =>
-          hasDataSetTokenAccess(request).flatMap {
-            case true =>
-              block(request)
-            case false =>
-              Future.successful(Forbidden("Invalid access token."))
-          }
+          Future.successful(Forbidden("Invalid access token."))
       }
-    }
-
-    private def hasUserAccess[A](request: Request[A]): Future[Boolean] = {
-      request.getQueryString("token").map { token =>
-        accessTokenService.hasUserAccess(token, dataSetName, dataLayerName)
-      } getOrElse Future.successful(false)
-    }
-
-    private def hasDataSetTokenAccess[A](request: Request[A]): Future[Boolean] = {
-      request.getQueryString("datasetToken").map { token =>
-        accessTokenService.hasDataSetAccess(token, dataSetName)
-      } getOrElse Future.successful(false)
     }
   }
 }

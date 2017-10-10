@@ -22,7 +22,7 @@ GET         /datasets/:dataSetName/layers/:dataLayerName/mappings/:mappingName  
 
 # DataSource management
 GET         /datasets                                                                          @com.scalableminds.braingames.datastore.controllers.DataSourceController.list
-POST        /datasets                                                                          @com.scalableminds.braingames.datastore.controllers.DataSourceController.upload(token: String)
+POST        /datasets                                                                          @com.scalableminds.braingames.datastore.controllers.DataSourceController.upload
 POST        /datasets/:dataSetName                                                             @com.scalableminds.braingames.datastore.controllers.DataSourceController.update(dataSetName: String)
 GET         /datasets/:dataSetName                                                             @com.scalableminds.braingames.datastore.controllers.DataSourceController.explore(dataSetName: String)
 

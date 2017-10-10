@@ -66,10 +66,9 @@ class WebKnossosServer @Inject()(
       .post(dataSources)
   }
 
-  def validateDataSourceUpload(token: String, id: DataSourceId): Fox[_] = {
+  def validateDataSourceUpload(id: DataSourceId): Fox[_] = {
     RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/verifyUpload")
       .withQueryString("key" -> dataStoreKey)
-      .withQueryString("token" -> token)
       .post(id)
   }
 
@@ -79,20 +78,10 @@ class WebKnossosServer @Inject()(
       .post(Json.obj("timestamps" -> timestamps, "statistics" -> statistics, "tracingId" -> tracingId))
   }
 
-  def requestUserAccess(token: String, dataSetName: String, dataLayerName: String): Fox[_] = {
+  def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[_] = {
     RPC(s"$webKnossosUrl/api/dataToken/validate")
-      .withQueryString(
-        "token" -> token,
-        "dataSetName" -> dataSetName,
-        "dataLayerName" -> dataLayerName)
-      .get
-  }
-
-  def requestDataSetAccess(token: String, dataSetName: String): Fox[_] = {
-    RPC(s"$webKnossosUrl/api/datasetToken/validate")
-      .withQueryString(
-        "token" -> token,
-        "dataSetName" -> dataSetName)
-      .get
+      .withQueryString("key" -> dataStoreKey)
+      .withQueryString("token" -> token)
+      .post(accessRequest)
   }
 }

@@ -9,7 +9,7 @@ import com.google.inject.Inject
 import com.scalableminds.braingames.binary.api.DataSourceService
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.binary.models.datasource.{DataSource, DataSourceId}
-import com.scalableminds.braingames.datastore.services.{AccessTokenService, WebKnossosServer}
+import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest, WebKnossosServer}
 import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
@@ -27,7 +27,7 @@ class DataSourceController @Inject()(
                                       val messagesApi: MessagesApi
                                     ) extends TokenSecuredController {
 
-  def list() = Action {
+  def list() = TokenSecuredAction(UserAccessRequest.listDataSets) {
     implicit request => {
       AllowRemoteOrigin {
         val ds = dataSourceRepository.findAll
@@ -44,7 +44,7 @@ class DataSourceController @Inject()(
       }
   }
 
-  def upload(token: String) = Action.async(parse.multipartFormData) {
+  def upload = TokenSecuredAction(UserAccessRequest.createDataSet).async(parse.multipartFormData) {
     implicit request =>
 
     val uploadForm = Form(
@@ -61,7 +61,7 @@ class DataSourceController @Inject()(
           case (name, team) =>
             val id = DataSourceId(name, team)
             for {
-              _ <- webKnossosServer.validateDataSourceUpload(token, id) ?~> Messages("dataSet.name.alreadyTaken")
+              _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
               zipFile <- request.body.file("zipFile") ?~> Messages("zip.file.notFound")
               _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
             } yield {
@@ -71,7 +71,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def explore(dataSetName: String) = Action {
+  def explore(dataSetName: String) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)) {
     implicit request =>
       AllowRemoteOrigin {
         for {
@@ -86,7 +86,7 @@ class DataSourceController @Inject()(
       }
   }
 
-  def update(dataSetName: String) = Action(validateJson[DataSource]) {
+  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSet(dataSetName))(validateJson[DataSource]) {
     implicit request =>
       AllowRemoteOrigin {
         for {

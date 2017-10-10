@@ -73,10 +73,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
 
     if (this.state.isValidJSON && this.state.dataset) {
+      // Make flow happy
+      const nonNullDataset = this.state.dataset;
       doWithToken(token =>
         Request.sendJSONReceiveJSON(
-          `${this.state.dataset.dataStore.url}/data/datasets/${this.props
-            .datasetName}?token=${token}`,
+          `${nonNullDataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
           {
             data: JSON.parse(this.state.datasetJson),
           },

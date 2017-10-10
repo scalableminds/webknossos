@@ -18,6 +18,7 @@ const StoreMock = {
     dataset: { name: "dataSet" },
     datasetConfiguration: { fourBit: false },
   }),
+  dispatch: sinon.stub(),
 };
 
 mockRequire("libs/request", RequestMock);
@@ -142,53 +143,41 @@ test.serial("sendToStore: Request Handling should send the correct request param
   const bucket2 = new DataBucket(8, [1, 1, 1, 1], null);
   bucket2.data = data;
   const batch = [bucket1, bucket2];
-  RequestMock.sendJSONReceiveJSON = sinon.stub();
-  RequestMock.sendJSONReceiveJSON.returns(Promise.resolve());
 
   const getBucketData = sinon.stub();
   getBucketData.returns(data);
 
-  const expectedUrl = "url/data/tracings/volume/layername/update";
-  const expectedOptions = {
-    method: "POST",
-    data: [
+  const expectedSaveQueueItems = {
+    type: "PUSH_SAVE_QUEUE",
+    items: [
       {
-        actions: [
-          {
-            name: "updateBucket",
-            value: {
-              position: [0, 0, 0],
-              zoomStep: 0,
-              cubeSize: 32,
-              fourBit: false,
-              base64Data: Base64.fromByteArray(data),
-            },
-          },
-          {
-            name: "updateBucket",
-            value: {
-              position: [64, 64, 64],
-              zoomStep: 1,
-              cubeSize: 32,
-              fourBit: false,
-              base64Data: Base64.fromByteArray(data),
-            },
-          },
-        ],
-        timestamp: 1234,
-        version: 0,
+        name: "updateBucket",
+        value: {
+          position: [0, 0, 0],
+          zoomStep: 0,
+          cubeSize: 32,
+          fourBit: false,
+          base64Data: Base64.fromByteArray(data),
+        },
+      },
+      {
+        name: "updateBucket",
+        value: {
+          position: [64, 64, 64],
+          zoomStep: 1,
+          cubeSize: 32,
+          fourBit: false,
+          base64Data: Base64.fromByteArray(data),
+        },
       },
     ],
-    timeout: 30000,
-    compress: false,
-    doNotCatch: true,
+    pushNow: false,
   };
 
   return layer.sendToStore(batch).then(() => {
-    t.is(RequestMock.sendJSONReceiveJSON.callCount, 1);
+    t.is(StoreMock.dispatch.callCount, 1);
 
-    const [url, options] = RequestMock.sendJSONReceiveJSON.getCall(0).args;
-    t.is(url, expectedUrl);
-    t.deepEqual(options, expectedOptions);
+    const [saveQueueItems] = StoreMock.dispatch.getCall(0).args;
+    t.deepEqual(saveQueueItems, expectedSaveQueueItems);
   });
 });

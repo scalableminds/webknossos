@@ -53,7 +53,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
   handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
     const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/duplicate`;
-    app.router.loadURL(url);
+    app.history.push(url);
   };
 
   handleFinish = async (event: SyntheticInputEvent<>) => {
@@ -61,7 +61,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
     const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
-      app.router.loadURL(url);
+      app.history.push(url);
     }
   };
 

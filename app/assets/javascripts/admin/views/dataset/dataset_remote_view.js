@@ -89,7 +89,7 @@ class DatasetRemoteView extends Marionette.View {
       }).then(
         () => {
           Toast.success();
-          app.router.navigate("/dashboard", { trigger: true });
+          app.history.push("/dashboard");
         },
         () => {}, // NOOP
       );

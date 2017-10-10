@@ -145,7 +145,7 @@ class TaskTypeCreateView extends Marionette.View {
       return;
     }
 
-    this.model.save(formValues).then(() => app.router.navigate("/taskTypes", { trigger: true }));
+    this.model.save(formValues).then(() => app.history.push("/taskTypes"));
   }
 
   onRender() {

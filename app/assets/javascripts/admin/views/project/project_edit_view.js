@@ -102,7 +102,7 @@ class ProjectEditView extends Marionette.View {
       .then(
         () => {},
         Toast.success("Saved!"),
-        app.router.loadURL(`/projects#${this.model.get("name")}`),
+        app.histoy.push(`/projects#${this.model.get("name")}`),
       );
   }
 

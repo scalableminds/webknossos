@@ -83,8 +83,7 @@ class TaskListView extends Marionette.CompositeView {
       urlParam = "";
     }
 
-    // The trailing '#' is important for routing
-    app.router.navigate(`/tasks/create${urlParam}#`, { trigger: true });
+    app.history.push(`/tasks/create${urlParam}`);
   }
 
   toggleAllDetails() {

@@ -25,9 +25,9 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/changepw", { data: formValues }).then(()=>{
-          Toast.success(messages["auth.reset_reset_pw_confirmation"])
-            app.router.navigate("/login", {trigger: true})
+        Request.sendJSONReceiveJSON("/api/changepw", { data: formValues }).then(() => {
+          Toast.success(messages["auth.reset_reset_pw_confirmation"]);
+          app.history.push("/login");
         });
       }
     });

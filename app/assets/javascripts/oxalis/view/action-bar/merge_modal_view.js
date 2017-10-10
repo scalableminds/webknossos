@@ -82,7 +82,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     );
     Toast.message(annotation.messages);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
-    app.router.loadURL(redirectUrl);
+    app.history.push(redirectUrl);
   }
 
   handleChangeMergeTaskType = (taskType: string) => {

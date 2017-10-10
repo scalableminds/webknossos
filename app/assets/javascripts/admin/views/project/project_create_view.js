@@ -228,7 +228,7 @@ class ProjectCreateView extends Marionette.View {
       // convert expectedTime from minutes to milliseconds
       formValues.expectedTime *= 60000;
 
-      this.model.save(formValues).then(() => app.router.navigate("/projects", { trigger: true }));
+      this.model.save(formValues).then(() => app.history.push("/projects"));
     } else {
       this.ui.name.focus();
     }

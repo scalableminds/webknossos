@@ -152,9 +152,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
 
   handleNMLUpload = (response: Object) => {
     response.messages.map(m => Toast.success(m.success));
-    app.router.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`, {
-      trigger: true,
-    });
+    app.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
   };
 
   renderActions = (tracing: APIAnnotationType) => {

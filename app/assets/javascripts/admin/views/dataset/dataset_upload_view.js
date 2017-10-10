@@ -136,7 +136,7 @@ class DatasetUploadView extends Marionette.View {
           () => {
             Toast.success(messages["dataset.upload_success"]);
             const url = `/datasets/${form.name.value}/import`;
-            app.router.navigate(url, { trigger: true });
+            app.history.push(url);
           },
           () => {
             this.ui.spinner.addClass("hidden");

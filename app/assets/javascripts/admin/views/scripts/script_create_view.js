@@ -86,7 +86,7 @@ class ScriptCreateView extends Marionette.View {
 
     const formValues = FormSyphon.serialize(this.ui.form);
 
-    this.model.save(formValues).then(() => app.router.navigate("/scripts", { trigger: true }));
+    this.model.save(formValues).then(() => app.history.push("/scripts"));
   }
 
   onRender() {

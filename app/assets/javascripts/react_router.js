@@ -1,10 +1,10 @@
 import _ from "lodash";
 import React from "react";
-import { BrowserRouter as Router, Route } from "react-router-dom";
-import ReactDOM from "react-dom";
+import { Router, Route } from "react-router-dom";
 import { Layout, LocaleProvider } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";
 
+import app from "app";
 import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
 import { ControlModeEnum } from "oxalis/constants";
 import Navbar from "./navbar";
@@ -195,7 +195,7 @@ class ReactRouter extends React.Component {
 
   render() {
     return (
-      <Router>
+      <Router history={app.history}>
         <LocaleProvider locale={enUS}>
           <Layout>
             <Navbar />

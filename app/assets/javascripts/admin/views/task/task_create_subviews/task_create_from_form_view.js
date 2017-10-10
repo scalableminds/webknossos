@@ -91,7 +91,7 @@ class TaskCreateFromFormView extends Marionette.View {
         params: { type: "default" },
       });
       if (this.parent.isEditingMode) {
-        app.router.loadURL("/tasks");
+        app.history.push("/tasks");
       } else {
         this.parent.showSaveSuccess(response);
       }

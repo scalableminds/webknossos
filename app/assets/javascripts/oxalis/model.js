@@ -251,7 +251,7 @@ export class OxalisModel {
           };
         }
 
-        tracing.trees = _.range(10).map(() => generateDummyTree(100000));
+        tracing.trees = _.range(1).map(() => generateDummyTree(500000));
 
         Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }

@@ -114,16 +114,45 @@ export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
   yield [watchBranchPointDeletion()];
 }
 
+function arraysEqual(a, b) {
+  if (a === b) return true;
+  if (a == null || b == null) return false;
+  if (a.length != b.length) return false;
+
+  // If you don't care about the order of the elements inside
+  // the array, you should sort both arrays here.
+
+  for (var i = 0; i < a.length; ++i) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
 function* diffNodes(
   prevNodes: NodeMapType,
   nodes: NodeMapType,
   treeId: number,
 ): Generator<UpdateAction, void, void> {
   if (prevNodes === nodes) return;
+
+  console.time("before");
   const { onlyA: deletedNodeIds, onlyB: addedNodeIds, both: bothNodeIds } = Utils.diffArrays(
     _.map(prevNodes, node => node.id),
     _.map(nodes, node => node.id),
   );
+  console.timeEnd("before");
+
+  console.time("after");
+  const { onlyA: deletedNodeIds2, onlyB: addedNodeIds2, both: bothNodeIds2 } = Utils.diffArrays2(
+    prevNodes,
+    nodes,
+  );
+  console.timeEnd("after");
+
+  console.log(arraysEqual(deletedNodeIds, deletedNodeIds2));
+  console.log(arraysEqual(addedNodeIds, addedNodeIds2));
+  console.log(arraysEqual(bothNodeIds, bothNodeIds2));
+
   for (const nodeId of deletedNodeIds) {
     yield deleteNode(treeId, nodeId);
   }

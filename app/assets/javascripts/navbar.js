@@ -1,6 +1,7 @@
 import React from "react";
 import { Layout, Menu, Icon } from "antd";
 import { Link } from "react-router-dom";
+import app from "app";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -11,7 +12,7 @@ class Navbar extends React.PureComponent {
       <Header style={{ padding: 0 }}>
         <Menu
           mode="horizontal"
-          defaultSelectedKeys={["2"]}
+          defaultSelectedKeys={[app.history.location.pathname]}
           style={{ lineHeight: "64px" }}
           theme="dark"
         >
@@ -21,7 +22,7 @@ class Navbar extends React.PureComponent {
               webKnossos
             </Link>
           </Menu.Item>
-          <Menu.Item key="1">
+          <Menu.Item key="/dashboard">
             <Link to="/dashboard">
               <Icon type="home" />
               Dashboard
@@ -36,38 +37,44 @@ class Navbar extends React.PureComponent {
               </span>
             }
           >
-            <Menu.Item key="2">
+            <Menu.Item key="/users">
+              {" "}
               <Link to="/users">Users</Link>
             </Menu.Item>
-            <Menu.Item key="3">
+            <Menu.Item key="/teams">
+              {" "}
               <Link to="/teams">Teams</Link>
             </Menu.Item>
-            <Menu.Item key="4">
+            <Menu.Item key="/projects">
+              {" "}
               <Link to="/projects">Projects</Link>
             </Menu.Item>
-            <Menu.Item key="5">
+            <Menu.Item key="/tasks">
+              {" "}
               <Link to="/tasks">Tasks</Link>
             </Menu.Item>
-            <Menu.Item key="6">
+            <Menu.Item key="/taskTypes">
+              {" "}
               <Link to="/taskTypes">Task Types</Link>
             </Menu.Item>
-            <Menu.Item key="7">
+            <Menu.Item key="/scripts">
+              {" "}
               <Link to="/scripts">Scripts</Link>
             </Menu.Item>
           </SubMenu>
 
           <SubMenu
-            key="sub2"
+            KEY="sub2"
             title={
               <span>
                 <Icon type="line-chart" />Statistics
               </span>
             }
           >
-            <Menu.Item key="8">
+            <Menu.Item key="/tasks/overview">
               <Link to="/tasks/overview">Overview</Link>
             </Menu.Item>
-            <Menu.Item key="9">
+            <Menu.Item key="/statistics">
               <Link to="/statistics">Weekly</Link>
             </Menu.Item>
           </SubMenu>
@@ -80,7 +87,7 @@ class Navbar extends React.PureComponent {
               </span>
             }
           >
-            <Menu.Item key="10">
+            <Menu.Item key="/help/faq">
               <a target="_blank" href="/help/faq">
                 FAQ
               </a>
@@ -90,7 +97,7 @@ class Navbar extends React.PureComponent {
                 Frontend API Documentation
               </a>
             </Menu.Item>
-            <Menu.Item key="12">
+            <Menu.Item key="/help/keyboardshortcuts">
               <a target="_blank" href="/help/keyboardshortcuts">
                 Keyboard Shortcuts
               </a>

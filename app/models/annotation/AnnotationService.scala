@@ -190,7 +190,8 @@ object AnnotationService extends AnnotationContentProviders
     user: User,
     content: AnnotationContent,
     annotationType: AnnotationType,
-    name: Option[String])(implicit messages: Messages, ctx: DBAccessContext) = {
+    name: Option[String],
+    description: String)(implicit messages: Messages, ctx: DBAccessContext) = {
 
     for {
       dataSet <- DataSetDAO.findOneBySourceName(content.dataSetName) ?~> Messages("dataSet.notFound", content.dataSetName)
@@ -199,6 +200,7 @@ object AnnotationService extends AnnotationContentProviders
         ContentReference.createFor(content),
         team = selectSuitableTeam(user, dataSet),
         _name = name,
+        description = description,
         typ = annotationType)
       _ <- AnnotationDAO.insert(annotation)
     } yield {
@@ -220,6 +222,7 @@ object AnnotationService extends AnnotationContentProviders
       temporary.typ,
       temporary.version,
       temporary._name,
+      temporary.description,
       None,
       temporary.created,
       id)
@@ -278,7 +281,8 @@ object AnnotationService extends AnnotationContentProviders
     }
     for {
       content <- createContent()
-      annotation <- AnnotationService.createFrom(user, content, typ, name) ?~> Messages("annotation.create.fromFailed")
+      description <- nmls.headOption.map(_.description).toFox
+      annotation <- AnnotationService.createFrom(user, content, typ, name, description) ?~> Messages("annotation.create.fromFailed")
     } yield annotation
   }
 

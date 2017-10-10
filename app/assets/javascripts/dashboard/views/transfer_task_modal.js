@@ -4,6 +4,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Spin, Modal, Button, Select } from "antd";
 import Request from "libs/request";
+import { getUsers } from "admin/admin_rest_api";
 import type { APIUserType } from "admin/api_flow_types";
 
 const { Option } = Select;
@@ -38,7 +39,7 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
 
   async fetchData() {
     this.setState({ isLoading: true });
-    const users = await Request.receiveJSON("/api/users");
+    const users = await getUsers();
     const activeUsers = users.filter(u => u.isActive);
     this.setState({ isLoading: false });
     const sortedUsers = _.sortBy(activeUsers, "lastName");

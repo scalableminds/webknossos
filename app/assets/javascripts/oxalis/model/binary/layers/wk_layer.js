@@ -12,6 +12,7 @@ import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
 import type { Vector4 } from "oxalis/constants";
 import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
+import type { DataBucket } from "oxalis/model/binary/bucket";
 
 // TODO: Non-reactive
 class WkLayer extends Layer {
@@ -78,14 +79,11 @@ class WkLayer extends Layer {
     return newColors;
   }
 
-  async sendToStoreImpl(
-    batch: Array<BucketInfo>,
-    getBucketData: Vector4 => Uint8Array,
-    token: string,
-  ): Promise<void> {
+  async sendToStoreImpl(batch: Array<DataBucket>, token: string): Promise<void> {
     const data = batch.map(bucket => {
-      const bucketData = getBucketData(BucketBuilder.bucketToZoomedAddress(bucket));
-      const bucketWithData = Object.assign({}, bucket, {
+      const bucketData = bucket.getData();
+      const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress);
+      const bucketWithData = Object.assign({}, bucketInfo, {
         base64Data: Base64.fromByteArray(bucketData),
       });
       return { action: "labelVolume", value: bucketWithData };

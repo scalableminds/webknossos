@@ -81,7 +81,7 @@ trait AnnotationFileService extends FoxImplicits with LazyLogging {
   def annotationIntoOutputStream(os: OutputStream): Fox[Boolean] = {
     annotation.content.flatMap {
       case t: SkeletonTracingLike =>
-        NMLService.toNML(t, os)
+        NMLService.toNML(t, annotation, os)
       case _                      =>
         Fox.failure("Invalid annotation content. Can not convert to output stream.")
     }

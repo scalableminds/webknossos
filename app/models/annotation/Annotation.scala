@@ -1,7 +1,5 @@
 package models.annotation
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
@@ -14,9 +12,11 @@ import models.user.User
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import reactivemongo.play.json.BSONFormats._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
+
+import scala.concurrent.Future
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -27,6 +27,7 @@ case class Annotation(
                        typ: String = AnnotationType.Explorational,
                        version: Int = 0,
                        _name: Option[String] = None,
+                       description: String = "",
                        tracingTime: Option[Long] = None,
                        created : Long = System.currentTimeMillis,
                        _id: BSONObjectID = BSONObjectID.generate,
@@ -45,8 +46,6 @@ case class Annotation(
   /**
    * Easy access methods
    */
-
-  val name = _name getOrElse ""
 
   def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
 
@@ -292,6 +291,12 @@ object AnnotationDAO
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("_name" -> name)),
+      returnNew = true)
+
+  def setDescription(_annotation: BSONObjectID, description: String)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("description" -> description)),
       returnNew = true)
 
   def setIsPublic(_annotation: BSONObjectID, isPublic: Boolean)(implicit ctx: DBAccessContext) =

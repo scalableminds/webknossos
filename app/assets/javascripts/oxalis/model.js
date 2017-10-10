@@ -155,10 +155,12 @@ export class OxalisModel {
     // Fetch the actual tracing from the datastore, if there is an annotation
     let tracing: ?ServerTracingType;
     if (annotation != null) {
+      // Make flow happy
+      const nonNullAnnotation = annotation;
       tracing = await doWithToken(token =>
         Request.receiveJSON(
-          `${annotation.dataStore.url}/data/tracings/${annotation.content.typ}/${annotation.content
-            .id}?token=${token}`,
+          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content
+            .typ}/${nonNullAnnotation.content.id}?token=${token}`,
         ),
       );
       tracing.id = annotation.content.id;

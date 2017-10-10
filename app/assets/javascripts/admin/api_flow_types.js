@@ -4,6 +4,7 @@
  */
 import type { Vector3 } from "oxalis/constants";
 import type { DataLayerType, SettingsType } from "oxalis/store";
+import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
 
 type APIDataSourceType = {
   +id: {
@@ -43,7 +44,7 @@ export type APITeamRoleType = {
   +role: APIRoleType,
 };
 
-type ExperienceMapType = { +[string]: number };
+export type ExperienceMapType = { +[string]: number };
 
 export type APIUserType = {
   +email: string,
@@ -136,7 +137,7 @@ export type APIAnnotationType = {
     +isFinished: boolean,
     +isInProgress: boolean,
   },
-  +stats: { +numberOfNodes: number, +numberOfEdges: number, +numberOfTrees: number },
+  +stats: SkeletonTracingStatsType,
   +tags: Array<string>,
   +task: APITaskType,
   +tracingTime: number,

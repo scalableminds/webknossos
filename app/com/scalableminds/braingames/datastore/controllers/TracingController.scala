@@ -6,7 +6,7 @@ package com.scalableminds.braingames.datastore.controllers
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.Color
 import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
-import com.scalableminds.braingames.datastore.services.WebKnossosServer
+import com.scalableminds.braingames.datastore.services.{UserAccessRequest, WebKnossosServer}
 import com.scalableminds.braingames.datastore.tracings._
 import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.util.tools.Fox
@@ -20,7 +20,7 @@ import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]] extends Controller {
+trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMessage with Message[Ts]] extends TokenSecuredController {
 
   def dataSourceRepository: DataSourceRepository
 
@@ -46,7 +46,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
       .registerWriter[Vector3D](v => JArray(List(JDouble(v.x), JDouble(v.y), JDouble(v.z))), json => Vector3D(0.0, 0.0, 0.0))
       .registerWriter[Color](c => JArray(List(JDouble(c.r), JDouble(c.g), JDouble(c.b))), json => Color(0.0, 0.0, 0.0, 1.0)))
 
-  def save = Action.async(validateProto[T]) {
+  def save = TokenSecuredAction(UserAccessRequest.webknossos).async(validateProto[T]) {
     implicit request =>
       AllowRemoteOrigin {
         val tracing = request.body
@@ -56,7 +56,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
       }
   }
 
-  def saveMultiple = Action.async(validateProto[Ts]) {
+  def saveMultiple = TokenSecuredAction(UserAccessRequest.webknossos).async(validateProto[Ts]) {
     implicit request => {
       AllowRemoteOrigin {
         val references = Fox.sequence(request.body.map { tracing =>
@@ -69,7 +69,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def get(tracingId: String, version: Option[Long]) = Action.async {
+  def get(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.readTracing(tracingId)).async {
     implicit request => {
       AllowRemoteOrigin {
         for {
@@ -81,7 +81,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def getMultiple = Action.async(validateJson[List[TracingSelector]]) {
+  def getMultiple = TokenSecuredAction(UserAccessRequest.webknossos).async(validateJson[List[TracingSelector]]) {
     implicit request => {
       AllowRemoteOrigin {
         for {
@@ -93,7 +93,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def getProto(tracingId: String, version: Option[Long]) = Action.async {
+  def getProto(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
     implicit request => {
       AllowRemoteOrigin {
         for {
@@ -105,7 +105,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def update(tracingId: String) = Action.async(validateJson[List[UpdateActionGroup[T]]]) {
+  def update(tracingId: String) = TokenSecuredAction(UserAccessRequest.writeTracing(tracingId)).async(validateJson[List[UpdateActionGroup[T]]]) {
     implicit request => {
       AllowRemoteOrigin {
         val updateGroups = request.body

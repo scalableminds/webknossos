@@ -79,7 +79,7 @@ class WebKnossosServer @Inject()(
   }
 
   def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[_] = {
-    RPC(s"$webKnossosUrl/api/dataToken/validate")
+    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
       .withQueryString("key" -> dataStoreKey)
       .withQueryString("token" -> token)
       .post(accessRequest)

@@ -8,7 +8,7 @@ import java.util.UUID
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.braingames.datastore.services.WebKnossosServer
+import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.braingames.datastore.tracings.skeleton._
 import com.scalableminds.braingames.datastore.tracings._
 import play.api.i18n.{Messages, MessagesApi}
@@ -21,6 +21,7 @@ class SkeletonTracingController @Inject()(
                                            val tracingService: SkeletonTracingService,
                                            val dataSourceRepository: DataSourceRepository,
                                            val webKnossosServer: WebKnossosServer,
+                                           val accessTokenService: AccessTokenService,
                                            val messagesApi: MessagesApi
                                        ) extends TracingController[SkeletonTracing, SkeletonTracings] {
 
@@ -30,7 +31,7 @@ class SkeletonTracingController @Inject()(
 
   implicit def unpackMultiple(tracings: SkeletonTracings): List[SkeletonTracing] = tracings.tracings.toList
 
-  def mergedFromContents(persist: Boolean) = Action.async(validateProto[SkeletonTracings]) {
+  def mergedFromContents(persist: Boolean) = TokenSecuredAction(UserAccessRequest.webknossos).async(validateProto[SkeletonTracings]) {
     implicit request => {
       AllowRemoteOrigin {
         val tracings = request.body.tracings
@@ -42,7 +43,7 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def mergedFromIds(persist: Boolean) = Action.async(validateJson[List[TracingSelector]]) {
+  def mergedFromIds(persist: Boolean) = TokenSecuredAction(UserAccessRequest.webknossos).async(validateJson[List[TracingSelector]]) {
     implicit request => {
       AllowRemoteOrigin {
         for {
@@ -56,7 +57,7 @@ class SkeletonTracingController @Inject()(
     }
   }
 
-  def duplicate(tracingId: String, version: Option[Long]) = Action.async {
+  def duplicate(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
     implicit request => {
       AllowRemoteOrigin {
         for {

@@ -5,15 +5,12 @@ package com.scalableminds.braingames.datastore.controllers
 
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
-import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
-import com.scalableminds.braingames.datastore.services.WebKnossosServer
-import com.scalableminds.braingames.datastore.tracings.volume.{VolumeTracingService, VolumeUpdateAction}
+import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.braingames.datastore.tracings._
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingService
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
-import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -21,6 +18,7 @@ class VolumeTracingController @Inject()(
                                          val tracingService: VolumeTracingService,
                                          val dataSourceRepository: DataSourceRepository,
                                          val webKnossosServer: WebKnossosServer,
+                                         val accessTokenService: AccessTokenService,
                                          tracingDataStore: TracingDataStore,
                                          val messagesApi: MessagesApi
                                        ) extends TracingController[VolumeTracing, VolumeTracings] {
@@ -31,7 +29,7 @@ class VolumeTracingController @Inject()(
 
   implicit def unpackMultiple(tracings: VolumeTracings): List[VolumeTracing] = tracings.tracings.toList
 
-  def initialData(tracingId: String) = Action.async {
+  def initialData(tracingId: String) = TokenSecuredAction(UserAccessRequest.webknossos).async {
     implicit request =>
       AllowRemoteOrigin {
         for {
@@ -43,7 +41,7 @@ class VolumeTracingController @Inject()(
       }
   }
 
-  def getData(tracingId: String, version: Option[Long]) = Action.async {
+  def getData(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
     implicit request => {
       AllowRemoteOrigin {
         for {

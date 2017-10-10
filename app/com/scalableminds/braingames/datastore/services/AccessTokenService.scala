@@ -14,14 +14,14 @@ import scala.concurrent.duration._
 
 object AccessMode extends Enumeration {
 
-  val read, write, create, list = Value
+  val administrate, list, read, write = Value
 
   implicit val jsonFormat = Format(Reads.enumNameReads(AccessMode), Writes.enumNameWrites)
 }
 
 object AccessRessourceType extends Enumeration {
 
-  val dataset, tracing = Value
+  val datasource, tracing, webknossos = Value
 
   implicit val jsonFormat = Format(Reads.enumNameReads(AccessRessourceType), Writes.enumNameWrites)
 }
@@ -33,19 +33,22 @@ case class UserAccessRequest(resourceId: String, resourceType: AccessRessourceTy
 object UserAccessRequest {
   implicit val jsonFormat = Json.format[UserAccessRequest]
 
-  def createDataSet =
-    UserAccessRequest("", AccessRessourceType.dataset, AccessMode.create)
-  def listDataSets =
-    UserAccessRequest("", AccessRessourceType.dataset, AccessMode.list)
-  def readDataSet(dataSetName: String) =
-    UserAccessRequest(dataSetName, AccessRessourceType.dataset, AccessMode.read)
-  def writeDataSet(dataSetName: String) =
-    UserAccessRequest(dataSetName, AccessRessourceType.dataset, AccessMode.write)
+  def administrateDataSources =
+    UserAccessRequest("", AccessRessourceType.datasource, AccessMode.administrate)
+  def listDataSources =
+    UserAccessRequest("", AccessRessourceType.datasource, AccessMode.list)
+  def readDataSources(dataSourceName: String) =
+    UserAccessRequest(dataSourceName, AccessRessourceType.datasource, AccessMode.read)
+  def writeDataSource(dataSourceName: String) =
+    UserAccessRequest(dataSourceName, AccessRessourceType.datasource, AccessMode.write)
 
   def readTracing(tracingId: String) =
     UserAccessRequest(tracingId, AccessRessourceType.tracing, AccessMode.read)
   def writeTracing(tracingId: String) =
     UserAccessRequest(tracingId, AccessRessourceType.tracing, AccessMode.write)
+
+  def webknossos =
+    UserAccessRequest("webknossos", AccessRessourceType.webknossos, AccessMode.administrate)
 }
 
 class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer) {

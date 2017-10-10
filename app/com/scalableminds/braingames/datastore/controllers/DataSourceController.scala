@@ -27,7 +27,7 @@ class DataSourceController @Inject()(
                                       val messagesApi: MessagesApi
                                     ) extends TokenSecuredController {
 
-  def list() = TokenSecuredAction(UserAccessRequest.listDataSets) {
+  def list() = TokenSecuredAction(UserAccessRequest.listDataSources) {
     implicit request => {
       AllowRemoteOrigin {
         val ds = dataSourceRepository.findAll
@@ -36,7 +36,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def triggerInboxCheck() = Action {
+  def triggerInboxCheck() = TokenSecuredAction(UserAccessRequest.administrateDataSources) {
     implicit request =>
       AllowRemoteOrigin {
         dataSourceService.checkInbox()
@@ -44,7 +44,7 @@ class DataSourceController @Inject()(
       }
   }
 
-  def upload = TokenSecuredAction(UserAccessRequest.createDataSet).async(parse.multipartFormData) {
+  def upload = TokenSecuredAction(UserAccessRequest.administrateDataSources).async(parse.multipartFormData) {
     implicit request =>
 
     val uploadForm = Form(
@@ -71,7 +71,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def explore(dataSetName: String) = TokenSecuredAction(UserAccessRequest.readDataSet(dataSetName)) {
+  def explore(dataSetName: String) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)) {
     implicit request =>
       AllowRemoteOrigin {
         for {
@@ -86,7 +86,7 @@ class DataSourceController @Inject()(
       }
   }
 
-  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSet(dataSetName))(validateJson[DataSource]) {
+  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName))(validateJson[DataSource]) {
     implicit request =>
       AllowRemoteOrigin {
         for {

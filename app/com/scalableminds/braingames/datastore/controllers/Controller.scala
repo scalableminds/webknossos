@@ -37,9 +37,9 @@ trait TokenSecuredController extends Controller {
     val debugModeEnabled = Play.current.configuration.getBoolean("datastore.debugMode").getOrElse(false)
 
     private def hasUserAccess[A](implicit request: Request[A]): Future[Boolean] = {
-      if (debugModeEnabled && Play.mode(Play.current) != Mode.Prod) {
-        return Future.successful(true)
-      }
+      // TODO RocksDB if (debugModeEnabled && Play.mode(Play.current) != Mode.Prod) {
+      //  return Future.successful(true)
+      //}
 
       request.getQueryString("token").map { token =>
         accessTokenService.hasUserAccess(token, accessRequest)

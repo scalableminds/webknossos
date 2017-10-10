@@ -5,6 +5,7 @@ package com.scalableminds.braingames.datastore.controllers
 
 import javax.inject.Inject
 
+import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.braingames.datastore.tracings.TracingDataStore
 import play.api.Configuration
 import play.api.i18n.MessagesApi
@@ -14,8 +15,9 @@ import play.api.mvc.Action
 class Application @Inject()(
                              store: TracingDataStore,
                              config: Configuration,
+                             val accessTokenService: AccessTokenService,
                              val messagesApi: MessagesApi
-                           ) extends Controller {
+                           ) extends TokenSecuredController {
 
   def health = Action {
     implicit request =>
@@ -24,7 +26,7 @@ class Application @Inject()(
       Ok
   }
 
-  def backup = Action {
+  def backup = TokenSecuredAction(UserAccessRequest.webknossos) {
     implicit request =>
       val start = System.currentTimeMillis()
       logger.info(s"Starting tracing data backup")

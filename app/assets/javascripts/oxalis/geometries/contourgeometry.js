@@ -25,14 +25,16 @@ class ContourGeometry {
 
       Store.subscribe(() => {
         getVolumeTracing(Store.getState().tracing).map(tracing => {
-          const contourList = tracing.contourList;
-          if (contourList && lastContourList.length !== contourList.length) {
-            // Update meshes according to the new contourList
-            this.reset();
-            this.color = tracing.activeCellId === 0 ? COLOR_DELETE : COLOR_NORMAL;
-            contourList.forEach(p => this.addEdgePoint(p));
+          if (tracing.activeTool === "TRACE") {
+            const contourList = tracing.contourList;
+            if (contourList && lastContourList.length !== contourList.length) {
+              // Update meshes according to the new contourList
+              this.reset();
+              this.color = tracing.activeCellId === 0 ? COLOR_DELETE : COLOR_NORMAL;
+              contourList.forEach(p => this.addEdgePoint(p));
+            }
+            lastContourList = contourList;
           }
-          lastContourList = contourList;
         });
       });
     });

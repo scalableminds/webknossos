@@ -12,8 +12,7 @@ import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
 import TracingView from "oxalis/view/tracing_view";
-import enUS from "antd/lib/locale-provider/en_US";
-import { LocaleProvider, Layout, Icon } from "antd";
+import { Layout, Icon } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
@@ -47,54 +46,52 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <LocaleProvider locale={enUS}>
-        <Provider store={Store}>
-          <div>
-            <OxalisController
-              initialTracingType={this.props.initialTracingType}
-              initialTracingId={this.props.initialTracingId}
-              initialControlmode={this.props.initialControlmode}
-              ref={ref => {
-                app.oxalis = ref;
-              }}
-            />
+      <Provider store={Store}>
+        <div>
+          <OxalisController
+            initialTracingType={this.props.initialTracingType}
+            initialTracingId={this.props.initialTracingId}
+            initialControlmode={this.props.initialControlmode}
+            ref={ref => {
+              app.oxalis = ref;
+            }}
+          />
 
-            <Layout className="tracing-layout">
-              <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
-                <ButtonComponent
-                  size="large"
-                  onClick={this.handleSettingsCollapse}
-                  style={{ float: "left", marginTop: "10px" }}
-                >
-                  <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
-                  Settings
-                </ButtonComponent>
-                <ActionBarView />
-              </Header>
-              <Layout style={{ marginTop: 64 }}>
-                <Sider
-                  collapsible
-                  trigger={null}
-                  collapsed={this.state.isSettingsCollapsed}
-                  collapsedWidth={0}
-                  width={350}
-                  style={{ zIndex: 100 }}
-                >
-                  <SettingsView />
-                </Sider>
-                <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
-                  <div>
-                    <TracingView />
-                  </div>
-                  <div style={{ flex: "1", display: "inline-flex" }}>
-                    <RightMenuView />
-                  </div>
+          <Layout className="tracing-layout">
+            <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
+              <ButtonComponent
+                size="large"
+                onClick={this.handleSettingsCollapse}
+                style={{ float: "left", marginTop: "10px" }}
+              >
+                <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
+                Settings
+              </ButtonComponent>
+              <ActionBarView />
+            </Header>
+            <Layout style={{ marginTop: 64 }}>
+              <Sider
+                collapsible
+                trigger={null}
+                collapsed={this.state.isSettingsCollapsed}
+                collapsedWidth={0}
+                width={350}
+                style={{ zIndex: 100 }}
+              >
+                <SettingsView />
+              </Sider>
+              <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
+                <div>
+                  <TracingView />
                 </div>
-              </Layout>
+                <div style={{ flex: "1", display: "inline-flex" }}>
+                  <RightMenuView />
+                </div>
+              </div>
             </Layout>
-          </div>
-        </Provider>
-      </LocaleProvider>
+          </Layout>
+        </div>
+      </Provider>
     );
   }
 }

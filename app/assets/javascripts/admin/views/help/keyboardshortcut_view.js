@@ -136,6 +136,10 @@ const KeyboardShortcutView = () => (
       </thead>
       <tbody>
         <tr>
+          <td>Shift + Left click</td>
+          <td>Select active node</td>
+        </tr>
+        <tr>
           <td>Mouse drag or Arrow keys</td>
           <td>Rotation</td>
         </tr>
@@ -192,19 +196,19 @@ const KeyboardShortcutView = () => (
       </thead>
       <tbody>
         <tr>
-          <td>Left click</td>
-          <td>Set active cell</td>
+          <td>Shift + Left click</td>
+          <td>Select active cell</td>
         </tr>
         <tr>
           <td>Left Mouse drag</td>
-          <td>Move (Move mode) / Add to current Cell (Trace mode)</td>
+          <td>Move (Move mode) / Add to current Cell (Trace/Brush mode)</td>
         </tr>
         <tr>
           <td>Arrow keys</td>
           <td>Move</td>
         </tr>
         <tr>
-          <td>Shift + Left Mouse drag / Right Mouse drag</td>
+          <td>Right Mouse drag</td>
           <td>Remove voxels from cell</td>
         </tr>
         <tr>
@@ -213,7 +217,11 @@ const KeyboardShortcutView = () => (
         </tr>
         <tr>
           <td>W, 1</td>
-          <td>Toggle Move / Trace mode</td>
+          <td>Toggle Move / Trace / Brush mode</td>
+        </tr>
+        <tr>
+          <td>Shift + Mousewheel</td>
+          <td>Change brush size (Brush mode)</td>
         </tr>
       </tbody>
     </table>

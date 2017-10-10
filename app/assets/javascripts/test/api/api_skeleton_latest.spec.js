@@ -167,7 +167,7 @@ test("Utils Api: registerOverwrite should overwrite an existing function", t => 
 
 test("Calling a volume api function in a skeleton tracing should throw an error", t => {
   const api = t.context.api;
-  t.throws(() => api.tracing.getVolumeMode());
+  t.throws(() => api.tracing.getVolumeTool());
 });
 
 test("getTreeName should get the name of a tree", t => {

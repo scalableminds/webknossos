@@ -44,7 +44,7 @@ class TemporalBucketManager {
     const loadedPromise = new Promise((resolve, _reject) =>
       bucket.on("bucketLoaded", () => {
         if (bucket.dirty) {
-          this.pushQueue.insert(bucket.zoomedAddress);
+          this.pushQueue.insert(bucket);
         }
 
         this.loadedPromises = _.without(this.loadedPromises, loadedPromise);

@@ -288,7 +288,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
 
         // persist to server
         const url = `/annotations/${newAnnotation.typ}/${newAnnotation.id}/edit`;
-        Request.sendJSONReceiveJSON(url, { data: { tags: newAnnotation.tags } });
+        Request.sendJSONReceiveJSON(url, {
+          data: { tags: newAnnotation.tags },
+        });
       }
       return newAnnotation;
     });
@@ -429,7 +431,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     );
 
     return (
-      <div>
+      <div className="TestExplorativeAnnotationsView">
         {this.props.isAdminView ? (
           search
         ) : (

@@ -88,7 +88,6 @@ module.exports = function(env = {}) {
         "window.jQuery": "jquery",
         _: "lodash",
       }),
-      new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
       new webpack.optimize.CommonsChunkPlugin({
         name: "vendor",
         minChunks: function(module) {

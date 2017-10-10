@@ -9,8 +9,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.UserTokenService
 import oxalis.security.Secured
 import play.api.i18n.MessagesApi
-  import play.api.libs.json.Json
-  import scala.concurrent.ExecutionContext.Implicits.global
+import play.api.libs.json.Json
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import com.scalableminds.braingames.datastore.services.UserAccessRequest
 
 class UserTokenController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with WKDataStoreActionHelper with FoxImplicits {
 
@@ -28,12 +30,10 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
     }
   }
 
-  def validateUserToken(name: String) = DataStoreAction(name)(parse.json) { implicit request =>
-    val resourceType = (request.body \ "resourceType").asOpt[String]
-    val token = (request.body \ "token").asOpt[String]
-    val resourceIdentifier = (request.body \ "resourceIdentifier").asOpt[String]
-    val action = (request.body \ "action").asOpt[String]
-
+  def validateUserAccess(name: String, token: String) = DataStoreAction(name)(validateJson[UserAccessRequest]) { implicit request =>
+    val accessRequest = request.body
+    println(s"${token} tries to ${accessRequest.mode} ${accessRequest.resourceType}/${accessRequest.resourceId}")
+    // TODO RocksDB return Ok, if token == webknossosToken
     Ok
   }
 }

@@ -26,6 +26,7 @@ mockRequire.reRequire("libs/request");
 mockRequire.reRequire("oxalis/model/binary/layers/layer");
 
 const WkLayer = mockRequire.reRequire("oxalis/model/binary/layers/wk_layer").default;
+const { doWithToken } = mockRequire.reRequire("admin/admin_rest_api");
 
 const layerInfo = {
   name: "layername",
@@ -64,9 +65,8 @@ function prepare() {
 }
 
 test.serial("requestFromStore: Token Handling should request a token first", t => {
-  const { layer } = t.context;
   prepare();
-  return layer.tokenPromise.then(token => {
+  return doWithToken(token => {
     t.is(RequestMock.receiveJSON.callCount, 1);
 
     const [url] = RequestMock.receiveJSON.getCall(0).args;
@@ -87,29 +87,26 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
     .returns(Promise.resolve(responseBuffer));
 
   RequestMock.receiveJSON = sinon.stub();
-  RequestMock.receiveJSON.returns(Promise.resolve({ token: "token2" }));
+  RequestMock.receiveJSON
+    .onFirstCall()
+    .returns(Promise.resolve(tokenResponse))
+    .onSecondCall()
+    .returns(Promise.resolve({ token: "token2" }));
 
-  return layer.tokenPromise
-    .then(token => {
-      t.is(token, "token");
-      return layer.requestFromStore(batch);
-    })
-    .then(result => {
-      t.deepEqual(result, responseBuffer);
+  return doWithToken(token => {
+    t.is(token, "token");
+    return layer.requestFromStore(batch);
+  }).then(result => {
+    t.deepEqual(result, responseBuffer);
 
-      t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
+    t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
 
-      const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];
-      t.is(url, "url/data/datasets/dataSet/layers/layername/data?token=token");
+    const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];
+    t.is(url, "url/data/datasets/dataSet/layers/layername/data?token=token");
 
-      const url2 = RequestMock.sendJSONReceiveArraybuffer.getCall(1).args[0];
-      t.is(url2, "url/data/datasets/dataSet/layers/layername/data?token=token2");
-
-      return layer.tokenPromise;
-    })
-    .then(token => {
-      t.is(token, "token2");
-    });
+    const url2 = RequestMock.sendJSONReceiveArraybuffer.getCall(1).args[0];
+    t.is(url2, "url/data/datasets/dataSet/layers/layername/data?token=token2");
+  });
 });
 
 test.serial("requestFromStore: Request Handling: should pass the correct request parameters", t => {
@@ -117,7 +114,7 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
   const { batch } = prepare();
   layer.setFourBit(true);
 
-  const expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token";
+  const expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token2";
   const expectedOptions = {
     data: [
       { position: [0, 0, 0], zoomStep: 0, cubeSize: 32, fourBit: true },

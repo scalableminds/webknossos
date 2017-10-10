@@ -23,7 +23,6 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
 const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions");
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
-const Request = mockRequire.reRequire("libs/request").default;
 
 const { alert } = mockRequire.reRequire("libs/window");
 const {
@@ -32,6 +31,7 @@ const {
   sendRequestToServer,
   toggleErrorHighlighting,
   addVersionNumbers,
+  sendRequestWithToken,
 } = mockRequire.reRequire("oxalis/model/sagas/save_saga");
 
 const initialState = {
@@ -116,9 +116,9 @@ test("SaveSaga should send request to server", t => {
   expectValueDeepEqual(
     t,
     saga.next(DATASTORE_URL),
-    call(Request.sendJSONReceiveJSON, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update`, {
+    call(sendRequestWithToken, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
-      headers: { "X-Date": TIMESTAMP },
+      headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
     }),
   );
@@ -138,9 +138,9 @@ test("SaveSaga should retry update actions", t => {
   expectValueDeepEqual(
     t,
     saga.next(DATASTORE_URL),
-    call(Request.sendJSONReceiveJSON, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update`, {
+    call(sendRequestWithToken, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
-      headers: { "X-Date": TIMESTAMP },
+      headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
     }),
   );
@@ -166,9 +166,9 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
   expectValueDeepEqual(
     t,
     saga.next(DATASTORE_URL),
-    call(Request.sendJSONReceiveJSON, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update`, {
+    call(sendRequestWithToken, `${DATASTORE_URL}/data/tracings/skeleton/1234567890/update?token=`, {
       method: "POST",
-      headers: { "X-Date": TIMESTAMP },
+      headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
     }),
   );

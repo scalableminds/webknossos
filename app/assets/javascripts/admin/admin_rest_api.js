@@ -118,3 +118,32 @@ export async function deleteProject(projectName: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+// ### Do with userToken
+
+let tokenRequestPromise;
+function requestUserToken(): Promise<string> {
+  if (tokenRequestPromise) {
+    return tokenRequestPromise;
+  }
+
+  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
+    tokenRequestPromise = null;
+    return tokenObj.token;
+  });
+
+  return tokenRequestPromise;
+}
+
+let tokenPromise;
+export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  if (!tokenPromise) tokenPromise = requestUserToken();
+  return tokenPromise.then(fn).catch(error => {
+    if (error.status === 403) {
+      console.warn("Token expired. Requesting new token...");
+      tokenPromise = requestUserToken();
+      return doWithToken(fn);
+    }
+    throw error;
+  });
+}

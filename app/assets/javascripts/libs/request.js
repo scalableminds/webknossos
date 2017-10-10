@@ -14,7 +14,7 @@ type RequestOptions = {
   timeout?: number,
 };
 
-type RequestOptionsWithData<T> = {
+export type RequestOptionsWithData<T> = {
   data: T,
   headers?: { [key: string]: string },
   method?: "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH",

@@ -20,6 +20,8 @@ import ChangePasswordView from "admin/views/auth/change_password_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 
 // admin
+import FAQView from "admin/views/help/faq_view.js";
+import KeyboardShortcutView from "admin/views/help/keyboardshortcut_view.js";
 import PaginationView from "admin/views/pagination_view";
 import DatasetAddView from "admin/views/dataset/dataset_add_view";
 import UserListView from "admin/views/user/user_list_view";
@@ -245,6 +247,8 @@ class ReactRouter extends React.Component {
               <Route path="/reset" component={StartResetPasswordView} />
               <Route path="/finishreset" component={FinishResetPasswordView} />
               <Route path="/api/changepassword" component={ChangePasswordView} />
+              <Route path="/help/faq" component={FAQView} />
+              <Route path="/help/keyboardshortcuts" component={KeyboardShortcutView} />
             </Content>
           </Layout>
         </LocaleProvider>

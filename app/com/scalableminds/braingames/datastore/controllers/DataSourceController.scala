@@ -71,7 +71,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def explore(dataSetName: String) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)) {
+  def explore(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName)) {
     implicit request =>
       AllowRemoteOrigin {
         for {

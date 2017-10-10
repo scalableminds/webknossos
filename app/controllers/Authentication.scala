@@ -189,7 +189,7 @@ class Authentication @Inject() (
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => for {
-          token <- userTokenService.save(UserToken.create(user._id, email, isSignUp = false))
+          token <- userTokenService.save(UserToken.create(user._id, email, isLogin = false))
         } yield {
           Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email, token.id.toString))
           Ok
@@ -207,9 +207,10 @@ class Authentication @Inject() (
         userTokenService.find(id).flatMap {
           case None =>
             Future.successful(BadRequest(Messages("error.invalidToken")))
-          case Some(token) if !token.isSignUp && !token.isExpired =>
+          case Some(token) if !token.isLogin && !token.isExpired =>
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
+              _ <- userTokenService.remove(id)
               _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
             } yield Ok
         }
@@ -241,6 +242,32 @@ class Authentication @Inject() (
         }
       }
     )
+  }
+
+  // user can request a token to authenticate themselves (but only one, otherwise they would loose track of them)
+  def activateLoginToken = SecuredAction.async { implicit request =>
+    for{
+      oldTokens <- userTokenService.find(request.identity.email)
+      filteredList = oldTokens.filter(t => t.isLogin)
+      _ <- (filteredList.size == 0).toFox ?~> Messages("user.maxLoginTokenLimit") //in case the user has already a token
+      token <- userTokenService.save(UserToken.createLoginToken(request.identity._id, request.identity.email))
+    } yield {
+      JsonOk(token.id.toString)
+    }
+    //Future.successful(Ok)
+  }
+
+  // to deactivate the tokens (maybe also the resetPW-token ?!)
+  def deactivateLoginToken = SecuredAction.async { implicit request =>
+    //val tokens = userTokenService.find(request.identity.email)
+    for{
+      tokens <- userTokenService.find(request.identity.email)
+      filteredList = tokens.filter(t => t.isLogin)
+      _ <- (filteredList.size != 0).toFox ?~> Messages("user.noLoginToken")
+    } yield {
+      filteredList.foreach(token => userTokenService.remove(token.id))
+      JsonOk(Messages("user.loginTokenDeleted"))
+    }
   }
 
   def logout = SecuredAction.async { implicit request =>

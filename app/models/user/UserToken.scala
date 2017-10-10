@@ -1,8 +1,10 @@
 package models.user
 
 import org.joda.time.DateTime
-import play.api.libs.json.Json
+import play.api.libs.json.{JsObject, Json}
 import java.util.UUID
+
+import com.scalableminds.util.reactivemongo.DBAccessContext
 
 import scala.concurrent.Future
 import play.api.Play.current
@@ -13,15 +15,18 @@ import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.bson.BSONObjectID
 
 
-case class UserToken(id:UUID, userId:BSONObjectID, email:String, expirationTime:DateTime, isSignUp:Boolean) {
+case class UserToken(id:UUID, userId:BSONObjectID, email:String, expirationTime:DateTime, isLogin:Boolean) {
   def isExpired = expirationTime.isBeforeNow
 }
 
 object UserToken {
   implicit val toJson = Json.format[UserToken]
 
-  def create(userId:BSONObjectID, email:String, isSignUp:Boolean) =
-    UserToken(UUID.randomUUID(), userId, email, new DateTime().plusHours(12), isSignUp)
+  def create(userId:BSONObjectID, email:String, isLogin:Boolean) =
+    UserToken(UUID.randomUUID(), userId, email, new DateTime().plusHours(12), isLogin)
+
+  def createLoginToken(userId:BSONObjectID, email:String) =
+    UserToken(UUID.randomUUID(), userId, email, new DateTime().plusYears(1), true)
 }
 
 trait UserTokenDao {
@@ -36,6 +41,9 @@ class MongoUserTokenDao extends UserTokenDao {
 
   def find(id:UUID):Future[Option[UserToken]] =
     tokens.find(Json.obj("id" -> id)).one[UserToken]
+
+  def find(email: String): Future[List[UserToken]] =
+    tokens.find(Json.obj("email" -> email)).cursor[UserToken]().collect[List]() // does this work ???
 
   def save(token:UserToken):Future[UserToken] = for {
     _ <- tokens.insert(token)

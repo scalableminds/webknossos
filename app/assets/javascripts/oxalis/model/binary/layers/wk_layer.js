@@ -10,6 +10,9 @@ import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
 import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import Request from "libs/request";
+import Store from "oxalis/store";
+import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
+import { updateBucket } from "oxalis/model/sagas/update_actions";
 import type { Vector4 } from "oxalis/constants";
 import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 import type { DataBucket } from "oxalis/model/binary/bucket";
@@ -80,26 +83,12 @@ class WkLayer extends Layer {
   }
 
   async sendToStoreImpl(batch: Array<DataBucket>): Promise<void> {
-    const actions = batch.map(bucket => {
+    const items = batch.map(bucket => {
       const bucketData = bucket.getData();
       const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress);
-      const bucketWithData = Object.assign({}, bucketInfo, {
-        base64Data: Base64.fromByteArray(bucketData),
-      });
-      return { name: "updateBucket", value: bucketWithData };
+      return updateBucket(bucketInfo, Base64.fromByteArray(bucketData));
     });
-    const data = [{ version: 0, timestamp: 1234, actions }];
-
-    await Request.sendJSONReceiveJSON(
-      `${this.dataStoreInfo.url}/data/tracings/volume/${this.name}/update`,
-      {
-        method: "POST",
-        data,
-        timeout: REQUEST_TIMEOUT,
-        compress: false,
-        doNotCatch: true,
-      },
-    );
+    Store.dispatch(pushSaveQueueAction(items));
   }
 }
 

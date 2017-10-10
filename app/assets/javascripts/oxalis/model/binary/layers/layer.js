@@ -77,7 +77,7 @@ class Layer {
 
   // Sends the batch to the store.
   sendToStore(batch: Array<DataBucket>): Promise<void> {
-    return doWithToken(token => this.sendToStoreImpl(batch, token));
+    return this.sendToStoreImpl(batch);
   }
 
   /* eslint-disable no-unused-vars */
@@ -89,7 +89,7 @@ class Layer {
     throw new Error("Subclass responsibility");
   }
 
-  sendToStoreImpl(batch: Array<DataBucket>, token: string): Promise<void> {
+  sendToStoreImpl(batch: Array<DataBucket>): Promise<void> {
     throw new Error("Subclass responsibility");
   }
   /* eslint-enable no-unused-vars */

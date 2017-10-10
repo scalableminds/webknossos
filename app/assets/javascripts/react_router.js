@@ -1,3 +1,4 @@
+// @flow
 import _ from "lodash";
 import React from "react";
 import { Router, Route } from "react-router-dom";
@@ -49,8 +50,8 @@ import PaginationCollection from "admin/models/pagination_collection";
 
 const { Content } = Layout;
 
-class ReactRouter extends React.Component {
-  showWithPagination = (View, Collection, options = {}) => {
+class ReactRouter extends React.Component<*> {
+  showWithPagination = (View, Collection, options: Object = {}) => {
     _.defaults(options, { addButtonText: null });
 
     const collection = new Collection(null, options);
@@ -203,7 +204,7 @@ class ReactRouter extends React.Component {
               <Route path="/scripts" component={ScriptListView} exact />
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/workload" render={this.workload} />
-              <Route path="/login" component={LoginView} />
+              <Route path="/login" render={() => <LoginView layout="horizontal" />} />
               <Route path="/register" component={RegistrationView} />
               <Route path="/reset" component={StartResetPasswordView} />
               <Route path="/finishreset" component={FinishResetPasswordView} />

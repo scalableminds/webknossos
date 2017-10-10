@@ -27,11 +27,17 @@ ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
 app.on("start", async () => {
   try {
-    const user = await Request.receiveJSON("/api/user", { doNotCatch: true });
-    app.currentUser = user;
-
-    ErrorHandling.setCurrentUser(user);
-    ReactDOM.render(React.createElement(ReactRouter), document.body);
+    Request.receiveJSON("/api/user", { doNotCatch: true }).then(
+      user => {
+        app.currentUser = user;
+        ErrorHandling.setCurrentUser(user);
+        ReactDOM.render(React.createElement(ReactRouter), document.body);
+      },
+      () => {
+        app.currentUser = null;
+        ReactDOM.render(React.createElement(ReactRouter), document.body);
+      },
+    );
   } catch (e) {
     // pass
   }

@@ -9,6 +9,7 @@ const FormItem = Form.Item;
 
 type Props = {
   form: Object,
+  layout: "horizontal" | "inline",
 };
 
 class LoginView extends React.PureComponent<Props> {
@@ -26,11 +27,14 @@ class LoginView extends React.PureComponent<Props> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
+    const rowStyle = this.props.layout === "horizontal" ? { padding: 50 } : null;
+    const resetStyle = this.props.layout === "horizontal" ? { float: "right" } : null;
+    const linkStyle = this.props.layout === "inline" ? { paddingLeft: 10 } : null;
 
     return (
-      <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+      <Row type="flex" justify="center" style={rowStyle} align="middle">
         <Col span={8}>
-          <Form onSubmit={this.handleSubmit}>
+          <Form onSubmit={this.handleSubmit} layout={this.props.layout}>
             <FormItem>
               {getFieldDecorator("email", {
                 rules: [
@@ -62,8 +66,10 @@ class LoginView extends React.PureComponent<Props> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Log in
               </Button>
-              <a href="/register">Register Now!</a>
-              <a style={{ float: "right" }} href="/reset">
+              <a style={linkStyle} href="/register">
+                Register Now!
+              </a>
+              <a style={Object.assign({}, linkStyle, resetStyle)} href="/reset">
                 Forgot Password
               </a>
             </FormItem>

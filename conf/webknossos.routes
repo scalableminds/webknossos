@@ -86,13 +86,11 @@ GET           /api/datastores                                                   
 POST          /api/datastores/:name/datasource                                  controllers.WKDataStoreController.updateOne(name: String)
 POST          /api/datastores/:name/datasources                                 controllers.WKDataStoreController.updateAll(name: String)
 POST          /api/datastores/:name/status                                      controllers.WKDataStoreController.statusUpdate(name: String)
-POST          /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String, token: String)
 POST          /api/datastores/:name/authorizeTracingUpdates                     controllers.WKDataStoreController.authorizeTracingUpdates(name: String)
+POST          /api/datastores/:name/validateUserToken                           controllers.UserTokenController.validateUserToken(name: String)
 
-# Data Tokens
-GET           /api/dataToken/validate                                           controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)
-GET           /api/dataToken/generate                                           controllers.DataTokenController.generateToken(dataSetName: Option[String], dataLayerName: Option[String])
-GET           /api/datasetToken/validate                                        controllers.DataTokenController.validateDataSetToken(token: String, dataSetName: String)
+# User access tokens for datastore authentification
+GET           /api/userToken/generate                                           controllers.UserTokenController.generateUserToken
 
 # Annotations
 POST          /annotations/upload                                               controllers.AnnotationIOController.upload

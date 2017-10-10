@@ -125,7 +125,7 @@ class DatasetUploadView extends Marionette.View {
       Toast.info("Uploading datasets", false);
       this.ui.spinner.removeClass("hidden");
 
-      Request.receiveJSON("/api/dataToken/generate")
+      Request.receiveJSON("/api/userToken/generate")
         .then(({ token }) =>
           Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
             data: new FormData(form),

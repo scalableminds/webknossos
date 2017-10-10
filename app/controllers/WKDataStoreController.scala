@@ -26,6 +26,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     with WKDataStoreActionHelper
     with LazyLogging {
 
+  //TODO: RocksDB this was    POST          /api/datastores/:name/verifyUpload
   def validateDataSetUpload(name: String, token: String) = DataStoreAction(name).async(parse.json){ implicit request =>
     for {
       uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")

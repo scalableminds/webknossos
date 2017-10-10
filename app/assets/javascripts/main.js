@@ -18,20 +18,25 @@ import "libs/core_ext";
 import "backbone.marionette";
 
 import "../stylesheets/main.less";
-import Router from "./router";
+// import Router from "./router";
+import React from "react";
+import ReactRouter from "./react_router";
+import ReactDOM from "react-dom";
 
 ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
 app.on("start", () => {
-  app.router = new Router();
-  return Backbone.history.start({ pushState: true });
+  // app.router = new Router();
+  // return Backbone.history.start({ pushState: true });
 });
 
 app.on("start", async () => {
   try {
     const user = await Request.receiveJSON("/api/user", { doNotCatch: true });
     app.currentUser = user;
+
     ErrorHandling.setCurrentUser(user);
+    ReactDOM.render(React.createElement(ReactRouter), document.body);
   } catch (e) {
     // pass
   }

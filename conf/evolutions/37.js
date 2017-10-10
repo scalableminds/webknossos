@@ -1,16 +1,8 @@
-// Store instance count with a single OpenAnnotations
+// Update to support "description" attribute for annotations
 
 // --- !Ups
-db.users.find().forEach(function(elem){
-  elem.loginInfo = {"providerID":"credentials", "providerKey": elem.email}
-  elem.passwordInfo = {"hasher":"SCrypt", "password":elem.pwdHash}
-  db.users.save(elem);
-})
+db.annotations.update({}, { $set: { description: "" } }, { multi: true });
 
 // --- !Downs
-db.users.find().forEach(function(elem){
-  delete elem.loginInfo
-  delete elem.passwordInfo
-  db.users.save(elem);
-})
+db.annotations.update({}, { $unset: { description: 1 } }, { multi: true });
 

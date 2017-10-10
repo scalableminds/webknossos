@@ -7,27 +7,27 @@
  */
 
 import type { OxalisState, VolumeTracingType, VolumeCellType } from "oxalis/store";
-import type { VolumeTraceOrMoveModeType, Vector3 } from "oxalis/constants";
-import Constants from "oxalis/constants";
+import type { VolumeToolType, Vector3 } from "oxalis/constants";
+import { VolumeToolEnum } from "oxalis/constants";
 import update from "immutability-helper";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
-import { setRotationReducer } from "oxalis/model/reducers/flycam_reducer";
+import { setDirectionReducer } from "oxalis/model/reducers/flycam_reducer";
 
-export function setModeReducer(
+export function setToolReducer(
   state: OxalisState,
   volumeTracing: VolumeTracingType,
-  mode: VolumeTraceOrMoveModeType,
+  tool: VolumeToolType,
 ) {
-  if (mode === volumeTracing.volumeTraceOrMoveMode) {
+  if (tool === volumeTracing.activeTool) {
     return state;
   }
-  if (mode === Constants.VOLUME_MODE_TRACE && isVolumeTracingDisallowed(state)) {
+  if (tool !== VolumeToolEnum.MOVE && isVolumeTracingDisallowed(state)) {
     return state;
   }
 
   return update(state, {
     tracing: {
-      volumeTraceOrMoveMode: { $set: mode },
+      activeTool: { $set: tool },
     },
   });
 }
@@ -86,7 +86,7 @@ export function updateDirectionReducer(
 ) {
   let newState = state;
   if (volumeTracing.lastCentroid != null) {
-    newState = setRotationReducer(state, [
+    newState = setDirectionReducer(state, [
       centroid[0] - volumeTracing.lastCentroid[0],
       centroid[1] - volumeTracing.lastCentroid[1],
       centroid[2] - volumeTracing.lastCentroid[2],
@@ -121,5 +121,11 @@ export function resetContourReducer(state: OxalisState) {
     tracing: {
       contourList: { $set: [] },
     },
+  });
+}
+
+export function hideBrushReducer(state: OxalisState) {
+  return update(state, {
+    temporaryConfiguration: { brushPosition: { $set: null } },
   });
 }

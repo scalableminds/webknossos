@@ -1,11 +1,11 @@
 // @flow
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
-import type { VolumeTraceOrMoveModeType } from "oxalis/constants";
+import type { VolumeToolType } from "oxalis/constants";
 import type { OxalisState, VolumeTracingType } from "oxalis/store";
-import Constants from "oxalis/constants";
+import { VolumeToolEnum } from "oxalis/constants";
 import Store from "oxalis/store";
-import { setModeAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
+import { setToolAction, createCellAction } from "oxalis/model/actions/volumetracing_actions";
 import { Button, Radio } from "antd";
 import { enforceVolumeTracing } from "oxalis/model/accessors/volumetracing_accessor";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -20,8 +20,8 @@ type Props = {
 };
 
 class VolumeActionsView extends PureComponent<Props> {
-  handleSetMode = (event: { target: { value: VolumeTraceOrMoveModeType } }) => {
-    Store.dispatch(setModeAction(event.target.value));
+  handleSetTool = (event: { target: { value: VolumeToolType } }) => {
+    Store.dispatch(setToolAction(event.target.value));
   };
 
   handleCreateCell = () => {
@@ -32,13 +32,14 @@ class VolumeActionsView extends PureComponent<Props> {
     return (
       <div>
         <RadioGroup
-          onChange={this.handleSetMode}
-          value={this.props.volumeTracing.volumeTraceOrMoveMode}
+          onChange={this.handleSetTool}
+          value={this.props.volumeTracing.activeTool}
           style={{ marginRight: 10 }}
           size="large"
         >
-          <RadioButton value={Constants.VOLUME_MODE_MOVE}>Move</RadioButton>
-          <RadioButton value={Constants.VOLUME_MODE_TRACE}>Trace</RadioButton>
+          <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
+          <RadioButton value={VolumeToolEnum.TRACE}>Trace</RadioButton>
+          <RadioButton value={VolumeToolEnum.BRUSH}>Brush</RadioButton>
         </RadioGroup>
         <ButtonGroup size="large">
           <ButtonComponent onClick={this.handleCreateCell}>Create new cell (C)</ButtonComponent>

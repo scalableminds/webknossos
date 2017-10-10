@@ -96,18 +96,19 @@ test("Voxel Labeling should push buckets after they were pulled", t => {
   cube.labelVoxel([1, 1, 1], 42);
 
   t.plan(3);
+  let bucket;
   return runAsync([
     () => {
       t.is(pushQueue.insert.called, false);
     },
     () => {
-      const bucket = cube.getBucket([0, 0, 0, 0]);
+      bucket = cube.getBucket([0, 0, 0, 0]);
       bucket.pull();
       bucket.receiveData(new Uint8Array(32 * 32 * 32 * 3));
       t.pass();
     },
     () => {
-      t.true(pushQueue.insert.calledWith([0, 0, 0, 0]));
+      t.true(pushQueue.insert.calledWith(bucket));
     },
   ]);
 });
@@ -123,7 +124,7 @@ test("Voxel Labeling should push buckets immediately if they are pulled already"
   t.plan(1);
   return runAsync([
     () => {
-      t.true(pushQueue.insert.calledWith([0, 0, 0, 0]));
+      t.true(pushQueue.insert.calledWith(bucket));
     },
   ]);
 });

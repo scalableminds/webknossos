@@ -18,7 +18,10 @@ import scala.concurrent.duration._
 
 case class UserToken(_user: BSONObjectID,
                      token: String = UserToken.generateRandomToken,
-                     expirationTime: Long = System.currentTimeMillis + UserToken.expirationTime.toMillis)
+                     expirationTime: Long = System.currentTimeMillis + UserToken.expirationTime.toMillis) {
+
+  def user = UserDAO.findOneById(_user)
+}
 
 object UserToken {
   val expirationTime = 24.hours

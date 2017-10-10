@@ -4,6 +4,7 @@ import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
+import app from "app";
 
 const FormItem = Form.Item;
 

@@ -68,8 +68,6 @@ class TaskQueryView extends Marionette.View {
     const paginatedCollection = new PaginationCollection([], { fullCollection: this.collection });
     this.taskListView = new TaskListView({ collection: paginatedCollection });
 
-    app.router.hideLoadingSpinner();
-
     const paginationView = new PaginationView({
       collection: paginatedCollection,
       addButtonText: "Create New Task",

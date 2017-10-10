@@ -48,6 +48,14 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
     }
   };
 
+  checkConfirm = (rule, value, callback) => {
+    const form = this.props.form;
+    if (value && this.state.confirmDirty) {
+      form.validateFields(["confirm"], { force: true });
+    }
+    callback();
+  };
+
   render() {
     const { getFieldDecorator } = this.props.form;
 

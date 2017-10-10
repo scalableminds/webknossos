@@ -4,6 +4,7 @@ import { Form, Icon, Input, Button, Col, Row, Alert } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
+import app from "app";
 
 const FormItem = Form.Item;
 
@@ -36,6 +37,14 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
   handleConfirmBlur = (e: SyntheticInputEvent<>) => {
     const value = e.target.value;
     this.setState({ confirmDirty: this.state.confirmDirty || !!value });
+  };
+
+  checkConfirm = (rule, value, callback) => {
+    const form = this.props.form;
+    if (value && this.state.confirmDirty) {
+      form.validateFields(["confirm"], { force: true });
+    }
+    callback();
   };
 
   checkPassword = (rule, value, callback) => {

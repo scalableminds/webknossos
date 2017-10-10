@@ -32,6 +32,7 @@ import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
+import { Spin } from "antd";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
@@ -74,8 +75,6 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    app.router.showLoadingSpinner();
-
     _.extend(this, Backbone.Events);
 
     UrlManager.initialize();
@@ -128,7 +127,6 @@ class Controller extends React.PureComponent<Props, State> {
 
     window.webknossos = new ApiLoader(Model);
 
-    app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
     this.setState({ ready: true });
@@ -262,7 +260,7 @@ class Controller extends React.PureComponent<Props, State> {
 
   render() {
     if (!this.state.ready) {
-      return null;
+      return <Spin spinning />;
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;

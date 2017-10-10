@@ -118,7 +118,7 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
       } else {
         yield call(alert, messages["save.failed_client_error"]);
       }
-      app.router.reload();
+      window.location.reload();
       return;
     }
     yield delay(SAVE_RETRY_WAITING_TIME);

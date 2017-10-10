@@ -1,3 +1,6 @@
+// @flow
+/* eslint-disable react/prefer-stateless-function */
+
 import React from "react";
 import { Layout, Menu, Icon } from "antd";
 import { Link } from "react-router-dom";
@@ -6,7 +9,7 @@ import app from "app";
 const { SubMenu } = Menu;
 const { Header } = Layout;
 
-class Navbar extends React.PureComponent {
+class Navbar extends React.PureComponent<*> {
   render() {
     return (
       <Header style={{ padding: 0 }}>
@@ -105,7 +108,7 @@ class Navbar extends React.PureComponent {
           </SubMenu>
 
           <Menu.Item key="13">
-            <a href="https://discuss.webknossos.org" target="_blank">
+            <a href="https://discuss.webknossos.org" target="_blank" rel="noopener noreferrer">
               <Icon type="notification" />
               Discussion Board
             </a>

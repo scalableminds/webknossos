@@ -10,6 +10,10 @@ import Request from "libs/request";
 import app from "app";
 import { getWebGLReport } from "libs/webgl_stats";
 
+import React from "react";
+import ReactRouter from "react_router";
+import ReactDOM from "react-dom";
+
 import "bootstrap";
 import "jasny-bootstrap";
 import "whatwg-fetch";
@@ -18,17 +22,8 @@ import "libs/core_ext";
 import "backbone.marionette";
 
 import "../stylesheets/main.less";
-// import Router from "./router";
-import React from "react";
-import ReactRouter from "./react_router";
-import ReactDOM from "react-dom";
 
 ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
-
-app.on("start", () => {
-  // app.router = new Router();
-  // return Backbone.history.start({ pushState: true });
-});
 
 app.on("start", async () => {
   try {

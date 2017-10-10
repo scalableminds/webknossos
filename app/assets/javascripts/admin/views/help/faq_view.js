@@ -1,3 +1,4 @@
+// @flow
 import React from "react";
 
 const FAQView = () => (
@@ -20,9 +21,7 @@ const FAQView = () => (
       <li>Safari 10</li>
     </ul>
     <p>Internet Explorer is not supported.</p>
-    <h4>
-      <a name="taskqueries" />What are possible task queries?
-    </h4>
+    <h4>What are possible task queries?</h4>
     <p>
       You can use every possible mongo db query in the task query field. That includes quering for
       specific attribute values or for ranges. Here are some examples:

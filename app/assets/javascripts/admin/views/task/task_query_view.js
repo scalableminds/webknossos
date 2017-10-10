@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import Marionette from "backbone.marionette";
 import Request from "libs/request";
 import Toast from "libs/toast";

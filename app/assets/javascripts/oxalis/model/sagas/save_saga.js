@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import app from "app";
 import Request from "libs/request";
 import Date from "libs/date";
 import messages from "messages";

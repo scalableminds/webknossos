@@ -2,7 +2,6 @@
  * app.js
  * @flow
  */
-import _ from "lodash";
 import Marionette from "backbone.marionette";
 import typeof OxalisController from "oxalis/controller";
 import window from "libs/window";

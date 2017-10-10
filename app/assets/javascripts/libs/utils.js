@@ -264,8 +264,8 @@ const Utils = {
   diffArrays2(stateA, stateB) {
     //console.time("without map");
     //console.time("sorting");
-    stateA = Object.keys(stateA);
-    stateB = Object.keys(stateB);
+    stateA = Object.keys(stateA).map(x => +x);
+    stateB = Object.keys(stateB).map(x => +x);
     //console.timeEnd("sorting");
     let pointerA = 0;
     let pointerB = 0;

@@ -44,6 +44,7 @@ import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
+import { doWithToken } from "admin/admin_rest_api";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
 export type ServerNodeType = {
@@ -154,9 +155,11 @@ export class OxalisModel {
     // Fetch the actual tracing from the datastore, if there is an annotation
     let tracing: ?ServerTracingType;
     if (annotation != null) {
-      tracing = await Request.receiveJSON(
-        `${annotation.dataStore.url}/data/tracings/${annotation.content.typ}/${annotation.content
-          .id}`,
+      tracing = await doWithToken(token =>
+        Request.receiveJSON(
+          `${annotation.dataStore.url}/data/tracings/${annotation.content.typ}/${annotation.content
+            .id}?token=${token}`,
+        ),
       );
       tracing.id = annotation.content.id;
     }

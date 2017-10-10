@@ -5,6 +5,7 @@ import { Button, Spin, Input, Checkbox, Alert } from "antd";
 import Request from "libs/request";
 import update from "immutability-helper";
 import Toast from "libs/toast";
+import { doWithToken } from "admin/admin_rest_api";
 import type { APIDatasetType } from "admin/api_flow_types";
 
 type Props = {
@@ -48,8 +49,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     const datasetUrl = `/api/datasets/${this.props.datasetName}`;
     const dataset = await Request.receiveJSON(datasetUrl);
 
-    const datasetJsonUrl = `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}`;
-    const datasetJson = await Request.receiveJSON(datasetJsonUrl);
+    const datasetJson = await doWithToken(token =>
+      Request.receiveJSON(
+        `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
+      ),
+    );
 
     // eslint-disable-next-line react/no-did-mount-set-state
     this.setState({
@@ -69,10 +73,15 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
 
     if (this.state.isValidJSON && this.state.dataset) {
-      const url = `${this.state.dataset.dataStore.url}/data/datasets/${this.props.datasetName}`;
-      Request.sendJSONReceiveJSON(url, {
-        data: JSON.parse(this.state.datasetJson),
-      }).then(() => {
+      doWithToken(token =>
+        Request.sendJSONReceiveJSON(
+          `${this.state.dataset.dataStore.url}/data/datasets/${this.props
+            .datasetName}?token=${token}`,
+          {
+            data: JSON.parse(this.state.datasetJson),
+          },
+        ),
+      ).then(() => {
         Toast.success(`Successfully imported ${this.props.datasetName}`);
         window.history.back();
       });

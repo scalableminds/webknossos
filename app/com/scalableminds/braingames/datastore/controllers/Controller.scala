@@ -8,16 +8,15 @@ import java.io.FileInputStream
 import com.google.protobuf.CodedInputStream
 import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.util.mvc.ExtendedController
-import com.trueaccord.scalapb.json.JsonFormat
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
+import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, Reads}
 import play.api.mvc.Results.BadRequest
 import play.api.mvc.{Controller => PlayController, _}
-import play.api.{Mode, Play}
 
 import scala.concurrent.Future
 
@@ -51,7 +50,7 @@ trait TokenSecuredController extends Controller {
         case true =>
           block(request)
         case false =>
-          Future.successful(Forbidden("Invalid access token."))
+          Future.successful(Forbidden("No access token."))
       }
     }
   }

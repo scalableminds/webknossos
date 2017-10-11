@@ -4,12 +4,11 @@
 package com.scalableminds.braingames.datastore.services
 
 import com.google.inject.Inject
+import com.scalableminds.util.tools.Fox
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.libs.json.{Format, Json, Reads, Writes}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 import scala.concurrent.duration._
 
 object AccessMode extends Enumeration {
@@ -19,46 +18,50 @@ object AccessMode extends Enumeration {
   implicit val jsonFormat = Format(Reads.enumNameReads(AccessMode), Writes.enumNameWrites)
 }
 
-object AccessRessourceType extends Enumeration {
+object AccessResourceType extends Enumeration {
 
   val datasource, tracing, webknossos = Value
 
-  implicit val jsonFormat = Format(Reads.enumNameReads(AccessRessourceType), Writes.enumNameWrites)
+  implicit val jsonFormat = Format(Reads.enumNameReads(AccessResourceType), Writes.enumNameWrites)
 }
 
-case class UserAccessRequest(resourceId: String, resourceType: AccessRessourceType.Value, mode: AccessMode.Value) {
+case class UserAccessRequest(resourceId: String, resourceType: AccessResourceType.Value, mode: AccessMode.Value) {
   def toCacheKey(token: String) = s"$token#$resourceId#$resourceType#$mode"
 }
+
+case class UserAccessAnswer(granted: Boolean, msg: Option[String] = None)
+object UserAccessAnswer {implicit val jsonFormat = Json.format[UserAccessAnswer]}
 
 object UserAccessRequest {
   implicit val jsonFormat = Json.format[UserAccessRequest]
 
   def administrateDataSources =
-    UserAccessRequest("", AccessRessourceType.datasource, AccessMode.administrate)
+    UserAccessRequest("", AccessResourceType.datasource, AccessMode.administrate)
   def listDataSources =
-    UserAccessRequest("", AccessRessourceType.datasource, AccessMode.list)
+    UserAccessRequest("", AccessResourceType.datasource, AccessMode.list)
   def readDataSources(dataSourceName: String) =
-    UserAccessRequest(dataSourceName, AccessRessourceType.datasource, AccessMode.read)
+    UserAccessRequest(dataSourceName, AccessResourceType.datasource, AccessMode.read)
   def writeDataSource(dataSourceName: String) =
-    UserAccessRequest(dataSourceName, AccessRessourceType.datasource, AccessMode.write)
+    UserAccessRequest(dataSourceName, AccessResourceType.datasource, AccessMode.write)
 
   def readTracing(tracingId: String) =
-    UserAccessRequest(tracingId, AccessRessourceType.tracing, AccessMode.read)
+    UserAccessRequest(tracingId, AccessResourceType.tracing, AccessMode.read)
   def writeTracing(tracingId: String) =
-    UserAccessRequest(tracingId, AccessRessourceType.tracing, AccessMode.write)
+    UserAccessRequest(tracingId, AccessResourceType.tracing, AccessMode.write)
 
   def webknossos =
-    UserAccessRequest("webknossos", AccessRessourceType.webknossos, AccessMode.administrate)
+    UserAccessRequest("webknossos", AccessResourceType.webknossos, AccessMode.administrate)
 }
+
 
 class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer) {
 
   val AccessExpiration: FiniteDuration = 30.minutes
 
-  def hasUserAccess(token: String, accessRequest: UserAccessRequest): Future[Boolean] = {
+  def hasUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)
     Cache.getOrElse(key, AccessExpiration.toSeconds.toInt) {
-      webKnossosServer.requestUserAccess(token, accessRequest).futureBox.map(_.isDefined)
+      webKnossosServer.requestUserAccess(token, accessRequest)
     }
   }
 }

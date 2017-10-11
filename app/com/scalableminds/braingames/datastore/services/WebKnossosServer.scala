@@ -78,10 +78,10 @@ class WebKnossosServer @Inject()(
       .post(Json.obj("timestamps" -> timestamps, "statistics" -> statistics, "tracingId" -> tracingId))
   }
 
-  def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[_] = {
+  def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
     RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/validateUserAccess")
       .withQueryString("key" -> dataStoreKey)
       .withQueryString("token" -> token)
-      .post(accessRequest)
+      .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
   }
 }

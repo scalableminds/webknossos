@@ -6,8 +6,9 @@ package com.scalableminds.braingames.datastore.controllers
 import java.io.FileInputStream
 
 import com.google.protobuf.CodedInputStream
-import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest}
+import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.util.mvc.ExtendedController
+import com.scalableminds.util.tools.Fox
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
@@ -35,22 +36,24 @@ trait TokenSecuredController extends Controller {
 
     val debugModeEnabled = Play.current.configuration.getBoolean("datastore.debugMode").getOrElse(false)
 
-    private def hasUserAccess[A](implicit request: Request[A]): Future[Boolean] = {
+    private def hasUserAccess[A](implicit request: Request[A]): Fox[UserAccessAnswer] = {
       // TODO RocksDB if (debugModeEnabled && Play.mode(Play.current) != Mode.Prod) {
       //  return Future.successful(true)
       //}
 
       request.getQueryString("token").map { token =>
         accessTokenService.hasUserAccess(token, accessRequest)
-      }.getOrElse(Future.successful(false))
+      }.getOrElse(Fox.successful(UserAccessAnswer(false, Some("No access token."))))
     }
 
     def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
       hasUserAccess(request).flatMap {
-        case true =>
+        case UserAccessAnswer(true, _) =>
           block(request)
-        case false =>
-          Future.successful(Forbidden("No access token."))
+        case UserAccessAnswer(false, Some(msg)) =>
+          Future.successful(Forbidden("Forbidden: " + msg))
+        case _ =>
+          Future.successful(Forbidden("Token authentication failed"))
       }
     }
   }

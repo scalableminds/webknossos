@@ -5,18 +5,22 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.braingames.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.tools.Fox
+import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider, AnnotationRestrictions}
 import models.user.{User, UserToken, UserTokenDAO}
 import oxalis.security.Secured
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import com.scalableminds.braingames.datastore.services.{AccessMode, AccessRessourceType, UserAccessRequest}
 
-import scala.concurrent.Future
-
-class UserTokenController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with WKDataStoreActionHelper with FoxImplicits {
+class UserTokenController @Inject()(val messagesApi: MessagesApi)
+  extends Controller
+    with Secured
+    with WKDataStoreActionHelper
+    with AnnotationInformationProvider {
 
   val webKnossosToken = play.api.Play.current.configuration.getString("application.authentication.dataStoreToken").getOrElse("somethingSecure")
 
@@ -37,32 +41,52 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi) extends Contro
   }
 
   def validateUserAccess(name: String, token: String) = DataStoreAction(name).async(validateJson[UserAccessRequest]) { implicit request =>
+    implicit val ctx = GlobalAccessContext //TODO: RocksDB is this really necessary?
     val accessRequest = request.body
     if (token == webKnossosToken) {
-      Fox.successful(Ok)
+      Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {
         userToken <- UserTokenDAO.findByToken(token)
         user <- userToken.user
-        result <- accessRequest match {
-          case AccessRessourceType.datasource =>
+        answer <- accessRequest.resourceType match {
+          case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, user)
-          case AccessRessourceType.tracing =>
+          case AccessResourceType.tracing =>
             handleTracingAccess(accessRequest.resourceId, accessRequest.mode, user)
           case _ =>
-            Fox.successful(Forbidden("Invalid access token."))
+            Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
         }
       } yield {
-        result
+        Ok(Json.toJson(answer))
       }
     }
   }
 
   private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, user: User) = {
-    Fox.successful(Ok)
+    Fox.successful(UserAccessAnswer(true))
   }
 
   private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, user: User) = {
-    Fox.successful(Forbidden("sorry :P"))
+
+    def checkRestrictions(restrictions: AnnotationRestrictions) = {
+      mode match {
+        case AccessMode.read => restrictions.allowAccess(user)
+        case AccessMode.write => restrictions.allowUpdate(user)
+      }
+    }
+
+    implicit val ctx = GlobalAccessContext //TODO: RocksDB is this really necessary?
+
+    //TODO: rocksDB what about tracings other than those of saved annotations? compound?
+    //TODO: rocksDB get annotation from some sort of cache?
+
+    for {
+      annotation <- AnnotationDAO.findByTracingId(tracingId)
+      restrictions <- restrictionsFor(AnnotationIdentifier("saved", annotation.id))
+      allowed = checkRestrictions(restrictions)
+    } yield {
+      if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))
+    }
   }
 }

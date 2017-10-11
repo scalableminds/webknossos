@@ -20,7 +20,7 @@ case class UserToken(_user: BSONObjectID,
                      token: String = UserToken.generateRandomToken,
                      expirationTime: Long = System.currentTimeMillis + UserToken.expirationTime.toMillis) {
 
-  def user = UserDAO.findOneById(_user)
+  def user(implicit ctx: DBAccessContext) = UserDAO.findOneById(_user)
 }
 
 object UserToken {

@@ -151,14 +151,6 @@ const Utils = {
     return output;
   },
 
-  loaderTemplate(): string {
-    return `\
-<div id="loader-icon">
-  <i class="fa fa-spinner fa-spin fa-4x"></i>
-  <br>Loading
-</div>`;
-  },
-
   isElementInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
     return (

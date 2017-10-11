@@ -118,3 +118,8 @@ export async function deleteProject(projectName: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+// ### Active User
+export async function getActiveUser(options: Object = {}) {
+  return Request.receiveJSON("/api/user", options);
+}

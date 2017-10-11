@@ -4,9 +4,7 @@
  */
 
 import * as React from "react";
-import { Provider } from "react-redux";
 import app from "app";
-import Store from "oxalis/throttled_store";
 import OxalisController from "oxalis/controller";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -46,52 +44,50 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <Provider store={Store}>
-        <div>
-          <OxalisController
-            initialTracingType={this.props.initialTracingType}
-            initialTracingId={this.props.initialTracingId}
-            initialControlmode={this.props.initialControlmode}
-            ref={ref => {
-              app.oxalis = ref;
-            }}
-          />
+      <div>
+        <OxalisController
+          initialTracingType={this.props.initialTracingType}
+          initialTracingId={this.props.initialTracingId}
+          initialControlmode={this.props.initialControlmode}
+          ref={ref => {
+            app.oxalis = ref;
+          }}
+        />
 
-          <Layout className="tracing-layout">
-            <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
-              <ButtonComponent
-                size="large"
-                onClick={this.handleSettingsCollapse}
-                style={{ float: "left", marginTop: "10px" }}
-              >
-                <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
-                Settings
-              </ButtonComponent>
-              <ActionBarView />
-            </Header>
-            <Layout style={{ marginTop: 64 }}>
-              <Sider
-                collapsible
-                trigger={null}
-                collapsed={this.state.isSettingsCollapsed}
-                collapsedWidth={0}
-                width={350}
-                style={{ zIndex: 100 }}
-              >
-                <SettingsView />
-              </Sider>
-              <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
-                <div>
-                  <TracingView />
-                </div>
-                <div style={{ flex: "1", display: "inline-flex" }}>
-                  <RightMenuView />
-                </div>
+        <Layout className="tracing-layout">
+          <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
+            <ButtonComponent
+              size="large"
+              onClick={this.handleSettingsCollapse}
+              style={{ float: "left", marginTop: "10px" }}
+            >
+              <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
+              Settings
+            </ButtonComponent>
+            <ActionBarView />
+          </Header>
+          <Layout style={{ marginTop: 64 }}>
+            <Sider
+              collapsible
+              trigger={null}
+              collapsed={this.state.isSettingsCollapsed}
+              collapsedWidth={0}
+              width={350}
+              style={{ zIndex: 100 }}
+            >
+              <SettingsView />
+            </Sider>
+            <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
+              <div>
+                <TracingView />
               </div>
-            </Layout>
+              <div style={{ flex: "1", display: "inline-flex" }}>
+                <RightMenuView />
+              </div>
+            </div>
           </Layout>
-        </div>
-      </Provider>
+        </Layout>
+      </div>
     );
   }
 }

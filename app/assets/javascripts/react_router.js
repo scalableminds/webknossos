@@ -2,6 +2,7 @@
 import _ from "lodash";
 import React from "react";
 import { Router, Route } from "react-router-dom";
+import { connect } from "react-redux";
 import { Layout, LocaleProvider } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";
 
@@ -48,10 +49,48 @@ import TaskOverviewView from "admin/views/task/task_overview_view";
 import TaskOverviewCollection from "admin/models/task/task_overview_collection";
 import PaginationCollection from "admin/models/pagination_collection";
 
+import type { OxalisState } from "oxalis/store";
+
 const { Content } = Layout;
 
+type BrowserLocationType = {
+  key: string,
+  pathname: string,
+  search: string,
+  hash: string,
+  state: Object,
+};
+
+type ReactRouterArgumentsType = {
+  location: BrowserLocationType,
+  match: {
+    params: { [string]: string },
+    isExact: boolean,
+    path: string,
+    url: string,
+  },
+  history: {
+    length: number,
+    action: string,
+    location: BrowserLocationType,
+    pathname: string,
+    search: string,
+    hash: string,
+    state: string,
+    push: (string, [Object]) => void,
+    replace: (string, [Object]) => void,
+    go: number => void,
+    goBack: () => void,
+    goForward: () => void,
+    block: string => string,
+  },
+};
+
+const SecuredRoute = props =>
+  props.isAuthenticated ? <div>{props.children}</div> : <LoginView layout="horizontal" />;
+
 class ReactRouter extends React.Component<*> {
-  showWithPagination = (View, Collection, options: Object = {}) => {
+  showWithPagination = (View: any, Collection: any, options: Object = {}) => {
     _.defaults(options, { addButtonText: null });
 
     const collection = new Collection(null, options);
@@ -70,7 +109,7 @@ class ReactRouter extends React.Component<*> {
     );
   };
 
-  projectTasks = ({ match }) =>
+  projectTasks = ({ match }: ReactRouterArgumentsType) =>
     this.showWithPagination(TaskListView, TaskCollection, {
       projectName: match.params.projectName,
       addButtonText: "Create New Task",
@@ -90,7 +129,7 @@ class ReactRouter extends React.Component<*> {
     return <BackboneWrapper backboneView={view} />;
   };
 
-  taskTypesTasks = ({ match }) =>
+  taskTypesTasks = ({ match }: ReactRouterArgumentsType) =>
     this.showWithPagination(TaskListView, TaskCollection, {
       taskTypeId: match.params.taskTypeId,
       addButtonText: "Create New Task",
@@ -111,7 +150,7 @@ class ReactRouter extends React.Component<*> {
     return <BackboneWrapper backboneView={view} />;
   };
 
-  taskEdit = ({ match }) => {
+  taskEdit = ({ match }: ReactRouterArgumentsType) => {
     const model = new TaskModel({ id: match.params.taskId });
     const view = new TaskCreateFromView({ model, type: "from_form" });
 
@@ -138,14 +177,14 @@ class ReactRouter extends React.Component<*> {
     return <BackboneWrapper backboneView={view} />;
   };
 
-  scriptsCreate = ({ match }) => {
+  scriptsCreate = ({ match }: ReactRouterArgumentsType) => {
     const id = match.params.id || null;
     const model = new ScriptModel({ id });
     const view = new ScriptCreateView({ model });
     return <BackboneWrapper backboneView={view} />;
   };
 
-  tracingView = ({ match }) => (
+  tracingView = ({ match }: ReactRouterArgumentsType) => (
     <TracingLayoutView
       initialTracingType={match.params.type}
       initialTracingId={match.params.id}
@@ -153,7 +192,7 @@ class ReactRouter extends React.Component<*> {
     />
   );
 
-  tracingViewPublic = ({ match }) => (
+  tracingViewPublic = ({ match }: ReactRouterArgumentsType) => (
     <TracingLayoutView
       initialTracingType={SkeletonTracingTypeTracingEnum.View}
       initialTracingId={match.params.id}
@@ -162,55 +201,61 @@ class ReactRouter extends React.Component<*> {
   );
 
   render() {
+    const isAuthenticated = this.props.activeUser !== null;
+    debugger;
+
     return (
       <Router history={app.history}>
         <LocaleProvider locale={enUS}>
           <Layout>
-            <Navbar />
+            <Navbar isAuthenticated={isAuthenticated} />
             <Content>
-              <Route exact path="/" component={DashboardView} />
-              <Route path="/dashboard" component={DashboardView} />
+              <SecuredRoute isAuthenticated={isAuthenticated}>
+                <Route exact path="/" component={DashboardView} />
+                <Route path="/dashboard" component={DashboardView} />
 
-              <Route path="/users" component={UserListView} />
-              <Route path="/teams" component={TeamListView} />
-              <Route path="/statistics" component={StatisticView} />
-              <Route path="/tasks" render={this.taskQuery} exact />
-              <Route path="/tasks/create" render={this.taskCreate} />
-              <Route path="/tasks/overview" render={this.taskOverview} />
-              <Route path="/tasks/:taskId/edit" render={this.taskEdit} />
-              <Route path="/projects" component={ProjectListView} exact />
-              <Route path="/projects/create" render={this.projectCreate} />
-              <Route path="/projects/:projectName/tasks" render={this.projectTasks} />
-              <Route path="/projects/:id/edit" render={this.projectEdit} />
-              <Route path="/annotations/:type/:id" render={this.tracingView} />
-              <Route path="/annotations/:type/:id/readOnly)" render={this.tracingView} />
-              <Route path="/datasets/:id/view" render={this.tracingViewPublic} />
-              <Route path="/dashboard" component={DashboardView} />
-              <Route path="/datasets" component={DashboardView} exact />
-              <Route path="/datasets/upload" render={this.datasetAdd} />
-              <Route
-                path="/datasets/:datasetName/edit"
-                component={DatasetImportView}
-                isEditingMode
-              />
-              <Route path="/datasets/:name/import" component={DatasetImportView} isEditingMode />
-              <Route path="/users/:id/details" component={DashboardView} />
-              <Route path="/taskTypes" component={TaskTypeListView} exact />
-              <Route path="/taskTypes/create" render={this.taskTypesCreate} />
-              <Route path="/taskTypes/:id/edit" render={this.taskTypesCreate} />
-              <Route path="/taskTypes/:taskTypeId/tasks" render={this.taskTypesTasks} />
-              <Route path="/scripts/create" render={this.scriptsCreate} />
-              <Route path="/scripts/:id/edit" render={this.scriptsCreate} />
-              <Route path="/scripts" component={ScriptListView} exact />
-              <Route path="/spotlight" component={SpotlightView} />
-              <Route path="/workload" render={this.workload} />
+                <Route path="/users" component={UserListView} />
+                <Route path="/teams" component={TeamListView} />
+                <Route path="/statistics" component={StatisticView} />
+                <Route path="/tasks" render={this.taskQuery} exact />
+                <Route path="/tasks/create" render={this.taskCreate} />
+                <Route path="/tasks/overview" render={this.taskOverview} />
+                <Route path="/tasks/:taskId/edit" render={this.taskEdit} />
+                <Route path="/projects" component={ProjectListView} exact />
+                <Route path="/projects/create" render={this.projectCreate} />
+                <Route path="/projects/:projectName/tasks" render={this.projectTasks} />
+                <Route path="/projects/:id/edit" render={this.projectEdit} />
+                <Route path="/annotations/:type/:id" render={this.tracingView} />
+                <Route path="/annotations/:type/:id/readOnly)" render={this.tracingView} />
+                <Route path="/dashboard" component={DashboardView} />
+                <Route path="/datasets" component={DashboardView} exact />
+                <Route path="/datasets/upload" render={this.datasetAdd} />
+                <Route
+                  path="/datasets/:datasetName/edit"
+                  component={DatasetImportView}
+                  isEditingMode
+                />
+                <Route path="/datasets/:name/import" component={DatasetImportView} isEditingMode />
+                <Route path="/users/:id/details" component={DashboardView} />
+                <Route path="/taskTypes" component={TaskTypeListView} exact />
+                <Route path="/taskTypes/create" render={this.taskTypesCreate} />
+                <Route path="/taskTypes/:id/edit" render={this.taskTypesCreate} />
+                <Route path="/taskTypes/:taskTypeId/tasks" render={this.taskTypesTasks} />
+                <Route path="/scripts/create" render={this.scriptsCreate} />
+                <Route path="/scripts/:id/edit" render={this.scriptsCreate} />
+                <Route path="/scripts" component={ScriptListView} exact />
+                <Route path="/workload" render={this.workload} />
+                <Route path="/help/faq" component={FAQView} />
+                <Route path="/help/keyboardshortcuts" component={KeyboardShortcutView} />
+              </SecuredRoute>
+
               <Route path="/login" render={() => <LoginView layout="horizontal" />} />
               <Route path="/register" component={RegistrationView} />
               <Route path="/reset" component={StartResetPasswordView} />
               <Route path="/finishreset" component={FinishResetPasswordView} />
               <Route path="/api/changepassword" component={ChangePasswordView} />
-              <Route path="/help/faq" component={FAQView} />
-              <Route path="/help/keyboardshortcuts" component={KeyboardShortcutView} />
+              <Route path="/spotlight" component={SpotlightView} />
+              <Route path="/datasets/:id/view" render={this.tracingViewPublic} />
             </Content>
           </Layout>
         </LocaleProvider>
@@ -219,4 +264,8 @@ class ReactRouter extends React.Component<*> {
   }
 }
 
-export default ReactRouter;
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(ReactRouter);

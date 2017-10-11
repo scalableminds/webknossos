@@ -4,6 +4,9 @@ import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import app from "app";
+import Store from "oxalis/throttled_store";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { getActiveUser } from "admin/admin_rest_api";
 
 const FormItem = Form.Item;
 
@@ -16,11 +19,13 @@ class LoginView extends React.PureComponent<Props> {
   handleSubmit = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
 
-    this.props.form.validateFields((err: ?Object, formValues: Object) => {
+    this.props.form.validateFields(async (err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/login", { data: formValues }).then(() =>
-          app.history.push("/dashboard"),
-        );
+        await Request.sendJSONReceiveJSON("/api/login", { data: formValues });
+        const user = await getActiveUser();
+        debugger;
+        Store.dispatch(setActiveUserAction(user));
+        app.history.push("/dashboard");
       }
     });
   };

@@ -4,22 +4,29 @@
 import React from "react";
 import { Layout, Menu, Icon } from "antd";
 import { Link } from "react-router-dom";
+import { connect } from "react-redux";
 import app from "app";
 import Request from "libs/request";
 import LoginView from "admin/views/auth/login_view";
 
+import type { OxalisState } from "oxalis/store";
+import type { APIUserType } from "admin/api_flow_types";
+
 const { SubMenu } = Menu;
 const { Header } = Layout;
 
-class Navbar extends React.PureComponent<*> {
-  render() {
-    const isLoggedIn = app.currentUser !== null;
+type Props = {
+  isAuthenticated: boolean,
+  activeUser: APIUserType,
+};
 
+class Navbar extends React.PureComponent<Props> {
+  render() {
     return (
       <Header style={{ padding: 0 }}>
         <Menu
           mode="horizontal"
-          defaultSelectedKeys={[app.history.location.pathname]}
+          defaultSelectedkeys={[app.history.location.pathname]}
           style={{ lineHeight: "64px" }}
           theme="dark"
         >
@@ -29,7 +36,7 @@ class Navbar extends React.PureComponent<*> {
               webKnossos
             </Link>
           </Menu.Item>
-          {isLoggedIn ? (
+          {this.props.isAuthenticated ? (
             [
               <Menu.Item key="/dashboard">
                 <Link to="/dashboard">
@@ -71,7 +78,7 @@ class Navbar extends React.PureComponent<*> {
                 </Menu.Item>
               </SubMenu>,
               <SubMenu
-                KEY="sub2"
+                key="sub2"
                 title={
                   <span>
                     <Icon type="line-chart" />Statistics
@@ -105,7 +112,7 @@ class Navbar extends React.PureComponent<*> {
                 </Menu.Item>
                 <Menu.Item key="/help/keyboardshortcuts">
                   <a target="_blank" href="/help/keyboardshortcuts">
-                    Keyboard Shortcuts
+                    keyboard Shortcuts
                   </a>
                 </Menu.Item>
               </SubMenu>,
@@ -116,12 +123,12 @@ class Navbar extends React.PureComponent<*> {
                 </a>
               </Menu.Item>,
               <SubMenu
-                KEY="sub4"
+                key="sub4"
                 className="pull-right"
                 title={
                   <span>
                     <Icon type="user" />
-                    {`${app.currentUser.firstName} ${app.currentUser.lastName}`}
+                    {`${this.props.activeUser.firstName} ${this.props.activeUser.lastName}`}
                   </span>
                 }
               >
@@ -130,7 +137,7 @@ class Navbar extends React.PureComponent<*> {
                 </Menu.Item>
                 <Menu.Item key="logout">
                   <Link
-                    to="/asd"
+                    to="/"
                     onClick={() => {
                       Request.receiveJSON("/api/logout").then(() => window.location.reload());
                     }}
@@ -151,4 +158,8 @@ class Navbar extends React.PureComponent<*> {
   }
 }
 
-export default Navbar;
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(Navbar);

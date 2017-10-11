@@ -8,8 +8,9 @@ import javax.inject.Inject
 import com.scalableminds.braingames.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.annotation.{AnnotationDAO, AnnotationIdentifier, AnnotationInformationProvider, AnnotationRestrictions}
+import models.annotation._
 import models.user.{User, UserToken, UserTokenDAO}
+import net.liftweb.common.Full
 import oxalis.security.Secured
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
@@ -68,6 +69,19 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   }
 
   private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, user: User) = {
+    implicit val ctx = GlobalAccessContext //TODO: RocksDB is this really necessary?
+
+    def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
+      val annotationFox = AnnotationDAO.findByTracingId(tracingId)
+      for {
+        annotationBox <- annotationFox.futureBox
+      } yield {
+        annotationBox match {
+          case Full(_) => annotationBox
+          case _ => AnnotationStore.findCachedByTracingId(tracingId)
+        }
+      }
+    }
 
     def checkRestrictions(restrictions: AnnotationRestrictions) = {
       mode match {
@@ -76,14 +90,9 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       }
     }
 
-    implicit val ctx = GlobalAccessContext //TODO: RocksDB is this really necessary?
-
-    //TODO: rocksDB what about tracings other than those of saved annotations? compound?
-    //TODO: rocksDB get annotation from some sort of cache?
-
     for {
-      annotation <- AnnotationDAO.findByTracingId(tracingId)
-      restrictions <- restrictionsFor(AnnotationIdentifier("saved", annotation.id))
+      annotation <- findAnnotationForTracing(tracingId)
+      restrictions <- restrictionsFor(AnnotationIdentifier(annotation.typ, annotation.id))
       allowed = checkRestrictions(restrictions)
     } yield {
       if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))

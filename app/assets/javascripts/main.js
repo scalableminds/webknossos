@@ -32,18 +32,6 @@ import "../stylesheets/main.less";
 ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
 app.on("start", async () => {
-  app.currentUser = {
-    id: "59cbd00f5bd4c0f801061856",
-    email: "scmboy@scalableminds.com",
-    firstName: "SCM",
-    lastName: "Boy",
-    isActive: true,
-    teams: [{ team: "Connectomics department", role: { name: "admin" } }],
-    experiences: { asd: 10 },
-    lastActivity: 1507566685002,
-    isAnonymous: false,
-    isEditable: true,
-  };
   ReactDOM.render(
     <Provider store={Store}>
       <ReactRouter />

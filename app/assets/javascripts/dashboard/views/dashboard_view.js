@@ -2,15 +2,16 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import * as React from "react";
+import { connect } from "react-redux";
 import Request from "libs/request";
 import { Spin, Tabs } from "antd";
-import app from "app";
 import Utils from "libs/utils";
 import DatasetView from "dashboard/views/dataset_view";
 import DashboardTaskListView from "dashboard/views/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/views/explorative_annotations_view";
 import LoggedTimeView from "dashboard/views/logged_time_view";
 import type { APIUserType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 
 const TabPane = Tabs.TabPane;
 
@@ -53,7 +54,7 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   getTabs(user: APIUserType) {
-    const isUserAdmin = Utils.isUserAdmin(app.currentUser);
+    const isUserAdmin = Utils.isUserAdmin(this.props.activeUser);
     const isAdminView = this.props.isAdminView;
 
     return [
@@ -118,4 +119,8 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 }
 
-export default DashboardView;
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(DashboardView);

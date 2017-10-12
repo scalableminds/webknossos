@@ -5,6 +5,7 @@ import Marionette from "backbone.marionette";
 import UserCollection from "admin/models/user/user_collection";
 import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
+import Store from "oxalis/store";
 
 class ProjectCreateView extends Marionette.View {
   static initClass() {
@@ -179,7 +180,7 @@ class ProjectCreateView extends Marionette.View {
     this.userSelectionView = new SelectionView({
       collection: new UserCollection(),
       childViewOptions: {
-        defaultItem: { email: app.currentUser.email },
+        defaultItem: { email: Store.getState().activeUser.email },
         modelValue() {
           return this.model.id;
         },

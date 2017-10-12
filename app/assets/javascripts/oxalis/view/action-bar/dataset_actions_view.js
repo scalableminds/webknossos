@@ -15,6 +15,7 @@ import messages from "messages";
 import api from "oxalis/api/internal_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
+import type { APIUserType } from "admin/api_flow_types";
 
 type Props = {
   // eslint-disable-next-line react/no-unused-prop-types
@@ -26,6 +27,7 @@ type Props = {
   // eslint-disable-next-line react/no-unused-prop-types
   dispatch: Dispatch<*>,
   task: ?TaskType,
+  activeUser: APIUserType,
 };
 
 type State = {
@@ -191,7 +193,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
       );
     }
 
-    if (isSkeletonMode && app.currentUser != null) {
+    if (isSkeletonMode && this.props.activeUser != null) {
       elements.push(
         <Menu.Item key="merge-button">
           <div onClick={this.handleMergeOpen}>
@@ -234,6 +236,7 @@ function mapStateToProps(state: OxalisState) {
     tracingId: state.tracing.tracingId,
     restrictions: state.tracing.restrictions,
     task: state.task,
+    activeUser: state.activeUser,
   };
 }
 

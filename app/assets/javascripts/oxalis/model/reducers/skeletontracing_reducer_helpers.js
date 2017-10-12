@@ -33,7 +33,7 @@ import type {
 } from "oxalis/store";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
-  let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
+  let user = `${state.activeUser.firstName}_${state.activeUser.lastName}`;
   user = user.replace(/ /g, "_"); // Replace spaces in user names
 
   let prefix = "Tree";

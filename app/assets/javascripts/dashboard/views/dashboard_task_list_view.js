@@ -2,6 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import * as React from "react";
+import { connect } from "react-redux";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
@@ -9,15 +10,16 @@ import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
-import app from "app";
 import TransferTaskModal from "dashboard/views/transfer_task_modal";
 import type { APITaskWithAnnotationType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 
 type Props = {
   userID: ?string,
   isAdminView: boolean,
+  activeUser: string,
 };
 
 type State = {
@@ -51,7 +53,7 @@ const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnot
   return task;
 };
 
-export default class DashboardTaskListView extends React.PureComponent<Props, State> {
+class DashboardTaskListView extends React.PureComponent<Props, State> {
   state = {
     showFinishedTasks: false,
     finishedTasks: [],
@@ -117,7 +119,7 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
 
   renderActions = (task: APITaskWithAnnotationType) => {
     const annotation = task.annotation;
-    const isAdmin = app.currentUser.teams
+    const isAdmin = this.props.activeUser.teams
       .filter(team => team.role.name === "admin")
       .map(team => team.team)
       .includes(task.team);
@@ -361,3 +363,9 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
     );
   }
 }
+
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(DashboardTaskListView);

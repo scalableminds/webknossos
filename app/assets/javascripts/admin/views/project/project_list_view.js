@@ -3,16 +3,21 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { connect } from "react-redux";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
-import app from "app";
 import messages from "messages";
 import { getProjects, deleteProject } from "admin/admin_rest_api";
 import type { APIProjectType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 const { Search } = Input;
+
+type Props = {
+  activeUser: string,
+};
 
 type State = {
   isLoading: boolean,
@@ -20,7 +25,7 @@ type State = {
   searchQuery: string,
 };
 
-class ProjectListView extends React.PureComponent<{}, State> {
+class ProjectListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: true,
     projects: [],
@@ -189,7 +194,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
                       <Icon type="download" />Download
                     </a>
                     <br />
-                    {project.owner.email === app.currentUser.email ? (
+                    {project.owner.email === this.props.activeUser.email ? (
                       <a href="#" onClick={_.partial(this.deleteProject, project)}>
                         <Icon type="delete" />Delete
                       </a>
@@ -205,4 +210,8 @@ class ProjectListView extends React.PureComponent<{}, State> {
   }
 }
 
-export default ProjectListView;
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(ProjectListView);

@@ -1,19 +1,21 @@
 // flow
 /* eslint-disable jsx-a11y/href-no-hash */
 import * as React from "react";
+import { connect } from "react-redux";
 import { Row, Col, Modal, Card } from "antd";
 import Utils from "libs/utils";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
-import app from "app";
 import messages from "messages";
 import type { DatasetType } from "dashboard/views/dataset_view";
+import type { OxalisState } from "oxalis/store";
 
 const padding = 16;
 
 type Props = {
   datasets: Array<DatasetType>,
   searchQuery: string,
+  activeUser: string,
 };
 
 class GalleryDatasetView extends React.PureComponent<Props> {
@@ -22,7 +24,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
   };
 
   createTracing(event: Event) {
-    if (app.currentUser === undefined) {
+    if (this.props.activeUser === null) {
       event.preventDefault();
       Modal.confirm({
         content: messages["dataset.confirm_signup"],
@@ -103,4 +105,8 @@ class GalleryDatasetView extends React.PureComponent<Props> {
   }
 }
 
-export default GalleryDatasetView;
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(GalleryDatasetView);

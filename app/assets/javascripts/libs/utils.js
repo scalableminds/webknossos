@@ -6,7 +6,7 @@
 import _ from "lodash";
 import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
-import window from "libs/window";
+import window, { location } from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
@@ -177,7 +177,7 @@ const Utils = {
 
   getUrlParams(paramName: string): { [key: string]: string | boolean } {
     // Parse the URL parameters as objects and return it or just a single param
-    const params = window.location.search
+    const params = location.search
       .substring(1)
       .split("&")
       .reduce((result, value): void => {

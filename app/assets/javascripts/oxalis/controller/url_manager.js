@@ -11,7 +11,7 @@ import type { Vector3, ModeType } from "oxalis/constants";
 import constants, { ModeValues } from "oxalis/constants";
 import { getRotation, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
-import window from "libs/window";
+import window, { location } from "libs/window";
 
 const NO_MODIFY_TIMEOUT = 5000;
 const MAX_UPDATE_INTERVAL = 1000;
@@ -54,12 +54,12 @@ class UrlManager {
     }
 
     // Don't tamper with URL if changed externally for some time
-    const urlDidNotChange = window.location.href === this.lastUrl;
+    const urlDidNotChange = location.href === this.lastUrl;
     const isFreshUrl = this.lastUrl == null;
 
     if (isFreshUrl || urlDidNotChange || force) {
       window.history.replaceState({}, null, url);
-      this.lastUrl = window.location.href;
+      this.lastUrl = location.href;
     } else {
       setTimeout(() => {
         this.lastUrl = null;

@@ -18,8 +18,9 @@ const TabPane = Tabs.TabPane;
 const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnnotations"];
 
 type Props = {
-  userID: ?string,
+  userId: ?string,
   isAdminView: boolean,
+  activeUser: APIUserType,
 };
 
 type State = {
@@ -45,7 +46,7 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = this.props.userID ? `/api/users/${this.props.userID}` : "/api/user";
+    const url = this.props.userId ? `/api/users/${this.props.userId}` : "/api/user";
     const user = await Request.receiveJSON(url);
 
     this.setState({
@@ -69,17 +70,17 @@ class DashboardView extends React.PureComponent<Props, State> {
         </TabPane>
       ) : null,
       <TabPane tab="Tasks" key="tasks">
-        <DashboardTaskListView isAdminView={this.props.isAdminView} userID={this.props.userID} />
+        <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
       </TabPane>,
       <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
         <ExplorativeAnnotationsView
           isAdminView={this.props.isAdminView}
-          userID={this.props.userID}
+          userId={this.props.userId}
         />
       </TabPane>,
       isAdminView ? (
         <TabPane tab="Tracked Time" key="trackedTime">
-          <LoggedTimeView userID={this.props.userID} />
+          <LoggedTimeView userId={this.props.userId} />
         </TabPane>
       ) : null,
     ];

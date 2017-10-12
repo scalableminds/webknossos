@@ -38,11 +38,14 @@ import WorkloadListView from "admin/views/workload/workload_list_view";
 import WorkloadCollection from "admin/models/workload/workload_collection";
 import ScriptListView from "admin/views/scripts/script_list_view";
 import ProjectCreateView from "admin/views/project/project_create_view";
+import ProjectEditView from "admin/views/project/project_edit_view";
 import ProjectModel from "admin/models/project/project_model";
 import TaskQueryView from "admin/views/task/task_query_view";
-import TaskCreateView from "admin/views/task/task_create_view";
 import TaskModel from "admin/models/task/task_model";
+import TaskCreateView from "admin/views/task/task_create_view";
 import TaskCreateFromView from "admin/views/task/task_create_subviews/task_create_from_view";
+import TaskTypeModel from "admin/models/tasktype/task_type_model";
+import TaskTypeCreateView from "admin/views/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/views/scripts/script_create_view";
 import ScriptModel from "admin/models/scripts/script_model";
 import TaskOverviewView from "admin/views/task/task_overview_view";
@@ -86,22 +89,22 @@ type ReactRouterArgumentsType = {
   },
 };
 
+// <Redirect
+// to={{
+// pathname: "/login",
+// state: { from: props.location },
+// }}
+// />
 const SecuredRoute = ({ component: Component, render, isAuthenticated, ...rest }: Object) => (
   <Route
     {...rest}
-    render={props =>
-      isAuthenticated ? Component ? (
-        <Component {...props} />
-      ) : (
-        render()
-      ) : (
-        <Redirect
-          to={{
-            pathname: "/login",
-            state: { from: props.location },
-          }}
-        />
-      )}
+    render={props => {
+      if (isAuthenticated) {
+        return Component ? <Component {...props} /> : render(props);
+      } else {
+        return <LoginView />;
+      }
+    }}
   />
 );
 
@@ -131,16 +134,16 @@ class ReactRouter extends React.Component<*> {
       addButtonText: "Create New Task",
     });
 
-  projectEdit = () => {
-    const model = new TaskModel();
-    const view = new TaskCreateView({ model });
+  projectEdit = ({ match }: ReactRouterArgumentsType) => {
+    const model = new ProjectModel({ name: match.params.projectName });
+    const view = new ProjectEditView({ model });
 
     return <BackboneWrapper backboneView={view} />;
   };
 
-  taskTypesCreate = () => {
-    const model = new TaskModel();
-    const view = new TaskCreateView({ model });
+  taskTypesCreate = ({ match }: ReactRouterArgumentsType) => {
+    const model = new TaskTypeModel({ id: match.params.taskTypeId });
+    const view = new TaskTypeCreateView({ model });
 
     return <BackboneWrapper backboneView={view} />;
   };
@@ -174,14 +177,14 @@ class ReactRouter extends React.Component<*> {
   };
 
   datasetAdd = () => {
-    const model = new TaskModel();
-    const view = new TaskCreateView({ model });
+    const view = new DatasetAddView();
 
     return <BackboneWrapper backboneView={view} />;
   };
 
   taskCreate = () => {
-    const view = new DatasetAddView();
+    const model = new TaskModel();
+    const view = new TaskCreateView({ model });
 
     return <BackboneWrapper backboneView={view} />;
   };
@@ -194,8 +197,7 @@ class ReactRouter extends React.Component<*> {
   };
 
   scriptsCreate = ({ match }: ReactRouterArgumentsType) => {
-    const id = match.params.id || null;
-    const model = new ScriptModel({ id });
+    const model = new ScriptModel({ id: match.params.id });
     const view = new ScriptCreateView({ model });
     return <BackboneWrapper backboneView={view} />;
   };
@@ -224,19 +226,28 @@ class ReactRouter extends React.Component<*> {
         <LocaleProvider locale={enUS}>
           <Layout>
             <Navbar isAuthenticated={isAuthenticated} />
-            <Content>
+            <Content style={{ marginTop: 48 }}>
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 exact
                 path="/"
-                component={DashboardView}
+                render={() => <DashboardView isAdminView={false} />}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/dashboard"
-                component={DashboardView}
+                render={() => <DashboardView isAdminView={false} />}
               />
-
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/users/:userId/details"
+                render={({ match }: ReactRouterArgumentsType) => (
+                  <DashboardView
+                    userId={match.params.userId}
+                    isAdminView={match.params.userId !== null}
+                  />
+                )}
+              />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/users"
@@ -306,36 +317,23 @@ class ReactRouter extends React.Component<*> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/dashboard"
-                component={DashboardView}
-              />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/datasets"
-                component={DashboardView}
-                exact
-              />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
                 render={this.datasetAdd}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
+                path="/datasets/:datasetName/import"
+                component={DatasetImportView}
+                render={({ match }: ReactRouterArgumentsType) => (
+                  <DatasetImportView isEditingMode={false} datasetName={match.params.datasetName} />
+                )}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
                 path="/datasets/:datasetName/edit"
-                component={DatasetImportView}
-                isEditingMode
-              />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/datasets/:name/import"
-                component={DatasetImportView}
-                isEditingMode
-              />
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
-                path="/users/:id/details"
-                component={DashboardView}
+                render={({ match }: ReactRouterArgumentsType) => (
+                  <DatasetImportView isEditingMode datasetName={match.params.datasetName} />
+                )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -350,7 +348,7 @@ class ReactRouter extends React.Component<*> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/taskTypes/:id/edit"
+                path="/taskTypes/:taskTypeId/edit"
                 render={this.taskTypesCreate}
               />
               <SecuredRoute
@@ -389,7 +387,6 @@ class ReactRouter extends React.Component<*> {
                 path="/help/keyboardshortcuts"
                 component={KeyboardShortcutView}
               />
-
               <Route path="/login" render={() => <LoginView layout="horizontal" />} />
               <Route path="/register" component={RegistrationView} />
               <Route path="/reset" component={StartResetPasswordView} />

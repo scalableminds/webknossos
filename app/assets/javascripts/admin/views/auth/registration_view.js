@@ -1,6 +1,7 @@
 // @flow
 
 import React from "react";
+import { Link } from "react-router-dom";
 import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
 import Request from "libs/request";
@@ -231,7 +232,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Register
               </Button>
-              <a href="/login">Already have an account? Logininstead.</a>
+              <Link to="/login">Already have an account? Login instead.</Link>
             </FormItem>
           </Form>
         </Col>

@@ -3,6 +3,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
+import { Link } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
@@ -17,7 +18,7 @@ import type { OxalisState } from "oxalis/store";
 const { Column } = Table;
 
 type Props = {
-  userID: ?string,
+  userId: ?string,
   isAdminView: boolean,
   activeUser: string,
 };
@@ -93,8 +94,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   async fetchData(): Promise<void> {
     this.setState({ isLoading: true });
     const isFinished = this.state.showFinishedTasks;
-    const url = this.props.userID
-      ? `/api/users/${this.props.userID}/tasks?isFinished=${isFinished.toString()}`
+    const url = this.props.userId
+      ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
       : `/api/user/tasks?isFinished=${isFinished.toString()}`;
     const annotationsWithTasks = await Request.receiveJSON(url);
 
@@ -135,10 +136,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     ) : (
       <ul>
         <li>
-          <a href={`/annotations/Task/${annotation.id}`}>
+          <Link to={`/annotations/Task/${annotation.id}`}>
             <i className="fa fa-random" />
             <strong>{label}</strong>
-          </a>
+          </Link>
         </li>
         {isAdmin || this.props.isAdminView ? (
           <li>
@@ -151,10 +152,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin ? (
           <div>
             <li>
-              <a href={`/annotations/Task/${annotation.id}/download`}>
+              <Link to={`/annotations/Task/${annotation.id}/download`}>
                 <i className="fa fa-download" />
                 Download
-              </a>
+              </Link>
             </li>
             <li>
               <a href="#" onClick={() => this.resetTask(annotation.id)}>
@@ -327,10 +328,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return (
       <div>
         <div className="pull-right">
-          {this.props.isAdminView && this.props.userID ? (
-            <a href={`/api/users/${this.props.userID}/annotations/download`}>
+          {this.props.isAdminView && this.props.userId ? (
+            <Link to={`/api/users/${this.props.userId}/annotations/download`}>
               <Button icon="download">Download All Finished Tracings</Button>
-            </a>
+            </Link>
           ) : (
             <AsyncButton type="primary" icon="file-add" onClick={() => this.confirmGetNewTask()}>
               Get a New Task
@@ -357,7 +358,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           annotationId={this.state.currentAnnotationId}
           onCancel={() => this.setState({ isTransferModalVisible: false })}
           onChange={() => this.handleTransferredTask()}
-          userID={this.props.userID}
+          userId={this.props.userId}
         />
       </div>
     );

@@ -42,7 +42,7 @@ const UserListView = mockRequire.reRequire("../../admin/views/user/user_list_vie
 // const TracingLayoutView = mockRequire.reRequire("../../oxalis/view/tracing_layout_view").default;
 
 test("Dashboard", async t => {
-  const dashboard = mount(<Dashboard userID={null} isAdminView={false} />);
+  const dashboard = mount(<Dashboard userId={null} isAdminView={false} />);
   await waitForAllRequests();
   t.is(dashboard.find(".TestDatasetHeadline").length, 1);
 

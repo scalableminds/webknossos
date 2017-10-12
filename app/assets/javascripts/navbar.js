@@ -22,12 +22,14 @@ type Props = {
 
 class Navbar extends React.PureComponent<Props> {
   render() {
+    const navbarStyle = { padding: 0, position: "fixed", width: "100%", zIndex: 1000, height: 48 };
+
     return (
-      <Header style={{ padding: 0 }}>
+      <Header style={navbarStyle}>
         <Menu
           mode="horizontal"
           defaultSelectedkeys={[app.history.location.pathname]}
-          style={{ lineHeight: "64px" }}
+          style={{ lineHeight: "48px" }}
           theme="dark"
         >
           <Menu.Item key="0">

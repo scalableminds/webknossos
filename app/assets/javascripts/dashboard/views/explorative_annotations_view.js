@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Modal, Tag } from "antd";
@@ -21,7 +22,7 @@ const { Column } = Table;
 const { Search } = Input;
 
 type Props = {
-  userID: ?string,
+  userId: ?string,
   isAdminView: boolean,
 };
 
@@ -91,8 +92,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     }
 
     const isFinishedString = this.state.shouldShowArchivedTracings.toString();
-    const url = this.props.userID
-      ? `/api/users/${this.props.userID}/annotations?isFinished=${isFinishedString}`
+    const url = this.props.userId
+      ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
 
     this.enterRequest();
@@ -165,15 +166,15 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     if (!this.state.shouldShowArchivedTracings) {
       return (
         <div>
-          <a href={controller.trace(typ, id).url}>
+          <Link to={controller.trace(typ, id).url}>
             <i className="fa fa-random" />
             <strong>Trace</strong>
-          </a>
+          </Link>
           <br />
-          <a href={jsRoutes.controllers.AnnotationIOController.download(typ, id).url}>
+          <Link to={jsRoutes.controllers.AnnotationIOController.download(typ, id).url}>
             <i className="fa fa-download" />
             Download
-          </a>
+          </Link>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
             <i className="fa fa-archive" />

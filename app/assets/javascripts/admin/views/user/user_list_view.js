@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input } from "antd";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
@@ -229,9 +230,9 @@ class UserListView extends React.PureComponent<{}, State> {
             key="actions"
             render={(__, user: APIUserType) => (
               <span>
-                <a href={`/users/${user.id}/details`}>
+                <Link to={`/users/${user.id}/details`}>
                   <Icon type="user" />Show Tracings
-                </a>
+                </Link>
                 <br />
                 <a
                   href={`/api/users/${user.id}/annotations/download`}

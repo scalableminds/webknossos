@@ -23,7 +23,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
     searchQuery: "",
   };
 
-  createTracing(event: Event) {
+  createTracing = (event: Event) => {
     if (this.props.activeUser === null) {
       event.preventDefault();
       Modal.confirm({
@@ -33,7 +33,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         },
       });
     }
-  }
+  };
 
   renderCard(dataset: DatasetType) {
     let description;

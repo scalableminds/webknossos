@@ -23,7 +23,6 @@ class LoginView extends React.PureComponent<Props> {
       if (!err) {
         await Request.sendJSONReceiveJSON("/api/login", { data: formValues });
         const user = await getActiveUser();
-        debugger;
         Store.dispatch(setActiveUserAction(user));
         app.history.push("/dashboard");
       }

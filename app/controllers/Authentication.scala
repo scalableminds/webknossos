@@ -271,7 +271,7 @@ class Authentication @Inject() (
   }
 
   def logout = SecuredAction.async { implicit request =>
-    env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index()))
+    env.authenticatorService.discard(request.authenticator, Ok)
   }
 }
 

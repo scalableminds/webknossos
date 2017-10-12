@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 import React from "react";
-import { Router, Route } from "react-router-dom";
+import { Router, Route, Redirect } from "react-router-dom";
 import { connect } from "react-redux";
 import { Layout, LocaleProvider } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";
@@ -86,8 +86,24 @@ type ReactRouterArgumentsType = {
   },
 };
 
-const SecuredRoute = props =>
-  props.isAuthenticated ? <div>{props.children}</div> : <LoginView layout="horizontal" />;
+const SecuredRoute = ({ component: Component, render, isAuthenticated, ...rest }: Object) => (
+  <Route
+    {...rest}
+    render={props =>
+      isAuthenticated ? Component ? (
+        <Component {...props} />
+      ) : (
+        render()
+      ) : (
+        <Redirect
+          to={{
+            pathname: "/login",
+            state: { from: props.location },
+          }}
+        />
+      )}
+  />
+);
 
 class ReactRouter extends React.Component<*> {
   showWithPagination = (View: any, Collection: any, options: Object = {}) => {
@@ -202,7 +218,6 @@ class ReactRouter extends React.Component<*> {
 
   render() {
     const isAuthenticated = this.props.activeUser !== null;
-    debugger;
 
     return (
       <Router history={app.history}>
@@ -210,44 +225,170 @@ class ReactRouter extends React.Component<*> {
           <Layout>
             <Navbar isAuthenticated={isAuthenticated} />
             <Content>
-              <SecuredRoute isAuthenticated={isAuthenticated}>
-                <Route exact path="/" component={DashboardView} />
-                <Route path="/dashboard" component={DashboardView} />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                exact
+                path="/"
+                component={DashboardView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/dashboard"
+                component={DashboardView}
+              />
 
-                <Route path="/users" component={UserListView} />
-                <Route path="/teams" component={TeamListView} />
-                <Route path="/statistics" component={StatisticView} />
-                <Route path="/tasks" render={this.taskQuery} exact />
-                <Route path="/tasks/create" render={this.taskCreate} />
-                <Route path="/tasks/overview" render={this.taskOverview} />
-                <Route path="/tasks/:taskId/edit" render={this.taskEdit} />
-                <Route path="/projects" component={ProjectListView} exact />
-                <Route path="/projects/create" render={this.projectCreate} />
-                <Route path="/projects/:projectName/tasks" render={this.projectTasks} />
-                <Route path="/projects/:id/edit" render={this.projectEdit} />
-                <Route path="/annotations/:type/:id" render={this.tracingView} />
-                <Route path="/annotations/:type/:id/readOnly)" render={this.tracingView} />
-                <Route path="/dashboard" component={DashboardView} />
-                <Route path="/datasets" component={DashboardView} exact />
-                <Route path="/datasets/upload" render={this.datasetAdd} />
-                <Route
-                  path="/datasets/:datasetName/edit"
-                  component={DatasetImportView}
-                  isEditingMode
-                />
-                <Route path="/datasets/:name/import" component={DatasetImportView} isEditingMode />
-                <Route path="/users/:id/details" component={DashboardView} />
-                <Route path="/taskTypes" component={TaskTypeListView} exact />
-                <Route path="/taskTypes/create" render={this.taskTypesCreate} />
-                <Route path="/taskTypes/:id/edit" render={this.taskTypesCreate} />
-                <Route path="/taskTypes/:taskTypeId/tasks" render={this.taskTypesTasks} />
-                <Route path="/scripts/create" render={this.scriptsCreate} />
-                <Route path="/scripts/:id/edit" render={this.scriptsCreate} />
-                <Route path="/scripts" component={ScriptListView} exact />
-                <Route path="/workload" render={this.workload} />
-                <Route path="/help/faq" component={FAQView} />
-                <Route path="/help/keyboardshortcuts" component={KeyboardShortcutView} />
-              </SecuredRoute>
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/users"
+                component={UserListView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/teams"
+                component={TeamListView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/statistics"
+                component={StatisticView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/tasks"
+                render={this.taskQuery}
+                exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/tasks/create"
+                render={this.taskCreate}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/tasks/overview"
+                render={this.taskOverview}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/tasks/:taskId/edit"
+                render={this.taskEdit}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/projects"
+                component={ProjectListView}
+                exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/projects/create"
+                render={this.projectCreate}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/projects/:projectName/tasks"
+                render={this.projectTasks}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/projects/:id/edit"
+                render={this.projectEdit}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/annotations/:type/:id"
+                render={this.tracingView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/annotations/:type/:id/readOnly)"
+                render={this.tracingView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/dashboard"
+                component={DashboardView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/datasets"
+                component={DashboardView}
+                exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/datasets/upload"
+                render={this.datasetAdd}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/datasets/:datasetName/edit"
+                component={DatasetImportView}
+                isEditingMode
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/datasets/:name/import"
+                component={DatasetImportView}
+                isEditingMode
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/users/:id/details"
+                component={DashboardView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/taskTypes"
+                component={TaskTypeListView}
+                exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/taskTypes/create"
+                render={this.taskTypesCreate}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/taskTypes/:id/edit"
+                render={this.taskTypesCreate}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/taskTypes/:taskTypeId/tasks"
+                render={this.taskTypesTasks}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/scripts/create"
+                render={this.scriptsCreate}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/scripts/:id/edit"
+                render={this.scriptsCreate}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/scripts"
+                component={ScriptListView}
+                exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/workload"
+                render={this.workload}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/help/faq"
+                component={FAQView}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/help/keyboardshortcuts"
+                component={KeyboardShortcutView}
+              />
 
               <Route path="/login" render={() => <LoginView layout="horizontal" />} />
               <Route path="/register" component={RegistrationView} />

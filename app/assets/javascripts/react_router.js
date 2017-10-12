@@ -1,7 +1,8 @@
 // @flow
+/* eslint-disable react/no-unused-prop-types */
 import _ from "lodash";
 import React from "react";
-import { Router, Route, Redirect } from "react-router-dom";
+import { Router, Route } from "react-router-dom";
 import { connect } from "react-redux";
 import { Layout, LocaleProvider } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";
@@ -52,7 +53,7 @@ import TaskOverviewView from "admin/views/task/task_overview_view";
 import TaskOverviewCollection from "admin/models/task/task_overview_collection";
 import PaginationCollection from "admin/models/pagination_collection";
 
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
 const { Content } = Layout;
 
@@ -202,13 +203,21 @@ class ReactRouter extends React.Component<*> {
     return <BackboneWrapper backboneView={view} />;
   };
 
-  tracingView = ({ match }: ReactRouterArgumentsType) => (
-    <TracingLayoutView
-      initialTracingType={match.params.type}
-      initialTracingId={match.params.id}
-      initialControlmode={ControlModeEnum.TRACE}
-    />
-  );
+  tracingView = ({ match }: ReactRouterArgumentsType) => {
+    const tracingType = match.params.type;
+    if (Object.keys(SkeletonTracingTypeTracingEnum).includes(tracingType)) {
+      const saveTracingType = ((tracingType: any): SkeletonTracingTypeTracingType);
+      return (
+        <TracingLayoutView
+          initialTracingType={saveTracingType}
+          initialTracingId={match.params.id}
+          initialControlmode={ControlModeEnum.TRACE}
+        />
+      );
+    } else {
+      return null;
+    }
+  };
 
   tracingViewPublic = ({ match }: ReactRouterArgumentsType) => (
     <TracingLayoutView

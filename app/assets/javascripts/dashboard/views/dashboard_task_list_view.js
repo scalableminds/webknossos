@@ -12,7 +12,7 @@ import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/views/transfer_task_modal";
-import type { APITaskWithAnnotationType } from "admin/api_flow_types";
+import type { APITaskWithAnnotationType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
@@ -20,7 +20,7 @@ const { Column } = Table;
 type Props = {
   userId: ?string,
   isAdminView: boolean,
-  activeUser: string,
+  activeUser: APIUserType,
 };
 
 type State = {

@@ -48,11 +48,13 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
         isEditable: "true",
       };
 
-      await createTeam(newTeam);
+      const response = await createTeam(newTeam);
       this.setState({
         newTeamName: "",
         parentTeam: undefined,
       });
+
+      this.props.onOk(response);
     }
   };
 

@@ -7,6 +7,8 @@ type SetActiveUserType = {
   user: APIUserType,
 };
 
+export type UserActionType = SetActiveUserType;
+
 export const setActiveUserAction = (user: APIUserType): SetActiveUserType => ({
   type: "SET_ACTIVE_USER",
   user,

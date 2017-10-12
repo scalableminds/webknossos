@@ -346,7 +346,7 @@ export type OxalisState = {
   +save: SaveStateType,
   +flycam: FlycamType,
   +viewModeData: ViewModeData,
-  +activeUser: APIUserType,
+  +activeUser: ?APIUserType,
 };
 
 export const defaultState: OxalisState = {

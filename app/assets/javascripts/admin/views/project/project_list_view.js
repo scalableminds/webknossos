@@ -10,14 +10,14 @@ import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import messages from "messages";
 import { getProjects, deleteProject } from "admin/admin_rest_api";
-import type { APIProjectType } from "admin/api_flow_types";
+import type { APIProjectType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 const { Search } = Input;
 
 type Props = {
-  activeUser: string,
+  activeUser: APIUserType,
 };
 
 type State = {

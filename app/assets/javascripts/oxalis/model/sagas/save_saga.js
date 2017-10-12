@@ -24,7 +24,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { alert } from "libs/window";
+import { alert, location } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -117,7 +117,7 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
       } else {
         yield call(alert, messages["save.failed_client_error"]);
       }
-      window.location.reload();
+      location.reload();
       return;
     }
     yield delay(SAVE_RETRY_WAITING_TIME);

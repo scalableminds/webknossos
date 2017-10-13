@@ -24,7 +24,7 @@ trait SkeletonUpdateActionHelper {
   protected def convertBranchPoint(aBranchPoint: BranchPointDepr) =
     BranchPoint(aBranchPoint.nodeId, aBranchPoint.timestamp)
   protected def convertComment(aComment: CommentDepr) =
-    Comment(aComment.node, aComment.content)
+    Comment(aComment.nodeId, aComment.content)
   protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]) = aColorOpt match {
     case Some(aColor) => Some(convertColor(aColor))
     case None => None

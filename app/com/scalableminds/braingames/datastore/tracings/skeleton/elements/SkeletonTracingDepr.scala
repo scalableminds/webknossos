@@ -58,7 +58,7 @@ case class SkeletonTracingDepr(dataSetName: String,
     val (movedNodes, remainingNodes) = sourceTree.nodes.partition(nodeIds contains _.id)
     val (movedEdges, remainingEdges) = sourceTree.edges.partition(e => nodeIds.contains(e.source) && nodeIds.contains(e.target))
     val (movedBp, remainingBp) = sourceTree.branchPoints.partition(bp => nodeIds.contains(bp.nodeId))
-    val (movedC, remainingC) = sourceTree.comments.partition(c => nodeIds.contains(c.node))
+    val (movedC, remainingC) = sourceTree.comments.partition(c => nodeIds.contains(c.nodeId))
     val updatedSource = sourceTree.copy(branchPoints = remainingBp, comments = remainingC,
                                         nodes = remainingNodes, edges = remainingEdges)
     val updatedTarget = targetTree.copy(branchPoints = movedBp ::: targetTree.branchPoints,

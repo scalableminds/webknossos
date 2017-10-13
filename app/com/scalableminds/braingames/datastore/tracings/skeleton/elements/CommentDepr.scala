@@ -9,8 +9,8 @@ import com.scalableminds.util.xml.SynchronousXMLWrites
 import play.api.libs.json.Json
 
 case class CommentDepr(
-  node: Int,
-  content: String)
+                        nodeId: Int,
+                        content: String)
 
 object CommentDepr {
   implicit val jsonFormat = Json.format[CommentDepr]
@@ -18,7 +18,7 @@ object CommentDepr {
   implicit object CommentXMLWrites extends SynchronousXMLWrites[CommentDepr] {
     def synchronousWrites(n: CommentDepr)(implicit writer: XMLStreamWriter): Boolean = {
       writer.writeStartElement("comment")
-      writer.writeAttribute("node", n.node.toString)
+      writer.writeAttribute("node", n.nodeId.toString)
       writer.writeAttribute("content", n.content)
       writer.writeEndElement()
       true

@@ -11,6 +11,7 @@ import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
 import TracingView from "oxalis/view/tracing_view";
 import { Layout, Icon } from "antd";
+import { location } from "libs/window";
 import ButtonComponent from "oxalis/view/components/button_component";
 import type { SkeletonTracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
@@ -33,7 +34,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   };
 
   componentWillUnmount() {
-    window.app.oxalis = null;
+    location.reload();
   }
 
   handleSettingsCollapse = () => {

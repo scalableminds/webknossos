@@ -110,6 +110,7 @@ class TaskSearchForm extends React.Component<Props, State> {
               {getFieldDecorator("taskTypeId")(
                 <Select
                   showSearch
+                  allowClear
                   placeholder="Select a Task Type"
                   optionFilterProp="children"
                   style={{ width: "100%" }}
@@ -127,6 +128,7 @@ class TaskSearchForm extends React.Component<Props, State> {
             <FormItem {...formItemLayout} label="Project">
               {getFieldDecorator("projectName")(
                 <Select
+                  allowClear
                   showSearch
                   placeholder="Select a Project"
                   optionFilterProp="children"
@@ -145,6 +147,7 @@ class TaskSearchForm extends React.Component<Props, State> {
             <FormItem {...formItemLayout} label="User">
               {getFieldDecorator("userId")(
                 <Select
+                  allowClear
                   showSearch
                   placeholder="Select a User"
                   optionFilterProp="children"

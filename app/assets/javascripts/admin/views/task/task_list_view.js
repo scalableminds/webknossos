@@ -49,7 +49,7 @@ class TaskListView extends React.PureComponent<Props, State> {
 
   deleteTask = (task: APITaskType) => {
     Modal.confirm({
-      title: messages["project.delete"],
+      title: messages["task.delete"],
       onOk: async () => {
         this.setState({
           isLoading: true,
@@ -225,7 +225,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                       </a>
                     ) : null}
                     <br />
-                    <a href={`/tasks/${task.id}/edit`} title="Edit Project">
+                    <a href={`/tasks/${task.id}/edit`} title="Edit Task">
                       <Icon type="edit" />Edit
                     </a>
                     <br />

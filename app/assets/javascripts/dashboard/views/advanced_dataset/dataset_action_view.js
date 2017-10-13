@@ -19,7 +19,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
       <Menu>
         <Menu.Item key="existing">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=true`}
             title="Create volume tracing"
           >
             Use Existing Segmentation Layer
@@ -27,7 +27,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         </Menu.Item>
         <Menu.Item key="new">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing`}
+            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=false`}
             title="Create volume tracing"
           >
             Use a New Segmentation Layer

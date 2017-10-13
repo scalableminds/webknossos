@@ -310,7 +310,10 @@ export function performDiffTracing(
   flycam: FlycamType,
 ): Array<UpdateAction> {
   if (tracing.type === "skeleton" && prevTracing.type === "skeleton") {
-    return Array.from(diffSkeletonTracing(prevTracing, tracing, flycam));
+    console.time("diffSkeletonTracing");
+    const result = Array.from(diffSkeletonTracing(prevTracing, tracing, flycam));
+    console.timeEnd("diffSkeletonTracing");
+    return result;
   } else if (tracing.type === "volume" && prevTracing.type === "volume") {
     return Array.from(diffVolumeTracing(prevTracing, tracing, flycam));
   } else {

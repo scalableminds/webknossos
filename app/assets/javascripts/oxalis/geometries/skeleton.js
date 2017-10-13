@@ -286,8 +286,8 @@ class Skeleton {
           break;
         case "createEdge": {
           const tree = skeletonTracing.trees[update.value.treeId];
-          const source = tree.nodes[update.value.source];
-          const target = tree.nodes[update.value.target];
+          const source = tree.nodes.get(update.value.source);
+          const target = tree.nodes.get(update.value.target);
           this.createEdge(tree.treeId, source, target);
           break;
         }
@@ -342,12 +342,12 @@ class Skeleton {
     }
 
     // compute bounding sphere to make ThreeJS happy
-    // for (const nodes of this.nodes.buffers) {
-    //   nodes.geometry.computeBoundingSphere();
-    // }
-    // for (const edges of this.edges.buffers) {
-    //   edges.geometry.computeBoundingSphere();
-    // }
+    for (const nodes of this.nodes.buffers) {
+      nodes.geometry.computeBoundingSphere();
+    }
+    for (const edges of this.edges.buffers) {
+      edges.geometry.computeBoundingSphere();
+    }
 
     if (skeletonTracing.activeNodeId !== this.prevTracing.activeNodeId) {
       this.startNodeHighlightAnimation();
@@ -409,15 +409,16 @@ class Skeleton {
    * Usually called only once initially.
    */
   createTree(tree: TreeType) {
-    for (const node of _.values(tree.nodes)) {
+    for (const node of tree.nodes.values()) {
+      console.log(createNode, node);
       this.createNode(tree.treeId, node);
     }
     for (const branchpoint of tree.branchPoints) {
       this.updateNodeType(tree.treeId, branchpoint.nodeId, NodeTypes.BRANCH_POINT);
     }
     for (const edge of tree.edges) {
-      const source = tree.nodes[edge.source];
-      const target = tree.nodes[edge.target];
+      const source = tree.nodes.get(edge.source);
+      const target = tree.nodes.get(edge.target);
       this.createEdge(tree.treeId, source, target);
     }
 

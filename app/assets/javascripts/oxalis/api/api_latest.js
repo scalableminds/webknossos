@@ -200,7 +200,7 @@ class TracingApi {
         if (treeId != null) {
           tree = skeletonTracing.trees[treeId];
           assertExists(tree, `Couldn't find tree ${treeId}.`);
-          assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
+          // assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
         } else {
           tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
           assertExists(tree, `Couldn't find node ${nodeId}.`);

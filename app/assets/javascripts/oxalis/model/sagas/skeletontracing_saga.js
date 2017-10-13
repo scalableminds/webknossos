@@ -6,7 +6,7 @@ import _ from "lodash";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
-import Store from "oxalis/store";
+import Store, { NodeMapWrapper } from "oxalis/store";
 import Modal from "oxalis/view/modal";
 import { put, take, takeEvery, select, race } from "redux-saga/effects";
 import {
@@ -128,12 +128,12 @@ function* diffNodes(
     yield deleteNode(treeId, nodeId);
   }
   for (const nodeId of addedNodeIds) {
-    const node = nodes[nodeId];
+    const node = nodes.get(nodeId);
     yield createNode(treeId, node);
   }
   for (const nodeId of bothNodeIds) {
-    const node = nodes[nodeId];
-    const prevNode = prevNodes[nodeId];
+    const node = nodes.get(nodeId);
+    const prevNode = prevNodes.get(nodeId);
     if (node !== prevNode) {
       if (updateNodePredicate(prevNode, node)) {
         yield updateNode(treeId, node);
@@ -182,14 +182,14 @@ export function* diffTrees(
   );
   for (const treeId of deletedTreeIds) {
     const prevTree = prevTrees[treeId];
-    yield* diffNodes(prevTree.nodes, {}, treeId);
+    yield* diffNodes(prevTree.nodes, new NodeMapWrapper(), treeId);
     yield* diffEdges(prevTree.edges, [], treeId);
     yield deleteTree(treeId);
   }
   for (const treeId of addedTreeIds) {
     const tree = trees[treeId];
     yield createTree(tree);
-    yield* diffNodes({}, tree.nodes, treeId);
+    yield* diffNodes(new NodeMapWrapper(), tree.nodes, treeId);
     yield* diffEdges([], tree.edges, treeId);
   }
   for (const treeId of bothTreeIds) {

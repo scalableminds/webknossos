@@ -31,6 +31,7 @@ import type {
   TreeMapType,
   CommentType,
 } from "oxalis/store";
+import { NodeMapWrapper } from "oxalis/store";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
@@ -140,7 +141,7 @@ export function deleteNode(
         return deleteTree(state, activeTree, timestamp);
       } else {
         // Use split-algorithmus. If we delete a node which is only connected via one edge,
-        // this algorithmus will only produce one tree (which reuses the old oen)
+        // this algorithm will only produce one tree (which reuses the old one)
 
         // Build a hashmap which contains for each node all edges leading/leaving into/from the node
         const nodeToEdgesMap: { [number]: Array<EdgeType> } = {};
@@ -175,7 +176,7 @@ export function deleteNode(
             const edges = nodeToEdgesMap[nodeId];
 
             if (nodeId !== node.id) {
-              newTree.nodes[nodeId] = activeTree.nodes[nodeId];
+              newTree.nodes.set(nodeId, activeTree.nodes.get(nodeId));
             }
 
             for (const edge of edges) {
@@ -209,7 +210,7 @@ export function deleteNode(
               comments: [],
               edges: [],
               name: activeTree.name,
-              nodes: {},
+              nodes: new NodeMapWrapper(),
               timestamp: activeTree.timestamp,
               treeId: activeTree.treeId,
               isVisible: true,
@@ -238,7 +239,7 @@ export function deleteNode(
         // Write branchpoints into correct trees
         activeTree.branchPoints.forEach(branchpoint => {
           cutTrees.forEach(newTree => {
-            if (newTree.nodes[branchpoint.nodeId]) {
+            if (newTree.nodes.get(branchpoint.nodeId)) {
               newTree.branchPoints.push(branchpoint);
             }
           });
@@ -247,7 +248,7 @@ export function deleteNode(
         // Write comments into correct trees
         activeTree.comments.forEach(comment => {
           cutTrees.forEach(newTree => {
-            if (newTree.nodes[comment.nodeId]) {
+            if (newTree.nodes.get(comment.nodeId)) {
               newTree.comments.push(comment);
             }
           });
@@ -339,7 +340,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const tree: TreeType = {
         name,
         treeId: newTreeId,
-        nodes: {},
+        nodes: new NodeMapWrapper(),
         timestamp,
         color: ColorGenerator.distinctColorForId(newTreeId),
         branchPoints: [],

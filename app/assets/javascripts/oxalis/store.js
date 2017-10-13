@@ -4,7 +4,7 @@
  */
 
 /* eslint-disable no-useless-computed-key */
-
+import _ from "lodash";
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
@@ -68,7 +68,61 @@ export type BranchPointType = {
   +nodeId: number,
 };
 
-export type NodeMapType = { +[number]: NodeType };
+export class NodeMapWrapper<K, V> {
+  _map: Map<K, V>;
+  constructor(optIteratorOrObject: *) {
+    if (optIteratorOrObject && optIteratorOrObject[Symbol.iterator] != null) {
+      this._map = new Map(optIteratorOrObject);
+    } else {
+      this._map = new Map();
+      if (_.isObject(optIteratorOrObject)) {
+        Object.keys(optIteratorOrObject).forEach(key => {
+          this._map.set(+key, optIteratorOrObject[key]);
+        });
+      }
+    }
+  }
+
+  set(key: K, value: V) {
+    return this._map.set(key, value);
+  }
+
+  get(key: K): V {
+    const value = this._map.get(key);
+    if (value != null) {
+      throw new Error("Key not found");
+    }
+    return value;
+  }
+
+  clone(): NodeMapWrapper<K, V> {
+    return new NodeMapWrapper(this._map);
+  }
+
+  map<T>(fn: (value: V) => T): Array<T> {
+    const returnValue = [];
+    for (const v of this._map.values()) {
+      returnValue.push(fn(v));
+    }
+    return returnValue;
+  }
+
+  *[Symbol.iterator]() {
+    for (const item of this._map) {
+      yield item;
+    }
+  }
+
+  values() {
+    return this._map.values();
+  }
+
+  keys() {
+    return this._map.keys();
+  }
+}
+
+export type NodeMapType = NodeMapWrapper<number, NodeType>; // { +[number]: NodeType };
 
 export type BoundingBoxObjectType = {
   +topLeft: Vector3,
@@ -92,7 +146,7 @@ export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
-type TemporaryMutableNodeMapType = { [number]: NodeType };
+type TemporaryMutableNodeMapType = NodeMapWrapper<number, NodeType>; // { [number]: NodeType };
 export type TemporaryMutableTreeType = TreeTypeBase & {
   +nodes: TemporaryMutableNodeMapType,
 };
@@ -456,5 +510,7 @@ const store = createStore(
   applyMiddleware(overwriteActionMiddleware, sagaMiddleware),
 );
 sagaMiddleware.run(rootSaga);
+
+window.store = store;
 
 export default store;

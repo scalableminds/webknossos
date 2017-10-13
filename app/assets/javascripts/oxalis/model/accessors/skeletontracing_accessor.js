@@ -32,7 +32,7 @@ export function getActiveNode(tracing: TracingType) {
   return getSkeletonTracing(tracing).chain(skeletonTracing => {
     const { activeTreeId, activeNodeId } = skeletonTracing;
     if (activeTreeId != null && activeNodeId != null) {
-      return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes[activeNodeId]);
+      return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.get(activeNodeId));
     }
     return Maybe.Nothing();
   });
@@ -56,7 +56,7 @@ export function getActiveNodeFromTree(tracing: TracingType, tree: TreeType) {
   return getSkeletonTracing(tracing).chain(skeletonTracing => {
     const { activeNodeId } = skeletonTracing;
     if (activeNodeId != null) {
-      return Maybe.Just(tree.nodes[activeNodeId]);
+      return Maybe.Just(tree.nodes.get(activeNodeId));
     }
     return Maybe.Nothing();
   });
@@ -96,11 +96,11 @@ export function getNodeAndTree(tracing: TracingType, nodeId: ?number, treeId: ?n
     if (tree != null) {
       let node = null;
       if (nodeId != null) {
-        node = tree.nodes[nodeId];
+        node = tree.nodes.get(nodeId);
       } else {
         const { activeNodeId } = skeletonTracing;
         if (activeNodeId != null) {
-          node = tree.nodes[activeNodeId];
+          node = tree.nodes.get(activeNodeId);
         }
       }
       if (node != null) {
@@ -134,7 +134,6 @@ export function getBranchPoints(tracing: TracingType): Maybe<Array<BranchPointTy
 }
 
 export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> {
-  return Maybe.fromNullable(null);
   return getSkeletonTracing(tracing)
     .chain(skeletonTracing => Maybe.fromNullable(skeletonTracing.trees))
     .map(trees => ({

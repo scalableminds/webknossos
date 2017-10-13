@@ -213,6 +213,7 @@ export class OxalisModel {
       } else {
         const skeletonTracing: ServerSkeletonTracingType = (tracing: any);
 
+        const treecount = 1;
         let currentNewNodeId = 1;
         let currentTreeId = 1;
         function generateDummyTree(nodeCount) {
@@ -223,7 +224,11 @@ export class OxalisModel {
           while (counter++ < nodeCount) {
             nodes.push({
               id: currentNewNodeId++,
-              position: [5120 + 5000 * counter / nodeCount, 3725 + (currentTreeId - 1) * 100, 1545],
+              position: [
+                5120 + 5000 * counter / nodeCount,
+                3725 + (currentTreeId - 1) * treecount / 10,
+                1545,
+              ],
               rotation: [0, 270, 0],
               radius: 112.39999389648438,
               viewport: 1,
@@ -251,7 +256,7 @@ export class OxalisModel {
           };
         }
 
-        tracing.trees = _.range(10).map(() => generateDummyTree(100000));
+        // tracing.trees = _.range(treecount).map(() => generateDummyTree(1000000));
 
         Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }

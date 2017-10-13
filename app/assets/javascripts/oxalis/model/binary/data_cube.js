@@ -256,9 +256,9 @@ class DataCube {
         }
       }
 
-      if (!this.buckets[this.bucketIterator].shouldCollect()) {
-        throw new Error("All buckets have shouldCollect == false permanently");
-      }
+      // if (!this.buckets[this.bucketIterator].shouldCollect()) {
+      //   throw new Error("All buckets have shouldCollect == false permanently");
+      // }
 
       this.collectBucket(this.buckets[this.bucketIterator]);
       this.bucketCount--;

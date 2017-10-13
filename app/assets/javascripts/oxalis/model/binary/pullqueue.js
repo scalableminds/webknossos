@@ -78,7 +78,6 @@ class PullQueue {
   }
 
   async pullBatch(batch: Array<Vector4>): Promise<void> {
-    return;
     // Loading a bunch of buckets
     this.batchCount++;
 

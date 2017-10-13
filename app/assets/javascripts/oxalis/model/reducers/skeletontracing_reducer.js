@@ -29,6 +29,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, NodeType, BranchPointType } from "oxalis/store";
+import { NodeMapWrapper } from "oxalis/store";
 import type { ServerNodeType, ServerBranchPointType } from "oxalis/model";
 import type { ActionType } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
@@ -66,7 +67,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const trees = _.keyBy(
         action.tracing.trees.map(tree =>
           update(tree, {
-            nodes: { $set: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id") },
+            nodes: { $set: new NodeMapWrapper(_.keyBy(tree.nodes.map(serverNodeToNode), "id")) },
             color: {
               $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
             },
@@ -79,7 +80,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       );
 
       const activeNodeIdMaybe = Maybe.fromNullable(action.tracing.activeNodeId);
-      let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
+      let cachedMaxNodeId = _.max(_.flatMap(trees, __ => __.nodes.map(node => node.id)));
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
       let activeNodeId = Utils.toNullable(activeNodeIdMaybe);
@@ -151,12 +152,16 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                 viewport,
                 resolution,
                 timestamp,
-              ).map(([node, edges]) =>
-                update(state, {
+              ).map(([node, edges]) => {
+                const newNodeMapWrapper = new NodeMapWrapper(
+                  skeletonTracing.trees[tree.treeId].nodes,
+                );
+                newNodeMapWrapper.set(node.id, node);
+                return update(state, {
                   tracing: {
                     trees: {
                       [tree.treeId]: {
-                        nodes: { [node.id]: { $set: node } },
+                        nodes: { $set: newNodeMapWrapper },
                         edges: { $set: edges },
                       },
                     },
@@ -164,8 +169,8 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                     cachedMaxNodeId: { $set: node.id },
                     activeTreeId: { $set: tree.treeId },
                   },
-                }),
-              ),
+                });
+              }),
             )
             .getOrElse(state);
         }
@@ -209,15 +214,19 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             Constants.MAX_NODE_RADIUS,
           );
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
-            .map(([tree, node]) =>
-              update(state, {
+            .map(([tree, node]) => {
+              const newNodeMapWrapper = new NodeMapWrapper(
+                skeletonTracing.trees[tree.treeId].nodes,
+              );
+              newNodeMapWrapper.set(node.id, update(node, { radius: { $set: clampedRadius } }));
+              return update(state, {
                 tracing: {
                   trees: {
-                    [tree.treeId]: { nodes: { [node.id]: { radius: { $set: clampedRadius } } } },
+                    [tree.treeId]: { nodes: { $set: newNodeMapWrapper } },
                   },
                 },
-              }),
-            )
+              });
+            })
             .getOrElse(state);
         }
 
@@ -287,7 +296,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
           return getTree(skeletonTracing, action.treeId)
             .map(tree => {
-              const newActiveNodeId = _.max(_.map(trees[tree.treeId].nodes, "id")) || null;
+              const newActiveNodeId = _.max(trees[tree.treeId].nodes.map(el => el.id)) || null;
 
               return update(state, {
                 tracing: {
@@ -343,7 +352,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             (activeTreeIdIndex + increaseDecrease + treeIds.length) % treeIds.length;
 
           const newActiveTreeId = treeIds[newActiveTreeIdIndex];
-          const newActiveNodeId = _.max(_.map(trees[newActiveTreeId].nodes, "id")) || null;
+          const newActiveNodeId = _.max(trees[newActiveTreeId].nodes.map(el => el.id)) || null;
 
           return update(state, {
             tracing: {

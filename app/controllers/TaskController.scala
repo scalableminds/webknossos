@@ -228,12 +228,15 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {
-    AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen =>
-      if (numberOfOpen < MAX_OPEN_TASKS || user.hasAdminAccess)
-        Fox.successful(numberOfOpen)
-      else
+  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = {
+    AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
+      if (numberOfOpen < MAX_OPEN_TASKS) {
+        Fox.successful(user.teamNames)
+      } else if (user.hasAdminAccess) {
+        Fox.successful(user.adminTeamNames)
+      } else {
         Fox.failure(Messages("task.tooManyOpenOnes"))
+      }
     }
   }
 
@@ -260,9 +263,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 //    }
   }
 
-  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+  def tryToGetNextAssignmentFor(user: User, teams: List[String], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     val s = System.currentTimeMillis()
-    TaskService.findAssignableFor(user).futureBox.flatMap {
+    TaskService.findAssignableFor(user, teams).futureBox.flatMap {
       case Full(assignment) =>
         NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
         TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.take(assignment)).flatMap {
@@ -270,7 +273,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           if (updateResult.n >= 1)
             Fox.successful(assignment)
           else if (retryCount > 0)
-            tryToGetNextAssignmentFor(user, retryCount - 1)
+            tryToGetNextAssignmentFor(user, teams, retryCount - 1)
           else {
             val e = System.currentTimeMillis()
             logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
@@ -282,7 +285,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       case f: Failure =>
         logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
         if (retryCount > 0)
-          tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
+          tryToGetNextAssignmentFor(user, teams, retryCount - 1).futureBox
         else {
           logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to FAILURE")
           Fox.failure(Messages("assignment.retrieval.failed")).futureBox
@@ -297,9 +300,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val user = request.user
     val id = UUID.randomUUID().toString
     for {
-      _ <- ensureMaxNumberOfOpenTasks(user)
+      teams <- getAllowedTeamsForNextTask(user)
       _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      assignment <- tryToGetNextAssignmentFor(user)
+      assignment <- tryToGetNextAssignmentFor(user, teams)
       task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content"))
@@ -332,8 +335,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       !l.map(_._task).contains(next._task)
 
     def findNextAssignments = {
-      TaskService.findAssignable(user) |>>> takeUpTo[OpenAssignment](limit, uniqueIdFilter)
+      TaskService.findAssignable(user, user.teamNames) |>>> takeUpTo[OpenAssignment](limit, uniqueIdFilter)
     }
+
     for {
       assignments <- findNextAssignments
     } yield {

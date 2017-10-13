@@ -79,8 +79,9 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   private def noRequiredExperience =
     Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
 
-  def findOrderedByPriority(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
+  def findOrderedByPriority(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
     find(validPriorityQ ++ Json.obj(
+        "team" -> Json.obj("$in" -> teams),
         "$or" -> (experiencesToQuery(user) :+ noRequiredExperience)))
       .sort(byPriority)
       .cursor[OpenAssignment]()

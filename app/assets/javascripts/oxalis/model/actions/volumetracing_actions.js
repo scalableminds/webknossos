@@ -16,7 +16,7 @@ type FinishEditingActionType = { type: "FINISH_EDITING" };
 type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
 type SetToolActionType = { type: "SET_TOOL", tool: VolumeToolType };
 type CycleToolActionType = { type: "CYCLE_TOOL" };
-type CopySegmentationLayerActionType = {
+export type CopySegmentationLayerActionType = {
   type: "COPY_SEGMENTATION_LAYER",
   source: "previousLayer" | "nextLayer",
 };

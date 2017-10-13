@@ -261,6 +261,41 @@ const Utils = {
     return { both, onlyA, onlyB };
   },
 
+  diffArrays2(stateA, stateB) {
+    //console.time("without map");
+    //console.time("sorting");
+    stateA = Object.keys(stateA).map(x => +x);
+    stateB = Object.keys(stateB).map(x => +x);
+    //console.timeEnd("sorting");
+    let pointerA = 0;
+    let pointerB = 0;
+
+    let both = [];
+    let onlyA = [];
+    let onlyB = [];
+
+    while (pointerA < stateA.length && pointerB < stateB.length) {
+      let elemA = stateA[pointerA];
+      let elemB = stateB[pointerB];
+      if (elemA == elemB) {
+        both.push(elemA);
+        pointerA++;
+        pointerB++;
+      } else if (elemA < elemB) {
+        onlyA.push(elemA);
+        pointerA++;
+      } else {
+        onlyB.push(elemB);
+        pointerAB++;
+      }
+    }
+
+    onlyA = onlyA.concat(stateA.slice(pointerA));
+    onlyB = onlyB.concat(stateB.slice(pointerB));
+    //console.timeEnd("without map");
+    return { both, onlyA, onlyB };
+  },
+
   zipMaybe<T, U>(maybeA: Maybe<T>, maybeB: Maybe<U>): Maybe<[T, U]> {
     return maybeA.chain(valueA => maybeB.map(valueB => [valueA, valueB]));
   },

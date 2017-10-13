@@ -49,6 +49,9 @@ class VolumeTracingController {
       v: () => {
         Store.dispatch(copySegmentationLayerAction());
       },
+      "shift + v": () => {
+        Store.dispatch(copySegmentationLayerAction(true));
+      },
     });
 
     // no merging for now

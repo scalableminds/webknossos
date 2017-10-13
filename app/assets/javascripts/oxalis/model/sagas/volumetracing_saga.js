@@ -7,6 +7,7 @@ import {
   updateDirectionAction,
   resetContourAction,
 } from "oxalis/model/actions/volumetracing_actions";
+import type { CopySegmentationLayerActionType } from "oxalis/model/actions/volumetracing_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -110,7 +111,7 @@ function* labelWithIterator(iterator): Generator<*, *, *> {
   yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
 }
 
-function* copySegmentationLayer(): Generator<*, *, *> {
+function* copySegmentationLayer(action: CopySegmentationLayerActionType): Generator<*, *, *> {
   const activeViewport = yield select(state => state.viewModeData.plane.activeViewport);
   if (activeViewport === "TDView") {
     // Cannot copy labels from 3D view
@@ -120,7 +121,7 @@ function* copySegmentationLayer(): Generator<*, *, *> {
   const binary = yield call([Model, Model.getSegmentationBinary]);
   const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
   const zoom = yield select(state => state.flycam.zoomStep);
-  const delta = Math.round(Constants.VIEWPORT_WIDTH / 2 * zoom);
+  const halfViewportWidth = Math.round(Constants.VIEWPORT_WIDTH / 2 * zoom);
   const activeCellId = yield select(state => state.tracing.activeCellId);
 
   const copyVoxelLabel = function(voxelTemplateAddress, voxelTargetAddress) {
@@ -137,12 +138,17 @@ function* copySegmentationLayer(): Generator<*, *, *> {
     }
   };
 
+  const directionInverter = action.source === "nextLayer" ? 1 : -1;
+  const spaceDirectionOrtho = yield select(state => state.flycam.spaceDirectionOrtho);
+  const dim = Dimensions.getIndices(activeViewport)[2];
+  const direction = spaceDirectionOrtho[dim];
+
   switch (activeViewport) {
     case "PLANE_XY": {
       const z = position[2];
-      for (let x = position[0] - delta; x < position[0] + delta; x++) {
-        for (let y = position[1] - delta; y < position[1] + delta; y++) {
-          copyVoxelLabel([x, y, position[2] - 1], [x, y, z]);
+      for (let x = position[0] - halfViewportWidth; x < position[0] + halfViewportWidth; x++) {
+        for (let y = position[1] - halfViewportWidth; y < position[1] + halfViewportWidth; y++) {
+          copyVoxelLabel([x, y, position[2] + direction * directionInverter], [x, y, z]);
         }
       }
       break;
@@ -150,9 +156,9 @@ function* copySegmentationLayer(): Generator<*, *, *> {
 
     case "PLANE_YZ": {
       const x = position[0];
-      for (let y = position[1] - delta; y < position[1] + delta; y++) {
-        for (let z = position[2] - delta; z < position[2] + delta; z++) {
-          copyVoxelLabel([position[0] - 1, y, z], [x, y, z]);
+      for (let y = position[1] - halfViewportWidth; y < position[1] + halfViewportWidth; y++) {
+        for (let z = position[2] - halfViewportWidth; z < position[2] + halfViewportWidth; z++) {
+          copyVoxelLabel([position[0] + direction * directionInverter, y, z], [x, y, z]);
         }
       }
       break;
@@ -160,9 +166,9 @@ function* copySegmentationLayer(): Generator<*, *, *> {
 
     case "PLANE_XZ": {
       const y = position[1];
-      for (let x = position[0] - delta; x < position[0] + delta; x++) {
-        for (let z = position[2] - delta; z < position[2] + delta; z++) {
-          copyVoxelLabel([x, position[1] - 1, z], [x, y, z]);
+      for (let x = position[0] - halfViewportWidth; x < position[0] + halfViewportWidth; x++) {
+        for (let z = position[2] - halfViewportWidth; z < position[2] + halfViewportWidth; z++) {
+          copyVoxelLabel([x, position[1] + direction * directionInverter, z], [x, y, z]);
         }
       }
       break;

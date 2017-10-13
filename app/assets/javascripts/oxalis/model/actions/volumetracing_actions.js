@@ -16,7 +16,10 @@ type FinishEditingActionType = { type: "FINISH_EDITING" };
 type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
 type SetToolActionType = { type: "SET_TOOL", tool: VolumeToolType };
 type CycleToolActionType = { type: "CYCLE_TOOL" };
-type CopySegmentationLayerActionType = { type: "COPY_SEGMENTATION_LAYER" };
+type CopySegmentationLayerActionType = {
+  type: "COPY_SEGMENTATION_LAYER",
+  source: "previousLayer" | "nextLayer",
+};
 type UpdateDirectionActionType = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourActionType = { type: "RESET_CONTOUR" };
 type SetBrushPositionActionType = { type: "SET_BRUSH_POSITION", position: Vector2 };
@@ -85,8 +88,11 @@ export const cycleToolAction = (): CycleToolActionType => ({
   type: "CYCLE_TOOL",
 });
 
-export const copySegmentationLayerAction = (): CopySegmentationLayerActionType => ({
+export const copySegmentationLayerAction = (
+  fromNext?: boolean,
+): CopySegmentationLayerActionType => ({
   type: "COPY_SEGMENTATION_LAYER",
+  source: fromNext ? "nextLayer" : "previousLayer",
 });
 
 export const updateDirectionAction = (centroid: Vector3): UpdateDirectionActionType => ({

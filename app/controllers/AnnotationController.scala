@@ -220,8 +220,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def empty(typ: String, id: String) = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
-  def traceReadOnly(typ: String, id: String) = UserAwareAction { implicit request =>
-    Ok(empty)
+  def emptyReadOnly(typ: String, id: String) = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html("")))
   }
 
 

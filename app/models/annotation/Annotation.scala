@@ -92,6 +92,7 @@ case class Annotation(
         "content" -> tracingReference,
         "dataSetName" -> dataSetName,
         "dataStore" -> dataSet.dataStoreInfo,
+        "isPublic" -> isPublic,
         "settings" -> settings,
         "tracingTime" -> tracingTime,
         "tags" -> (tags ++ Set(dataSetName, tracingReference.typ.toString)),

@@ -107,7 +107,7 @@ GET           /annotations/:typ/:id/revert                                      
 POST          /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                             controllers.AnnotationController.empty(typ: String, id: String)
-GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.empty(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.emptyReadOnly(typ: String, id: String)
 
 GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)

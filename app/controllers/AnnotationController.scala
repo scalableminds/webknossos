@@ -186,7 +186,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      restrictions <- restrictionsFor(AnnotationIdentifier(id, typ))
+      restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
       finished <- annotation.muta.finishAnnotation(request.user, restrictions).futureBox
     } yield {
       finished match {

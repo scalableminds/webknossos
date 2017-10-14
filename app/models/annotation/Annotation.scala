@@ -94,7 +94,7 @@ case class Annotation(
         "dataStore" -> dataSet.dataStoreInfo,
         "settings" -> settings,
         "tracingTime" -> tracingTime,
-        "tags" -> tags,
+        "tags" -> (tags ++ Set(dataSetName, tracingReference.typ.toString)),
         "user" -> userJson
       )
     }
@@ -217,7 +217,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[String] = Nil)(implicit ctx: DBAccessContext) =
     count(defaultFindForUserQ(_user, annotationType) ++ Json.obj("team" -> Json.obj("$nin" -> excludeTeams)))
-  
+
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("isActive" -> true, "_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
 

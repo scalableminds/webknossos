@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 20011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+* Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
 */
 package com.scalableminds.util.mvc
 

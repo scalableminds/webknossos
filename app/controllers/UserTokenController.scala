@@ -6,11 +6,11 @@ package controllers
 import javax.inject.Inject
 
 import com.scalableminds.braingames.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import models.annotation._
 import models.user.{User, UserToken, UserTokenDAO}
-import net.liftweb.common.Full
+import net.liftweb.common.{Box, Full}
 import oxalis.security.Secured
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
@@ -48,13 +48,12 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {
-        userToken <- UserTokenDAO.findByToken(token)
-        user <- userToken.user
-        answer <- accessRequest.resourceType match {
+          userBox <- userForToken(token).futureBox
+          answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
-            handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, user)
+            handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)
           case AccessResourceType.tracing =>
-            handleTracingAccess(accessRequest.resourceId, accessRequest.mode, user)
+            handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox)
           case _ =>
             Fox.successful(UserAccessAnswer(false, Some("Invalid access token.")))
         }
@@ -64,12 +63,25 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, user: User) = {
-    Fox.successful(UserAccessAnswer(true))
+  private def userForToken(token: String)(implicit ctx: DBAccessContext): Fox[User] = {
+    for {
+      userToken <- UserTokenDAO.findByToken(token) ?~> "Could not match user access token"
+      user <- userToken.user ?~> "Could not find user for user access token"
+    } yield {
+      user
+    }
   }
 
-  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, user: User) = {
-    implicit val ctx = GlobalAccessContext //TODO: RocksDB is this really necessary?
+  private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, userBox: Box[User]) = {
+    //TODO: RocksDB handle data source access. public datasets should be accessible without a user
+    for {
+      user <- userBox.toFox
+    } yield {
+      UserAccessAnswer(true)
+    }
+  }
+
+  private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext) = {
 
     def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
       val annotationFox = AnnotationDAO.findByTracingId(tracingId)
@@ -85,8 +97,8 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
     def checkRestrictions(restrictions: AnnotationRestrictions) = {
       mode match {
-        case AccessMode.read => restrictions.allowAccess(user)
-        case AccessMode.write => restrictions.allowUpdate(user)
+        case AccessMode.read => restrictions.allowAccess(userBox)
+        case AccessMode.write => restrictions.allowUpdate(userBox)
       }
     }
 

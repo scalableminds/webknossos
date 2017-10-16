@@ -10,6 +10,7 @@ import type {
   APITeamType,
   APIProjectType,
   APITaskType,
+  APIAnnotationType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 
@@ -123,6 +124,10 @@ export async function deleteProject(projectName: string): Promise<void> {
 }
 
 // ### Tasks
+export async function getAnnotationsForTask(taskId: string): Promise<void> {
+  return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
+}
+
 export async function deleteTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}`, {
     method: "DELETE",
@@ -156,4 +161,23 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
   });
 
   return tasks;
+}
+
+// ### Annotations
+export async function reOpenAnnotation(annotationId: string): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/annotations/Task/${annotationId}/reopen`);
+}
+
+export async function finishAnnotation(annotationId: string): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/annotations/Task/${annotationId}/finish`);
+}
+
+export async function resetAnnotation(annotationId: string): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/annotations/Task/${annotationId}/reset`);
+}
+
+export async function deleteAnnotation(annotationId: string): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/annotations/Task/${annotationId}`, {
+    method: "DELETE",
+  });
 }

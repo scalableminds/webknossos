@@ -28,6 +28,7 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
+  "annotation.delete": "Do you really want to delete this annotation?",
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "project.delete": "Do you really want to delete this project?",

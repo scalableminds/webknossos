@@ -12,6 +12,7 @@ import TaskSearchForm from "admin/views/task/task_search_form";
 import { deleteTask, getTasks } from "admin/admin_rest_api";
 import TemplateHelpers from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
+import TaskAnnotationView from "admin/views/task/task_annotation_view";
 import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 
@@ -128,6 +129,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                 defaultPageSize: 50,
               }}
               style={{ marginTop: 30, marginBotton: 30 }}
+              expandedRowRender={task => <TaskAnnotationView task={task} />}
             >
               <Column title="#" dataIndex="id" key="id" sorter={Utils.localeCompareBy("id")} />
               <Column

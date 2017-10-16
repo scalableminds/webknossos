@@ -364,9 +364,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       userId <- (request.body \ "userId").asOpt[String].toFox
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      result <- annotation.muta.transferToUser(user)
+      annotation <- annotation.muta.transferToUser(user)
+      json <- annotationJson(request.user, annotation, exclude = List("content"))
     } yield {
-      JsonOk(Messages("annotation.transfered"))
+      JsonOk(json)
     }
   }
 

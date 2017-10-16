@@ -77,7 +77,7 @@ export type APIAnnotationType = {
     +isAnonymous: boolean,
     +teams: Array<APITeamRoleType>,
   },
-  +created: string,
+  +modified: string,
   +stateLabel: string,
   +state: { +isAssigned: boolean, +isFinished: boolean, +isInProgress: boolean },
   +id: string,

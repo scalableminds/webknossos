@@ -171,7 +171,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               </Select>
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button type="primary" htmlType="submit" size="default" disabled={this.state.selectedTaskType==null}>
                 Merge
               </Button>
             </Form.Item>
@@ -192,7 +192,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               </Select>
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button type="primary" htmlType="submit" size="default" disabled={this.state.selectedProject==null}>
                 Merge
               </Button>
             </Form.Item>
@@ -226,7 +226,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               />
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button type="primary" htmlType="submit" size="default" disabled={this.state.selectedExplorativeAnnotation.length != 24}>
                 Merge
               </Button>
             </Form.Item>

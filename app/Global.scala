@@ -37,6 +37,10 @@ object Global extends GlobalSettings with LazyLogging{
       UserTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
     }
 
+    CleanUpService.register("deletion of openAssignments with zero instances", OpenAssignment.pruningInterval) {
+      OpenAssignmentDAO.removeZeroInstanceAssignments()(GlobalAccessContext).map(r => s"deleted ${r.n}")
+    }
+
     super.onStart(app)
   }
 

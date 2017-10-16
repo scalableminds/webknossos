@@ -114,6 +114,7 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
         method: "POST",
         headers: { "X-Date": `${timestamp}` },
         data: compactBatch,
+        compress: true,
       },
     );
     yield put(setVersionNumberAction(version + compactBatch.length));

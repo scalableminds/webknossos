@@ -120,6 +120,7 @@ test("SaveSaga should send request to server", t => {
       method: "POST",
       headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
+      compress: true,
     }),
   );
 });
@@ -142,6 +143,7 @@ test("SaveSaga should retry update actions", t => {
       method: "POST",
       headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
+      compress: true,
     }),
   );
 
@@ -170,6 +172,7 @@ test("SaveSaga should escalate on permanent client error update actions", t => {
       method: "POST",
       headers: { "X-Date": `${TIMESTAMP}` },
       data: saveQueueWithVersions,
+      compress: true,
     }),
   );
 

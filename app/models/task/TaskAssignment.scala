@@ -24,7 +24,7 @@ import scala.concurrent.{ExecutionContext, Future}
  */
 trait TaskAssignment extends FoxImplicits with LazyLogging{
 
-  def findNextAssignment(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment]
+  def findNextAssignment(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[OpenAssignment]
 
   def findAllAssignments(implicit ctx: DBAccessContext): Enumerator[OpenAssignment]
 
@@ -58,37 +58,25 @@ trait TaskAssignment extends FoxImplicits with LazyLogging{
 
   }
 
-  def findAssignable(user: User)(implicit ctx: DBAccessContext) = {
-    val cache = mutable.HashSet[BSONObjectID]()
+  def findAssignable(user: User, teams: List[String])(implicit ctx: DBAccessContext) = {
     val alreadyDoneFilter = filterM[OpenAssignment]{ assignment =>
-      if (cache.contains(assignment._task)) {
-        Future.successful(false)
-      } else {
-        AnnotationService.countTaskOf(user, assignment._task).futureBox.map { count =>
-          if (count.contains(0)) {
-            true
-          } else {
-            cache.add(assignment._task)
-            false
-          }
-        }
-      }
+      AnnotationService.countTaskOf(user, assignment._task).futureBox.map(_.contains(0))
     }
 
-    findNextAssignment(user)(ctx) &> alreadyDoneFilter
+    findNextAssignment(user, teams)(ctx) &> alreadyDoneFilter
   }
 
-  def findAllAssignableFor(user: User)(implicit ctx: DBAccessContext): Fox[List[OpenAssignment]] = {
-    findAssignable(user) |>>> Iteratee.getChunks[OpenAssignment]
+  def findAllAssignableFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[List[OpenAssignment]] = {
+    findAssignable(user, teams) |>>> Iteratee.getChunks[OpenAssignment]
   }
 
-  def findAssignableFor(user: User)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
-    findAssignable(user) |>>> Iteratee.head[OpenAssignment]
+  def findAssignableFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+    findAssignable(user, teams) |>>> Iteratee.head[OpenAssignment]
   }
 
-  def allNextTasksForUser(user: User)(implicit ctx: DBAccessContext): Fox[List[Task]] =
-    findAllAssignableFor(user).flatMap(assignments => Fox.serialSequence(assignments)(_.task).map(_.flatten))
+  def allNextTasksForUser(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[List[Task]] =
+    findAllAssignableFor(user, teams).flatMap(assignments => Fox.serialSequence(assignments)(_.task).map(_.flatten))
 
-  def nextTaskForUser(user: User)(implicit ctx: DBAccessContext): Fox[Task] =
-    findAssignableFor(user).flatMap(_.task)
+  def nextTaskForUser(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Task] =
+    findAssignableFor(user, teams).flatMap(_.task)
 }

@@ -2,7 +2,7 @@
 
 wrap(repo: "scalableminds/webknossos-datastore") {
   
-  env.SBT_VERSION_TAG = "sbt-0.13.9_mongo-3.2.1_node-7.x_jdk-8"
+  env.SBT_VERSION_TAG = "sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8"
   
   stage("Prepare") {
     // sh "sudo /var/lib/jenkins/fix_workspace.sh webknossos-datastore"
@@ -26,7 +26,7 @@ wrap(repo: "scalableminds/webknossos-datastore") {
     sh """
       DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos-datastore &
       sleep 10
-      curl -v http://localhost:9090/data/health
+      curl --retry 3 --max-time 15 -v http://localhost:9090/data/health
       docker-compose down --volumes --remove-orphans
     """
   }

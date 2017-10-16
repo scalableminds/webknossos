@@ -13,10 +13,10 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.trueaccord.scalapb.json.{JsonFormat, Printer}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import net.liftweb.common.Failure
 import org.json4s.JsonAST._
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, Reads}
-import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -115,11 +115,11 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStatistics).flatMap { _ =>
           updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
             previousVersion.flatMap { version =>
-              //if (version + 1 == updateGroup.version) {
+              if (version + 1 == updateGroup.version) {
                 tracingService.handleUpdateGroup(tracingId, updateGroup).map(_ => updateGroup.version)
-              //} else {
-              //  Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
-              //}
+              } else {
+                Failure(s"incorrect version. expected: ${version + 1}; got: ${updateGroup.version}")
+              }
             }
           }
         }.map(_ => Ok)

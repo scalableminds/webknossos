@@ -31,5 +31,5 @@ wrap(repo: "scalableminds/webknossos-datastore") {
     """
   }
 
-  dockerPublish { repo = "scalableminds/webknossos-datastore" }
+  dockerPublish(repo: "scalableminds/webknossos-datastore")
 }

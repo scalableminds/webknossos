@@ -66,7 +66,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       const projects = await Request.receiveJSON("/api/projects", { doNotCatch: true });
       this.setState({
         taskTypes: taskTypes.map(taskType => ({ id: taskType.id, label: taskType.summary })),
-        projects: projects.map(project => project.name),
+        projects: projects.map(project => ({ id: project.id, label: project.name })),
       });
     })();
   }
@@ -185,8 +185,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={this.handleChangeMergeProject}
               >
                 {this.state.projects.map(project => (
-                  <Select.Option key={project} value={project}>
-                    {project}
+                  <Select.Option key={project.id} value={project.id}>
+                    {project.label}
                   </Select.Option>
                 ))}
               </Select>

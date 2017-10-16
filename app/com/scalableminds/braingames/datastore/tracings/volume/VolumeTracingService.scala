@@ -62,7 +62,7 @@ class VolumeTracingService @Inject()(
         case f: Failure =>
           Fox.failure(f.msg)
       }
-    }.map(t => save(t, Some(tracingId), updateGroup.version))
+    }.map(t => save(t.copy(version = updateGroup.version), Some(tracingId), updateGroup.version))
   }
 
   def initializeWithData(tracingId: String, tracing: VolumeTracing, dataSource: DataSource, initialData: File): Box[_] = {

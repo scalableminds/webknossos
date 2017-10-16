@@ -135,7 +135,7 @@ class Navbar extends React.PureComponent<Props> {
                 }
               >
                 <Menu.Item key="resetpassword">
-                  <Link to="/reset">Reset Password</Link>
+                  <Link to="/changepassword">Change Password</Link>
                 </Menu.Item>
                 <Menu.Item key="logout">
                   <Link

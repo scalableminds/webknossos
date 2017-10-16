@@ -34,6 +34,8 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   };
 
   componentWillUnmount() {
+    // do a complete page refresh to make sure all tracing data is garbage
+    // collected and all events are canceled, etc.
     location.reload();
   }
 

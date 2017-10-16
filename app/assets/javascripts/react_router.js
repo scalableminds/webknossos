@@ -404,7 +404,7 @@ class ReactRouter extends React.Component<*> {
                 <Route path="/register" component={RegistrationView} />
                 <Route path="/reset" component={StartResetPasswordView} />
                 <Route path="/finishreset" component={FinishResetPasswordView} />
-                <Route path="/api/changepassword" component={ChangePasswordView} />
+                <Route path="/changepassword" component={ChangePasswordView} />
                 <Route path="/spotlight" component={SpotlightView} />
                 <Route path="/datasets/:id/view" render={this.tracingViewPublic} />
               </Switch>

@@ -23,14 +23,14 @@ GET           /help/keyboardshortcuts                                           
 GET           /register                                                         controllers.Authentication.empty
 GET           /login                                                            controllers.Authentication.empty
 GET           /reset                                                            controllers.Authentication.empty
+GET           /changepassword                                                   controllers.Authentication.empty
 GET           /finishreset                                                      controllers.Authentication.empty
-GET           /api/changepassword                                               controllers.Authentication.empty
 POST          /api/register                                                     controllers.Authentication.handleRegistration
 POST          /api/login                                                        controllers.Authentication.authenticate
 GET           /api/switch                                                       controllers.Authentication.switchTo(to: String)
 POST          /api/reset                                                        controllers.Authentication.handleStartResetPassword
 POST          /api/changepw                                                     controllers.Authentication.changePassword
-POST          /api/resetPassword                                                 controllers.Authentication.handleResetPassword
+POST          /api/resetPassword                                                controllers.Authentication.handleResetPassword
 GET           /api/logout                                                       controllers.Authentication.logout
 GET           /api/getLoginToken                                                controllers.Authentication.activateLoginToken
 GET           /api/deleteLoginToken                                             controllers.Authentication.deactivateLoginToken

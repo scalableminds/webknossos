@@ -13,6 +13,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, AnnotationDAO}
 import models.binary._
+import models.user.UserTokenService
 import models.user.time.TimeSpanService
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -72,20 +73,21 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def authorizeTracingUpdates(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
+  def handleTracingUpdateReport(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       tracingId <- (request.body \ "tracingId").asOpt[String].toFox
       annotation: Annotation <- AnnotationDAO.findByTracingId(tracingId)(GlobalAccessContext)
-      user <- annotation.user
       timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
       statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
+      userTokenOpt = (request.body \ "userToken").asOpt[String]
       _ <- statisticsOpt match {
         case Some(statistics) => AnnotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
         case None => Fox.successful()
       }
       _ <- AnnotationDAO.updateModifiedTimestamp(annotation._id)(GlobalAccessContext)
+      userBox <- UserTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
     } yield {
-      TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext)
+      userBox.map(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
       Ok
     }
   }

@@ -10,7 +10,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.Fox
 import models.annotation._
 import models.binary.DataSetDAO
-import models.user.{User, UserToken, UserTokenDAO}
+import models.user.{User, UserToken, UserTokenDAO, UserTokenService}
 import net.liftweb.common.{Box, Full}
 import oxalis.security.Secured
 import play.api.i18n.MessagesApi
@@ -48,9 +48,9 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {
-          userBox <- userForToken(token)(GlobalAccessContext).futureBox
-          ctx = DBAccessContext(userBox)
-          answer <- accessRequest.resourceType match {
+        userBox <- UserTokenService.userForToken(token)(GlobalAccessContext).futureBox
+        ctx = DBAccessContext(userBox)
+        answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
           case AccessResourceType.tracing =>
@@ -64,14 +64,6 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  private def userForToken(token: String)(implicit ctx: DBAccessContext): Fox[User] = {
-    for {
-      userToken <- UserTokenDAO.findByToken(token) ?~> "Could not match user access token"
-      user <- userToken.user ?~> "Could not find user for user access token"
-    } yield {
-      user
-    }
-  }
 
   private def handleDataSourceAccess(dataSourceName: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
     //Note: reading access is ensured in findOneBySourceName, depending on the implicit DBAccessContext

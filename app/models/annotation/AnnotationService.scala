@@ -10,9 +10,8 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, S
 import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
-import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils, BoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler

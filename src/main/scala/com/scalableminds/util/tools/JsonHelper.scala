@@ -7,7 +7,6 @@ import java.io.FileNotFoundException
 import java.nio.file._
 
 import com.scalableminds.util.io.FileIO
-import com.scalableminds.util.mvc.BoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.i18n.Messages

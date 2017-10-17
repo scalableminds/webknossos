@@ -3,7 +3,7 @@
 */
 package com.scalableminds.util.mvc
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import net.liftweb.common.{Full, _}
 import play.api.http.Status._
 import play.api.http.{HeaderNames, Status, Writeable}
@@ -74,23 +74,6 @@ trait ResultImplicits extends ResultBox with I18nSupport{
 
 //  implicit def box2ResultBox[T <: Result](b: Box[T]) = new ResultBox(b)
 }
-
-trait BoxImplicits {
-
-  implicit def option2Box[T](in: Option[T]): Box[T] = Box(in)
-
-  implicit def box2Option[T](in: Box[T]): Option[T] = in match {
-    case Full(t) => Some(t)
-    case _ => None
-  }
-
-  implicit def jsResult2Box[T](result: JsResult[T]): Box[T] = result match {
-    case JsSuccess(value, _) => Full(value)
-    case JsError(e) => Failure(s"Invalid json: $e")
-  }
-}
-
-object BoxImplicits extends BoxImplicits
 
 class JsonResult(status: Int) extends Result(header = ResponseHeader(status), body = Enumerator(Array[Byte]())) with JsonResultAttribues {
 

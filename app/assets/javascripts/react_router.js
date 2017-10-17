@@ -2,12 +2,11 @@
 /* eslint-disable react/no-unused-prop-types */
 import _ from "lodash";
 import React from "react";
-import { Router, Route, Switch } from "react-router-dom";
+import { BrowserRouter, Route, Switch } from "react-router-dom";
 import { connect } from "react-redux";
 import { Layout, LocaleProvider } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";
 
-import app from "app";
 import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
 import { ControlModeEnum } from "oxalis/constants";
 import Navbar from "navbar";
@@ -57,7 +56,7 @@ import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
 
 const { Content } = Layout;
 
-type BrowserLocationType = {
+type ReactRouterLocationType = {
   key: string,
   pathname: string,
   search: string,
@@ -65,29 +64,31 @@ type BrowserLocationType = {
   state: Object,
 };
 
+export type ReactRouterHistoryType = {
+  length: number,
+  action: string,
+  location: ReactRouterLocationType,
+  pathname: string,
+  search: string,
+  hash: string,
+  state: string,
+  push: (string, ?Object) => void,
+  replace: (string, ?Object) => void,
+  go: number => void,
+  goBack: () => void,
+  goForward: () => void,
+  block: string => string,
+};
+
 type ReactRouterArgumentsType = {
-  location: BrowserLocationType,
+  location: ReactRouterLocationType,
   match: {
     params: { [string]: string },
     isExact: boolean,
     path: string,
     url: string,
   },
-  history: {
-    length: number,
-    action: string,
-    location: BrowserLocationType,
-    pathname: string,
-    search: string,
-    hash: string,
-    state: string,
-    push: (string, [Object]) => void,
-    replace: (string, [Object]) => void,
-    go: number => void,
-    goBack: () => void,
-    goForward: () => void,
-    block: string => string,
-  },
+  history: ReactRouterHistoryType,
 };
 
 // <Redirect
@@ -110,7 +111,12 @@ const SecuredRoute = ({ component: Component, render, isAuthenticated, ...rest }
 );
 
 class ReactRouter extends React.Component<*> {
-  showWithPagination = (View: any, Collection: any, options: Object = {}) => {
+  showWithPagination = (
+    history: ReactRouterHistoryType,
+    View: any,
+    Collection: any,
+    options: Object = {},
+  ) => {
     _.defaults(options, { addButtonText: null });
 
     const collection = new Collection(null, options);
@@ -123,84 +129,85 @@ class ReactRouter extends React.Component<*> {
 
     return (
       <div>
-        <BackboneWrapper backboneView={paginationView} />
-        <BackboneWrapper backboneView={view} />
+        <BackboneWrapper history={history} backboneView={paginationView} />
+        <BackboneWrapper history={history} backboneView={view} />
       </div>
     );
   };
 
-  projectTasks = ({ match }: ReactRouterArgumentsType) =>
-    this.showWithPagination(TaskListView, TaskCollection, {
+  projectTasks = ({ match, history }: ReactRouterArgumentsType) =>
+    this.showWithPagination(history, TaskListView, TaskCollection, {
       projectName: match.params.projectName,
       addButtonText: "Create New Task",
     });
 
-  projectEdit = ({ match }: ReactRouterArgumentsType) => {
+  projectEdit = ({ match, history }: ReactRouterArgumentsType) => {
     const model = new ProjectModel({ name: match.params.projectName });
     const view = new ProjectEditView({ model });
 
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} />;
   };
 
-  taskTypesCreate = ({ match }: ReactRouterArgumentsType) => {
+  taskTypesCreate = ({ match, history }: ReactRouterArgumentsType) => {
     const model = new TaskTypeModel({ id: match.params.taskTypeId });
     const view = new TaskTypeCreateView({ model });
 
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} />;
   };
 
-  taskTypesTasks = ({ match }: ReactRouterArgumentsType) =>
-    this.showWithPagination(TaskListView, TaskCollection, {
+  taskTypesTasks = ({ match, history }: ReactRouterArgumentsType) =>
+    this.showWithPagination(history, TaskListView, TaskCollection, {
       taskTypeId: match.params.taskTypeId,
       addButtonText: "Create New Task",
     });
 
-  taskOverview = () => {
+  taskOverview = ({ history }: ReactRouterArgumentsType) => {
     const collection = new TaskOverviewCollection();
     const view = new TaskOverviewView({ collection });
 
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} />;
   };
 
-  workload = () => this.showWithPagination(WorkloadListView, WorkloadCollection);
+  workload = ({ history }: ReactRouterArgumentsType) =>
+    this.showWithPagination(history, WorkloadListView, WorkloadCollection);
 
-  taskQuery = () => {
+  taskQuery = ({ history }: ReactRouterArgumentsType) => {
     const view = new TaskQueryView();
 
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} />;
   };
 
-  taskEdit = ({ match }: ReactRouterArgumentsType) => {
+  taskEdit = ({ match, history }: ReactRouterArgumentsType) => {
     const model = new TaskModel({ id: match.params.taskId });
     const view = new TaskCreateFromView({ model, type: "from_form" });
 
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} />;
   };
 
-  datasetAdd = () => {
+  datasetAdd = ({ history }: ReactRouterArgumentsType) => {
     const view = new DatasetAddView();
 
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} />;
   };
 
-  taskCreate = () => {
+  taskCreate = ({ history }: ReactRouterArgumentsType) => {
     const model = new TaskModel();
     const view = new TaskCreateView({ model });
 
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} />;
   };
 
-  projectCreate = () => {
+  projectCreate = ({ history }: ReactRouterArgumentsType) => {
     const model = new ProjectModel();
     const view = new ProjectCreateView({ model });
 
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} foo="kevin" />;
   };
 
-  scriptsCreate = ({ match }: ReactRouterArgumentsType) => {
+  scriptsCreate = ({ match, history }: ReactRouterArgumentsType) => {
     const model = new ScriptModel({ id: match.params.id });
     const view = new ScriptCreateView({ model });
-    return <BackboneWrapper backboneView={view} />;
+    return <BackboneWrapper history={history} backboneView={view} />;
   };
 
   tracingView = ({ match }: ReactRouterArgumentsType) => {
@@ -231,7 +238,7 @@ class ReactRouter extends React.Component<*> {
     const isAuthenticated = this.props.activeUser !== null;
 
     return (
-      <Router history={app.history}>
+      <BrowserRouter>
         <LocaleProvider locale={enUS}>
           <Layout>
             <Navbar isAuthenticated={isAuthenticated} />
@@ -411,7 +418,7 @@ class ReactRouter extends React.Component<*> {
             </Content>
           </Layout>
         </LocaleProvider>
-      </Router>
+      </BrowserRouter>
     );
   }
 }

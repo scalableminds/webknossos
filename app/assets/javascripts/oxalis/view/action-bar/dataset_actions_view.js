@@ -1,9 +1,9 @@
 // @flow
 import React, { PureComponent } from "react";
+import { withRouter } from "react-router-dom";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import app from "app";
 import { Button, Dropdown, Menu, Icon } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
@@ -16,6 +16,7 @@ import api from "oxalis/api/internal_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react-router";
 
 type Props = {
   // eslint-disable-next-line react/no-unused-prop-types
@@ -28,6 +29,7 @@ type Props = {
   dispatch: Dispatch<*>,
   task: ?TaskType,
   activeUser: APIUserType,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -55,7 +57,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
   handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
     const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/duplicate`;
-    app.history.push(url);
+    this.props.history.push(url);
   };
 
   handleFinish = async (event: SyntheticInputEvent<>) => {
@@ -63,7 +65,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
     const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
-      app.history.push(url);
+      this.props.history.push(url);
     }
   };
 
@@ -240,4 +242,4 @@ function mapStateToProps(state: OxalisState) {
   };
 }
 
-export default connect(mapStateToProps)(DatasetActionsView);
+export default withRouter(connect(mapStateToProps)(DatasetActionsView));

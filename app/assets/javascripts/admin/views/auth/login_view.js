@@ -1,18 +1,20 @@
 // @flow
 import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
+import { withRouter } from "react-router-dom";
 import Request from "libs/request";
 import messages from "messages";
-import app from "app";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { getActiveUser } from "admin/admin_rest_api";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 
 type Props = {
   form: Object,
   layout: "horizontal" | "inline",
+  history: ReactRouterHistoryType,
 };
 
 class LoginView extends React.PureComponent<Props> {
@@ -24,7 +26,7 @@ class LoginView extends React.PureComponent<Props> {
         await Request.sendJSONReceiveJSON("/api/login", { data: formValues });
         const user = await getActiveUser();
         Store.dispatch(setActiveUserAction(user));
-        app.history.push("/dashboard");
+        this.props.history.push("/dashboard");
       }
     });
   };
@@ -84,4 +86,4 @@ class LoginView extends React.PureComponent<Props> {
   }
 }
 
-export default Form.create()(LoginView);
+export default withRouter(Form.create()(LoginView));

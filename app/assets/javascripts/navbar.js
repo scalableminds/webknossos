@@ -2,15 +2,16 @@
 /* eslint-disable react/prefer-stateless-function */
 
 import React from "react";
+import { withRouter } from "react-router-dom";
 import { Layout, Menu, Icon } from "antd";
 import { Link } from "react-router-dom";
 import { connect } from "react-redux";
-import app from "app";
 import Request from "libs/request";
 import LoginView from "admin/views/auth/login_view";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react-router";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -18,6 +19,7 @@ const { Header } = Layout;
 type Props = {
   isAuthenticated: boolean,
   activeUser: APIUserType,
+  history: ReactRouterHistoryType,
 };
 
 class Navbar extends React.PureComponent<Props> {
@@ -28,7 +30,7 @@ class Navbar extends React.PureComponent<Props> {
       <Header style={navbarStyle}>
         <Menu
           mode="horizontal"
-          defaultSelectedkeys={[app.history.location.pathname]}
+          defaultSelectedkeys={[this.props.history.location.pathname]}
           style={{ lineHeight: "48px" }}
           theme="dark"
         >
@@ -164,4 +166,4 @@ const mapStateToProps = (state: OxalisState) => ({
   activeUser: state.activeUser,
 });
 
-export default connect(mapStateToProps)(Navbar);
+export default withRouter(connect(mapStateToProps)(Navbar));

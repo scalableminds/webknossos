@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import UserCollection from "admin/models/user/user_collection";
@@ -87,7 +86,7 @@ class ScriptCreateView extends Marionette.View {
 
     const formValues = FormSyphon.serialize(this.ui.form);
 
-    this.model.save(formValues).then(() => app.history.push("/scripts"));
+    this.model.save(formValues).then(() => this.props.history.push("/scripts"));
   }
 
   onRender() {

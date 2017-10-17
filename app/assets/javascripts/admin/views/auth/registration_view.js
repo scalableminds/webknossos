@@ -1,19 +1,20 @@
 // @flow
 
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
 import Request from "libs/request";
 import type { APITeamType } from "admin/api_flow_types";
 import Toast from "libs/toast";
-import app from "app";
+import type { ReactRouterHistoryType } from "react-router";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
 type Props = {
   form: Object,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -48,7 +49,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
           Toast.success(messages["auth.account_created"]);
           // else
           // Toast.success(messages["auth.automatic_user_activation"])
-          app.history.push("/login");
+          this.props.history.push("/login");
         });
       }
     });
@@ -241,4 +242,4 @@ class RegistrationView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(RegistrationView);
+export default withRouter(Form.create()(RegistrationView));

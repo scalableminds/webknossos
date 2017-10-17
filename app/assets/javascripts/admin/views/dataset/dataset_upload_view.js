@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import Request from "libs/request";
@@ -136,7 +135,7 @@ class DatasetUploadView extends Marionette.View {
           () => {
             Toast.success(messages["dataset.upload_success"]);
             const url = `/datasets/${form.name.value}/import`;
-            app.history.push(url);
+            this.props.history.push(url);
           },
           () => {
             this.ui.spinner.addClass("hidden");

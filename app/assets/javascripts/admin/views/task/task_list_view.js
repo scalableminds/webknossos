@@ -83,7 +83,7 @@ class TaskListView extends Marionette.CompositeView {
       urlParam = "";
     }
 
-    app.history.push(`/tasks/create${urlParam}`);
+    this.props.history.push(`/tasks/create${urlParam}`);
   }
 
   toggleAllDetails() {

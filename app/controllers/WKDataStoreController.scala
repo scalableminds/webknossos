@@ -33,9 +33,6 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       _ <- DataSetService.isProperDataSetName(uploadInfo.name) ?~> Messages("dataSet.name.invalid")
       _ <- DataSetService.checkIfNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
       _ <- uploadInfo.team.nonEmpty ?~> Messages("team.invalid")
-      // TODO RocksDB
-      //user <- DataTokenService.userFromToken(token) ?~> Messages("dataToken.user.invalid")
-      //_ <- ensureTeamAdministration(user, uploadInfo.team)
     } yield Ok
   }
 

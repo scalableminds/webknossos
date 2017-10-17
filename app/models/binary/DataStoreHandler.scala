@@ -9,13 +9,11 @@ import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.models.ImageThumbnail
-import com.scalableminds.braingames.datastore.tracings.TracingReference
-import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
+import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingSelector}
 import com.scalableminds.util.rpc.RPC
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.util.tools.JsonHelper.boxFormat
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.user.UserToken
 import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current

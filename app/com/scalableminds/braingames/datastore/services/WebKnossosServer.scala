@@ -72,10 +72,10 @@ class WebKnossosServer @Inject()(
       .post(id)
   }
 
-  def authorizeTracingUpdate(tracingId: String, timestamps: List[Long], statistics: Option[JsObject]): Fox[_] = {
-    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/authorizeTracingUpdates")
+  def reportTracingUpdates(tracingId: String, timestamps: List[Long], statistics: Option[JsObject], userToken: Option[String]): Fox[_] = {
+    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/handleTracingUpdateReport")
       .withQueryString("key" -> dataStoreKey)
-      .post(Json.obj("timestamps" -> timestamps, "statistics" -> statistics, "tracingId" -> tracingId))
+      .post(Json.obj("timestamps" -> timestamps, "statistics" -> statistics, "tracingId" -> tracingId, "userToken" -> userToken))
   }
 
   def requestUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {

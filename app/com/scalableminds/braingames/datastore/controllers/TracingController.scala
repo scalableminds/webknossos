@@ -111,7 +111,8 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         val timestamps = updateGroups.map(_.timestamp)
         val latestStatistics = updateGroups.flatMap(_.stats).lastOption
         val currentVersion = tracingService.currentVersion(tracingId)
-        webKnossosServer.authorizeTracingUpdate(tracingId, timestamps, latestStatistics).flatMap { _ =>
+        val userToken = request.getQueryString("token")
+        webKnossosServer.reportTracingUpdates(tracingId, timestamps, latestStatistics, userToken).flatMap { _ =>
           updateGroups.foldLeft(currentVersion) { (previousVersion, updateGroup) =>
             previousVersion.flatMap { version =>
               if (version + 1 == updateGroup.version) {

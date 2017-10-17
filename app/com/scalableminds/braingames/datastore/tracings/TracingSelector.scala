@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.datastore.tracings.skeleton
+package com.scalableminds.braingames.datastore.tracings
 
 import play.api.libs.json.Json
 

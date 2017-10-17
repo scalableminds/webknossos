@@ -7,8 +7,7 @@ import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.Color
 import com.scalableminds.braingames.datastore.geometry.{Point3D, Vector3D}
 import com.scalableminds.braingames.datastore.services.{UserAccessRequest, WebKnossosServer}
-import com.scalableminds.braingames.datastore.tracings._
-import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
+import com.scalableminds.braingames.datastore.tracings.{TracingSelector, _}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.trueaccord.scalapb.json.{JsonFormat, Printer}

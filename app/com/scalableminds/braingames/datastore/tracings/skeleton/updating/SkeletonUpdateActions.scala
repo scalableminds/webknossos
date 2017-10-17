@@ -1,38 +1,17 @@
 /*
  * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
-package com.scalableminds.braingames.datastore.tracings.skeleton
+package com.scalableminds.braingames.datastore.tracings.skeleton.updating
 
 import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.tracings._
-import com.scalableminds.braingames.datastore.tracings.skeleton.elements.{BranchPointDepr, CommentDepr}
+import com.scalableminds.braingames.datastore.tracings.skeleton._
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import play.api.libs.json._
 
-trait SkeletonUpdateActionHelper {
-
-  protected def mapTrees(tracing: SkeletonTracing, treeId: Int, transformTree: Tree => Tree): Seq[Tree] = {
-    tracing.trees.map((tree: Tree) => if (tree.treeId == treeId) transformTree(tree) else tree)
-  }
-
-  protected def treeById(tracing: SkeletonTracing, treeId: Int) =
-    tracing.trees.find(_.treeId == treeId)
-      .getOrElse(throw new NoSuchElementException("Tracing does not contain tree with requested id " + treeId))
-
-  protected def convertColor(aColor: com.scalableminds.util.image.Color) =
-    Color(aColor.r, aColor.g, aColor.b, aColor.a)
-  protected def convertBranchPoint(aBranchPoint: BranchPointDepr) =
-    BranchPoint(aBranchPoint.nodeId, aBranchPoint.timestamp)
-  protected def convertComment(aComment: CommentDepr) =
-    Comment(aComment.nodeId, aComment.content)
-  protected def convertColorOpt(aColorOpt: Option[com.scalableminds.util.image.Color]) = aColorOpt match {
-    case Some(aColor) => Some(convertColor(aColor))
-    case None => None
-  }
-}
 
 case class CreateTreeSkeletonAction(id: Int, color: Option[com.scalableminds.util.image.Color], name: String,
-                                    branchPoints: List[BranchPointDepr], timestamp: Long, comments: List[CommentDepr]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+                                    branchPoints: List[UpdateActionBranchPoint], timestamp: Long, comments: List[UpdateActionComment]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name, timestamp)
     tracing.withTrees(newTree +: tracing.trees)
@@ -44,7 +23,7 @@ case class DeleteTreeSkeletonAction(id: Int) extends UpdateAction.SkeletonUpdate
 }
 
 case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Option[com.scalableminds.util.image.Color], name: String,
-                                    branchPoints: List[BranchPointDepr], comments: List[CommentDepr]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+                                    branchPoints: List[UpdateActionBranchPoint], comments: List[UpdateActionComment]) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(tree: Tree) =
       tree

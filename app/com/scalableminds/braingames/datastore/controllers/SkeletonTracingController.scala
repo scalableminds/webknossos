@@ -3,17 +3,14 @@
 */
 package com.scalableminds.braingames.datastore.controllers
 
-import java.util.UUID
-
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.helpers.DataSourceRepository
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.services.{AccessTokenService, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.braingames.datastore.tracings.skeleton._
-import com.scalableminds.braingames.datastore.tracings._
+import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingSelector, TracingType}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
-import play.api.mvc.Action
 
 import scala.concurrent.ExecutionContext.Implicits.global
 

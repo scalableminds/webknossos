@@ -2,7 +2,6 @@
  * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
 package com.scalableminds.braingames.datastore.tracings.skeleton
-
 import com.google.inject.Inject
 import com.scalableminds.braingames.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValuePair}
 import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
@@ -12,6 +11,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.braingames.datastore.tracings.UpdateAction.SkeletonUpdateAction
+import com.scalableminds.braingames.datastore.tracings.skeleton.updating._
 
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,

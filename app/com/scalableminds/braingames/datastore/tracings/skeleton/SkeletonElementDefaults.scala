@@ -21,10 +21,6 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   def createInstance = SkeletonTracing(dataSetName, trees, createdTimestamp, boundingBox, activeNodeId, editPosition, editRotation, zoomLevel, version)
 }
 
-object TreeDefaults {
-
-}
-
 object NodeDefaults extends ProtoGeometryImplicits {
   val id = 0
   val rotation = Vector3D(0, 0, 0)

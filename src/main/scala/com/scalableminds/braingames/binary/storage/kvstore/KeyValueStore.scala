@@ -3,7 +3,7 @@
  */
 package com.scalableminds.braingames.binary.storage.kvstore
 
-import com.scalableminds.util.mvc.BoxImplicits
+import com.scalableminds.util.tools.BoxImplicits
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import net.liftweb.common.{Box, Full}

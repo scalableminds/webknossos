@@ -47,11 +47,12 @@ object AnnotationService extends AnnotationContentProviders
     user: User,
     dataSet: DataSet,
     contentType: String,
+    withFallback: Boolean,
     id: String = "")(implicit ctx: DBAccessContext) =
 
     withProviderForContentType(contentType) { provider =>
       for {
-        content <- provider.createFrom(dataSet)
+        content <- provider.createFrom(dataSet, withFallback)
         contentReference = ContentReference.createFor(content)
         annotation = Annotation(
           Some(user._id),

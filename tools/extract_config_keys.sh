@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+set -e
+
 grep -oR -P '(conf|configuration)\.get[a-z,A-Z]+\(.+?\)(\.getOrElse\(.+?\))?' app | sort | while read line; do
   file=$(echo $line | cut -d : -f 1)
   match=$(echo $line | cut -d : -f 2-)

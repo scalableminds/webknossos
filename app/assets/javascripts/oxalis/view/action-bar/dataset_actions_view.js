@@ -16,7 +16,7 @@ import api from "oxalis/api/internal_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
-import type { ReactRouterHistoryType } from "react-router";
+import type { ReactRouterHistoryType } from "react_router";
 
 type Props = {
   // eslint-disable-next-line react/no-unused-prop-types

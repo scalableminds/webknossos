@@ -5,7 +5,7 @@ import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
-import type { ReactRouterHistoryType } from "react-router";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 

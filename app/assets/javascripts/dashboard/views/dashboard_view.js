@@ -17,11 +17,16 @@ const TabPane = Tabs.TabPane;
 
 const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnnotations"];
 
-type Props = {
+type OwnProps = {
   userId: ?string,
   isAdminView: boolean,
-  activeUser: APIUserType,
 };
+
+type StoreProps = {
+  activeUser: ?APIUserType,
+};
+
+type Props = OwnProps & StoreProps;
 
 type State = {
   activeTabKey: string,
@@ -55,35 +60,39 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   getTabs(user: APIUserType) {
-    const isUserAdmin = Utils.isUserAdmin(this.props.activeUser);
-    const isAdminView = this.props.isAdminView;
+    if (this.props.activeUser) {
+      const isUserAdmin = Utils.isUserAdmin(this.props.activeUser);
+      const isAdminView = this.props.isAdminView;
 
-    return [
-      !isAdminView ? (
-        <TabPane tab="Dataset Gallery" key="datasets">
-          <DatasetView user={user} dataViewType="gallery" />
-        </TabPane>
-      ) : null,
-      !isAdminView && isUserAdmin ? (
-        <TabPane tab="Datasets" key="advanced-datasets">
-          <DatasetView user={user} dataViewType="advanced" />
-        </TabPane>
-      ) : null,
-      <TabPane tab="Tasks" key="tasks">
-        <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
-      </TabPane>,
-      <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
-        <ExplorativeAnnotationsView
-          isAdminView={this.props.isAdminView}
-          userId={this.props.userId}
-        />
-      </TabPane>,
-      isAdminView ? (
-        <TabPane tab="Tracked Time" key="trackedTime">
-          <LoggedTimeView userId={this.props.userId} />
-        </TabPane>
-      ) : null,
-    ];
+      return [
+        !isAdminView ? (
+          <TabPane tab="Dataset Gallery" key="datasets">
+            <DatasetView user={user} dataViewType="gallery" />
+          </TabPane>
+        ) : null,
+        !isAdminView && isUserAdmin ? (
+          <TabPane tab="Datasets" key="advanced-datasets">
+            <DatasetView user={user} dataViewType="advanced" />
+          </TabPane>
+        ) : null,
+        <TabPane tab="Tasks" key="tasks">
+          <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
+        </TabPane>,
+        <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
+          <ExplorativeAnnotationsView
+            isAdminView={this.props.isAdminView}
+            userId={this.props.userId}
+          />
+        </TabPane>,
+        isAdminView ? (
+          <TabPane tab="Tracked Time" key="trackedTime">
+            <LoggedTimeView userId={this.props.userId} />
+          </TabPane>
+        ) : null,
+      ];
+    } else {
+      return null;
+    }
   }
 
   render() {
@@ -120,7 +129,7 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: OxalisState): StoreProps => ({
   activeUser: state.activeUser,
 });
 

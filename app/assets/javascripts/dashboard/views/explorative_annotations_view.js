@@ -16,7 +16,7 @@ import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FileUpload from "components/file_upload";
-import type { ReactRouterHistoryType } from "react-router";
+import type { ReactRouterHistoryType } from "react_router";
 
 const { Column } = Table;
 const { Search } = Input;

@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
@@ -102,7 +101,7 @@ class ProjectEditView extends Marionette.View {
       .then(
         () => {},
         Toast.success("Saved!"),
-        app.histoy.push(`/projects#${this.model.get("name")}`),
+        this.props.histoy.push(`/projects#${this.model.get("name")}`),
       );
   }
 
@@ -110,14 +109,14 @@ class ProjectEditView extends Marionette.View {
     event.preventDefault();
 
     await Request.receiveJSON(`/api/projects/${this.model.id}/pause`);
-    app.router.reload();
+    this.props.history.reload();
   }
 
   async handleResumeClick(event) {
     event.preventDefault();
 
     await Request.receiveJSON(`/api/projects/${this.model.id}/resume`);
-    app.router.reload();
+    this.props.history.reload();
   }
 }
 ProjectEditView.initClass();

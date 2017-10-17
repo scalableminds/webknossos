@@ -77,7 +77,7 @@ export type ReactRouterHistoryType = {
   go: number => void,
   goBack: () => void,
   goForward: () => void,
-  block: string => string,
+  block: Function => ?string | null,
 };
 
 type ReactRouterArgumentsType = {
@@ -248,12 +248,12 @@ class ReactRouter extends React.Component<*> {
                   isAuthenticated={isAuthenticated}
                   exact
                   path="/"
-                  render={() => <DashboardView isAdminView={false} />}
+                  render={() => <DashboardView userId={null} isAdminView={false} />}
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
                   path="/dashboard"
-                  render={() => <DashboardView isAdminView={false} />}
+                  render={() => <DashboardView userId={null} isAdminView={false} />}
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}

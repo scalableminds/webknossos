@@ -7,7 +7,7 @@ import messages from "messages";
 import Request from "libs/request";
 import type { APITeamType } from "admin/api_flow_types";
 import Toast from "libs/toast";
-import type { ReactRouterHistoryType } from "react-router";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 const Option = Select.Option;

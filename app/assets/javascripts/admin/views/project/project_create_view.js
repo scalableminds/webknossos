@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import UserCollection from "admin/models/user/user_collection";

@@ -37,7 +37,7 @@ import { fetchGistContent } from "libs/gist";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
-import type { ReactRouterHistoryType } from "react-router";
+import type { ReactRouterHistoryType } from "react_router";
 
 type Props = {
   initialTracingType: SkeletonTracingTypeTracingType,

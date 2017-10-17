@@ -2,16 +2,15 @@
 /* eslint-disable react/prefer-stateless-function */
 
 import React from "react";
-import { withRouter } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Layout, Menu, Icon } from "antd";
-import { Link } from "react-router-dom";
 import { connect } from "react-redux";
 import Request from "libs/request";
 import LoginView from "admin/views/auth/login_view";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
-import type { ReactRouterHistoryType } from "react-router";
+import type { ReactRouterHistoryType } from "react_router";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;

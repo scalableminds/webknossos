@@ -195,6 +195,25 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     find("_project", project).collect[List]()
   }
 
+  def findAllByProjectTaskTypeIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    val projectFilter = projectOpt match {
+      case Some(project) => Json.obj(("_project") -> Json.toJson(project))
+      case None => Json.obj()
+    }
+
+    val taskTypeFilter = taskTypeOpt match {
+      case Some(taskType) => Json.obj(("_taskType") -> Json.obj("$oid" -> taskType))
+      case None => Json.obj()
+    }
+
+    val idsFilter = idsOpt match {
+      case Some(ids) => Json.obj(("_id") -> Json.obj("$in" -> ids.map(id => Json.obj("$oid" -> id))))
+      case None => Json.obj()
+    }
+
+    find(projectFilter ++ taskTypeFilter ++ idsFilter).cursor[Task]().collect[List]()
+  }
+
   def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     update(Json.obj("_script" -> _script), Json.obj("$unset" -> Json.obj("_script" -> 1)), multi = true)
   }

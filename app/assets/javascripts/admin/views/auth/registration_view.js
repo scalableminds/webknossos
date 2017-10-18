@@ -1,11 +1,11 @@
 // @flow
-
 import React from "react";
 import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
 import Request from "libs/request";
 import type { APITeamType } from "admin/api_flow_types";
 import Toast from "libs/toast";
+import app from "app";
 
 const FormItem = Form.Item;
 const Option = Select.Option;

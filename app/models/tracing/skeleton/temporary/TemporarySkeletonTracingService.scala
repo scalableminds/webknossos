@@ -91,7 +91,7 @@ object TemporarySkeletonTracingService extends AnnotationContentService with Fox
 
   def findOneById(id: String)(implicit ctx: DBAccessContext) = ???
 
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext) = ???
+  def createFrom(dataSet: DataSet, withFallback: Boolean)(implicit ctx: DBAccessContext) = ???
 
   def clearAndRemove(id: String)(implicit ctx: DBAccessContext) = ???
 

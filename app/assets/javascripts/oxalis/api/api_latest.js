@@ -55,6 +55,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
+import type { ToastStyleType } from "libs/toast";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -769,7 +770,7 @@ class UtilsApi {
    * // ... optionally:
    * // removeToast();
    */
-  showToast(type: string, message: string, timeout: number): ?Function {
+  showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
     const noop = () => {};
     return Toast.message(type, message, timeout === 0, timeout).remove || noop;
   }

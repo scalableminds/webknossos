@@ -11,8 +11,8 @@ import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.modules.reactivemongo.ReactiveMongoApi
 import play.modules.reactivemongo.json._
-import play.modules.reactivemongo.json.collection.JSONCollection
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.collection.JSONCollection
 
 
 case class UserToken(id:UUID, userId:BSONObjectID, email:String, expirationTime:DateTime, isLogin:Boolean) {
@@ -43,7 +43,7 @@ class MongoUserTokenDao extends UserTokenDao {
     tokens.find(Json.obj("id" -> id)).one[UserToken]
 
   def find(email: String): Future[List[UserToken]] =
-    tokens.find(Json.obj("email" -> email)).cursor[UserToken]().collect[List]() // does this work ???
+    tokens.find(Json.obj("email" -> email)).cursor[UserToken]().collect[List]()
 
   def save(token:UserToken):Future[UserToken] = for {
     _ <- tokens.insert(token)

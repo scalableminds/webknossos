@@ -244,32 +244,6 @@ class Authentication @Inject() (
     )
   }
 
-  // user can request a token to authenticate themselves (but only one, otherwise they would loose track of them)
-  def activateLoginToken = SecuredAction.async { implicit request =>
-    for{
-      oldTokens <- userTokenService.find(request.identity.email)
-      filteredList = oldTokens.filter(t => t.isLogin)
-      _ <- (filteredList.size == 0).toFox ?~> Messages("user.maxLoginTokenLimit") //in case the user has already a token
-      token <- userTokenService.save(UserToken.createLoginToken(request.identity._id, request.identity.email))
-    } yield {
-      JsonOk(token.id.toString)
-    }
-    //Future.successful(Ok)
-  }
-
-  // to deactivate the tokens (maybe also the resetPW-token ?!)
-  def deactivateLoginToken = SecuredAction.async { implicit request =>
-    //val tokens = userTokenService.find(request.identity.email)
-    for{
-      tokens <- userTokenService.find(request.identity.email)
-      filteredList = tokens.filter(t => t.isLogin)
-      _ <- (filteredList.size != 0).toFox ?~> Messages("user.noLoginToken")
-    } yield {
-      filteredList.foreach(token => userTokenService.remove(token.id))
-      JsonOk(Messages("user.loginTokenDeleted"))
-    }
-  }
-
   def logout = SecuredAction.async { implicit request =>
     env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index()))
   }

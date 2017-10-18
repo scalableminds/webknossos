@@ -129,7 +129,7 @@ class PlaneController extends React.PureComponent<Props> {
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
       },
-      pinch: delta => this.zoom(delta, true),
+      pinch: delta => this.zoomTDView(delta, true),
     };
   }
 

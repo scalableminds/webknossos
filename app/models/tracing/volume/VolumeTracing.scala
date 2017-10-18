@@ -135,10 +135,10 @@ object VolumeTracingService extends AnnotationContentService with CommonTracingS
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     VolumeTracingDAO.findOneById(id)
 
-  def createFrom(baseDataSet: DataSet)(implicit ctx: DBAccessContext) = {
+  def createFrom(baseDataSet: DataSet, withFallback: Boolean)(implicit ctx: DBAccessContext) = {
     for {
       baseSource <- baseDataSet.dataSource.toUsable.toFox
-      tracingContent <- DataStoreHandler.createVolumeTracing(baseDataSet.dataStoreInfo, baseSource)
+      tracingContent <- DataStoreHandler.createVolumeTracing(baseDataSet.dataStoreInfo, baseSource, withFallback)
       volumeTracing = VolumeTracing(
         baseDataSet.name,
         tracingContent,

@@ -186,10 +186,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def createExplorational(dataSetName: String, typ: String) = Authenticated.async { implicit request =>
+  def createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean]) = Authenticated.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, typ) ?~> Messages("annotation.create.failed")
+      annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, typ, withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
     } yield {
       Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
     }
@@ -197,7 +197,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def handleUpdates(annotation: Annotation, js: JsValue, version: Int, clientTimestamp: Long)(implicit request: AuthenticatedRequest[_]): Fox[JsObject] = {
     js match {
-      case JsArray(jsUpdates) if jsUpdates.length >= 1 =>
+      case JsArray(jsUpdates) if jsUpdates.nonEmpty =>
         for {
           updated <- annotation.muta.updateFromJson(jsUpdates) //?~> Messages("format.json.invalid")
         } yield {
@@ -362,9 +362,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       userId <- (request.body \ "userId").asOpt[String].toFox
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      result <- annotation.muta.transferToUser(user)
+      annotation <- annotation.muta.transferToUser(user)
+      json <- annotationJson(request.user, annotation, exclude = List("content"))
     } yield {
-      JsonOk(Messages("annotation.transfered"))
+      JsonOk(json)
     }
   }
 

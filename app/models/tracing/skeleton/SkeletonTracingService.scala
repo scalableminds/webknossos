@@ -85,7 +85,7 @@ object SkeletonTracingService extends AnnotationContentService with CommonTracin
     createFrom(List(nml), boundingBox, settings)
   }
 
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
+  def createFrom(dataSet: DataSet, withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[SkeletonTracing] =
     createFrom(
       dataSet.name,
       dataSet.defaultStart,

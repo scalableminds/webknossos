@@ -24,7 +24,6 @@ import ProjectCreateView from "admin/views/project/project_create_view";
 import ProjectModel from "admin/models/project/project_model";
 import ProjectEditView from "admin/views/project/project_edit_view";
 import DatasetModel from "admin/models/dataset/dataset_model";
-import TaskQueryView from "admin/views/task/task_query_view";
 import TaskCreateView from "admin/views/task/task_create_view";
 import TaskModel from "admin/models/task/task_model";
 import TaskCreateFromView from "admin/views/task/task_create_subviews/task_create_from_view";
@@ -62,7 +61,6 @@ export {
   ProjectModel,
   ProjectEditView,
   DatasetModel,
-  TaskQueryView,
   TaskCreateView,
   TaskModel,
   TaskCreateFromView,

@@ -9,10 +9,10 @@ db.runCommand({
         _content: { $type: "object", $exists: true },
       },
       {
-        "_content.contentType": { $type: "string", $exists: true },
+        "_content.contentType": { $in: ["skeletonTracing", "volumeTracing"], $exists: true },
       },
       {
-        "_content._id": { $type: "string", $exists: true },
+        "_content._id": { $type: "string", $exists: true }, //TODO objectid regex
       },
       {
         $or: [{ _task: { $type: "objectId" } }, { _task: { $exists: false } }],

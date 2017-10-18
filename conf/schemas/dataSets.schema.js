@@ -39,11 +39,7 @@ db.runCommand({
         ],
       },
       {
-        $or: [
-          { "dataSource.scale": { $type: "number" } },
-          { "dataSource.scale": { $exists: false } },
-          { "dataSource.scale": { $size: 0 } },
-        ],
+        "dataSource.scale": { $type: "number", $exists: false, $size: 3 },
       },
       {
         $or: [

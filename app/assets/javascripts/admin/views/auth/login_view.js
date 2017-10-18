@@ -17,7 +17,9 @@ class LoginView extends React.PureComponent<Props> {
 
     this.props.form.validateFields((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/login", { data: formValues }).then(()=>app.router.navigate("/dashboard", {trigger: true}));
+        Request.sendJSONReceiveJSON("/api/login", { data: formValues }).then(() =>
+          app.router.navigate("/dashboard", { trigger: true }),
+        );
       }
     });
   };

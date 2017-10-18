@@ -15,6 +15,8 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
+import scala.concurrent.duration._
+
 case class OpenAssignment(
   instances: Int,
   _task: BSONObjectID,
@@ -38,6 +40,8 @@ case class OpenAssignment(
 
 object OpenAssignment extends FoxImplicits {
   implicit val openAssignmentFormat = Json.format[OpenAssignment]
+
+  val pruningInterval = 3.hours
 
   def from(task: Task, project: Project, instances: Int): OpenAssignment =
     OpenAssignment(instances, task._id, task.team, task._project, task.neededExperience,
@@ -79,8 +83,10 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   private def noRequiredExperience =
     Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
 
-  def findOrderedByPriority(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
+  def findOrderedByPriority(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
     find(validPriorityQ ++ Json.obj(
+        "instances" -> Json.obj("$gt" -> 0),
+        "team" -> Json.obj("$in" -> teams),
         "$or" -> (experiencesToQuery(user) :+ noRequiredExperience)))
       .sort(byPriority)
       .cursor[OpenAssignment]()
@@ -126,11 +132,12 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     update(
       Json.obj("_id" -> id, "instances" -> Json.obj("$gt" -> 0)),
       Json.obj("$inc" -> Json.obj("instances" -> -1))
-    ).map { writeResult =>
-      // delete OpenAssignment, if no more instances are available
-      if (writeResult.n == 0) removeById(id)
-      writeResult
-    }
+    )
+    //Note: a cleanup job periodically removes OpenAssignments whose instance count has gone down to zero
+  }
+
+  def removeZeroInstanceAssignments()(implicit ctx: DBAccessContext) = Fox[WriteResult] {
+    remove(Json.obj("instances" -> 0))
   }
 
   def updateAllOf(name: String, project: Project)(implicit ctx: DBAccessContext) = {

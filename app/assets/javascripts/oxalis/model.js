@@ -334,14 +334,14 @@ export class OxalisModel {
 
   getLayerInfos(userLayers: ?Array<Object>) {
     // Overwrite or extend layers with userLayers
-
     const dataset = Store.getState().dataset;
-    const layers = dataset == null ? [] : _.clone(dataset.dataLayers);
+    let layers = dataset == null ? [] : _.clone(dataset.dataLayers);
     if (userLayers == null) {
       return layers;
     }
 
     for (const userLayer of userLayers) {
+      // Find the fallback layer which should be used as the foundation of the userLayer
       const existingLayerIndex = _.findIndex(
         layers,
         layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName),
@@ -353,6 +353,10 @@ export class OxalisModel {
           $merge: { mappings: existingLayer.mappings },
         });
       } else {
+        // Remove other segmentation layers, since we are adding a new one.
+        // This is a temporary workaround. In the long term we want to support
+        // multiple segmentation layers.
+        layers = layers.filter(layer => layer.category !== "segmentation");
         layers.push(userLayer);
       }
     }

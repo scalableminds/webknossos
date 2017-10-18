@@ -5,9 +5,9 @@ import _ from "lodash";
 import * as React from "react";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
-import Request from "libs/request";
 import messages from "messages";
 import CreateTeamModal from "admin/views/team/create_team_modal_view.js";
+import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
 
 const { Column } = Table;
@@ -33,8 +33,7 @@ class TeamListView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = "/api/teams?isEditable=true";
-    const teams = await Request.receiveJSON(url);
+    const teams = await getEditableTeams();
 
     this.setState({
       isLoading: false,
@@ -46,22 +45,18 @@ class TeamListView extends React.PureComponent<{}, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteTeam = async (script: APITeamType) => {
+  deleteTeam = (team: APITeamType) => {
     Modal.confirm({
       title: messages["team.delete"],
-      onOk: () => {
+      onOk: async () => {
         this.setState({
           isLoading: true,
         });
 
-        const url = `/api/teams/${script.id}`;
-        Request.receiveJSON(url, {
-          method: "DELETE",
-        }).then(() => {
-          this.setState({
-            isLoading: false,
-            teams: this.state.teams.filter(p => p.id !== script.id),
-          });
+        await deleteTeam(team.id);
+        this.setState({
+          isLoading: false,
+          teams: this.state.teams.filter(t => t.id !== team.id),
         });
       },
     });

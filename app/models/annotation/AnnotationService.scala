@@ -47,11 +47,12 @@ object AnnotationService extends AnnotationContentProviders
     user: User,
     dataSet: DataSet,
     contentType: String,
+    withFallback: Boolean,
     id: String = "")(implicit ctx: DBAccessContext) =
 
     withProviderForContentType(contentType) { provider =>
       for {
-        content <- provider.createFrom(dataSet)
+        content <- provider.createFrom(dataSet, withFallback)
         contentReference = ContentReference.createFor(content)
         annotation = Annotation(
           Some(user._id),
@@ -108,6 +109,9 @@ object AnnotationService extends AnnotationContentProviders
 
   def countOpenTasks(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task)
+
+  def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
 
   def hasAnOpenTask(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.hasAnOpenAnnotation(user._id, AnnotationType.Task)

@@ -257,7 +257,7 @@ class TaskCreateFromView extends Marionette.View {
         modelLabel() {
           return `${this.model.get("summary")}`;
         },
-        defaultItem: { id: this.model.get("type.id") || Utils.getUrlParams("taskType") },
+        defaultItem: { id: this.model.get("type.id") || Utils.getUrlParamValue("taskType") },
       },
       data: "amIAnAdmin=true",
       name: "taskTypeId",
@@ -298,7 +298,9 @@ class TaskCreateFromView extends Marionette.View {
         modelValue() {
           return `${this.model.get("name")}`;
         },
-        defaultItem: { name: this.model.get("projectName") || Utils.getUrlParams("projectName") },
+        defaultItem: {
+          name: this.model.get("projectName") || Utils.getUrlParamValue("projectName"),
+        },
       },
       data: "amIAnAdmin=true",
       name: "projectName",

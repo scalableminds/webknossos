@@ -29,6 +29,16 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
+        js <- Fox.serialSequence(projects)(Project.projectPublicWrites(_, request.user))
+      } yield {
+        Ok(Json.toJson(js))
+      }
+  }
+
+  def listWithStatus = Authenticated.async {
+    implicit request =>
+      for {
+        projects <- ProjectDAO.findAll
         js <- Fox.serialSequence(projects)(Project.projectPublicWritesWithStatus(_, request.user))
       } yield {
         Ok(Json.toJson(js))

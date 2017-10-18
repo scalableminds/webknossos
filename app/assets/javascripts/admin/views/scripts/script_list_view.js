@@ -5,8 +5,8 @@ import _ from "lodash";
 import * as React from "react";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
-import Request from "libs/request";
 import messages from "messages";
+import { getScripts, deleteScript } from "admin/admin_rest_api";
 import type { APIScriptType } from "admin/api_flow_types";
 
 const { Column } = Table;
@@ -30,8 +30,7 @@ class ScriptListView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = "/api/scripts";
-    const scripts = await Request.receiveJSON(url);
+    const scripts = await getScripts();
 
     this.setState({
       isLoading: false,
@@ -43,22 +42,18 @@ class ScriptListView extends React.PureComponent<{}, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteScript = async (script: APIScriptType) => {
+  deleteScript = (script: APIScriptType) => {
     Modal.confirm({
       title: messages["script.delete"],
-      onOk: () => {
+      onOk: async () => {
         this.setState({
           isLoading: true,
         });
 
-        const url = `/api/scripts/${script.id}`;
-        Request.receiveJSON(url, {
-          method: "DELETE",
-        }).then(() => {
-          this.setState({
-            isLoading: false,
-            scripts: this.state.scripts.filter(p => p.id !== script.id),
-          });
+        await deleteScript(script.id);
+        this.setState({
+          isLoading: false,
+          scripts: this.state.scripts.filter(s => s.id !== script.id),
         });
       },
     });

@@ -6,9 +6,9 @@ import * as React from "react";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
-import Request from "libs/request";
 import app from "app";
 import messages from "messages";
+import { getProjectsWithOpenAssignments, deleteProject } from "admin/admin_rest_api";
 import type { APIProjectType } from "admin/api_flow_types";
 
 const { Column } = Table;
@@ -32,8 +32,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = "/api/projects";
-    const projects = await Request.receiveJSON(url);
+    const projects = await getProjectsWithOpenAssignments();
 
     this.setState({
       isLoading: false,
@@ -45,22 +44,18 @@ class ProjectListView extends React.PureComponent<{}, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
-  deleteProject = async (project: APIProjectType) => {
+  deleteProject = (project: APIProjectType) => {
     Modal.confirm({
       title: messages["project.delete"],
-      onOk: () => {
+      onOk: async () => {
         this.setState({
           isLoading: true,
         });
 
-        const url = `/api/projects/${project.name}`;
-        Request.receiveJSON(url, {
-          method: "DELETE",
-        }).then(() => {
-          this.setState({
-            isLoading: false,
-            projects: this.state.projects.filter(p => p.id !== project.id),
-          });
+        await deleteProject(project.name);
+        this.setState({
+          isLoading: false,
+          projects: this.state.projects.filter(p => p.id !== project.id),
         });
       },
     });
@@ -71,7 +66,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
 
     return (
       <div className="container wide TestProjectListView">
-        <div style={{ marginTag: 20 }}>
+        <div style={{ marginTop: 20 }}>
           <div className="pull-right">
             <a href="/projects/create">
               <Button icon="plus" style={marginRight} type="primary">

@@ -24,13 +24,17 @@ In order to restore the current window, a reload is necessary.`,
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
+  "task.delete": "Do you really want to delete this task?",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
+  "annotation.delete": "Do you really want to delete this annotation?",
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "project.delete": "Do you really want to delete this project?",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type?",
+  "request.max_item_count_alert":
+    "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
 };

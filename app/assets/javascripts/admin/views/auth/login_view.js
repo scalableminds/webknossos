@@ -1,7 +1,7 @@
 // @flow
 import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
-import { withRouter } from "react-router-dom";
+import { withRouter, Link } from "react-router-dom";
 import Request from "libs/request";
 import messages from "messages";
 import Store from "oxalis/throttled_store";
@@ -72,12 +72,12 @@ class LoginView extends React.PureComponent<Props> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Log in
               </Button>
-              <a style={linkStyle} href="/register">
+              <Link to="/register" style={linkStyle}>
                 Register Now!
-              </a>
-              <a style={Object.assign({}, linkStyle, resetStyle)} href="/reset">
+              </Link>
+              <Link to="/reset" tyle={Object.assign({}, linkStyle, resetStyle)}>
                 Forgot Password
-              </a>
+              </Link>
             </FormItem>
           </Form>
         </Col>

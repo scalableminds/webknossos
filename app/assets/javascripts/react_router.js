@@ -23,7 +23,6 @@ import ChangePasswordView from "admin/views/auth/change_password_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 
 // admin
-import FAQView from "admin/views/help/faq_view";
 import KeyboardShortcutView from "admin/views/help/keyboardshortcut_view";
 import PaginationView from "admin/views/pagination_view";
 import DatasetAddView from "admin/views/dataset/dataset_add_view";
@@ -380,11 +379,6 @@ class ReactRouter extends React.Component<*> {
                   isAuthenticated={isAuthenticated}
                   path="/workload"
                   render={this.workload}
-                />
-                <SecuredRoute
-                  isAuthenticated={isAuthenticated}
-                  path="/help/faq"
-                  component={FAQView}
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}

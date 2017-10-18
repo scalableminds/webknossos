@@ -24,7 +24,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
   };
 
   createTracing = (event: Event) => {
-    if (this.props.activeUser === null) {
+    if (this.props.activeUser == null) {
       event.preventDefault();
       Modal.confirm({
         content: messages["dataset.confirm_signup"],

@@ -31,17 +31,19 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.mvc.{AnyContent, Result}
 import play.twirl.api.Html
-import scala.concurrent.Future
 
+import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
+
 import scala.concurrent.duration._
 import scala.async.Async.{async, await}
-
 import models.project.{Project, ProjectDAO}
+import scala.util.Success
 
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -225,6 +227,48 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield {
       Ok(Json.toJson(js))
     }
+  }
+
+  def parseBsonToFox(s: String): Fox[BSONObjectID] =
+    BSONObjectID.parse(s) match {
+      case Success(id) => Fox.successful(id)
+      case _ => Fox(Future.successful(Empty))
+    }
+
+  def listTasks() = SecuredAction.async(parse.json) { implicit request =>
+
+    val userOpt = (request.body \ "user").asOpt[String]
+    val projectOpt =  (request.body \ "project").asOpt[String]
+    val idsOpt = (request.body \ "ids").asOpt[List[String]]
+    val taskTypeOpt =  (request.body \ "taskType").asOpt[String]
+
+    userOpt match {
+      case Some(userId) => {
+        for {
+          userIdBson <- parseBsonToFox(userId)
+          user <- UserDAO.findOneById(userIdBson) ?~> Messages("user.notFound")
+          userAnnotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
+          taskIdsFromAnnotations = userAnnotations.flatMap(_._task).map(_.stringify).toSet
+          taskIds = idsOpt match {
+            case Some(ids) => taskIdsFromAnnotations.intersect(ids.toSet)
+            case None => taskIdsFromAnnotations
+          }
+          tasks <- TaskDAO.findAllByProjectTaskTypeIds(projectOpt, taskTypeOpt, Some(taskIds.toList))
+          jsResult <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, Some(request.identity)))
+        } yield {
+          Ok(Json.toJson(jsResult))
+        }
+      }
+      case None => {
+        for {
+          tasks <- TaskDAO.findAllByProjectTaskTypeIds(projectOpt, taskTypeOpt, idsOpt)
+          jsResult <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, Some(request.identity)))
+        } yield {
+          Ok(Json.toJson(jsResult))
+        }
+      }
+    }
+
   }
 
   def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = {

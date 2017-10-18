@@ -30,7 +30,6 @@ import DatasetAddView from "admin/views/dataset/dataset_add_view";
 import UserListView from "admin/views/user/user_list_view";
 import TeamListView from "admin/views/team/team_list_view";
 import TaskListView from "admin/views/task/task_list_view";
-import TaskCollection from "admin/models/task/task_collection";
 import TaskTypeListView from "admin/views/tasktype/task_type_list_view";
 import ProjectListView from "admin/views/project/project_list_view";
 import StatisticView from "admin/views/statistic/statistic_view";
@@ -40,7 +39,6 @@ import ScriptListView from "admin/views/scripts/script_list_view";
 import ProjectCreateView from "admin/views/project/project_create_view";
 import ProjectEditView from "admin/views/project/project_edit_view";
 import ProjectModel from "admin/models/project/project_model";
-import TaskQueryView from "admin/views/task/task_query_view";
 import TaskModel from "admin/models/task/task_model";
 import TaskCreateView from "admin/views/task/task_create_view";
 import TaskCreateFromView from "admin/views/task/task_create_subviews/task_create_from_view";
@@ -135,12 +133,6 @@ class ReactRouter extends React.Component<*> {
     );
   };
 
-  projectTasks = ({ match, history }: ReactRouterArgumentsType) =>
-    this.showWithPagination(history, TaskListView, TaskCollection, {
-      projectName: match.params.projectName,
-      addButtonText: "Create New Task",
-    });
-
   projectEdit = ({ match, history }: ReactRouterArgumentsType) => {
     const model = new ProjectModel({ name: match.params.projectName });
     const view = new ProjectEditView({ model });
@@ -155,27 +147,8 @@ class ReactRouter extends React.Component<*> {
     return <BackboneWrapper history={history} backboneView={view} />;
   };
 
-  taskTypesTasks = ({ match, history }: ReactRouterArgumentsType) =>
-    this.showWithPagination(history, TaskListView, TaskCollection, {
-      taskTypeId: match.params.taskTypeId,
-      addButtonText: "Create New Task",
-    });
-
-  taskOverview = ({ history }: ReactRouterArgumentsType) => {
-    const collection = new TaskOverviewCollection();
-    const view = new TaskOverviewView({ collection });
-
-    return <BackboneWrapper history={history} backboneView={view} />;
-  };
-
   workload = ({ history }: ReactRouterArgumentsType) =>
     this.showWithPagination(history, WorkloadListView, WorkloadCollection);
-
-  taskQuery = ({ history }: ReactRouterArgumentsType) => {
-    const view = new TaskQueryView();
-
-    return <BackboneWrapper history={history} backboneView={view} />;
-  };
 
   taskEdit = ({ match, history }: ReactRouterArgumentsType) => {
     const model = new TaskModel({ id: match.params.taskId });
@@ -193,6 +166,13 @@ class ReactRouter extends React.Component<*> {
   taskCreate = ({ history }: ReactRouterArgumentsType) => {
     const model = new TaskModel();
     const view = new TaskCreateView({ model });
+
+    return <BackboneWrapper history={history} backboneView={view} />;
+  };
+
+  taskOverview = ({ history }: ReactRouterArgumentsType) => {
+    const collection = new TaskOverviewCollection();
+    const view = new TaskOverviewView({ collection });
 
     return <BackboneWrapper history={history} backboneView={view} />;
   };
@@ -283,7 +263,7 @@ class ReactRouter extends React.Component<*> {
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
                   path="/tasks"
-                  render={this.taskQuery}
+                  component={TaskListView}
                   exact
                 />
                 <SecuredRoute
@@ -315,7 +295,9 @@ class ReactRouter extends React.Component<*> {
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
                   path="/projects/:projectName/tasks"
-                  render={this.projectTasks}
+                  render={({ match }: ReactRouterArgumentsType) => (
+                    <TaskListView initialFieldValues={{ projectName: match.params.projectName }} />
+                  )}
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
@@ -374,7 +356,9 @@ class ReactRouter extends React.Component<*> {
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
                   path="/taskTypes/:taskTypeId/tasks"
-                  render={this.taskTypesTasks}
+                  render={({ match }: ReactRouterArgumentsType) => (
+                    <TaskListView initialFieldValues={{ taskTypeId: match.params.taskTypeId }} />
+                  )}
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}

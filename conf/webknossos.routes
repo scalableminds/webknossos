@@ -82,7 +82,7 @@ GET           /datasets                                                         
 GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:id/import                                              controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
-GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String)
+GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean])
 
 GET           /api/datasets                                                     controllers.DataSetController.list
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)
@@ -150,12 +150,9 @@ GET           /tasks                                                            
 GET           /tasks/overview                                                   controllers.TaskController.empty
 GET           /tasks/create                                                     controllers.TaskController.empty
 
-GET           /api/queries                                                      controllers.QueryController.empty
-POST          /api/queries                                                      controllers.QueryController.query(type: String, limit: Int ?= 1000)
-GET           /api/descriptions/:element                                        controllers.QueryController.descriptions(element)
-
 POST          /api/tasks                                                        controllers.TaskController.create(type: String)
 GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
+POST          /api/tasks/list                                                   controllers.TaskController.listTasks
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)

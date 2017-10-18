@@ -21,7 +21,7 @@ import play.api.mvc.Codec
 
 trait DataStoreHandlingStrategy {
 
-  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracingContent]
+  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, withFallback: Boolean): Fox[VolumeTracingContent]
 
   def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracingContent]
 
@@ -37,8 +37,8 @@ object DataStoreHandler extends DataStoreHandlingStrategy {
     case WebKnossosStore => WKStoreHandlingStrategy
   }
 
-  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracingContent] =
-    strategyForType(dataStoreInfo.typ).createVolumeTracing(dataStoreInfo, base)
+  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, withFallback: Boolean): Fox[VolumeTracingContent] =
+    strategyForType(dataStoreInfo.typ).createVolumeTracing(dataStoreInfo, base, withFallback)
 
   override def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracingContent] =
     strategyForType(dataStoreInfo.typ).uploadVolumeTracing(dataStoreInfo, base, file)
@@ -52,7 +52,7 @@ object DataStoreHandler extends DataStoreHandlingStrategy {
 
 object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplicits with LazyLogging {
 
-  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracingContent] =
+  override def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, withFallback: Boolean): Fox[VolumeTracingContent] =
     Fox.failure("NDStore doesn't support creation of VolumeTracings.")
 
   override def uploadVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, file: TemporaryFile): Fox[VolumeTracingContent] =
@@ -94,11 +94,12 @@ object NDStoreHandlingStrategy extends DataStoreHandlingStrategy with FoxImplici
 
 object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLogging {
 
-  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource): Fox[VolumeTracingContent] = {
+  def createVolumeTracing(dataStoreInfo: DataStoreInfo, base: DataSource, withFallback: Boolean): Fox[VolumeTracingContent] = {
     logger.debug("Called to create VolumeTracing. Base: " + base.id + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/volumes")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
+      .withQueryString("withFallback" -> withFallback.toString)
       .postWithJsonResponse[JsObject, VolumeTracingContent]()
   }
 

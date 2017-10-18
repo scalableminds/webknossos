@@ -72,7 +72,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
 
     return (
       <div className="container wide TestProjectListView">
-        <div style={{ marginTag: 20 }}>
+        <div style={{ marginTop: 20 }}>
           <div className="pull-right">
             <Link to="/projects/create">
               <Button icon="plus" style={marginRight} type="primary">

@@ -175,9 +175,9 @@ const Utils = {
     return _.findIndex(user.teams, team => team.role.name === "admin") >= 0;
   },
 
-  getUrlParams(paramName: string): { [key: string]: string | boolean } {
+  getUrlParamsObject(): { [key: string]: string | boolean } {
     // Parse the URL parameters as objects and return it or just a single param
-    const params = location.search
+    return location.search
       .substring(1)
       .split("&")
       .reduce((result, value): void => {
@@ -192,12 +192,16 @@ const Utils = {
         }
         return result;
       }, {});
+  },
 
-    if (paramName) {
-      return params[paramName];
-    } else {
-      return params;
-    }
+  getUrlParamValue(paramName: string): string {
+    const params = this.getUrlParamsObject();
+    return params[paramName];
+  },
+
+  hasUrlParam(paramName: string): boolean {
+    const params = this.getUrlParamsObject();
+    return Object.prototype.hasOwnProperty.call(params, paramName);
   },
 
   __range__(left: number, right: number, inclusive: boolean): Array<number> {

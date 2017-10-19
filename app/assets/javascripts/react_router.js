@@ -2,7 +2,7 @@
 /* eslint-disable react/no-unused-prop-types */
 import _ from "lodash";
 import React from "react";
-import { BrowserRouter, Route, Switch } from "react-router-dom";
+import { Router, Route, Switch, createBrowserHistory } from "react-router-dom";
 import { connect } from "react-redux";
 import { Layout, LocaleProvider } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";
@@ -88,12 +88,13 @@ type ReactRouterArgumentsType = {
   history: ReactRouterHistoryType,
 };
 
-// <Redirect
-// to={{
-// pathname: "/login",
-// state: { from: props.location },
-// }}
-// />
+const browserHistory = createBrowserHistory();
+browserHistory.listen(location => {
+  if (typeof window.ga !== "undefined" && window.ga !== null) {
+    window.ga("send", "pageview", location.pathname);
+  }
+});
+
 const SecuredRoute = ({ component: Component, render, isAuthenticated, ...rest }: Object) => (
   <Route
     {...rest}
@@ -217,7 +218,7 @@ class ReactRouter extends React.Component<*> {
     const isAuthenticated = this.props.activeUser !== null;
 
     return (
-      <BrowserRouter>
+      <Router history={browserHistory}>
         <LocaleProvider locale={enUS}>
           <Layout>
             <Navbar isAuthenticated={isAuthenticated} />
@@ -396,7 +397,7 @@ class ReactRouter extends React.Component<*> {
             </Content>
           </Layout>
         </LocaleProvider>
-      </BrowserRouter>
+      </Router>
     );
   }
 }

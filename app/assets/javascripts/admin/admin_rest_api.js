@@ -117,6 +117,13 @@ export async function getProjects(): Promise<Array<APIProjectType>> {
   return projects;
 }
 
+export async function getProjectsWithOpenAssignments(): Promise<Array<APIProjectType>> {
+  const projects = await Request.receiveJSON("/api/projects/assignments");
+  assertResponseLimit(projects);
+
+  return projects;
+}
+
 export async function deleteProject(projectName: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",

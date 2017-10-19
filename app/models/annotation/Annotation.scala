@@ -26,7 +26,6 @@ case class Annotation(
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
                        state: AnnotationState = AnnotationState.InProgress,
-                       version: Int = 0,
                        _name: Option[String] = None,
                        description: String = "",
                        tracingTime: Option[Long] = None,

@@ -3,7 +3,8 @@
  */
 package models.binary
 
-import java.util.UUID
+import java.math.BigInteger
+import java.security.SecureRandom
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -33,11 +34,12 @@ case class DataToken(
 
 object DataToken {
 
+  private val generator = new SecureRandom
   implicit val dataTokenFormat = Json.format[DataToken]
 
   val expirationTime = 24.hours
 
-  def generateRandomToken = UUID.randomUUID.toString
+  def generateRandomToken = new BigInteger(180, generator).toString(32)
 }
 
 object DataTokenService extends FoxImplicits {

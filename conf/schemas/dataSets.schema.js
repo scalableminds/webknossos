@@ -33,13 +33,22 @@ db.runCommand({
       },
       {
         $or: [
-          { "dataSource.dataLayers": { $type: "object" } },
+          {
+            $and: [
+              { "dataSource.dataLayers": { $type: "object" } },
+              { "dataSource.dataLayers.name": { $type: string } },
+              { "dataSource.dataLayers.category": { $in: ["color", "mask", "segmentation"] } },
+              { "dataSource.dataLayers.boundingBox": { $type: "object" } },
+              { "dataSource.dataLayers.boundingBox.topLeft": { $type: "number", $exists: true } },
+              { "dataSource.dataLayers.boundingBox.width": { $type: "number", $exists: true } },
+              { "dataSource.dataLayers.boundingBox.height": { $type: "number", $exists: true } },
+              { "dataSource.dataLayers.boundingBox.depth": { $type: "number", $exists: true } },
+              { "dataSource.scale": { $type: "number", $exists: false, $size: 3 } },
+            ],
+          },
           { "dataSource.dataLayers": { $exists: false } },
           { "dataSource.dataLayers": { $size: 0 } },
         ],
-      },
-      {
-        "dataSource.scale": { $type: "number", $exists: false, $size: 3 },
       },
       {
         $or: [

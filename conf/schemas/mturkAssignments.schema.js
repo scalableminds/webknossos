@@ -40,7 +40,7 @@ db.runCommand({
                 "annotations._user": { $type: "objectId", $exists: true },
               },
               {
-                "annotations.assignmentId": { $type: "string", $exists: true },
+                "annotations.assignmentId": { $type: "string", $exists: true }, //REGEX
               },
             ],
           },

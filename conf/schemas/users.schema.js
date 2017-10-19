@@ -9,10 +9,10 @@ db.runCommand({
         },
       },
       {
-        firstName: { $type: "string", $exists: true },
+        firstName: { $regex: /^[a-z ]+$/i, $exists: true },
       },
       {
-        lastName: { $type: "string", $exists: true },
+        lastName: { $regex: /^[a-z ]+$/i, $exists: true },
       },
       {
         isActive: { $type: "bool", $exists: true },

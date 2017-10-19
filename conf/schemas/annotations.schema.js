@@ -12,7 +12,7 @@ db.runCommand({
         "_content.contentType": { $in: ["skeletonTracing", "volumeTracing"], $exists: true },
       },
       {
-        "_content._id": { $type: "string", $exists: true }, //TODO objectid regex
+        "_content._id": { $regex: /^[a-f\d]{24}$/i, $exists: true },
       },
       {
         $or: [{ _task: { $type: "objectId" } }, { _task: { $exists: false } }],

@@ -9,10 +9,10 @@ db.runCommand({
         annotationId: { $type: "object", $exists: true },
       },
       {
-        "annotationId.annotationType": { $type: "string", $exists: true },
+        "annotationId.annotationType": { $type: "string", $exists: true }, //IN
       },
       {
-        "annotationId.identifier": { $type: "string", $exists: true },
+        "annotationId.identifier": { $type: "string", $exists: true }, //REGEX
       },
       {
         _id: { $type: "objectId", $exists: true },

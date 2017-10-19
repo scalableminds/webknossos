@@ -61,24 +61,15 @@ object Project {
       )
     }
 
-  def numberOfOpenAssignments(project: Project)(implicit ctx: DBAccessContext): Fox[Int] = {
-    project.assignmentConfiguration match {
-      case WebknossosAssignmentConfig =>
-        OpenAssignmentDAO.countForProject(project.name)
-      case _: MTurkAssignmentConfig =>
-        MTurkProjectDAO.findByProject(project.name).map(_.numberOfOpenAssignments)
-    }
-  }
-
   def projectPublicWritesWithStatus(
     project: Project,
+    openAssignments: Int,
     requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
 
     for {
-      open <- numberOfOpenAssignments(project) getOrElse -1
       projectJson <- projectPublicWrites(project, requestingUser)
     } yield {
-      projectJson + ("numberOfOpenAssignments" -> JsNumber(open))
+      projectJson + ("numberOfOpenAssignments" -> JsNumber(openAssignments))
     }
   }
 

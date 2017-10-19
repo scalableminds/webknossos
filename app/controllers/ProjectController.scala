@@ -6,10 +6,10 @@ package controllers
 import javax.inject.Inject
 
 import scala.concurrent.Future
-
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.project.{Project, ProjectDAO, ProjectService}
+import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
+import models.project.{Project, ProjectDAO, ProjectService, WebknossosAssignmentConfig}
 import models.task._
 import models.user.User
 import net.liftweb.common.{Empty, Full}
@@ -29,7 +29,28 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        js <- Fox.serialSequence(projects)(Project.projectPublicWritesWithStatus(_, request.identity))
+        js <- Fox.serialSequence(projects)(Project.projectPublicWrites(_, request.identity))
+      } yield {
+        Ok(Json.toJson(js))
+      }
+  }
+
+  def listWithStatus = SecuredAction.async {
+    implicit request =>
+      for {
+        projects <- ProjectDAO.findAll
+        allCounts <- OpenAssignmentDAO.countForProjects
+        js <- Fox.serialCombined(projects) { project =>
+          for {
+            openAssignments <- project.assignmentConfiguration match {
+              case WebknossosAssignmentConfig =>
+                Fox.successful(allCounts.get(project.name).getOrElse(0))
+              case _: MTurkAssignmentConfig =>
+                MTurkProjectDAO.findByProject(project.name).map(_.numberOfOpenAssignments)
+            }
+            r <- Project.projectPublicWritesWithStatus(project, openAssignments, request.identity)
+          } yield r
+        }
       } yield {
         Ok(Json.toJson(js))
       }
@@ -63,7 +84,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
           for {
             _ <- ProjectService.reportToExternalService(project, request.body)
             _ <- ProjectDAO.insert(project)
-            js <- Project.projectPublicWritesWithStatus(project, request.identity)
+            js <- Project.projectPublicWrites(project, request.identity)
           } yield Ok(js)
         case Empty                                                       =>
           Future.successful(JsonBadRequest(Messages("team.notAllowed")))
@@ -79,7 +100,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
         _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("team.notAllowed")
         updatedProject <- ProjectService.update(project._id, project, updateRequest) ?~> Messages("project.update.failed", projectName)
-        js <- Project.projectPublicWritesWithStatus(updatedProject, request.identity)
+        js <- Project.projectPublicWrites(updatedProject, request.identity)
       } yield Ok(js)
     }
   }

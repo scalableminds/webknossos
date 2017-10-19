@@ -208,6 +208,7 @@ GET           /projects/create                                                  
 GET           /projects/:name/tasks                                             controllers.ProjectController.empty(name: String)
 GET           /projects/:name/edit                                              controllers.ProjectController.empty(name: String)
 GET           /api/projects                                                     controllers.ProjectController.list
+GET           /api/projects/assignments                                         controllers.ProjectController.listWithStatus
 POST          /api/projects                                                     controllers.ProjectController.create
 GET           /api/projects/:name                                               controllers.ProjectController.read(name: String)
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)

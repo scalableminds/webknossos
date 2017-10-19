@@ -10,12 +10,19 @@ import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsArray, JsObject, Json}
+import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson.{BSONDocument, BSONObjectID, BSONString}
 import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.duration._
+
+case class OpenAssignmentsResult(_id: String, openAssignments: Int)
+
+object OpenAssignmentsResult {
+  implicit val format = Json.format[OpenAssignmentsResult]
+}
 
 case class OpenAssignment(
   instances: Int,
@@ -105,8 +112,8 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     countInstances(Json.obj("_task" -> _task))
   }
 
-  def countForProject(project: String)(implicit ctx: DBAccessContext) = {
-    countInstances(Json.obj("_project" -> project))
+  def countForProjects(implicit ctx: DBAccessContext) = {
+    countOpenAssignments("$_project")
   }
 
   def removeByTask(_task: BSONObjectID)(implicit ctx: DBAccessContext) = {
@@ -117,8 +124,17 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     remove(Json.obj("_project" -> _project))
   }
 
-  def countOpenAssignments(implicit ctx: DBAccessContext) = {
-    countInstances(Json.obj())
+  def countAllOpenAssignments(implicit ctx: DBAccessContext) = {
+    countOpenAssignments("all").map(_.get("all"))
+  }
+
+  def countOpenAssignments(groupingField: String = "1")(implicit ctx: DBAccessContext) = {
+    val dao =  underlying.db.collection[BSONCollection]("openAssignments")
+    import dao.BatchCommands.AggregationFramework._
+
+    dao.aggregate(
+      Group(BSONString(groupingField))( "openAssignments" -> SumField("instances"))
+    ).map{result => Json.toJson(result.firstBatch).as[List[OpenAssignmentsResult]].map( x => x._id -> x.openAssignments).toMap }
   }
 
   def updateRemainingInstances(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {

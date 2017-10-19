@@ -149,11 +149,9 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   <br />
                   <span>
                     <i className="fa fa-clock-o" />
-                    {annotation.tracingTime ? (
-                      FormatUtils.formatSeconds(annotation.tracingTime / 1000)
-                    ) : (
-                      0
-                    )}
+                    {annotation.tracingTime
+                      ? FormatUtils.formatSeconds(annotation.tracingTime / 1000)
+                      : 0}
                   </span>
                 </td>
                 <td className="nowrap">

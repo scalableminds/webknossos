@@ -34,7 +34,7 @@ object OpenAssignmentService extends FoxImplicits{
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {
-    OpenAssignmentDAO.countOpenAssignments
+    OpenAssignmentDAO.countAllOpenAssignments
   }
 
   def insertInstancesFor(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {

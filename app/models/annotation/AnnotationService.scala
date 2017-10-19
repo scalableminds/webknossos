@@ -40,11 +40,13 @@ object AnnotationService
     dataSetTeams.intersect(user.teamNames).head
   }
 
-  private def createVolumeTracing(dataSource: DataSource): VolumeTracing = {
-    val fallbackLayer = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer => Some(layer)
-      case _ => None
-    }.headOption
+  private def createVolumeTracing(dataSource: DataSource, withFallback: Boolean): VolumeTracing = {
+    val fallbackLayer = if (withFallback) {
+      dataSource.dataLayers.flatMap {
+        case layer: SegmentationLayer => Some(layer)
+        case _ => None
+      }.headOption
+    } else None
 
     VolumeTracing(
       None,
@@ -65,15 +67,15 @@ object AnnotationService
     user: User,
     dataSet: DataSet,
     tracingType: TracingType.Value,
+    withFallback: Boolean,
     id: String = "")(implicit ctx: DBAccessContext): Fox[Annotation] = {
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
         dataSet.dataStore.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
       case TracingType.volume =>
-        dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource))
+        dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
     }
-
     for {
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
       tracing <- createTracing(dataSource)

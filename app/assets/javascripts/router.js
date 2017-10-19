@@ -31,7 +31,9 @@ class Router extends BaseRouter {
       "/users": "users",
       "/teams": "teams",
       "/statistics": "statistics",
+      "/tasks": "tasks",
       "/tasks/create": "taskCreate",
+      "/tasks/overview": "taskOverview",
       "/tasks/:id/edit": "taskEdit",
       "/projects": "projects",
       "/projects/create": "projectCreate",
@@ -53,10 +55,8 @@ class Router extends BaseRouter {
       "/scripts/create": "scriptsCreate",
       "/scripts/:id/edit": "scriptsCreate",
       "/spotlight": "spotlight",
-      "/tasks/overview": "taskOverview",
       "/admin/taskTypes": "hideLoadingSpinner",
       "/workload": "workload",
-      "/tasks": "taskQuery",
     };
   }
 
@@ -178,26 +178,32 @@ class Router extends BaseRouter {
     });
   }
 
-  taskQuery() {
+  tasks() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskQueryView = admin.TaskQueryView;
-
-      const view = new TaskQueryView();
+      const view = new ReactBackboneWrapper(admin.TaskListView, {});
       this.changeView(view);
     });
   }
 
   projectTasks(projectName) {
-    this.showWithPagination("TaskListView", "TaskCollection", {
-      projectName,
-      addButtonText: "Create New Task",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.TaskListView, {
+        // See format for `mapPropsToFields`
+        // https://ant.design/components/form/#Form.create(options)
+        initialFieldValues: { projectName },
+      });
+      this.changeView(view);
     });
   }
 
   taskTypesTasks(taskTypeId) {
-    this.showWithPagination("TaskListView", "TaskCollection", {
-      taskTypeId,
-      addButtonText: "Create New Task",
+    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
+      const view = new ReactBackboneWrapper(admin.TaskListView, {
+        // See format for `mapPropsToFields`
+        // https://ant.design/components/form/#Form.create(options)
+        initialFieldValues: { taskTypeId },
+      });
+      this.changeView(view);
     });
   }
 

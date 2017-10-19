@@ -2,9 +2,9 @@
  * api_flow_types.js
  * @flow
  */
-import type { Vector3 } from "oxalis/constants";
-import type { DataLayerType, SettingsType } from "oxalis/store";
 import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import type { DataLayerType, SettingsType, BoundingBoxObjectType } from "oxalis/store";
 
 type APIDataSourceType = {
   +id: {
@@ -87,25 +87,6 @@ export type APISettingsType = {
   +somaClickingAllowed: boolean,
 };
 
-export type APIScriptType = {
-  +gist: string,
-  +id: string,
-  +name: string,
-  +owner: APIUserType,
-};
-
-export type APITaskType = {
-  +id: number,
-  +type: "string",
-  +script?: APIScriptType,
-  +type: {
-    +summary: string,
-    +description: string,
-    +id: string,
-    +team: string,
-  },
-};
-
 export const APITracingTypeTracingEnum = {
   Explorational: "Explorational",
   Task: "Task",
@@ -122,11 +103,11 @@ export type APIAnnotationType = {
     +id: string,
     +typ: string,
   },
-  +created: string,
   +dataSetName: string,
   +dataStore: APIDataStoreType,
   +description: string,
   +formattedHash: string,
+  +modified: string,
   +id: string,
   +isPublic: boolean,
   +name: string,
@@ -152,6 +133,8 @@ export type APITaskTypeType = {
   +settings: SettingsType,
 };
 
+type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
+
 export type APITaskWithAnnotationType = {
   +id: string,
   +team: string,
@@ -164,11 +147,41 @@ export type APITaskWithAnnotationType = {
   +boundingBox: null,
   +neededExperience: ExperienceMapType,
   +created: string,
-  +status: { +open: number, +inProgress: number, +completed: number },
+  +status: TaskStatusType,
   +script: null,
   +tracingTime: null,
   +creationInfo: null,
   +annotation: APIAnnotationType,
+};
+
+export type APIScriptType = {
+  +id: string,
+  +name: string,
+  +owner: APIUserType,
+  +gist: string,
+};
+
+export type APITaskType = {
+  +boundingBox: BoundingBoxObjectType,
+  +boundingBoxVec6: Vector6,
+  +created: string,
+  +creationInfo: ?string,
+  +dataSet: string,
+  +editPosition: Vector3,
+  +editRotation: Vector3,
+  +formattedHash: string,
+  +id: string,
+  +neededExperience: {
+    +domain: string,
+    +value: number,
+  },
+  +projectName: string,
+  +script: ?APIScriptType,
+  +status: TaskStatusType,
+  +team: string,
+  +tracingTime: number,
+  +type: APITaskTypeType,
+  +directLinks?: Array<string>,
 };
 
 export type APIProjectType = {

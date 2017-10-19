@@ -328,7 +328,7 @@ export class OxalisModel {
 
   getLayerInfos(tracing: ?ServerTracingType) {
     // Overwrite or extend layers with volumeTracingLayer
-    const layers = _.clone(Store.getState().dataset.dataLayers);
+    let layers = _.clone(Store.getState().dataset.dataLayers);
     if (tracing == null || tracing.elementClass == null) {
       return layers;
     }
@@ -367,6 +367,10 @@ export class OxalisModel {
     if (existingLayer != null) {
       layers[existingLayerIndex] = tracingLayer;
     } else {
+      // Remove other segmentation layers, since we are adding a new one.
+      // This is a temporary workaround. In the long term we want to support
+      // multiple segmentation layers.
+      layers = layers.filter(layer => layer.category !== "segmentation");
       layers.push(tracingLayer);
     }
     return layers;

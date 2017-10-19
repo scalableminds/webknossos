@@ -32,8 +32,6 @@ POST          /api/reset                                                        
 POST          /api/changepw                                                     controllers.Authentication.changePassword
 POST          /api/resetPassword                                                controllers.Authentication.handleResetPassword
 GET           /api/logout                                                       controllers.Authentication.logout
-GET           /api/getLoginToken                                                controllers.Authentication.activateLoginToken
-GET           /api/deleteLoginToken                                             controllers.Authentication.deactivateLoginToken
 
 # Configurations
 GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default

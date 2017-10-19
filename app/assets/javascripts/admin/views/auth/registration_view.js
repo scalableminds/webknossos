@@ -1,5 +1,4 @@
 // @flow
-
 import React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
@@ -45,10 +44,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/register", { data: formValues }).then(() => {
-          // if(...)
           Toast.success(messages["auth.account_created"]);
-          // else
-          // Toast.success(messages["auth.automatic_user_activation"])
           this.props.history.push("/login");
         });
       }

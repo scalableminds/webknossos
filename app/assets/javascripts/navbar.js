@@ -103,11 +103,6 @@ class Navbar extends React.PureComponent<Props> {
                   </span>
                 }
               >
-                <Menu.Item key="/help/faq">
-                  <a target="_blank" href="/help/faq">
-                    FAQ
-                  </a>
-                </Menu.Item>
                 <Menu.Item key="11">
                   <a target="_blank" href="/assets/docs/frontend-api/index.html">
                     Frontend API Documentation

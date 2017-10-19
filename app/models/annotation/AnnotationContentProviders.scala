@@ -35,7 +35,7 @@ trait AnnotationContentService {
 
   def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[AType]
 
-  def createFrom(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[AType]
+  def createFrom(dataSet: DataSet, withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[AType]
 
   def clearAndRemove(id: String)(implicit ctx: DBAccessContext): Fox[Boolean]
 }

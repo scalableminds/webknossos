@@ -32,15 +32,17 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import play.api.mvc.{AnyContent, Result}
 import play.twirl.api.Html
-import scala.concurrent.Future
 
+import scala.concurrent.Future
 import play.api.libs.json._
 import play.api.libs.functional.syntax._
 import reactivemongo.bson.BSONObjectID
+
 import scala.concurrent.duration._
 import scala.async.Async.{async, await}
-
 import models.project.{Project, ProjectDAO}
+
+import scala.util.Success
 
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
 
@@ -228,12 +230,57 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def ensureMaxNumberOfOpenTasks(user: User)(implicit ctx: DBAccessContext): Fox[Int] = {
-    AnnotationService.countOpenTasks(user).flatMap{ numberOfOpen =>
-      if (numberOfOpen < MAX_OPEN_TASKS || user.hasAdminAccess)
-        Fox.successful(numberOfOpen)
-      else
+  def parseBsonToFox(s: String): Fox[BSONObjectID] =
+    BSONObjectID.parse(s) match {
+      case Success(id) => Fox.successful(id)
+      case _ => Fox(Future.successful(Empty))
+    }
+
+  def listTasks() = Authenticated.async(parse.json) { implicit request =>
+
+    val userOpt = (request.body \ "user").asOpt[String]
+    val projectOpt =  (request.body \ "project").asOpt[String]
+    val idsOpt = (request.body \ "ids").asOpt[List[String]]
+    val taskTypeOpt =  (request.body \ "taskType").asOpt[String]
+
+    userOpt match {
+      case Some(userId) => {
+        for {
+          userIdBson <- parseBsonToFox(userId)
+          user <- UserDAO.findOneById(userIdBson) ?~> Messages("user.notFound")
+          userAnnotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
+          taskIdsFromAnnotations = userAnnotations.flatMap(_._task).map(_.stringify).toSet
+          taskIds = idsOpt match {
+            case Some(ids) => taskIdsFromAnnotations.intersect(ids.toSet)
+            case None => taskIdsFromAnnotations
+          }
+          tasks <- TaskDAO.findAllByProjectTaskTypeIds(projectOpt, taskTypeOpt, Some(taskIds.toList))
+          jsResult <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, request.userOpt))
+        } yield {
+          Ok(Json.toJson(jsResult))
+        }
+      }
+      case None => {
+        for {
+          tasks <- TaskDAO.findAllByProjectTaskTypeIds(projectOpt, taskTypeOpt, idsOpt)
+          jsResult <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, request.userOpt))
+        } yield {
+          Ok(Json.toJson(jsResult))
+        }
+      }
+    }
+
+  }
+
+  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = {
+    AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
+      if (numberOfOpen < MAX_OPEN_TASKS) {
+        Fox.successful(user.teamNames)
+      } else if (user.hasAdminAccess) {
+        Fox.successful(user.adminTeamNames)
+      } else {
         Fox.failure(Messages("task.tooManyOpenOnes"))
+      }
     }
   }
 
@@ -260,9 +307,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 //    }
   }
 
-  def tryToGetNextAssignmentFor(user: User, retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+  def tryToGetNextAssignmentFor(user: User, teams: List[String], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     val s = System.currentTimeMillis()
-    TaskService.findAssignableFor(user).futureBox.flatMap {
+    TaskService.findAssignableFor(user, teams).futureBox.flatMap {
       case Full(assignment) =>
         NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
         TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.take(assignment)).flatMap {
@@ -270,7 +317,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           if (updateResult.n >= 1)
             Fox.successful(assignment)
           else if (retryCount > 0)
-            tryToGetNextAssignmentFor(user, retryCount - 1)
+            tryToGetNextAssignmentFor(user, teams, retryCount - 1)
           else {
             val e = System.currentTimeMillis()
             logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
@@ -282,7 +329,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       case f: Failure =>
         logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
         if (retryCount > 0)
-          tryToGetNextAssignmentFor(user, retryCount - 1).futureBox
+          tryToGetNextAssignmentFor(user, teams, retryCount - 1).futureBox
         else {
           logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to FAILURE")
           Fox.failure(Messages("assignment.retrieval.failed")).futureBox
@@ -297,9 +344,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val user = request.user
     val id = UUID.randomUUID().toString
     for {
-      _ <- ensureMaxNumberOfOpenTasks(user)
+      teams <- getAllowedTeamsForNextTask(user)
       _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      assignment <- tryToGetNextAssignmentFor(user)
+      assignment <- tryToGetNextAssignmentFor(user, teams)
       task <- assignment.task
       annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
       annotationJSON <- AnnotationLike.annotationLikeInfoWrites(annotation, Some(user), exclude = List("content"))
@@ -332,8 +379,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       !l.map(_._task).contains(next._task)
 
     def findNextAssignments = {
-      TaskService.findAssignable(user) |>>> takeUpTo[OpenAssignment](limit, uniqueIdFilter)
+      TaskService.findAssignable(user, user.teamNames) |>>> takeUpTo[OpenAssignment](limit, uniqueIdFilter)
     }
+
     for {
       assignments <- findNextAssignments
     } yield {

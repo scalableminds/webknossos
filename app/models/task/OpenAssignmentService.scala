@@ -14,8 +14,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.api.commands.WriteResult
 
 object OpenAssignmentService extends FoxImplicits{
-  def findNextOpenAssignments(user: User)(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
-    OpenAssignmentDAO.findOrderedByPriority(user)
+  def findNextOpenAssignments(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
+    OpenAssignmentDAO.findOrderedByPriority(user, teams)
   }
 
   def findAllOpenAssignments(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
@@ -36,7 +36,7 @@ object OpenAssignmentService extends FoxImplicits{
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {
-    OpenAssignmentDAO.countOpenAssignments
+    OpenAssignmentDAO.countAllOpenAssignments
   }
 
   def insertInstancesFor(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {

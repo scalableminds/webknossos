@@ -8,7 +8,7 @@ import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import app from "app";
 import messages from "messages";
-import { getProjects, deleteProject } from "admin/admin_rest_api";
+import { getProjectsWithOpenAssignments, deleteProject } from "admin/admin_rest_api";
 import type { APIProjectType } from "admin/api_flow_types";
 
 const { Column } = Table;
@@ -32,7 +32,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    const projects = await getProjects();
+    const projects = await getProjectsWithOpenAssignments();
 
     this.setState({
       isLoading: false,
@@ -66,7 +66,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
 
     return (
       <div className="container wide TestProjectListView">
-        <div style={{ marginTag: 20 }}>
+        <div style={{ marginTop: 20 }}>
           <div className="pull-right">
             <a href="/projects/create">
               <Button icon="plus" style={marginRight} type="primary">

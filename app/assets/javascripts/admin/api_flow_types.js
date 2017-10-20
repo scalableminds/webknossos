@@ -115,6 +115,36 @@ export type APIScriptType = {
   +gist: string,
 };
 
+export type APIScriptType = {
+  +id: string,
+  +name: string,
+  +owner: APIUserType,
+  +gist: string,
+};
+
+export type APITaskType = {
+  +boundingBox: BoundingBoxObjectType,
+  +boundingBoxVec6: Vector6,
+  +created: string,
+  +creationInfo: ?string,
+  +dataSet: string,
+  +editPosition: Vector3,
+  +editRotation: Vector3,
+  +formattedHash: string,
+  +id: string,
+  +neededExperience: {
+    +domain: string,
+    +value: number,
+  },
+  +projectName: string,
+  +script: ?APIScriptType,
+  +status: TaskStatusType,
+  +team: string,
+  +tracingTime: number,
+  +type: APITaskTypeType,
+  +directLinks?: Array<string>,
+};
+
 export type APIProjectType = {
   +id: string,
   +name: string,

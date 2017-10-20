@@ -1,117 +1,113 @@
-import _ from "lodash";
+// @flow
+import React from "react";
+import { Form, Input, Select, Button, Card } from "antd";
 import app from "app";
-import FormSyphon from "form-syphon";
-import Marionette from "backbone.marionette";
-import UserCollection from "admin/models/user/user_collection";
-import SelectionView from "admin/views/selection_view";
-import Toast from "libs/toast";
+import { getUsers, updateScript, createScript } from "admin/admin_rest_api";
+import type { APIUserType } from "admin/api_flow_types";
 
-class ScriptCreateView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="row">
-  <div class="col-sm-12">
-    <div class="well">
-      <div class="col-sm-9 col-sm-offset-2">
-        <h3><%- getTitle() %> Scripts</h3>
-      </div>
+const FormItem = Form.Item;
+const Option = Select.Option;
 
-      <form method="POST" class="form-horizontal">
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="name">Script Name</label>
-          <div class="col-sm-9">
-            <input type="text" id="name" name="name" value="<%- name %>" class="form-control"
-             required pattern=".{3,}" title="Please use at least 3 characters.">
-          </div>
-        </div>
+type Props = {
+  scriptId: ?string,
+  form: Object,
+};
 
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="gist">Gist URL</label>
-          <div class="col-sm-9">
-            <input type="url" id="gist" name="gist" value="<%- gist %>" class="form-control">
-          </div>
-        </div>
+type State = {
+  users: Array<APIUserType>,
+};
 
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="ownerId">Owner</label>
-          <div class="col-sm-9 ownerId">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <div class="col-sm-2 col-sm-offset-9">
-          <button type="submit" class="form-control btn btn-primary"><%- getTitle() %></button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>\
-`);
-    this.prototype.className = "container wide";
-
-    this.prototype.events = { "submit form": "submitForm" };
-
-    this.prototype.regions = {
-      ownerId: ".ownerId",
-    };
-
-    this.prototype.ui = {
-      form: "form",
-    };
+class ScriptCreateView extends React.PureComponent<Props, State> {
+  state = {
+    users: [],
+  };
+  componentDidMount() {
+    this.fetchData();
   }
 
-  templateContext() {
-    return {
-      getTitle: () => (this.isEditingMode ? "Update" : "Create"),
-    };
+  async fetchData() {
+    const users = await getUsers();
+    this.setState({ users: users.filter(user => user.isActive) });
   }
 
-  initialize() {
-    this.isEditingMode = _.isString(this.model.id);
+  handleSubmit = e => {
+    e.preventDefault();
+    this.props.form.validateFields((err, formValues) => {
+      if (!err) {
+        if (this.props.scriptId) {
+          updateScript(this.props.scriptId, formValues);
+        } else {
+          createScript(formValues);
+        }
 
-    if (this.isEditingMode) {
-      this.listenTo(this.model, "sync", this.render);
-      this.model.fetch();
-    }
-  }
-
-  submitForm(event) {
-    event.preventDefault();
-
-    if (!this.ui.form[0].checkValidity()) {
-      Toast.error("Please supply all needed values.");
-      return;
-    }
-
-    const formValues = FormSyphon.serialize(this.ui.form);
-
-    this.model.save(formValues).then(() => app.router.navigate("/scripts", { trigger: true }));
-  }
-
-  onRender() {
-    const owner = this.model.get("owner");
-    const defaultUserId = owner ? owner.id : app.currentUser.id;
-    const userSelectionView = new SelectionView({
-      collection: new UserCollection(),
-      childViewOptions: {
-        modelValue() {
-          return this.model.id;
-        },
-        modelLabel() {
-          return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get(
-            "email",
-          )})`;
-        },
-        defaultItem: { id: defaultUserId },
-      },
-      filter: model => model.get("isActive"),
-      name: "ownerId",
-      data: "isAdmin=true",
+        app.router.navigate("/scripts", { trigger: true });
+      }
     });
-    this.showChildView("ownerId", userSelectionView);
+  };
+
+  render() {
+    const { getFieldDecorator } = this.props.form;
+    const titlePrefix = this.props.scriptId ? "Update " : "Create";
+
+    return (
+      <div className="container wide" style={{ paddingTop: 20 }}>
+        <Card title={<h3>{titlePrefix} Scripts</h3>}>
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            <FormItem label="Script Name" hasFeedback>
+              {getFieldDecorator("name", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                  { min: 3 },
+                ],
+              })(<Input autoFocus />)}
+            </FormItem>
+
+            <FormItem label="Gist URL" hasFeedback>
+              {getFieldDecorator("gist", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                  { type: "url" },
+                ],
+              })(<Input />)}
+            </FormItem>
+
+            <FormItem label="Owner" hasFeedback>
+              {getFieldDecorator("ownerId", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                ],
+              })(
+                <Select
+                  showSearch
+                  placeholder="Select a User"
+                  optionFilterProp="children"
+                  style={{ width: "100%" }}
+                >
+                  {this.state.users.map((user: APIUserType) => (
+                    <Option key={user.id} value={user.id}>
+                      {`${user.lastName}, ${user.firstName} ${user.email}`}
+                    </Option>
+                  ))}
+                </Select>,
+              )}
+            </FormItem>
+
+            <FormItem>
+              <Button type="primary" htmlType="submit">
+                {titlePrefix} Script
+              </Button>
+            </FormItem>
+          </Form>
+        </Card>
+      </div>
+    );
   }
 }
-ScriptCreateView.initClass();
 
-export default ScriptCreateView;
+export default Form.create()(ScriptCreateView);

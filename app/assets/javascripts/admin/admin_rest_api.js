@@ -55,9 +55,27 @@ export async function getScripts(): Promise<Array<APIScriptType>> {
   return scripts;
 }
 
+export async function getScript(scriptId: string): Promise<APIScriptType> {
+  return Request.receiveJSON(`/api/scripts/${scriptId}`);
+}
+
 export async function deleteScript(scriptId: string): Promise<void> {
   return Request.receiveJSON(`/api/scripts/${scriptId}`, {
     method: "DELETE",
+  });
+}
+
+export async function createScript(script: APIScriptType): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/scripts", {
+    method: "POST",
+    data: script,
+  });
+}
+
+export async function updateScript(scriptId: string, script: APIScriptType): Promise<void> {
+  return Request.sendJSONReceiveJSON(`/api/scripts/${scriptId}`, {
+    method: "PUT",
+    data: script,
   });
 }
 

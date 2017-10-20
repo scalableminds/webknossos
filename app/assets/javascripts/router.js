@@ -271,11 +271,7 @@ class Router extends BaseRouter {
 
   scriptsCreate(scriptId) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const ScriptCreateView = admin.ScriptCreateView;
-      const ScriptModel = admin.ScriptModel;
-
-      const model = new ScriptModel({ id: scriptId });
-      const view = new ScriptCreateView({ model });
+      const view = new ReactBackboneWrapper(admin.ScriptCreateView, { scriptId });
       this.changeView(view);
       this.hideLoadingSpinner();
     });

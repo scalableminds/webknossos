@@ -30,6 +30,13 @@ export async function getUsers(): Promise<Array<APIUserType>> {
   return users;
 }
 
+export async function getAdminUsers(): Promise<Array<APIUserType>> {
+  const users = await Request.receiveJSON("/api/users?isAdmin=true");
+  assertResponseLimit(users);
+
+  return users;
+}
+
 export async function getEditableUsers(): Promise<Array<APIUserType>> {
   const users = await Request.receiveJSON("/api/users?isEditable=true");
   assertResponseLimit(users);

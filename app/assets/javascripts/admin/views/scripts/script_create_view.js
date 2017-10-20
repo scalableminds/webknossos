@@ -2,7 +2,7 @@
 import React from "react";
 import { Form, Input, Select, Button, Card } from "antd";
 import app from "app";
-import { getUsers, updateScript, createScript } from "admin/admin_rest_api";
+import { getAdminUsers, updateScript, createScript, getScript } from "admin/admin_rest_api";
 import type { APIUserType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
@@ -23,11 +23,22 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
   };
   componentDidMount() {
     this.fetchData();
+    this.applyDefaults();
   }
 
   async fetchData() {
-    const users = await getUsers();
+    const users = await getAdminUsers();
     this.setState({ users: users.filter(user => user.isActive) });
+  }
+
+  async applyDefaults() {
+    const script = this.props.scriptId ? await getScript(this.props.scriptId) : null;
+    const defaultValues = {
+      owner: script ? script.owner.id : app.currentUser.id,
+    };
+
+    const defaultFormValues = Object.assign({}, script, defaultValues);
+    this.props.form.setFieldsValue(defaultFormValues);
   }
 
   handleSubmit = e => {
@@ -76,7 +87,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
             </FormItem>
 
             <FormItem label="Owner" hasFeedback>
-              {getFieldDecorator("ownerId", {
+              {getFieldDecorator("owner", {
                 rules: [
                   {
                     required: true,

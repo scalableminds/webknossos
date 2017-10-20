@@ -1,4 +1,4 @@
-// Store instance count with a single OpenAnnotations
+// Update user login credentials from SecureSocial to Silhouette
 
 // --- !Ups
 db.users.find().forEach(function(elem) {

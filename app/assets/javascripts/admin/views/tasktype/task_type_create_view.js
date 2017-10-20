@@ -2,8 +2,8 @@
 import React from "react";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
 import app from "app";
-import { getTeams, createTaskType, updateTaskType } from "admin/admin_rest_api";
-import type { APITeamType, APITaskTypeType } from "admin/api_flow_types";
+import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
+import type { APITeamType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -24,7 +24,10 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     this.fetchData();
+    this.applyDefaults();
+  }
 
+  async applyDefaults() {
     const defaultValues = {
       settings: {
         somaClickingAllowed: true,
@@ -32,7 +35,10 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         advancedOptionsAllowed: true,
       },
     };
-    this.props.form.setFieldsValue(defaultValues);
+    const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
+
+    const formValues = Object.assign({}, defaultValues, taskType);
+    this.props.form.setFieldsValue(formValues);
   }
 
   async fetchData() {

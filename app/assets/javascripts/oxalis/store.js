@@ -19,6 +19,7 @@ import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
+import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
 import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
 import type {
   OrthoViewType,
@@ -477,7 +478,7 @@ const combinedReducers = reduceReducers(
 const store = createStore(
   combinedReducers,
   defaultState,
-  applyMiddleware(overwriteActionMiddleware, sagaMiddleware),
+  applyMiddleware(googleAnalyticsMiddleware, overwriteActionMiddleware, sagaMiddleware),
 );
 sagaMiddleware.run(rootSaga);
 

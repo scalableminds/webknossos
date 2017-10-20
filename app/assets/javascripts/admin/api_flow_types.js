@@ -115,11 +115,16 @@ export type APIScriptType = {
   +gist: string,
 };
 
-export type APIScriptType = {
+export type APIProjectType = {
   +id: string,
   +name: string,
+  +team: string,
   +owner: APIUserType,
-  +gist: string,
+  +priority: number,
+  +paused: boolean,
+  +expectedTime: number,
+  +assignmentConfiguration: { location: "webknossos" | "mturk" },
+  +numberOfOpenAssignments: number,
 };
 
 export type APITaskType = {
@@ -143,41 +148,6 @@ export type APITaskType = {
   +tracingTime: number,
   +type: APITaskTypeType,
   +directLinks?: Array<string>,
-};
-
-export type APIProjectType = {
-  +id: string,
-  +name: string,
-  +team: string,
-  +owner: APIUserType,
-  +priority: number,
-  +paused: boolean,
-  +expectedTime: number,
-  +assignmentConfiguration: { location: "webknossos" | "mturk" },
-  +numberOfOpenAssignments: number,
-};
-
-export type APITaskType = {
- +boundingBox: BoundingBoxObjectType,
- +boundingBoxVec6: Vector6,
- +created: string,
- +creationInfo: ?string,
- +dataSet: string,
- +editPosition: Vector3,
- +editRotation: Vector3,
- +formattedHash: string,
- +id: string,
- +neededExperience: {
-   +domain: string,
-   +value: number,
- },
- +projectName: string,
- +script: ?APIScriptType,
- +status: TaskStatusType,
- +team: string,
- +tracingTime: number,
- +type: APITaskTypeType,
- +directLinks?: Array<string>,
 };
 
 export type APIAnnotationType = {

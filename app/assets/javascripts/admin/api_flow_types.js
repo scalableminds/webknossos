@@ -3,7 +3,7 @@
  * @flow
  */
 import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 import type { DataLayerType, SettingsType, BoundingBoxObjectType } from "oxalis/store";
 
 type APIDataSourceType = {

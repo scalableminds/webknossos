@@ -58,7 +58,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-    const titlePrefix = this.props.scriptId ? "Update " : "Create";
+    const titlePrefix = this.props.scriptId ? "Update" : "Create";
 
     return (
       <div className="container wide" style={{ paddingTop: 20 }}>

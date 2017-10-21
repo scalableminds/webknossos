@@ -55,6 +55,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
+import { emptySaveQueueAction } from "oxalis/model/actions/save_actions";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -320,6 +321,7 @@ class TracingApi {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
     await Model.fetch(newTracingType, newTracingId, newControlMode, false);
+    Store.dispatch(emptySaveQueueAction());
     Store.dispatch(wkReadyAction());
     UrlManager.updateUnthrottled(true);
   }

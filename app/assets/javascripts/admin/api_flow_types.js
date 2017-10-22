@@ -2,8 +2,8 @@
  * api_flow_types.js
  * @flow
  */
-import type { Vector3 } from "oxalis/constants";
-import type { DataLayerType, SettingsType } from "oxalis/store";
+import type { Vector3, Vector6 } from "oxalis/constants";
+import type { DataLayerType, SettingsType, BoundingBoxObjectType } from "oxalis/store";
 
 type APIDataSourceType = {
   +id: {
@@ -77,7 +77,7 @@ export type APIAnnotationType = {
     +isAnonymous: boolean,
     +teams: Array<APITeamRoleType>,
   },
-  +created: string,
+  +modified: string,
   +stateLabel: string,
   +state: { +isAssigned: boolean, +isFinished: boolean, +isInProgress: boolean },
   +id: string,
@@ -97,6 +97,7 @@ export type APIAnnotationType = {
   +tracingTime: null,
   +tags: Array<string>,
 };
+
 export type APITaskTypeType = {
   +id: string,
   +summary: string,
@@ -104,6 +105,8 @@ export type APITaskTypeType = {
   +team: string,
   +settings: SettingsType,
 };
+
+type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
 
 export type APITaskWithAnnotationType = {
   +id: string,
@@ -117,11 +120,41 @@ export type APITaskWithAnnotationType = {
   +boundingBox: null,
   +neededExperience: ExperienceMapType,
   +created: string,
-  +status: { +open: number, +inProgress: number, +completed: number },
+  +status: TaskStatusType,
   +script: null,
   +tracingTime: null,
   +creationInfo: null,
   +annotation: APIAnnotationType,
+};
+
+export type APIScriptType = {
+  +id: string,
+  +name: string,
+  +owner: APIUserType,
+  +gist: string,
+};
+
+export type APITaskType = {
+  +boundingBox: BoundingBoxObjectType,
+  +boundingBoxVec6: Vector6,
+  +created: string,
+  +creationInfo: ?string,
+  +dataSet: string,
+  +editPosition: Vector3,
+  +editRotation: Vector3,
+  +formattedHash: string,
+  +id: string,
+  +neededExperience: {
+    +domain: string,
+    +value: number,
+  },
+  +projectName: string,
+  +script: ?APIScriptType,
+  +status: TaskStatusType,
+  +team: string,
+  +tracingTime: number,
+  +type: APITaskTypeType,
+  +directLinks?: Array<string>,
 };
 
 export type APIProjectType = {
@@ -134,11 +167,4 @@ export type APIProjectType = {
   +expectedTime: number,
   +assignmentConfiguration: { location: "webknossos" | "mturk" },
   +numberOfOpenAssignments: number,
-};
-
-export type APIScriptType = {
-  +id: string,
-  +name: string,
-  +owner: APIUserType,
-  +gist: string,
 };

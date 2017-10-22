@@ -1,18 +1,13 @@
 package models.annotation
 
-import com.scalableminds.braingames.datastore.tracings.skeleton.TracingSelector
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType.AnnotationType
 import models.binary.DataSetDAO
-import models.user.User
-import net.liftweb.common.Failure
 import oxalis.security.AuthenticatedRequest
-import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 
 /**
@@ -58,7 +53,7 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
     if (annotations.isEmpty)
       Fox.empty
     else {
-      val mergedAnnotationFox = for {
+      for {
         mergedTracingReference <- mergeTracingsOfAnnotations(annotations, dataSetName, persistTracing)
       } yield {
         Annotation(
@@ -71,8 +66,6 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
           typ,
           _id = newId)
       }
-      AnnotationStore.storeAnnotationInCache(mergedAnnotationFox, newId)
-      mergedAnnotationFox
     }
   }
 

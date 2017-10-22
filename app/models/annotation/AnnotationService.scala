@@ -10,9 +10,8 @@ import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, S
 import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
-import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils, BoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler
@@ -41,11 +40,13 @@ object AnnotationService
     dataSetTeams.intersect(user.teamNames).head
   }
 
-  private def createVolumeTracing(dataSource: DataSource): VolumeTracing = {
-    val fallbackLayer = dataSource.dataLayers.flatMap {
-      case layer: SegmentationLayer => Some(layer)
-      case _ => None
-    }.headOption
+  private def createVolumeTracing(dataSource: DataSource, withFallback: Boolean): VolumeTracing = {
+    val fallbackLayer = if (withFallback) {
+      dataSource.dataLayers.flatMap {
+        case layer: SegmentationLayer => Some(layer)
+        case _ => None
+      }.headOption
+    } else None
 
     VolumeTracing(
       None,
@@ -66,15 +67,15 @@ object AnnotationService
     user: User,
     dataSet: DataSet,
     tracingType: TracingType.Value,
+    withFallback: Boolean,
     id: String = "")(implicit ctx: DBAccessContext): Fox[Annotation] = {
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
         dataSet.dataStore.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
       case TracingType.volume =>
-        dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource))
+        dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
     }
-
     for {
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
       tracing <- createTracing(dataSource)
@@ -129,6 +130,9 @@ object AnnotationService
 
   def countOpenTasks(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task)
+
+  def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
 
   def hasAnOpenTask(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.hasAnOpenAnnotation(user._id, AnnotationType.Task)

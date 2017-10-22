@@ -55,6 +55,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
+import { doWithToken } from "admin/admin_rest_api";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -611,7 +612,7 @@ class DataApi {
     const dataset = Store.getState().dataset;
     const layer = this.__getLayer(layerName);
 
-    return layer.layer.doWithToken(token => {
+    return doWithToken(token => {
       const downloadUrl =
         `${dataset.dataStore
           .url}/data/datasets/${dataset.name}/layers/${layer.name}/data?resolution=0&` +
@@ -624,6 +625,8 @@ class DataApi {
         `depth=${bottomRight[2] - topLeft[2]}`;
 
       window.open(downloadUrl);
+      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
+      return Promise.resolve();
     });
   }
 

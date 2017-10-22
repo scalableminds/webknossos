@@ -44,6 +44,7 @@ import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
+import { doWithToken } from "admin/admin_rest_api";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
 export type ServerNodeType = {
@@ -154,9 +155,13 @@ export class OxalisModel {
     // Fetch the actual tracing from the datastore, if there is an annotation
     let tracing: ?ServerTracingType;
     if (annotation != null) {
-      tracing = await Request.receiveJSON(
-        `${annotation.dataStore.url}/data/tracings/${annotation.content.typ}/${annotation.content
-          .id}`,
+      // Make flow happy
+      const nonNullAnnotation = annotation;
+      tracing = await doWithToken(token =>
+        Request.receiveJSON(
+          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content
+            .typ}/${nonNullAnnotation.content.id}?token=${token}`,
+        ),
       );
       tracing.id = annotation.content.id;
     }
@@ -368,7 +373,7 @@ export class OxalisModel {
 
   getLayerInfos(tracing: ?ServerTracingType) {
     // Overwrite or extend layers with volumeTracingLayer
-    const layers = _.clone(Store.getState().dataset.dataLayers);
+    let layers = _.clone(Store.getState().dataset.dataLayers);
     if (tracing == null || tracing.elementClass == null) {
       return layers;
     }
@@ -407,6 +412,10 @@ export class OxalisModel {
     if (existingLayer != null) {
       layers[existingLayerIndex] = tracingLayer;
     } else {
+      // Remove other segmentation layers, since we are adding a new one.
+      // This is a temporary workaround. In the long term we want to support
+      // multiple segmentation layers.
+      layers = layers.filter(layer => layer.category !== "segmentation");
       layers.push(tracingLayer);
     }
     return layers;

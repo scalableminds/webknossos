@@ -26,7 +26,6 @@ case class Annotation(
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
                        state: AnnotationState = AnnotationState.InProgress,
-                       version: Int = 0,
                        _name: Option[String] = None,
                        description: String = "",
                        tracingTime: Option[Long] = None,
@@ -92,9 +91,10 @@ case class Annotation(
         "content" -> tracingReference,
         "dataSetName" -> dataSetName,
         "dataStore" -> dataSet.dataStoreInfo,
+        "isPublic" -> isPublic,
         "settings" -> settings,
         "tracingTime" -> tracingTime,
-        "tags" -> tags,
+        "tags" -> (tags ++ Set(dataSetName, tracingReference.typ.toString)),
         "user" -> userJson
       )
     }
@@ -215,8 +215,8 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]().collect[List]()
   }
 
-  def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    count(defaultFindForUserQ(_user, annotationType))
+  def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[String] = Nil)(implicit ctx: DBAccessContext) =
+    count(defaultFindForUserQ(_user, annotationType) ++ Json.obj("team" -> Json.obj("$nin" -> excludeTeams)))
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("isActive" -> true, "_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)

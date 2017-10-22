@@ -159,7 +159,7 @@ class Controller extends React.PureComponent<Props, State> {
     // they start working on a new TaskType and need to be instructed.
     let text;
     const task = Store.getState().task;
-    if (!Utils.getUrlParams("differentTaskType") || task == null) {
+    if (!Utils.hasUrlParam("differentTaskType") || task == null) {
       return;
     }
 

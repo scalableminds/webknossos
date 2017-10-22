@@ -6,6 +6,7 @@ import Request from "libs/request";
 import SelectionView from "admin/views/selection_view";
 import TeamCollection from "admin/models/team/team_collection";
 import DatastoreCollection from "admin/models/datastore/datastore_collection";
+import { doWithToken } from "admin/admin_rest_api";
 import messages from "messages";
 
 class DatasetUploadView extends Marionette.View {
@@ -125,23 +126,21 @@ class DatasetUploadView extends Marionette.View {
       Toast.info("Uploading datasets", false);
       this.ui.spinner.removeClass("hidden");
 
-      Request.receiveJSON("/api/dataToken/generate")
-        .then(({ token }) =>
-          Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
-            data: new FormData(form),
-            host: form.datastore.value,
-          }),
-        )
-        .then(
-          () => {
-            Toast.success(messages["dataset.upload_success"]);
-            const url = `/datasets/${form.name.value}/import`;
-            app.router.navigate(url, { trigger: true });
-          },
-          () => {
-            this.ui.spinner.addClass("hidden");
-          },
-        );
+      doWithToken(token =>
+        Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
+          data: new FormData(form),
+          host: form.datastore.value,
+        }),
+      ).then(
+        () => {
+          Toast.success(messages["dataset.upload_success"]);
+          const url = `/datasets/${form.name.value}/import`;
+          app.router.navigate(url, { trigger: true });
+        },
+        () => {
+          this.ui.spinner.addClass("hidden");
+        },
+      );
     }
   }
 }

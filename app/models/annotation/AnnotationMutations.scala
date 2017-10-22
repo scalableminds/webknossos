@@ -1,14 +1,12 @@
 package models.annotation
 
 import com.scalableminds.braingames.datastore.tracings.TracingType
-import com.scalableminds.util.mvc.BoxImplicits
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import models.project.{Project, WebknossosAssignmentConfig}
 import models.task.{OpenAssignmentService, Task}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsValue, Json}
 
 /**
  * Company: scalableminds

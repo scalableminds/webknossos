@@ -8,6 +8,7 @@ import type {
   NodeType,
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
+import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
@@ -97,6 +98,12 @@ type UpdateVolumeTracingUpdateAction = {
     zoomLevel: number,
   },
 };
+type UpdateBucketUpdateAction = {
+  name: "updateBucket",
+  value: BucketInfo & {
+    base64Data: string,
+  },
+};
 type UpdateTracingUpdateAction =
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction;
@@ -112,6 +119,7 @@ export type UpdateAction =
   | CreateEdgeUpdateAction
   | DeleteEdgeUpdateAction
   | UpdateTracingUpdateAction
+  | UpdateBucketUpdateAction
   | ToggleTreeUpdateAction;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
@@ -268,5 +276,13 @@ export function updateVolumeTracing(
       largestSegmentId: tracing.maxCellId,
       zoomLevel,
     },
+  };
+}
+export function updateBucket(bucketInfo: BucketInfo, base64Data: string) {
+  return {
+    name: "updateBucket",
+    value: Object.assign({}, bucketInfo, {
+      base64Data,
+    }),
   };
 }

@@ -131,11 +131,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def createExplorational(dataSetName: String, typ: String) = Authenticated.async { implicit request =>
+  def createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean]) = Authenticated.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       contentType <- TracingType.values.find(_.toString == typ).toFox
-      annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType) ?~> Messages("annotation.create.failed")
+      annotation <- AnnotationService.createExplorationalFor(request.user, dataSet, contentType, withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
     } yield {
       Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
     }
@@ -186,7 +186,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     for {
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      restrictions <- restrictionsFor(AnnotationIdentifier(id, typ))
+      restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
       finished <- annotation.muta.finishAnnotation(request.user, restrictions).futureBox
     } yield {
       finished match {
@@ -220,8 +220,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def empty(typ: String, id: String) = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))
   }
-  def traceReadOnly(typ: String, id: String) = UserAwareAction { implicit request =>
-    Ok(empty)
+  def emptyReadOnly(typ: String, id: String) = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html("")))
   }
 
 
@@ -264,9 +264,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
       userId <- (request.body \ "userId").asOpt[String].toFox
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      result <- annotation.muta.transferToUser(user)
+      annotation <- annotation.muta.transferToUser(user)
+      restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
+      json <- annotation.toJson(request.userOpt, Some(restrictions))
     } yield {
-      JsonOk(Messages("annotation.transfered"))
+      JsonOk(json)
     }
   }
 

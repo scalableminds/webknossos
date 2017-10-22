@@ -71,7 +71,7 @@ GET           /datasets/:id/edit                                                
 GET           /datasets/:id/import                                              controllers.DataSetController.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
 GET           /datasets/upload                                                  controllers.DataSetController.empty
-GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String)
+GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean])
 
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
@@ -86,13 +86,12 @@ GET           /api/datastores                                                   
 POST          /api/datastores/:name/datasource                                  controllers.WKDataStoreController.updateOne(name: String)
 POST          /api/datastores/:name/datasources                                 controllers.WKDataStoreController.updateAll(name: String)
 POST          /api/datastores/:name/status                                      controllers.WKDataStoreController.statusUpdate(name: String)
-POST          /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String, token: String)
-POST          /api/datastores/:name/authorizeTracingUpdates                     controllers.WKDataStoreController.authorizeTracingUpdates(name: String)
+POST          /api/datastores/:name/handleTracingUpdateReport                   controllers.WKDataStoreController.handleTracingUpdateReport(name: String)
+POST          /api/datastores/:name/verifyUpload                                controllers.WKDataStoreController.validateDataSetUpload(name: String)
+POST          /api/datastores/:name/validateUserAccess                          controllers.UserTokenController.validateUserAccess(name: String, token: String)
 
-# Data Tokens
-GET           /api/dataToken/validate                                           controllers.DataTokenController.validateUserAndDataSetToken(token: String, dataSetName: String, dataLayerName: String)
-GET           /api/dataToken/generate                                           controllers.DataTokenController.generateToken(dataSetName: Option[String], dataLayerName: Option[String])
-GET           /api/datasetToken/validate                                        controllers.DataTokenController.validateDataSetToken(token: String, dataSetName: String)
+# User access tokens for datastore authentification
+GET           /api/userToken/generate                                           controllers.UserTokenController.generateUserToken
 
 # Annotations
 POST          /annotations/upload                                               controllers.AnnotationIOController.upload
@@ -108,7 +107,7 @@ GET           /annotations/:typ/:id/revert                                      
 POST          /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
 
 GET           /annotations/:typ/:id                                             controllers.AnnotationController.empty(typ: String, id: String)
-GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.empty(typ: String, id: String)
+GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.emptyReadOnly(typ: String, id: String)
 
 GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
 GET           /annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)
@@ -123,14 +122,12 @@ GET           /tasks                                                            
 GET           /tasks/overview                                                   controllers.TaskController.empty
 GET           /tasks/create                                                     controllers.TaskController.empty
 
-GET           /api/queries                                                      controllers.QueryController.empty
-POST          /api/queries                                                      controllers.QueryController.query(type: String, limit: Int ?= 1000)
-GET           /api/descriptions/:element                                        controllers.QueryController.descriptions(element)
-
 GET           /api/tasks                                                        controllers.TaskController.list
 POST          /api/tasks                                                        controllers.TaskController.create
 POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFile
+
 GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
+POST          /api/tasks/list                                                   controllers.TaskController.listTasks
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
@@ -172,6 +169,7 @@ GET           /projects/:name/tasks                                             
 GET           /projects/:name/edit                                              controllers.ProjectController.empty(name: String)
 
 GET           /api/projects                                                     controllers.ProjectController.list
+GET           /api/projects/assignments                                         controllers.ProjectController.listWithStatus
 POST          /api/projects                                                     controllers.ProjectController.create
 GET           /api/projects/:name                                               controllers.ProjectController.read(name: String)
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)

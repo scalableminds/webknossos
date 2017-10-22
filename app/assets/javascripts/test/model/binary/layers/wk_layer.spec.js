@@ -18,6 +18,7 @@ const StoreMock = {
     dataset: { name: "dataSet" },
     datasetConfiguration: { fourBit: false },
   }),
+  dispatch: sinon.stub(),
 };
 
 mockRequire("libs/request", RequestMock);
@@ -26,6 +27,7 @@ mockRequire.reRequire("libs/request");
 mockRequire.reRequire("oxalis/model/binary/layers/layer");
 
 const WkLayer = mockRequire.reRequire("oxalis/model/binary/layers/wk_layer").default;
+const { doWithToken } = mockRequire.reRequire("admin/admin_rest_api");
 
 const layerInfo = {
   name: "layername",
@@ -64,13 +66,12 @@ function prepare() {
 }
 
 test.serial("requestFromStore: Token Handling should request a token first", t => {
-  const { layer } = t.context;
   prepare();
-  return layer.tokenPromise.then(token => {
+  return doWithToken(token => {
     t.is(RequestMock.receiveJSON.callCount, 1);
 
     const [url] = RequestMock.receiveJSON.getCall(0).args;
-    t.is(url, "/api/dataToken/generate?dataSetName=dataSet&dataLayerName=layername");
+    t.is(url, "/api/userToken/generate");
 
     t.is(token, "token");
   });
@@ -87,29 +88,26 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
     .returns(Promise.resolve(responseBuffer));
 
   RequestMock.receiveJSON = sinon.stub();
-  RequestMock.receiveJSON.returns(Promise.resolve({ token: "token2" }));
+  RequestMock.receiveJSON
+    .onFirstCall()
+    .returns(Promise.resolve(tokenResponse))
+    .onSecondCall()
+    .returns(Promise.resolve({ token: "token2" }));
 
-  return layer.tokenPromise
-    .then(token => {
-      t.is(token, "token");
-      return layer.requestFromStore(batch);
-    })
-    .then(result => {
-      t.deepEqual(result, responseBuffer);
+  return doWithToken(token => {
+    t.is(token, "token");
+    return layer.requestFromStore(batch);
+  }).then(result => {
+    t.deepEqual(result, responseBuffer);
 
-      t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
+    t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
 
-      const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];
-      t.is(url, "url/data/datasets/dataSet/layers/layername/data?token=token");
+    const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];
+    t.is(url, "url/data/datasets/dataSet/layers/layername/data?token=token");
 
-      const url2 = RequestMock.sendJSONReceiveArraybuffer.getCall(1).args[0];
-      t.is(url2, "url/data/datasets/dataSet/layers/layername/data?token=token2");
-
-      return layer.tokenPromise;
-    })
-    .then(token => {
-      t.is(token, "token2");
-    });
+    const url2 = RequestMock.sendJSONReceiveArraybuffer.getCall(1).args[0];
+    t.is(url2, "url/data/datasets/dataSet/layers/layername/data?token=token2");
+  });
 });
 
 test.serial("requestFromStore: Request Handling: should pass the correct request parameters", t => {
@@ -117,7 +115,7 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
   const { batch } = prepare();
   layer.setFourBit(true);
 
-  const expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token";
+  const expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token2";
   const expectedOptions = {
     data: [
       { position: [0, 0, 0], zoomStep: 0, cubeSize: 32, fourBit: true },
@@ -145,53 +143,41 @@ test.serial("sendToStore: Request Handling should send the correct request param
   const bucket2 = new DataBucket(8, [1, 1, 1, 1], null);
   bucket2.data = data;
   const batch = [bucket1, bucket2];
-  RequestMock.sendJSONReceiveJSON = sinon.stub();
-  RequestMock.sendJSONReceiveJSON.returns(Promise.resolve());
 
   const getBucketData = sinon.stub();
   getBucketData.returns(data);
 
-  const expectedUrl = "url/data/tracings/volume/layername/update";
-  const expectedOptions = {
-    method: "POST",
-    data: [
+  const expectedSaveQueueItems = {
+    type: "PUSH_SAVE_QUEUE",
+    items: [
       {
-        actions: [
-          {
-            name: "updateBucket",
-            value: {
-              position: [0, 0, 0],
-              zoomStep: 0,
-              cubeSize: 32,
-              fourBit: false,
-              base64Data: Base64.fromByteArray(data),
-            },
-          },
-          {
-            name: "updateBucket",
-            value: {
-              position: [64, 64, 64],
-              zoomStep: 1,
-              cubeSize: 32,
-              fourBit: false,
-              base64Data: Base64.fromByteArray(data),
-            },
-          },
-        ],
-        timestamp: 1234,
-        version: 0,
+        name: "updateBucket",
+        value: {
+          position: [0, 0, 0],
+          zoomStep: 0,
+          cubeSize: 32,
+          fourBit: false,
+          base64Data: Base64.fromByteArray(data),
+        },
+      },
+      {
+        name: "updateBucket",
+        value: {
+          position: [64, 64, 64],
+          zoomStep: 1,
+          cubeSize: 32,
+          fourBit: false,
+          base64Data: Base64.fromByteArray(data),
+        },
       },
     ],
-    timeout: 30000,
-    compress: false,
-    doNotCatch: true,
+    pushNow: false,
   };
 
   return layer.sendToStore(batch).then(() => {
-    t.is(RequestMock.sendJSONReceiveJSON.callCount, 1);
+    t.is(StoreMock.dispatch.callCount, 1);
 
-    const [url, options] = RequestMock.sendJSONReceiveJSON.getCall(0).args;
-    t.is(url, expectedUrl);
-    t.deepEqual(options, expectedOptions);
+    const [saveQueueItems] = StoreMock.dispatch.getCall(0).args;
+    t.deepEqual(saveQueueItems, expectedSaveQueueItems);
   });
 });

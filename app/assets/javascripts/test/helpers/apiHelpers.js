@@ -57,6 +57,8 @@ const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 const Store = mockRequire.reRequire("oxalis/store").default;
 
+const TOKEN = "secure-token";
+
 const modelData = {
   skeleton: {
     tracing: SKELETON_TRACING,
@@ -89,12 +91,12 @@ export function setupOxalis(t, mode, apiVersion = 2) {
   Request.receiveJSON
     .withArgs(
       `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${ANNOTATION.content
-        .id}`,
+        .id}?token=${TOKEN}`,
     )
     .returns(Promise.resolve(_.cloneDeep(modelData[mode].tracing)));
   Request.receiveJSON
-    .withArgs("/api/dataToken/generate?dataSetName=ROI2017_wkw&dataLayerName=color")
-    .returns(Promise.resolve({ token: "secure-token" }));
+    .withArgs("/api/userToken/generate")
+    .returns(Promise.resolve({ token: TOKEN }));
   Request.receiveJSON.returns(Promise.resolve({}));
 
   return model

@@ -4,7 +4,7 @@
  */
 
 import Utils from "libs/utils";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 
 class TemplateHelpers {
   COLOR_MAP: Array<string> = [
@@ -31,7 +31,7 @@ class TemplateHelpers {
     return hash % this.COLOR_MAP.length;
   }
 
-  formatTuple(tuple: Array<number> | Vector3) {
+  formatTuple(tuple: Array<number> | Vector3 | Vector6) {
     if (tuple != null && tuple.length > 0) {
       const tupleRounded = tuple.map(value => Utils.roundTo(value, 2));
       return `(${tupleRounded.join(", ")})`;

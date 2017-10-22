@@ -12,7 +12,6 @@ const DateMock = {
 };
 
 mockRequire("libs/window", { alert: console.log.bind(console) });
-mockRequire("bootstrap-toggle", {});
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {

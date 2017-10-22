@@ -30,7 +30,9 @@ import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { TracingType, FlycamType, SaveQueueEntryType } from "oxalis/store";
+import type { RequestOptionsWithData } from "libs/request";
 import { moveTreeComponent } from "oxalis/model/sagas/update_actions";
+import { doWithToken } from "admin/admin_rest_api";
 
 const PUSH_THROTTLE_TIME = 30000; // 30s
 const SAVE_RETRY_WAITING_TIME = 5000;
@@ -90,20 +92,29 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
   }
 }
 
+export function sendRequestWithToken(
+  urlWithoutToken: string,
+  data: RequestOptionsWithData<Array<SaveQueueEntryType>>,
+) {
+  return doWithToken(token => Request.sendJSONReceiveJSON(`${urlWithoutToken}${token}`, data));
+}
+
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
   const batch = yield select(state => state.save.queue);
   let compactBatch = compactUpdateActions(batch);
   const { version, type, tracingId } = yield select(state => state.tracing);
   const dataStoreUrl = yield select(state => state.dataset.dataStore.url);
   compactBatch = addVersionNumbers(compactBatch, version);
+
   try {
     yield call(
-      Request.sendJSONReceiveJSON,
-      `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update`,
+      sendRequestWithToken,
+      `${dataStoreUrl}/data/tracings/${type}/${tracingId}/update?token=`,
       {
         method: "POST",
-        headers: { "X-Date": timestamp },
+        headers: { "X-Date": `${timestamp}` },
         data: compactBatch,
+        compress: true,
       },
     );
     yield put(setVersionNumberAction(version + compactBatch.length));

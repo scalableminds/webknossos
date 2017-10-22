@@ -19,6 +19,11 @@ type TaskTypeInfoType = {
   label: string,
 };
 
+type ProjectInfoType = {
+  id: string,
+  label: string,
+};
+
 type Props = {
   isVisible: boolean,
   onOk: () => void,
@@ -28,7 +33,7 @@ type Props = {
 
 type MergeModalViewState = {
   taskTypes: Array<TaskTypeInfoType>,
-  projects: Array<string>,
+  projects: Array<ProjectInfoType>,
   selectedTaskType: ?string,
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
@@ -66,7 +71,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       const projects = await Request.receiveJSON("/api/projects", { doNotCatch: true });
       this.setState({
         taskTypes: taskTypes.map(taskType => ({ id: taskType.id, label: taskType.summary })),
-        projects: projects.map(project => project.name),
+        projects: projects.map(project => ({ id: project.id, label: project.name })),
       });
     })();
   }
@@ -171,7 +176,12 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               </Select>
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="default"
+                disabled={this.state.selectedTaskType == null}
+              >
                 Merge
               </Button>
             </Form.Item>
@@ -185,14 +195,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={this.handleChangeMergeProject}
               >
                 {this.state.projects.map(project => (
-                  <Select.Option key={project} value={project}>
-                    {project}
+                  <Select.Option key={project.id} value={project.id}>
+                    {project.label}
                   </Select.Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="default"
+                disabled={this.state.selectedProject == null}
+              >
                 Merge
               </Button>
             </Form.Item>
@@ -226,7 +241,12 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               />
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="default"
+                disabled={this.state.selectedExplorativeAnnotation.length !== 24}
+              >
                 Merge
               </Button>
             </Form.Item>

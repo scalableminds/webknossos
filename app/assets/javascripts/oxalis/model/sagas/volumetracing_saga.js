@@ -143,38 +143,15 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
   const dim = Dimensions.getIndices(activeViewport)[2];
   const direction = spaceDirectionOrtho[dim];
 
-  switch (activeViewport) {
-    case "PLANE_XY": {
-      const z = position[2];
-      for (let x = position[0] - halfViewportWidth; x < position[0] + halfViewportWidth; x++) {
-        for (let y = position[1] - halfViewportWidth; y < position[1] + halfViewportWidth; y++) {
-          copyVoxelLabel([x, y, position[2] + direction * directionInverter], [x, y, z]);
-        }
-      }
-      break;
+  const [tx, ty, tz] = Dimensions.transDim(position, activeViewport);
+  const z = tz;
+  for (let x = tx - halfViewportWidth; x < tx + halfViewportWidth; x++) {
+    for (let y = ty - halfViewportWidth; y < ty + halfViewportWidth; y++) {
+      copyVoxelLabel(
+        Dimensions.transDim([x, y, tz + direction * directionInverter], activeViewport),
+        Dimensions.transDim([x, y, z], activeViewport),
+      );
     }
-
-    case "PLANE_YZ": {
-      const x = position[0];
-      for (let y = position[1] - halfViewportWidth; y < position[1] + halfViewportWidth; y++) {
-        for (let z = position[2] - halfViewportWidth; z < position[2] + halfViewportWidth; z++) {
-          copyVoxelLabel([position[0] + direction * directionInverter, y, z], [x, y, z]);
-        }
-      }
-      break;
-    }
-
-    case "PLANE_XZ": {
-      const y = position[1];
-      for (let x = position[0] - halfViewportWidth; x < position[0] + halfViewportWidth; x++) {
-        for (let z = position[2] - halfViewportWidth; z < position[2] + halfViewportWidth; z++) {
-          copyVoxelLabel([x, position[1] + direction * directionInverter, z], [x, y, z]);
-        }
-      }
-      break;
-    }
-
-    default:
   }
 }
 

@@ -72,7 +72,7 @@ object AnnotationService
 
     def createTracing(dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
-        dataSet.dataStore.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
+        dataSet.dataStore.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center, userBoundingBox = Some(BoundingBox(Point3D(510,510,510),5,5,5)))) //TODO: remove before merge
       case TracingType.volume =>
         dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
     }

@@ -95,6 +95,7 @@ export type ServerTracing<T> = {
   created: string,
   dataSetName: string,
   downloadUrl: string,
+  error?: string,
   formattedHash: string,
   id: string,
   name: string,

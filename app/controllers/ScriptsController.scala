@@ -20,7 +20,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
-      (__ \ 'ownerId).read[String]) (Script.fromForm _)
+      (__ \ 'owner).read[String]) (Script.fromForm _)
 
   def empty(id: String) = Authenticated { implicit request =>
     Ok(views.html.main()(Html("")))

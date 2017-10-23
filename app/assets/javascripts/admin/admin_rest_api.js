@@ -30,6 +30,13 @@ export async function getUsers(): Promise<Array<APIUserType>> {
   return users;
 }
 
+export async function getAdminUsers(): Promise<Array<APIUserType>> {
+  const users = await Request.receiveJSON("/api/users?isAdmin=true");
+  assertResponseLimit(users);
+
+  return users;
+}
+
 export async function getEditableUsers(): Promise<Array<APIUserType>> {
   const users = await Request.receiveJSON("/api/users?isEditable=true");
   assertResponseLimit(users);
@@ -55,9 +62,30 @@ export async function getScripts(): Promise<Array<APIScriptType>> {
   return scripts;
 }
 
+export async function getScript(scriptId: string): Promise<APIScriptType> {
+  return Request.receiveJSON(`/api/scripts/${scriptId}`);
+}
+
 export async function deleteScript(scriptId: string): Promise<void> {
   return Request.receiveJSON(`/api/scripts/${scriptId}`, {
     method: "DELETE",
+  });
+}
+
+export async function createScript(script: APIScriptType): Promise<APIScriptType> {
+  return Request.sendJSONReceiveJSON("/api/scripts", {
+    method: "POST",
+    data: script,
+  });
+}
+
+export async function updateScript(
+  scriptId: string,
+  script: APIScriptType,
+): Promise<APIScriptType> {
+  return Request.sendJSONReceiveJSON(`/api/scripts/${scriptId}`, {
+    method: "PUT",
+    data: script,
   });
 }
 

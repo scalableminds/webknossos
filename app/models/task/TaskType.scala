@@ -17,7 +17,6 @@ case class TaskType(
                      description: String,
                      team: String,
                      settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
-                     fileName: Option[String] = None,
                      isActive: Boolean = true,
                      _id: BSONObjectID = BSONObjectID.generate) {
 
@@ -58,8 +57,7 @@ object TaskType {
       "summary" -> tt.summary,
       "description" -> tt.description,
       "team" -> tt.team,
-      "settings" -> Json.toJson(tt.settings),
-      "fileName" -> tt.fileName
+      "settings" -> Json.toJson(tt.settings)
     )
   }
 }

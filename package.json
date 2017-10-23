@@ -93,7 +93,6 @@
     "base64-js": "^1.2.1",
     "bootstrap": "^3.3.6",
     "bootstrap-daterangepicker": "^2.1.17",
-    "bootstrap-multiselect": "^0.9.13",
     "c3": "^0.4.10",
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",

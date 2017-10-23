@@ -24,7 +24,7 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
       return state;
     }
 
-    case "EMPTY_SAVE_QUEUE": {
+    case "DISCARD_SAVE_QUEUE": {
       return update(state, {
         save: { queue: { $set: [] } },
       });

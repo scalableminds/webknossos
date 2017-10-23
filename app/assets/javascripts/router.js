@@ -259,23 +259,14 @@ class Router extends BaseRouter {
 
   taskTypesCreate(taskTypeId) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskTypeCreateView = admin.TaskTypeCreateView;
-      const TaskTypeModel = admin.TaskTypeModel;
-
-      const model = new TaskTypeModel({ id: taskTypeId });
-      const view = new TaskTypeCreateView({ model });
+      const view = new ReactBackboneWrapper(admin.TaskTypeCreateView, { taskTypeId });
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 
   scriptsCreate(scriptId) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const ScriptCreateView = admin.ScriptCreateView;
-      const ScriptModel = admin.ScriptModel;
-
-      const model = new ScriptModel({ id: scriptId });
-      const view = new ScriptCreateView({ model });
+      const view = new ReactBackboneWrapper(admin.ScriptCreateView, { scriptId });
       this.changeView(view);
       this.hideLoadingSpinner();
     });

@@ -276,7 +276,7 @@ class Request {
               json.status = error.status;
             }
 
-            Toast.message(json.messages);
+            Toast.messages(json.messages);
             return Promise.reject(json);
           } catch (jsonError) {
             Toast.error(text);

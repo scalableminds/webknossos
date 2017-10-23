@@ -373,17 +373,14 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     event.preventDefault();
-
     if (_state === STATE.ROTATE && !_this.noRotate) {
       _this.getMouseProjectionOnBall(event.pageX, event.pageY, _rotateEnd);
-      _this.update();
     } else if (_state === STATE.ZOOM && !_this.noZoom) {
       _this.getMouseOnScreen(event.pageX, event.pageY, _zoomEnd);
-      _this.update();
     } else if (_state === STATE.PAN && !_this.noPan) {
       _this.getMouseOnScreen(event.pageX, event.pageY, _panEnd);
-      _this.update();
     }
+    _this.update();
   }
 
   function mouseup(event) {
@@ -463,7 +460,13 @@ function TrackballControls(object, domElement, target, updateCallback) {
 
     switch (event.touches.length) {
       case 1:
-        _this.getMouseProjectionOnBall(event.touches[0].pageX, event.touches[0].pageY, _rotateEnd);
+        if (_state === STATE.ROTATE && !_this.noRotate) {
+          _this.getMouseProjectionOnBall(
+            event.touches[0].pageX,
+            event.touches[0].pageY,
+            _rotateEnd,
+          );
+        }
         break;
 
       case 2: {
@@ -480,6 +483,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
       default:
         _state = STATE.NONE;
     }
+    _this.update();
   }
 
   function touchend(event) {

@@ -1532,10 +1532,6 @@ bootstrap-daterangepicker@^2.1.17:
     jquery ">=1.10"
     moment "^2.9.0"
 
-bootstrap-multiselect@^0.9.13:
-  version "0.9.13"
-  resolved "https://registry.yarnpkg.com/bootstrap-multiselect/-/bootstrap-multiselect-0.9.13.tgz#57b874511495393b23f866da6d2e866579fc27e5"
-
 bootstrap@^3.3.6:
   version "3.3.7"
   resolved "https://registry.yarnpkg.com/bootstrap/-/bootstrap-3.3.7.tgz#5a389394549f23330875a3b150656574f8a9eb71"

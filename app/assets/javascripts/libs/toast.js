@@ -1,9 +1,13 @@
+// @flow
+
 import _ from "lodash";
 import $ from "jquery";
 
 export type ToastType = {
   remove: () => void,
 };
+
+export type ToastStyleType = "info" | "warning" | "success" | "danger";
 
 function hashCode(s) {
   return s.split("").reduce((a, b) => {
@@ -25,32 +29,36 @@ function alertWithTimeout($this: JQuery, timeout = 3000) {
   $(window).one("mousemove", () => $this.mouseout());
 }
 
-const getToasts = (type, message) => $(`.alert-${type}[data-id='${hashCode(message)}']`);
+const getToasts = (type: ToastStyleType, message: string) =>
+  $(`.alert-${type}[data-id='${hashCode(message)}']`);
 
-const shouldDisplayToast = (type, message, sticky) =>
+const shouldDisplayToast = (type: ToastStyleType, message: string, sticky: boolean) =>
   // Don't show duplicate sticky toasts
   !sticky || getToasts(type, message).length === 0;
 
 const Toast = {
-  message(type, message, sticky = false, optTimeout): ToastType {
-    let messages;
-    if (_.isArray(type) && message == null) {
-      messages = type;
-      const toasts = messages.map(singleMessage => {
-        if (singleMessage.success != null) {
-          this.success(singleMessage.success);
-        }
-        if (singleMessage.error != null) {
-          this.error(singleMessage.error);
-        }
-      });
-      return {
-        remove: () => toasts.foreach(toast => toast.remove()),
-      };
-    } else if (_.isArray(message)) {
-      messages = message;
-      return messages.map(singleMessage => this.message(type, singleMessage, sticky));
-    } else if (shouldDisplayToast(type, message, sticky)) {
+  messages(messages: Array<{ success: string } | { error: string }>): ToastType {
+    const toasts = messages.map(singleMessage => {
+      if (singleMessage.success != null) {
+        return this.success(singleMessage.success);
+      }
+      if (singleMessage.error != null) {
+        return this.error(singleMessage.error);
+      }
+      return { remove: _.noop };
+    });
+    return {
+      remove: () => toasts.forEach(toast => toast.remove()),
+    };
+  },
+
+  message(
+    type: ToastStyleType,
+    message: string,
+    sticky: boolean = false,
+    optTimeout?: number,
+  ): ToastType {
+    if (shouldDisplayToast(type, message, sticky)) {
       let displayMessage;
       if (message.match(/<html[^>]*>/)) {
         displayMessage = `<iframe src='data:text/html;charset=utf-8,${escape(message)}'></iframe>`;
@@ -80,36 +88,38 @@ const Toast = {
       }
 
       return {
-        remove() {
-          return $closeButton.click();
+        remove: () => {
+          $closeButton.click();
         },
       };
     } else {
-      return {};
+      return {
+        remove: _.noop,
+      };
     }
   },
 
-  info(message, sticky) {
+  info(message: string, sticky?: boolean) {
     return this.message("info", message, sticky);
   },
 
-  warning(message, sticky) {
+  warning(message: string, sticky?: boolean) {
     return this.message("warning", message, sticky);
   },
 
-  success(message = "Success :-)", sticky) {
+  success(message: string = "Success :-)", sticky?: boolean) {
     return this.message("success", message, sticky);
   },
 
-  error(message = "Error :-/", sticky) {
+  error(message: string = "Error :-/", sticky?: boolean) {
     return this.message("danger", message, sticky);
   },
 
-  highlight(target) {
+  highlight(target: JQuery) {
     target.addClass("alert-wiggle");
   },
 
-  delete(type, message) {
+  delete(type: ToastStyleType, message: string) {
     getToasts(type, message).alert("close");
   },
 };

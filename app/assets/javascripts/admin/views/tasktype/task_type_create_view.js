@@ -1,175 +1,200 @@
-import _ from "lodash";
+// @flow
+import React from "react";
+import { Form, Checkbox, Input, Select, Card, Button } from "antd";
 import app from "app";
-import FormSyphon from "form-syphon";
-import Marionette from "backbone.marionette";
-import "bootstrap-multiselect";
-import TeamCollection from "admin/models/team/team_collection";
-import SelectionView from "admin/views/selection_view";
-import Toast from "libs/toast";
+import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
+import type { APITeamType } from "admin/api_flow_types";
 
-class TaskTypeCreateView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="row">
-  <div class="col-sm-12">
-    <div class="well">
-      <div class="col-sm-9 col-sm-offset-2">
-        <h3><%- getTitle() %> TaskType</h3>
-      </div>
+const FormItem = Form.Item;
+const Option = Select.Option;
+const TextArea = Input.TextArea;
 
-      <form method="POST" class="form-horizontal">
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="summary">Summary</label>
-          <div class="col-sm-9">
-          <input type="text" id="summary" name="summary" value="<%- summary %>" class="form-control"
-             required pattern=".{3,}" title="Please use at least 3 characters.">
-          </div>
-        </div>
+type Props = {
+  taskTypeId: ?string,
+  form: Object,
+};
 
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="team">Team</label>
-          <div class="col-sm-9 team">
-          </div>
-        </div>
+type State = {
+  teams: Array<APITeamType>,
+};
 
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="description">Description (<a href="https://markdown-it.github.io/" target="_blank">Markdown enabled</a>)</label>
-          <div class="col-sm-9">
-          <textarea id="description" name="description" class="form-control"><%- description %></textarea>
-          </div>
-        </div>
+class TaskTypeCreateView extends React.PureComponent<Props, State> {
+  state = {
+    teams: [],
+  };
 
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="allowedModes">Allowed Modes</label>
-          <div class="col-sm-9">
-            <select multiple="multiple" name="settings[allowedModes[]]" class="form-control">
-            <% ["flight", "orthogonal", "oblique"].forEach(function(mode) { %>
-              <option value="<%-mode %>" <%- isSelected(_.includes(settings.allowedModes, mode)) %>> <%- mode %> </option>
-            <% }) %>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label">Settings</label>
-          <div class="col-sm-9">
-
-            <label class="col-sm-3" for="somaClickingAllowed">
-              <input type="checkbox" id="somaClickingAllowed" name="settings[somaClickingAllowed]" <%- isChecked(settings.somaClickingAllowed) %>>
-              Allow Soma clicking
-            </label>
-
-            <label class="col-sm-3" for="branchPointsAllowed">
-              <input type="checkbox" id="branchPointsAllowed" name="settings[branchPointsAllowed]" <%- isChecked(settings.branchPointsAllowed) %>>
-              Allow Branchpoints
-            </label>
-
-            <label class="col-sm-3" for="advancedOptionsAllowed">
-              <input type="checkbox" id="advancedOptionsAllowed" name="settings[advancedOptionsAllowed]" <%- isChecked(settings.advancedOptionsAllowed) %>>
-              Advanced Tracing Options
-            </label>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="preferredMode">Preferred Mode</label>
-          <div class="col-sm-9">
-            <select id="preferredMode" name="settings[preferredMode]" class="form-control">
-              <option>Any</option>
-              <option value="orthogonal" <%- isSelected(settings.preferredMode == "orthogonal") %>>Orthogonal</option>
-              <option value="oblique" <%- isSelected(settings.preferredMode == "oblique") %>>Oblique</option>
-              <option value="flight" <%- isSelected(settings.preferredMode == "flight") %>>Flight</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group">
-          <div class="col-sm-2 col-sm-offset-9">
-          <button type="submit" class="form-control btn btn-primary"><%- getTitle() %></button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>\
-`);
-    this.prototype.className = "container wide task-types-administration";
-
-    this.prototype.regions = { team: ".team" };
-
-    this.prototype.events = { "submit form": "submitForm" };
-
-    this.prototype.ui = {
-      form: "form",
-      multiselect: "select[multiple='multiple']",
-    };
+  componentDidMount() {
+    this.fetchData();
+    this.applyDefaults();
   }
 
-  templateContext() {
-    return {
-      getTitle: () => (this.isEditingMode ? "Update" : "Create"),
-      isChecked(bool) {
-        return bool ? "checked" : "";
-      },
-      isSelected(bool) {
-        return bool ? "selected" : "";
+  async applyDefaults() {
+    const defaultValues = {
+      settings: {
+        somaClickingAllowed: true,
+        branchPointsAllowed: true,
+        advancedOptionsAllowed: true,
       },
     };
+    const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
+
+    const formValues = Object.assign({}, defaultValues, taskType);
+    this.props.form.setFieldsValue(formValues);
   }
 
-  initialize() {
-    this.isEditingMode = _.isString(this.model.id);
-
-    if (this.isEditingMode) {
-      this.listenTo(this.model, "sync", this.render);
-      this.model.fetch();
-    }
+  async fetchData() {
+    this.setState({ teams: await getTeams() });
   }
 
-  submitForm(event) {
-    event.preventDefault();
+  handleSubmit = e => {
+    e.preventDefault();
+    this.props.form.validateFields(async (err, formValues) => {
+      if (!err) {
+        if (this.props.taskTypeId) {
+          await updateTaskType(this.props.taskTypeId, formValues);
+        } else {
+          await createTaskType(formValues);
+        }
 
-    if (!this.ui.form[0].checkValidity()) {
-      Toast.error("Please supply all needed values.");
-      return;
-    }
-
-    const formValues = FormSyphon.serialize(this.ui.form);
-    if (formValues.settings.preferredMode === "Any") {
-      formValues.settings.preferredMode = null;
-    }
-
-    // Add 'required' attribute to select once it's supported
-    // https://github.com/davidstutz/bootstrap-multiselect/issues/620
-    if (_.isEmpty(formValues.settings.allowedModes)) {
-      Toast.error("Please provide at least one allowed mode.");
-      return;
-    }
-
-    this.model.save(formValues).then(() => app.router.navigate("/taskTypes", { trigger: true }));
-  }
-
-  onRender() {
-    const teamSelectionView = new SelectionView({
-      collection: new TeamCollection(),
-      childViewOptions: {
-        modelValue() {
-          return `${this.model.get("name")}`;
-        },
-        defaultItem: { name: this.model.get("team") },
-      },
-      data: "amIAnAdmin=true",
-      name: "team",
-      required: true,
+        app.router.navigate("/taskTypes", { trigger: true });
+      }
     });
-    this.showChildView("team", teamSelectionView);
+  };
 
-    this.ui.multiselect.multiselect();
-  }
+  render() {
+    const { getFieldDecorator } = this.props.form;
+    const titlePrefix = this.props.taskTypeId ? "Update " : "Create";
 
-  onBeforeDestroy() {
-    this.ui.multiselect.multiselect("destroy");
+    return (
+      <div className="container wide task-types-administration">
+        <Card title={<h3>{titlePrefix} Task Type</h3>}>
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            <FormItem label="Summary" hasFeedback>
+              {getFieldDecorator("summary", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                  { min: 3 },
+                ],
+              })(<Input />)}
+            </FormItem>
+
+            <FormItem label="Team" hasFeedback>
+              {getFieldDecorator("team", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                ],
+              })(
+                <Select
+                  allowClear
+                  showSearch
+                  placeholder="Select a Team"
+                  optionFilterProp="children"
+                  style={{ width: "100%" }}
+                >
+                  {this.state.teams.map((team: APITeamType) => (
+                    <Option key={team.id} value={team.name}>
+                      {`${team.name}`}
+                    </Option>
+                  ))}
+                </Select>,
+              )}
+            </FormItem>
+
+            <FormItem
+              label={
+                <span>
+                  Description (
+                  <a
+                    href="https://markdown-it.github.io/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Markdown enabled
+                  </a>
+                  )
+                </span>
+              }
+              hasFeedback
+            >
+              {getFieldDecorator("description", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                ],
+              })(<TextArea rows={3} />)}
+            </FormItem>
+
+            <FormItem label="Allowed Modes" hasFeedback>
+              {getFieldDecorator("settings.allowedModes", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                ],
+              })(
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="Select all Allowed Modes"
+                  optionFilterProp="children"
+                  style={{ width: "100%" }}
+                >
+                  <Option value="orthogonal">Orthogonal</Option>
+                  <Option value="oblique">Oblique</Option>
+                  <Option value="flight">Flight</Option>
+                </Select>,
+              )}
+            </FormItem>
+
+            <FormItem label="Settings">
+              {getFieldDecorator("settings.somaClickingAllowed", {
+                valuePropName: "checked",
+              })(<Checkbox>Allow Soma clicking</Checkbox>)}
+            </FormItem>
+
+            <FormItem>
+              {getFieldDecorator("settings.branchPointsAllowed", {
+                valuePropName: "checked",
+              })(<Checkbox>Allow Branchpoints</Checkbox>)}
+            </FormItem>
+            <FormItem>
+              {getFieldDecorator("settings.advancedOptionsAllowed", {
+                valuePropName: "checked",
+              })(<Checkbox> Advanced Tracing Options</Checkbox>)}
+            </FormItem>
+
+            <FormItem label="Preferred Mode" hasFeedback>
+              {getFieldDecorator("settings.preferredMode", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                ],
+              })(
+                <Select allowClear optionFilterProp="children" style={{ width: "100%" }}>
+                  <Option value={null}>Any</Option>
+                  <Option value="orthogonal">Orthogonal</Option>
+                  <Option value="oblique">Oblique</Option>
+                  <Option value="flight">Flight</Option>
+                </Select>,
+              )}
+            </FormItem>
+
+            <FormItem>
+              <Button type="primary" htmlType="submit">
+                {titlePrefix} Task Type
+              </Button>
+            </FormItem>
+          </Form>
+        </Card>
+      </div>
+    );
   }
 }
-TaskTypeCreateView.initClass();
 
-export default TaskTypeCreateView;
+export default Form.create()(TaskTypeCreateView);

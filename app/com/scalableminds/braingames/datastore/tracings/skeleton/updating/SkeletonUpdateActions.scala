@@ -155,13 +155,15 @@ case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int) extends UpdateActi
 }
 
 case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: com.scalableminds.util.geometry.Point3D,
-                                       editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double) extends UpdateAction.SkeletonUpdateAction with ProtoGeometryImplicits {
+                                       editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double,
+                                       userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox]) extends UpdateAction.SkeletonUpdateAction with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) =
     tracing
       .withActiveNodeId(activeNode.getOrElse(tracing.getActiveNodeId))
       .withEditPosition(editPosition)
       .withEditRotation(editRotation)
       .withZoomLevel(zoomLevel)
+      .copy(userBoundingBox = userBoundingBox)
 }
 
 

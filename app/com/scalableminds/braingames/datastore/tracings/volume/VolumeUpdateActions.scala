@@ -22,7 +22,8 @@ case class UpdateTracingVolumeAction(
                                       editPosition: Point3D,
                                       editRotation: Vector3D,
                                       largestSegmentId: Long,
-                                      zoomLevel: Double
+                                      zoomLevel: Double,
+                                      userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox]
                                     ) extends VolumeUpdateAction
 
 object UpdateTracingVolumeAction {

@@ -59,6 +59,7 @@ message SkeletonTracing {
     required Vector3D editRotation = 7;
     required double zoomLevel = 8;
     required int64 version = 9;
+    optional BoundingBox userBoundingBox = 10;
 }
 
 message SkeletonTracings {

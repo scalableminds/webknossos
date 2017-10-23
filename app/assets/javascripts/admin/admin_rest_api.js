@@ -75,6 +75,24 @@ export async function deleteTaskType(taskTypeId: string): Promise<void> {
   });
 }
 
+export async function getTaskType(taskTypeId: string): Promise<APITaskTypeType> {
+  return Request.receiveJSON(`/api/taskTypes/${taskTypeId}`);
+}
+
+export async function createTaskType(taskType: APITaskTypeType): Promise<APITaskTypeType> {
+  return Request.sendJSONReceiveJSON("/api/taskTypes", {
+    method: "POST",
+    data: taskType,
+  });
+}
+
+export async function updateTaskType(taskTypeId: string, taskType: APITaskTypeType): Promise<void> {
+  return Request.sendJSONReceiveJSON(`/api/taskTypes/${taskTypeId}`, {
+    method: "PUT",
+    data: taskType,
+  });
+}
+
 // ### Teams
 export async function getTeams(): Promise<Array<APITeamType>> {
   const teams = await Request.receiveJSON("/api/teams");

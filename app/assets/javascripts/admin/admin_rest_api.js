@@ -75,11 +75,11 @@ export async function deleteTaskType(taskTypeId: string): Promise<void> {
   });
 }
 
-export async function getTaskType(taskTypeId: string): Promise<void> {
+export async function getTaskType(taskTypeId: string): Promise<APITaskTypeType> {
   return Request.receiveJSON(`/api/taskTypes/${taskTypeId}`);
 }
 
-export async function createTaskType(taskType: APITaskTypeType): Promise<void> {
+export async function createTaskType(taskType: APITaskTypeType): Promise<APITaskTypeType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
     method: "POST",
     data: taskType,

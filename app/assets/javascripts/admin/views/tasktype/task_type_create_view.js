@@ -7,6 +7,7 @@ import type { APITeamType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
+const TextArea = Input.TextArea;
 
 type Props = {
   taskTypeId: ?string,
@@ -47,12 +48,12 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
   handleSubmit = e => {
     e.preventDefault();
-    this.props.form.validateFields((err, formValues) => {
+    this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
         if (this.props.taskTypeId) {
-          updateTaskType(this.props.taskTypeId, formValues);
+          await updateTaskType(this.props.taskTypeId, formValues);
         } else {
-          createTaskType(formValues);
+          await createTaskType(formValues);
         }
 
         app.router.navigate("/taskTypes", { trigger: true });
@@ -125,7 +126,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
                     required: true,
                   },
                 ],
-              })(<Input />)}
+              })(<TextArea rows={3} />)}
             </FormItem>
 
             <FormItem label="Allowed Modes" hasFeedback>

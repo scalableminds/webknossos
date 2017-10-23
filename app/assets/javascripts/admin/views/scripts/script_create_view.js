@@ -43,12 +43,12 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
 
   handleSubmit = e => {
     e.preventDefault();
-    this.props.form.validateFields((err, formValues) => {
+    this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
         if (this.props.scriptId) {
-          updateScript(this.props.scriptId, formValues);
+          await updateScript(this.props.scriptId, formValues);
         } else {
-          createScript(formValues);
+          await createScript(formValues);
         }
 
         app.router.navigate("/scripts", { trigger: true });

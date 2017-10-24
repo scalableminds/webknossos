@@ -158,10 +158,10 @@ case class UpdateTracingSkeletonAction(activeNode: Option[Int], editPosition: co
                                        editRotation: com.scalableminds.util.geometry.Vector3D, zoomLevel: Double) extends UpdateAction.SkeletonUpdateAction with ProtoGeometryImplicits {
   override def applyOn(tracing: SkeletonTracing) =
     tracing
-      .withActiveNodeId(activeNode.getOrElse(tracing.getActiveNodeId))
       .withEditPosition(editPosition)
       .withEditRotation(editRotation)
       .withZoomLevel(zoomLevel)
+      .copy(activeNodeId = activeNode)
 }
 
 

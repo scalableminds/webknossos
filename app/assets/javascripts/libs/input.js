@@ -380,8 +380,6 @@ export class InputMouse {
   };
 
   mouseUp = (event: JQueryInputEventObject): void => {
-    event.preventDefault();
-
     this.leftMouseButton.handleMouseUp(event);
     this.rightMouseButton.handleMouseUp(event);
 
@@ -396,7 +394,6 @@ export class InputMouse {
   };
 
   mouseMove = (event: JQueryInputEventObject): void => {
-    event.preventDefault();
     let delta = null;
 
     this.position = this.getRelativeMousePosition(event);

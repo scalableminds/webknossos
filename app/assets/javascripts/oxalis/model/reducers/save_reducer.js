@@ -24,6 +24,12 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
       return state;
     }
 
+    case "DISCARD_SAVE_QUEUE": {
+      return update(state, {
+        save: { queue: { $set: [] } },
+      });
+    }
+
     case "SET_SAVE_BUSY": {
       return update(state, {
         save: { isBusy: { $set: action.isBusy } },

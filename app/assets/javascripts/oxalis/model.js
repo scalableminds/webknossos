@@ -45,6 +45,7 @@ import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
 import { doWithToken } from "admin/admin_rest_api";
+import messages from "messages";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
 export type ServerNodeType = {
@@ -132,7 +133,7 @@ export class OxalisModel {
       if (annotation.error) {
         ({ error } = annotation);
       } else if (!annotation.restrictions.allowAccess) {
-        error = "You are not allowed to access this tracing";
+        error = messages["tracing.no_access"];
       }
 
       if (error) {
@@ -212,7 +213,7 @@ export class OxalisModel {
       if (isVolume) {
         ErrorHandling.assert(
           this.getSegmentationBinary() != null,
-          "Volume is allowed, but segmentation does not exist",
+          messages["tracing.volume_missing_segmentation"],
         );
         const volumeTracing: ServerVolumeTracingType = (tracing: any);
         Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
@@ -224,7 +225,7 @@ export class OxalisModel {
 
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
     if (allowedModes.length === 0) {
-      Toast.error("There was no valid allowed tracing mode specified.");
+      Toast.error(messages["tracing.no_allowed_mode"]);
     } else {
       const mode = preferredMode || UrlManager.initialState.mode || allowedModes[0];
       Store.dispatch(setViewModeAction(mode));
@@ -236,9 +237,9 @@ export class OxalisModel {
 
     let error;
     if (!dataset) {
-      error = "Selected dataset doesn't exist";
+      error = messages["dataset.does_not_exist"];
     } else if (!dataset.dataSource.dataLayers) {
-      error = `Please, double check if you have the dataset '${datasetName}' imported.`;
+      error = `${messages["dataset.not_imported"]} '${datasetName}'`;
     }
 
     if (error) {
@@ -250,7 +251,7 @@ export class OxalisModel {
     if (!_.isEmpty(this.binary)) {
       ErrorHandling.assert(
         _.isEqual(dataset, Store.getState().dataset),
-        "Model.fetch was called for a task with another dataset, without reloading the page.",
+        messages["dataset.changed_without_reload"],
       );
     }
 
@@ -271,7 +272,7 @@ export class OxalisModel {
         case "ndstore":
           return NdStoreLayer;
         default:
-          throw new Error(`Unknown datastore type: ${dataStore.typ}`);
+          throw new Error(`${messages["datastore.unknown_type"]} ${dataStore.typ}`);
       }
     })();
 
@@ -289,7 +290,7 @@ export class OxalisModel {
     this.buildMappingsObject();
 
     if (this.getColorBinaries().length === 0) {
-      Toast.error("No data available! Something seems to be wrong with the dataset.");
+      Toast.error(messages["dataset.no_data"]);
       throw this.HANDLED_ERROR;
     }
 

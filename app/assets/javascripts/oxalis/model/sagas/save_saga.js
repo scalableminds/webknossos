@@ -100,11 +100,11 @@ export function sendRequestWithToken(
 }
 
 export function* sendRequestToServer(timestamp: number = Date.now()): Generator<*, *, *> {
-  const batch = yield select(state => state.save.queue);
-  let compactBatch = compactUpdateActions(batch);
+  const saveQueue = yield select(state => state.save.queue);
+  let compactedSaveQueue = compactUpdateActions(saveQueue);
   const { version, type, tracingId } = yield select(state => state.tracing);
   const dataStoreUrl = yield select(state => state.dataset.dataStore.url);
-  compactBatch = addVersionNumbers(compactBatch, version);
+  compactedSaveQueue = addVersionNumbers(compactedSaveQueue, version);
 
   try {
     yield call(
@@ -113,13 +113,13 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
       {
         method: "POST",
         headers: { "X-Date": `${timestamp}` },
-        data: compactBatch,
+        data: compactedSaveQueue,
         compress: true,
       },
     );
-    yield put(setVersionNumberAction(version + compactBatch.length));
+    yield put(setVersionNumberAction(version + compactedSaveQueue.length));
     yield put(setLastSaveTimestampAction());
-    yield put(shiftSaveQueueAction(batch.length));
+    yield put(shiftSaveQueueAction(saveQueue.length));
     yield call(toggleErrorHighlighting, false);
   } catch (error) {
     yield call(toggleErrorHighlighting, true);

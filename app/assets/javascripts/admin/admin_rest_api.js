@@ -171,8 +171,25 @@ export async function getProjectsWithOpenAssignments(): Promise<Array<APIProject
 }
 
 export async function deleteProject(projectName: string): Promise<void> {
-  return Request.receiveJSON(`/api/projects/${projectName}`, {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",
+  });
+}
+
+export async function createProject(project: APIProjectType): Promise<APIProjectType> {
+  return Request.sendJSONReceiveJSON("/api/projects", {
+    method: "POST",
+    data: project,
+  });
+}
+
+export async function updateProject(
+  projectName: string,
+  project: APIProjectType,
+): Promise<APIProjectType> {
+  return Request.receiveJSON(`/api/projects/${projectName}`, {
+    method: "PUT",
+    data: project,
   });
 }
 

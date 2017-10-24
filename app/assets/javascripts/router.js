@@ -104,14 +104,8 @@ class Router extends BaseRouter {
 
   projectCreate() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const ProjectCreateView = admin.ProjectCreateView;
-      const ProjectModel = admin.ProjectModel;
-
-      const model = new ProjectModel();
-      const view = new ProjectCreateView({ model });
-
+      const view = new ReactBackboneWrapper(admin.ProjectCreateView, {});
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 

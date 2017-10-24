@@ -111,6 +111,7 @@ object WKStoreHandlingStrategy extends DataStoreHandlingStrategy with LazyLoggin
     RPC(s"${dataStoreInfo.url}/data/tracings/volumes")
       .withQueryString("token" -> DataTokenService.webKnossosToken)
       .withQueryString("dataSetName" -> base.id.name)
+      .withQueryString("withFallback" -> "false")
       .postWithJsonResponse[VolumeTracingContent](file.file)
   }
 

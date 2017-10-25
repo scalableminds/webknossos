@@ -116,7 +116,11 @@ class Authentication @Inject() (
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
 
-  def empty = Action { implicit request =>
+  def empty = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
+  def emptyWithWildcard(param: String) = UserAwareAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
@@ -174,7 +178,7 @@ class Authentication @Inject() (
       user <- UserService.defaultUser
       authenticator <- env.authenticatorService.create(user.loginInfo)
       value <- env.authenticatorService.init(authenticator)
-      result <- env.authenticatorService.embed(value, Redirect("/dashboard"))
+      result <- env.authenticatorService.embed(value, Ok)
     } yield result
   }
 

@@ -18,10 +18,6 @@ import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, Secu
 
 class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller{
 
-  def empty = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
   def list = SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: Team) =>

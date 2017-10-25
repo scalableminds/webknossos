@@ -35,15 +35,6 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   val defaultAnnotationLimit = 1000
 
-  def empty = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  // TODO: find a better way to ignore parameters
-  def emptyWithWildcard(param: String) = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
   def current = SecuredAction { implicit request =>
     Ok(Json.toJson(request.identity)(User.userPublicWrites(request.identity)))
   }

@@ -33,15 +33,13 @@ type DatasetInfoTabProps = DatasetInfoTabStateProps & {
 
 class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   calculateZoomLevel(): number {
+    const zoom = getPlaneScalingFactor(this.props.flycam);
     let width;
-    let zoom;
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     if (constants.MODES_PLANE.includes(viewMode)) {
-      zoom = getPlaneScalingFactor(this.props.flycam);
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
-      zoom = this.props.flycam.zoomStep;
-      width = constants.ARBITRARY_WIDTH;
+      width = constants.VIEWPORT_WIDTH;
     } else {
       throw Error(`Model mode not recognized: ${viewMode}`);
     }

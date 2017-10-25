@@ -32,16 +32,15 @@ class Plane {
   planeID: OrthoViewType;
   planeWidth: number;
   textureWidth: number;
-  displayCosshair: boolean;
+  displayCrosshair: boolean;
   scaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
   constructor(planeWidth: number, textureWidth: number, planeID: OrthoViewType) {
     this.planeID = planeID;
-    this.planeWidth = planeWidth;
     this.textureWidth = textureWidth;
-    this.displayCosshair = true;
+    this.displayCrosshair = true;
 
     // planeWidth means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
@@ -93,7 +92,7 @@ class Plane {
   }
 
   setDisplayCrosshair = (value: boolean): void => {
-    this.displayCosshair = value;
+    this.displayCrosshair = value;
   };
 
   getLineBasicMaterial = _.memoize(
@@ -180,8 +179,8 @@ class Plane {
   setVisible = (visible: boolean): void => {
     this.plane.visible = visible;
     this.TDViewBorders.visible = visible;
-    this.crosshair[0].visible = visible && this.displayCosshair;
-    this.crosshair[1].visible = visible && this.displayCosshair;
+    this.crosshair[0].visible = visible && this.displayCrosshair;
+    this.crosshair[1].visible = visible && this.displayCrosshair;
   };
 
   setSegmentationAlpha(alpha: number): void {

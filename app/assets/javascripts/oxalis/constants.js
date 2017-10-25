@@ -80,8 +80,9 @@ const Constants = {
 
   DEFAULT_SEG_ALPHA: 20,
 
+  // The plane in orthogonal mode is a little smaller than the viewport
+  // as there are two borders with width 2px each => 8px
   PLANE_WIDTH: 376,
-  ARBITRARY_WIDTH: 128,
   VIEWPORT_WIDTH: 384,
   TEXTURE_WIDTH: 512,
   TEXTURE_SIZE_P: 9,

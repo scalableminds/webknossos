@@ -119,7 +119,7 @@ class ArbitraryController extends React.PureComponent<Props> {
         } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
           const f =
             Store.getState().flycam.zoomStep /
-            (this.arbitraryView.width / constants.ARBITRARY_WIDTH);
+            (this.arbitraryView.width / constants.VIEWPORT_WIDTH);
           Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
         }
       },
@@ -140,10 +140,6 @@ class ArbitraryController extends React.PureComponent<Props> {
 
     this.input.keyboard = new InputKeyboard({
       // KeyboardJS is sensitive to ordering (complex combos first)
-
-      // Scale plane
-      l: () => this.arbitraryView.applyScale(-Store.getState().userConfiguration.scaleValue),
-      k: () => this.arbitraryView.applyScale(Store.getState().userConfiguration.scaleValue),
 
       // Move
       space: timeFactor => {
@@ -278,7 +274,6 @@ class ArbitraryController extends React.PureComponent<Props> {
   init(): void {
     const clippingDistanceArbitrary = Store.getState().userConfiguration.clippingDistanceArbitrary;
     this.setClippingDistance(clippingDistanceArbitrary);
-    this.arbitraryView.applyScale(0);
   }
 
   bindToEvents(): void {
@@ -298,10 +293,13 @@ class ArbitraryController extends React.PureComponent<Props> {
             sphericalCapRadius,
             clippingDistanceArbitrary,
             displayCrosshair,
+            crosshairSize,
           } = userConfiguration;
-          this.crosshair.setScale(sphericalCapRadius);
+          this.plane.setSphericalCapRadius(sphericalCapRadius);
           this.setClippingDistance(clippingDistanceArbitrary);
+          this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
+          this.arbitraryView.resize();
         },
       ),
       listenToStoreProperty(
@@ -318,10 +316,10 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   start(): void {
-    this.arbitraryView = new ArbitraryView(CANVAS_SELECTOR, constants.ARBITRARY_WIDTH);
+    this.arbitraryView = new ArbitraryView(CANVAS_SELECTOR, constants.VIEWPORT_WIDTH);
     this.arbitraryView.start();
 
-    this.plane = new ArbitraryPlane(constants.ARBITRARY_WIDTH);
+    this.plane = new ArbitraryPlane(constants.VIEWPORT_WIDTH);
     this.plane.setMode(this.props.viewMode);
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);

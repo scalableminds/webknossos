@@ -13,10 +13,6 @@ import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 
-const DEFAULT_SCALE: number = 1.35;
-const MAX_SCALE: number = 3;
-const MIN_SCALE: number = 1;
-
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -25,7 +21,6 @@ class ArbitraryView {
 
   animate: () => void;
   resize: () => void;
-  applyScale: (delta: number) => void;
   setClippingDistance: (value: number) => void;
 
   needsRerender: boolean;
@@ -47,26 +42,17 @@ class ArbitraryView {
   constructor(canvasSelector: string, width: number) {
     this.animate = this.animateImpl.bind(this);
     this.resize = this.resizeImpl.bind(this);
-    this.applyScale = this.applyScaleImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
     _.extend(this, Backbone.Events);
 
     // camDistance has to be calculated such that with cam
-    // angle 45°, the plane of width 128 fits exactly in the
+    // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
     // viewport.
     this.camDistance = width / 2 / Math.tan(Math.PI / 180 * 45 / 2);
 
-    // The "render" div serves as a container for the canvas, that is
-    // attached to it once a renderer has been initalized.
-    this.container = $(canvasSelector);
-    this.width = this.container.width();
-    this.height = this.container.height();
-
     // Initialize main THREE.js components
-
-    this.camera = new THREE.PerspectiveCamera(45, this.width / this.height, 50, 1000);
+    this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);
     this.camera.matrixAutoUpdate = false;
-    this.camera.aspect = this.width / this.height;
 
     this.cameraPosition = [0, 0, this.camDistance];
 
@@ -91,6 +77,7 @@ class ArbitraryView {
       SceneController.rootGroup.add(this.group);
 
       this.resize();
+
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
@@ -157,8 +144,8 @@ class ArbitraryView {
       camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
 
-      renderer.setViewport(0, 0, this.width, this.height);
-      renderer.setScissor(0, 0, this.width, this.height);
+      renderer.setViewport(0, 0, this.width, this.width);
+      renderer.setScissor(0, 0, this.width, this.width);
       renderer.setScissorTest(true);
       renderer.setClearColor(0xffffff, 1);
 
@@ -188,31 +175,9 @@ class ArbitraryView {
   resizeImpl(): void {
     // Call this after the canvas was resized to fix the viewport
     // Needs to be bound
-
-    this.width = this.container.width();
-    this.height = this.container.height();
-
-    SceneController.renderer.setSize(this.width, this.height);
-
-    this.camera.aspect = this.width / this.height;
-    this.camera.updateProjectionMatrix();
+    this.width = Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH;
+    SceneController.renderer.setSize(this.width, this.width);
     this.draw();
-  }
-
-  applyScaleImpl(delta: number): void {
-    if (!this.scaleFactor) {
-      this.scaleFactor = DEFAULT_SCALE;
-    }
-
-    if (this.scaleFactor + delta > MIN_SCALE && this.scaleFactor + delta < MAX_SCALE) {
-      this.scaleFactor += Number(delta);
-      this.width = this.scaleFactor * Constants.VIEWPORT_WIDTH;
-      this.height = this.scaleFactor * Constants.VIEWPORT_WIDTH;
-      this.container.width(this.width);
-      this.container.height(this.height);
-
-      this.resizeThrottled();
-    }
   }
 
   setClippingDistanceImpl(value: number): void {

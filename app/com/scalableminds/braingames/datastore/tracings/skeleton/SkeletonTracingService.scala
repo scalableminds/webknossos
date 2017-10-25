@@ -126,7 +126,7 @@ class SkeletonTracingService @Inject()(
       BoundingBox.combine(List[BoundingBox](boundinBoxA, boundinBoxB))
     }
 
-    tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBox, version = 0)
+    tracingA.copy(trees = mergedTrees, boundingBox = mergedBoundingBox, version = 0, userBoundingBox = None)
   }
 
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)

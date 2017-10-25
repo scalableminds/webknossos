@@ -160,7 +160,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
                 sorter={Utils.localeCompareBy((project: APIProjectType) =>
                   project.expectedTime.toString(),
                 )}
-                render={expectedTime => `${parseInt(expectedTime / 60000)}m`}
+                render={expectedTime => `${expectedTime}m`}
               />
               <Column
                 title="Action"

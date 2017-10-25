@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -157,29 +158,46 @@ export async function deleteTeam(teamId: string): Promise<void> {
 
 // ### Projects
 export async function getProjects(): Promise<Array<APIProjectType>> {
-  const projects = await Request.receiveJSON("/api/projects");
-  assertResponseLimit(projects);
+  const responses = await Request.receiveJSON("/api/projects");
+  assertResponseLimit(responses);
 
+  const projects = responses.map(response =>
+    Object.assign(response, { expectedTime: Utils.millisecondsToMinutes(response.expectedTime) }),
+  );
   return projects;
 }
 
 export async function getProjectsWithOpenAssignments(): Promise<Array<APIProjectType>> {
-  const projects = await Request.receiveJSON("/api/projects/assignments");
-  assertResponseLimit(projects);
+  const responses = await Request.receiveJSON("/api/projects/assignments");
+  assertResponseLimit(responses);
 
+  const projects = responses.map(response =>
+    Object.assign(response, { expectedTime: Utils.millisecondsToMinutes(response.expectedTime) }),
+  );
   return projects;
 }
 
+export async function getProject(projectName: string): Promise<APIProjectType> {
+  const project = await Request.receiveJSON(`/api/projects/${projectName}`);
+  return Object.assign(project, {
+    expectedTime: Utils.millisecondsToMinutes(project.expectedTime),
+  });
+}
+
 export async function deleteProject(projectName: string): Promise<void> {
-  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}`, {
+  return Request.receiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",
   });
 }
 
 export async function createProject(project: APIProjectType): Promise<APIProjectType> {
+  const transformedProject = Object.assign(project, {
+    expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
+  });
+
   return Request.sendJSONReceiveJSON("/api/projects", {
     method: "POST",
-    data: project,
+    data: transformedProject,
   });
 }
 
@@ -187,9 +205,13 @@ export async function updateProject(
   projectName: string,
   project: APIProjectType,
 ): Promise<APIProjectType> {
-  return Request.receiveJSON(`/api/projects/${projectName}`, {
+  const transformedProject = Object.assign(project, {
+    expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
+  });
+
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}`, {
     method: "PUT",
-    data: project,
+    data: transformedProject,
   });
 }
 

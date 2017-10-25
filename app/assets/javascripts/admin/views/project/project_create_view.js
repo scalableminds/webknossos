@@ -1,7 +1,7 @@
 import React from "react";
 import { Form, Input, Select, Button, Card, InputNumber } from "antd";
 import app from "app";
-import { getUsers, getTeams, createProject } from "admin/admin_rest_api";
+import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";
 import type { APIUserType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
@@ -9,6 +9,7 @@ const Option = Select.Option;
 
 type Props = {
   form: Object,
+  projectName: ?string,
 };
 
 type State = {
@@ -39,9 +40,9 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
     });
   }
 
-  applyDefaults() {
+  async applyDefaults() {
+    const project = this.props.projectName ? await getProject(this.props.projectName) : null;
     const defaultValues = {
-      owner: app.currentUser.id,
       priority: 100,
       expectedTime: 90,
       assignmentConfiguration: {
@@ -49,7 +50,9 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
       },
     };
 
-    const defaultFormValues = Object.assign({}, defaultValues);
+    const defaultFormValues = Object.assign({}, defaultValues, project, {
+      owner: project ? project.owner.id : app.currentUser.id,
+    });
     this.props.form.setFieldsValue(defaultFormValues);
   }
 
@@ -57,7 +60,11 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
     e.preventDefault();
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
-        await createProject(formValues);
+        if (this.props.projectName) {
+          await updateProject(this.props.projectName, formValues);
+        } else {
+          await createProject(formValues);
+        }
         app.router.navigate("/projects", { trigger: true });
       }
     });
@@ -65,11 +72,13 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
+    const isEditMode = this.props.projectName != null;
+    const titlePrefix = isEditMode ? "Update " : "Create";
     const fullWidth = { width: "100%" };
 
     return (
       <div className="row container wide project-administration">
-        <Card title={<h3>Create Project</h3>}>
+        <Card title={<h3>{titlePrefix} Project</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Project Name" hasFeedback>
               {getFieldDecorator("name", {
@@ -79,7 +88,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                   },
                   { min: 3 },
                 ],
-              })(<Input autoFocus />)}
+              })(<Input autoFocus disabled={isEditMode} />)}
             </FormItem>
 
             <FormItem label="Team" hasFeedback>
@@ -95,6 +104,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                   placeholder="Select a Team"
                   optionFilterProp="children"
                   style={fullWidth}
+                  disabled={isEditMode}
                 >
                   {this.state.teams.map((team: APITeamType) => (
                     <Option key={team.id} value={team.name}>
@@ -118,6 +128,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                   placeholder="Select a User"
                   optionFilterProp="children"
                   style={fullWidth}
+                  disabled={isEditMode}
                 >
                   {this.state.users.map((user: APIUserType) => (
                     <Option key={user.id} value={user.id}>
@@ -148,7 +159,12 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                   },
                 ],
               })(
-                <Select allowClear optionFilterProp="children" style={fullWidth}>
+                <Select
+                  allowClear
+                  optionFilterProp="children"
+                  style={fullWidth}
+                  disabled={isEditMode}
+                >
                   <Option value="webknossos">webKnossos</Option>
                   <Option value="mturk">Mechanical Turk</Option>
                 </Select>,
@@ -157,7 +173,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 
             <FormItem>
               <Button type="primary" htmlType="submit">
-                Create Project
+                {titlePrefix} Project
               </Button>
             </FormItem>
           </Form>

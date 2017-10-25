@@ -38,7 +38,7 @@ class Router extends BaseRouter {
       "/projects": "projects",
       "/projects/create": "projectCreate",
       "/projects/:name/tasks": "projectTasks",
-      "/projects/:id/edit": "projectEdit",
+      "/projects/:id/edit": "projectCreate",
       "/annotations/:type/:id(/readOnly)": "tracingView",
       "/datasets/:id/view": "tracingViewPublic",
       "/dashboard": "dashboard",
@@ -102,25 +102,10 @@ class Router extends BaseRouter {
     });
   }
 
-  projectCreate() {
+  projectCreate(projectName) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const view = new ReactBackboneWrapper(admin.ProjectCreateView, {});
+      const view = new ReactBackboneWrapper(admin.ProjectCreateView, { projectName });
       this.changeView(view);
-    });
-  }
-
-  projectEdit(projectName) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const ProjectEditView = admin.ProjectEditView;
-      const ProjectModel = admin.ProjectModel;
-
-      const model = new ProjectModel({ name: projectName });
-      const view = new ProjectEditView({ model });
-
-      this.listenTo(model, "sync", () => {
-        this.changeView(view);
-        this.hideLoadingSpinner();
-      });
     });
   }
 

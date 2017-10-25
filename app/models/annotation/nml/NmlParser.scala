@@ -56,6 +56,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         val editPosition = parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracingDefaults.editPosition)
         val editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
+        val userBoundingBox = parseUserBoundingBox(parameters \ "userBoundingBox")
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
@@ -63,7 +64,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel), volumes.head.location), description)
         } else {
           (Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
-            editPosition, editRotation, zoomLevel, version=0)), description)
+            editPosition, editRotation, zoomLevel, version=0, userBoundingBox)), description)
         }
       }
     } catch {
@@ -160,6 +161,19 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
     treeNodes.flatMap(treeNode => parseTree(treeNode, branchPoints, comments))
+  }
+
+  private def parseUserBoundingBox(node: NodeSeq) = {
+    node.headOption.flatMap(bb =>
+      for {
+        topLeftX <- (node \ "@topLeftX").text.toIntOpt
+        topLeftY <- (node \ "@topLeftY").text.toIntOpt
+        topLeftZ <- (node \ "@topLeftZ").text.toIntOpt
+        width <- (node \ "@width").text.toIntOpt
+        height <- (node \ "@height").text.toIntOpt
+        depth <- (node \ "@depth").text.toIntOpt
+      } yield BoundingBox(Point3D(topLeftX, topLeftY, topLeftZ), width, height, depth)
+    )
   }
 
   private def parseDataSetName(node: NodeSeq) = {

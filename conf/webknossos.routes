@@ -28,6 +28,7 @@ GET           /finishreset                                                      
 GET           /api/changepassword                                               controllers.Authentication.empty
 POST          /api/register                                                     controllers.Authentication.handleRegistration
 POST          /api/login                                                        controllers.Authentication.authenticate
+GET           /autoLogin                                                        controllers.Authentication.autoLogin
 GET           /api/switch                                                       controllers.Authentication.switchTo(to: String)
 POST          /api/reset                                                        controllers.Authentication.handleStartResetPassword
 POST          /api/changepw                                                     controllers.Authentication.changePassword

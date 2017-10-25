@@ -6,6 +6,7 @@ import type { APIUserType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
+const TextArea = Input.TextArea;
 
 type Props = {
   form: Object,
@@ -93,11 +94,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 
             <FormItem label="Team" hasFeedback>
               {getFieldDecorator("team", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(
                 <Select
                   showSearch
@@ -117,11 +114,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 
             <FormItem label="Owner" hasFeedback>
               {getFieldDecorator("owner", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(
                 <Select
                   showSearch
@@ -153,23 +146,94 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 
             <FormItem label="Project Type" hasFeedback>
               {getFieldDecorator("assignmentConfiguration.location", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(
                 <Select
                   allowClear
                   optionFilterProp="children"
                   style={fullWidth}
                   disabled={isEditMode}
+                  onChange={(value: string) => this.setState({ isMTurkProject: value === "mturk" })}
                 >
                   <Option value="webknossos">webKnossos</Option>
                   <Option value="mturk">Mechanical Turk</Option>
                 </Select>,
               )}
             </FormItem>
+
+            {this.state.isMTurkProject ? (
+              <div>
+                <FormItem label="Mechanical Turk: Required Qualification" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.requiredQualification", {
+                    rules: [{ required: true }],
+                    initialValue: "mt-everyone",
+                  })(
+                    <Select allowClear style={fullWidth} disabled={isEditMode}>
+                      <Option value="mt-everyone">None</Option>
+                      <Option value="mt-expert">Expert</Option>
+                      <Option value="mpi-branchpoint">MPI Branchpoint</Option>
+                      <Option value="mt-max-10k-hits">
+                        Worker with less than 10k approved HITs
+                      </Option>
+                      <Option value="mt-min-10k-hits">
+                        Worker with more than 10k approved HITs
+                      </Option>
+                    </Select>,
+                  )}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Assignment Duration in Seconds" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration[assignmentDurationInSeconds]", {
+                    rules: [{ required: true }],
+                    initialValue: 3600,
+                  })(<InputNumber style={fullWidth} disabled={isEditMode} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Reward in USD" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.rewardInDollar", {
+                    rules: [{ required: true }],
+                    initialValue: 0.05,
+                  })(<InputNumber style={fullWidth} disabled={isEditMode} step={0.01} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Auto Approval Delay in Seconds" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.autoApprovalDelayInSeconds", {
+                    rules: [{ required: true }],
+                    initialValue: 60000.0,
+                  })(<InputNumber style={fullWidth} disabled={isEditMode} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: HIT Template" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.template", {
+                    rules: [{ required: true }],
+                    initialValue: "default_template",
+                  })(
+                    <Select allowClear style={fullWidth} disabled={isEditMode}>
+                      <Option value="default_template">Default flight template</Option>
+                      <Option value="branchpoint_template">Branchpoint template</Option>
+                    </Select>,
+                  )}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Title" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.title", {
+                    rules: [{ required: true }],
+                  })(<Input disabled={isEditMode} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Keywords (Comma Separated)" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.keywords", {
+                    rules: [{ required: true }],
+                  })(<Input disabled={isEditMode} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Description" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.description", {
+                    rules: [{ required: true }],
+                  })(<TextArea disabled={isEditMode} rows={3} />)}
+                </FormItem>
+              </div>
+            ) : null}
 
             <FormItem>
               <Button type="primary" htmlType="submit">

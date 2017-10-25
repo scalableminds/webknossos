@@ -1,5 +1,4 @@
 // @flow
-import _ from "lodash";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -191,7 +190,7 @@ export async function deleteProject(projectName: string): Promise<void> {
 }
 
 export async function createProject(project: APIProjectType): Promise<APIProjectType> {
-  const transformedProject = Object.assign(project, {
+  const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
   });
 
@@ -205,7 +204,7 @@ export async function updateProject(
   projectName: string,
   project: APIProjectType,
 ): Promise<APIProjectType> {
-  const transformedProject = Object.assign(project, {
+  const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
   });
 

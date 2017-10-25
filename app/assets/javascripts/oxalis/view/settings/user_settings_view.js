@@ -7,12 +7,9 @@ import _ from "lodash";
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import { Collapse } from "antd";
-import type { ControlModeType, Vector6, ModeType } from "oxalis/constants";
+import type { ControlModeType, Vector6orEmpty, ModeType } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
-import {
-  updateUserSettingAction,
-  updateTemporarySettingAction,
-} from "oxalis/model/actions/settings_actions";
+import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
   setActiveTreeAction,
@@ -26,30 +23,26 @@ import {
   Vector6InputSetting,
   LogSliderSetting,
 } from "oxalis/view/settings/setting_input_views";
+import { setUserBoundingBoxAction } from "oxalis/model/actions/annotation_actions";
 import { getMaxZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import { setZoomStepAction } from "oxalis/model/actions/flycam_actions";
-import type {
-  UserConfigurationType,
-  TemporaryConfigurationType,
-  OxalisState,
-  TracingType,
-} from "oxalis/store";
+import Utils from "libs/utils";
+import type { UserConfigurationType, OxalisState, TracingType } from "oxalis/store";
 import type { Dispatch } from "redux";
 
 const Panel = Collapse.Panel;
 
 type UserSettingsViewProps = {
   userConfiguration: UserConfigurationType,
-  temporaryConfiguration: TemporaryConfigurationType,
   tracing: TracingType,
   zoomStep: number,
   state: OxalisState,
   onChangeUser: (key: $Keys<UserConfigurationType>, value: any) => void,
-  onChangeTemporary: (key: $Keys<TemporaryConfigurationType>, value: any) => void,
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
   onChangeActiveCellId: (value: number) => void,
+  onChangeBoundingBox: (value: Vector6orEmpty) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   viewMode: ModeType,
@@ -58,7 +51,6 @@ type UserSettingsViewProps = {
 
 class UserSettingsView extends PureComponent<UserSettingsViewProps> {
   onChangeUser: { [$Keys<UserConfigurationType>]: Function };
-  onChangeTemporary: { [$Keys<TemporaryConfigurationType>]: Function };
 
   componentWillMount() {
     // cache onChange handler
@@ -66,10 +58,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       _.partial(this.props.onChangeUser, propertyName),
     );
   }
-
-  onChangeBoundingBox = (boundingBox: Vector6) => {
-    this.props.onChangeTemporary("userBoundingBox", boundingBox);
-  };
 
   getViewportOptions = () => {
     switch (this.props.viewMode) {
@@ -342,8 +330,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           <Vector6InputSetting
             label="Bounding Box"
             tooltipTitle="Format: minX, minY, minZ, width, height, depth"
-            value={this.props.temporaryConfiguration.userBoundingBox}
-            onChange={this.onChangeBoundingBox}
+            value={Utils.computeArrayFromBoundingBox(this.props.tracing.userBoundingBox)}
+            onChange={this.props.onChangeBoundingBox}
           />
           <SwitchSetting
             label="Display Planes in 3D View"
@@ -358,7 +346,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
 
 const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
-  temporaryConfiguration: state.temporaryConfiguration,
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
   state,
@@ -370,9 +357,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeUser(propertyName, value) {
     dispatch(updateUserSettingAction(propertyName, value));
   },
-  onChangeTemporary(propertyName, value) {
-    dispatch(updateTemporarySettingAction(propertyName, value));
-  },
   onChangeActiveNodeId(id: number) {
     dispatch(setActiveNodeAction(id));
   },
@@ -381,6 +365,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeActiveCellId(id: number) {
     dispatch(setActiveCellAction(id));
+  },
+  onChangeBoundingBox(boundingBox: Vector6orEmpty) {
+    dispatch(setUserBoundingBoxAction(Utils.computeBoundingBoxFromArray(boundingBox)));
   },
   onChangeZoomStep(zoomStep: number) {
     dispatch(setZoomStepAction(zoomStep));

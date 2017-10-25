@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
+import type { Vector3, Vector4, Vector6, Vector6orEmpty, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import window from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";
@@ -70,13 +70,32 @@ const Utils = {
     return [r, g, b, 1];
   },
 
-  computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
-    const [x, y, z, width, height, depth] = bb;
+  computeBoundingBoxFromArray(boundingBox: Vector6orEmpty): ?BoundingBoxType {
+    if (boundingBox.length >= 6) {
+      // TODO: Remove once https://github.com/facebook/flow/issues/3564 is fixed
+      const bb = ((boundingBox: any): Vector6);
+      const [x, y, z, width, height, depth] = bb;
 
-    return {
-      min: [x, y, z],
-      max: [x + width, y + height, z + depth],
-    };
+      return {
+        min: [x, y, z],
+        max: [x + width, y + height, z + depth],
+      };
+    } else {
+      return null;
+    }
+  },
+
+  computeArrayFromBoundingBox(bb: ?BoundingBoxType): Vector6orEmpty {
+    return bb != null
+      ? [
+          bb.min[0],
+          bb.min[1],
+          bb.min[2],
+          bb.max[0] - bb.min[0],
+          bb.max[1] - bb.min[1],
+          bb.max[2] - bb.min[2],
+        ]
+      : [];
   },
 
   compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {

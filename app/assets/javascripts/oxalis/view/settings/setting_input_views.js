@@ -10,7 +10,7 @@
 import * as React from "react";
 import Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6orEmpty } from "oxalis/constants";
 
 type NumberSliderSettingProps = {
   onChange: (value: number) => void,
@@ -196,7 +196,7 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
   }
 }
 
-type VectorInputSettingPropTypes<T: Vector6> = {
+type VectorInputSettingPropTypes<T> = {
   label: string,
   value: T,
   onChange: (value: T) => void,
@@ -210,10 +210,10 @@ type State = {
 };
 
 export class Vector6InputSetting extends React.PureComponent<
-  VectorInputSettingPropTypes<Vector6>,
+  VectorInputSettingPropTypes<Vector6orEmpty>,
   State,
 > {
-  constructor(props: VectorInputSettingPropTypes<Vector6>) {
+  constructor(props: VectorInputSettingPropTypes<Vector6orEmpty>) {
     super(props);
     this.state = {
       isEditing: false,
@@ -222,7 +222,7 @@ export class Vector6InputSetting extends React.PureComponent<
     };
   }
 
-  componentWillReceiveProps(newProps: VectorInputSettingPropTypes<Vector6>) {
+  componentWillReceiveProps(newProps: VectorInputSettingPropTypes<Vector6orEmpty>) {
     if (!this.state.isEditing) {
       this.setState({
         isValid: true,
@@ -231,7 +231,7 @@ export class Vector6InputSetting extends React.PureComponent<
     }
   }
 
-  defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
+  defaultValue = [];
 
   handleBlur = () => {
     this.setState({
@@ -265,10 +265,14 @@ export class Vector6InputSetting extends React.PureComponent<
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(text);
     const value = Utils.stringToNumberArray(text);
-    const isValidFormat = value.length === 6;
+    const isValidFormat = value.length === 6 || value.length === 0;
 
     if (isValidFormat && isValidInput) {
-      this.props.onChange(Utils.numberArrayToVector6(value));
+      if (value.length === 0) {
+        this.props.onChange(this.defaultValue);
+      } else {
+        this.props.onChange(Utils.numberArrayToVector6(value));
+      }
     }
 
     this.setState({
@@ -297,6 +301,7 @@ export class Vector6InputSetting extends React.PureComponent<
               onFocus={this.handleFocus}
               onBlur={this.handleBlur}
               value={this.state.text}
+              placeholder="0, 0, 0, 512, 512, 512"
             />
           </Tooltip>
         </Col>

@@ -6,9 +6,11 @@ import type {
   CommentType,
   TreeType,
   NodeType,
+  BoundingBoxObjectType,
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
+import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
@@ -85,6 +87,7 @@ type UpdateSkeletonTracingUpdateAction = {
     activeNode?: number,
     editPosition: Vector3,
     editRotation: Vector3,
+    userBoundingBox: ?BoundingBoxObjectType,
     zoomLevel: number,
   },
 };
@@ -95,6 +98,7 @@ type UpdateVolumeTracingUpdateAction = {
     editPosition: Vector3,
     editRotation: Vector3,
     largestSegmentId: number,
+    userBoundingBox: ?BoundingBoxObjectType,
     zoomLevel: number,
   },
 };
@@ -227,24 +231,19 @@ export function updateSkeletonTracing(
   rotation: Vector3,
   zoomLevel: number,
 ): UpdateSkeletonTracingUpdateAction {
+  const optionalObject = {};
   if (tracing.activeNodeId != null) {
-    return {
-      name: "updateTracing",
-      value: {
-        activeNode: tracing.activeNodeId,
-        editPosition: position,
-        editRotation: rotation,
-        zoomLevel,
-      },
-    };
+    optionalObject.activeNode = tracing.activeNodeId;
   }
+
   return {
     name: "updateTracing",
-    value: {
+    value: Object.assign(optionalObject, {
       editPosition: position,
       editRotation: rotation,
+      userBoundingBox: convertFrontendBoundingBoxToServer(tracing.userBoundingBox),
       zoomLevel,
-    },
+    }),
   };
 }
 export function moveTreeComponent(
@@ -274,6 +273,7 @@ export function updateVolumeTracing(
       editPosition: position,
       editRotation: rotation,
       largestSegmentId: tracing.maxCellId,
+      userBoundingBox: convertFrontendBoundingBoxToServer(tracing.userBoundingBox),
       zoomLevel,
     },
   };

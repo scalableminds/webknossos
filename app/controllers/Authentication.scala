@@ -35,6 +35,7 @@ import com.mohiva.play.silhouette.api.{Environment, LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
 import play.api._
+import play.api.Play.current
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
@@ -98,7 +99,8 @@ class Authentication @Inject() (
                        passwordHasher: PasswordHasher,
                        configuration: Configuration)
   extends Controller
-    with ProvidesUnauthorizedSessionData {
+    with ProvidesUnauthorizedSessionData
+    with FoxImplicits {
 
   import AuthForms._
 
@@ -114,7 +116,11 @@ class Authentication @Inject() (
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
 
-  def empty = Action { implicit request =>
+  def empty = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
+  def emptyWithWildcard(param: String) = UserAwareAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
@@ -164,6 +170,16 @@ class Authentication @Inject() (
         }
       }
     )
+  }
+
+  def autoLogin = Action.async { implicit request =>
+    for {
+      _ <- Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get ?~> Messages("error.notInDev")
+      user <- UserService.defaultUser
+      authenticator <- env.authenticatorService.create(user.loginInfo)
+      value <- env.authenticatorService.init(authenticator)
+      result <- env.authenticatorService.embed(value, Ok)
+    } yield result
   }
 
   def switchTo(email: String) = SecuredAction.async { implicit request =>

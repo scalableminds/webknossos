@@ -2,7 +2,8 @@
 /* eslint-disable react/no-unused-prop-types */
 import _ from "lodash";
 import React from "react";
-import { Router, Route, Switch, createBrowserHistory } from "react-router-dom";
+import { Router, Route, Switch } from "react-router-dom";
+import createBrowserHistory from "history/createBrowserHistory";
 import { connect } from "react-redux";
 import { Layout, LocaleProvider } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";

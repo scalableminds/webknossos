@@ -4,7 +4,8 @@
 
 # The general pages
 GET           /                                                                 controllers.Application.index
-GET           /dashboard                                                        controllers.UserController.empty
+
+GET           /dashboard                                                        controllers.Authentication.empty
 GET           /impressum                                                        controllers.Application.impressum
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou
@@ -27,6 +28,7 @@ GET           /changepassword                                                   
 GET           /finishreset                                                      controllers.Authentication.empty
 POST          /api/register                                                     controllers.Authentication.handleRegistration
 POST          /api/login                                                        controllers.Authentication.authenticate
+GET           /autoLogin                                                        controllers.Authentication.autoLogin
 GET           /api/switch                                                       controllers.Authentication.switchTo(to: String)
 POST          /api/reset                                                        controllers.Authentication.handleStartResetPassword
 POST          /api/changepw                                                     controllers.Authentication.changePassword
@@ -44,8 +46,8 @@ POST          /api/dataSetConfigurations/:dataSetName                           
 # Users
 GET           /user/tasks/request                                               controllers.TaskController.request
 GET           /user/tasks/peek                                                  controllers.TaskController.peekNext(limit: Int ?= 10)
-GET           /users/:id/details                                                controllers.UserController.emptyWithWildcard(id)
-GET           /users                                                            controllers.UserController.empty
+GET           /users/:id/details                                                controllers.Authentication.emptyWithWildcard(id)
+GET           /users                                                            controllers.Authentication.empty
 
 GET           /api/users                                                        controllers.UserController.list
 GET           /api/user                                                         controllers.UserController.current
@@ -64,7 +66,7 @@ GET           /api/users/:id/annotations/download                               
 GET           /hits/:id                                                         controllers.MTurkController.startAssignment(id: String, workerId: String, assignmentId: String)
 
 # Team
-GET           /teams                                                            controllers.TeamController.empty
+GET           /teams                                                            controllers.Authentication.empty
 GET           /api/teams                                                        controllers.TeamController.list
 GET           /api/allTeams                                                     controllers.TeamController.listAllTeams
 POST          /api/teams                                                        controllers.TeamController.create
@@ -73,12 +75,12 @@ DELETE        /api/teams/:id                                                    
 # Binary Data
 
 # Spotlight
-GET           /spotlight                                                        controllers.DataSetController.userAwareEmpty
+GET           /spotlight                                                        controllers.Authentication.empty
 
 # DataSets
-GET           /datasets                                                         controllers.DataSetController.empty
-GET           /datasets/:id/edit                                                controllers.DataSetController.emptyWithWildcard(id)
-GET           /datasets/:id/import                                              controllers.DataSetController.emptyWithWildcard(id)
+GET           /datasets                                                         controllers.Authentication.empty
+GET           /datasets/:id/edit                                                controllers.Authentication.emptyWithWildcard(id)
+GET           /datasets/:id/import                                              controllers.Authentication.emptyWithWildcard(id)
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
 GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean])
 
@@ -136,7 +138,7 @@ GET           /api/annotations/:typ/:id/loggedTime                              
 # GET           /annotations/:typ/:id/saveMerged                                  controllers.AnnotationController.saveMerged(typ: String, id: String)
 
 # Admin datasets
-GET           /datasets/upload                                                  controllers.DataSetController.empty
+GET           /datasets/upload                                                  controllers.Authentication.empty
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
 
 # Admin Tasks
@@ -144,9 +146,9 @@ GET           /api/tasks                                                        
 
 # DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
 
-GET           /tasks                                                            controllers.TaskController.empty
-GET           /tasks/overview                                                   controllers.TaskController.empty
-GET           /tasks/create                                                     controllers.TaskController.empty
+GET           /tasks                                                            controllers.Authentication.empty
+GET           /tasks/overview                                                   controllers.Authentication.empty
+GET           /tasks/create                                                     controllers.Authentication.empty
 
 POST          /api/tasks                                                        controllers.TaskController.create(type: String)
 GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
@@ -155,7 +157,7 @@ GET           /api/tasks/:id                                                    
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
 
-GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
+GET           /tasks/:id/edit                                                   controllers.Authentication.emptyWithWildcard(id: String)
 # show backbone views for task creation
 
 #POST          /admin/tasks/createBulk                                           controllers.admin.TaskAdministration.createBulk
@@ -163,19 +165,19 @@ GET           /tasks/:id/edit                                                   
 #POST          /admin/tasks/createFromForm                                       controllers.admin.TaskAdministration.createFromForm
 
 # TODO: remove
-#GET           /admin/tasks/:id/edit                                          controllers.admin.TaskAdministration.edit(id: String)
-#GET           /admin/tasks/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
-#POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
-#GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
-GET           /workload                                                         controllers.TaskController.empty
+#GET           /admin/tasks/:id/edit                                            controllers.admin.TaskAdministration.edit(id: String)
+#GET           /admin/tasks/:id/edit                                            controllers.Authentication.emptyWithWildcard(id: String)
+#POST          /admin/tasks/:id                                                 controllers.admin.TaskAdministration.editTaskForm(id: String)
+#GET           /api/tasks/overview                                              controllers.admin.TaskAdministration.overviewData
+GET           /workload                                                         controllers.Authentication.empty
 
 GET           /api/tasks/:id/download                                           controllers.AnnotationIOController.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
-GET           /taskTypes                                                        controllers.TaskTypeController.empty(id: String = "")
-GET           /taskTypes/create                                                 controllers.TaskTypeController.empty(id: String = "")
-GET           /taskTypes/:id/tasks                                              controllers.TaskTypeController.empty(id: String)
-GET           /taskTypes/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
+GET           /taskTypes                                                        controllers.Authentication.empty
+GET           /taskTypes/create                                                 controllers.Authentication.empty
+GET           /taskTypes/:id/tasks                                              controllers.Authentication.emptyWithWildcard(id: String)
+GET           /taskTypes/:id/edit                                               controllers.Authentication.emptyWithWildcard(id: String)
 
 GET           /api/taskTypes                                                    controllers.TaskTypeController.list
 POST          /api/taskTypes                                                    controllers.TaskTypeController.create
@@ -186,15 +188,15 @@ GET           /api/taskTypes/:id/download                                       
 GET           /api/taskTypes/:id                                                controllers.TaskTypeController.get(id: String)
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
-GET           /scripts                                                        controllers.ScriptsController.empty(id: String = "")
-GET           /scripts/create                                                 controllers.ScriptsController.empty(id: String = "")
-GET           /scripts/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
+GET           /scripts                                                          controllers.Authentication.empty
+GET           /scripts/create                                                   controllers.Authentication.empty
+GET           /scripts/:id/edit                                                 controllers.Authentication.emptyWithWildcard(id: String)
 
-GET           /api/scripts                                                    controllers.ScriptsController.list
-POST          /api/scripts                                                    controllers.ScriptsController.create
-GET           /api/scripts/:id                                                controllers.ScriptsController.get(id: String)
-PUT           /api/scripts/:id                                                controllers.ScriptsController.update(id: String)
-DELETE        /api/scripts/:id                                                controllers.ScriptsController.delete(id: String)
+GET           /api/scripts                                                      controllers.ScriptsController.list
+POST          /api/scripts                                                      controllers.ScriptsController.create
+GET           /api/scripts/:id                                                  controllers.ScriptsController.get(id: String)
+PUT           /api/scripts/:id                                                  controllers.ScriptsController.update(id: String)
+DELETE        /api/scripts/:id                                                  controllers.ScriptsController.delete(id: String)
 
 
 # ID Validation
@@ -202,10 +204,10 @@ GET           /api/find                                                         
 
 
 # Projects
-GET           /projects                                                         controllers.ProjectController.empty(name: String = "")
-GET           /projects/create                                                  controllers.ProjectController.empty(name: String = "")
-GET           /projects/:name/tasks                                             controllers.ProjectController.empty(name: String)
-GET           /projects/:name/edit                                              controllers.ProjectController.empty(name: String)
+GET           /projects                                                         controllers.Authentication.empty
+GET           /projects/create                                                  controllers.Authentication.empty
+GET           /projects/:name/tasks                                             controllers.Authentication.emptyWithWildcard(name: String)
+GET           /projects/:name/edit                                              controllers.Authentication.emptyWithWildcard(name: String)
 GET           /api/projects                                                     controllers.ProjectController.list
 GET           /api/projects/assignments                                         controllers.ProjectController.listWithStatus
 POST          /api/projects                                                     controllers.ProjectController.create
@@ -217,7 +219,7 @@ GET           /api/projects/:name/tasks                                         
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
 
-GET           /statistics                                                       controllers.StatisticsController.empty
+GET           /statistics                                                       controllers.Authentication.empty
 GET           /api/statistics/webknossos                                        controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 GET           /api/statistics/assignments                                       controllers.StatisticsController.assignmentStatistics(start: Option[Long], end: Option[Long])

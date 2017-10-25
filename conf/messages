@@ -5,6 +5,7 @@ error.unknown=Unknown error
 error.invalidCredentials=Email or Password is wrong
 error.noUser=There is no user to this email
 error.invalidToken=The token is invalid
+error.notInDev=This feature is only available in dev mode
 
 notAllowed=You are not allowed to view this resource
 

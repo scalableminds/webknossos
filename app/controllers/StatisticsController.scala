@@ -44,10 +44,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     )
   }
 
-  def empty = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
   def oxalis(interval: String, start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>

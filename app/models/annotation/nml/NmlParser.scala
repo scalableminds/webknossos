@@ -177,9 +177,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   }
 
   private def parseDataSetName(node: NodeSeq) = {
-    val rawDataSetName = (node \ "@name").text
-    val magRx = "_mag[0-9]*$".r
-    magRx.replaceAllIn(rawDataSetName, "")
+    (node \ "@name").text
   }
 
   private def parseDescription(node: NodeSeq) = {

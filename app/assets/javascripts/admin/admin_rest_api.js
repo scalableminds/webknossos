@@ -214,6 +214,14 @@ export async function updateProject(
   });
 }
 
+export function pauseProject(projectName: string): Promise<void> {
+  return Request.receiveJSON(`/api/projects/${projectName}/pause`);
+}
+
+export function resumeProject(projectName: string): Promise<void> {
+  return Request.receiveJSON(`/api/projects/${projectName}/resume`);
+}
+
 // ### Tasks
 export async function getAnnotationsForTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);

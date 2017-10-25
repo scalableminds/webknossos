@@ -124,6 +124,13 @@ class ArbitraryController extends React.PureComponent<Props> {
         }
       },
       scroll: this.scroll,
+      pinch: (delta: number) => {
+        if (delta < 0) {
+          Store.dispatch(zoomOutAction());
+        } else {
+          Store.dispatch(zoomInAction());
+        }
+      },
     });
   }
 

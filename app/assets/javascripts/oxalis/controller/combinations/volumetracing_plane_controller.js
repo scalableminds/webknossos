@@ -93,7 +93,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
           const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
           const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
           const viewportScale = Store.getState().userConfiguration.scale;
-          this.move([
+          this.movePlane([
             delta.x * mouseInversionX / viewportScale,
             delta.y * mouseInversionY / viewportScale,
             0,

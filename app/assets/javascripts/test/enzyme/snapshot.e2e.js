@@ -31,7 +31,8 @@ mockRequire("antd/lib/button", props => (
   </div>
 ));
 
-const ProjectListView = mockRequire.reRequire("admin/admin").ProjectListView;
+const ProjectListView = mockRequire.reRequire("../../admin/views/project/project_list_view")
+  .default;
 const Dashboard = mockRequire.reRequire("../../dashboard/views/dashboard_view").default;
 const UserListView = mockRequire.reRequire("../../admin/views/user/user_list_view").default;
 // Cannot be rendered for some reason

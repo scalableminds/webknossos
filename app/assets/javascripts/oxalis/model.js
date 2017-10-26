@@ -424,8 +424,11 @@ export class OxalisModel {
   }
 
   save = async () => {
-    Store.dispatch(saveNowAction());
     while (!this.stateSaved()) {
+      // The dispatch of the saveNowAction IN the while loop is deliberate.
+      // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
+      // the while loop would continue running until the next save would be triggered.
+      Store.dispatch(saveNowAction());
       // eslint-disable-next-line no-await-in-loop
       await Utils.sleep(500);
     }

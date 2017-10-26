@@ -1,8 +1,9 @@
+// @flow
 import React from "react";
 import { Form, Input, Select, Button, Card, InputNumber } from "antd";
 import app from "app";
 import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, APITeamType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;

@@ -11,10 +11,17 @@ import type {
   APIProjectType,
   APITaskType,
   APIAnnotationType,
+  APIRoleType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
+
+type NewTeamType = {
+  +name: string,
+  +parent: string,
+  +roles: Array<APIRoleType>,
+};
 
 function assertResponseLimit(collection) {
   if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
@@ -143,7 +150,7 @@ export async function getRootTeams(): Promise<Array<APITeamType>> {
   return teams;
 }
 
-export async function createTeam(newTeam: APITeamType): Promise<APITeamType> {
+export async function createTeam(newTeam: NewTeamType): Promise<APITeamType> {
   return Request.sendJSONReceiveJSON("/api/teams", {
     data: newTeam,
   });

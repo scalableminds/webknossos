@@ -29,8 +29,6 @@ import TaskTypeCreateView from "admin/views/tasktype/task_type_create_view";
 import TaskTypeModel from "admin/models/tasktype/task_type_model";
 import ScriptCreateView from "admin/views/scripts/script_create_view";
 import ScriptModel from "admin/models/scripts/script_model";
-import TaskOverviewView from "admin/views/task/task_overview_view";
-import TaskOverviewCollection from "admin/models/task/task_overview_collection";
 
 //
 // This exports all the modules listed above and mainly serves the purpose of
@@ -64,6 +62,4 @@ export {
   TaskTypeModel,
   ScriptCreateView,
   ScriptModel,
-  TaskOverviewView,
-  TaskOverviewCollection,
 };

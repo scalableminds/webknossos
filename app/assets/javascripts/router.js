@@ -33,7 +33,6 @@ class Router extends BaseRouter {
       "/statistics": "statistics",
       "/tasks": "tasks",
       "/tasks/create": "taskCreate",
-      "/tasks/overview": "taskOverview",
       "/tasks/:id/edit": "taskEdit",
       "/projects": "projects",
       "/projects/create": "projectCreate",
@@ -55,7 +54,6 @@ class Router extends BaseRouter {
       "/scripts/create": "scriptsCreate",
       "/scripts/:id/edit": "scriptsCreate",
       "/spotlight": "spotlight",
-      "/admin/taskTypes": "hideLoadingSpinner",
     };
   }
 
@@ -279,19 +277,6 @@ class Router extends BaseRouter {
   spotlight() {
     const view = new ReactBackboneWrapper(SpotlightView, {});
     this.changeView(view);
-  }
-
-  taskOverview() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskOverviewView = admin.TaskOverviewView;
-      const TaskOverviewCollection = admin.TaskOverviewCollection;
-
-      const collection = new TaskOverviewCollection();
-      const view = new TaskOverviewView({ collection });
-
-      this.changeView(view);
-      this.listenTo(collection, "sync", this.hideLoadingSpinner);
-    });
   }
 
   showWithPagination(view, collection, options = {}) {

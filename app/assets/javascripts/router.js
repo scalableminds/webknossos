@@ -56,7 +56,6 @@ class Router extends BaseRouter {
       "/scripts/:id/edit": "scriptsCreate",
       "/spotlight": "spotlight",
       "/admin/taskTypes": "hideLoadingSpinner",
-      "/workload": "workload",
     };
   }
 
@@ -205,10 +204,6 @@ class Router extends BaseRouter {
       });
       this.changeView(view);
     });
-  }
-
-  workload() {
-    this.showWithPagination("WorkloadListView", "WorkloadCollection");
   }
 
   taskTypes() {

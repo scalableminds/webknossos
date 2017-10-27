@@ -181,3 +181,11 @@ export type NDStoreConfigType = {
   +server: string,
   +token: string,
 };
+
+export type DatasetConfigType = {
+  +name: string,
+  +team: string,
+  +datastore: string,
+  +zipFile: File,
+};
+

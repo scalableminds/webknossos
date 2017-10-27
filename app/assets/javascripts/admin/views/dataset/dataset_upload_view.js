@@ -2,10 +2,9 @@
 import React from "react";
 import { Form, Input, Select, Button, Card, Spin, Upload, Icon } from "antd";
 import app from "app";
-import { getTeams, getDatastores } from "admin/admin_rest_api";
 import Toast from "libs/toast";
-import Request from "libs/request";
 import messages from "messages";
+import { getTeams, getDatastores, addDataset } from "admin/admin_rest_api";
 import type { APITeamType, APIDatastoreType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
@@ -62,23 +61,16 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
           isUploading: true,
         });
 
-        Request.receiveJSON("/api/dataToken/generate")
-          .then(({ token }) =>
-            Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
-              data: formValues,
-              host: formValues.datastore,
-            }),
-          )
-          .then(
-            () => {
-              Toast.success(messages["dataset.upload_success"]);
-              const url = `/datasets/${formValues.name}/import`;
-              app.router.navigate(url, { trigger: true });
-            },
-            () => {
-              this.setState({ isUploading: false });
-            },
-          );
+        addDataset(formValues).then(
+          () => {
+            Toast.success(messages["dataset.upload_success"]);
+            const url = `/datasets/${formValues.name}/import`;
+            app.router.navigate(url, { trigger: true });
+          },
+          () => {
+            this.setState({ isUploading: false });
+          },
+        );
       }
     });
   };

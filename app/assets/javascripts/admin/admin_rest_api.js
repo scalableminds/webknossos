@@ -13,6 +13,7 @@ import type {
   APIAnnotationType,
   APIDatastoreType,
   NDStoreConfigType,
+  DatasetConfigType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 
@@ -251,5 +252,13 @@ export async function addNDStoreDataset(
 ): Promise<APIAnnotationType> {
   return Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore", {
     data: ndstoreConfig,
+  });
+}
+
+export async function addDataset(datatsetConfig: DatasetConfigType): Promise<APIAnnotationType> {
+  const token = await Request.receiveJSON("/api/dataToken/generate");
+  return Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
+    data: datatsetConfig,
+    host: datatsetConfig.datastore,
   });
 }

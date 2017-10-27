@@ -50,10 +50,7 @@ object Team extends FoxImplicits {
         "name" -> team.name,
         "parent" -> team.parent,
         "roles" -> team.roles,
-        "owner" -> owner.toOption,
-        "amIAnAdmin" -> requestingUser.isAdminOf(team.name),
-        "isEditable" -> team.isEditableBy(requestingUser),
-        "amIOwner" -> team.isOwner(requestingUser)
+        "owner" -> owner.toOption
       )
     }
 

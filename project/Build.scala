@@ -37,7 +37,6 @@ object Dependencies{
   val braingamesDatastore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
-  val mongev = "com.scalableminds" %% "play-mongev" % "0.4.1"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val resourceManager = "com.jsuereth" %% "scala-arm" % "2.0"
 
@@ -217,7 +216,6 @@ object ApplicationBuild extends Build {
     ws,
     scalaLogging,
     airbrake,
-    mongev,
     urlHelper,
     newrelic,
     newrelicApi,

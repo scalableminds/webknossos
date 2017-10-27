@@ -256,8 +256,8 @@ export async function addNDStoreDataset(
 }
 
 export async function addDataset(datatsetConfig: DatasetConfigType): Promise<APIAnnotationType> {
-  const token = await Request.receiveJSON("/api/dataToken/generate");
-  return Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
+  const response = await Request.receiveJSON("/api/dataToken/generate");
+  return Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${response.token}`, {
     data: datatsetConfig,
     host: datatsetConfig.datastore,
   });

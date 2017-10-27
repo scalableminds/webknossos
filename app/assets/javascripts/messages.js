@@ -26,6 +26,8 @@ In order to restore the current window, a reload is necessary.`,
   "task.no_description": "You are now tracing a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
   "dataset.upload_success": "The dataset was uploaded successfully",
+  "dataset.ndstore_success":
+    "The dataset was successfully added to webKnossos from the specified NDStore.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "annotation.delete": "Do you really want to delete this annotation?",

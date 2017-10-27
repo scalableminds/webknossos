@@ -33,12 +33,11 @@ class Router extends BaseRouter {
       "/statistics": "statistics",
       "/tasks": "tasks",
       "/tasks/create": "taskCreate",
-      "/tasks/overview": "taskOverview",
       "/tasks/:id/edit": "taskEdit",
       "/projects": "projects",
       "/projects/create": "projectCreate",
       "/projects/:name/tasks": "projectTasks",
-      "/projects/:id/edit": "projectEdit",
+      "/projects/:id/edit": "projectCreate",
       "/annotations/:type/:id(/readOnly)": "tracingView",
       "/datasets/:id/view": "tracingViewPublic",
       "/dashboard": "dashboard",
@@ -55,8 +54,6 @@ class Router extends BaseRouter {
       "/scripts/create": "scriptsCreate",
       "/scripts/:id/edit": "scriptsCreate",
       "/spotlight": "spotlight",
-      "/admin/taskTypes": "hideLoadingSpinner",
-      "/workload": "workload",
     };
   }
 
@@ -102,31 +99,10 @@ class Router extends BaseRouter {
     });
   }
 
-  projectCreate() {
+  projectCreate(projectName) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const ProjectCreateView = admin.ProjectCreateView;
-      const ProjectModel = admin.ProjectModel;
-
-      const model = new ProjectModel();
-      const view = new ProjectCreateView({ model });
-
+      const view = new ReactBackboneWrapper(admin.ProjectCreateView, { projectName });
       this.changeView(view);
-      this.hideLoadingSpinner();
-    });
-  }
-
-  projectEdit(projectName) {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const ProjectEditView = admin.ProjectEditView;
-      const ProjectModel = admin.ProjectModel;
-
-      const model = new ProjectModel({ name: projectName });
-      const view = new ProjectEditView({ model });
-
-      this.listenTo(model, "sync", () => {
-        this.changeView(view);
-        this.hideLoadingSpinner();
-      });
     });
   }
 
@@ -203,10 +179,6 @@ class Router extends BaseRouter {
     });
   }
 
-  workload() {
-    this.showWithPagination("WorkloadListView", "WorkloadCollection");
-  }
-
   taskTypes() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const view = new ReactBackboneWrapper(admin.TaskTypeListView, {});
@@ -280,19 +252,6 @@ class Router extends BaseRouter {
   spotlight() {
     const view = new ReactBackboneWrapper(SpotlightView, {});
     this.changeView(view);
-  }
-
-  taskOverview() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskOverviewView = admin.TaskOverviewView;
-      const TaskOverviewCollection = admin.TaskOverviewCollection;
-
-      const collection = new TaskOverviewCollection();
-      const view = new TaskOverviewView({ collection });
-
-      this.changeView(view);
-      this.listenTo(collection, "sync", this.hideLoadingSpinner);
-    });
   }
 
   showWithPagination(view, collection, options = {}) {

@@ -6,7 +6,7 @@ import _ from "lodash";
 import { Input } from "antd";
 
 type Vector3InputPropTypes = {
-  value: Vector3,
+  value: Vector3 | string,
   onChange: (value: Vector3) => void,
 };
 
@@ -22,7 +22,7 @@ export default class Vector3Input extends React.PureComponent<Vector3InputPropTy
     this.state = {
       isEditing: false,
       isValid: true,
-      text: props.value.join(", "),
+      text: this.getText(props.value),
     };
   }
 
@@ -30,8 +30,16 @@ export default class Vector3Input extends React.PureComponent<Vector3InputPropTy
     if (!this.state.isEditing) {
       this.setState({
         isValid: true,
-        text: newProps.value.join(", "),
+        text: this.getText(newProps.value),
       });
+    }
+  }
+
+  getText(value: Vector3 | string): string {
+    if (_.isArray(value)) {
+      return value.join(", ");
+    } else if (_.isString(value)) {
+      return value;
     }
   }
 
@@ -44,7 +52,7 @@ export default class Vector3Input extends React.PureComponent<Vector3InputPropTy
     if (this.state.isValid) {
       this.setState({
         isValid: true,
-        text: this.props.value.join(", "),
+        text: this.getText(this.props.value),
       });
     } else {
       this.props.onChange(this.defaultValue);
@@ -58,7 +66,7 @@ export default class Vector3Input extends React.PureComponent<Vector3InputPropTy
   handleFocus = () => {
     this.setState({
       isEditing: true,
-      text: this.props.value.join(", "),
+      text: this.getText(this.props.value),
       isValid: true,
     });
   };

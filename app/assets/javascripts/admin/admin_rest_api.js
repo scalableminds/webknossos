@@ -277,6 +277,13 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
   return tasks;
 }
 
+export async function createTask(task: APITaskType, type: "default" | "nml"): Promise<APITaskType> {
+  return Request.sendJSONReceiveJSON(`/api/tasks?type=${type}`, {
+    method: "POST",
+    data: task,
+  });
+}
+
 // ### Annotations
 export async function reOpenAnnotation(annotationId: string): Promise<APIAnnotationType> {
   return Request.receiveJSON(`/annotations/Task/${annotationId}/reopen`);

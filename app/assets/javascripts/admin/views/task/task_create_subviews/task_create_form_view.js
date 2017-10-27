@@ -1,7 +1,6 @@
 // @flow
 import React from "react";
 import { Form, Input, Select, Button, Card, Radio, Upload, Icon, InputNumber } from "antd";
-import app from "app";
 import {
   getActiveDatasets,
   getProjects,
@@ -16,18 +15,16 @@ import type {
   APIScriptType,
   APITeamType,
 } from "admin/api_flow_types";
+import type { BoundingBoxObjectType } from "oxalis/store";
+import type { Vector6 } from "oxalis/constants";
 
-import DatasetCollection from "admin/models/dataset/dataset_collection";
-import SelectionView from "admin/views/selection_view";
-import Utils from "libs/utils";
+import Request from "libs/request";
 import Vector3Input from "libs/vector3_input";
 import Vector6Input from "libs/vector6_input";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 const RadioGroup = Radio.Group;
-
-const CLEAR_ON_SUCCESS = true;
 
 type Props = {
   form: Object,
@@ -65,49 +62,75 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       getTaskTypes(),
     ]);
 
-    this.setState({ datasets, projects, teams, scripts, taskTypes });
+    this.setState({ datasets, projects, teams, scripts, taskTypes }, () => {
+      const initialValues = {
+        dataSet: "100527_k0563",
+        editPosition: [0, 0, 0],
+        editRotation: [0, 0, 0],
+        neededExperience: { domain: "adasd", value: 1 },
+        projectName: "orphaned-tasks",
+        scriptId: "59ea1c71010000a70211d13e",
+        status: { open: 1, inProgress: 0, completed: 0 },
+        taskTypeId: "5782a1800100005307614834",
+        team: "adminTeam",
+      };
+      this.props.form.setFieldsValue(initialValues);
+    });
   }
 
-  handleSubmit(event) {
-    // event.preventDefault();
-    // const serializedForm = this.serializeForm();
-    // // unblock submit button after model synched
-    // // show a status flash message
-    // try {
-    //   const method = this.parent.isEditingMode ? "PUT" : "POST";
-    //   const response = await Request.sendJSONReceiveJSON(this.model.url(), {
-    //     method,
-    //     data: serializedForm,
-    //     params: { type: "default" },
-    //   });
-    //   if (this.parent.isEditingMode) {
-    //     app.router.loadURL("/tasks");
-    //   } else {
-    //     this.parent.showSaveSuccess(response);
-    //   }
-    // } catch (e) {
-    //   this.parent.showSaveError();
-    // }
+  transformBoundingBox(boundingBox: Vector6): BoundingBoxObjectType {
+    return {
+      topLeft: [boundingBox[0] || 0, boundingBox[1] || 0, boundingBox[2] || 0],
+      width: boundingBox[3] || 0,
+      height: boundingBox[4] || 0,
+      depth: boundingBox[5] || 0,
+    };
   }
+
+  handleSubmit = e => {
+    e.preventDefault();
+    this.props.form.validateFields(async (err, formValues) => {
+      if (!err) {
+        formValues.status.inProgress = 0;
+        formValues.status.completed = 0;
+        formValues.boundingBox = formValues.boundingBox
+          ? this.transformBoundingBox(formValues.boundingBox)
+          : null;
+
+        await Request.sendJSONReceiveJSON("/api/tasks", {
+          data: formValues,
+          params: { type: "default" },
+        });
+
+        // if (this..isEditingMode) {
+        //   app.router.loadURL("/tasks");
+        // } else {
+        //   this.parent.showSaveSuccess(response);
+        // }
+      }
+    });
+  };
 
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditingMode = true;
     const taskInstancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
 
+    const fullWidth = { width: "100%" };
+
     return (
       <div className="container wide" style={{ paddingTop: 20 }}>
         <Card title={<h3>Create Task</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="TaskType" hasFeedback>
-              {getFieldDecorator("taskType", {
+              {getFieldDecorator("taskTypeId", {
                 rules: [{ required: true }],
               })(
                 <Select
                   showSearch
                   placeholder="Select a TaskType"
                   optionFilterProp="children"
-                  style={{ width: "100%" }}
+                  style={fullWidth}
                   autoFocus
                 >
                   {this.state.taskTypes.map((taskType: APITaskTypeType) => (
@@ -120,15 +143,21 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
             </FormItem>
 
             <FormItem label="Experience Domain" hasFeedback>
-              {getFieldDecorator("neededExperience", {
+              {getFieldDecorator("neededExperience.domain", {
                 rules: [{ required: true }, { min: 3 }],
               })(<Input />)}
+            </FormItem>
+
+            <FormItem label="Experience Value" hasFeedback>
+              {getFieldDecorator("neededExperience.value", {
+                rules: [{ required: true }],
+              })(<InputNumber style={fullWidth} />)}
             </FormItem>
 
             <FormItem label={taskInstancesLabel} hasFeedback>
               {getFieldDecorator("status.open", {
                 rules: [{ required: true }, { type: "number" }],
-              })(<InputNumber />)}
+              })(<InputNumber style={fullWidth} />)}
             </FormItem>
 
             <FormItem label="Team" hasFeedback>
@@ -139,7 +168,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   showSearch
                   placeholder="Select a Team"
                   optionFilterProp="children"
-                  style={{ width: "100%" }}
+                  style={fullWidth}
                   autoFocus
                 >
                   {this.state.teams.map((team: APITeamType) => (
@@ -159,7 +188,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   showSearch
                   placeholder="Select a Project"
                   optionFilterProp="children"
-                  style={{ width: "100%" }}
+                  style={fullWidth}
                   autoFocus
                 >
                   {this.state.projects.map((project: APIProjectType) => (
@@ -179,7 +208,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   showSearch
                   placeholder="Select a Project"
                   optionFilterProp="children"
-                  style={{ width: "100%" }}
+                  style={fullWidth}
                   autoFocus
                 >
                   {this.state.scripts.map((script: APIScriptType) => (
@@ -191,11 +220,12 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               )}
             </FormItem>
 
-            <FormItem label="Bounding Box" hasFeedback>
-              {getFieldDecorator("boundingBox", {
-                rules: [{ required: true }, { type: "array", min: 6, max: 6 }],
-                initialValue: "",
-              })(<Vector6Input />)}
+            <FormItem
+              label="Bounding Box"
+              extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+              hasFeedback
+            >
+              {getFieldDecorator("boundingBox")(<Vector6Input />)}
             </FormItem>
 
             <FormItem label="Task Specification" hasFeedback>
@@ -245,7 +275,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       showSearch
                       placeholder="Select a Dataset"
                       optionFilterProp="children"
-                      style={{ width: "100%" }}
+                      style={fullWidth}
                       autoFocus
                     >
                       {this.state.datasets.map((dataset: APIDatasetType) => (
@@ -259,14 +289,14 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
                 <FormItem label="Starting Position" hasFeedback>
                   {getFieldDecorator("editPosition", {
-                    rules: [{ required: true }, { type: "number", min: 3 }],
-                  })(<InputNumber />)}
+                    rules: [{ required: true }],
+                  })(<Vector3Input style={fullWidth} />)}
                 </FormItem>
 
                 <FormItem label="Starting Rotation" hasFeedback>
                   {getFieldDecorator("editRotation", {
-                    rules: [{ required: true }, { type: "number", min: 3 }],
-                  })(<InputNumber />)}
+                    rules: [{ required: true }],
+                  })(<Vector3Input style={fullWidth} />)}
                 </FormItem>
               </div>
             )}
@@ -281,12 +311,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       </div>
     );
   }
-
-  // const formValues = this.parent.serializeForm();
-  // formValues.editPosition = Utils.stringToNumberArray(this.ui.editPosition.val());
-  // formValues.editRotation = Utils.stringToNumberArray(this.ui.editRotation.val());
-
-  // return formValues;
 }
 
 export default Form.create()(TaskCreateFormView);

@@ -132,7 +132,6 @@ PUT           /api/tasks/:id                                                    
 
 GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
 
-GET           /api/tasks/:id/download                                           controllers.AnnotationIOController.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
 # Task Types

@@ -81,7 +81,7 @@
     "flow-coverage":
       "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
     "docs":
-      "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"
+      "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",
@@ -92,7 +92,6 @@
     "backbone.radio": "^2.0.0",
     "base64-js": "^1.2.1",
     "bootstrap": "^3.3.6",
-    "bootstrap-daterangepicker": "^2.1.17",
     "c3": "^0.4.10",
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",
@@ -111,7 +110,6 @@
     "lodash": "^4.13.1",
     "mjs": "^1.0.0",
     "moment": "^2.10.6",
-    "nouislider": "^8.2.1",
     "pako": "^0.2.8",
     "react": "^15.5.4",
     "react-c3js": "^0.1.19",
@@ -126,7 +124,6 @@
     "three": "^0.84.0",
     "tween.js": "^16.3.1",
     "underscore": "^1.8.3",
-    "webcola": "3.3.0",
     "whatwg-fetch": "^1.1.0"
   },
   "ava": {

@@ -60,10 +60,7 @@ export type APIUserType = {
 };
 
 export type APITeamType = {
-  +amIAnAdmin: boolean,
-  +amIOwner: boolean,
   +id: string,
-  +isEditable: boolean,
   +name: string,
   +owner: APIUserType,
   +parent: string,

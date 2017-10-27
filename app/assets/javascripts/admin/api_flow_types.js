@@ -15,14 +15,16 @@ type APIDataSourceType = {
   +scale: Vector3,
 };
 
+export type APIDataStoreType = {
+  +name: string,
+  +url: string,
+  +typ: "webknossos-store" | "nd-store",
+};
+
 export type APIDatasetType = {
   +name: string,
   +dataSource: APIDataSourceType,
-  +dataStore: {
-    +name: string,
-    +url: string,
-    +typ: "webknossos-store" | "nd-store",
-  },
+  +dataStore: APIDataStoreType,
   +sourceType: "wkw" | "knossos",
   +owningTeam: "Connectomics department",
   +allowedTeams: Array<string>,

@@ -12,6 +12,7 @@ import type {
   APITaskType,
   APIAnnotationType,
   APIRoleType,
+  APIDatasetType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 
@@ -145,6 +146,13 @@ export async function getEditableTeams(): Promise<Array<APITeamType>> {
 
 export async function getRootTeams(): Promise<Array<APITeamType>> {
   const teams = await Request.receiveJSON("/api/teams?isRoot=true");
+  assertResponseLimit(teams);
+
+  return teams;
+}
+
+export async function getAdminTeams(): Promise<Array<APITeamType>> {
+  const teams = await Request.receiveJSON("/api/teams?amIAnAdmin=true");
   assertResponseLimit(teams);
 
   return teams;
@@ -286,4 +294,19 @@ export async function deleteAnnotation(annotationId: string): Promise<APIAnnotat
   return Request.receiveJSON(`/annotations/Task/${annotationId}`, {
     method: "DELETE",
   });
+}
+
+// ### Datasets
+export async function getDatasets(): Promise<Array<APIDatasetType>> {
+  const datasets = await Request.receiveJSON("/api/datasets");
+  assertResponseLimit(datasets);
+
+  return datasets;
+}
+
+export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
+  const datasets = await Request.receiveJSON("/api/datasets?isActive=true");
+  assertResponseLimit(datasets);
+
+  return datasets;
 }

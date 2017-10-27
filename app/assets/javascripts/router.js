@@ -209,14 +209,8 @@ class Router extends BaseRouter {
    */
   taskCreate() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskCreateView = admin.TaskCreateView;
-      const TaskModel = admin.TaskModel;
-
-      const model = new TaskModel();
-      const view = new TaskCreateView({ model });
-
+      const view = new ReactBackboneWrapper(admin.TaskCreateView, {});
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 

@@ -98,7 +98,7 @@ export function getRequestLogZoomStep(state: OxalisState): number {
 export function calculateTextureBuffer(state: OxalisState): OrthoViewMapType<Vector2> {
   // buffer: how many pixels is the texture larger than the canvas on each dimension?
   // --> two dimensional array with buffer[planeId][dimension], dimension: x->0, y->1
-  const pixelNeeded = constants.VIEWPORT_WIDTH * getTextureScalingFactor(state);
+  const pixelNeeded = constants.PLANE_WIDTH * getTextureScalingFactor(state);
   const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
   const buffer = {};
   for (const planeId of OrthoViewValues) {
@@ -180,7 +180,7 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {
     planeId,
   );
   const offsets = getOffsets(state, planeId);
-  const size = getTextureScalingFactor(state) * constants.VIEWPORT_WIDTH;
+  const size = getTextureScalingFactor(state) * constants.PLANE_WIDTH;
   // two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
   // [offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
   return [

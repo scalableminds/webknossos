@@ -287,25 +287,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
     Fox.serialSequence(tasks)(_.project).map(_.flatten).map(_.distinct)
 
-  def createAvailableTasksJson(availableTasksMap: Map[User, (Int, List[Project])]) =
-    Json.toJson(availableTasksMap.map { case (user, (taskCount, projects)) =>
-      Json.obj(
-        "name" -> user.name,
-        "teams" -> user.teamNames,
-        "availableTaskCount" -> taskCount,
-        "projects" -> projects.map(_.name)
-      )
-    })
-
-  def requestAvailableTasks = Authenticated.async { implicit request =>
-    // TODO: WORKLOAD CURRENTLY DISABLED DUE TO PERFORMANCE REASONS
-    Future.successful(Ok(Json.arr()))
-//    for {
-//      availableTasksMap <- getAllAvailableTaskCountsAndProjects()
-//    } yield {
-//      Ok(createAvailableTasksJson(availableTasksMap))
-//    }
-  }
 
   def tryToGetNextAssignmentFor(user: User, teams: List[String], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     val s = System.currentTimeMillis()

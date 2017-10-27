@@ -188,4 +188,3 @@ export type DatasetConfigType = {
   +datastore: string,
   +zipFile: File,
 };
-

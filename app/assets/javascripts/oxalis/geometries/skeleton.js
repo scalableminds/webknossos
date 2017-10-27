@@ -117,7 +117,7 @@ class Skeleton {
     this.pickingNode.remove(...this.pickingNode.children);
 
     const trees = skeletonTracing.trees;
-    const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
+    const nodeCount = _.sum(_.map(trees, tree => tree.nodes.size()));
     const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
 
     this.treeColorTexture = new THREE.DataTexture(
@@ -410,7 +410,6 @@ class Skeleton {
    */
   createTree(tree: TreeType) {
     for (const node of tree.nodes.values()) {
-      console.log(createNode, node);
       this.createNode(tree.treeId, node);
     }
     for (const branchpoint of tree.branchPoints) {

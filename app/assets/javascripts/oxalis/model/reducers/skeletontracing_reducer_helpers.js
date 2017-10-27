@@ -32,7 +32,7 @@ import type {
   TreeMapType,
   CommentType,
 } from "oxalis/store";
-import { NodeMapWrapper } from "oxalis/store";
+import DiffableMap from "libs/diffable_map";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
@@ -126,7 +126,7 @@ export function deleteNode(
 
       // Delete Node
       const activeTree = update(tree, {
-        nodes: { $set: _.omit(tree.nodes, [node.id.toString()]) },
+        nodes: { $apply: nodes => nodes.delete(node.id) },
       });
 
       // Do we need to split trees? Are there edges leading to/from it?
@@ -164,7 +164,7 @@ export function deleteNode(
             const edges = nodeToEdgesMap[nodeId];
 
             if (nodeId !== node.id) {
-              newTree.nodes.set(nodeId, activeTree.nodes.get(nodeId));
+              newTree.nodes.mutableSet(nodeId, activeTree.nodes.get(nodeId));
             }
 
             for (const edge of edges) {
@@ -198,7 +198,7 @@ export function deleteNode(
               comments: [],
               edges: [],
               name: activeTree.name,
-              nodes: new NodeMapWrapper(),
+              nodes: new DiffableMap(),
               timestamp: activeTree.timestamp,
               treeId: activeTree.treeId,
               isVisible: true,
@@ -328,7 +328,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const tree: TreeType = {
         name,
         treeId: newTreeId,
-        nodes: new NodeMapWrapper(),
+        nodes: new DiffableMap(),
         timestamp,
         color: ColorGenerator.distinctColorForId(newTreeId),
         branchPoints: [],

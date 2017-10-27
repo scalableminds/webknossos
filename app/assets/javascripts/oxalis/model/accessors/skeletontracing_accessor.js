@@ -86,7 +86,7 @@ export function getActiveNodeFromTree(tracing: TracingType, tree: TreeType) {
 }
 
 export function findTreeByNodeId(trees: TreeMapType, nodeId: number): Maybe<TreeType> {
-  return Maybe.fromNullable(_.values(trees).find(tree => tree.nodes[nodeId] != null));
+  return Maybe.fromNullable(_.values(trees).find(tree => tree.nodes.has(nodeId)));
 }
 
 export function getTree(tracing: TracingType, treeId: ?number) {
@@ -108,7 +108,7 @@ export function getNodeAndTree(tracing: TracingType, nodeId: ?number, treeId: ?n
     if (treeId != null) {
       tree = skeletonTracing.trees[treeId];
     } else if (nodeId != null) {
-      tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+      tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
     } else {
       const { activeTreeId } = skeletonTracing;
       if (activeTreeId != null) {

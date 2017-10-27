@@ -95,7 +95,7 @@ test("SkeletonTracing should add a new node", t => {
   t.is(newState.tracing.activeNodeId, 1);
   t.deepEqual(_.size(newState.tracing.trees[1].edges), 0);
 
-  deepEqualObjectContaining(t, newState.tracing.trees[1].nodes[1], {
+  deepEqualObjectContaining(t, newState.tracing.trees[1].nodes.get(1), {
     position,
     rotation,
     viewport,
@@ -267,13 +267,13 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
   const newTrees = state1.tracing.trees;
 
   t.is(Object.keys(newTrees).length, 4);
-  t.is(newTrees[0].nodes[0].id, 0);
+  t.is(newTrees[0].nodes.get(0).id, 0);
   t.is(newTrees[0].comments.length, 1);
   t.is(newTrees[0].comments[0].nodeId, 0);
-  t.is(newTrees[1].nodes[4].id, 4);
+  t.is(newTrees[1].nodes.get(4).id, 4);
 
-  t.is(newTrees[2].nodes[2].id, 2);
-  t.is(newTrees[3].nodes[7].id, 7);
+  t.is(newTrees[2].nodes.get(2).id, 2);
+  t.is(newTrees[3].nodes.get(7).id, 7);
   t.is(newTrees[3].branchPoints[0].nodeId, 7);
 });
 
@@ -334,7 +334,7 @@ test("SkeletonTracing should set a new node radius", t => {
   newState = SkeletonTracingReducer(newState, setNodeRadiusAction);
 
   t.not(newState, initialState);
-  t.deepEqual(newState.tracing.trees[1].nodes[1].radius, newRadius);
+  t.deepEqual(newState.tracing.trees[1].nodes.get(1).radius, newRadius);
 });
 
 test("SkeletonTracing should create a branchpoint", t => {
@@ -991,7 +991,7 @@ test("SkeletonTracing should add a node in a specified tree", t => {
     .unpack();
 
   t.not(newState, initialState);
-  t.truthy(newState.tracing.trees[2].nodes[1]);
+  t.truthy(newState.tracing.trees[2].nodes.get(1));
   t.is(newState.tracing.activeTreeId, 2);
   t.is(newState.tracing.activeNodeId, 1);
 });
@@ -1014,7 +1014,7 @@ test("SkeletonTracing should delete a specified node (1/2)", t => {
     .unpack();
 
   t.not(newState, initialState);
-  t.falsy(newState.tracing.trees[1].nodes[2]);
+  t.falsy(newState.tracing.trees[1].nodes.get(2));
   // tree is split
   t.truthy(newState.tracing.trees[2]);
   t.is(newState.tracing.activeNodeId, 3);
@@ -1039,7 +1039,7 @@ test("SkeletonTracing should delete a specified node (2/2)", t => {
     .unpack();
 
   t.not(newState, initialState);
-  t.falsy(newState.tracing.trees[1].nodes[2]);
+  t.falsy(newState.tracing.trees[1].nodes.get(2));
   // tree is split
   t.truthy(newState.tracing.trees[2]);
   t.is(newState.tracing.activeNodeId, 3);

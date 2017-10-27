@@ -85,8 +85,8 @@ test.serial("Skeleton should initialize correctly using the store's state", t =>
         nodeTypes.push(NodeShader.NodeTypes.NORMAL);
       }
       for (const edge of tree.edges) {
-        const sourcePosition = tree.nodes[edge.source].position;
-        const targetPosition = tree.nodes[edge.target].position;
+        const sourcePosition = tree.nodes.get(edge.source).position;
+        const targetPosition = tree.nodes.get(edge.target).position;
         edgePositions = edgePositions.concat(sourcePosition).concat(targetPosition);
         edgeTreeIds.push(tree.treeId, tree.treeId);
       }

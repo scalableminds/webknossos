@@ -29,7 +29,7 @@ import {
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
 import type { OxalisState, SkeletonTracingType, NodeType, BranchPointType } from "oxalis/store";
-import { NodeMapWrapper } from "oxalis/store";
+import DiffableMap from "libs/diffable_map";
 import type { ServerNodeType, ServerBranchPointType } from "oxalis/model";
 import type { ActionType } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
@@ -67,7 +67,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const trees = _.keyBy(
         action.tracing.trees.map(tree =>
           update(tree, {
-            nodes: { $set: new NodeMapWrapper(_.keyBy(tree.nodes.map(serverNodeToNode), "id")) },
+            nodes: { $set: new DiffableMap(_.keyBy(tree.nodes.map(serverNodeToNode), "id")) },
             color: {
               $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
             },
@@ -153,15 +153,13 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                 resolution,
                 timestamp,
               ).map(([node, edges]) => {
-                const newNodeMapWrapper = new NodeMapWrapper(
-                  skeletonTracing.trees[tree.treeId].nodes,
-                );
-                newNodeMapWrapper.set(node.id, node);
+                const diffableNodeMap = skeletonTracing.trees[tree.treeId].nodes;
+                const newDiffableMap = diffableNodeMap.set(node.id, node);
                 return update(state, {
                   tracing: {
                     trees: {
                       [tree.treeId]: {
-                        nodes: { $set: newNodeMapWrapper },
+                        nodes: { $set: newDiffableMap },
                         edges: { $set: edges },
                       },
                     },
@@ -215,14 +213,15 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           );
           return getNodeAndTree(skeletonTracing, nodeId, treeId)
             .map(([tree, node]) => {
-              const newNodeMapWrapper = new NodeMapWrapper(
-                skeletonTracing.trees[tree.treeId].nodes,
+              const diffableMap = skeletonTracing.trees[tree.treeId].nodes;
+              const newDiffableMap = diffableMap.set(
+                node.id,
+                update(node, { radius: { $set: clampedRadius } }),
               );
-              newNodeMapWrapper.set(node.id, update(node, { radius: { $set: clampedRadius } }));
               return update(state, {
                 tracing: {
                   trees: {
-                    [tree.treeId]: { nodes: { $set: newNodeMapWrapper } },
+                    [tree.treeId]: { nodes: { $set: newDiffableMap } },
                   },
                 },
               });

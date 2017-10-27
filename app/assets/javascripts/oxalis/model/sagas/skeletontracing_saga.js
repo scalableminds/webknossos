@@ -6,7 +6,7 @@ import _ from "lodash";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
-import Store, { NodeMapWrapper } from "oxalis/store";
+import Store from "oxalis/store";
 import Modal from "oxalis/view/modal";
 import { put, take, takeEvery, select, race } from "redux-saga/effects";
 import {
@@ -40,6 +40,7 @@ import type {
 } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import api from "oxalis/api/internal_api";
+import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.tracing)).map(activeNode => {
@@ -121,10 +122,12 @@ function* diffNodes(
 ): Generator<UpdateAction, void, void> {
   if (prevNodes === nodes) return;
 
-  const { onlyA: deletedNodeIds, onlyB: addedNodeIds, both: bothNodeIds } = Utils.diffArrays(
-    _.map(prevNodes, node => node.id),
-    _.map(nodes, node => node.id),
+  const { onlyA: deletedNodeIds, onlyB: addedNodeIds, both: bothNodeIds } = diffDiffableMaps(
+    prevNodes,
+    nodes,
   );
+
+  console.log(deletedNodeIds, addedNodeIds, bothNodeIds);
 
   for (const nodeId of deletedNodeIds) {
     yield deleteNode(treeId, nodeId);
@@ -184,14 +187,14 @@ export function* diffTrees(
   );
   for (const treeId of deletedTreeIds) {
     const prevTree = prevTrees[treeId];
-    yield* diffNodes(prevTree.nodes, new NodeMapWrapper(), treeId);
+    yield* diffNodes(prevTree.nodes, new DiffableMap(), treeId);
     yield* diffEdges(prevTree.edges, [], treeId);
     yield deleteTree(treeId);
   }
   for (const treeId of addedTreeIds) {
     const tree = trees[treeId];
     yield createTree(tree);
-    yield* diffNodes(new NodeMapWrapper(), tree.nodes, treeId);
+    yield* diffNodes(new DiffableMap(), tree.nodes, treeId);
     yield* diffEdges([], tree.edges, treeId);
   }
   for (const treeId of bothTreeIds) {

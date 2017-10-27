@@ -138,9 +138,9 @@ class TracingApi_DEPRECATED {
         if (treeId != null) {
           tree = skeletonTracing.trees[treeId];
           assertExists(tree, `Couldn't find tree ${treeId}.`);
-          // assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
+          assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
         } else {
-          tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+          tree = _.values(skeletonTracing.trees).find(__ => __.nodes.get(nodeId) != null);
           assertExists(tree, `Couldn't find node ${nodeId}.`);
         }
         // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed

@@ -1,6 +1,6 @@
 // @flow
 import React from "react";
-import { Form, Input, Select, Button, Card } from "antd";
+import { Form, Input, Select, Button, Card, Radio, Upload, Icon, InputNumber } from "antd";
 import app from "app";
 import {
   getActiveDatasets,
@@ -20,9 +20,13 @@ import type {
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 import SelectionView from "admin/views/selection_view";
 import Utils from "libs/utils";
+import Vector3Input from "libs/vector3_input";
+import Vector6Input from "libs/vector6_input";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
+const RadioGroup = Radio.Group;
+
 const CLEAR_ON_SUCCESS = true;
 
 type Props = {
@@ -35,6 +39,7 @@ type State = {
   projects: Array<APIProjectType>,
   scripts: Array<APIScriptType>,
   teams: Array<APITeamType>,
+  isNMLSpecifiction: boolean,
 };
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {
@@ -44,6 +49,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     projects: [],
     scripts: [],
     teams: [],
+    isNMLSpecifiction: false,
   };
   componentDidMount() {
     this.fetchData();
@@ -121,8 +127,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
             <FormItem label={taskInstancesLabel} hasFeedback>
               {getFieldDecorator("status.open", {
-                rules: [{ required: true }, { type: "number", min: 3 }],
-              })(<Input />)}
+                rules: [{ required: true }, { type: "number" }],
+              })(<InputNumber />)}
             </FormItem>
 
             <FormItem label="Team" hasFeedback>
@@ -187,9 +193,83 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
             <FormItem label="Bounding Box" hasFeedback>
               {getFieldDecorator("boundingBox", {
-                rules: [{ required: true }],
-              })(<Input />)}
+                rules: [{ required: true }, { type: "array", min: 6, max: 6 }],
+                initialValue: "",
+              })(<Vector6Input />)}
             </FormItem>
+
+            <FormItem label="Task Specification" hasFeedback>
+              <RadioGroup
+                value={this.state.isNMLSpecifiction ? "nml" : "manual"}
+                onChange={(evt: SyntheticInputEvent<*>) =>
+                  this.setState({ isNMLSpecifiction: evt.target.value === "nml" })}
+              >
+                <Radio value="manual">Manually Specify Starting Postion</Radio>
+                <Radio value="nml">Upload NML</Radio>
+              </RadioGroup>
+            </FormItem>
+
+            {this.state.isNMLSpecifiction ? (
+              <FormItem
+                label="NML File"
+                extra="Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip)."
+                hasFeedback
+              >
+                {getFieldDecorator("zipFile", {
+                  rules: [{ required: true }],
+                  valuePropName: "fileList",
+                  getValueFromEvent: this.normFile,
+                })(
+                  <Upload.Dragger
+                    accept=".nml,.zip"
+                    name="nmlFile"
+                    beforeUpload={file => {
+                      this.props.form.setFieldsValue({ zipFile: [file] });
+                      return false;
+                    }}
+                  >
+                    <p className="ant-upload-drag-icon">
+                      <Icon type="inbox" />
+                    </p>
+                    <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                  </Upload.Dragger>,
+                )}
+              </FormItem>
+            ) : (
+              <div>
+                <FormItem label="Dataset" hasFeedback>
+                  {getFieldDecorator("dataSet", {
+                    rules: [{ required: true }],
+                  })(
+                    <Select
+                      showSearch
+                      placeholder="Select a Dataset"
+                      optionFilterProp="children"
+                      style={{ width: "100%" }}
+                      autoFocus
+                    >
+                      {this.state.datasets.map((dataset: APIDatasetType) => (
+                        <Option key={dataset.name} value={dataset.name}>
+                          {dataset.name}
+                        </Option>
+                      ))}
+                    </Select>,
+                  )}
+                </FormItem>
+
+                <FormItem label="Starting Position" hasFeedback>
+                  {getFieldDecorator("editPosition", {
+                    rules: [{ required: true }, { type: "number", min: 3 }],
+                  })(<InputNumber />)}
+                </FormItem>
+
+                <FormItem label="Starting Rotation" hasFeedback>
+                  {getFieldDecorator("editRotation", {
+                    rules: [{ required: true }, { type: "number", min: 3 }],
+                  })(<InputNumber />)}
+                </FormItem>
+              </div>
+            )}
 
             <FormItem>
               <Button type="primary" htmlType="submit">
@@ -200,46 +280,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         </Card>
       </div>
     );
-
-    //       <div className="create-from-form">
-    // <div class=" form-group">
-    //   <label class="col-sm-2 control-label" for="dataSet">Dataset</label>
-    //   <div class="col-sm-9 dataSet">
-    //   </div>
-    // </div>
-
-    // <div class=" form-group">
-    //   <label class="col-sm-2 control-label" for="editPosition">Start</label>
-    //   <div class="col-sm-9">
-    //     <input
-    //       type="text"
-    //       id="editPosition"
-    //       name="editPosition"
-    //       placeholder="x, y, z"
-    //       title="x, y, z"
-    //       pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
-    //       value="<%- editPosition %>"
-    //       required
-    //       class="form-control">
-    //   </div>
-    // </div>
-
-    // <div class=" form-group">
-    //   <label class="col-sm-2 control-label" for="editRotation">Start Rotation</label>
-    //   <div class="col-sm-9">
-    //     <input
-    //       type="text"
-    //       id="editRotation"
-    //       name="editRotation"
-    //       placeholder="Rotation x, Rotation y, Rotation z"
-    //       title="Rotation x, Rotation y, Rotation z"
-    //       pattern="(\\s*\\d+\\s*,){2}(\\s*\\d+\\s*)"
-    //       value="<%- editRotation %>"
-    //       required
-    //       class="form-control">
-    //   </div>
-    // </div>
-    return;
   }
 
   // const formValues = this.parent.serializeForm();

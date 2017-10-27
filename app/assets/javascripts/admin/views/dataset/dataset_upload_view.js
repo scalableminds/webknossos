@@ -138,13 +138,13 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true }],
-                  valuePropName: "file",
+                  valuePropName: "fileList",
                   getValueFromEvent: this.normFile,
                 })(
                   <Upload.Dragger
                     name="files"
                     beforeUpload={file => {
-                      this.props.form.setFieldsValue({ zipFile: file });
+                      this.props.form.setFieldsValue({ zipFile: [file] });
                       return false;
                     }}
                   >

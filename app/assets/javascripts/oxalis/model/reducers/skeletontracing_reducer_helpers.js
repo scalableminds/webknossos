@@ -117,154 +117,213 @@ export function deleteNode(
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
-      let newActiveNodeId = node.id;
-      let newActiveTreeId = tree.treeId;
-      let newMaxNodeId = skeletonTracing.cachedMaxNodeId;
-      let newTrees = skeletonTracing.trees;
-
       // Delete Node
       const activeTree = update(tree, {
         nodes: { $set: _.omit(tree.nodes, [node.id.toString()]) },
       });
 
       // Do we need to split trees? Are there edges leading to/from it?
-      const sourceNodeIds = activeTree.edges
-        .filter(edge => edge.target === node.id)
-        .map(edge => edge.source);
-      const targetNodeIds = activeTree.edges
-        .filter(edge => edge.source === node.id)
-        .map(edge => edge.target);
-      const neighborIds = sourceNodeIds.concat(targetNodeIds);
+      const neighborIds = [];
+      const deletedEdges = [];
+      activeTree.edges.forEach(edge => {
+        if (edge.target === node.id || edge.source === node.id) {
+          neighborIds.push(edge.target === node.id ? edge.source : edge.target);
+          deletedEdges.push(edge);
+        }
+      });
 
       if (neighborIds.length === 0) {
         return deleteTree(state, activeTree, timestamp);
-      } else {
-        // Use split-algorithmus. If we delete a node which is only connected via one edge,
-        // this algorithmus will only produce one tree (which reuses the old oen)
-
-        // Build a hashmap which contains for each node all edges leading/leaving into/from the node
-        const nodeToEdgesMap: { [number]: Array<EdgeType> } = {};
-        activeTree.edges.forEach(edge => {
-          if (nodeToEdgesMap[edge.source]) {
-            nodeToEdgesMap[edge.source].push(edge);
-          } else {
-            nodeToEdgesMap[edge.source] = [edge];
-          }
-          if (nodeToEdgesMap[edge.target]) {
-            nodeToEdgesMap[edge.target].push(edge);
-          } else {
-            nodeToEdgesMap[edge.target] = [edge];
-          }
-        });
-
-        // Traverse from active node in all directions (i.e., use each edge) and
-        // remember which edges were already visited
-        const deletedEdges = nodeToEdgesMap[node.id];
-        const visitedEdges = {};
-        const getEdgeHash = edge => `${edge.source}-${edge.target}`;
-
-        // Mark edges of deleted node as visited
-        deletedEdges.forEach(deletedEdge => {
-          visitedEdges[getEdgeHash(deletedEdge)] = true;
-        });
-
-        const traverseTree = (nodeId: number, newTree: TemporaryMutableTreeType) => {
-          const edges = nodeToEdgesMap[nodeId];
-
-          if (nodeId !== node.id) {
-            newTree.nodes[nodeId] = activeTree.nodes[nodeId];
-          }
-          for (const edge of edges) {
-            const edgeHash = getEdgeHash(edge);
-            if (visitedEdges[edgeHash]) {
-              continue;
-            }
-            visitedEdges[edgeHash] = true;
-            newTree.edges.push(edge);
-
-            traverseTree(edge.source, newTree);
-            traverseTree(edge.target, newTree);
-          }
-        };
-
-        // The intermediateState is used for the createTree function, which takes
-        // care of generating non-colliding tree names, ids and colors
-        let intermediateState = state;
-        // For each edge of the to-be-deleted node, create a new tree.
-        const cutTrees = deletedEdges.map((edgeOfActiveNode, edgeIndex) => {
-          let newTree;
-          if (edgeIndex === 0) {
-            // Reuse the first tree
-            newTree = {
-              branchPoints: [],
-              color: activeTree.color,
-              comments: [],
-              edges: [],
-              name: activeTree.name,
-              nodes: {},
-              timestamp: activeTree.timestamp,
-              treeId: activeTree.treeId,
-              isVisible: true,
-            };
-          } else {
-            const immutableNewTree = createTree(intermediateState, timestamp).get();
-            // Cast to mutable tree type since we want to mutably do the split
-            // in this reducer for performance reasons.
-            newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
-            intermediateState = update(intermediateState, {
-              tracing: { trees: { [newTree.treeId]: { $set: newTree } } },
-            });
-          }
-
-          const neighborId =
-            node.id !== edgeOfActiveNode.source ? edgeOfActiveNode.source : edgeOfActiveNode.target;
-
-          if (newActiveNodeId != null) {
-            // Use a neighbor of the deleted node as the new active node
-            newActiveNodeId = neighborId;
-          }
-          traverseTree(neighborId, newTree);
-          return newTree;
-        });
-
-        // Write branchpoints into correct trees
-        activeTree.branchPoints.forEach(branchpoint => {
-          cutTrees.forEach(newTree => {
-            if (newTree.nodes[branchpoint.id]) {
-              newTree.branchPoints.push(branchpoint);
-            }
-          });
-        });
-
-        // Write comments into correct trees
-        activeTree.comments.forEach(comment => {
-          cutTrees.forEach(newTree => {
-            if (newTree.nodes[comment.node]) {
-              newTree.comments.push(comment);
-            }
-          });
-        });
-
-        newTrees = skeletonTracing.trees;
-        cutTrees.forEach(cutTree => {
-          newTrees = update(newTrees, { [cutTree.treeId]: { $set: cutTree } });
-        });
-        // newActiveNodeId was already written to when traversing the tree. Find the
-        // corresponding treeId
-        const newActiveTree = findTreeByNodeId(newTrees, newActiveNodeId).get();
-        newActiveTreeId = newActiveTree.treeId;
       }
 
-      // if the deleted node had the max id, find the new largest id
+      const newTrees = splitTreeByNodes(
+        state,
+        skeletonTracing,
+        activeTree,
+        neighborIds,
+        deletedEdges,
+        timestamp,
+      );
+
+      // If the deleted node had the max id, find the new largest id
+      let newMaxNodeId = skeletonTracing.cachedMaxNodeId;
       if (node.id === newMaxNodeId) {
         newMaxNodeId = getMaximumNodeId(newTrees);
       }
+
+      const newActiveNodeId = neighborIds[0];
+      const newActiveTree = findTreeByNodeId(newTrees, newActiveNodeId).get();
+      const newActiveTreeId = newActiveTree.treeId;
 
       return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
     } else {
       return Maybe.Nothing();
     }
   });
+}
+
+export function deleteEdge(
+  state: OxalisState,
+  sourceTree: TreeType,
+  sourceNode: NodeType,
+  targetTree: TreeType,
+  targetNode: NodeType,
+  timestamp: number,
+): Maybe<TreeMapType> {
+  return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
+    const { allowUpdate } = skeletonTracing.restrictions;
+
+    if (allowUpdate) {
+      if (sourceTree.treeId !== targetTree.treeId) {
+        // The two selected nodes are in different trees
+        console.error(
+          "Tried two delete an edge that was not there, the two nodes are in different trees.",
+        );
+        return Maybe.Nothing();
+      }
+
+      console.log(sourceTree.edges, sourceNode.id, targetNode.id);
+      const deletedEdge = sourceTree.edges.find(
+        edge =>
+          (edge.source === sourceNode.id && edge.target === targetNode.id) ||
+          (edge.source === targetNode.id && edge.target === sourceNode.id),
+      );
+
+      if (deletedEdge == null) {
+        // The two selected nodes do not share an edge
+        console.error("Tried two delete an edge that was not there.");
+        return Maybe.Nothing();
+      }
+
+      return Maybe.Just(
+        splitTreeByNodes(
+          state,
+          skeletonTracing,
+          sourceTree,
+          [sourceNode.id, targetNode.id],
+          [deletedEdge],
+          timestamp,
+        ),
+      );
+    } else {
+      return Maybe.Nothing();
+    }
+  });
+}
+
+function splitTreeByNodes(
+  state: OxalisState,
+  skeletonTracing: SkeletonTracingType,
+  activeTree: TreeType,
+  neighborIds: Array<number>,
+  deletedEdges: Array<EdgeType>,
+  timestamp: number,
+): TreeMapType {
+  // Use split-algorithmus. If we delete a node which is only connected via one edge,
+  // this algorithmus will only produce one tree (which reuses the old one)
+
+  let newTrees = skeletonTracing.trees;
+
+  // Build a hashmap which contains for each node all edges leading/leaving into/from the node
+  const nodeToEdgesMap: { [number]: Array<EdgeType> } = {};
+  activeTree.edges.forEach(edge => {
+    if (nodeToEdgesMap[edge.source]) {
+      nodeToEdgesMap[edge.source].push(edge);
+    } else {
+      nodeToEdgesMap[edge.source] = [edge];
+    }
+    if (nodeToEdgesMap[edge.target]) {
+      nodeToEdgesMap[edge.target].push(edge);
+    } else {
+      nodeToEdgesMap[edge.target] = [edge];
+    }
+  });
+
+  // Traverse from active node in all directions (i.e., use each edge) and
+  // remember which edges were already visited
+  const visitedEdges = {};
+  const getEdgeHash = edge => `${edge.source}-${edge.target}`;
+
+  // Mark edges of deleted node as visited
+  deletedEdges.forEach(deletedEdge => {
+    visitedEdges[getEdgeHash(deletedEdge)] = true;
+  });
+
+  const traverseTree = (nodeId: number, newTree: TemporaryMutableTreeType) => {
+    const edges = nodeToEdgesMap[nodeId];
+
+    newTree.nodes[nodeId] = activeTree.nodes[nodeId];
+
+    for (const edge of edges) {
+      const edgeHash = getEdgeHash(edge);
+      if (visitedEdges[edgeHash]) {
+        continue;
+      }
+      visitedEdges[edgeHash] = true;
+      newTree.edges.push(edge);
+
+      traverseTree(edge.source, newTree);
+      traverseTree(edge.target, newTree);
+    }
+  };
+
+  // The intermediateState is used for the createTree function, which takes
+  // care of generating non-colliding tree names, ids and colors
+  let intermediateState = state;
+  // For each neighbor of the to-be-deleted node, create a new tree.
+  const cutTrees = neighborIds.map((neighborId, neighborIndex) => {
+    let newTree;
+    if (neighborIndex === 0) {
+      // Reuse the first tree
+      newTree = {
+        branchPoints: [],
+        color: activeTree.color,
+        comments: [],
+        edges: [],
+        name: activeTree.name,
+        nodes: {},
+        timestamp: activeTree.timestamp,
+        treeId: activeTree.treeId,
+        isVisible: true,
+      };
+    } else {
+      const immutableNewTree = createTree(intermediateState, timestamp).get();
+      // Cast to mutable tree type since we want to mutably do the split
+      // in this reducer for performance reasons.
+      newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
+      intermediateState = update(intermediateState, {
+        tracing: { trees: { [newTree.treeId]: { $set: newTree } } },
+      });
+    }
+
+    traverseTree(neighborId, newTree);
+    return newTree;
+  });
+
+  // Write branchpoints into correct trees
+  activeTree.branchPoints.forEach(branchpoint => {
+    cutTrees.forEach(newTree => {
+      if (newTree.nodes[branchpoint.id]) {
+        newTree.branchPoints.push(branchpoint);
+      }
+    });
+  });
+
+  // Write comments into correct trees
+  activeTree.comments.forEach(comment => {
+    cutTrees.forEach(newTree => {
+      if (newTree.nodes[comment.node]) {
+        newTree.comments.push(comment);
+      }
+    });
+  });
+
+  newTrees = skeletonTracing.trees;
+  cutTrees.forEach(cutTree => {
+    newTrees = update(newTrees, { [cutTree.treeId]: { $set: cutTree } });
+  });
+
+  return newTrees;
 }
 
 export function createBranchPoint(

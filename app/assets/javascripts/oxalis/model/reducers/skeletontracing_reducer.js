@@ -14,6 +14,7 @@ import {
   createTree,
   deleteTree,
   deleteNode,
+  deleteEdge,
   shuffleTreeColor,
   createComment,
   deleteComment,
@@ -157,6 +158,26 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                   activeNodeId: { $set: newActiveNodeId },
                   activeTreeId: { $set: newActiveTreeId },
                   cachedMaxNodeId: { $set: newMaxNodeId },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "DELETE_EDGE": {
+          const { timestamp, sourceNodeId, targetNodeId } = action;
+          const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId);
+          const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
+          return sourceTreeMaybe
+            .chain(([sourceTree, sourceNode]) =>
+              targetTreeMaybe.chain(([targetTree, targetNode]) =>
+                deleteEdge(state, sourceTree, sourceNode, targetTree, targetNode, timestamp),
+              ),
+            )
+            .map(trees =>
+              update(state, {
+                tracing: {
+                  trees: { $set: trees },
                 },
               }),
             )

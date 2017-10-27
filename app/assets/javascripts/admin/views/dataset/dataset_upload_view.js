@@ -4,6 +4,7 @@ import { Form, Input, Select, Button, Card, Spin, Upload, Icon } from "antd";
 import app from "app";
 import Toast from "libs/toast";
 import messages from "messages";
+import Utils from "libs/utils";
 import { getTeams, getDatastores, addDataset } from "admin/admin_rest_api";
 import type { APITeamType, APIDatastoreType } from "admin/api_flow_types";
 
@@ -62,8 +63,9 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
         });
 
         addDataset(formValues).then(
-          () => {
+          async () => {
             Toast.success(messages["dataset.upload_success"]);
+            await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
             const url = `/datasets/${formValues.name}/import`;
             app.router.navigate(url, { trigger: true });
           },

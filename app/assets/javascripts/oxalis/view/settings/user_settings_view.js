@@ -7,7 +7,7 @@ import _ from "lodash";
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import { Collapse } from "antd";
-import type { ControlModeType, Vector6orEmpty, ModeType } from "oxalis/constants";
+import type { ControlModeType, Vector6, ModeType } from "oxalis/constants";
 import Constants, { ControlModeEnum } from "oxalis/constants";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import {
@@ -42,7 +42,7 @@ type UserSettingsViewProps = {
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
   onChangeActiveCellId: (value: number) => void,
-  onChangeBoundingBox: (value: Vector6orEmpty) => void,
+  onChangeBoundingBox: (value: ?Vector6) => void,
   onChangeRadius: (value: number) => void,
   onChangeZoomStep: (value: number) => void,
   viewMode: ModeType,
@@ -366,7 +366,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeActiveCellId(id: number) {
     dispatch(setActiveCellAction(id));
   },
-  onChangeBoundingBox(boundingBox: Vector6orEmpty) {
+  onChangeBoundingBox(boundingBox: ?Vector6) {
     dispatch(setUserBoundingBoxAction(Utils.computeBoundingBoxFromArray(boundingBox)));
   },
   onChangeZoomStep(zoomStep: number) {

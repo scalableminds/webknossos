@@ -10,7 +10,7 @@
 import * as React from "react";
 import Utils from "libs/utils";
 import { Row, Col, Slider, InputNumber, Switch, Tooltip, Input, Select } from "antd";
-import type { Vector3, Vector6orEmpty } from "oxalis/constants";
+import type { Vector3, Vector6 } from "oxalis/constants";
 
 type NumberSliderSettingProps = {
   onChange: (value: number) => void,
@@ -210,28 +210,31 @@ type State = {
 };
 
 export class Vector6InputSetting extends React.PureComponent<
-  VectorInputSettingPropTypes<Vector6orEmpty>,
+  VectorInputSettingPropTypes<?Vector6>,
   State,
 > {
-  constructor(props: VectorInputSettingPropTypes<Vector6orEmpty>) {
+  constructor(props: VectorInputSettingPropTypes<?Vector6>) {
     super(props);
     this.state = {
       isEditing: false,
       isValid: true,
-      text: props.value.join(", "),
+      text: this.computeText(props.value),
     };
   }
 
-  componentWillReceiveProps(newProps: VectorInputSettingPropTypes<Vector6orEmpty>) {
+  componentWillReceiveProps(newProps: VectorInputSettingPropTypes<?Vector6>) {
     if (!this.state.isEditing) {
       this.setState({
         isValid: true,
-        text: newProps.value.join(", "),
+        text: this.computeText(newProps.value),
       });
     }
   }
 
-  defaultValue = [];
+  computeText(vector: ?Vector6) {
+    const defaultValue = "";
+    return vector != null ? vector.join(", ") : defaultValue;
+  }
 
   handleBlur = () => {
     this.setState({
@@ -240,13 +243,13 @@ export class Vector6InputSetting extends React.PureComponent<
     if (this.state.isValid) {
       this.setState({
         isValid: true,
-        text: this.props.value.join(", "),
+        text: this.computeText(this.props.value),
       });
     } else {
-      this.props.onChange(this.defaultValue);
+      this.props.onChange();
       this.setState({
         isValid: true,
-        text: this.defaultValue.join(", "),
+        text: this.computeText(),
       });
     }
   };
@@ -254,7 +257,7 @@ export class Vector6InputSetting extends React.PureComponent<
   handleFocus = () => {
     this.setState({
       isEditing: true,
-      text: this.props.value.join(", "),
+      text: this.computeText(this.props.value),
       isValid: true,
     });
   };
@@ -269,7 +272,7 @@ export class Vector6InputSetting extends React.PureComponent<
 
     if (isValidFormat && isValidInput) {
       if (value.length === 0) {
-        this.props.onChange(this.defaultValue);
+        this.props.onChange();
       } else {
         this.props.onChange(Utils.numberArrayToVector6(value));
       }
@@ -277,7 +280,7 @@ export class Vector6InputSetting extends React.PureComponent<
 
     this.setState({
       text,
-      isValid: isValidFormat,
+      isValid: isValidInput && isValidFormat,
     });
   };
 

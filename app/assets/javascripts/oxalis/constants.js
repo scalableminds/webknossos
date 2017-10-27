@@ -5,13 +5,11 @@
 
 export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
 export type ModeType = "orthogonal" | "oblique" | "flight" | "volume";
-export type Vector0 = [];
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
 export type Vector4 = [number, number, number, number];
 export type Vector5 = [number, number, number, number, number];
 export type Vector6 = [number, number, number, number, number, number];
-export type Vector6orEmpty = Vector6 | Vector0;
 export type Point2 = { x: number, y: number };
 export type Point3 = { x: number, y: number, z: number };
 export type BoundingBoxType = {

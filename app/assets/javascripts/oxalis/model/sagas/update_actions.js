@@ -84,7 +84,7 @@ type DeleteEdgeUpdateAction = {
 type UpdateSkeletonTracingUpdateAction = {
   name: "updateTracing",
   value: {
-    activeNode?: number,
+    activeNode: ?number,
     editPosition: Vector3,
     editRotation: Vector3,
     userBoundingBox: ?BoundingBoxObjectType,
@@ -231,19 +231,15 @@ export function updateSkeletonTracing(
   rotation: Vector3,
   zoomLevel: number,
 ): UpdateSkeletonTracingUpdateAction {
-  const optionalObject = {};
-  if (tracing.activeNodeId != null) {
-    optionalObject.activeNode = tracing.activeNodeId;
-  }
-
   return {
     name: "updateTracing",
-    value: Object.assign(optionalObject, {
+    value: {
+      activeNode: tracing.activeNodeId,
       editPosition: position,
       editRotation: rotation,
       userBoundingBox: convertFrontendBoundingBoxToServer(tracing.userBoundingBox),
       zoomLevel,
-    }),
+    },
   };
 }
 export function moveTreeComponent(

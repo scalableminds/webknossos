@@ -130,7 +130,7 @@ class TracingApi {
     return getSkeletonTracing(tracing)
       .map(skeletonTracing => {
         const { trees } = skeletonTracing;
-        return _.flatMap(trees, tree => _.values(tree.nodes));
+        return _.flatMap(trees, tree => Array.from(tree.nodes.values()));
       })
       .getOrElse([]);
   }

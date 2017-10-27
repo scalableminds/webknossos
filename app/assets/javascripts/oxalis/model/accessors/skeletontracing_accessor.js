@@ -135,7 +135,11 @@ export function getNodeAndTree(tracing: TracingType, nodeId: ?number, treeId: ?n
 }
 
 export function getMaxNodeIdInTree(tree: TreeType) {
-  const maxNodeId = _.reduce(tree.nodes, (r, node) => Math.max(r, node.id), -Infinity);
+  const maxNodeId = _.reduce(
+    Array.from(tree.nodes.keys()),
+    (r, nodeId) => Math.max(r, nodeId),
+    -Infinity,
+  );
   return maxNodeId === -Infinity ? Maybe.Nothing() : Maybe.Just(maxNodeId);
 }
 
@@ -161,7 +165,7 @@ export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> 
     .chain(skeletonTracing => Maybe.fromNullable(skeletonTracing.trees))
     .map(trees => ({
       treeCount: _.size(trees),
-      nodeCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.nodes), 0),
+      nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
       edgeCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.edges), 0),
       branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
     }));

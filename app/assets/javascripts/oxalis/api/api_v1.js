@@ -83,7 +83,7 @@ class TracingApi_DEPRECATED {
     return getSkeletonTracing(Store.getState().tracing)
       .map(skeletonTracing => {
         const { trees } = skeletonTracing;
-        return _.flatMap(trees, tree => _.values(tree.nodes));
+        return _.flatMap(trees, tree => Array.from(tree.nodes.values()));
       })
       .getOrElse([]);
   }

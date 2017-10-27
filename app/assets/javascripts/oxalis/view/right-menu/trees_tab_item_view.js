@@ -58,7 +58,7 @@ class ListTreeItemView extends React.PureComponent<ListTreeItemViewProps> {
         <Checkbox checked={this.props.tree.isVisible} onChange={this.handleToggleTree} />
         <a onClick={this.handleSetActive} className={aClassName}>
           <span title="Node count" className="inline-block tree-node-count" style={{ width: 50 }}>
-            {_.size(this.props.tree.nodes)}
+            {this.props.tree.nodes.size()}
           </span>
           <i style={{ color: `rgb(${rgbColorString})` }} className="fa fa-circle tree-icon" />
           <span title="Tree Name" className="tree-name">

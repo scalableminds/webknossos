@@ -3,12 +3,12 @@ import _ from "lodash";
 
 const itemsPerBatch = 10000;
 
-class DiffableMap<K, V> {
+class DiffableMap<K: number, V> {
   maps: Array<Map<K, V>>;
   entryCount: number;
   existsCache: Map<K, boolean>;
 
-  constructor(optDiffableMap?: DiffableMap<K, V> | { +[K]: V }) {
+  constructor(optDiffableMap?: DiffableMap<K, V> | Array<[K, V]>) {
     if (optDiffableMap && optDiffableMap instanceof DiffableMap) {
       this.maps = optDiffableMap.maps.slice();
       this.existsCache = new Map(optDiffableMap.existsCache);
@@ -19,10 +19,9 @@ class DiffableMap<K, V> {
       this.entryCount = 0;
 
       if (optDiffableMap != null) {
-        _.forEach(optDiffableMap, (value: V, key: K) => {
-          // TODO: cast to number on caller side somehow
-          this.mutableSet(+key, value);
-        });
+        for (const [key, value] of optDiffableMap) {
+          this.mutableSet(key, value);
+        }
       }
     }
   }
@@ -171,11 +170,11 @@ class DiffableMap<K, V> {
     return returnValue;
   }
 
-  // *[Symbol.iterator]() {
-  //   for (const item of this._map) {
-  //     yield item;
-  //   }
-  // }
+  *entries() {
+    for (const map of this.maps) {
+      yield* map;
+    }
+  }
 
   *values(): Generator<V, void, void> {
     for (const map of this.maps) {
@@ -198,7 +197,7 @@ class DiffableMap<K, V> {
   }
 }
 
-export function diffDiffableMaps<K, V>(
+export function diffDiffableMaps<K: number, V>(
   mapA: DiffableMap<K, V>,
   mapB: DiffableMap<K, V>,
 ): { both: Array<K>, onlyA: Array<K>, onlyB: Array<K> } {

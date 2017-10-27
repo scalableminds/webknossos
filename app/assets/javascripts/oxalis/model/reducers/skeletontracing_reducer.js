@@ -67,7 +67,9 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const trees = _.keyBy(
         action.tracing.trees.map(tree =>
           update(tree, {
-            nodes: { $set: new DiffableMap(_.keyBy(tree.nodes.map(serverNodeToNode), "id")) },
+            nodes: {
+              $set: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
+            },
             color: {
               $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
             },

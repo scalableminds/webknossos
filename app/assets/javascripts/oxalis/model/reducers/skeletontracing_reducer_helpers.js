@@ -51,7 +51,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
 }
 
 function getMaximumNodeId(trees: TreeMapType): number {
-  const newMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, n => n.id)));
+  const newMaxNodeId = _.max(_.flatMap(trees, __ => __.nodes.map(n => n.id)));
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
 
@@ -369,7 +369,7 @@ export function deleteTree(
         const maxTreeId = getMaximumTreeId(newTrees);
         newActiveTreeId = maxTreeId;
         // Object.keys returns strings and the newActiveNodeId should be an integer
-        newActiveNodeId = +_.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
+        newActiveNodeId = +_.first(Array.from(newTrees[maxTreeId].nodes.keys())) || null;
       }
       const newMaxNodeId = getMaximumNodeId(newTrees);
 
@@ -396,9 +396,16 @@ export function mergeTrees(
     };
 
     let newTrees = _.omit(trees, sourceTree.treeId.toString());
+    // const newNodes = Object.assign({}, targetTree.nodes, sourceTree.nodes);
+
+    const newNodes = targetTree.nodes.clone();
+    for (const [id, node] of sourceTree.nodes.entries()) {
+      newNodes.mutableSet(id, node);
+    }
+
     newTrees = update(newTrees, {
       [targetTree.treeId]: {
-        nodes: { $set: Object.assign({}, targetTree.nodes, sourceTree.nodes) },
+        nodes: { $set: newNodes },
         edges: { $set: targetTree.edges.concat(sourceTree.edges).concat([newEdge]) },
         comments: { $set: targetTree.comments.concat(sourceTree.comments) },
         branchPoints: { $set: targetTree.branchPoints.concat(sourceTree.branchPoints) },

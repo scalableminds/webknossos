@@ -56,6 +56,8 @@ import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
 import { doWithToken } from "admin/admin_rest_api";
+import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
+import type { ToastStyleType } from "libs/toast";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -321,6 +323,7 @@ class TracingApi {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
     await Model.fetch(newTracingType, newAnnotationId, newControlMode, false);
+    Store.dispatch(discardSaveQueueAction());
     Store.dispatch(wkReadyAction());
     UrlManager.updateUnthrottled(true);
   }
@@ -574,7 +577,7 @@ class DataApi {
   * @example // Using the await keyword instead of the promise syntax
   * const greyscaleColor = await api.data.getDataValue("binary", position);
   *
-  * @example // Get the segmentation id for a segementation layer
+  * @example // Get the segmentation id for a segmentation layer
   * const segmentId = await api.data.getDataValue("segmentation", position);
   */
   async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
@@ -772,7 +775,7 @@ class UtilsApi {
    * // ... optionally:
    * // removeToast();
    */
-  showToast(type: string, message: string, timeout: number): ?Function {
+  showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
     const noop = () => {};
     return Toast.message(type, message, timeout === 0, timeout).remove || noop;
   }

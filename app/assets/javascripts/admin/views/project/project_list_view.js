@@ -8,7 +8,12 @@ import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import app from "app";
 import messages from "messages";
-import { getProjectsWithOpenAssignments, deleteProject } from "admin/admin_rest_api";
+import {
+  getProjectsWithOpenAssignments,
+  deleteProject,
+  pauseProject,
+  resumeProject,
+} from "admin/admin_rest_api";
 import type { APIProjectType } from "admin/api_flow_types";
 
 const { Column } = Table;
@@ -58,6 +63,16 @@ class ProjectListView extends React.PureComponent<{}, State> {
           projects: this.state.projects.filter(p => p.id !== project.id),
         });
       },
+    });
+  };
+
+  pauseResumeProject = async (
+    project: APIProjectType,
+    APICall: string => Promise<APIProjectType>,
+  ) => {
+    const updatedProject = await APICall(project.name);
+    this.setState({
+      projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
     });
   };
 
@@ -160,7 +175,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
                 sorter={Utils.localeCompareBy((project: APIProjectType) =>
                   project.expectedTime.toString(),
                 )}
-                render={expectedTime => `${parseInt(expectedTime / 60000)}m`}
+                render={expectedTime => `${expectedTime}m`}
               />
               <Column
                 title="Action"
@@ -178,10 +193,27 @@ class ProjectListView extends React.PureComponent<{}, State> {
                       <Icon type="edit" />Edit
                     </a>
                     <br />
-                    <a href={`/projects/${project.name}/tasks`} title="View Tasks">
-                      <Icon type="book" />Tasks
-                    </a>
-                    <br />
+                    {project.paused ? (
+                      <div>
+                        <a
+                          onClick={_.partial(this.pauseResumeProject, project, resumeProject)}
+                          title="Resume Project"
+                        >
+                          <Icon type="play-circle-o" />Resume
+                        </a>
+                        <br />
+                      </div>
+                    ) : (
+                      <div>
+                        <a
+                          onClick={_.partial(this.pauseResumeProject, project, pauseProject)}
+                          title="Pause Tasks"
+                        >
+                          <Icon type="pause-circle-o" />Pause
+                        </a>
+                        <br />
+                      </div>
+                    )}
                     <a
                       href={`/annotations/CompoundProject/${project.id}/download`}
                       title="Download all Finished Tracings"
@@ -190,7 +222,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
                     </a>
                     <br />
                     {project.owner.email === app.currentUser.email ? (
-                      <a href="#" onClick={_.partial(this.deleteProject, project)}>
+                      <a onClick={_.partial(this.deleteProject, project)}>
                         <Icon type="delete" />Delete
                       </a>
                     ) : null}

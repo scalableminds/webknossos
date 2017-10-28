@@ -79,7 +79,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   async merge(url: string) {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url);
-    Toast.message(annotation.messages);
+    Toast.messages(annotation.messages);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
     app.router.loadURL(redirectUrl);
   }
@@ -101,14 +101,14 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   ) => {
     if (info.file.status === "done") {
       const { annotation } = info.file.response;
-      Toast.message(info.file.response.messages);
+      Toast.messages(info.file.response.messages);
       this.setState({ isUploading: false });
       const url =
         `/annotations/${annotation.typ}/${annotation.id}/merge/` +
         `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     } else if (info.file.status === "error") {
-      Toast.message(info.file.response.messages);
+      Toast.messages(info.file.response.messages);
       this.setState({ isUploading: false });
     }
   };

@@ -132,7 +132,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         : `/annotations/${tracing.typ}/${tracing.id}/reopen`;
 
     const newTracing = await Request.receiveJSON(url);
-    Toast.message(newTracing.messages);
+    Toast.messages(newTracing.messages);
 
     const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
 
@@ -226,7 +226,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     const payload = { data: { name } };
 
     Request.sendJSONReceiveJSON(url, payload).then(response => {
-      Toast.message(response.messages);
+      Toast.messages(response.messages);
     });
   }
 
@@ -242,7 +242,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
             annotations: selectedAnnotationIds,
           },
         });
-        Toast.message(data.messages);
+        Toast.messages(data.messages);
 
         this.setState({
           archivedTracings: this.state.archivedTracings.concat(selectedAnnotations),

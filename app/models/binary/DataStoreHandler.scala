@@ -18,6 +18,7 @@ import net.liftweb.common.Box
 import org.apache.commons.codec.binary.Base64
 import play.api.Play.current
 import play.api.http.Status
+import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.ws.{WS, WSResponse}

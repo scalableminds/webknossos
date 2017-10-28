@@ -119,21 +119,18 @@ GET           /api/annotations/:typ/:id/loggedTime                              
 
 # Tasks
 GET           /tasks                                                            controllers.TaskController.empty
-GET           /tasks/overview                                                   controllers.TaskController.empty
 GET           /tasks/create                                                     controllers.TaskController.empty
 
 GET           /api/tasks                                                        controllers.TaskController.list
 POST          /api/tasks                                                        controllers.TaskController.create
 POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFile
 
-GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
 POST          /api/tasks/list                                                   controllers.TaskController.listTasks
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
 
 GET           /tasks/:id/edit                                                   controllers.UserController.emptyWithWildcard(id: String)
-GET           /workload                                                         controllers.TaskController.empty
 
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
@@ -183,7 +180,6 @@ GET           /statistics                                                       
 
 GET           /api/statistics/webknossos                                        controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
-GET           /api/statistics/assignments                                       controllers.StatisticsController.assignmentStatistics(start: Option[Long], end: Option[Long])
 
 # Map static resources from the /public folder to the /public path
 GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)

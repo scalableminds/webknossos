@@ -1,5 +1,5 @@
 // @flow
-import _ from "lodash";
+import Utils from "libs/utils";
 
 const itemsPerBatch = 10000;
 
@@ -135,7 +135,7 @@ class DiffableMap<K: number, V> {
 
   clone(): DiffableMap<K, V> {
     const newDiffableMap = new DiffableMap();
-    newDiffableMap.maps.forEach(map => {
+    this.maps.forEach(map => {
       newDiffableMap.maps.push(new Map(map));
     });
     return newDiffableMap;
@@ -195,6 +195,14 @@ class DiffableMap<K: number, V> {
     }
     return size;
   }
+
+  toObject(): { [key: K]: V } {
+    const result = {};
+    for (const [k, v] of this.entries()) {
+      result[k] = v;
+    }
+    return result;
+  }
 }
 
 export function diffDiffableMaps<K: number, V>(
@@ -202,11 +210,27 @@ export function diffDiffableMaps<K: number, V>(
   mapB: DiffableMap<K, V>,
 ): { both: Array<K>, onlyA: Array<K>, onlyB: Array<K> } {
   let idx = 0;
+
+  // const { both, onlyA, onlyB } = Utils.diffArrays(mapA.maps, mapB.maps);
+
   const both = [];
   const onlyA = [];
   const onlyB = [];
+
+  // TODO: this approach will break if the maps entries of the two DiffableMaps are not
+  // in "sync". E.g., if one map array is shifted, it will break.
+
+  console.log("mapA.maps", mapA.maps);
+  console.log("mapB.maps", mapB.maps);
+
   while (mapA.maps[idx] != null) {
-    if (mapA.maps[idx] !== mapB.maps[idx]) {
+    if (mapB.maps[idx] == null) {
+      // mapA has more internal maps than mapB. Add all to onlyA.
+      const map = mapA.maps[idx];
+      for (const key of map.keys()) {
+        onlyA.push(key);
+      }
+    } else if (mapA.maps[idx] !== mapB.maps[idx]) {
       const setA = new Set(mapA.maps[idx].keys());
       const setB = new Set(mapB.maps[idx].keys());
 
@@ -223,11 +247,19 @@ export function diffDiffableMaps<K: number, V>(
           onlyB.push(key);
         }
       }
-      // todo: it might exist other differing maps! do not return yet
-      return { both, onlyA, onlyB };
     }
     idx++;
   }
+
+  // mapB has more internal maps than mapB. Add all to onlyB.
+  while (mapB.maps[idx] != null) {
+    const map = mapB.maps[idx];
+    for (const key of map.keys()) {
+      onlyB.push(key);
+    }
+    idx++;
+  }
+
   return { both, onlyA, onlyB };
 }
 

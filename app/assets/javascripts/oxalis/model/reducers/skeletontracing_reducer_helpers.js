@@ -227,7 +227,7 @@ export function deleteNode(
         // Write branchpoints into correct trees
         activeTree.branchPoints.forEach(branchpoint => {
           cutTrees.forEach(newTree => {
-            if (newTree.nodes.get(branchpoint.nodeId)) {
+            if (newTree.nodes.has(branchpoint.nodeId)) {
               newTree.branchPoints.push(branchpoint);
             }
           });
@@ -236,7 +236,7 @@ export function deleteNode(
         // Write comments into correct trees
         activeTree.comments.forEach(comment => {
           cutTrees.forEach(newTree => {
-            if (newTree.nodes.get(comment.nodeId)) {
+            if (newTree.nodes.has(comment.nodeId)) {
               newTree.comments.push(comment);
             }
           });
@@ -396,7 +396,6 @@ export function mergeTrees(
     };
 
     let newTrees = _.omit(trees, sourceTree.treeId.toString());
-    // const newNodes = Object.assign({}, targetTree.nodes, sourceTree.nodes);
 
     const newNodes = targetTree.nodes.clone();
     for (const [id, node] of sourceTree.nodes.entries()) {

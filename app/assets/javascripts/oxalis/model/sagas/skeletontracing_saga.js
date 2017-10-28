@@ -127,11 +127,10 @@ function* diffNodes(
     nodes,
   );
 
-  console.log(deletedNodeIds, addedNodeIds, bothNodeIds);
-
   for (const nodeId of deletedNodeIds) {
     yield deleteNode(treeId, nodeId);
   }
+
   for (const nodeId of addedNodeIds) {
     const node = nodes.get(nodeId);
     yield createNode(treeId, node);

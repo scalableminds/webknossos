@@ -50,7 +50,7 @@ test.before(t => {
     const trees = skeletonTracing.trees;
     t.is(_.size(trees), 20);
     for (const tree of Object.values(trees)) {
-      t.is(_.size(tree.nodes), 100);
+      t.is(tree.nodes.size(), 100);
     }
   });
 });
@@ -77,7 +77,7 @@ test.serial("Skeleton should initialize correctly using the store's state", t =>
 
     for (const tree of Object.values(trees)) {
       treeColors = treeColors.concat(skeleton.getTreeRGBA(tree.color, tree.isVisible));
-      for (const node of Object.values(tree.nodes)) {
+      for (const node of Array.from(tree.nodes.values())) {
         nodePositions = nodePositions.concat(node.position);
         nodeTreeIds.push(tree.treeId);
         nodeRadii.push(node.radius);

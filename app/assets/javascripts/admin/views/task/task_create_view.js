@@ -21,20 +21,10 @@ const TaskCreateView = () => (
     <TabPane
       tab={
         <span>
-          <Icon type="file-add" />Create Task from NML File
+          <Icon type="bars" />Bulk Creation
         </span>
       }
       key="2"
-    >
-      Content of Tab Pane 2
-    </TabPane>
-    <TabPane
-      tab={
-        <span>
-          <Icon type="bars" />Import Task in Bulk
-        </span>
-      }
-      key="3"
     >
       Content of Tab Pane 3
     </TabPane>

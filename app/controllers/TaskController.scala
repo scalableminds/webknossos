@@ -90,7 +90,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
     for {
       body <- request.body.asMultipartFormData ?~> Messages("invalid")
-      nmlFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
+      nmlFile <- body.file("nmlFile[]") ?~> Messages("nml.file.notFound")
       stringifiedJson <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
       (taskTypeId, experience, status, team, projectName, scriptId, boundingBox) <- parseJson(stringifiedJson).toFox
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")

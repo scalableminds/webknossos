@@ -68,11 +68,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         editPosition: [0, 0, 0],
         editRotation: [0, 0, 0],
         neededExperience: { domain: "adasd", value: 1 },
-        projectName: "orphaned-tasks",
-        scriptId: "59ea1c71010000a70211d13e",
+        projectName: "Test123",
+        scriptId: "qwe",
         status: { open: 1, inProgress: 0, completed: 0 },
-        taskTypeId: "5782a1800100005307614834",
-        team: "adminTeam",
+        taskTypeId: "Testing",
+        team: "sdfsdf",
       };
       this.props.form.setFieldsValue(initialValues);
     });
@@ -97,10 +97,20 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           ? this.transformBoundingBox(formValues.boundingBox)
           : null;
 
-        await Request.sendJSONReceiveJSON("/api/tasks", {
-          data: formValues,
-          params: { type: "default" },
-        });
+        if (this.state.isNMLSpecifiction) {
+          await Request.sendMultipartFormReceiveJSON("/api/tasks", {
+            data: {
+              nmlFile: formValues.nmlFile,
+              formJSON: JSON.stringify(formValues),
+            },
+            params: { type: "nml" },
+          });
+        } else {
+          await Request.sendJSONReceiveJSON("/api/tasks", {
+            data: formValues,
+            params: { type: "default" },
+          });
+        }
 
         // if (this..isEditingMode) {
         //   app.router.loadURL("/tasks");
@@ -235,17 +245,13 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   this.setState({ isNMLSpecifiction: evt.target.value === "nml" })}
               >
                 <Radio value="manual">Manually Specify Starting Postion</Radio>
-                <Radio value="nml">Upload NML</Radio>
+                <Radio value="nml">Upload NML File</Radio>
               </RadioGroup>
             </FormItem>
 
             {this.state.isNMLSpecifiction ? (
-              <FormItem
-                label="NML File"
-                extra="Every nml creates a new task. You can either upload a single NML file or a zipped collection of nml files (.zip)."
-                hasFeedback
-              >
-                {getFieldDecorator("zipFile", {
+              <FormItem label="NML File" hasFeedback>
+                {getFieldDecorator("nmlFile", {
                   rules: [{ required: true }],
                   valuePropName: "fileList",
                   getValueFromEvent: this.normFile,
@@ -254,7 +260,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     accept=".nml,.zip"
                     name="nmlFile"
                     beforeUpload={file => {
-                      this.props.form.setFieldsValue({ zipFile: [file] });
+                      this.props.form.setFieldsValue({ nmlFile: [file] });
                       return false;
                     }}
                   >
@@ -262,6 +268,10 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       <Icon type="inbox" />
                     </p>
                     <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                    <p>
+                      Every nml creates a new task. You can either upload a single NML file or a
+                      zipped collection of nml files (.zip).
+                    </p>
                   </Upload.Dragger>,
                 )}
               </FormItem>

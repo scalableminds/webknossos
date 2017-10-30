@@ -294,6 +294,13 @@ export async function createTaskFromNML(task: APITaskType): Promise<*> {
   });
 }
 
+// TODO fix return types
+export async function createTasksFromBulk(tasks: Array<APITaskType>): Promise<*> {
+  return Request.sendJSONReceiveJSON("/api/tasks?type=bulk", {
+    data: tasks,
+  });
+}
+
 // ### Annotations
 export async function reOpenAnnotation(annotationId: string): Promise<APIAnnotationType> {
   return Request.receiveJSON(`/annotations/Task/${annotationId}/reopen`);

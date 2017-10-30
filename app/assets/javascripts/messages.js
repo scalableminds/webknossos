@@ -25,6 +25,7 @@ In order to restore the current window, a reload is necessary.`,
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
+  "task.bulk_create_invalid": "Can not parse specification. Text area contains invalid content.",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",

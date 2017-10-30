@@ -26,7 +26,7 @@ const TaskCreateView = () => (
       }
       key="2"
     >
-      Content of Tab Pane 3
+      <TaskCreateBulkImportView />
     </TabPane>
   </Tabs>
 );

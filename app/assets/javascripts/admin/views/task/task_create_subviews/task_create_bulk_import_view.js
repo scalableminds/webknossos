@@ -1,168 +1,47 @@
+// @flow
 import _ from "lodash";
-import Marionette from "backbone.marionette";
-import Toast from "libs/toast";
-import Request from "libs/request";
-import Modal from "oxalis/view/modal";
+import React from "react";
+import { Form, Input, Button, Card, Upload, Icon, Spin } from "antd";
+import Messages from "messages";
+import { createTasksFromBulk } from "admin/admin_rest_api";
+import { handleTaskCreationResponse } from "admin/views/task/task_create_subviews/task_create_form_view";
+import type { APITaskType } from "admin/api_flow_types";
 
-class TaskCreateBulkImportView extends Marionette.View {
-  constructor(...args) {
-    super(...args);
-    this.showSaveSuccess = this.showSaveSuccess.bind(this);
-  }
+const FormItem = Form.Item;
+const TextArea = Input.TextArea;
 
-  static initClass() {
-    this.prototype.id = "create-bulk-import";
+type Props = {
+  form: Object,
+};
 
-    this.prototype.template = _.template(`\
-<div class="row">
-  <div class="col-sm-12">
-    <div class="well">
-      One line for each task. The values are seperated by ','. Format: <br>
-      dataSet, <a href="/taskTypes">taskTypeId</a>, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, <a href="/scripts">scriptId</a>]<br><br>
-      <form action="" method="POST" class="form-horizontal" onSubmit="return false;">
-        <div class="form-group">
-          <div class="col-sm-12">
-            <textarea class="form-control input-monospace" rows="20" name="data"></textarea>
-          </div>
-        </div>
-        <div class="form-group">
-          <div class="col-sm-offset-10 col-sm-2">
-            <button type="submit" class="form-control btn btn-primary">
-              <i class="fa fa-spinner fa-pulse fa-fw hide"></i>Import
-            </button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>\
-`);
+type State = {
+  isUploading: boolean,
+};
 
-    this.prototype.events = { submit: "submit" };
+class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
+  state = {
+    isUploading: false,
+  };
 
-    this.prototype.ui = {
-      bulkText: "textarea[name=data]",
-      submitButton: "button[type=submit]",
-      submitSpinner: ".fa-spinner",
-    };
-  }
-
-  /**
-    * Submit form data as json.
-  */
-  submit() {
-    const bulkText = this.ui.bulkText.val();
-
-    if (!this.isValidData(bulkText)) {
-      this.showInvalidData();
-      return false;
-    }
-
+  isValidData(bulkText): boolean {
     const tasks = this.parseText(bulkText);
-    Request.sendJSONReceiveJSON("/api/tasks", {
-      params: { type: "bulk" },
-      data: tasks,
-    }).then(this.showSaveSuccess, this.showSaveError);
-
-    this.toggleSubmitButton(false);
-
-    // prevent page reload
-    return false;
+    return _.every(tasks, this.isValidTask);
   }
 
-  showSaveSuccess(response) {
-    // A succesful request indicates that the bulk syntax was correct. However,
-    // each task is processed individually and can fail or succeed.
-    if (response.errors) {
-      this.handleSuccessfulRequest(response.items);
-    } else {
-      this.ui.bulkText.val("");
-    }
-    const successItems = response.items.filter(item => item.status === 200);
-    if (successItems.length > 0) {
-      Toast.success(`${successItems.length} tasks were successfully created.`);
-      const csvContent = successItems
-        .map(
-          ({ success: task }) => `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`,
-        )
-        .join("\n");
-      Modal.show(`<pre>taskId,filename,position\n${csvContent}</pre>`, "Task IDs");
-    }
-
-    this.toggleSubmitButton(true);
-  }
-
-  showSaveError() {
-    Toast.error("The tasks could not be created due to server errors.");
-
-    this.toggleSubmitButton(true);
-  }
-
-  showInvalidData() {
-    Toast.error("The form data is not correct.");
-  }
-
-  handleSuccessfulRequest(items) {
-    // Remove all successful tasks from the text area and show an error toast for
-    // the failed tasks
-    const bulkText = this.ui.bulkText.val();
-    const tasks = this.splitToLines(bulkText);
-    const failedTasks = [];
-    let errorMessages = [];
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.status === 400) {
-        failedTasks.push(tasks[i]);
-        errorMessages.push(item.error);
-      }
-    }
-
-    // prefix the error message with line numbers
-    errorMessages = errorMessages.map((text, i) => `Line ${i} : ${text}`);
-
-    this.ui.bulkText.val(failedTasks.join("\n"));
-    Toast.error(errorMessages.join("\n"), true);
-  }
-
-  toggleSubmitButton(enabled) {
-    this.ui.submitButton.prop("disabled", !enabled);
-    this.ui.submitSpinner.toggleClass("hide", enabled);
-  }
-
-  splitToLines(string) {
-    return string.trim().split("\n");
-  }
-
-  splitToWords(string) {
-    return string.split(",").map(_.trim);
-  }
-
-  isValidData(bulkText) {
-    return _.every(this.splitToLines(bulkText), this.isValidLine.bind(this));
-  }
-
-  isNull(value) {
-    return value === null;
-  }
-
-  isValidLine(bulkLine) {
-    const bulkData = this.formatLine(bulkLine);
-    if (bulkData === null) {
-      return false;
-    }
-
-    if (_.some(bulkData, this.isNull.bind(this))) {
-      return false;
-    }
-
+  isValidTask(task: APITaskType): boolean {
     if (
-      _.some(bulkData.experienceDomain, isNaN) ||
-      _.some(bulkData.editPosition, isNaN) ||
-      isNaN(bulkData.boundingBox.width) ||
-      isNaN(bulkData.boundingBox.height) ||
-      isNaN(bulkData.boundingBox.depth) ||
-      _.some(bulkData.boundingBox.topLeft, isNaN)
+      !_.isString(task.neededExperience.domain) ||
+      !_.isString(task.dataSet) ||
+      !_.isString(task.taskTypeId) ||
+      !_.isString(task.team) ||
+      _.some(task.editPosition, isNaN) ||
+      _.some(task.editRotation, isNaN) ||
+      _.some(task.boundingBox.topLeft, isNaN) ||
+      isNaN(task.status.open) ||
+      isNaN(task.neededExperience.value) ||
+      isNaN(task.boundingBox.width) ||
+      isNaN(task.boundingBox.height) ||
+      isNaN(task.boundingBox.depth)
     ) {
       return false;
     }
@@ -170,12 +49,23 @@ class TaskCreateBulkImportView extends Marionette.View {
     return true;
   }
 
-  parseText(bulkText) {
-    return _.map(this.splitToLines(bulkText), this.formatLine.bind(this));
+  splitToLines(string: string): Array<string> {
+    return string.trim().split("\n");
   }
 
-  formatLine(bulkLine) {
-    const words = this.splitToWords(bulkLine);
+  splitToWords(string: string): Array<string> {
+    return string
+      .split(",")
+      .map(_.trim)
+      .filter(word => word !== "");
+  }
+
+  parseText(bulkText: string): Array<?APITaskType> {
+    return this.splitToLines(bulkText).map(line => this.parseLine(line));
+  }
+
+  parseLine(line: string): ?APITaskType {
+    const words = this.splitToWords(line);
     if (words.length < 19) {
       return null;
     }
@@ -227,7 +117,95 @@ class TaskCreateBulkImportView extends Marionette.View {
       isForAnonymous: false,
     };
   }
-}
-TaskCreateBulkImportView.initClass();
 
-export default TaskCreateBulkImportView;
+  readCSVFile(csvFile: File): Array<APITaskType> {}
+
+  handleSubmit = e => {
+    e.preventDefault();
+    this.props.form.validateFields(async (err, formValues) => {
+      if (!err) {
+        let tasks;
+        if (formValues.csvFile) {
+          tasks = this.readCSVFile(formValues.csvFile);
+        } else {
+          tasks = this.parseText(formValues.bulkText);
+        }
+        const response = await createTasksFromBulk(tasks);
+        if (response.error === false) {
+          handleTaskCreationResponse(response.items);
+        }
+      }
+    });
+  };
+
+  render() {
+    const { getFieldDecorator } = this.props.form;
+
+    return (
+      <div className="container wide" style={{ paddingTop: 20 }}>
+        <Spin spinning={this.state.isUploading}>
+          <Card title={<h3>Bulk Create Tasks</h3>}>
+            <p>
+              Specify each new task on a separate line as comma seperated values (CSV) in the
+              followng format:
+              <br />
+              <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,
+              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
+              <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,
+              <a href="/projects">project</a>[, <a href="/scripts">scriptId</a>]
+            </p>
+            <Form onSubmit={this.handleSubmit} layout="vertical">
+              <FormItem label="Bulk Task Specification" hasFeedback>
+                {getFieldDecorator("bulkText", {
+                  rules: [
+                    {
+                      validator: (rule, value, callback) =>
+                        this.isValidData(value)
+                          ? callback()
+                          : callback(Messages["task.bulk_create_invalid"]),
+                    },
+                  ],
+                })(
+                  <TextArea
+                    className="input-monospace"
+                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId]"
+                    autosize={{ minRows: 6 }}
+                  />,
+                )}
+              </FormItem>
+              <hr />
+              <FormItem label="Alternatively Upload a CSV File" hasFeedback>
+                {getFieldDecorator("csvFile")(
+                  <Upload.Dragger
+                    accept=".csv,.txt"
+                    name="nmlFile"
+                    beforeUpload={file => {
+                      this.props.form.setFieldsValue({ csvFile: [file] });
+                      return false;
+                    }}
+                  >
+                    <p className="ant-upload-drag-icon">
+                      <Icon type="inbox" />
+                    </p>
+                    <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                    <p>
+                      Upload a CSV files with your task specification in the same format as
+                      mentioned above.
+                    </p>
+                  </Upload.Dragger>,
+                )}
+              </FormItem>
+              <FormItem>
+                <Button type="primary" htmlType="submit">
+                  Create Task
+                </Button>
+              </FormItem>
+            </Form>
+          </Card>
+        </Spin>
+      </div>
+    );
+  }
+}
+
+export default Form.create()(TaskCreateBulkImportView);

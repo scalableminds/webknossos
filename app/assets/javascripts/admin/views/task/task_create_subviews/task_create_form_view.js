@@ -57,6 +57,37 @@ type State = {
   isResponseModalVisible: boolean,
 };
 
+export function handleTaskCreationResponse(
+  responses: Array<{ status: number, success: ?APITaskType }>,
+) {
+  const successCount = responses.filter(item => item.status === 200).length;
+  const errorCount = responses.length - successCount;
+  const csvContent = responses
+    .filter(item => item.status === 200)
+    .map(
+      // $FlowFixMe status == 200 means success
+      ({ success: task }) => `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`,
+    )
+    .join("\n");
+
+  if (successCount > 0) {
+    Modal.success({
+      title: `${successCount} tasks were successfully created.`,
+      content: (
+        <pre>
+          taskId,filename,position<br />
+          {csvContent}
+        </pre>
+      ),
+      width: 600,
+    });
+  }
+
+  if (errorCount > 0) {
+    Toast.error(`${errorCount}/${responses.length} tasks contained errors and were not created.`);
+  }
+}
+
 class TaskCreateFormView extends React.PureComponent<Props, State> {
   state = {
     datasets: [],
@@ -128,7 +159,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           } else {
             response = await createTask(formValues);
           }
-          this.handleResponse(response.items);
+          handleTaskCreationResponse(response.items);
         } finally {
           this.setState({
             isUploading: false,
@@ -143,35 +174,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       }
     });
   };
-
-  handleResponse(responses: Array<{ status: number, success: ?APITaskType }>) {
-    const successCount = responses.filter(item => item.status === 200).length;
-    const errorCount = responses.length - successCount;
-    const csvContent = responses
-      .filter(item => item.status === 200)
-      .map(
-        // $FlowFixMe status == 200 means success
-        ({ success: task }) => `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`,
-      )
-      .join("\n");
-
-    if (successCount > 0) {
-      Modal.success({
-        title: `${successCount} tasks were successfully created.`,
-        content: (
-          <pre>
-            taskId,filename,position<br />
-            {csvContent}
-          </pre>
-        ),
-        width: 600,
-      });
-    }
-
-    if (errorCount > 0) {
-      Toast.error(`${errorCount}/${responses.length} tasks contained errors and were not created.`);
-    }
-  }
 
   render() {
     const { getFieldDecorator } = this.props.form;

@@ -1,12 +1,26 @@
 // @flow
 import React from "react";
-import { Form, Input, Select, Button, Card, Radio, Upload, Icon, InputNumber } from "antd";
+import {
+  Form,
+  Input,
+  Select,
+  Button,
+  Card,
+  Radio,
+  Upload,
+  Modal,
+  Icon,
+  InputNumber,
+  Spin,
+} from "antd";
 import {
   getActiveDatasets,
   getProjects,
   getAdminTeams,
   getScripts,
   getTaskTypes,
+  createTask,
+  createTaskFromNML,
 } from "admin/admin_rest_api";
 import type {
   APIDatasetType,
@@ -14,11 +28,12 @@ import type {
   APIProjectType,
   APIScriptType,
   APITeamType,
+  APITaskType,
 } from "admin/api_flow_types";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
 
-import Request from "libs/request";
+import Toast from "libs/toast";
 import Vector3Input from "libs/vector3_input";
 import Vector6Input from "libs/vector6_input";
 
@@ -36,7 +51,10 @@ type State = {
   projects: Array<APIProjectType>,
   scripts: Array<APIScriptType>,
   teams: Array<APITeamType>,
-  isNMLSpecifiction: boolean,
+  responseItems: Array<APITaskType>,
+  isNMLSpecification: boolean,
+  isUploading: boolean,
+  isResponseModalVisible: boolean,
 };
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {
@@ -46,7 +64,10 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     projects: [],
     scripts: [],
     teams: [],
-    isNMLSpecifiction: false,
+    responseItems: [],
+    isNMLSpecification: false,
+    isUploading: false,
+    isResponseModalVisible: false,
   };
   componentDidMount() {
     this.fetchData();
@@ -62,6 +83,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       getTaskTypes(),
     ]);
 
+    // TODO REMOVE TEST DATA
     this.setState({ datasets, projects, teams, scripts, taskTypes }, () => {
       const initialValues = {
         dataSet: "100527_k0563",
@@ -97,18 +119,19 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           ? this.transformBoundingBox(formValues.boundingBox)
           : null;
 
-        if (this.state.isNMLSpecifiction) {
-          await Request.sendMultipartFormReceiveJSON("/api/tasks", {
-            data: {
-              nmlFile: formValues.nmlFile,
-              formJSON: JSON.stringify(formValues),
-            },
-            params: { type: "nml" },
-          });
-        } else {
-          await Request.sendJSONReceiveJSON("/api/tasks", {
-            data: formValues,
-            params: { type: "default" },
+        this.setState({ isUploading: true });
+
+        let response;
+        try {
+          if (this.state.isNMLSpecification) {
+            response = await createTaskFromNML(formValues);
+          } else {
+            response = await createTask(formValues);
+          }
+          this.handleResponse(response.items);
+        } finally {
+          this.setState({
+            isUploading: false,
           });
         }
 
@@ -121,6 +144,35 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     });
   };
 
+  handleResponse(responses: Array<{ status: number, success: ?APITaskType }>) {
+    const successCount = responses.filter(item => item.status === 200).length;
+    const errorCount = responses.length - successCount;
+    const csvContent = responses
+      .filter(item => item.status === 200)
+      .map(
+        // $FlowFixMe status == 200 means success
+        ({ success: task }) => `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`,
+      )
+      .join("\n");
+
+    if (successCount > 0) {
+      Modal.success({
+        title: `${successCount} tasks were successfully created.`,
+        content: (
+          <pre>
+            taskId,filename,position<br />
+            {csvContent}
+          </pre>
+        ),
+        width: 600,
+      });
+    }
+
+    if (errorCount > 0) {
+      Toast.error(`${errorCount}/${responses.length} tasks contained errors and were not created.`);
+    }
+  }
+
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditingMode = true;
@@ -130,194 +182,196 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
     return (
       <div className="container wide" style={{ paddingTop: 20 }}>
-        <Card title={<h3>Create Task</h3>}>
-          <Form onSubmit={this.handleSubmit} layout="vertical">
-            <FormItem label="TaskType" hasFeedback>
-              {getFieldDecorator("taskTypeId", {
-                rules: [{ required: true }],
-              })(
-                <Select
-                  showSearch
-                  placeholder="Select a TaskType"
-                  optionFilterProp="children"
-                  style={fullWidth}
-                  autoFocus
-                >
-                  {this.state.taskTypes.map((taskType: APITaskTypeType) => (
-                    <Option key={taskType.id} value={taskType.id}>
-                      {taskType.summary}
-                    </Option>
-                  ))}
-                </Select>,
-              )}
-            </FormItem>
-
-            <FormItem label="Experience Domain" hasFeedback>
-              {getFieldDecorator("neededExperience.domain", {
-                rules: [{ required: true }, { min: 3 }],
-              })(<Input />)}
-            </FormItem>
-
-            <FormItem label="Experience Value" hasFeedback>
-              {getFieldDecorator("neededExperience.value", {
-                rules: [{ required: true }],
-              })(<InputNumber style={fullWidth} />)}
-            </FormItem>
-
-            <FormItem label={taskInstancesLabel} hasFeedback>
-              {getFieldDecorator("status.open", {
-                rules: [{ required: true }, { type: "number" }],
-              })(<InputNumber style={fullWidth} />)}
-            </FormItem>
-
-            <FormItem label="Team" hasFeedback>
-              {getFieldDecorator("team", {
-                rules: [{ required: true }],
-              })(
-                <Select
-                  showSearch
-                  placeholder="Select a Team"
-                  optionFilterProp="children"
-                  style={fullWidth}
-                  autoFocus
-                >
-                  {this.state.teams.map((team: APITeamType) => (
-                    <Option key={team.id} value={team.name}>
-                      {team.name}
-                    </Option>
-                  ))}
-                </Select>,
-              )}
-            </FormItem>
-
-            <FormItem label="Project" hasFeedback>
-              {getFieldDecorator("projectName", {
-                rules: [{ required: true }],
-              })(
-                <Select
-                  showSearch
-                  placeholder="Select a Project"
-                  optionFilterProp="children"
-                  style={fullWidth}
-                  autoFocus
-                >
-                  {this.state.projects.map((project: APIProjectType) => (
-                    <Option key={project.id} value={project.name}>
-                      {project.name}
-                    </Option>
-                  ))}
-                </Select>,
-              )}
-            </FormItem>
-
-            <FormItem label="Script" hasFeedback>
-              {getFieldDecorator("scriptId", {
-                rules: [{ required: true }],
-              })(
-                <Select
-                  showSearch
-                  placeholder="Select a Project"
-                  optionFilterProp="children"
-                  style={fullWidth}
-                  autoFocus
-                >
-                  {this.state.scripts.map((script: APIScriptType) => (
-                    <Option key={script.id} value={script.id}>
-                      {script.name}
-                    </Option>
-                  ))}
-                </Select>,
-              )}
-            </FormItem>
-
-            <FormItem
-              label="Bounding Box"
-              extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
-              hasFeedback
-            >
-              {getFieldDecorator("boundingBox")(<Vector6Input />)}
-            </FormItem>
-
-            <FormItem label="Task Specification" hasFeedback>
-              <RadioGroup
-                value={this.state.isNMLSpecifiction ? "nml" : "manual"}
-                onChange={(evt: SyntheticInputEvent<*>) =>
-                  this.setState({ isNMLSpecifiction: evt.target.value === "nml" })}
-              >
-                <Radio value="manual">Manually Specify Starting Postion</Radio>
-                <Radio value="nml">Upload NML File</Radio>
-              </RadioGroup>
-            </FormItem>
-
-            {this.state.isNMLSpecifiction ? (
-              <FormItem label="NML File" hasFeedback>
-                {getFieldDecorator("nmlFile", {
+        <Spin spinning={this.state.isUploading}>
+          <Card title={<h3>Create Task</h3>}>
+            <Form onSubmit={this.handleSubmit} layout="vertical">
+              <FormItem label="TaskType" hasFeedback>
+                {getFieldDecorator("taskTypeId", {
                   rules: [{ required: true }],
-                  valuePropName: "fileList",
-                  getValueFromEvent: this.normFile,
                 })(
-                  <Upload.Dragger
-                    accept=".nml,.zip"
-                    name="nmlFile"
-                    beforeUpload={file => {
-                      this.props.form.setFieldsValue({ nmlFile: [file] });
-                      return false;
-                    }}
+                  <Select
+                    showSearch
+                    placeholder="Select a TaskType"
+                    optionFilterProp="children"
+                    style={fullWidth}
+                    autoFocus
                   >
-                    <p className="ant-upload-drag-icon">
-                      <Icon type="inbox" />
-                    </p>
-                    <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
-                    <p>
-                      Every nml creates a new task. You can either upload a single NML file or a
-                      zipped collection of nml files (.zip).
-                    </p>
-                  </Upload.Dragger>,
+                    {this.state.taskTypes.map((taskType: APITaskTypeType) => (
+                      <Option key={taskType.id} value={taskType.id}>
+                        {taskType.summary}
+                      </Option>
+                    ))}
+                  </Select>,
                 )}
               </FormItem>
-            ) : (
-              <div>
-                <FormItem label="Dataset" hasFeedback>
-                  {getFieldDecorator("dataSet", {
+
+              <FormItem label="Experience Domain" hasFeedback>
+                {getFieldDecorator("neededExperience.domain", {
+                  rules: [{ required: true }, { min: 3 }],
+                })(<Input />)}
+              </FormItem>
+
+              <FormItem label="Experience Value" hasFeedback>
+                {getFieldDecorator("neededExperience.value", {
+                  rules: [{ required: true }],
+                })(<InputNumber style={fullWidth} />)}
+              </FormItem>
+
+              <FormItem label={taskInstancesLabel} hasFeedback>
+                {getFieldDecorator("status.open", {
+                  rules: [{ required: true }, { type: "number" }],
+                })(<InputNumber style={fullWidth} />)}
+              </FormItem>
+
+              <FormItem label="Team" hasFeedback>
+                {getFieldDecorator("team", {
+                  rules: [{ required: true }],
+                })(
+                  <Select
+                    showSearch
+                    placeholder="Select a Team"
+                    optionFilterProp="children"
+                    style={fullWidth}
+                    autoFocus
+                  >
+                    {this.state.teams.map((team: APITeamType) => (
+                      <Option key={team.id} value={team.name}>
+                        {team.name}
+                      </Option>
+                    ))}
+                  </Select>,
+                )}
+              </FormItem>
+
+              <FormItem label="Project" hasFeedback>
+                {getFieldDecorator("projectName", {
+                  rules: [{ required: true }],
+                })(
+                  <Select
+                    showSearch
+                    placeholder="Select a Project"
+                    optionFilterProp="children"
+                    style={fullWidth}
+                    autoFocus
+                  >
+                    {this.state.projects.map((project: APIProjectType) => (
+                      <Option key={project.id} value={project.name}>
+                        {project.name}
+                      </Option>
+                    ))}
+                  </Select>,
+                )}
+              </FormItem>
+
+              <FormItem label="Script" hasFeedback>
+                {getFieldDecorator("scriptId", {
+                  rules: [{ required: true }],
+                })(
+                  <Select
+                    showSearch
+                    placeholder="Select a Project"
+                    optionFilterProp="children"
+                    style={fullWidth}
+                    autoFocus
+                  >
+                    {this.state.scripts.map((script: APIScriptType) => (
+                      <Option key={script.id} value={script.id}>
+                        {script.name}
+                      </Option>
+                    ))}
+                  </Select>,
+                )}
+              </FormItem>
+
+              <FormItem
+                label="Bounding Box"
+                extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+                hasFeedback
+              >
+                {getFieldDecorator("boundingBox")(<Vector6Input />)}
+              </FormItem>
+
+              <FormItem label="Task Specification" hasFeedback>
+                <RadioGroup
+                  value={this.state.isNMLSpecification ? "nml" : "manual"}
+                  onChange={(evt: SyntheticInputEvent<*>) =>
+                    this.setState({ isNMLSpecification: evt.target.value === "nml" })}
+                >
+                  <Radio value="manual">Manually Specify Starting Postion</Radio>
+                  <Radio value="nml">Upload NML File</Radio>
+                </RadioGroup>
+              </FormItem>
+
+              {this.state.isNMLSpecification ? (
+                <FormItem label="NML File" hasFeedback>
+                  {getFieldDecorator("nmlFile", {
                     rules: [{ required: true }],
+                    valuePropName: "fileList",
+                    getValueFromEvent: this.normFile,
                   })(
-                    <Select
-                      showSearch
-                      placeholder="Select a Dataset"
-                      optionFilterProp="children"
-                      style={fullWidth}
-                      autoFocus
+                    <Upload.Dragger
+                      accept=".nml,.zip"
+                      name="nmlFile"
+                      beforeUpload={file => {
+                        this.props.form.setFieldsValue({ nmlFile: [file] });
+                        return false;
+                      }}
                     >
-                      {this.state.datasets.map((dataset: APIDatasetType) => (
-                        <Option key={dataset.name} value={dataset.name}>
-                          {dataset.name}
-                        </Option>
-                      ))}
-                    </Select>,
+                      <p className="ant-upload-drag-icon">
+                        <Icon type="inbox" />
+                      </p>
+                      <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                      <p>
+                        Every nml creates a new task. You can either upload a single NML file or a
+                        zipped collection of nml files (.zip).
+                      </p>
+                    </Upload.Dragger>,
                   )}
                 </FormItem>
+              ) : (
+                <div>
+                  <FormItem label="Dataset" hasFeedback>
+                    {getFieldDecorator("dataSet", {
+                      rules: [{ required: true }],
+                    })(
+                      <Select
+                        showSearch
+                        placeholder="Select a Dataset"
+                        optionFilterProp="children"
+                        style={fullWidth}
+                        autoFocus
+                      >
+                        {this.state.datasets.map((dataset: APIDatasetType) => (
+                          <Option key={dataset.name} value={dataset.name}>
+                            {dataset.name}
+                          </Option>
+                        ))}
+                      </Select>,
+                    )}
+                  </FormItem>
 
-                <FormItem label="Starting Position" hasFeedback>
-                  {getFieldDecorator("editPosition", {
-                    rules: [{ required: true }],
-                  })(<Vector3Input style={fullWidth} />)}
-                </FormItem>
+                  <FormItem label="Starting Position" hasFeedback>
+                    {getFieldDecorator("editPosition", {
+                      rules: [{ required: true }],
+                    })(<Vector3Input style={fullWidth} />)}
+                  </FormItem>
 
-                <FormItem label="Starting Rotation" hasFeedback>
-                  {getFieldDecorator("editRotation", {
-                    rules: [{ required: true }],
-                  })(<Vector3Input style={fullWidth} />)}
-                </FormItem>
-              </div>
-            )}
+                  <FormItem label="Starting Rotation" hasFeedback>
+                    {getFieldDecorator("editRotation", {
+                      rules: [{ required: true }],
+                    })(<Vector3Input style={fullWidth} />)}
+                  </FormItem>
+                </div>
+              )}
 
-            <FormItem>
-              <Button type="primary" htmlType="submit">
-                Create Task
-              </Button>
-            </FormItem>
-          </Form>
-        </Card>
+              <FormItem>
+                <Button type="primary" htmlType="submit">
+                  Create Task
+                </Button>
+              </FormItem>
+            </Form>
+          </Card>
+        </Spin>
       </div>
     );
   }

@@ -277,10 +277,20 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
   return tasks;
 }
 
-export async function createTask(task: APITaskType, type: "default" | "nml"): Promise<APITaskType> {
-  return Request.sendJSONReceiveJSON(`/api/tasks?type=${type}`, {
-    method: "POST",
+// TODO fix return types
+export async function createTask(task: APITaskType): Promise<*> {
+  return Request.sendJSONReceiveJSON("/api/tasks?type=default", {
     data: task,
+  });
+}
+
+// TODO fix return types
+export async function createTaskFromNML(task: APITaskType): Promise<*> {
+  return Request.sendMultipartFormReceiveJSON("/api/tasks?type=nml", {
+    data: {
+      nmlFile: task.nmlFile,
+      formJSON: JSON.stringify(task),
+    },
   });
 }
 

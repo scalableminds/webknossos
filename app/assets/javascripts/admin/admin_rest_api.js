@@ -18,6 +18,7 @@ import type {
   APIDatasetType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
+import type { NewTaskType } from "admin/views/task/task_create_bulk_import_view";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -281,14 +282,14 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
 }
 
 // TODO fix return types
-export async function createTask(task: APITaskType): Promise<*> {
+export async function createTask(task: NewTaskType): Promise<*> {
   return Request.sendJSONReceiveJSON("/api/tasks?type=default", {
     data: task,
   });
 }
 
 // TODO fix return types
-export async function createTaskFromNML(task: APITaskType): Promise<*> {
+export async function createTaskFromNML(task: NewTaskType): Promise<*> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks?type=nml", {
     data: {
       nmlFile: task.nmlFile,
@@ -298,7 +299,7 @@ export async function createTaskFromNML(task: APITaskType): Promise<*> {
 }
 
 // TODO fix return types
-export async function createTasksFromBulk(tasks: Array<APITaskType>): Promise<*> {
+export async function createTasksFromBulk(tasks: Array<NewTaskType>): Promise<*> {
   return Request.sendJSONReceiveJSON("/api/tasks?type=bulk", {
     data: tasks,
   });
@@ -361,4 +362,3 @@ export async function getDatastores(): Promise<Array<APIDatastoreType>> {
 
   return datastores;
 }
-

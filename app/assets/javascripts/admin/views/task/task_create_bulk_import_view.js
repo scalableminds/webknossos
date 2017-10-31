@@ -6,7 +6,10 @@ import { createTasksFromBulk } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/views/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
-import type { APITaskType } from "admin/api_flow_types";
+
+import type { APIScriptType, TaskStatusType } from "admin/api_flow_types";
+import type { Vector3 } from "oxalis/constants";
+import type { BoundingBoxObjectType } from "oxalis/store";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
@@ -23,6 +26,23 @@ type State = {
   tasksProcessed: number,
 };
 
+export type NewTaskType = {
+  +boundingBox: BoundingBoxObjectType,
+  +dataSet: string,
+  +editPosition: Vector3,
+  +editRotation: Vector3,
+  +neededExperience: {
+    +domain: string,
+    +value: number,
+  },
+  +projectName: string,
+  +scriptId: ?APIScriptType,
+  +status: TaskStatusType,
+  +team: string,
+  +taskTypeId: string,
+  +nmlFile: ?File,
+};
+
 class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
   state = {
     isUploading: false,
@@ -35,7 +55,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
     return _.every(tasks, this.isValidTask);
   }
 
-  isValidTask(task: APITaskType): boolean {
+  isValidTask(task: NewTaskType): boolean {
     if (
       !_.isString(task.neededExperience.domain) ||
       !_.isString(task.dataSet) ||
@@ -68,13 +88,13 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
       .filter(word => word !== "");
   }
 
-  parseText(bulkText: string): Array<APITaskType> {
+  parseText(bulkText: string): Array<NewTaskType> {
     return this.splitToLines(bulkText)
       .map(line => this.parseLine(line))
       .filter(task => task !== null);
   }
 
-  parseLine(line: string): APITaskType {
+  parseLine(line: string): NewTaskType {
     const words = this.splitToWords(line);
 
     const dataSet = words[0];
@@ -125,7 +145,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
     };
   }
 
-  async readCSVFile(csvFile: File): Promise<Array<APITaskType>> {
+  async readCSVFile(csvFile: File): Promise<Array<NewTaskType>> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       // $FlowFixMe reader.result is wrongfully typed as ArrayBuffer
@@ -153,7 +173,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
     }
   };
 
-  async batchUpload(tasks: Array<APITaskType>) {
+  async batchUpload(tasks: Array<NewTaskType>) {
     // upload the tasks in batches to save the server from dying
     this.setState({
       isUploading: true,

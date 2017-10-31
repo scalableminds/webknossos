@@ -101,7 +101,7 @@ class Request {
           }
         } else if (value instanceof File) {
           formData.append(`${formKey}[]`, value, value.name);
-        } else if ((typeof value === "string") | (value === null)) {
+        } else if (typeof value === "string" || value === null) {
           formData.append(formKey, value);
         } else {
           // nested object

@@ -105,7 +105,7 @@ export type APITaskTypeType = {
   +settings: SettingsType,
 };
 
-type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
+export type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
 
 export type APITaskWithAnnotationType = {
   +id: string,

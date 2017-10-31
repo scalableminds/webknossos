@@ -1,8 +1,8 @@
 // @flow
 import React from "react";
 import { Tabs, Icon } from "antd";
-import TaskCreateFormView from "admin/views/task/task_create_subviews/task_create_form_view";
-import TaskCreateBulkImportView from "admin/views/task/task_create_subviews/task_create_bulk_import_view";
+import TaskCreateFormView from "admin/views/task/task_create_form_view";
+import TaskCreateBulkImportView from "admin/views/task/task_create_bulk_import_view";
 
 const { TabPane } = Tabs;
 

@@ -1,101 +1,109 @@
-import _ from "lodash";
+// @flow
+import React from "react";
+import { Form, Input, Select, Button, Card } from "antd";
+import { getTeams, addNDStoreDataset } from "admin/admin_rest_api";
 import app from "app";
-import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
-import Request from "libs/request";
-import FormSyphon from "form-syphon";
-import SelectionView from "admin/views/selection_view";
-import TeamCollection from "admin/models/team/team_collection";
+import messages from "messages";
 
-class DatasetRemoteView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="row">
-  <div class="col-md-6">
-    <h3>Add Remote NDStore Dataset</h3>
-    <form action="/api/datasets?typ=ndstore" method="POST" class="form-horizontal">
-      <div class=" form-group">
-        <label class="col-sm-3 control-label" for="name">Name</label>
-        <div class="col-sm-9">
-        <input type="text" required name="name" value="" class="form-control">
-          <span class="help-block errors"></span>
-        </div>
-      </div>
-      <div class=" form-group">
-        <label class="col-sm-3 control-label" for="team">Team</label>
-        <div class="col-sm-9 team">
-          <span class="help-block errors"></span>
-        </div>
-      </div>
-      <div class=" form-group">
-        <label class="col-sm-3 control-label" for="server">Server Url</label>
-        <div class="col-sm-9">
-          <input type="url" required name="server" class="form-control" title="NDstore server location">
-          <span class="help-block errors"></span>
-        </div>
-      </div>
-      <div class=" form-group">
-        <label class="col-sm-3 control-label" for="token">Token</label>
-        <div class="col-sm-9">
-          <input type="text" required name="token" class="form-control" title="NDstore token">
-          <span class="help-block errors"></span>
-        </div>
-      </div>
-      <div class="form-group">
-        <div class="col-sm-9 col-sm-offset-3">
-          <button type="submit" class="form-control btn btn-primary">
-            Import
-          </button>
-        </div>
-      </div>
-    </form>
-  </div>
-</div>\
-`);
+import type { APITeamType, NDStoreConfigType } from "admin/api_flow_types";
 
-    this.prototype.className = "container";
+const FormItem = Form.Item;
+const Option = Select.Option;
 
-    this.prototype.regions = { team: ".team" };
+type Props = {
+  form: Object,
+};
 
-    this.prototype.events = { "submit form": "addDataset" };
+type State = {
+  teams: Array<APITeamType>,
+};
 
-    this.prototype.ui = { form: "form" };
+class DatasetRemoteView extends React.PureComponent<Props, State> {
+  state = {
+    teams: [],
+  };
+
+  componentDidMount() {
+    this.fetchData();
   }
 
-  initialize() {
-    this.teamSelectionView = new SelectionView({
-      collection: new TeamCollection(),
-      name: "team",
-      childViewOptions: {
-        modelValue() {
-          return `${this.model.get("name")}`;
-        },
-      },
-      data: "amIAnAdmin=true",
+  async fetchData() {
+    const teams = await getTeams();
+    const currentUserAdminTeams = app.currentUser.teams
+      .filter(team => team.role.name === "admin")
+      .map(team => team.team);
+
+    this.setState({
+      teams: teams.filter(team => currentUserAdminTeams.includes(team.name)),
     });
   }
 
-  onRender() {
-    this.showChildView("team", this.teamSelectionView);
-  }
-
-  addDataset(evt) {
+  handleSubmit = evt => {
     evt.preventDefault();
-    const { form } = this.ui;
 
-    if (form[0].checkValidity()) {
-      Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore", {
-        data: FormSyphon.serialize(form),
-      }).then(
-        () => {
-          Toast.success();
-          app.router.navigate("/dashboard", { trigger: true });
-        },
-        () => {}, // NOOP
-      );
-    }
+    this.props.form.validateFields(async (err, formValues: NDStoreConfigType) => {
+      if (!err) {
+        await addNDStoreDataset(formValues);
+
+        Toast.success(messages["dataset.ndstore_success"]);
+        app.router.navigate("/dashboard", { trigger: true });
+      }
+    });
+  };
+  render() {
+    const { getFieldDecorator } = this.props.form;
+
+    return (
+      <div style={{ padding: 5 }}>
+        <Card title={<h3>Add Remote NDStore Dataset</h3>}>
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            <FormItem label="Dataset Name" hasFeedback>
+              {getFieldDecorator("name", {
+                rules: [{ required: true }, { min: 3 }, { pattern: /[0-9a-zA-Z_-]+$/ }],
+              })(<Input autoFocus />)}
+            </FormItem>
+
+            <FormItem label="Team" hasFeedback>
+              {getFieldDecorator("team", {
+                rules: [{ required: true }],
+              })(
+                <Select
+                  showSearch
+                  placeholder="Select a Team"
+                  optionFilterProp="children"
+                  style={{ width: "100%" }}
+                >
+                  {this.state.teams.map((team: APITeamType) => (
+                    <Option key={team.id} value={team.name}>
+                      {`${team.name}`}
+                    </Option>
+                  ))}
+                </Select>,
+              )}
+            </FormItem>
+
+            <FormItem label="Server Url" hasFeedback>
+              {getFieldDecorator("server", {
+                rules: [{ required: true, type: "url" }],
+              })(<Input />)}
+            </FormItem>
+
+            <FormItem label="Token" hasFeedback>
+              {getFieldDecorator("token", {
+                rules: [{ required: true }],
+              })(<Input />)}
+            </FormItem>
+
+            <FormItem>
+              <Button type="primary" htmlType="submit">
+                Add Dataset from NDStore
+              </Button>
+            </FormItem>
+          </Form>
+        </Card>
+      </div>
+    );
   }
 }
-DatasetRemoteView.initClass();
-
-export default DatasetRemoteView;
+export default Form.create()(DatasetRemoteView);

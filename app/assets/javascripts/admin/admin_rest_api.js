@@ -11,6 +11,9 @@ import type {
   APIProjectType,
   APITaskType,
   APIAnnotationType,
+  APIDatastoreType,
+  NDStoreConfigType,
+  DatasetConfigType,
   APIRoleType,
   APIDatasetType,
 } from "admin/api_flow_types";
@@ -334,3 +337,28 @@ export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
 
   return datasets;
 }
+
+export async function addNDStoreDataset(
+  ndstoreConfig: NDStoreConfigType,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore", {
+    data: ndstoreConfig,
+  });
+}
+
+export async function addDataset(datatsetConfig: DatasetConfigType): Promise<APIAnnotationType> {
+  const response = await Request.receiveJSON("/api/dataToken/generate");
+  return Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${response.token}`, {
+    data: datatsetConfig,
+    host: datatsetConfig.datastore,
+  });
+}
+
+// #### Datastores
+export async function getDatastores(): Promise<Array<APIDatastoreType>> {
+  const datastores = await Request.receiveJSON("/api/datastores");
+  assertResponseLimit(datastores);
+
+  return datastores;
+}
+

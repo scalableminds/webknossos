@@ -28,6 +28,8 @@ In order to restore the current window, a reload is necessary.`,
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "dataset.upload_success": "The dataset was uploaded successfully",
+  "dataset.ndstore_success":
+    "The dataset was successfully added to webKnossos from the specified NDStore.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "annotation.delete": "Do you really want to delete this annotation?",

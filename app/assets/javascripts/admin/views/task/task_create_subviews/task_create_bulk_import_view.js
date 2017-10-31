@@ -1,14 +1,17 @@
 // @flow
 import _ from "lodash";
 import React from "react";
-import { Form, Input, Button, Card, Upload, Icon, Spin } from "antd";
-import Messages from "messages";
+import { Form, Input, Button, Card, Upload, Icon, Spin, Progress } from "antd";
 import { createTasksFromBulk } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/views/task/task_create_subviews/task_create_form_view";
+import Messages from "messages";
+import Toast from "libs/toast";
 import type { APITaskType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const TextArea = Input.TextArea;
+
+const NUM_TASKS_PER_BATCH = 100;
 
 type Props = {
   form: Object,
@@ -16,11 +19,15 @@ type Props = {
 
 type State = {
   isUploading: boolean,
+  tasksCount: number,
+  tasksProcessed: number,
 };
 
 class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
   state = {
     isUploading: false,
+    tasksCount: 0,
+    tasksProcessed: 0,
   };
 
   isValidData(bulkText): boolean {
@@ -34,6 +41,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
       !_.isString(task.dataSet) ||
       !_.isString(task.taskTypeId) ||
       !_.isString(task.team) ||
+      !_.isString(task.projectName) ||
       _.some(task.editPosition, isNaN) ||
       _.some(task.editRotation, isNaN) ||
       _.some(task.boundingBox.topLeft, isNaN) ||
@@ -60,15 +68,14 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
       .filter(word => word !== "");
   }
 
-  parseText(bulkText: string): Array<?APITaskType> {
-    return this.splitToLines(bulkText).map(line => this.parseLine(line));
+  parseText(bulkText: string): Array<APITaskType> {
+    return this.splitToLines(bulkText)
+      .map(line => this.parseLine(line))
+      .filter(task => task !== null);
   }
 
-  parseLine(line: string): ?APITaskType {
+  parseLine(line: string): APITaskType {
     const words = this.splitToWords(line);
-    if (words.length < 19) {
-      return null;
-    }
 
     const dataSet = words[0];
     const taskTypeId = words[1];
@@ -121,6 +128,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
   async readCSVFile(csvFile: File): Promise<Array<APITaskType>> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
+      // $FlowFixMe reader.result is wrongfully typed as ArrayBuffer
       reader.onload = () => resolve(this.parseText(reader.result));
       reader.onerror = reject;
       reader.readAsText(csvFile);
@@ -129,19 +137,46 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
 
   handleSubmit = async e => {
     e.preventDefault();
-    const formValues = this.props.form.getFieldsValue();
+
     let tasks;
+    const formValues = this.props.form.getFieldsValue();
+
     if (formValues.csvFile) {
       tasks = await this.readCSVFile(formValues.csvFile[0]);
     } else {
       tasks = this.parseText(formValues.bulkText);
     }
-    const response = await createTasksFromBulk(tasks);
-    if (response.error === false) {
-      handleTaskCreationResponse(response.items);
+    if (_.every(tasks, this.isValidTask)) {
+      this.batchUpload(tasks);
+    } else {
+      Toast.error(Messages["task.bulk_create_invalid"]);
     }
-    // });
   };
+
+  async batchUpload(tasks: Array<APITaskType>) {
+    // upload the tasks in batches to save the server from dying
+    this.setState({
+      isUploading: true,
+      tasksCount: tasks.length,
+      tasksProcessed: 0,
+    });
+    let responses = [];
+
+    for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
+      const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
+      // eslint-disable-next-line no-await-in-loop
+      const response = await createTasksFromBulk(subArray);
+      responses = responses.concat(response.items);
+      this.setState({
+        tasksProcessed: i + NUM_TASKS_PER_BATCH,
+      });
+    }
+
+    handleTaskCreationResponse(responses);
+    this.setState({
+      isUploading: false,
+    });
+  }
 
   normFile = e => {
     if (Array.isArray(e)) {
@@ -211,6 +246,14 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
                 )}
               </FormItem>
               <FormItem>
+                {this.state.isUploading ? (
+                  <Progress
+                    percent={parseInt(this.state.tasksProcessed / this.state.tasksCount * 100)}
+                    showInfo
+                    status="active"
+                  />
+                ) : null}
+
                 <Button type="primary" htmlType="submit">
                   Create Task
                 </Button>

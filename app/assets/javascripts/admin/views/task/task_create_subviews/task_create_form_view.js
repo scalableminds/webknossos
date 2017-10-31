@@ -33,7 +33,6 @@ import type {
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
 
-import Toast from "libs/toast";
 import Vector3Input from "libs/vector3_input";
 import Vector6Input from "libs/vector6_input";
 
@@ -72,7 +71,7 @@ export function handleTaskCreationResponse(
 
   if (successCount > 0) {
     Modal.success({
-      title: `${successCount} tasks were successfully created.`,
+      title: `${successCount} tasks were successfully created. ${errorCount} tasks failed.`,
       content: (
         <pre>
           taskId,filename,position<br />
@@ -81,10 +80,6 @@ export function handleTaskCreationResponse(
       ),
       width: 600,
     });
-  }
-
-  if (errorCount > 0) {
-    Toast.error(`${errorCount}/${responses.length} tasks contained errors and were not created.`);
   }
 }
 

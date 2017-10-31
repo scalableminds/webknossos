@@ -118,24 +118,36 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
     };
   }
 
-  readCSVFile(csvFile: File): Array<APITaskType> {}
-
-  handleSubmit = e => {
-    e.preventDefault();
-    this.props.form.validateFields(async (err, formValues) => {
-      if (!err) {
-        let tasks;
-        if (formValues.csvFile) {
-          tasks = this.readCSVFile(formValues.csvFile);
-        } else {
-          tasks = this.parseText(formValues.bulkText);
-        }
-        const response = await createTasksFromBulk(tasks);
-        if (response.error === false) {
-          handleTaskCreationResponse(response.items);
-        }
-      }
+  async readCSVFile(csvFile: File): Promise<Array<APITaskType>> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(this.parseText(reader.result));
+      reader.onerror = reject;
+      reader.readAsText(csvFile);
     });
+  }
+
+  handleSubmit = async e => {
+    e.preventDefault();
+    const formValues = this.props.form.getFieldsValue();
+    let tasks;
+    if (formValues.csvFile) {
+      tasks = await this.readCSVFile(formValues.csvFile[0]);
+    } else {
+      tasks = this.parseText(formValues.bulkText);
+    }
+    const response = await createTasksFromBulk(tasks);
+    if (response.error === false) {
+      handleTaskCreationResponse(response.items);
+    }
+    // });
+  };
+
+  normFile = e => {
+    if (Array.isArray(e)) {
+      return e;
+    }
+    return e && e.fileList;
   };
 
   render() {
@@ -160,7 +172,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
                   rules: [
                     {
                       validator: (rule, value, callback) =>
-                        this.isValidData(value)
+                        _.isString(value) && this.isValidData(value)
                           ? callback()
                           : callback(Messages["task.bulk_create_invalid"]),
                     },
@@ -175,7 +187,10 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
               </FormItem>
               <hr />
               <FormItem label="Alternatively Upload a CSV File" hasFeedback>
-                {getFieldDecorator("csvFile")(
+                {getFieldDecorator("csvFile", {
+                  valuePropName: "fileList",
+                  getValueFromEvent: this.normFile,
+                })(
                   <Upload.Dragger
                     accept=".csv,.txt"
                     name="nmlFile"

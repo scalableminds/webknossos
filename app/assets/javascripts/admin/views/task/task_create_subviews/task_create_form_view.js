@@ -175,6 +175,13 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     });
   };
 
+  normFile = e => {
+    if (Array.isArray(e)) {
+      return e;
+    }
+    return e && e.fileList;
+  };
+
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditingMode = true;

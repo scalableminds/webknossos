@@ -40,7 +40,7 @@ export type NewTaskType = {
   +status: TaskStatusType,
   +team: string,
   +taskTypeId: string,
-  +nmlFile: ?File,
+  +csvFile?: File,
 };
 
 class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
@@ -169,9 +169,28 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
     if (_.every(tasks, this.isValidTask)) {
       this.batchUpload(tasks);
     } else {
-      Toast.error(Messages["task.bulk_create_invalid"]);
+      const invalidTaskIndices = this.getInvalidTaskIndices(tasks);
+      Toast.error(
+        `${Messages["task.bulk_create_invalid"]} Error in line ${invalidTaskIndices.join(", ")}`,
+      );
     }
   };
+
+  getInvalidTaskIndices(tasks: Array<NewTaskType>): Array<number> {
+    // returns the index / line number of an invalidly parsed task
+    // returned indicies start at 1 for easier matching by non-CS people
+    const isValidTasks = tasks.map(this.isValidTask);
+    const invalidTasks = isValidTasks.reduce(
+      (result: Array<number>, isValid: boolean, i: number) => {
+        if (!isValid) {
+          result.push(i + 1);
+        }
+        return result;
+      },
+      [],
+    );
+    return invalidTasks;
+  }
 
   async batchUpload(tasks: Array<NewTaskType>) {
     // upload the tasks in batches to save the server from dying
@@ -226,10 +245,18 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
                 {getFieldDecorator("bulkText", {
                   rules: [
                     {
-                      validator: (rule, value, callback) =>
-                        _.isString(value) && this.isValidData(value)
+                      validator: (rule, value, callback) => {
+                        const tasks = this.parseText(value);
+                        const invalidTaskIndices = this.getInvalidTaskIndices(tasks);
+
+                        return _.isString(value) && invalidTaskIndices.length === 0
                           ? callback()
-                          : callback(Messages["task.bulk_create_invalid"]),
+                          : callback(
+                              `${Messages[
+                                "task.bulk_create_invalid"
+                              ]} Error in line ${invalidTaskIndices.join(", ")}`,
+                            );
+                      },
                     },
                   ],
                 })(
@@ -248,7 +275,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
                 })(
                   <Upload.Dragger
                     accept=".csv,.txt"
-                    name="nmlFile"
+                    name="csvFile"
                     beforeUpload={file => {
                       this.props.form.setFieldsValue({ csvFile: [file] });
                       return false;

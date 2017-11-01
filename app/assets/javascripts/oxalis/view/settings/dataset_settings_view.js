@@ -24,7 +24,6 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import Utils from "libs/utils";
-import Constants from "oxalis/constants";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;

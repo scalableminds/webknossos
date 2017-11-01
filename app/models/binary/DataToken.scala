@@ -8,7 +8,6 @@ import java.security.SecureRandom
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
-
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.basics.SecuredBaseDAO
@@ -35,13 +34,12 @@ case class DataToken(
 
 object DataToken {
 
-  private val generator = new SecureRandom()
+  private val generator = new SecureRandom
   implicit val dataTokenFormat = Json.format[DataToken]
 
   val expirationTime = 24.hours
 
-  def generateRandomToken =
-    new BigInteger(130, generator).toString(32)
+  def generateRandomToken = new BigInteger(180, generator).toString(32)
 }
 
 object DataTokenService extends FoxImplicits {

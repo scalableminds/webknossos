@@ -33,8 +33,7 @@ import type {
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
 
-import Vector3Input from "libs/vector3_input";
-import Vector6Input from "libs/vector6_input";
+import { Vector3Input, Vector6Input } from "libs/vector_input";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -292,7 +291,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
                 hasFeedback
               >
-                {getFieldDecorator("boundingBox")(<Vector6Input />)}
+                automatically by the form
+                {getFieldDecorator("boundingBox")(
+                  // $FlowFixMe VectorComponent expects value + onChange props which will be set
+                  <Vector6Input />,
+                )}
               </FormItem>
 
               <FormItem label="Task Specification" hasFeedback>
@@ -357,12 +360,14 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   <FormItem label="Starting Position" hasFeedback>
                     {getFieldDecorator("editPosition", {
                       rules: [{ required: true }],
+                      // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                     })(<Vector3Input style={fullWidth} />)}
                   </FormItem>
 
                   <FormItem label="Starting Rotation" hasFeedback>
                     {getFieldDecorator("editRotation", {
                       rules: [{ required: true }],
+                      // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                     })(<Vector3Input style={fullWidth} />)}
                   </FormItem>
                 </div>

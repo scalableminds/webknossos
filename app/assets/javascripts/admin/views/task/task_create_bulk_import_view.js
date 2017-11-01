@@ -7,7 +7,7 @@ import { handleTaskCreationResponse } from "admin/views/task/task_create_form_vi
 import Messages from "messages";
 import Toast from "libs/toast";
 
-import type { APIScriptType, TaskStatusType } from "admin/api_flow_types";
+import type { TaskStatusType } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import type { BoundingBoxObjectType } from "oxalis/store";
 
@@ -36,11 +36,12 @@ export type NewTaskType = {
     +value: number,
   },
   +projectName: string,
-  +scriptId: ?APIScriptType,
+  +scriptId: ?string,
   +status: TaskStatusType,
   +team: string,
   +taskTypeId: string,
   +csvFile?: File,
+  +nmlFile?: File,
 };
 
 class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
@@ -52,7 +53,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
 
   isValidData(bulkText): boolean {
     const tasks = this.parseText(bulkText);
-    return _.every(tasks, this.isValidTask);
+    return tasks.every(this.isValidTask);
   }
 
   isValidTask(task: NewTaskType): boolean {
@@ -62,9 +63,9 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
       !_.isString(task.taskTypeId) ||
       !_.isString(task.team) ||
       !_.isString(task.projectName) ||
-      _.some(task.editPosition, isNaN) ||
-      _.some(task.editRotation, isNaN) ||
-      _.some(task.boundingBox.topLeft, isNaN) ||
+      task.editPosition.some(isNaN) ||
+      task.editRotation.some(isNaN) ||
+      task.boundingBox.topLeft.some(isNaN) ||
       isNaN(task.status.open) ||
       isNaN(task.neededExperience.value) ||
       isNaN(task.boundingBox.width) ||
@@ -84,7 +85,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
   splitToWords(string: string): Array<string> {
     return string
       .split(",")
-      .map(_.trim)
+      .map(word => word.trim())
       .filter(word => word !== "");
   }
 
@@ -166,7 +167,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
     } else {
       tasks = this.parseText(formValues.bulkText);
     }
-    if (_.every(tasks, this.isValidTask)) {
+    if (tasks.every(this.isValidTask)) {
       this.batchUpload(tasks);
     } else {
       const invalidTaskIndices = this.getInvalidTaskIndices(tasks);

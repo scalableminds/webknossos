@@ -96,7 +96,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   };
   componentDidMount() {
     this.fetchData();
-    // this.applyDefaults();
   }
 
   async fetchData() {
@@ -107,22 +106,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       getScripts(),
       getTaskTypes(),
     ]);
-
-    // TODO REMOVE TEST DATA
-    this.setState({ datasets, projects, teams, scripts, taskTypes }, () => {
-      const initialValues = {
-        dataSet: "100527_k0563",
-        editPosition: [0, 0, 0],
-        editRotation: [0, 0, 0],
-        neededExperience: { domain: "adasd", value: 1 },
-        projectName: "Test123",
-        scriptId: "qwe",
-        status: { open: 1, inProgress: 0, completed: 0 },
-        taskTypeId: "Testing",
-        team: "sdfsdf",
-      };
-      this.props.form.setFieldsValue(initialValues);
-    });
   }
 
   transformBoundingBox(boundingBox: Vector6): BoundingBoxObjectType {
@@ -291,9 +274,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
                 hasFeedback
               >
-                automatically by the form
                 {getFieldDecorator("boundingBox")(
-                  // $FlowFixMe VectorComponent expects value + onChange props which will be set
+                  // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                   <Vector6Input />,
                 )}
               </FormItem>
@@ -360,6 +342,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   <FormItem label="Starting Position" hasFeedback>
                     {getFieldDecorator("editPosition", {
                       rules: [{ required: true }],
+                      initialValue: [0, 0, 0],
                       // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                     })(<Vector3Input style={fullWidth} />)}
                   </FormItem>
@@ -367,6 +350,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                   <FormItem label="Starting Rotation" hasFeedback>
                     {getFieldDecorator("editRotation", {
                       rules: [{ required: true }],
+                      initialValue: [0, 0, 0],
                       // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
                     })(<Vector3Input style={fullWidth} />)}
                   </FormItem>

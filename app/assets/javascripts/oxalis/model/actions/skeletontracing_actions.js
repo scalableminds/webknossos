@@ -4,6 +4,9 @@
  * skeletontracing_actions.js
  * @flow
  */
+import Store from "oxalis/store";
+import { getActiveNode, getTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import Window from "libs/window";
 import type { Vector3 } from "oxalis/constants";
 import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
 import type { SkeletonTracingType } from "oxalis/store";
@@ -60,6 +63,7 @@ type CreateCommentActionType = {
 };
 type DeleteCommentActionType = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: number };
 type SetTracingActionType = { type: "SET_TRACING", tracing: SkeletonTracingType };
+type NoActionType = { type: "NONE" };
 
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
@@ -82,7 +86,8 @@ export type SkeletonTracingActionType =
   | DeleteCommentActionType
   | ToggleTreeActionType
   | ToggleAllTreesActionType
-  | ToggleInactiveTreesActionType;
+  | ToggleInactiveTreesActionType
+  | NoActionType;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -102,6 +107,10 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_COMMENT",
   "DELETE_COMMENT",
 ];
+
+const noAction = (): NoActionType => ({
+  type: "NONE",
+});
 
 export const initializeSkeletonTracingAction = (
   tracing: ServerTracing<SkeletonContentDataType>,
@@ -137,6 +146,25 @@ export const deleteNodeAction = (
   treeId,
   timestamp,
 });
+
+export const deleteNodeWithConfirmAction = (
+  nodeId?: number,
+  treeId?: number,
+): DeleteNodeActionType | NoActionType => {
+  const state = Store.getState();
+  return getActiveNode(state.tracing)
+    .map(activeNode => {
+      nodeId = nodeId != null ? nodeId : activeNode.id;
+      if (state.task != null && nodeId === 1) {
+        // Let the user confirm the deletion of the initial node (node with id 1) of a task
+        if (!Window.confirm("Do you really want to delete the initial node?")) {
+          return noAction();
+        }
+      }
+      return deleteNodeAction(nodeId, treeId);
+    })
+    .getOrElse(noAction());
+};
 
 export const setActiveNodeAction = (nodeId: number): SetActiveNodeActionType => ({
   type: "SET_ACTIVE_NODE",
@@ -186,6 +214,30 @@ export const deleteTreeAction = (
   treeId,
   timestamp,
 });
+
+export const deleteTreeWithConfirmAction = (
+  treeId?: number,
+): DeleteTreeActionType | NoActionType => {
+  const state = Store.getState();
+  return getTree(state.tracing, treeId)
+    .map(tree => {
+      if (state.task != null && tree.nodes[1] != null) {
+        // Let the user confirm the deletion of the initial node (node with id 1) of a task
+        if (
+          !Window.confirm(
+            "This tree contains the initial node. Do you really want to delete the whole tree?",
+          )
+        ) {
+          return noAction();
+        }
+      } else if (!Window.confirm("Do you really want to delete the whole tree?")) {
+        return noAction();
+      }
+
+      return deleteTreeAction(treeId);
+    })
+    .getOrElse(noAction());
+};
 
 export const toggleTreeAction = (
   treeId?: number,

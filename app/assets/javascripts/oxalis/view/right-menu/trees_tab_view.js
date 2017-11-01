@@ -7,7 +7,6 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu } from "antd";
-import Window from "libs/window";
 import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -16,7 +15,7 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
-  deleteTreeAction,
+  deleteTreeWithConfirmAction,
   shuffleTreeColorAction,
   selectNextTreeAction,
   toggleAllTreesAction,
@@ -47,9 +46,7 @@ class TreesTabView extends React.Component<Props> {
   };
 
   deleteTree = () => {
-    if (Window.confirm("Do you really want to delete the whole tree?")) {
-      this.props.onDeleteTree();
-    }
+    this.props.onDeleteTree();
   };
 
   shuffleTreeColor = () => {
@@ -179,7 +176,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(createTreeAction());
   },
   onDeleteTree() {
-    dispatch(deleteTreeAction());
+    dispatch(deleteTreeWithConfirmAction());
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));

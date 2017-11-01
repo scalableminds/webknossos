@@ -6,7 +6,6 @@ import _ from "lodash";
 import Backbone from "backbone";
 import "backbone.marionette";
 import { ControlModeEnum } from "oxalis/constants";
-import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import TRACING_OBJECT from "../fixtures/skeletontracing_object";
 
 function makeModelMock() {
@@ -63,6 +62,9 @@ const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").defaul
 const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 const Store = mockRequire.reRequire("oxalis/store").default;
+const { createNodeAction, deleteNodeAction } = mockRequire.reRequire(
+  "oxalis/model/actions/skeletontracing_actions",
+);
 
 test.beforeEach(t => {
   UrlManager.initialState = { position: [1, 2, 3] };

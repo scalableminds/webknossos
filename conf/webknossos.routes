@@ -142,11 +142,9 @@ GET           /api/tasks                                                        
 # DELETE        /api/tasks/:id                                                    controllers.admin.TaskAdministration.delete(id: String)
 
 GET           /tasks                                                            controllers.TaskController.empty
-GET           /tasks/overview                                                   controllers.TaskController.empty
 GET           /tasks/create                                                     controllers.TaskController.empty
 
 POST          /api/tasks                                                        controllers.TaskController.create(type: String)
-GET           /api/tasks/workload                                               controllers.TaskController.requestAvailableTasks
 POST          /api/tasks/list                                                   controllers.TaskController.listTasks
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
@@ -158,13 +156,6 @@ GET           /tasks/:id/edit                                                   
 #POST          /admin/tasks/createBulk                                           controllers.admin.TaskAdministration.createBulk
 #POST          /admin/tasks/createFromNML                                        controllers.admin.TaskAdministration.createFromNML
 #POST          /admin/tasks/createFromForm                                       controllers.admin.TaskAdministration.createFromForm
-
-# TODO: remove
-#GET           /admin/tasks/:id/edit                                          controllers.admin.TaskAdministration.edit(id: String)
-#GET           /admin/tasks/:id/edit                                             controllers.UserController.emptyWithWildcard(id: String)
-#POST          /admin/tasks/:id                                                  controllers.admin.TaskAdministration.editTaskForm(id: String)
-#GET           /api/tasks/overview                                               controllers.admin.TaskAdministration.overviewData
-GET           /workload                                                         controllers.TaskController.empty
 
 GET           /api/tasks/:id/download                                           controllers.AnnotationIOController.taskDownload(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
@@ -217,7 +208,6 @@ GET           /api/projects/:name/resume                                        
 GET           /statistics                                                       controllers.StatisticsController.empty
 GET           /api/statistics/webknossos                                        controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
-GET           /api/statistics/assignments                                       controllers.StatisticsController.assignmentStatistics(start: Option[Long], end: Option[Long])
 
 # Javascript routing
 GET           /assets/javascripts/routes.js                                     controllers.Application.javascriptRoutes

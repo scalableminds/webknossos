@@ -30,7 +30,6 @@ import models.project.Project
 
 class StatisticsController @Inject()(val messagesApi: MessagesApi)
   extends Controller
-  with UserAssignments
   with Secured {
 
   val intervalHandler = Map(
@@ -90,64 +89,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
         )
       }
       Ok(Json.toJson(json))
-    }
-  }
-}
-
-trait UserAssignments extends Secured with Dashboard with FoxImplicits { this: Controller =>
-  private case class UserWithTaskInfos(
-    user: User,
-    taskTypes: List[TaskType],
-    projects: List[Project],
-    futureTaskType: Option[TaskType],
-    workingTime: Long)
-
-  private object UserWithTaskInfos {
-    def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
-      ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
-        (__ \ "taskTypes").write[List[TaskType]] and
-        (__ \ "projects").write[List[Project]] and
-        (__ \ "futureTaskType").write[Option[TaskType]] and
-        (__ \ "workingTime").write[Long])( u =>
-        (u.user, u.taskTypes, u.projects, u.futureTaskType, u.workingTime))
-  }
-
-  def assignmentStatistics(start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
-
-    def getUserInfos(users: List[User]) = {
-
-      val futureTaskTypeMap = for {
-        futureTasks <- TaskService.simulateTaskAssignment(users)
-        futureTaskTypes <- Fox.serialSequence(futureTasks.toList){
-          case (user, task) => task.taskType.map(user -> _)
-        }.map(_.flatten)
-      } yield futureTaskTypes.toMap
-
-      Future.traverse(users){user =>
-        for {
-          annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
-          tasks <- Fox.serialSequence(annotations)(_.task).map(_.flatten)
-          projects <- Fox.serialSequence(tasks)(_.project).map(_.flatten)
-          taskTypes <- Fox.serialSequence(tasks)(_.taskType).map(_.flatten)
-          taskTypeMap <- futureTaskTypeMap.getOrElse(Map.empty)
-          workingTime <- TimeSpanService.totalTimeOfUser(user, start, end).futureBox
-        } yield {
-          UserWithTaskInfos(
-            user,
-            taskTypes.distinct,
-            projects.distinct,
-            taskTypeMap.get(user),
-            workingTime.map(_.toMillis).toOption.getOrElse(0)
-          )
-        }
-      }
-    }
-
-    for {
-      users <- UserService.findAllNonAnonymous()
-      userInfos <- getUserInfos(users)
-    } yield {
-      Ok(Writes.list(UserWithTaskInfos.userInfosPublicWrites(request.user)).writes(userInfos))
     }
   }
 }

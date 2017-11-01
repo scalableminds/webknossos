@@ -3,7 +3,6 @@
  * @flow weak
  */
 
-import PaginationView from "admin/views/pagination_view";
 import DatasetAddView from "admin/views/dataset/dataset_add_view";
 import UserListView from "admin/views/user/user_list_view";
 import TeamListView from "admin/views/team/team_list_view";
@@ -23,7 +22,6 @@ import ScriptCreateView from "admin/views/scripts/script_create_view";
 //
 
 export {
-  PaginationView,
   UserListView,
   TeamListView,
   TaskListView,

@@ -316,10 +316,10 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   start(): void {
-    this.arbitraryView = new ArbitraryView(CANVAS_SELECTOR, constants.VIEWPORT_WIDTH);
+    this.arbitraryView = new ArbitraryView();
     this.arbitraryView.start();
 
-    this.plane = new ArbitraryPlane(constants.VIEWPORT_WIDTH);
+    this.plane = new ArbitraryPlane();
     this.plane.setMode(this.props.viewMode);
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);

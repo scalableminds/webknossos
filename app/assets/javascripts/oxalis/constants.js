@@ -84,6 +84,8 @@ const Constants = {
   // as there are two borders with width 2px each => 8px
   PLANE_WIDTH: 376,
   VIEWPORT_WIDTH: 384,
+  // The size of the gap between the 4 viewports in the orthogonal mode
+  VIEWPORT_GAP_WIDTH: 20,
   TEXTURE_WIDTH: 512,
   TEXTURE_SIZE_P: 9,
   DISTANCE_3D: 140,

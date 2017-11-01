@@ -47,7 +47,7 @@ class TracingView extends React.PureComponent<Props> {
 
     const canvasWidth = isArbitraryMode
       ? Math.round(this.props.scale * Constants.VIEWPORT_WIDTH)
-      : Math.round(this.props.scale * Constants.VIEWPORT_WIDTH) * 2 + 20;
+      : Math.round(this.props.scale * Constants.VIEWPORT_WIDTH) * 2 + Constants.VIEWPORT_GAP_WIDTH;
     const canvasStyle = {
       width: canvasWidth,
       height: canvasWidth,

@@ -41,10 +41,10 @@ class ArbitraryPlane {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(width: number = 128) {
+  constructor() {
     this.isDirty = true;
     this.height = 0;
-    this.width = width;
+    this.width = constants.VIEWPORT_WIDTH;
     _.extend(this, Backbone.Events);
 
     this.mesh = this.createMesh();

@@ -39,7 +39,7 @@ class ArbitraryView {
   cameraPosition: Array<number>;
   container: JQuery;
 
-  constructor(canvasSelector: string, width: number) {
+  constructor() {
     this.animate = this.animateImpl.bind(this);
     this.resize = this.resizeImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
@@ -48,7 +48,7 @@ class ArbitraryView {
     // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
     // viewport.
-    this.camDistance = width / 2 / Math.tan(Math.PI / 180 * 45 / 2);
+    this.camDistance = Constants.VIEWPORT_WIDTH / 2 / Math.tan(Math.PI / 180 * 45 / 2);
 
     // Initialize main THREE.js components
     this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);

@@ -23,11 +23,7 @@ import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
 import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
-import constants, {
-  OrthoViews,
-  OrthoViewValues,
-  OrthoViewValuesWithoutTDView,
-} from "oxalis/constants";
+import { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -125,14 +121,10 @@ class SceneController {
       this.rootNode.add(this.skeleton.getRootNode());
     }
 
-    // create Meshes
-    const createPlane = planeIndex =>
-      new Plane(constants.PLANE_WIDTH, constants.TEXTURE_WIDTH, planeIndex);
-
     this.planes = {
-      [OrthoViews.PLANE_XY]: createPlane(OrthoViews.PLANE_XY),
-      [OrthoViews.PLANE_YZ]: createPlane(OrthoViews.PLANE_YZ),
-      [OrthoViews.PLANE_XZ]: createPlane(OrthoViews.PLANE_XZ),
+      [OrthoViews.PLANE_XY]: new Plane(OrthoViews.PLANE_XY),
+      [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
+      [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
 
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));

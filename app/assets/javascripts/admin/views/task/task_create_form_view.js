@@ -106,6 +106,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       getScripts(),
       getTaskTypes(),
     ]);
+
+    this.setState({ datasets, projects, teams, scripts, taskTypes });
   }
 
   transformBoundingBox(boundingBox: Vector6): BoundingBoxObjectType {

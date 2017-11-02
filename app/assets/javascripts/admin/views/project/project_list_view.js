@@ -214,6 +214,10 @@ class ProjectListView extends React.PureComponent<{}, State> {
                         <br />
                       </div>
                     )}
+                    <a href={`/projects/${project.name}/tasks`} title="View Tasks">
+                      <Icon type="schedule" />Tasks
+                    </a>
+                    <br />
                     <a
                       href={`/api/projects/${project.name}/download`}
                       title="Download all Finished Tracings"

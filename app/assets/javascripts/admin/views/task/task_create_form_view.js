@@ -58,28 +58,43 @@ type State = {
 export function handleTaskCreationResponse(
   responses: Array<{ status: number, success: ?APITaskType }>,
 ) {
-  const successCount = responses.filter(item => item.status === 200).length;
-  const errorCount = responses.length - successCount;
-  const csvContent = responses
-    .filter(item => item.status === 200)
-    .map(
-      // $FlowFixMe status == 200 means success
-      ({ success: task }) => `${task.id},${task.creationInfo},(${task.editPosition.join(",")})`,
-    )
-    .join("\n");
+  const successfulTasks = [];
+  const failedTasks = [];
 
-  if (successCount > 0) {
-    Modal.success({
-      title: `${successCount} tasks were successfully created. ${errorCount} tasks failed.`,
-      content: (
-        <pre>
-          taskId,filename,position<br />
-          {csvContent}
-        </pre>
-      ),
-      width: 600,
-    });
-  }
+  responses.forEach((response, i) => {
+    if (response.status === 200) {
+      successfulTasks.push(
+        `${response.success.id},${response.success
+          .creationInfo},(${response.success.editPosition.join(",")}) \n`,
+      );
+    } else {
+      failedTasks.push(`Line ${i}: ${response.error} \n`);
+    }
+  });
+
+  Modal.info({
+    title: `${successfulTasks.length} tasks were successfully created. ${failedTasks.length} tasks failed.`,
+    content: (
+      <div>
+        {successfulTasks.length > 0 ? (
+          <div>
+            Successful Tasks:
+            <pre>
+              taskId,filename,position<br />
+              {successfulTasks}
+            </pre>
+          </div>
+        ) : null}
+        {failedTasks.length > 0 ? (
+          <div>
+            Failed Tasks:
+            <pre>{failedTasks}</pre>
+          </div>
+        ) : null}
+      </div>
+    ),
+    width: 600,
+  });
 }
 
 class TaskCreateFormView extends React.PureComponent<Props, State> {
@@ -201,7 +216,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
               <FormItem label="Experience Value" hasFeedback>
                 {getFieldDecorator("neededExperience.value", {
-                  rules: [{ required: true }],
+                  rules: [{ required: true }, { type: "number" }],
                 })(<InputNumber style={fullWidth} />)}
               </FormItem>
 
@@ -252,9 +267,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               </FormItem>
 
               <FormItem label="Script" hasFeedback>
-                {getFieldDecorator("scriptId", {
-                  rules: [{ required: true }],
-                })(
+                {getFieldDecorator("scriptId")(
                   <Select
                     showSearch
                     placeholder="Select a Project"

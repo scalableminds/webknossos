@@ -28,34 +28,57 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType } from "oxalis/store";
+import type { OxalisState, SkeletonTracingType, NodeType, BranchPointType } from "oxalis/store";
+import type { ServerNodeType, ServerBranchPointType } from "oxalis/model";
 import type { ActionType } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
 import ErrorHandling from "libs/error_handling";
+
+function serverNodeToNode(n: ServerNodeType): NodeType {
+  return {
+    id: n.id,
+    position: n.position,
+    rotation: n.rotation,
+    bitDepth: n.bitDepth,
+    viewport: n.viewport,
+    resolution: n.resolution,
+    radius: n.radius,
+    timestamp: n.createdTimestamp,
+  };
+}
+
+function serverBranchPointToBranchPoint(b: ServerBranchPointType): BranchPointType {
+  return {
+    timestamp: b.createdTimestamp,
+    nodeId: b.nodeId,
+  };
+}
 
 function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "INITIALIZE_SKELETONTRACING": {
       const restrictions = Object.assign(
         {},
-        action.tracing.restrictions,
-        action.tracing.content.settings,
+        action.annotation.restrictions,
+        action.annotation.settings,
       );
-      const { contentData } = action.tracing.content;
 
       const trees = _.keyBy(
-        contentData.trees.map(tree =>
+        action.tracing.trees.map(tree =>
           update(tree, {
-            treeId: { $set: tree.id },
-            nodes: { $set: _.keyBy(tree.nodes, "id") },
-            color: { $set: tree.color || ColorGenerator.distinctColorForId(tree.id) },
+            nodes: { $set: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id") },
+            color: {
+              $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
+            },
+            branchPoints: { $set: _.map(tree.branchPoints, serverBranchPointToBranchPoint) },
             isVisible: { $set: true },
+            timestamp: { $set: tree.createdTimestamp },
           }),
         ),
-        "id",
+        "treeId",
       );
 
-      const activeNodeIdMaybe = Maybe.fromNullable(contentData.activeNode);
+      const activeNodeIdMaybe = Maybe.fromNullable(action.tracing.activeNodeId);
       let cachedMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, node => node.id)));
       cachedMaxNodeId = cachedMaxNodeId != null ? cachedMaxNodeId : Constants.MIN_NODE_ID - 1;
 
@@ -88,20 +111,21 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
 
       const skeletonTracing: SkeletonTracingType = {
+        annotationId: action.annotation.id,
         type: "skeleton",
         activeNodeId,
         cachedMaxNodeId,
         activeTreeId,
         restrictions,
         trees,
-        name: action.tracing.name,
-        tracingType: action.tracing.typ,
-        tracingId: action.tracing.id,
+        name: action.annotation.name,
+        tracingType: action.annotation.typ,
+        tracingId: action.annotation.content.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
-        isPublic: action.tracing.isPublic,
-        tags: action.tracing.tags,
-        description: action.tracing.description,
+        boundingBox: convertBoundingBox(action.tracing.boundingBox),
+        isPublic: action.annotation.isPublic,
+        tags: action.annotation.tags,
+        description: action.annotation.description,
       };
 
       return update(state, { tracing: { $set: skeletonTracing } });

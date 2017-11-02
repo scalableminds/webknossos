@@ -131,13 +131,13 @@ export class PingStrategy extends AbstractPingStrategy {
 }
 
 export class SkeletonPingStrategy extends PingStrategy {
-  contentTypes = ["skeletonTracing"];
+  contentTypes = ["skeleton", "readonly"];
   name = "SKELETON";
   preloadingSlides = 2;
 }
 
 export class VolumePingStrategy extends PingStrategy {
-  contentTypes = ["volumeTracing"];
+  contentTypes = ["volume"];
   name = "VOLUME";
   preloadingSlides = 1;
   preloadingPriorityOffset = 80;

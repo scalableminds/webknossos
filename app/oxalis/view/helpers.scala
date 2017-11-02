@@ -1,7 +1,7 @@
 package oxalis.view
 
-import play.twirl.api.Html
 import com.scalableminds.util.mvc.Formatter
+import play.twirl.api.Html
 
 package object helpers
     extends BootstrapHelpers

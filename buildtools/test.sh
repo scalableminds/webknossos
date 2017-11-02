@@ -17,7 +17,11 @@ function ensureUpToDateTests {
 
 	if [ $lastChangedSource -gt $lastChangedTests ]
 	then
-		echo "Please run yarn test-prepare. The source files seem to be newer than the compiled ones."
+    RED='\033[0;31m'
+    NC='\033[0m' # No Color
+    echo ""
+		echo -e "[${RED}Error${NC}] Please run yarn test-prepare. The source files seem to be newer than the compiled ones."
+    echo ""
 		exit 1
 	fi
 }

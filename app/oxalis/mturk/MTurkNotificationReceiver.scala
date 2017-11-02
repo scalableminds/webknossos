@@ -1,8 +1,5 @@
 package oxalis.mturk
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
-
 import akka.actor.{Actor, Props}
 import com.amazonaws.services.sqs.model.Message
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
@@ -14,6 +11,9 @@ import play.api.Application
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.json._
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 /**
   * This handler will process notifications from mturk using the amazon SQS message Queue. mturk will post

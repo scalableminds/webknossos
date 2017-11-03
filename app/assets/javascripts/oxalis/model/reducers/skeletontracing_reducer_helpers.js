@@ -183,7 +183,6 @@ export function deleteEdge(
         return Maybe.Nothing();
       }
 
-      console.log(sourceTree.edges, sourceNode.id, targetNode.id);
       const deletedEdge = sourceTree.edges.find(
         edge =>
           (edge.source === sourceNode.id && edge.target === targetNode.id) ||
@@ -216,22 +215,22 @@ function splitTreeByNodes(
   state: OxalisState,
   skeletonTracing: SkeletonTracingType,
   activeTree: TreeType,
-  neighborIds: Array<number>,
+  newTreeRootIds: Array<number>,
   deletedEdges: Array<EdgeType>,
   timestamp: number,
 ): TreeMapType {
-  // Use split-algorithmus. If we delete a node which is only connected via one edge,
-  // this algorithmus will only produce one tree (which reuses the old one)
+  // This function splits a given tree by deleting the given edges and making the
+  // given node ids the new tree roots.
 
   let newTrees = skeletonTracing.trees;
   const nodeToEdgesMap = getNodeToEdgesMap(activeTree);
 
-  // Traverse from active node in all directions (i.e., use each edge) and
-  // remember which edges were already visited
+  // Traverse from each new root node in all directions (i.e., use each edge) and
+  // remember which edges were already visited.
   const visitedEdges = {};
   const getEdgeHash = edge => `${edge.source}-${edge.target}`;
 
-  // Mark edges of deleted node as visited
+  // Mark deletedEdges as visited, so they are not traversed.
   deletedEdges.forEach(deletedEdge => {
     visitedEdges[getEdgeHash(deletedEdge)] = true;
   });
@@ -257,10 +256,10 @@ function splitTreeByNodes(
   // The intermediateState is used for the createTree function, which takes
   // care of generating non-colliding tree names, ids and colors
   let intermediateState = state;
-  // For each neighbor of the to-be-deleted node, create a new tree.
-  const cutTrees = neighborIds.map((neighborId, neighborIndex) => {
+  // For each new tree root create a new tree
+  const cutTrees = newTreeRootIds.map((rootNodeId, index) => {
     let newTree;
-    if (neighborIndex === 0) {
+    if (index === 0) {
       // Reuse the first tree
       newTree = {
         branchPoints: [],
@@ -283,7 +282,7 @@ function splitTreeByNodes(
       });
     }
 
-    traverseTree(neighborId, newTree);
+    traverseTree(rootNodeId, newTree);
     return newTree;
   });
 

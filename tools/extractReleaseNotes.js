@@ -16,7 +16,9 @@ const RELEASE_NOTES_REGEX = /Mailable description[^:]*:\r?\n([^]*)/;
     parsedJSON = require(CACHED_RESPONSE_PATH);
   } else {
     // This fetches at most the last 100 closed PRs to avoid additional complexity, which should be enough
-    const res = await fetch("https://api.github.com/repos/scalableminds/webknossos/pulls?state=closed&per_page=100");
+    const res = await fetch(
+      "https://api.github.com/repos/scalableminds/webknossos/pulls?state=closed&per_page=100",
+    );
     parsedJSON = await res.json();
     if (parsedJSON.message) {
       console.log(`Error while fetching from the Github API: ${parsedJSON.message}`);
@@ -24,12 +26,11 @@ const RELEASE_NOTES_REGEX = /Mailable description[^:]*:\r?\n([^]*)/;
     }
   }
 
-  // Sort PRs by merge date
-  parsedJSON.sort((a, b) => Date.parse(b.merged_at) - Date.parse(a.merged_at));
-
   const releaseNotes = parsedJSON
     // Filter PRs that were merged into master and have a PR description
     .filter(pr => pr.merged_at != null && pr.base.ref === "master" && pr.body.length > 0)
+    // Sort PRs by merge date
+    .sort((a, b) => Date.parse(b.merged_at) - Date.parse(a.merged_at))
     // Extract the Mailable description
     .map(pr => {
       const sections = pr.body.split("###");
@@ -45,8 +46,8 @@ const RELEASE_NOTES_REGEX = /Mailable description[^:]*:\r?\n([^]*)/;
     .reduce((result, pr) => `${result}${pr.description}\n(${pr.url})\n\n`, "");
 
   // Write the release notes to a file
-  fs.writeFile("./release_notes.txt", releaseNotes, (err) => {
-    if(err) {
+  fs.writeFile("./release_notes.txt", releaseNotes, err => {
+    if (err) {
       console.log(`Error while saving the release notes: ${err}`);
     }
     console.log("Release notes were saved to release_notes.txt");

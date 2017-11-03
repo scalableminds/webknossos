@@ -1,5 +1,4 @@
 .task-administration {
-
   margin-bottom: @navbar-bottom-offset;
 
   tbody + tbody {
@@ -9,7 +8,6 @@
   .dropdown-menu {
     z-index: 1031; //make sure we are above navbar-fixed-bottom
   }
-
 }
 
 .task-edit-administration {
@@ -23,64 +21,7 @@
   white-space: pre-wrap;
 }
 
-#task-overview {
-
-  svg a:hover {
-    text-decoration: none;
-    pointer-events: all;
-    &[href] {
-      cursor: pointer;
-    }
-  }
-
-  path {
-    fill: none;
-    stroke-width: 2px;
-  }
-
-  text {
-     alignment-baseline: middle;
-     text-anchor: middle;
-     color: white;
-  }
-
-  .overview-options {
-    float: right;
-    margin-right: 15px;
-    margin-top: 15px;
-    width: 250px;
-
-    label {
-      margin-top: 5px;
-    }
-
-    #colorLegend {
-      margin-top: 15px;
-      border-radius: 4px;
-      height: 30px;
-      background: linear-gradient(to right, #a50026 0%,#d73027 10%,#f46d43 20%,#fdae61 30%,#fee08b 40%,#ffffbf 50%,#d9ef8b 60%,#a6d96a 70%,#66bd63 80%,#1a9850 90%,#006837 100%);
-    }
-
-    #rangeSliderLabels {
-      text-align: center;
-      margin-top: 5px;
-
-      #rangeSliderLabel1 {
-        float: left;
-      }
-      #rangeSliderLabel2 {
-        display: inline-block;
-      }
-      #rangeSliderLabel3 {
-        float: right;
-      }
-
-    }
-  }
-}
-
 .task-types-administration {
-
   padding-top: 20px;
 
   h3 {
@@ -100,7 +41,8 @@
 }
 
 .task-type-description {
-  ul, ol {
+  ul,
+  ol {
     padding-left: 1.5em;
     list-style: initial;
   }

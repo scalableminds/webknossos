@@ -9,12 +9,12 @@ import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
 import { OrthoViews, VolumeToolEnum } from "oxalis/constants";
-import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import update from "immutability-helper";
 import { take, put, race, call } from "redux-saga/effects";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import { withoutUpdateTracing } from "../helpers/saveHelpers";
 
 const mockedVolumeLayer = {
   isEmpty: () => false,
@@ -32,10 +32,6 @@ const { saveTracingAsync } = require("oxalis/model/sagas/save_saga");
 const { editVolumeLayerAsync, finishLayer } = require("oxalis/model/sagas/volumetracing_saga");
 const VolumeLayer = require("oxalis/model/volumetracing/volumelayer").default;
 const { defaultState } = require("oxalis/store");
-
-function withoutUpdateTracing(items: Array<UpdateAction>): Array<UpdateAction> {
-  return items.filter(item => item.action !== "updateTracing");
-}
 
 const volumeTracing = {
   type: "volume",
@@ -102,12 +98,13 @@ test("VolumeTracingSaga should do something if changed (saga test)", t => {
   saga.next(newState.tracing);
   const items = execCall(t, saga.next(newState.flycam));
   t.is(withoutUpdateTracing(items).length, 0);
-  t.true(items[0].value.activeCell === ACTIVE_CELL_ID);
+  t.true(items[0].value.activeSegmentId === ACTIVE_CELL_ID);
   expectValueDeepEqual(t, saga.next(items), put(pushSaveQueueAction(items)));
 });
 
 test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
+  saga.next();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
@@ -119,6 +116,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
 
 test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
+  saga.next();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
@@ -135,6 +133,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
 
 test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   const saga = editVolumeLayerAsync();
+  saga.next();
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);

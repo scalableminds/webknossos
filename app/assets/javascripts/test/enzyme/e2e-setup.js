@@ -3,7 +3,6 @@
 import fs from "fs";
 import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
-import jsRoutes from "./jsRoutes";
 
 const requests = [];
 const minimumWait = 10; // ms
@@ -66,7 +65,6 @@ global.localStorage = {
 global.navigator = {
   userAgent: "node.js",
 };
-global.jsRoutes = jsRoutes;
 copyProps(window, global);
 
 function createSnapshotable(wrapper: any) {

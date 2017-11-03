@@ -3,12 +3,13 @@
  */
 package oxalis.cleanup
 
-import scala.concurrent.duration.FiniteDuration
-import com.typesafe.scalalogging.LazyLogging
-import play.api.libs.concurrent.Akka
 import com.scalableminds.util.tools.Fox
-import play.api.libs.concurrent.Execution.Implicits._
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}
+import play.api.libs.concurrent.Akka
+import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.concurrent.duration.FiniteDuration
 
 object CleanUpService extends LazyLogging {
 

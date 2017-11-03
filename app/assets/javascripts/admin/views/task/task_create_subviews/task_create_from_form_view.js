@@ -85,10 +85,10 @@ class TaskCreateFromFormView extends Marionette.View {
     // show a status flash message
     try {
       const method = this.parent.isEditingMode ? "PUT" : "POST";
+      const data = this.parent.isEditingMode ? serializedForm : [serializedForm];
       const response = await Request.sendJSONReceiveJSON(this.model.url(), {
         method,
-        data: serializedForm,
-        params: { type: "default" },
+        data,
       });
       if (this.parent.isEditingMode) {
         app.router.loadURL("/tasks");
@@ -115,6 +115,7 @@ class TaskCreateFromFormView extends Marionette.View {
       data: "amIAnAdmin=true&isActive=true",
       name: "dataSet",
       parentModel: this.model,
+      disabled: this.parent.isEditingMode,
     });
 
     this.showChildView("dataSet", this.dataSetSelectionView);

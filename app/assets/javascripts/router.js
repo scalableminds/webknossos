@@ -9,7 +9,7 @@
 import $ from "jquery";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
+import { APITracingTypeTracingEnum } from "admin/api_flow_types";
 import BaseRouter from "libs/base_router";
 import ReactBackboneWrapper from "libs/react_backbone_wrapper";
 import PaginationCollection from "admin/models/pagination_collection";
@@ -33,7 +33,6 @@ class Router extends BaseRouter {
       "/statistics": "statistics",
       "/tasks": "tasks",
       "/tasks/create": "taskCreate",
-      "/tasks/overview": "taskOverview",
       "/tasks/:id/edit": "taskEdit",
       "/projects": "projects",
       "/projects/create": "projectCreate",
@@ -55,8 +54,6 @@ class Router extends BaseRouter {
       "/scripts/create": "scriptsCreate",
       "/scripts/:id/edit": "scriptsCreate",
       "/spotlight": "spotlight",
-      "/admin/taskTypes": "hideLoadingSpinner",
-      "/workload": "workload",
     };
   }
 
@@ -78,7 +75,7 @@ class Router extends BaseRouter {
   tracingView(type, id) {
     const view = new ReactBackboneWrapper(TracingLayoutView, {
       initialTracingType: type,
-      initialTracingId: id,
+      initialAnnotationId: id,
       initialControlmode: ControlModeEnum.TRACE,
     });
     view.forcePageReload = true;
@@ -87,8 +84,8 @@ class Router extends BaseRouter {
 
   tracingViewPublic(id) {
     const view = new ReactBackboneWrapper(TracingLayoutView, {
-      initialTracingType: SkeletonTracingTypeTracingEnum.View,
-      initialTracingId: id,
+      initialTracingType: APITracingTypeTracingEnum.View,
+      initialAnnotationId: id,
       initialControlmode: ControlModeEnum.VIEW,
     });
     view.forcePageReload = true;
@@ -118,12 +115,8 @@ class Router extends BaseRouter {
 
   datasetAdd() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const DatasetAddView = admin.DatasetAddView;
-
-      const view = new DatasetAddView();
-
+      const view = new ReactBackboneWrapper(admin.DatasetAddView, {});
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 
@@ -184,10 +177,6 @@ class Router extends BaseRouter {
       });
       this.changeView(view);
     });
-  }
-
-  workload() {
-    this.showWithPagination("WorkloadListView", "WorkloadCollection");
   }
 
   taskTypes() {
@@ -263,19 +252,6 @@ class Router extends BaseRouter {
   spotlight() {
     const view = new ReactBackboneWrapper(SpotlightView, {});
     this.changeView(view);
-  }
-
-  taskOverview() {
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskOverviewView = admin.TaskOverviewView;
-      const TaskOverviewCollection = admin.TaskOverviewCollection;
-
-      const collection = new TaskOverviewCollection();
-      const view = new TaskOverviewView({ collection });
-
-      this.changeView(view);
-      this.listenTo(collection, "sync", this.hideLoadingSpinner);
-    });
   }
 
   showWithPagination(view, collection, options = {}) {

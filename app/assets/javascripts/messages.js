@@ -20,14 +20,25 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+  "tracing.no_access": "You are not allowed to access this tracing.",
+  "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
+  "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
+  "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
   "dataset.upload_success": "The dataset was uploaded successfully",
+  "dataset.ndstore_success":
+    "The dataset was successfully added to webKnossos from the specified NDStore.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
+  "dataset.does_not_exist": "Selected dataset doesn't exist!",
+  "dataset.no_data": "No data available! Something seems to be wrong with the dataset.",
+  "dataset.not_imported": "Please double check if you have the dataset imported:",
+  "dataset.changed_without_reload":
+    "Model.fetch was called for a task with another dataset, without reloading the page.",
   "annotation.delete": "Do you really want to delete this annotation?",
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",

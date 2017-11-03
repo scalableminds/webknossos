@@ -1,7 +1,5 @@
 package models.task
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -16,6 +14,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+
+import scala.concurrent.Future
 
 object TaskService
   extends TaskAssignmentSimulation
@@ -117,7 +117,4 @@ object TaskService
     }
     .map(_.toMap[User, (Int, List[Project])])
   }
-
-  def dataSetNamesForTasks(tasks: List[Task])(implicit ctx: DBAccessContext) =
-    Future.traverse(tasks)(_.annotationBase.flatMap(_.dataSetName getOrElse "").futureBox.map(_.toOption))
 }

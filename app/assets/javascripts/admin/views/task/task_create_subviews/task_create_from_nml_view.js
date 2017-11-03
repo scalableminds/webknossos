@@ -51,9 +51,8 @@ class TaskCreateFromNMLView extends Marionette.View {
     if (form.checkValidity()) {
       Toast.info("Uploading NML", false);
 
-      Request.sendMultipartFormReceiveJSON("/api/tasks", {
+      Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFile", {
         data: payload,
-        params: { type: "nml" },
       }).then(task => this.parent.showSaveSuccess(task), () => this.parent.showSaveError());
     }
 

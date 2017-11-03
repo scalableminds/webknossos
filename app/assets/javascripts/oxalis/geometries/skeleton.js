@@ -276,13 +276,13 @@ class Skeleton {
     const diff = cachedDiffTrees(this.prevTracing.trees, skeletonTracing.trees);
 
     for (const update of diff) {
-      switch (update.action) {
+      switch (update.name) {
         case "createNode": {
           this.createNode(update.value.treeId, update.value);
           break;
         }
         case "deleteNode":
-          this.deleteNode(update.value.treeId, update.value.id);
+          this.deleteNode(update.value.treeId, update.value.nodeId);
           break;
         case "createEdge": {
           const tree = skeletonTracing.trees[update.value.treeId];
@@ -311,8 +311,8 @@ class Skeleton {
           const treeId = update.value.id;
           const tree = skeletonTracing.trees[treeId];
           const prevTree = this.prevTracing.trees[treeId];
-          const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.id);
-          const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.id);
+          const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.nodeId);
+          const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.nodeId);
           const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(
             oldBranchPoints,
             newBranchPoints,
@@ -413,7 +413,7 @@ class Skeleton {
       this.createNode(tree.treeId, node);
     }
     for (const branchpoint of tree.branchPoints) {
-      this.updateNodeType(tree.treeId, branchpoint.id, NodeTypes.BRANCH_POINT);
+      this.updateNodeType(tree.treeId, branchpoint.nodeId, NodeTypes.BRANCH_POINT);
     }
     for (const edge of tree.edges) {
       const source = tree.nodes[edge.source];

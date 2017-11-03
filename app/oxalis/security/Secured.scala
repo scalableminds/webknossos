@@ -1,18 +1,9 @@
 package oxalis.security
 
-import scala.concurrent.{Future, Promise}
-
+import akka.actor.Props
+import akka.pattern.after
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mvc.JsonResult
-import models.user.{User, UserService}
-import play.api.mvc._
-import play.api.mvc.BodyParsers
-import play.api.mvc.Results._
-import play.api.i18n.{I18nSupport, Messages}
-import play.api.mvc.Request
-import play.api.{Logger, Play}
-import play.api.Play.current
-import controllers.routes
-import play.api.libs.concurrent.Akka
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import controllers.routes
@@ -20,23 +11,18 @@ import models.user.{User, UserService}
 import net.liftweb.common.{Empty, Full}
 import oxalis.user.{ActivityMonitor, UserActivity}
 import oxalis.view.AuthedSessionData
-import play.api.Play
+import play.api.{Logger, Play}
 import play.api.Play.current
-import play.api.i18n.Messages
+import play.api.http.Status._
+import play.api.i18n.{I18nSupport, Messages}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Results._
 import play.api.mvc.{Request, _}
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import models.team.Role
-import play.api.http.Status._
-import scala.concurrent.duration._
-import scala.util.Success
 
-import akka.actor.Props
-import akka.pattern.after
-import com.newrelic.api.agent.NewRelic
-import play.airbrake.Airbrake
+import scala.concurrent.duration._
+import scala.concurrent.{Future, Promise}
+import scala.util.Success
 
 class AuthenticatedRequest[A](
   val user: User, override val request: Request[A]

@@ -10,7 +10,7 @@ class Comment extends Component {
   }
 
   handleClick = () => {
-    Store.dispatch(setActiveNodeAction(this.props.data.node));
+    Store.dispatch(setActiveNodeAction(this.props.data.nodeId));
   };
 
   ensureVisible() {
@@ -30,14 +30,14 @@ class Comment extends Component {
     return (
       <li
         className={liClassName}
-        id={`comment-tab-node-${data.node}`}
+        id={`comment-tab-node-${data.nodeId}`}
         ref={ref => {
           this.comment = ref;
         }}
       >
         <i className={iClassName} />
         <a href="#jump-to-comment" onClick={this.handleClick}>
-          {`${data.node} - ${data.content}`}
+          {`${data.nodeId} - ${data.content}`}
         </a>
       </li>
     );

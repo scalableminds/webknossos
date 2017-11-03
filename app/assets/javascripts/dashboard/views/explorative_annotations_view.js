@@ -126,11 +126,10 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
-    const controller = jsRoutes.controllers.AnnotationController;
     const url =
       type === "finish"
-        ? controller.finish(tracing.typ, tracing.id).url
-        : controller.reopen(tracing.typ, tracing.id).url;
+        ? `/annotations/${tracing.typ}/${tracing.id}/finish`
+        : `/annotations/${tracing.typ}/${tracing.id}/reopen`;
 
     const newTracing = await Request.receiveJSON(url);
     Toast.messages(newTracing.messages);
@@ -162,17 +161,16 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
       return null;
     }
 
-    const controller = jsRoutes.controllers.AnnotationController;
     const { typ, id } = tracing;
     if (!this.state.shouldShowArchivedTracings) {
       return (
         <div>
-          <a href={controller.trace(typ, id).url}>
+          <a href={`/annotations/${typ}/${id}`}>
             <i className="fa fa-random" />
             <strong>Trace</strong>
           </a>
           <br />
-          <a href={jsRoutes.controllers.AnnotationIOController.download(typ, id).url}>
+          <a href={`/annotations/${typ}/${id}/download`}>
             <i className="fa fa-download" />
             Download
           </a>
@@ -327,7 +325,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         <Column
           title="#"
           dataIndex="id"
-          render={(__, tracing) => FormatUtils.formatHash(tracing.id)}
+          render={(__, tracing: APIAnnotationType) => FormatUtils.formatHash(tracing.id)}
           sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />
@@ -335,7 +333,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           title="Name"
           dataIndex="name"
           sorter={Utils.localeCompareBy("name")}
-          render={(name, tracing) => (
+          render={(name: string, tracing: APIAnnotationType) => (
             <EditableTextLabel
               value={name}
               onChange={newName => this.renameTracing(tracing, newName)}
@@ -344,22 +342,22 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         />
         <Column
           title="Stats"
-          render={(__, tracing) =>
-            tracing.stats && tracing.contentType === "skeletonTracing" ? (
+          render={(__, tracing: APIAnnotationType) =>
+            tracing.stats && tracing.content.typ === "skeleton" ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />
-                  {tracing.stats.numberOfTrees}
+                  {tracing.stats.treeCount}
                 </span>
                 <br />
                 <span title="Nodes">
                   <i className="fa fa-bull" />
-                  {tracing.stats.numberOfNodes}
+                  {tracing.stats.nodeCount}
                 </span>
                 <br />
                 <span title="Edges">
                   <i className="fa fa-arrows-h" />
-                  {tracing.stats.numberOfEdges}
+                  {tracing.stats.edgeCount}
                 </span>
               </div>
             ) : null}
@@ -368,7 +366,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           title="Tags"
           dataIndex="tags"
           width={500}
-          render={(tags, tracing) => (
+          render={(tags: Array<string>, tracing: APIAnnotationType) => (
             <div>
               {tags.map(tag => (
                 <Tag
@@ -402,7 +400,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           title="Actions"
           className="nowrap"
           key="action"
-          render={(__, tracing) => this.renderActions(tracing)}
+          render={(__, tracing: APIAnnotationType) => this.renderActions(tracing)}
         />
       </Table>
     );
@@ -439,10 +437,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         ) : (
           <div className="pull-right">
             <FileUpload
-              url="/admin/nml/upload"
+              url="/annotations/upload"
               accept=".nml, .zip"
               name="nmlFile"
               multiple
+              showUploadList={false}
               onSuccess={this.handleNMLUpload}
               onUploading={() => this.setState({ isUploadingNML: true })}
               onError={() => this.setState({ isUploadingNML: false })}

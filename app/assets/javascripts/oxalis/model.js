@@ -6,17 +6,12 @@
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
-  DatasetType,
   BoundingBoxObjectType,
-  RestrictionsType,
   SettingsType,
-  NodeType,
   EdgeType,
   CommentType,
-  BranchPointType,
-  SkeletonTracingTypeTracingType,
-  VolumeTracingTypeTracingType,
-  TaskType,
+  TracingTypeTracingType,
+  ElementClassType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -29,7 +24,6 @@ import {
   initializeSkeletonTracingAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import { initializeVolumeTracingAction } from "oxalis/model/actions/volumetracing_actions";
-import { initializeReadOnlyTracingAction } from "oxalis/model/actions/readonlytracing_actions";
 import { setTaskAction } from "oxalis/model/actions/task_actions";
 import {
   setPositionAction,
@@ -43,75 +37,68 @@ import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
-import type { Vector3, ControlModeType } from "oxalis/constants";
+import type { Vector3, Point3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
-import update from "immutability-helper";
 import UrlManager from "oxalis/controller/url_manager";
+import { doWithToken } from "admin/admin_rest_api";
+import messages from "messages";
+import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
-type SkeletonContentTreeType = {
+export type ServerNodeType = {
   id: number,
+  position: Vector3,
+  rotation: Vector3,
+  bitDepth: number,
+  viewport: number,
+  resolution: number,
+  radius: number,
+  createdTimestamp: number,
+};
+
+export type ServerBranchPointType = {
+  createdTimestamp: number,
+  nodeId: number,
+};
+
+type ServerSkeletonTracingTreeType = {
+  branchPoints: Array<ServerBranchPointType>,
   color: ?Vector3,
-  name: string,
-  timestamp: number,
   comments: Array<CommentType>,
-  branchPoints: Array<BranchPointType>,
   edges: Array<EdgeType>,
-  nodes: Array<NodeType>,
-};
-
-export type SkeletonContentDataType = {
-  activeNode: null | number,
-  trees: Array<SkeletonContentTreeType>,
-  zoomLevel: number,
-  customLayers: null,
-  zoomLevel: number,
-};
-
-export type VolumeContentDataType = {
-  activeCell: null | number,
-  nextCell: ?number,
-  customLayers: Array<Object>,
-  boundingBox: BoundingBoxObjectType,
   name: string,
-  zoomLevel: number,
+  nodes: Array<ServerNodeType>,
+  treeId: number,
+  createdTimestamp: number,
 };
 
-export type ServerTracing<T> = {
-  actions: Array<any>,
-  content: {
-    boundingBox: BoundingBoxObjectType,
-    contentData: T,
-    contentType: string,
-    dataSet: DatasetType,
-    editPosition: Vector3,
-    editRotation: Vector3,
-    settings: SettingsType,
-  },
-  contentType: string,
-  created: string,
-  dataSetName: string,
-  downloadUrl: string,
-  error?: string,
-  formattedHash: string,
+type ServerTracingBaseType = {
   id: string,
-  name: string,
-  restrictions: RestrictionsType,
-  state: UrlManagerState,
-  stateLabel: string,
-  stats: any,
-  task: TaskType,
-  tracingTime: number,
-  typ: SkeletonTracingTypeTracingType | VolumeTracingTypeTracingType,
-  user: any,
+  boundingBox?: BoundingBoxObjectType,
+  createdTimestamp: number,
+  editPosition: Point3,
+  editRotation: Point3,
+  error?: string,
   version: number,
-  isPublic: boolean,
-  tags: Array<string>,
-  description: string,
+  zoomLevel: number,
 };
+
+export type ServerSkeletonTracingType = ServerTracingBaseType & {
+  activeNodeId?: number,
+  trees: Array<ServerSkeletonTracingTreeType>,
+};
+
+export type ServerVolumeTracingType = ServerTracingBaseType & {
+  activeSegmentId?: number,
+  elementClass: ElementClassType,
+  fallbackLayer?: string,
+  largestSegmentId: number,
+};
+
+type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
 
 // TODO: Non-reactive
 export class OxalisModel {
@@ -123,76 +110,76 @@ export class OxalisModel {
   };
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>;
 
   async fetch(
-    tracingType: SkeletonTracingTypeTracingType,
-    tracingId: string,
+    tracingType: TracingTypeTracingType,
+    annotationId: string,
     controlMode: ControlModeType,
     initialFetch: boolean,
   ) {
     Store.dispatch(setControlModeAction(controlMode));
 
-    let infoUrl;
+    let annotation: ?APIAnnotationType;
+    let datasetName;
     if (controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
       const isReadOnly = window.location.pathname.endsWith("/readOnly");
       const readOnlyPart = isReadOnly ? "readOnly/" : "";
-      infoUrl = `/annotations/${tracingType}/${tracingId}/${readOnlyPart}info`;
-    } else {
-      infoUrl = `/annotations/${tracingType}/${tracingId}/info`;
-    }
+      const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+      annotation = await Request.receiveJSON(infoUrl);
+      datasetName = annotation.dataSetName;
 
-    const tracing: ServerTracing<*> = await Request.receiveJSON(infoUrl);
-
-    let error;
-    const dataset = tracing.content.dataSet;
-    if (tracing.error) {
-      ({ error } = tracing);
-    } else if (!dataset) {
-      error = "Selected dataset doesn't exist";
-    } else if (!dataset.dataLayers) {
-      if (dataset.name) {
-        error = `Please, double check if you have the dataset '${dataset.name}' imported.`;
-      } else {
-        error = "Please, make sure you have a dataset imported.";
+      let error;
+      if (annotation.error) {
+        ({ error } = annotation);
+      } else if (!annotation.restrictions.allowAccess) {
+        error = messages["tracing.no_access"];
       }
+
+      if (error) {
+        Toast.error(error);
+        throw this.HANDLED_ERROR;
+      }
+
+      ErrorHandling.assertExtendContext({
+        task: annotation.id,
+      });
+
+      Store.dispatch(setTaskAction(annotation.task));
+    } else {
+      // In View mode, the annotationId is actually the dataSetName
+      // as there is no annotation and no tracing!
+      datasetName = annotationId;
     }
 
-    if (error) {
-      Toast.error(error);
-      throw this.HANDLED_ERROR;
-    }
+    await this.initializeDataset(datasetName);
 
-    if (!tracing.restrictions.allowAccess) {
-      error = "You are not allowed to access this tracing";
-      throw this.HANDLED_ERROR;
-    }
-
-    // Make sure subsequent fetch calls are always for the same dataset
-    if (!_.isEmpty(this.binary)) {
-      ErrorHandling.assert(
-        _.isEqual(dataset, Store.getState().dataset),
-        "Model.fetch was called for a task with another dataset, without reloading the page.",
+    // Fetch the actual tracing from the datastore, if there is an annotation
+    let tracing: ?ServerTracingType;
+    if (annotation != null) {
+      // Make flow happy
+      const nonNullAnnotation = annotation;
+      tracing = await doWithToken(token =>
+        Request.receiveJSON(
+          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content
+            .typ}/${nonNullAnnotation.content.id}?token=${token}`,
+        ),
       );
+      tracing.id = annotation.content.id;
     }
-
-    ErrorHandling.assertExtendContext({
-      task: tracing.id,
-      dataSet: dataset.name,
-    });
-
-    Store.dispatch(setDatasetAction(dataset));
-    Store.dispatch(setTaskAction(tracing.task));
 
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
     if (initialFetch) {
       this.initializeModel(tracing);
+      if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
     }
-    this.initializeTracing(tracing, initialFetch);
+    // There is no need to initialize the tracing if there is no tracing (View mode).
+    if (annotation != null && tracing != null) {
+      this.initializeTracing(annotation, tracing);
+    }
 
-    return tracing;
+    this.applyState(UrlManager.initialState, tracing);
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -215,52 +202,68 @@ export class OxalisModel {
     return { preferredMode, allowedModes };
   }
 
-  initializeTracing(
-    tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>,
-    initialFetch: boolean,
-  ) {
-    const { allowedModes, preferredMode } = this.determineAllowedModes(tracing.content.settings);
-    _.extend(tracing.content.settings, { allowedModes, preferredMode });
+  initializeTracing(annotation: APIAnnotationType, tracing: ServerTracingType) {
+    // This method is not called for the View mode
+    const { allowedModes, preferredMode } = this.determineAllowedModes(annotation.settings);
+    _.extend(annotation.settings, { allowedModes, preferredMode });
 
-    const isVolume = tracing.content.settings.allowedModes.includes("volume");
+    const isVolume = annotation.content.typ === "volume";
     const controlMode = Store.getState().temporaryConfiguration.controlMode;
     if (controlMode === ControlModeEnum.TRACE) {
       if (isVolume) {
         ErrorHandling.assert(
           this.getSegmentationBinary() != null,
-          "Volume is allowed, but segmentation does not exist",
+          messages["tracing.volume_missing_segmentation"],
         );
-        const volumeTracing: ServerTracing<VolumeContentDataType> = (tracing: ServerTracing<any>);
-        Store.dispatch(initializeVolumeTracingAction(volumeTracing));
+        const volumeTracing: ServerVolumeTracingType = (tracing: any);
+        Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
       } else {
-        const skeletonTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<
-          any,
-        >);
-        Store.dispatch(initializeSkeletonTracingAction(skeletonTracing));
+        const skeletonTracing: ServerSkeletonTracingType = (tracing: any);
+        Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }
-    } else {
-      const readOnlyTracing: ServerTracing<SkeletonContentDataType> = (tracing: ServerTracing<any>);
-      Store.dispatch(initializeReadOnlyTracingAction(readOnlyTracing));
-    }
-
-    if (initialFetch) {
-      Store.dispatch(setZoomStepAction(tracing.content.contentData.zoomLevel));
     }
 
     // Initialize 'flight', 'oblique' or 'orthogonal'/'volume' mode
     if (allowedModes.length === 0) {
-      Toast.error("There was no valid allowed tracing mode specified.");
+      Toast.error(messages["tracing.no_allowed_mode"]);
     } else {
       const mode = preferredMode || UrlManager.initialState.mode || allowedModes[0];
       Store.dispatch(setViewModeAction(mode));
     }
-
-    this.applyState(UrlManager.initialState, tracing);
   }
 
-  initializeModel(tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>) {
-    const dataset = tracing.content.dataSet;
-    const { dataStore } = dataset;
+  async initializeDataset(datasetName: string) {
+    const dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
+
+    let error;
+    if (!dataset) {
+      error = messages["dataset.does_not_exist"];
+    } else if (!dataset.dataSource.dataLayers) {
+      error = `${messages["dataset.not_imported"]} '${datasetName}'`;
+    }
+
+    if (error) {
+      Toast.error(error);
+      throw this.HANDLED_ERROR;
+    }
+
+    // Make sure subsequent fetch calls are always for the same dataset
+    if (!_.isEmpty(this.binary)) {
+      ErrorHandling.assert(
+        _.isEqual(dataset, Store.getState().dataset),
+        messages["dataset.changed_without_reload"],
+      );
+    }
+
+    ErrorHandling.assertExtendContext({
+      dataSet: dataset.dataSource.id.name,
+    });
+
+    Store.dispatch(setDatasetAction(dataset));
+  }
+
+  initializeModel(tracing: ?ServerTracingType) {
+    const { dataStore } = Store.getState().dataset;
 
     const LayerClass = (() => {
       switch (dataStore.typ) {
@@ -269,36 +272,29 @@ export class OxalisModel {
         case "ndstore":
           return NdStoreLayer;
         default:
-          throw new Error(`Unknown datastore type: ${dataStore.typ}`);
+          throw new Error(`${messages["datastore.unknown_type"]} ${dataStore.typ}`);
       }
     })();
 
-    const layers = this.getLayerInfos(tracing.content.contentData.customLayers).map(
+    const layers = this.getLayerInfos(tracing).map(
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
-
-    let maxZoomStep = -Infinity;
-
     for (const layer of layers) {
       const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
-      this.binary[layer.name] = new Binary(tracing, layer, maxLayerZoomStep, this.connectionInfo);
-      maxZoomStep = Math.max(maxZoomStep, maxLayerZoomStep);
+      this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
     }
 
     this.buildMappingsObject();
 
     if (this.getColorBinaries().length === 0) {
-      Toast.error("No data available! Something seems to be wrong with the dataset.");
+      Toast.error(messages["dataset.no_data"]);
       throw this.HANDLED_ERROR;
     }
 
     this.computeBoundaries();
-
-    // TODO: remove
-    this.tracing = tracing;
   }
 
   // For now, since we have no UI for this
@@ -332,35 +328,53 @@ export class OxalisModel {
     return this.binary[name];
   }
 
-  getLayerInfos(userLayers: ?Array<Object>) {
-    // Overwrite or extend layers with userLayers
-    const dataset = Store.getState().dataset;
-    let layers = dataset == null ? [] : _.clone(dataset.dataLayers);
-    if (userLayers == null) {
+  getLayerInfos(tracing: ?ServerTracingType) {
+    // Overwrite or extend layers with volumeTracingLayer
+    let layers = _.clone(Store.getState().dataset.dataLayers);
+    if (tracing == null || tracing.elementClass == null) {
       return layers;
     }
 
-    for (const userLayer of userLayers) {
-      // Find the fallback layer which should be used as the foundation of the userLayer
-      const existingLayerIndex = _.findIndex(
-        layers,
-        layer => layer.name === Utils.__guard__(userLayer.fallback, x => x.layerName),
-      );
-      const existingLayer = layers[existingLayerIndex];
+    // This code will only be executed for volume tracings as only those have a dataLayer.
+    // The tracing always contains the layer information for the user segmentation.
+    // layers (dataset.dataLayers) contains information about all existing layers of the dataset.
+    // Two possible cases:
+    // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer.
+    // 2) Segmentation exists: In that case layers already contains dataLayer and the fallbackLayer
+    //    property specifies its name, to be able to merge the two layers
+    const fallbackLayer = tracing.fallbackLayer != null ? tracing.fallbackLayer : null;
+    const existingLayerIndex = _.findIndex(layers, layer => layer.name === fallbackLayer);
+    const existingLayer = layers[existingLayerIndex];
 
-      if (existingLayer != null) {
-        layers[existingLayerIndex] = update(userLayer, {
-          $merge: { mappings: existingLayer.mappings },
-        });
-      } else {
-        // Remove other segmentation layers, since we are adding a new one.
-        // This is a temporary workaround. In the long term we want to support
-        // multiple segmentation layers.
-        layers = layers.filter(layer => layer.category !== "segmentation");
-        layers.push(userLayer);
-      }
+    const tracingLayer = {
+      name: tracing.id,
+      category: "segmentation",
+      boundingBox: {
+        topLeft: [
+          tracing.boundingBox.topLeft[0],
+          tracing.boundingBox.topLeft[1],
+          tracing.boundingBox.topLeft[2],
+        ],
+        width: tracing.boundingBox.width,
+        height: tracing.boundingBox.height,
+        depth: tracing.boundingBox.depth,
+      },
+      resolutions: [1],
+      elementClass: tracing.elementClass,
+      mappings:
+        existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],
+      largestSegmentId: tracing.largestSegmentId,
+    };
+
+    if (existingLayer != null) {
+      layers[existingLayerIndex] = tracingLayer;
+    } else {
+      // Remove other segmentation layers, since we are adding a new one.
+      // This is a temporary workaround. In the long term we want to support
+      // multiple segmentation layers.
+      layers = layers.filter(layer => layer.category !== "segmentation");
+      layers.push(tracingLayer);
     }
-
     return layers;
   }
 
@@ -393,16 +407,26 @@ export class OxalisModel {
     }
   }
 
-  applyState(
-    state: UrlManagerState,
-    tracing: ServerTracing<SkeletonContentDataType | VolumeContentDataType>,
-  ) {
-    Store.dispatch(setPositionAction(state.position || tracing.content.editPosition));
+  getDatasetCenter(): Vector3 {
+    return [
+      (this.lowerBoundary[0] + this.upperBoundary[0]) / 2,
+      (this.lowerBoundary[1] + this.upperBoundary[1]) / 2,
+      (this.lowerBoundary[2] + this.upperBoundary[2]) / 2,
+    ];
+  }
+
+  applyState(state: UrlManagerState, tracing: ?ServerTracingType) {
+    // If there is no editPosition (e.g. when viewing a dataset), compute the center of the dataset
+    const editPosition = tracing != null ? tracing.editPosition : this.getDatasetCenter();
+    const position = state.position || editPosition;
+    Store.dispatch(setPositionAction(position));
+
     if (state.zoomStep != null) {
       Store.dispatch(setZoomStepAction(state.zoomStep));
     }
 
-    const rotation = state.rotation || tracing.content.editRotation;
+    const editRotation = tracing != null ? tracing.editRotation : null;
+    const rotation = state.rotation || editRotation;
     if (rotation != null) {
       Store.dispatch(setRotationAction(rotation));
     }

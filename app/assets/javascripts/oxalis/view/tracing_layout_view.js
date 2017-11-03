@@ -15,14 +15,14 @@ import TracingView from "oxalis/view/tracing_view";
 import enUS from "antd/lib/locale-provider/en_US";
 import { LocaleProvider, Layout, Icon } from "antd";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
 
 const { Header, Sider } = Layout;
 
 type Props = {
-  initialTracingType: SkeletonTracingTypeTracingType,
-  initialTracingId: string,
+  initialTracingType: TracingTypeTracingType,
+  initialAnnotationId: string,
   initialControlmode: ControlModeType,
 };
 
@@ -52,7 +52,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
           <div>
             <OxalisController
               initialTracingType={this.props.initialTracingType}
-              initialTracingId={this.props.initialTracingId}
+              initialAnnotationId={this.props.initialAnnotationId}
               initialControlmode={this.props.initialControlmode}
               ref={ref => {
                 app.oxalis = ref;

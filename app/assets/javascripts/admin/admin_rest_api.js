@@ -11,6 +11,9 @@ import type {
   APIProjectType,
   APITaskType,
   APIAnnotationType,
+  APIDatastoreType,
+  NDStoreConfigType,
+  DatasetConfigType,
   APIRoleType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
@@ -196,6 +199,35 @@ export async function deleteProject(projectName: string): Promise<void> {
   });
 }
 
+// ### Do with userToken
+
+let tokenRequestPromise;
+function requestUserToken(): Promise<string> {
+  if (tokenRequestPromise) {
+    return tokenRequestPromise;
+  }
+
+  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
+    tokenRequestPromise = null;
+    return tokenObj.token;
+  });
+
+  return tokenRequestPromise;
+}
+
+let tokenPromise;
+export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  if (!tokenPromise) tokenPromise = requestUserToken();
+  return tokenPromise.then(fn).catch(error => {
+    if (error.status === 403) {
+      console.warn("Token expired. Requesting new token...");
+      tokenPromise = requestUserToken();
+      return doWithToken(fn);
+    }
+    throw error;
+  });
+}
+
 export async function createProject(project: APIProjectType): Promise<APIProjectType> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
@@ -286,4 +318,30 @@ export async function deleteAnnotation(annotationId: string): Promise<APIAnnotat
   return Request.receiveJSON(`/annotations/Task/${annotationId}`, {
     method: "DELETE",
   });
+}
+
+// #### Datastores
+export async function getDatastores(): Promise<Array<APIDatastoreType>> {
+  const datastores = await Request.receiveJSON("/api/datastores");
+  assertResponseLimit(datastores);
+
+  return datastores;
+}
+
+// ### Datasets
+export async function addNDStoreDataset(
+  ndstoreConfig: NDStoreConfigType,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore", {
+    data: ndstoreConfig,
+  });
+}
+
+export async function addDataset(datatsetConfig: DatasetConfigType): Promise<APIAnnotationType> {
+  return doWithToken(token =>
+    Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
+      data: datatsetConfig,
+      host: datatsetConfig.datastore,
+    }),
+  );
 }

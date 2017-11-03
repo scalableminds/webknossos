@@ -1,9 +1,9 @@
 package models.basics
 
-import play.api.libs.concurrent.Akka
-import play.api.Play
 import akka.agent.Agent
-      import play.api.libs.concurrent.Execution.Implicits._
+import play.api.Play
+import play.api.libs.concurrent.Akka
+import play.api.libs.concurrent.Execution.Implicits._
 /**
  * Company: scalableminds
  * User: tmbo

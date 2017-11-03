@@ -19,7 +19,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
       <Menu>
         <Menu.Item key="existing">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=true`}
+            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=true`}
             title="Create volume tracing"
           >
             Use Existing Segmentation Layer
@@ -27,7 +27,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         </Menu.Item>
         <Menu.Item key="new">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=false`}
+            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=false`}
             title="Create volume tracing"
           >
             Use a New Segmentation Layer
@@ -66,10 +66,10 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
               <img src="/assets/images/eye.svg" alt="eye icon" /> View
             </a>
             <a
-              href={`/datasets/${dataset.name}/trace?typ=skeletonTracing`}
+              href={`/datasets/${dataset.name}/trace?typ=skeleton`}
               title="Create skeleton tracing"
             >
-              <img src="/assets/images/skeleton.svg" alt="skeleton iocn" /> Start Skeleton Tracing
+              <img src="/assets/images/skeleton.svg" alt="skeleton icon" /> Start Skeleton Tracing
             </a>
             {dataset.dataStore.typ !== "ndstore" ? createVolumeTracingMenu : null}
           </div>

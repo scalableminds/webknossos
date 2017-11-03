@@ -1,33 +1,35 @@
 package models.annotation.handler
 
-import net.liftweb.common.Box
-import models.task.{TaskDAO, Task}
-import models.user.User
-import models.annotation.{CompoundAnnotation, AnnotationRestrictions, TemporaryAnnotation}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.tools.{FoxImplicits, Fox}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{Annotation, AnnotationMerger, AnnotationRestrictions, AnnotationType}
+import models.task.TaskDAO
 import models.team.Role
+import models.user.User
+import play.api.libs.concurrent.Execution.Implicits._
+import reactivemongo.bson.BSONObjectID
 
 object TaskInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  import com.scalableminds.util.mvc.BoxImplicits._
-
-  type AType = TemporaryAnnotation
-
-  def taskAnnotationRestrictions(task: Task) =
-    new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) =
-        user.flatMap(_.roleInTeam(task.team)) == Some(Role.Admin)
-    }
-
-  def provideAnnotation(taskId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[TemporaryAnnotation] = {
+  def provideAnnotation(taskId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
-      annotation <- CompoundAnnotation.createFromTask(task, user.map(_._id)) ?~> "task.noAnnotation"
+      annotations <- task.annotations
+      finishedAnnotations = annotations.filter(_.state.isFinished)
+      _ <- assertAllOnSameDataset(finishedAnnotations)
+      _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
+      dataSetName = finishedAnnotations.head.dataSetName
+      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user.map(_._id),
+        dataSetName, task.team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+    } yield mergedAnnotation
+
+  def restrictionsFor(taskId: String)(implicit ctx: DBAccessContext) =
+    for {
+      task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
     } yield {
-      annotation.copy(restrictions = taskAnnotationRestrictions(task))
+      new AnnotationRestrictions {
+        override def allowAccess(user: Option[User]) =
+          user.flatMap(_.roleInTeam(task.team)) == Some(Role.Admin)
+      }
     }
-  }
 }

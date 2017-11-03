@@ -1,15 +1,14 @@
 package models.basics
 
 import com.scalableminds.util.reactivemongo.{SecuredMongoDAO, UnsecuredMongoDAO}
-import reactivemongo.bson.BSONObjectID
 import com.scalableminds.util.tools.Fox
-import scala.util.Success
-import scala.concurrent.Future
-
 import net.liftweb.common.Empty
-import scala.concurrent.ExecutionContext.Implicits.global
-
 import play.modules.reactivemongo.ReactiveMongoApi
+import reactivemongo.bson.BSONObjectID
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.Success
 
 /**
  * Company: scalableminds

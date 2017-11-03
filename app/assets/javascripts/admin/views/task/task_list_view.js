@@ -233,7 +233,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                     <br />
                     {task.status.completed > 0 ? (
                       <a
-                        href={`/api/tasks/${task.id}/download`}
+                        href={`/annotations/CompoundTask/${task.id}/download`}
                         title="Download all Finished Tracings"
                       >
                         <Icon type="download" />Download

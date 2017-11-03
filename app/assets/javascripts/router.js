@@ -9,7 +9,7 @@
 import $ from "jquery";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
-import { SkeletonTracingTypeTracingEnum } from "oxalis/store";
+import { APITracingTypeTracingEnum } from "admin/api_flow_types";
 import BaseRouter from "libs/base_router";
 import ReactBackboneWrapper from "libs/react_backbone_wrapper";
 
@@ -74,7 +74,7 @@ class Router extends BaseRouter {
   tracingView(type, id) {
     const view = new ReactBackboneWrapper(TracingLayoutView, {
       initialTracingType: type,
-      initialTracingId: id,
+      initialAnnotationId: id,
       initialControlmode: ControlModeEnum.TRACE,
     });
     view.forcePageReload = true;
@@ -83,8 +83,8 @@ class Router extends BaseRouter {
 
   tracingViewPublic(id) {
     const view = new ReactBackboneWrapper(TracingLayoutView, {
-      initialTracingType: SkeletonTracingTypeTracingEnum.View,
-      initialTracingId: id,
+      initialTracingType: APITracingTypeTracingEnum.View,
+      initialAnnotationId: id,
       initialControlmode: ControlModeEnum.VIEW,
     });
     view.forcePageReload = true;

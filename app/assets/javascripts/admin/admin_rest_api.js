@@ -209,6 +209,35 @@ export async function deleteProject(projectName: string): Promise<void> {
   });
 }
 
+// ### Do with userToken
+
+let tokenRequestPromise;
+function requestUserToken(): Promise<string> {
+  if (tokenRequestPromise) {
+    return tokenRequestPromise;
+  }
+
+  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
+    tokenRequestPromise = null;
+    return tokenObj.token;
+  });
+
+  return tokenRequestPromise;
+}
+
+let tokenPromise;
+export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  if (!tokenPromise) tokenPromise = requestUserToken();
+  return tokenPromise.then(fn).catch(error => {
+    if (error.status === 403) {
+      console.warn("Token expired. Requesting new token...");
+      tokenPromise = requestUserToken();
+      return doWithToken(fn);
+    }
+    throw error;
+  });
+}
+
 export async function createProject(project: APIProjectType): Promise<APIProjectType> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
@@ -282,26 +311,19 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
 }
 
 // TODO fix return types
-export async function createTask(task: NewTaskType): Promise<*> {
-  return Request.sendJSONReceiveJSON("/api/tasks?type=default", {
-    data: task,
+export async function createTasks(tasks: Array<NewTaskType>): Promise<Array<*>> {
+  return Request.sendJSONReceiveJSON("/api/tasks", {
+    data: tasks,
   });
 }
 
 // TODO fix return types
 export async function createTaskFromNML(task: NewTaskType): Promise<*> {
-  return Request.sendMultipartFormReceiveJSON("/api/tasks?type=nml", {
+  return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFile", {
     data: {
       nmlFile: task.nmlFile,
       formJSON: JSON.stringify(task),
     },
-  });
-}
-
-// TODO fix return types
-export async function createTasksFromBulk(tasks: Array<NewTaskType>): Promise<*> {
-  return Request.sendJSONReceiveJSON("/api/tasks?type=bulk", {
-    data: tasks,
   });
 }
 
@@ -361,11 +383,12 @@ export async function addNDStoreDataset(
 }
 
 export async function addDataset(datatsetConfig: DatasetConfigType): Promise<APIAnnotationType> {
-  const response = await Request.receiveJSON("/api/dataToken/generate");
-  return Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${response.token}`, {
-    data: datatsetConfig,
-    host: datatsetConfig.datastore,
-  });
+  return doWithToken(token =>
+    Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
+      data: datatsetConfig,
+      host: datatsetConfig.datastore,
+    }),
+  );
 }
 
 // #### Datastores

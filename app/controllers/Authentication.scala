@@ -3,9 +3,6 @@ package controllers
 import java.net.URLEncoder
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
-import akka.actor.ActorRef
 import com.scalableminds.util.mail._
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
@@ -18,7 +15,6 @@ import oxalis.mail.DefaultMails
 import oxalis.security.Secured
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.{ProvidesUnauthorizedSessionData, SessionData}
-import play.api.Play.current
 import play.api._
 import play.api.data.Forms._
 import play.api.data._
@@ -27,6 +23,8 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Action
 import views.html
+
+import scala.concurrent.Future
 
 class Authentication @Inject()(val messagesApi: MessagesApi, val configuration: Configuration)
   extends Controller

@@ -1,11 +1,11 @@
 package oxalis.mvc
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.api.libs.json.Json.JsValueWrapper
+
+import scala.concurrent.Future
 
 object FilterableJson
 

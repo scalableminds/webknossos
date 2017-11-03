@@ -18,6 +18,7 @@ import {
   getSkeletonTracing,
   getActiveNodeFromTree,
   findTreeByNodeId,
+  getNodeToEdgesMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type {
@@ -142,20 +143,7 @@ export function deleteNode(
         // Use split-algorithmus. If we delete a node which is only connected via one edge,
         // this algorithmus will only produce one tree (which reuses the old oen)
 
-        // Build a hashmap which contains for each node all edges leading/leaving into/from the node
-        const nodeToEdgesMap: { [number]: Array<EdgeType> } = {};
-        activeTree.edges.forEach(edge => {
-          if (nodeToEdgesMap[edge.source]) {
-            nodeToEdgesMap[edge.source].push(edge);
-          } else {
-            nodeToEdgesMap[edge.source] = [edge];
-          }
-          if (nodeToEdgesMap[edge.target]) {
-            nodeToEdgesMap[edge.target].push(edge);
-          } else {
-            nodeToEdgesMap[edge.target] = [edge];
-          }
-        });
+        const nodeToEdgesMap = getNodeToEdgesMap(activeTree);
 
         // Traverse from active node in all directions (i.e., use each edge) and
         // remember which edges were already visited
@@ -230,7 +218,7 @@ export function deleteNode(
         // Write branchpoints into correct trees
         activeTree.branchPoints.forEach(branchpoint => {
           cutTrees.forEach(newTree => {
-            if (newTree.nodes[branchpoint.id]) {
+            if (newTree.nodes[branchpoint.nodeId]) {
               newTree.branchPoints.push(branchpoint);
             }
           });
@@ -239,7 +227,7 @@ export function deleteNode(
         // Write comments into correct trees
         activeTree.comments.forEach(comment => {
           cutTrees.forEach(newTree => {
-            if (newTree.nodes[comment.node]) {
+            if (newTree.nodes[comment.nodeId]) {
               newTree.comments.push(comment);
             }
           });
@@ -278,13 +266,13 @@ export function createBranchPoint(
   if (branchPointsAllowed && allowUpdate) {
     const doesBranchPointExistAlready = _.some(
       tree.branchPoints,
-      branchPoint => branchPoint.id === node.id,
+      branchPoint => branchPoint.nodeId === node.id,
     );
 
     if (!doesBranchPointExistAlready) {
       // create new branchpoint
       return Maybe.Just({
-        id: node.id,
+        nodeId: node.id,
         timestamp,
       });
     }
@@ -309,7 +297,7 @@ export function deleteBranchPoint(
     if (branchPoint) {
       // Delete branchpoint
       const newBranchPoints = _.without(skeletonTracing.trees[treeId].branchPoints, branchPoint);
-      return Maybe.Just([newBranchPoints, treeId, branchPoint.id]);
+      return Maybe.Just([newBranchPoints, treeId, branchPoint.nodeId]);
     }
   }
   return Maybe.Nothing();
@@ -371,7 +359,8 @@ export function deleteTree(
         // just set the last tree to be the active one
         const maxTreeId = getMaximumTreeId(newTrees);
         newActiveTreeId = maxTreeId;
-        newActiveNodeId = _.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
+        // Object.keys returns strings and the newActiveNodeId should be an integer
+        newActiveNodeId = +_.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
       }
       const newMaxNodeId = getMaximumNodeId(newTrees);
 
@@ -432,10 +421,10 @@ export function createComment(
   if (allowUpdate) {
     // Gather all comments other than the activeNode's comments
     const comments = tree.comments;
-    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.node !== node.id);
+    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.nodeId !== node.id);
 
     const newComment: CommentType = {
-      node: node.id,
+      nodeId: node.id,
       content: commentText,
     };
 
@@ -455,7 +444,7 @@ export function deleteComment(
 
   if (allowUpdate) {
     const comments = tree.comments;
-    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.node !== node.id);
+    const commentsWithoutActiveNodeComment = comments.filter(comment => comment.nodeId !== node.id);
 
     return Maybe.Just(commentsWithoutActiveNodeComment);
   }

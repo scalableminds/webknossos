@@ -20,7 +20,7 @@ import {
   getScripts,
   getTaskTypes,
   getTask,
-  createTask,
+  createTasks,
   createTaskFromNML,
   updateTask,
 } from "admin/admin_rest_api";
@@ -135,7 +135,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
       const task = await getTask(this.props.taskId);
       const defaultValues = Object.assign({}, task, {
         taskTypeId: task.type.id,
-        boundingBox: task.boundingBoxVec6,
+        boundingBox: task.boundingBox ? task.boundingBoxVec6 : null,
         scriptId: task.script ? task.script.id : null,
       });
       this.props.form.setFieldsValue(defaultValues);
@@ -156,7 +156,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
         if (this.props.taskId) {
-          debugger;
           await updateTask(this.props.taskId, formValues);
           app.router.loadURL("/tasks");
         } else {
@@ -173,7 +172,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
             if (this.state.isNMLSpecification) {
               response = await createTaskFromNML(formValues);
             } else {
-              response = await createTask(formValues);
+              response = await createTasks([formValues]);
             }
             handleTaskCreationResponse(response.items);
           } finally {

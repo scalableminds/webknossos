@@ -2,7 +2,7 @@
 import _ from "lodash";
 import React from "react";
 import { Form, Input, Button, Card, Upload, Icon, Spin, Progress } from "antd";
-import { createTasksFromBulk } from "admin/admin_rest_api";
+import { createTasks } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/views/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
@@ -205,7 +205,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
     for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
       const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
       // eslint-disable-next-line no-await-in-loop
-      const response = await createTasksFromBulk(subArray);
+      const response = await createTasks(subArray);
       responses = responses.concat(response.items);
       this.setState({
         tasksProcessed: i + NUM_TASKS_PER_BATCH,

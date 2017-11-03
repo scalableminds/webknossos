@@ -38,7 +38,7 @@ import type {
   DatasetConfigurationType,
   TreeMapType,
   TracingType,
-  SkeletonTracingTypeTracingType,
+  TracingTypeTracingType,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
@@ -55,6 +55,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
+import { doWithToken } from "admin/admin_rest_api";
 import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
 import type { ToastStyleType } from "libs/toast";
 
@@ -208,7 +209,7 @@ class TracingApi {
           assertExists(tree, `Couldn't find node ${nodeId}.`);
         }
         // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
-        const comment = tree.comments.find(__ => __.node === nodeId);
+        const comment = tree.comments.find(__ => __.nodeId === nodeId);
         return comment != null ? comment.content : null;
       })
       .getOrElse(null);
@@ -273,9 +274,9 @@ class TracingApi {
    */
   async finishAndGetNextTask() {
     const state = Store.getState();
-    const { tracingType, tracingId } = state.tracing;
+    const { tracingType, annotationId } = state.tracing;
     const task = state.task;
-    const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
+    const finishUrl = `/annotations/${tracingType}/${annotationId}/finish`;
     const requestTaskUrl = "/user/tasks/request";
 
     await Model.save();
@@ -315,13 +316,13 @@ class TracingApi {
    *
    */
   async restart(
-    newTracingType: SkeletonTracingTypeTracingType,
-    newTracingId: string,
+    newTracingType: TracingTypeTracingType,
+    newAnnotationId: string,
     newControlMode: ControlModeType,
   ) {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
-    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
+    await Model.fetch(newTracingType, newAnnotationId, newControlMode, false);
     Store.dispatch(discardSaveQueueAction());
     Store.dispatch(wkReadyAction());
     UrlManager.updateUnthrottled(true);
@@ -614,7 +615,7 @@ class DataApi {
     const dataset = Store.getState().dataset;
     const layer = this.__getLayer(layerName);
 
-    return layer.layer.doWithToken(token => {
+    return doWithToken(token => {
       const downloadUrl =
         `${dataset.dataStore
           .url}/data/datasets/${dataset.name}/layers/${layer.name}/data?resolution=0&` +
@@ -627,6 +628,8 @@ class DataApi {
         `depth=${bottomRight[2] - topLeft[2]}`;
 
       window.open(downloadUrl);
+      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
+      return Promise.resolve();
     });
   }
 

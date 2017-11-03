@@ -3,11 +3,6 @@ package oxalis.mturk
 import java.nio.file.Paths
 import java.util.UUID
 
-import scala.collection.JavaConversions._
-import scala.collection.JavaConverters._
-import scala.concurrent._
-import scala.concurrent.duration._
-
 import com.amazonaws.mturk.addon.HITQuestion
 import com.amazonaws.mturk.requester._
 import com.amazonaws.mturk.service.axis.RequesterService
@@ -23,6 +18,11 @@ import models.task._
 import net.liftweb.common.{Empty, Failure, Full}
 import play.api.Play._
 import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.collection.JavaConversions._
+import scala.collection.JavaConverters._
+import scala.concurrent._
+import scala.concurrent.duration._
 
 /**
   * Service handling all the communication with the mturk api.

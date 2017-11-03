@@ -46,12 +46,16 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
     }
 
     case "SET_DATASET": {
+      const dataset = {
+        dataStore: action.dataset.dataStore,
+        name: action.dataset.dataSource.id.name,
+        scale: action.dataset.dataSource.scale,
+        dataLayers: action.dataset.dataSource.dataLayers,
+      };
+
       // set defaults for every data layer if not yet present
       if (_.isEmpty(state.datasetConfiguration.layers)) {
-        const colorLayers = _.filter(
-          action.dataset.dataLayers,
-          layer => layer.category === "color",
-        );
+        const colorLayers = _.filter(dataset.dataLayers, layer => layer.category === "color");
         const layerSettingsDefaults = _.transform(
           colorLayers,
           (result, layer) => {
@@ -66,12 +70,12 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
 
         return update(state, {
           datasetConfiguration: { layers: { $set: layerSettingsDefaults } },
-          dataset: { $set: action.dataset },
+          dataset: { $set: dataset },
         });
       }
 
       return update(state, {
-        dataset: { $set: action.dataset },
+        dataset: { $set: dataset },
       });
     }
 

@@ -158,7 +158,7 @@ class Authentication @Inject() (
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
-            } yield result
+            } yield Ok.withCookies(value)//result
             case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
         }.recover {

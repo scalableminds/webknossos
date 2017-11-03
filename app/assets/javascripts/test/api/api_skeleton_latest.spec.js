@@ -88,7 +88,7 @@ test("Data Api: getBoundingBox should throw an error if the layer name is not va
 
 test("Data Api: getBoundingBox should get the bounding box of a layer", t => {
   const api = t.context.api;
-  const correctBoundingBox = [[3840, 4220, 2304], [3968, 4351, 2688]];
+  const correctBoundingBox = [[0, 0, 0], [1024, 1024, 1024]];
   const boundingBox = api.data.getBoundingBox("color");
   t.deepEqual(boundingBox, correctBoundingBox);
 });
@@ -104,7 +104,7 @@ test("Data Api: getDataValue should get the data value for a layer, position and
   // There is another spec for pullqueue.js
   const { api, model } = t.context;
   const cube = model.getBinaryByName("segmentation").cube;
-  const position = [3840, 4220, 2304];
+  const position = [100, 100, 100];
   const zoomStep = 0;
   const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
   const bucket = cube.getOrCreateBucket(bucketAddress);
@@ -173,13 +173,13 @@ test("Calling a volume api function in a skeleton tracing should throw an error"
 test("getTreeName should get the name of a tree", t => {
   const api = t.context.api;
   const name = api.tracing.getTreeName(2);
-  t.is(name, "explorative_2017-02-08_SCM_Boy_002");
+  t.is(name, "explorative_2017-08-09_SCM_Boy_002");
 });
 
 test("getTreeName should get the name of the active tree if no treeId is specified", t => {
   const api = t.context.api;
   const name = api.tracing.getTreeName();
-  t.is(name, "explorative_2017-02-08_SCM_Boy_001");
+  t.is(name, "explorative_2017-08-09_SCM_Boy_001");
 });
 
 test("getTreeName should throw an error if the supplied treeId doesn't exist", t => {

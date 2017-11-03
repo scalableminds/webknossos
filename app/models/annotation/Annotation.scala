@@ -1,14 +1,15 @@
 package models.annotation
 
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.braingames.datastore.tracings.TracingReference
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.basics._
-import models.task.Task
-import models.user.User
+import models.binary.DataSetDAO
+import models.task.{Task, TaskDAO}
+import models.user.{User, UserService}
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
@@ -16,30 +17,26 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
-import scala.concurrent.Future
-
 case class Annotation(
                        _user: Option[BSONObjectID],
-                       _content: ContentReference,
-                       _task: Option[BSONObjectID] = None,
+                       tracingReference: TracingReference,
+                       dataSetName: String,
                        team: String,
-                       state: AnnotationState = AnnotationState.InProgress,
+                       settings: AnnotationSettings,
+                       statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
-                       version: Int = 0,
+                       state: AnnotationState = AnnotationState.InProgress,
                        _name: Option[String] = None,
                        description: String = "",
                        tracingTime: Option[Long] = None,
-                       created : Long = System.currentTimeMillis,
+                       createdTimestamp: Long = System.currentTimeMillis,
+                       modifiedTimestamp: Long = System.currentTimeMillis,
+                       _task: Option[BSONObjectID] = None,
                        _id: BSONObjectID = BSONObjectID.generate,
                        isActive: Boolean = true,
-                       readOnly: Option[Boolean] = None,
                        isPublic: Boolean = false,
                        tags: Set[String] = Set.empty
-                     )
-
-  extends AnnotationLike with FoxImplicits {
-
-  lazy val id = _id.stringify
+                     ) extends FoxImplicits {
 
   lazy val muta = new AnnotationMutations(this)
 
@@ -47,76 +44,78 @@ case class Annotation(
    * Easy access methods
    */
 
-  def content = _content.resolveAs[AnnotationContent](GlobalAccessContext).toFox
+  val name = _name getOrElse ""
 
-  val contentType = _content.contentType
+  lazy val id = _id.stringify
 
-  val restrictions = if(readOnly.getOrElse(false))
-      AnnotationRestrictions.readonlyAnnotation()
-    else
-      AnnotationRestrictions.defaultAnnotationRestrictions(this)
+  def user: Fox[User] =
+    _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))
 
-  def relativeDownloadUrl = Some(Annotation.relativeDownloadUrlOf(typ, id))
+  def task: Fox[Task] =
+    _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
+
+  val tracingType = tracingReference.typ
 
   def removeTask() = {
     this.copy(_task = None, typ = AnnotationType.Orphan)
   }
 
-  def temporaryDuplicate(keepId: Boolean)(implicit ctx: DBAccessContext) = {
-    for{
-      contentDuplicate <- content.flatMap(c => c.temporaryDuplicate(if(keepId) c.id else BSONObjectID.generate.stringify))
-    } yield {
-      TemporaryAnnotationService.createFrom(
-        this,
-        if(keepId) this.id else BSONObjectID.generate.stringify,
-        contentDuplicate)
-    }
-  }
-
-  def makeReadOnly: AnnotationLike = {
-    this.copy(readOnly = Some(true))
-  }
-
   def saveToDB(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    AnnotationService.saveToDB(this)
+    AnnotationDAO.saveToDB(this)
   }
-}
 
-object Annotation {
-  implicit val annotationFormat = Json.format[Annotation]
+  def isRevertPossible: Boolean = {
+    // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
+    // hence we need a way to decide if a tracing can safely be reverted. We will use the created date of the
+    // annotation to do so
+    createdTimestamp > 1470002400000L  // 1.8.2016, 00:00:00
+  }
 
-  def relativeDownloadUrlOf(typ: String, id: String): String =
-    controllers.routes.AnnotationIOController.download(typ, id).url
-
-  def transformToJson(annotation: Annotation)(implicit ctx: DBAccessContext): Future[JsObject] = {
+  def toJson(requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      dataSetName <- annotation.dataSetName
-      task <- annotation.task.futureBox
-      user <- annotation.user.futureBox
-      content <- annotation.content.futureBox
-      contentType = content.map(_.contentType).getOrElse("")
-      stats <- annotation.statisticsForAnnotation().futureBox
+      taskJson <- task.flatMap(t => Task.transformToJson(t)).getOrElse(JsNull)
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "Could not find DataSet for Annotation"
+      userJson <- user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
     } yield {
       Json.obj(
-        "created" -> content.map(annotationContent => DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(annotationContent.timestamp)).toOption,
-        "contentType" -> contentType,
+        "modified" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(modifiedTimestamp),
+        "state" -> state,
+        "id" -> id,
+        "name" -> name,
+        "description" -> description,
+        "typ" -> typ,
+        "task" -> taskJson,
+        "stats" -> statistics,
+        "restrictions" -> AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser),
+        "formattedHash" -> Formatter.formatHash(id),
+        "content" -> tracingReference,
         "dataSetName" -> dataSetName,
-        "state" -> annotation.state,
-        "typ" -> annotation.typ,
-        "name" -> annotation.name,
-        "id" -> annotation.id,
-        "formattedHash" -> Formatter.formatHash(annotation.id),
-        "stats" -> stats.map(_.writeAsJson).toOption,
-        "tracingTime" -> annotation.tracingTime
+        "dataStore" -> dataSet.dataStoreInfo,
+        "isPublic" -> isPublic,
+        "settings" -> settings,
+        "tracingTime" -> tracingTime,
+        "tags" -> (tags ++ Set(dataSetName, tracingReference.typ.toString)),
+        "user" -> userJson
       )
     }
   }
+
+  private def composeRestrictions(restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
+    if (readOnly.getOrElse(false))
+      AnnotationRestrictions.readonlyAnnotation()
+    else
+      restrictions.getOrElse(AnnotationRestrictions.defaultAnnotationRestrictions(this))
+  }
 }
 
+object Annotation  {
+  implicit val annotationFormat = Json.format[Annotation]
+}
 
-object AnnotationDAO
-  extends SecuredBaseDAO[Annotation]
-  with FoxImplicits with MongoHelpers with QuerySupportedDAO[Annotation]{
+object AnnotationDAO extends SecuredBaseDAO[Annotation]
+  with FoxImplicits
+  with MongoHelpers
+  with QuerySupportedDAO[Annotation] {
 
   val collectionName = "annotations"
 
@@ -166,6 +165,18 @@ object AnnotationDAO
     }
   }
 
+  def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    update(
+      Json.obj("_id" -> annotation._id),
+      Json.obj(
+        "$set" -> formatWithoutId(annotation),
+        "$setOnInsert" -> Json.obj("_id" -> annotation._id)
+      ),
+      upsert = true).map { _ =>
+      annotation
+    }
+  }
+
   def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
     "_user" -> _user,
     "state.isFinished" -> false,
@@ -206,15 +217,9 @@ object AnnotationDAO
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[String] = Nil)(implicit ctx: DBAccessContext) =
     count(defaultFindForUserQ(_user, annotationType) ++ Json.obj("team" -> Json.obj("$nin" -> excludeTeams)))
-  
+
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("isActive" -> true, "_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
-
-  def incrementVersion(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$inc" -> Json.obj("version" -> 1)),
-      returnNew = true)
 
   def countByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     count(Json.obj(
@@ -230,6 +235,13 @@ object AnnotationDAO
       "$or" -> Json.arr(
         Json.obj("state.isAssigned" -> true),
         Json.obj("state.isFinished" -> true))))
+
+  def findByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    findOne(Json.obj(
+      "tracingReference.id" -> tracingId
+      )
+    )
+  }
 
   def countUnfinishedByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(Json.obj(
@@ -252,30 +264,11 @@ object AnnotationDAO
       Json.obj("_id" -> annotation._id),
       Json.obj("$set" -> Json.obj("state" -> state)))
 
-  def updateTeamForAllOfTask(task: Task, team: String)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> task._id), Json.obj("$set" -> Json.obj("team" -> team)))
-
-  def updateAllOfTask(
-    task: Task,
-    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-
-    find(
-      Json.obj(
-        "_task" -> task._id)).cursor[Annotation]().collect[List]().map(_.map { annotation =>
-      annotation._content.service.updateSettings(settings, annotation._content._id)
-    })
-  }
-  def updateAllOfTask(
-    task: Task,
-    dataSetName: String,
-    boundingBox: Option[BoundingBox],
-    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-
-    find(
-      Json.obj(
-        "_task" -> task._id)).cursor[Annotation]().collect[List]().map(_.map{ annotation =>
-          annotation._content.service.updateSettings(dataSetName, boundingBox, settings, annotation._content._id)
-    })
+  def updateSettingsForAllOfTask(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
+    update(
+      Json.obj("_task" -> task._id),
+      Json.obj("$set" -> Json.obj("settings" -> settings))
+    )
   }
 
   def countAll(implicit ctx: DBAccessContext) =
@@ -288,10 +281,17 @@ object AnnotationDAO
       returnNew = true)
 
   def rename(_annotation: BSONObjectID, name: String)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj("_name" -> name)),
-      returnNew = true)
+    if (name == "") {
+      findAndModify(
+        Json.obj("_id" -> _annotation),
+        Json.obj("$unset" -> Json.obj("_name" -> 1)),
+        returnNew = true)
+    } else {
+      findAndModify(
+        Json.obj("_id" -> _annotation),
+        Json.obj("$set" -> Json.obj("_name" -> name)),
+        returnNew = true)
+    }
 
   def setDescription(_annotation: BSONObjectID, description: String)(implicit ctx: DBAccessContext) =
     findAndModify(
@@ -320,11 +320,24 @@ object AnnotationDAO
       Json.obj("$set" -> Json.obj("state" -> state)),
       returnNew = true)
 
-  def updateContent(_annotation: BSONObjectID, content: ContentReference)(implicit ctx: DBAccessContext) =
+  def updateModifiedTimestamp(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj("modifiedTimestamp" -> System.currentTimeMillis)),
+      returnNew = true)
+
+  def updateTracingRefernce(_annotation: BSONObjectID, tracingReference: TracingReference)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj(
-        "_content" -> content)),
+        "tracingReference" -> tracingReference)),
+      returnNew = true)
+
+  def updateStatistics(_annotation: BSONObjectID, statistics: JsObject)(implicit ctx: DBAccessContext) =
+    findAndModify(
+      Json.obj("_id" -> _annotation),
+      Json.obj("$set" -> Json.obj(
+        "statistics" -> statistics)),
       returnNew = true)
 
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =

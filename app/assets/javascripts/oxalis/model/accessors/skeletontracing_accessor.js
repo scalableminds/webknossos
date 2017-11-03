@@ -5,10 +5,18 @@ import type {
   TracingType,
   SkeletonTracingType,
   NodeType,
+  EdgeType,
   TreeType,
   TreeMapType,
   BranchPointType,
 } from "oxalis/store";
+
+export type SkeletonTracingStatsType = {
+  treeCount: number,
+  nodeCount: number,
+  edgeCount: number,
+  branchPointCount: number,
+};
 
 export function getSkeletonTracing(tracing: TracingType): Maybe<SkeletonTracingType> {
   if (tracing.type === "skeleton") {
@@ -43,6 +51,28 @@ export function getActiveTree(tracing: TracingType) {
 
 export function getEdges(tree: TreeType, node: NodeType) {
   return tree.edges.filter(e => e.source === node.id || e.target === node.id);
+}
+
+export function getNodeToEdgesMap(tree: TreeType, doublyLinked: boolean = true) {
+  // Build a hashmap which contains for each node all edges leading/leaving into/from the node
+  const nodeToEdgesMap: { [number]: Array<EdgeType> } = {};
+  tree.edges.forEach(edge => {
+    if (nodeToEdgesMap[edge.source]) {
+      nodeToEdgesMap[edge.source].push(edge);
+    } else {
+      nodeToEdgesMap[edge.source] = [edge];
+    }
+    // The doublyLinked flag determines (if true) that source AND target node should contain their connecting edge
+    // or (if false) that only the source node should contain the connecting edge
+    if (doublyLinked) {
+      if (nodeToEdgesMap[edge.target]) {
+        nodeToEdgesMap[edge.target].push(edge);
+      } else {
+        nodeToEdgesMap[edge.target] = [edge];
+      }
+    }
+  });
+  return nodeToEdgesMap;
 }
 
 export function getActiveNodeFromTree(tracing: TracingType, tree: TreeType) {
@@ -124,4 +154,15 @@ export function getBranchPoints(tracing: TracingType): Maybe<Array<BranchPointTy
   return getSkeletonTracing(tracing).map(skeletonTracing =>
     _.flatMap(skeletonTracing.trees, tree => tree.branchPoints),
   );
+}
+
+export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> {
+  return getSkeletonTracing(tracing)
+    .chain(skeletonTracing => Maybe.fromNullable(skeletonTracing.trees))
+    .map(trees => ({
+      treeCount: _.size(trees),
+      nodeCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.nodes), 0),
+      edgeCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.edges), 0),
+      branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
+    }));
 }

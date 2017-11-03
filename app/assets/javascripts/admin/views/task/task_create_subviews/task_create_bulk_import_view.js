@@ -60,7 +60,6 @@ class TaskCreateBulkImportView extends Marionette.View {
 
     const tasks = this.parseText(bulkText);
     Request.sendJSONReceiveJSON("/api/tasks", {
-      params: { type: "bulk" },
       data: tasks,
     }).then(this.showSaveSuccess, this.showSaveError);
 

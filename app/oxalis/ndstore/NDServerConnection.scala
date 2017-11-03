@@ -4,9 +4,9 @@
 package oxalis.ndstore
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import oxalis.ndstore.NDChannels.NDChannelsReads
-import com.typesafe.scalalogging.LazyLogging
 import play.api.Play.current
 import play.api.http.Status
 import play.api.i18n.Messages

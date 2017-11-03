@@ -1,28 +1,23 @@
 package models.user
 
-import play.api.Play.current
 import com.scalableminds.util.security.SCrypt._
-import reactivemongo.api.commands.WriteResult
 
 //import scala.collection.mutable.Stack
 //import play.api.libs.json.{Json, JsValue}
-import play.api.libs.json.Json._
-import models.basics._
-import models.team._
-import models.configuration.{UserConfiguration, DataSetConfiguration}
 import com.scalableminds.util.reactivemongo._
+import models.basics._
+import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.team._
+import play.api.libs.json.Json._
 //import scala.concurrent.Future
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.json._
+import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import reactivemongo.api.indexes.{IndexType, Index}
-import reactivemongo.api.indexes.Index
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import reactivemongo.core.commands.LastError
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
-import com.scalableminds.util.tools.Fox
-import com.typesafe.scalalogging.LazyLogging
 
 case class User(
                  email: String,
@@ -68,6 +63,8 @@ case class User(
   def roleInTeam(team: String) = teams.find(_.team == team).map(_.role)
 
   def isAdminOf(team: String) = adminTeamNames.contains(team)
+
+  def isAdmin = adminTeams.nonEmpty
 
   override def toString = email
 

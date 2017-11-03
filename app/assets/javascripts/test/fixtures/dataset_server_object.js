@@ -1,0 +1,40 @@
+export default {
+  name: "ROI2017_wkw",
+  dataSource: {
+    id: { name: "ROI2017_wkw", team: "Connectomics department" },
+    dataLayers: [
+      {
+        name: "color",
+        category: "color",
+        boundingBox: { topLeft: [0, 0, 0], width: 1024, height: 1024, depth: 1024 },
+        resolutions: [1, 16, 2, 32, 4, 8],
+        elementClass: "uint8",
+      },
+      {
+        name: "segmentation",
+        category: "segmentation",
+        boundingBox: { topLeft: [0, 0, 0], width: 1024, height: 1024, depth: 1024 },
+        resolutions: [1, 16, 2, 32, 4, 8],
+        elementClass: "uint32",
+        largestSegmentId: 1000000000,
+        mappings: [
+          "larger5um1",
+          "axons",
+          "astrocyte-ge-7",
+          "astrocyte",
+          "mitochondria",
+          "astrocyte-full",
+        ],
+      },
+    ],
+    scale: [11.239999771118164, 11.239999771118164, 28],
+  },
+  dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
+  owningTeam: "Connectomics department",
+  allowedTeams: ["Connectomics department"],
+  isActive: true,
+  isPublic: false,
+  description: null,
+  created: 1502288550432,
+  isEditable: true,
+};

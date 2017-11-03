@@ -5,7 +5,7 @@ import javax.inject.Inject
 
 import com.scalableminds.util.mail.Send
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationLike}
+import models.annotation.{AnnotationDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, TaskService, TaskTypeDAO}
 import models.user.time.{TimeSpan, TimeSpanDAO}

@@ -29,6 +29,12 @@ type DeleteNodeActionType = {
   treeId?: number,
   timestamp: number,
 };
+type DeleteEdgeActionType = {
+  type: "DELETE_EDGE",
+  sourceNodeId: number,
+  targetNodeId: number,
+  timestamp: number,
+};
 type SetActiveNodeActionType = { type: "SET_ACTIVE_NODE", nodeId: number };
 type SetNodeRadiusActionType = {
   type: "SET_NODE_RADIUS",
@@ -67,6 +73,7 @@ export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
   | CreateNodeActionType
   | DeleteNodeActionType
+  | DeleteEdgeActionType
   | SetActiveNodeActionType
   | SetNodeRadiusActionType
   | CreateBranchPointActionType
@@ -90,6 +97,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
   "DELETE_NODE",
+  "DELETE_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
   "CREATE_BRANCHPOINT",
@@ -139,6 +147,17 @@ export const deleteNodeAction = (
   type: "DELETE_NODE",
   nodeId,
   treeId,
+  timestamp,
+});
+
+export const deleteEdgeAction = (
+  sourceNodeId: number,
+  targetNodeId: number,
+  timestamp: number = Date.now(),
+): DeleteEdgeActionType => ({
+  type: "DELETE_EDGE",
+  sourceNodeId,
+  targetNodeId,
   timestamp,
 });
 

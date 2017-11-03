@@ -265,4 +265,14 @@ object Authentication {
   def getLoginRoute() = {
     "/login"
   }
+
+  def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
+    val loginInfo = LoginInfo(CredentialsProvider.ID, email)
+    for {
+      authenticator <- silhouetteOxalis.environment.authenticatorService.create(loginInfo)
+      value <- silhouetteOxalis.environment.authenticatorService.init(authenticator)
+    } yield {
+      value
+    }
+  }
 }

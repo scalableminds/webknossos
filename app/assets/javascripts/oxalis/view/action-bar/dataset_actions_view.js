@@ -13,6 +13,7 @@ import SaveButton from "oxalis/view/action-bar/save_button";
 import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
+import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import type { Dispatch } from "redux";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 
@@ -48,6 +49,14 @@ class DatasetActionsView extends PureComponent<Props, State> {
       event.target.blur();
     }
     await Model.save();
+  };
+
+  handleUndo = () => {
+    Store.dispatch(undoAction());
+  };
+
+  handleRedo = () => {
+    Store.dispatch(redoAction());
   };
 
   handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
@@ -114,18 +123,28 @@ class DatasetActionsView extends PureComponent<Props, State> {
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.restrictions;
 
-    const saveButton = restrictions.allowUpdate ? (
-      <SaveButton onClick={this.handleSave} />
-    ) : (
-      [
-        <ButtonComponent key="read-only-button" type="primary" disabled>
-          Read only
-        </ButtonComponent>,
-        <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
-          Copy To My Account
-        </ButtonComponent>,
-      ]
-    );
+    const saveButton = restrictions.allowUpdate
+      ? [
+          isSkeletonMode
+            ? [
+                <ButtonComponent key="undo-button" title="Undo (Ctrl+Z)" onClick={this.handleUndo}>
+                  <i className="fa fa-undo" aria-hidden="true" />
+                </ButtonComponent>,
+                <ButtonComponent key="redo-button" title="Redo (Ctrl+Y)" onClick={this.handleRedo}>
+                  <i className="fa fa-repeat" aria-hidden="true" />
+                </ButtonComponent>,
+              ]
+            : null,
+          <SaveButton key="save-button" onClick={this.handleSave} />,
+        ]
+      : [
+          <ButtonComponent key="read-only-button" type="primary" disabled>
+            Read only
+          </ButtonComponent>,
+          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+            Copy To My Account
+          </ButtonComponent>,
+        ];
 
     const finishAndNextTaskButton =
       hasAdvancedOptions && restrictions.allowFinish && this.props.task ? (

@@ -1,27 +1,26 @@
 // @flow
 import Utils from "libs/utils";
 
-const itemsPerBatch = 10000;
+const defaultItemsPerBatch = 10000;
+
+// Some properties:
+// Insertion order is not guaranteed
 
 class DiffableMap<K: number, V> {
   maps: Array<Map<K, V>>;
   entryCount: number;
   existsCache: Map<K, boolean>;
+  itemsPerBatch: number;
 
-  constructor(optDiffableMap?: DiffableMap<K, V> | Array<[K, V]>) {
-    if (optDiffableMap && optDiffableMap instanceof DiffableMap) {
-      this.maps = optDiffableMap.maps.slice();
-      this.existsCache = new Map(optDiffableMap.existsCache);
-      this.entryCount = optDiffableMap.entryCount;
-    } else {
-      this.maps = [];
-      this.existsCache = new Map();
-      this.entryCount = 0;
+  constructor(optKeyValueArray?: ?Array<[K, V]>, itemsPerBatch: number = defaultItemsPerBatch) {
+    this.maps = [];
+    this.existsCache = new Map();
+    this.entryCount = 0;
+    this.itemsPerBatch = itemsPerBatch;
 
-      if (optDiffableMap != null) {
-        for (const [key, value] of optDiffableMap) {
-          this.mutableSet(key, value);
-        }
+    if (optKeyValueArray != null) {
+      for (const [key, value] of optKeyValueArray) {
+        this.mutableSet(key, value);
       }
     }
   }
@@ -52,7 +51,7 @@ class DiffableMap<K: number, V> {
       let idx = 0;
       while (this.maps[idx] != null) {
         if (this.maps[idx].has(key)) {
-          const newMap = new DiffableMap(this);
+          const newMap = shallowCopy(this);
           newMap.maps[idx] = new Map(this.maps[idx]);
           newMap.maps[idx].set(key, value);
           return newMap;
@@ -61,7 +60,7 @@ class DiffableMap<K: number, V> {
       }
       throw new Error("should not happen");
     } else {
-      const isTooFull = this.entryCount / this.maps.length > itemsPerBatch;
+      const isTooFull = this.entryCount / this.maps.length > this.itemsPerBatch;
       const nonFullMapIdx =
         isTooFull || this.maps.length === 0 ? -1 : Math.floor(Math.random() * this.maps.length);
 
@@ -71,7 +70,7 @@ class DiffableMap<K: number, V> {
 
       // let idx = 0;
       // while (this.maps[idx] != null) {
-      //  if (this.maps[idx].size < itemsPerBatch) {
+      //  if (this.maps[idx].size < this.itemsPerBatch) {
       //    nonFullMapIdx = idx;
       //    break;
       //  }
@@ -79,7 +78,7 @@ class DiffableMap<K: number, V> {
       // }
 
       // Key didn't exist. Add it.
-      const newDiffableMap = new DiffableMap(this);
+      const newDiffableMap = shallowCopy(this);
       newDiffableMap.existsCache.set(key, true);
       newDiffableMap.entryCount = this.entryCount + 1;
       if (nonFullMapIdx > -1) {
@@ -107,13 +106,13 @@ class DiffableMap<K: number, V> {
       }
     } else {
       // let idx = 0;
-      const isTooFull = this.entryCount / this.maps.length > itemsPerBatch;
+      const isTooFull = this.entryCount / this.maps.length > this.itemsPerBatch;
       const nonFullMapIdx =
         isTooFull || this.maps.length === 0 ? -1 : Math.floor(Math.random() * this.maps.length);
       // let nonFullMapIdx = this.maps.length === 0 ? -1 : 0;
       // while (this.maps[idx] != null) {
       //  if (
-      //    this.maps[idx].size < itemsPerBatch
+      //    this.maps[idx].size < this.itemsPerBatch
       //  ) {
       //    nonFullMapIdx = idx;
       //    break;
@@ -148,7 +147,7 @@ class DiffableMap<K: number, V> {
     let idx = 0;
     while (this.maps[idx] != null) {
       if (this.maps[idx].has(key)) {
-        const newMap = new DiffableMap(this);
+        const newMap = shallowCopy(this);
         newMap.existsCache.delete(key);
         newMap.entryCount--;
         newMap.maps[idx] = new Map(this.maps[idx]);
@@ -170,7 +169,7 @@ class DiffableMap<K: number, V> {
     return returnValue;
   }
 
-  *entries() {
+  *entries(): Generator<[K, V], void, void> {
     for (const map of this.maps) {
       yield* map;
     }
@@ -205,15 +204,36 @@ class DiffableMap<K: number, V> {
   }
 }
 
+// This function should only be used internally by this module.
+// It creates a new DiffableMap on the basis of another one, while
+// shallowly copying the internal chunks.
+// When modifying the chunks, each chunk should be manually cloned.
+// The existsCache is safely cloned.
+function shallowCopy<K: number, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
+  const newMap = new DiffableMap();
+  newMap.maps = template.maps.slice();
+  newMap.existsCache = new Map(template.existsCache);
+  newMap.entryCount = template.entryCount;
+  newMap.itemsPerBatch = template.itemsPerBatch;
+  return newMap;
+}
+
+// Given two DiffableMaps, this function returns an object holding:
+// changed: An array of keys, which both Maps hold, but **which do not have the same value**
+// onlyA: An array of keys, which only exists in mapA
+// onlyB: An array of keys, which only exists in mapB
+// Note: Unlike the Utils.diffArrays function, this function will return
+// { changed: [], onlyA: [], onlyB: []}
+// if mapA === mapB
 export function diffDiffableMaps<K: number, V>(
   mapA: DiffableMap<K, V>,
   mapB: DiffableMap<K, V>,
-): { both: Array<K>, onlyA: Array<K>, onlyB: Array<K> } {
+): { changed: Array<K>, onlyA: Array<K>, onlyB: Array<K> } {
   let idx = 0;
 
   // const { both, onlyA, onlyB } = Utils.diffArrays(mapA.maps, mapB.maps);
 
-  const both = [];
+  const changed = [];
   const onlyA = [];
   const onlyB = [];
 
@@ -231,12 +251,20 @@ export function diffDiffableMaps<K: number, V>(
         onlyA.push(key);
       }
     } else if (mapA.maps[idx] !== mapB.maps[idx]) {
-      const setA = new Set(mapA.maps[idx].keys());
-      const setB = new Set(mapB.maps[idx].keys());
+      const currentMapA = mapA.maps[idx];
+      const currentMapB = mapB.maps[idx];
+      const setA = new Set(currentMapA.keys());
+      const setB = new Set(currentMapB.keys());
 
       for (const key of setA.values()) {
         if (setB.has(key)) {
-          both.push(key);
+          if (currentMapA.get(key) !== currentMapB.get(key)) {
+            changed.push(key);
+          } else {
+            // The key exists in both maps, do not emit this key.
+            // If we were interested in unchanged values, we could
+            // aggregate these values here
+          }
         } else {
           onlyA.push(key);
         }
@@ -260,7 +288,7 @@ export function diffDiffableMaps<K: number, V>(
     idx++;
   }
 
-  return { both, onlyA, onlyB };
+  return { changed, onlyA, onlyB };
 }
 
 export default DiffableMap;

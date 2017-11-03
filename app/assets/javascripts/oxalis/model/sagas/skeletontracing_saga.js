@@ -122,7 +122,7 @@ function* diffNodes(
 ): Generator<UpdateAction, void, void> {
   if (prevNodes === nodes) return;
 
-  const { onlyA: deletedNodeIds, onlyB: addedNodeIds, both: bothNodeIds } = diffDiffableMaps(
+  const { onlyA: deletedNodeIds, onlyB: addedNodeIds, changed: changedNodeIds } = diffDiffableMaps(
     prevNodes,
     nodes,
   );
@@ -135,13 +135,12 @@ function* diffNodes(
     const node = nodes.get(nodeId);
     yield createNode(treeId, node);
   }
-  for (const nodeId of bothNodeIds) {
+
+  for (const nodeId of changedNodeIds) {
     const node = nodes.get(nodeId);
     const prevNode = prevNodes.get(nodeId);
-    if (node !== prevNode) {
-      if (updateNodePredicate(prevNode, node)) {
-        yield updateNode(treeId, node);
-      }
+    if (updateNodePredicate(prevNode, node)) {
+      yield updateNode(treeId, node);
     }
   }
 }

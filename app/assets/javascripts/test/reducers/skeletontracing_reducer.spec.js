@@ -348,9 +348,9 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
               [7]: createDummyNode(7),
             },
             timestamp: Date.now(),
-            branchPoints: [{ id: 1, timestamp: 0 }, { id: 7, timestamp: 0 }],
+            branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
             edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 2, target: 7 }],
-            comments: [{ comment: "comment", node: 7 }],
+            comments: [{ comment: "comment", nodeId: 7 }],
             color: [23, 23, 23],
           },
           [1]: {
@@ -383,16 +383,16 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
   t.is(Object.keys(newTrees).length, 3);
   t.is(newTrees[0].nodes[0].id, 0);
   t.is(_.size(newTrees[0].nodes), 2);
-  t.is(newTrees[0].branchPoints[0].id, 1);
+  t.is(newTrees[0].branchPoints[0].nodeId, 1);
   t.is(newTrees[1].nodes[4].id, 4);
   t.is(_.size(newTrees[1].nodes), 3);
 
   t.is(newTrees[2].comments.length, 1);
-  t.is(newTrees[2].comments[0].node, 7);
+  t.is(newTrees[2].comments[0].nodeId, 7);
   t.is(newTrees[2].nodes[2].id, 2);
   t.is(newTrees[2].nodes[7].id, 7);
   t.is(_.size(newTrees[2].nodes), 2);
-  t.is(newTrees[2].branchPoints[0].id, 7);
+  t.is(newTrees[2].branchPoints[0].nodeId, 7);
 });
 
 test("SkeletonTracing should set a new active node", t => {

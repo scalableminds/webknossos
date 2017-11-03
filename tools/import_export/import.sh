@@ -19,5 +19,13 @@ for dump_file in `ls $dump_dir`
 do
   collection=${dump_file%.json}
   mongo "$host/$db" --eval "db.${collection}.drop()"
+  mongo "$host/$db" --eval "db.createCollection('$collection')"
+done
+
+bash ../activateValidation.sh "$db" "$dump_dir/../../conf/schemas" "$host"  
+
+for dump_file in `ls $dump_dir`
+do
+  collection=${dump_file%.json}
   mongoimport --db "$db" --host "$host" --collection "$collection" --file "$dump_dir/$dump_file"
 done

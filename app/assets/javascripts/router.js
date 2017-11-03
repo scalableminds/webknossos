@@ -115,12 +115,8 @@ class Router extends BaseRouter {
 
   datasetAdd() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const DatasetAddView = admin.DatasetAddView;
-
-      const view = new DatasetAddView();
-
+      const view = new ReactBackboneWrapper(admin.DatasetAddView, {});
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 

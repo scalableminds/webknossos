@@ -194,4 +194,24 @@ export type APITaskWithAnnotationType = {
   +annotation: APIAnnotationType,
 };
 
+export type APIDatastoreType = {
+  +name: string,
+  +url: string,
+  +typ: string,
+};
+
+export type NDStoreConfigType = {
+  +name: string,
+  +team: string,
+  +server: string,
+  +token: string,
+};
+
+export type DatasetConfigType = {
+  +name: string,
+  +team: string,
+  +datastore: string,
+  +zipFile: File,
+};
+
 export default {};

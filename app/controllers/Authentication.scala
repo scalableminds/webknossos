@@ -162,7 +162,7 @@ class Authentication @Inject() (
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
-            } yield result
+            } yield Ok.withCookies(value)//result
             case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
         }.recover {
@@ -268,5 +268,15 @@ class Authentication @Inject() (
 object Authentication {
   def getLoginRoute() = {
     "/login"
+  }
+
+  def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
+    val loginInfo = LoginInfo(CredentialsProvider.ID, email)
+    for {
+      authenticator <- silhouetteOxalis.environment.authenticatorService.create(loginInfo)
+      value <- silhouetteOxalis.environment.authenticatorService.init(authenticator)
+    } yield {
+      value
+    }
   }
 }

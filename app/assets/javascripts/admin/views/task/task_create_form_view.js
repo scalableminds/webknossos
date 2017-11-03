@@ -159,8 +159,6 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           await updateTask(this.props.taskId, formValues);
           app.router.loadURL("/tasks");
         } else {
-          formValues.status.inProgress = 0;
-          formValues.status.completed = 0;
           formValues.boundingBox = formValues.boundingBox
             ? this.transformBoundingBox(formValues.boundingBox)
             : null;
@@ -174,7 +172,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
             } else {
               response = await createTasks([formValues]);
             }
-            handleTaskCreationResponse(response.items);
+            handleTaskCreationResponse(response);
           } finally {
             this.setState({
               isUploading: false,
@@ -194,7 +192,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-    const isEditingMode = this.props.taskId !== null;
+    const isEditingMode = this.props.taskId != null;
     const titleLabel = isEditingMode ? `Update Task ${this.props.taskId}` : "Create Task";
     const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
 
@@ -238,7 +236,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               </FormItem>
 
               <FormItem label={instancesLabel} hasFeedback>
-                {getFieldDecorator("status.open", {
+                {getFieldDecorator("openInstances", {
                   rules: [{ required: true }, { type: "number" }],
                 })(<InputNumber style={fullWidth} />)}
               </FormItem>

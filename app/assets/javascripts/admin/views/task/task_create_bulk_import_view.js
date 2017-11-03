@@ -7,7 +7,6 @@ import { handleTaskCreationResponse } from "admin/views/task/task_create_form_vi
 import Messages from "messages";
 import Toast from "libs/toast";
 
-import type { TaskStatusType } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import type { BoundingBoxObjectType } from "oxalis/store";
 
@@ -37,7 +36,7 @@ export type NewTaskType = {
   },
   +projectName: string,
   +scriptId: ?string,
-  +status: TaskStatusType,
+  +openInstances: number,
   +team: string,
   +taskTypeId: string,
   +csvFile?: File,
@@ -66,7 +65,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
       task.editPosition.some(isNaN) ||
       task.editRotation.some(isNaN) ||
       task.boundingBox.topLeft.some(isNaN) ||
-      isNaN(task.status.open) ||
+      isNaN(task.openInstances) ||
       isNaN(task.neededExperience.value) ||
       isNaN(task.boundingBox.width) ||
       isNaN(task.boundingBox.height) ||
@@ -108,7 +107,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
     const rotX = parseInt(words[7]);
     const rotY = parseInt(words[8]);
     const rotZ = parseInt(words[9]);
-    const instances = parseInt(words[10]);
+    const openInstances = parseInt(words[10]);
     const team = words[11];
     const minX = parseInt(words[12]);
     const minY = parseInt(words[13]);
@@ -124,14 +123,10 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
       team,
       taskTypeId,
       scriptId,
+      openInstances,
       neededExperience: {
         value: minExperience,
         domain: experienceDomain,
-      },
-      status: {
-        open: instances,
-        inProgress: 0,
-        completed: 0,
       },
       editPosition: [x, y, z],
       editRotation: [rotX, rotY, rotZ],
@@ -206,7 +201,7 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
       const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
       // eslint-disable-next-line no-await-in-loop
       const response = await createTasks(subArray);
-      responses = responses.concat(response.items);
+      responses = responses.concat(response);
       this.setState({
         tasksProcessed: i + NUM_TASKS_PER_BATCH,
       });

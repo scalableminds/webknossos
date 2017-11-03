@@ -24,14 +24,6 @@ export type APIDataStoreType = {
 };
 
 export type APIDatasetType = {
-  +name: string,
-  +dataSource: APIDataSourceType,
-  +dataStore: APIDataStoreType,
-  +sourceType: "wkw" | "knossos",
-  +owningTeam: "Connectomics department",
-};
-
-export type APIDatasetType = {
   +allowedTeams: Array<string>,
   +created: number,
   +dataSource: APIDataSourceType,

@@ -251,7 +251,7 @@ export class OxalisModel {
     // Make sure subsequent fetch calls are always for the same dataset
     if (!_.isEmpty(this.binary)) {
       ErrorHandling.assert(
-        _.isEqual(dataset, Store.getState().dataset),
+        _.isEqual(dataset.dataSource.id.name, Store.getState().dataset.name),
         messages["dataset.changed_without_reload"],
       );
     }

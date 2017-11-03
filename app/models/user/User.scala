@@ -64,6 +64,8 @@ case class User(
 
   def isAdminOf(team: String) = adminTeamNames.contains(team)
 
+  def isAdmin = adminTeams.nonEmpty
+
   override def toString = email
 
   def setExperience(name: String, value: Int) = {

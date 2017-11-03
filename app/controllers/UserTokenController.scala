@@ -86,9 +86,17 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       }
     }
 
+    def tryAdministrate: Fox[UserAccessAnswer] = {
+      userBox match {
+        case Full(user) => Fox.successful(UserAccessAnswer(user.isAdmin))
+        case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
+      }
+    }
+
     mode match {
       case AccessMode.read => tryRead
       case AccessMode.write => tryWrite
+      case AccessMode.administrate => tryAdministrate
       case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
     }
   }

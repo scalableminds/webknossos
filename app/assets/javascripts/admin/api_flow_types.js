@@ -60,10 +60,7 @@ export type APIUserType = {
 };
 
 export type APITeamType = {
-  +amIAnAdmin: boolean,
-  +amIOwner: boolean,
   +id: string,
-  +isEditable: boolean,
   +name: string,
   +owner: APIUserType,
   +parent: string,
@@ -195,6 +192,26 @@ export type APITaskWithAnnotationType = {
   +tracingTime: null,
   +creationInfo: null,
   +annotation: APIAnnotationType,
+};
+
+export type APIDatastoreType = {
+  +name: string,
+  +url: string,
+  +typ: string,
+};
+
+export type NDStoreConfigType = {
+  +name: string,
+  +team: string,
+  +server: string,
+  +token: string,
+};
+
+export type DatasetConfigType = {
+  +name: string,
+  +team: string,
+  +datastore: string,
+  +zipFile: File,
 };
 
 export default {};

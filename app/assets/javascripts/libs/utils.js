@@ -366,6 +366,14 @@ const Utils = {
       );
     }
   },
+
+  millisecondsToMinutes(ms: number) {
+    return ms / 60000;
+  },
+
+  minutesToMilliseconds(min: number) {
+    return min * 60000;
+  },
 };
 
 export default Utils;

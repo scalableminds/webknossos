@@ -22,7 +22,8 @@ do
   mongo "$host/$db" --eval "db.createCollection('$collection')"
 done
 
-bash ../activateValidation.sh "$db" "$dump_dir/../../conf/schemas" "$host"  
+bash ../activateValidation.sh "$db" "$dump_dir/../../conf/schemas" "$host"
+bash ../validationAction.sh "$db" "error" "$dump_dir/../../conf/schemas" "$host"
 
 for dump_file in `ls $dump_dir`
 do

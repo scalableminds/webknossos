@@ -16,7 +16,7 @@ const TaskCreateView = () => (
       }
       key="1"
     >
-      <TaskCreateFormView />
+      <TaskCreateFormView taskId={null} />
     </TabPane>
     <TabPane
       tab={

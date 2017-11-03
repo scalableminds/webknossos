@@ -15,6 +15,7 @@ import ProjectCreateView from "admin/views/project/project_create_view";
 import TaskCreateView from "admin/views/task/task_create_view";
 import TaskTypeCreateView from "admin/views/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/views/scripts/script_create_view";
+import TaskCreateFormView from "admin/views/task/task_create_form_view";
 
 //
 // This exports all the modules listed above and mainly serves the purpose of
@@ -34,4 +35,5 @@ export {
   TaskCreateView,
   TaskTypeCreateView,
   ScriptCreateView,
+  TaskCreateFormView,
 };

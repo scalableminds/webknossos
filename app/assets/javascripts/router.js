@@ -205,16 +205,10 @@ class Router extends BaseRouter {
   /**
    * Load item view which displays an editable task.
    */
-  taskEdit(taskID) {
+  taskEdit(taskId) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskCreateFromView = admin.TaskCreateFromView;
-      const TaskModel = admin.TaskModel;
-
-      const model = new TaskModel({ id: taskID });
-      const view = new TaskCreateFromView({ model, type: "from_form" });
-
+      const view = new ReactBackboneWrapper(admin.TaskCreateFormView, { taskId });
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 

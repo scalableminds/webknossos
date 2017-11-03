@@ -19,8 +19,10 @@ import {
   getAdminTeams,
   getScripts,
   getTaskTypes,
+  getTask,
   createTask,
   createTaskFromNML,
+  updateTask,
 } from "admin/admin_rest_api";
 import type {
   APIDatasetType,
@@ -30,6 +32,7 @@ import type {
   APITeamType,
   APITaskType,
 } from "admin/api_flow_types";
+import app from "app";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
 
@@ -41,6 +44,7 @@ const RadioGroup = Radio.Group;
 
 type Props = {
   form: Object,
+  taskId: ?string,
 };
 
 type State = {
@@ -56,18 +60,18 @@ type State = {
 };
 
 export function handleTaskCreationResponse(
-  responses: Array<{ status: number, success: ?APITaskType }>,
+  responses: Array<{ status: number, success?: APITaskType, error?: string }>,
 ) {
   const successfulTasks = [];
   const failedTasks = [];
 
   responses.forEach((response, i) => {
-    if (response.status === 200) {
+    if (response.status === 200 && response.success) {
       successfulTasks.push(
-        `${response.success.id},${response.success
-          .creationInfo},(${response.success.editPosition.join(",")}) \n`,
+        `${response.success.id},${response.success.creationInfo ||
+          "null"},(${response.success.editPosition.join(",")}) \n`,
       );
-    } else {
+    } else if (response.error) {
       failedTasks.push(`Line ${i}: ${response.error} \n`);
     }
   });
@@ -111,6 +115,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   };
   componentDidMount() {
     this.fetchData();
+    this.applyDefaults();
   }
 
   async fetchData() {
@@ -123,6 +128,18 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     ]);
 
     this.setState({ datasets, projects, teams, scripts, taskTypes });
+  }
+
+  async applyDefaults() {
+    if (this.props.taskId) {
+      const task = await getTask(this.props.taskId);
+      const defaultValues = Object.assign({}, task, {
+        taskTypeId: task.type.id,
+        boundingBox: task.boundingBoxVec6,
+        scriptId: task.script ? task.script.id : null,
+      });
+      this.props.form.setFieldsValue(defaultValues);
+    }
   }
 
   transformBoundingBox(boundingBox: Vector6): BoundingBoxObjectType {
@@ -138,33 +155,33 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     e.preventDefault();
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
-        formValues.status.inProgress = 0;
-        formValues.status.completed = 0;
-        formValues.boundingBox = formValues.boundingBox
-          ? this.transformBoundingBox(formValues.boundingBox)
-          : null;
+        if (this.props.taskId) {
+          debugger;
+          await updateTask(this.props.taskId, formValues);
+          app.router.loadURL("/tasks");
+        } else {
+          formValues.status.inProgress = 0;
+          formValues.status.completed = 0;
+          formValues.boundingBox = formValues.boundingBox
+            ? this.transformBoundingBox(formValues.boundingBox)
+            : null;
 
-        this.setState({ isUploading: true });
+          this.setState({ isUploading: true });
 
-        let response;
-        try {
-          if (this.state.isNMLSpecification) {
-            response = await createTaskFromNML(formValues);
-          } else {
-            response = await createTask(formValues);
+          let response;
+          try {
+            if (this.state.isNMLSpecification) {
+              response = await createTaskFromNML(formValues);
+            } else {
+              response = await createTask(formValues);
+            }
+            handleTaskCreationResponse(response.items);
+          } finally {
+            this.setState({
+              isUploading: false,
+            });
           }
-          handleTaskCreationResponse(response.items);
-        } finally {
-          this.setState({
-            isUploading: false,
-          });
         }
-
-        // if (this..isEditingMode) {
-        //   app.router.loadURL("/tasks");
-        // } else {
-        //   this.parent.showSaveSuccess(response);
-        // }
       }
     });
   };
@@ -178,15 +195,16 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-    const isEditingMode = true;
-    const taskInstancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
+    const isEditingMode = this.props.taskId !== null;
+    const titleLabel = isEditingMode ? `Update Task ${this.props.taskId}` : "Create Task";
+    const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
 
     const fullWidth = { width: "100%" };
 
     return (
       <div className="container wide" style={{ paddingTop: 20 }}>
         <Spin spinning={this.state.isUploading}>
-          <Card title={<h3>Create Task</h3>}>
+          <Card title={<h3>{titleLabel}</h3>}>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="TaskType" hasFeedback>
                 {getFieldDecorator("taskTypeId", {
@@ -220,7 +238,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 })(<InputNumber style={fullWidth} />)}
               </FormItem>
 
-              <FormItem label={taskInstancesLabel} hasFeedback>
+              <FormItem label={instancesLabel} hasFeedback>
                 {getFieldDecorator("status.open", {
                   rules: [{ required: true }, { type: "number" }],
                 })(<InputNumber style={fullWidth} />)}
@@ -302,7 +320,9 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     this.setState({ isNMLSpecification: evt.target.value === "nml" })}
                 >
                   <Radio value="manual">Manually Specify Starting Postion</Radio>
-                  <Radio value="nml">Upload NML File</Radio>
+                  <Radio value="nml" disabled={isEditingMode}>
+                    Upload NML File
+                  </Radio>
                 </RadioGroup>
               </FormItem>
 
@@ -374,7 +394,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
 
               <FormItem>
                 <Button type="primary" htmlType="submit">
-                  Create Task
+                  {titleLabel}
                 </Button>
               </FormItem>
             </Form>

@@ -7,6 +7,7 @@ import { handleTaskCreationResponse } from "admin/views/task/task_create_form_vi
 import Messages from "messages";
 import Toast from "libs/toast";
 
+import type { APITaskType } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import type { BoundingBoxObjectType } from "oxalis/store";
 
@@ -43,7 +44,13 @@ export type NewTaskType = {
   +nmlFile?: File,
 };
 
-class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
+export type TaskCreationResponseType = {
+  status: number,
+  success?: APITaskType,
+  error?: string,
+};
+
+class TaskCreateBulkView extends React.PureComponent<Props, State> {
   state = {
     isUploading: false,
     tasksCount: 0,
@@ -195,22 +202,26 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
       tasksCount: tasks.length,
       tasksProcessed: 0,
     });
-    let responses = [];
 
-    for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
-      const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
-      // eslint-disable-next-line no-await-in-loop
-      const response = await createTasks(subArray);
-      responses = responses.concat(response);
+    try {
+      let responses = [];
+
+      for (let i = 0; i < tasks.length; i += NUM_TASKS_PER_BATCH) {
+        const subArray = tasks.slice(i, i + NUM_TASKS_PER_BATCH);
+        // eslint-disable-next-line no-await-in-loop
+        const response = await createTasks(subArray);
+        responses = responses.concat(response);
+        this.setState({
+          tasksProcessed: i + NUM_TASKS_PER_BATCH,
+        });
+      }
+
+      handleTaskCreationResponse(responses);
+    } finally {
       this.setState({
-        tasksProcessed: i + NUM_TASKS_PER_BATCH,
+        isUploading: false,
       });
     }
-
-    handleTaskCreationResponse(responses);
-    this.setState({
-      isUploading: false,
-    });
   }
 
   normFile = e => {
@@ -309,4 +320,4 @@ class TaskCreateBulkImportView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(TaskCreateBulkImportView);
+export default Form.create()(TaskCreateBulkView);

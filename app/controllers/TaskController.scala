@@ -159,7 +159,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           bulk2StatusJson(taskJsonBoxes)
         }
       }
-    } yield Ok(result)
+    } yield Ok(Json.toJson(result))
   }
 
 

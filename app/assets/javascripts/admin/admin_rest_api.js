@@ -18,7 +18,7 @@ import type {
   APIDatasetType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
-import type { NewTaskType } from "admin/views/task/task_create_bulk_import_view";
+import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -311,14 +311,18 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
 }
 
 // TODO fix return types
-export async function createTasks(tasks: Array<NewTaskType>): Promise<Array<*>> {
+export async function createTasks(
+  tasks: Array<NewTaskType>,
+): Promise<Array<TaskCreationResponseType>> {
   return Request.sendJSONReceiveJSON("/api/tasks", {
     data: tasks,
   });
 }
 
 // TODO fix return types
-export async function createTaskFromNML(task: NewTaskType): Promise<*> {
+export async function createTaskFromNML(
+  task: NewTaskType,
+): Promise<Array<TaskCreationResponseType>> {
   return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFile", {
     data: {
       nmlFile: task.nmlFile,

@@ -35,7 +35,7 @@ import type {
 import app from "app";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
-
+import type { TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
 import { Vector3Input, Vector6Input } from "libs/vector_input";
 
 const FormItem = Form.Item;
@@ -59,13 +59,12 @@ type State = {
   isResponseModalVisible: boolean,
 };
 
-export function handleTaskCreationResponse(
-  responses: Array<{ status: number, success?: APITaskType, error?: string }>,
-) {
+export function handleTaskCreationResponse(responses: Array<TaskCreationResponseType>) {
   const successfulTasks = [];
   const failedTasks = [];
+  debugger;
 
-  responses.forEach((response, i) => {
+  responses.forEach((response: TaskCreationResponseType, i: number) => {
     if (response.status === 200 && response.success) {
       successfulTasks.push(
         `${response.success.id},${response.success.creationInfo ||
@@ -137,6 +136,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         taskTypeId: task.type.id,
         boundingBox: task.boundingBox ? task.boundingBoxVec6 : null,
         scriptId: task.script ? task.script.id : null,
+        openInstances: task.status.open,
       });
       this.props.form.setFieldsValue(defaultValues);
     }
@@ -155,16 +155,18 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     e.preventDefault();
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
+        formValues.boundingBox = formValues.boundingBox
+          ? this.transformBoundingBox(formValues.boundingBox)
+          : null;
+
         if (this.props.taskId) {
+          // either update an existing task
           await updateTask(this.props.taskId, formValues);
           app.router.loadURL("/tasks");
         } else {
-          formValues.boundingBox = formValues.boundingBox
-            ? this.transformBoundingBox(formValues.boundingBox)
-            : null;
-
           this.setState({ isUploading: true });
 
+          // or create a new one either from the form values or with an NML file
           let response;
           try {
             if (this.state.isNMLSpecification) {
@@ -193,7 +195,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditingMode = this.props.taskId != null;
-    const titleLabel = isEditingMode ? `Update Task ${this.props.taskId}` : "Create Task";
+    const titleLabel = isEditingMode ? `Update Task ${this.props.taskId || ""}` : "Create Task";
     const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
 
     const fullWidth = { width: "100%" };

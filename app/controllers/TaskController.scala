@@ -33,7 +33,7 @@ import scala.util.Success
 case class TaskParameters(
                            taskTypeId: String,
                            neededExperience: Experience,
-                           status: CompletionStatus,
+                           openInstances: Int,
                            team: String,
                            projectName: String,
                            scriptId: Option[String],
@@ -49,7 +49,7 @@ object TaskParameters {
 case class NmlTaskParameters(
                               taskTypeId: String,
                               neededExperience: Experience,
-                              status: CompletionStatus,
+                              openInstances: Int,
                               team: String,
                               projectName: String,
                               scriptId: Option[String],
@@ -115,7 +115,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     TaskParameters(
       nmlParams.taskTypeId,
       nmlParams.neededExperience,
-      nmlParams.status,
+      nmlParams.openInstances,
       nmlParams.team,
       nmlParams.projectName,
       nmlParams.scriptId,
@@ -156,11 +156,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       result <- {
         val taskJsonFuture: Future[List[Box[JsObject]]] = Fox.sequence(taskJsons)
         taskJsonFuture.map {taskJsonBoxes =>
-          val js = bulk2StatusJson(taskJsonBoxes)
-          JsonOk(js, Messages("task.bulk.processed"))
+          bulk2StatusJson(taskJsonBoxes)
         }
       }
-    } yield result
+    } yield Ok(result)
   }
 
 
@@ -174,7 +173,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         taskType._id,
         params.team,
         params.neededExperience,
-        params.status.open,
+        params.openInstances,
         _project = project.name,
         _script = params.scriptId,
         editPosition = params.editPosition,
@@ -194,12 +193,12 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       openInstanceCount <- task.remainingInstances
-      _ <- (params.status.open == openInstanceCount || project.assignmentConfiguration.supportsChangeOfNumInstances) ?~> Messages("task.instances.changeImpossible")
+      _ <- (params.openInstances == openInstanceCount || project.assignmentConfiguration.supportsChangeOfNumInstances) ?~> Messages("task.instances.changeImpossible")
       updatedTask <- TaskDAO.update(
         _task = task._id,
         _taskType = taskType._id,
         neededExperience = params.neededExperience,
-        instances = task.instances + params.status.open - openInstanceCount,
+        instances = task.instances + params.openInstances - openInstanceCount,
         team = params.team,
         _script = params.scriptId,
         _project = Some(project.name),
@@ -213,7 +212,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       newTracingBaseReference <- dataSet.dataStore.saveSkeletonTracing(newTracingBase) ?~> "Failed to save skeleton tracing."
        _ <- AnnotationService.updateAnnotationBase(updatedTask, newTracingBaseReference)
       json <- Task.transformToJson(updatedTask)
-      _ <- OpenAssignmentService.updateRemainingInstances(updatedTask, project, params.status.open)
+      _ <- OpenAssignmentService.updateRemainingInstances(updatedTask, project, params.openInstances)
     } yield {
       JsonOk(json, Messages("task.editSuccess"))
     }

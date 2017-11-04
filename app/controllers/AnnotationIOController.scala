@@ -14,14 +14,12 @@ import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
-import org.apache.commons.io.FilenameUtils
 import oxalis.security.{Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
-import play.api.mvc.MultipartFormData
 
 import scala.concurrent.Future
 
@@ -39,17 +37,6 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       None
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    def isZipFile(f: MultipartFormData.FilePart[TemporaryFile]): Boolean =
-      f.contentType.contains("application/zip") || FilenameUtils.isExtension(f.filename, "zip")
-
-    def parseFile(f: MultipartFormData.FilePart[TemporaryFile]) = {
-      if (isZipFile(f)) {
-        NmlService.extractFromZip(f.ref.file, Some(f.filename))
-      } else {
-        val nml = NmlService.extractFromNml(f.ref.file, f.filename)
-        NmlService.ZipParseResult(List(nml), Map.empty)
-      }
-    }
 
     def returnError(zipParseResult: NmlService.ZipParseResult) = {
       if (zipParseResult.containsFailure) {
@@ -73,7 +60,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
 
     val parsedFiles = request.body.files.foldLeft(NmlService.ZipParseResult()) {
-      case (acc, next) => acc.combineWith(parseFile(next))
+      case (acc, next) => acc.combineWith(NmlService.extractFromFile(next.ref.file, next.filename))
     }
 
     if (!parsedFiles.isEmpty) {

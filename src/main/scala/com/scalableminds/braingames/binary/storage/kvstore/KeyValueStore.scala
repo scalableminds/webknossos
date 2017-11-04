@@ -26,7 +26,7 @@ trait KeyValueStoreImplicits extends BoxImplicits {
 
   implicit def toBox[T](x: T): Box[T] = Full(x)
 
-  implicit def asJson[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.toCharArray.map(_.toByte)
+  implicit def asJson[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
   implicit def fromJson[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] = jsResult2Box(Json.parse(a).validate)
 

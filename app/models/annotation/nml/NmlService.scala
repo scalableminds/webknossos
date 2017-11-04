@@ -78,7 +78,25 @@ object NmlService extends LazyLogging {
         otherFiles += (filename.toString -> tempFile)
       }
     }
-    ZipParseResult(parseResults, otherFiles)
+    ZipParseResult(addPrefixesToTreeNames(parseResults), otherFiles)
+  }
+
+  private def addPrefixesToTreeNames(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
+    def renameTrees(name: String, tracing: SkeletonTracing): SkeletonTracing = {
+      val prefix = name.replaceAll("\\.[^.]*$", "") + "_"
+      tracing.copy(trees = tracing.trees.map(tree => tree.copy(name = prefix + tree.name)))
+    }
+
+    if (parseResults.length > 1) {
+      parseResults.map(r =>
+        r match {
+          case NmlParseSuccess(name, (Left(skeletonTracing), description)) => NmlParseSuccess(name, (Left(renameTrees(name, skeletonTracing)), description))
+          case _ => r
+        }
+      )
+    } else {
+      parseResults
+    }
   }
 
   def extractFromFile(file: File, fileName: String): ZipParseResult = {

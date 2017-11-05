@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import models.analytics.{AnalyticsDAO, AnalyticsEntry, UserAgentTrackingDAO}
+import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import oxalis.security.Secured
 import play.api._
 import play.api.i18n.MessagesApi
@@ -14,7 +14,6 @@ import play.twirl.api.Html
 class Application @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
 
   def index() = UserAwareAction { implicit request =>
-    UserAgentTrackingDAO.trackUserAgent(request.userOpt.map(_._id), request.headers.get("user-agent").getOrElse("<none>"))
     request.userOpt match {
       case Some(user) if user.isAnonymous =>
         Redirect("/info")

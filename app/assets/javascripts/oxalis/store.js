@@ -24,7 +24,6 @@ import type {
   OrthoViewType,
   Vector2,
   Vector3,
-  Vector6,
   ModeType,
   VolumeToolType,
   ControlModeType,
@@ -158,6 +157,7 @@ export type SkeletonTracingType = {
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
   +boundingBox: ?BoundingBoxType,
+  +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
@@ -178,6 +178,7 @@ export type VolumeTracingType = {
   +tracingId: string,
   +tracingType: TracingTypeTracingType,
   +boundingBox: ?BoundingBoxType,
+  +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
@@ -192,6 +193,7 @@ export type ReadOnlyTracingType = {
   +tracingId: string,
   +tracingType: "View",
   +boundingBox: ?BoundingBoxType,
+  +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
@@ -247,7 +249,6 @@ export type UserConfigurationType = {
 };
 
 export type TemporaryConfigurationType = {
-  +userBoundingBox: Vector6,
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
@@ -365,7 +366,6 @@ export const defaultState: OxalisState = {
     tdViewDisplayPlanes: true,
   },
   temporaryConfiguration: {
-    userBoundingBox: [0, 0, 0, 0, 0, 0],
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
@@ -387,6 +387,7 @@ export const defaultState: OxalisState = {
   tracing: {
     annotationId: "",
     boundingBox: null,
+    userBoundingBox: null,
     type: "readonly",
     name: "",
     version: 0,

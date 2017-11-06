@@ -91,7 +91,8 @@ export type SkeletonTracingActionType =
   | DeleteCommentActionType
   | ToggleTreeActionType
   | ToggleAllTreesActionType
-  | ToggleInactiveTreesActionType;
+  | ToggleInactiveTreesActionType
+  | SetTracingActionType;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -111,6 +112,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SHUFFLE_TREE_COLOR",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
+  "SET_USER_BOUNDING_BOX",
 ];
 
 export const initializeSkeletonTracingAction = (

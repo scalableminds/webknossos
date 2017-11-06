@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ ! $2 ]; then
-  echo " Example of use: $0 database_name schema_dir"
+  echo " Example of use: $0 error/warn database_name schema_dir"
   exit 1
 fi
 

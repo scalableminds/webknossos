@@ -71,7 +71,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       val name = nameForNmls(fileNames)
       if (volumeTracings.nonEmpty) {
         for {
-          dataSet: DataSet <- DataSetDAO.findOneBySourceName(volumeTracings.head._1.dataSetName).toFox
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(volumeTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", volumeTracings.head._1.dataSetName)
           tracingReference <- dataSet.dataStore.saveVolumeTracing(volumeTracings.head._1, parsedFiles.otherFiles.get(volumeTracings.head._2).map(_.file))
           annotation <- AnnotationService.createFrom(
             request.user, dataSet, tracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(tracingReference.typ), name, volumeTracings.head._3)
@@ -81,7 +81,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         )
       } else if (skeletonTracings.nonEmpty) {
         for {
-          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head._1.dataSetName).toFox
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", skeletonTracings.head._1.dataSetName)
           mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings.map(_._1), dataSet)
           annotation <- AnnotationService.createFrom(
             request.user, dataSet, mergedTracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(mergedTracingReference.typ), name, skeletonTracings.head._2)

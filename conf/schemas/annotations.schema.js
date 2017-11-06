@@ -57,7 +57,7 @@ db.runCommand({
         $or: [{ tracingTime: { $type: "number" } }, { tracingTime: { $exists: false } }],
       },
       {
-        $or: [{ created: { $type: "number" } }, { created: { $exists: false } }],
+        created: { $type: "number", $exists: true },
       },
       {
         _id: { $type: "objectId", $exists: true },

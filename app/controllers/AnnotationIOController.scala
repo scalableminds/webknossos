@@ -63,8 +63,10 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       case (acc, next) => acc.combineWith(NmlService.extractFromFile(next.ref.file, next.filename))
     }
 
+    val parseResultsPrefixed = NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
+
     if (!parsedFiles.isEmpty) {
-      val parseSuccess = parsedFiles.parseResults.filter(_.succeeded)
+      val parseSuccess = parseResultsPrefixed.filter(_.succeeded)
       val fileNames = parseSuccess.map(_.fileName)
       val tracings = parseSuccess.flatMap(_.tracing)
       val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)

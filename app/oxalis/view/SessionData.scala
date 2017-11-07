@@ -1,7 +1,7 @@
 package oxalis.view
 
-import play.api.mvc.Flash
 import models.user.User
+import play.api.mvc.Flash
 
 trait FlashMessages{
   sealed trait FlashMessage{

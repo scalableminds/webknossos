@@ -4,7 +4,7 @@ import Request from "libs/request";
 
 export function* pushAnnotationUpdateAsync(): Generator<*, *, *> {
   const tracing = yield select(state => state.tracing);
-  const url = `/annotations/${tracing.tracingType}/${tracing.tracingId}/edit`;
+  const url = `/annotations/${tracing.tracingType}/${tracing.annotationId}/edit`;
   yield [
     call(Request.sendJSONReceiveJSON, url, {
       data: { name: tracing.name, isPublic: tracing.isPublic, description: tracing.description },

@@ -20,7 +20,7 @@ type Props = {
   // eslint-disable-next-line react/no-unused-prop-types
   tracingType: string,
   // eslint-disable-next-line react/no-unused-prop-types
-  tracingId: string,
+  annotationId: string,
   // eslint-disable-next-line react/no-unused-prop-types
   restrictions: RestrictionsType & SettingsType,
   // eslint-disable-next-line react/no-unused-prop-types
@@ -52,13 +52,14 @@ class DatasetActionsView extends PureComponent<Props, State> {
 
   handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/duplicate`;
+    const url = `/annotations/${this.props.tracingType}/${this.props.annotationId}/duplicate`;
     app.router.loadURL(url);
   };
 
   handleFinish = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/finishAndRedirect`;
+    const url = `/annotations/${this.props.tracingType}/${this.props
+      .annotationId}/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
       app.router.loadURL(url);
@@ -79,7 +80,8 @@ class DatasetActionsView extends PureComponent<Props, State> {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    const downloadUrl = `/annotations/${this.props.tracingType}/${this.props.tracingId}/download`;
+    const downloadUrl = `/annotations/${this.props.tracingType}/${this.props
+      .annotationId}/download`;
     win.location.href = downloadUrl;
     win.document.body.innerHTML = messages["download.close_window"];
   };
@@ -231,7 +233,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
 function mapStateToProps(state: OxalisState) {
   return {
     tracingType: state.tracing.tracingType,
-    tracingId: state.tracing.tracingId,
+    annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
     task: state.task,
   };

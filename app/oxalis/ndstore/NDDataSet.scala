@@ -3,8 +3,8 @@
  */
 package oxalis.ndstore
 
-import play.api.libs.json.{Reads, _}
 import play.api.libs.functional.syntax._
+import play.api.libs.json.{Reads, _}
 
 case class NDDataSet(
   name: String,

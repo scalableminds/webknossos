@@ -183,7 +183,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
                 render={(__, project: APIProjectType) => (
                   <span>
                     <a
-                      href={`/annotations/CompoundProject/${project.name}`}
+                      href={`/annotations/CompoundProject/${project.id}`}
                       title="View all Finished Tracings"
                     >
                       <Icon type="eye-o" />View
@@ -219,7 +219,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
                     </a>
                     <br />
                     <a
-                      href={`/api/projects/${project.name}/download`}
+                      href={`/annotations/CompoundProject/${project.id}/download`}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />Download

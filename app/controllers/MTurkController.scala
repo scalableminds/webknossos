@@ -3,7 +3,6 @@ package controllers
 import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.tools.Fox
 import models.annotation.{AnnotationDAO, AnnotationService}
 import models.mturk.{MTurkAnnotationReference, MTurkAssignment, MTurkAssignmentDAO}
 import models.task.Task
@@ -38,7 +37,7 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
             AnnotationDAO.findOneById(reference._annotation)(GlobalAccessContext)
           case None            =>
             for {
-              annotation <- AnnotationService.createAnnotationFor(user, task)(GlobalAccessContext)
+              annotation <- AnnotationService.createAnnotationFor(user, task)(implicitly[Messages], GlobalAccessContext)
               _ <- MTurkAssignmentDAO.appendReference(
                 mturkAssignment._id,
                 MTurkAnnotationReference(annotation._id, user._id, assignmentId))(GlobalAccessContext)
@@ -52,7 +51,7 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
         user <- UserService.prepareMTurkUser(workerId, task.team, task.neededExperience)(GlobalAccessContext) ?~> Messages("mturk.user.notFound")
         annotation <- annotationForAssignment(mturkAssignment, user, task) ?~> Messages("annotation.creationFailed")
       } yield {
-        Redirect(routes.AnnotationController.trace(annotation.typ, annotation.id))
+        Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
         .withSession(Secured.createSession(user))
       }
   }

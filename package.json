@@ -81,7 +81,9 @@
     "flow-coverage":
       "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
     "docs":
-      "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api"
+      "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
+    "import-db": "./tools/import_export/import.sh webknossos-testing ./test/db/",
+    "drop-db": "./tools/dropDB.sh webknossos-testing"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",

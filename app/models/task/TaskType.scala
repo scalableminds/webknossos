@@ -1,30 +1,24 @@
 package models.task
 
-import play.api.libs.concurrent.Execution.Implicits._
+import com.scalableminds.braingames.datastore.tracings.TracingType
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
+import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
-import play.api.libs.json._
-import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.util.tools._
-import play.api.libs.functional.syntax._
-import models.annotation.{AnnotationService, AnnotationSettings}
-import reactivemongo.bson.BSONObjectID
-import com.scalableminds.util.reactivemongo._
-import reactivemongo.play.json.BSONFormats._
 import models.user.User
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
-import com.scalableminds.util.mvc.Formatter
-import scala.async.Async._
-import com.scalableminds.util.reactivemongo.{DefaultAccessDefinitions, DBAccessContext}
-import scala.concurrent.Future
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json._
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 
 case class TaskType(
-  summary: String,
-  description: String,
-  team: String,
-  settings: AnnotationSettings = AnnotationSettings.default,
-  isActive: Boolean = true,
-  _id: BSONObjectID = BSONObjectID.generate) {
+                     summary: String,
+                     description: String,
+                     team: String,
+                     settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
+                     isActive: Boolean = true,
+                     _id: BSONObjectID = BSONObjectID.generate) {
 
   val id = _id.stringify
 }

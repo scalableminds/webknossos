@@ -5,12 +5,14 @@
  * @flow
  */
 import type { Vector3 } from "oxalis/constants";
-import type { ServerTracing, SkeletonContentDataType } from "oxalis/model";
+import type { ServerSkeletonTracingType } from "oxalis/model";
+import type { APIAnnotationType } from "admin/api_flow_types";
 import type { SkeletonTracingType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
-  tracing: ServerTracing<SkeletonContentDataType>,
+  annotation: APIAnnotationType,
+  tracing: ServerSkeletonTracingType,
 };
 type CreateNodeActionType = {
   type: "CREATE_NODE",
@@ -25,6 +27,12 @@ type DeleteNodeActionType = {
   type: "DELETE_NODE",
   nodeId?: number,
   treeId?: number,
+  timestamp: number,
+};
+type DeleteEdgeActionType = {
+  type: "DELETE_EDGE",
+  sourceNodeId: number,
+  targetNodeId: number,
   timestamp: number,
 };
 type SetActiveNodeActionType = { type: "SET_ACTIVE_NODE", nodeId: number };
@@ -65,6 +73,7 @@ export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
   | CreateNodeActionType
   | DeleteNodeActionType
+  | DeleteEdgeActionType
   | SetActiveNodeActionType
   | SetNodeRadiusActionType
   | CreateBranchPointActionType
@@ -82,12 +91,14 @@ export type SkeletonTracingActionType =
   | DeleteCommentActionType
   | ToggleTreeActionType
   | ToggleAllTreesActionType
-  | ToggleInactiveTreesActionType;
+  | ToggleInactiveTreesActionType
+  | SetTracingActionType;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
   "CREATE_NODE",
   "DELETE_NODE",
+  "DELETE_EDGE",
   "SET_ACTIVE_NODE",
   "SET_NODE_RADIUS",
   "CREATE_BRANCHPOINT",
@@ -101,12 +112,15 @@ export const SkeletonTracingSaveRelevantActions = [
   "SHUFFLE_TREE_COLOR",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
+  "SET_USER_BOUNDING_BOX",
 ];
 
 export const initializeSkeletonTracingAction = (
-  tracing: ServerTracing<SkeletonContentDataType>,
+  annotation: APIAnnotationType,
+  tracing: ServerSkeletonTracingType,
 ): InitializeSkeletonTracingActionType => ({
   type: "INITIALIZE_SKELETONTRACING",
+  annotation,
   tracing,
 });
 
@@ -135,6 +149,17 @@ export const deleteNodeAction = (
   type: "DELETE_NODE",
   nodeId,
   treeId,
+  timestamp,
+});
+
+export const deleteEdgeAction = (
+  sourceNodeId: number,
+  targetNodeId: number,
+  timestamp: number = Date.now(),
+): DeleteEdgeActionType => ({
+  type: "DELETE_EDGE",
+  sourceNodeId,
+  targetNodeId,
   timestamp,
 });
 

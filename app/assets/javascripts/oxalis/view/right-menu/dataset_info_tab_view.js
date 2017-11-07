@@ -2,14 +2,12 @@
  * dataset_info_view.js
  * @flow
  */
-import _ from "lodash";
 import React from "react";
 import { connect } from "react-redux";
-import Maybe from "data.maybe";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
+import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
-import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
 import {
@@ -17,7 +15,7 @@ import {
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import type { OxalisState, TracingType, DatasetType, FlycamType, TaskType } from "oxalis/store";
+import type { OxalisState, TracingType, DatasetType, TaskType, FlycamType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
   tracing: TracingType,
@@ -70,18 +68,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const { tracingType, name, description } = this.props.tracing;
     const tracingName = name || "<untitled>";
     const tracingDescription = description || "<no comment>";
-    const treesMaybe = getSkeletonTracing(this.props.tracing).chain(tracing =>
-      Maybe.fromNullable(tracing.trees),
-    );
-    const treeCount = treesMaybe.map(trees => _.size(trees)).getOrElse(null);
-    const nodeCount = treesMaybe
-      // eslint-disable-next-line no-return-assign
-      .map(trees => _.reduce(trees, (sum, tree) => (sum += _.size(tree.nodes)), 0))
-      .getOrElse(null);
-    const branchPointCount = treesMaybe
-      // eslint-disable-next-line no-return-assign
-      .map(trees => _.reduce(trees, (sum, tree) => (sum += _.size(tree.branchPoints)), 0))
-      .getOrElse(null);
+    const statsMaybe = getStats(this.props.tracing);
     let annotationTypeLabel;
 
     if (this.props.task != null) {
@@ -127,9 +114,13 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         </p>
         {this.props.tracing.type === "skeleton" ? (
           <div>
-            <p>Number of Trees: {treeCount}</p>
-            <p>Number of Nodes: {nodeCount}</p>
-            <p>Number of Branch Points: {branchPointCount}</p>
+            <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
+            <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
+            <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
+            <p>
+              Number of Branch Points:{" "}
+              {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
+            </p>
           </div>
         ) : null}
         {isPublicViewMode ? (

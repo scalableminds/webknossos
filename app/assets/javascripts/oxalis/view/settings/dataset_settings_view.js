@@ -24,7 +24,6 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import Utils from "libs/utils";
-import Constants from "oxalis/constants";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
@@ -97,13 +96,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.fourBit}
             onChange={_.partial(this.props.onChange, "fourBit")}
           />
-          {this.props.viewMode === Constants.MODE_PLANE_TRACING ? (
-            <SwitchSetting
-              label="Interpolation"
-              value={this.props.datasetConfiguration.interpolation}
-              onChange={_.partial(this.props.onChange, "interpolation")}
-            />
-          ) : null}
+          <SwitchSetting
+            label="Interpolation"
+            value={this.props.datasetConfiguration.interpolation}
+            onChange={_.partial(this.props.onChange, "interpolation")}
+          />
           <DropdownSetting
             label="Quality"
             value={this.props.datasetConfiguration.quality}

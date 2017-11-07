@@ -5,7 +5,7 @@ package models.binary
 
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
-import reactivemongo.bson.{BSONString, BSONHandler}
+import reactivemongo.bson.{BSONHandler, BSONString}
 
 sealed trait DataStoreType {
   val name: String

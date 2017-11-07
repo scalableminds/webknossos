@@ -1,11 +1,10 @@
 package oxalis.user
 
-import play.api.cache.Cache
-import play.api.Play.current
-import scala.concurrent.Future
-import models.user.{UserDAO, User}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import models.user.{User, UserDAO}
+import play.api.Play.current
+import play.api.cache.Cache
 
 object UserCache {
   val userCacheTimeout = current.configuration.getInt("user.cacheTimeout") getOrElse 3

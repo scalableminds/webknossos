@@ -10,7 +10,7 @@ import {
 import type { CopySegmentationLayerActionType } from "oxalis/model/actions/volumetracing_actions";
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import {
   isVolumeTracingDisallowed,
   getActiveCellId,
@@ -64,6 +64,7 @@ function* warnOfTooLowOpacity(): Generator<*, *, *> {
 }
 
 export function* editVolumeLayerAsync(): Generator<*, *, *> {
+  yield take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
 
   while (allowUpdate) {
@@ -188,5 +189,10 @@ export function* diffVolumeTracing(
   flycam: FlycamType,
 ): Generator<UpdateAction, *, *> {
   // no diffing happening here (yet) as for volume tracings there are only updateTracing actions so far
-  yield updateVolumeTracing(volumeTracing, V3.floor(getPosition(flycam)));
+  yield updateVolumeTracing(
+    volumeTracing,
+    V3.floor(getPosition(flycam)),
+    getRotation(flycam),
+    flycam.zoomStep,
+  );
 }

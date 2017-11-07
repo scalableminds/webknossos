@@ -126,25 +126,24 @@ class UrlManager {
     }
 
     getActiveNode(tracing).map(node => state.push(node.id));
-    const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.tracingType, tracing.tracingId);
+    const newBaseUrl = updateTypeAndId(this.baseUrl, tracing.tracingType, tracing.annotationId);
     return `${newBaseUrl}#${state.join(",")}`;
   }
 }
 
-export function updateTypeAndId(baseUrl: string, tracingType: string, tracingId: string): string {
-  // Update the baseUrl with a potentially new tracing id and or tracing type.
-  // There are two possible routes (annotations or datasets) which will be handled
-  // both here. Chaining the replace function is possible, since they are mutually
-  // exclusive and thus can't apply both simultaneously.
-  return baseUrl
-    .replace(
-      /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
-      (all, base, type, id, rest) => `${base}/${tracingType}/${tracingId}${rest}`,
-    )
-    .replace(
-      /^(.*\/datasets)\/([^/]*)(\/.*)$/,
-      (all, base, id, rest) => `${base}/${tracingId}${rest}`,
-    );
+export function updateTypeAndId(
+  baseUrl: string,
+  tracingType: string,
+  annotationId: string,
+): string {
+  // Update the baseUrl with a potentially new annotation id and or tracing type.
+  // There are two possible routes (/annotations or /datasets), but the annotation id
+  // will only ever be updated for the annotations route as the other route is for
+  // dataset viewing only
+  return baseUrl.replace(
+    /^(.*\/annotations)\/(.*?)\/([^/]*)(\/?.*)$/,
+    (all, base, type, id, rest) => `${base}/${tracingType}/${annotationId}${rest}`,
+  );
 }
 
 export default new UrlManager();

@@ -34,11 +34,11 @@ import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
 type Props = {
-  initialTracingType: SkeletonTracingTypeTracingType,
-  initialTracingId: string,
+  initialTracingType: TracingTypeTracingType,
+  initialAnnotationId: string,
   initialControlmode: ControlModeType,
   // Delivered by connect()
   viewMode: ModeType,
@@ -87,7 +87,7 @@ class Controller extends React.PureComponent<Props, State> {
 
     Model.fetch(
       this.props.initialTracingType,
-      this.props.initialTracingId,
+      this.props.initialAnnotationId,
       this.props.initialControlmode,
       true,
     )

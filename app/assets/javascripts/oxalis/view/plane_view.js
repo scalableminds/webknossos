@@ -110,7 +110,7 @@ class PlaneView {
     return buffer;
   }
 
-  renderFunction(): void {
+  renderFunction(forceRender: boolean = false): void {
     // This is the main render function.
     // All 3D meshes and the trianglesplane are rendered here.
 
@@ -129,7 +129,7 @@ class PlaneView {
       }
     }
 
-    if (this.needsRerender || modelChanged) {
+    if (forceRender || this.needsRerender || modelChanged) {
       const { renderer, scene } = SceneController;
 
       this.trigger("render");

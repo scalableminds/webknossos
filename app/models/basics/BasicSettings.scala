@@ -1,8 +1,8 @@
 package models.basics
 
-import scala.language.reflectiveCalls
-
 import play.api.libs.json._
+
+import scala.language.reflectiveCalls
 
 trait BasicSettings{
   def default: { def configuration: Map[String, JsValue]}

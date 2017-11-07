@@ -65,15 +65,15 @@ class CommentTabView extends React.Component<Props, CommentTabStateType> {
         return tree.comments
           .slice(0)
           .sort(
-            Utils.localeCompareBy(comment => `${comment.content}_${comment.node}`, sortAscending),
+            Utils.localeCompareBy(comment => `${comment.content}_${comment.nodeId}`, sortAscending),
           );
       });
 
-      const currentCommentIndex = _.findIndex(sortedComments, { node: activeNode.id });
+      const currentCommentIndex = _.findIndex(sortedComments, { nodeId: activeNode.id });
       const nextCommentIndex = (currentCommentIndex + 1) % sortedComments.length;
 
       if (nextCommentIndex >= 0 && nextCommentIndex < sortedComments.length) {
-        this.props.setActiveNode(sortedComments[nextCommentIndex].node);
+        this.props.setActiveNode(sortedComments[nextCommentIndex].nodeId);
       }
 
       return null; // satisfy linter
@@ -125,7 +125,7 @@ class CommentTabView extends React.Component<Props, CommentTabStateType> {
       getActiveNode(this.props.skeletonTracing),
     )
       .chain(([tree, activeNode]) =>
-        Maybe.fromNullable(tree.comments.find(comment => comment.node === activeNode.id)),
+        Maybe.fromNullable(tree.comments.find(comment => comment.nodeId === activeNode.id)),
       )
       .map(comment => comment.content)
       .getOrElse("");

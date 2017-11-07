@@ -1,7 +1,7 @@
 package models.configuration
 
-import play.api.libs.json._
 import models.basics.BasicSettings
+import play.api.libs.json._
 
 case class DataSetConfiguration(configuration: Map[String, JsValue]) {
 

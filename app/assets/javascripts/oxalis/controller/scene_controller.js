@@ -283,7 +283,8 @@ class SceneController {
     return this.rootNode;
   }
 
-  setUserBoundingBox(bb: BoundingBoxType): void {
+  setUserBoundingBox(bb: ?BoundingBoxType): void {
+    if (bb == null) bb = { min: [0, 0, 0], max: [0, 0, 0] };
     this.userBoundingBox.setCorners(bb.min, bb.max);
   }
 
@@ -337,8 +338,8 @@ class SceneController {
       this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
     listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.userBoundingBox,
-      bb => this.setUserBoundingBox(Utils.computeBoundingBoxFromArray(bb)),
+      storeState => storeState.tracing.userBoundingBox,
+      bb => this.setUserBoundingBox(bb),
     );
     listenToStoreProperty(
       storeState => storeState.tracing.boundingBox,

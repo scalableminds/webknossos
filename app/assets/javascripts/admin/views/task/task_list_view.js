@@ -38,8 +38,12 @@ class TaskListView extends React.PureComponent<Props, State> {
 
   async fetchData(queryObject: QueryObjectType) {
     if (!_.isEmpty(queryObject)) {
+      this.setState({ isLoading: true });
+
+      const tasks = await getTasks(queryObject);
       this.setState({
-        tasks: await getTasks(queryObject),
+        tasks,
+        isLoading: false,
       });
     }
   }
@@ -114,6 +118,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             <TaskSearchForm
               onChange={queryObject => this.fetchData(queryObject)}
               initialFieldValues={this.props.initialFieldValues}
+              isLoading={this.state.isLoading}
             />
           </Card>
 

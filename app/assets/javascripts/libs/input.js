@@ -277,6 +277,7 @@ class InputMouseButton {
 
 export class InputMouse {
   $targetSelector: string;
+  hammerManager: Hammer;
   id: ?string;
 
   leftMouseButton: InputMouseButton;
@@ -321,14 +322,14 @@ export class InputMouse {
       this.$targetSelector,
     );
 
-    const hammerTarget = new Hammer(document.querySelector(this.$targetSelector));
-    hammerTarget.get("pan").set({ direction: Hammer.DIRECTION_ALL });
-    hammerTarget.get("pinch").set({ enable: true });
-    hammerTarget.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
-    hammerTarget.on("panmove", (evt: HammerJsEvent) => this.mouseMove(evt.srcEvent));
-    hammerTarget.on("panend", (evt: HammerJsEvent) => this.mouseUp(evt.srcEvent));
-    hammerTarget.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
-    hammerTarget.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
+    this.hammerManager = new Hammer(document.querySelector(this.$targetSelector));
+    this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
+    this.hammerManager.get("pinch").set({ enable: true });
+    this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
+    this.hammerManager.on("panmove", (evt: HammerJsEvent) => this.mouseMove(evt.srcEvent));
+    this.hammerManager.on("panend", (evt: HammerJsEvent) => this.mouseUp(evt.srcEvent));
+    this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
+    this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
 
     this.on(initialBindings);
     this.attach = this.on;
@@ -351,6 +352,9 @@ export class InputMouse {
       },
       this.$targetSelector,
     );
+
+    // Unbinds all events and input events
+    this.hammerManager.destroy();
   }
 
   isHit(event: JQueryInputEventObject) {

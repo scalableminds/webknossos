@@ -70,13 +70,28 @@ const Utils = {
     return [r, g, b, 1];
   },
 
-  computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
+  computeBoundingBoxFromArray(bb: ?Vector6): ?BoundingBoxType {
+    if (bb == null) return null;
+
     const [x, y, z, width, height, depth] = bb;
 
     return {
       min: [x, y, z],
       max: [x + width, y + height, z + depth],
     };
+  },
+
+  computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
+    return bb != null
+      ? [
+          bb.min[0],
+          bb.min[1],
+          bb.min[2],
+          bb.max[0] - bb.min[0],
+          bb.max[1] - bb.min[1],
+          bb.max[2] - bb.min[2],
+        ]
+      : null;
   },
 
   compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {

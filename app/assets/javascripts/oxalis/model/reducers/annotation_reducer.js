@@ -31,6 +31,16 @@ function AnnotationReducer(state: OxalisState, action: ActionType): OxalisState 
       });
     }
 
+    case "SET_USER_BOUNDING_BOX": {
+      return update(state, {
+        tracing: {
+          userBoundingBox: {
+            $set: action.userBoundingBox,
+          },
+        },
+      });
+    }
+
     default:
       return state;
   }

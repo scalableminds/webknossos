@@ -79,6 +79,16 @@ object NmlWriter {
     Xml.withinElementSync("zoomLevel") {
       writer.writeAttribute("zoom", tracing.zoomLevel.toString)
     }
+    tracing.userBoundingBox.map { b =>
+      Xml.withinElementSync("userBoundingBox") {
+        writer.writeAttribute("topLeftX", b.topLeft.x.toString)
+        writer.writeAttribute("topLeftY", b.topLeft.y.toString)
+        writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
+        writer.writeAttribute("width", b.width.toString)
+        writer.writeAttribute("height", b.height.toString)
+        writer.writeAttribute("depth", b.depth.toString)
+      }
+    }
   }
 
   def writeParametersAsXml(tracing: VolumeTracing, description: String, scale: Scale)(implicit writer: XMLStreamWriter) = {

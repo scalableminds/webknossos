@@ -14,13 +14,14 @@ import {
   createTree,
   deleteTree,
   deleteNode,
+  deleteEdge,
   shuffleTreeColor,
   createComment,
   deleteComment,
   mergeTrees,
   toggleAllTreesReducer,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
   getSkeletonTracing,
   findTreeByNodeId,
@@ -122,7 +123,8 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.boundingBox),
+        boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
+        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
         isPublic: action.annotation.isPublic,
         tags: action.annotation.tags,
         description: action.annotation.description,
@@ -181,6 +183,26 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                   activeNodeId: { $set: newActiveNodeId },
                   activeTreeId: { $set: newActiveTreeId },
                   cachedMaxNodeId: { $set: newMaxNodeId },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "DELETE_EDGE": {
+          const { timestamp, sourceNodeId, targetNodeId } = action;
+          const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId);
+          const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
+          return sourceTreeMaybe
+            .chain(([sourceTree, sourceNode]) =>
+              targetTreeMaybe.chain(([targetTree, targetNode]) =>
+                deleteEdge(state, sourceTree, sourceNode, targetTree, targetNode, timestamp),
+              ),
+            )
+            .map(trees =>
+              update(state, {
+                tracing: {
+                  trees: { $set: trees },
                 },
               }),
             )

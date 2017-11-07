@@ -37,15 +37,22 @@ services:
     stdin_open: true
 
   sbt:
-    image: scalableminds/sbt:sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
+    image: sbt
     ports:
       - "5005:5005"
+    environment:
+      - SBT_USER=$USER
     volumes:
       - ".:/project"
-      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/$USER/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/$USER/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/$USER/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/group:/etc/group:ro
+      - /etc/passwd:/etc/passwd:ro
+      - /etc/shadow:/etc/shadow:ro
 
   frontend-dependencies:
     extends:

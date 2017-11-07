@@ -62,7 +62,6 @@ type State = {
 export function handleTaskCreationResponse(responses: Array<TaskCreationResponseType>) {
   const successfulTasks = [];
   const failedTasks = [];
-  debugger;
 
   responses.forEach((response: TaskCreationResponseType, i: number) => {
     if (response.status === 200 && response.success) {

@@ -11,7 +11,7 @@ import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import Stats from "stats.js";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
@@ -26,7 +26,7 @@ import ApiLoader from "oxalis/api/api_loader";
 import api from "oxalis/api/internal_api";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
@@ -49,6 +49,7 @@ type State = {
 };
 
 class Controller extends React.PureComponent<Props, State> {
+  keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 
@@ -173,6 +174,14 @@ class Controller extends React.PureComponent<Props, State> {
     Modal.show(text, title);
   }
 
+  scaleTrianglesPlane(delta: number): void {
+    let scale = Store.getState().userConfiguration.scale + delta;
+    scale = Math.min(constants.MAX_SCALE, scale);
+    scale = Math.max(constants.MIN_SCALE, scale);
+
+    Store.dispatch(updateUserSettingAction("scale", scale));
+  }
+
   isWebGlSupported() {
     return (
       window.WebGLRenderingContext &&
@@ -256,6 +265,19 @@ class Controller extends React.PureComponent<Props, State> {
     }
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
+
+    this.keyboard = new InputKeyboard({
+      // Scale planes
+      l: timeFactor => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(-scaleValue * timeFactor);
+      },
+
+      k: timeFactor => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(scaleValue * timeFactor);
+      },
+    });
   }
 
   updateStats = () => this.stats.update();

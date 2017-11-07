@@ -44,9 +44,9 @@ services:
       - SBT_USER=$USER
     volumes:
       - ".:/project"
-      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/$USER/.m2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/$USER/.ivy2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/$USER/.sbt"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:$HOME/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:$HOME/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:$HOME/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
       - /etc/timezone:/etc/timezone:ro
       - /etc/localtime:/etc/localtime:ro

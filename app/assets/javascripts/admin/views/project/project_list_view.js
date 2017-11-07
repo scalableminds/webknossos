@@ -175,8 +175,7 @@ class ProjectListView extends React.PureComponent<{}, State> {
                 sorter={Utils.localeCompareBy((project: APIProjectType) =>
                   project.expectedTime.toString(),
                 )}
-                render={(expectedTime, project: APIProjectType) =>
-                  project.paused ? "<paused>" : `${expectedTime}m`}
+                render={expectedTime => `${expectedTime}m`}
               />
               <Column
                 title="Action"

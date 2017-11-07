@@ -78,6 +78,7 @@ type ServerSkeletonTracingTreeType = {
 type ServerTracingBaseType = {
   id: string,
   boundingBox?: BoundingBoxObjectType,
+  userBoundingBox?: BoundingBoxObjectType,
   createdTimestamp: number,
   editPosition: Point3,
   editRotation: Point3,

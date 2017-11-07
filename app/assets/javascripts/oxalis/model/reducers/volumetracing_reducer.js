@@ -15,7 +15,7 @@ import {
   resetContourReducer,
   hideBrushReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { VolumeToolEnum } from "oxalis/constants";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {
@@ -44,7 +44,8 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.boundingBox),
+        boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
+        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
         isPublic: action.annotation.isPublic,
         tags: action.annotation.tags,
         description: action.annotation.description,

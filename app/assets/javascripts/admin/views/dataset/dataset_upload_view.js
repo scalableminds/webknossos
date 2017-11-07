@@ -57,7 +57,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
-        Toast.info("Uploading datasets", false);
+        Toast.info("Uploading datasets");
         this.setState({
           isUploading: true,
         });

@@ -11,7 +11,7 @@ wrap(repo: "scalableminds/webknossos") {
 
     def commit = gitCommit()
 
-    env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
+    env.DOCKER_CACHE_PREFIX = "~/.webknossos-cache"
     env.COMPOSE_PROJECT_NAME = "webknossos_${env.BRANCH_NAME}_${commit}"
     sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
     sh "docker-compose pull sbt"

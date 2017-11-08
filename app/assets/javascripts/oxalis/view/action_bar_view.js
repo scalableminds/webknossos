@@ -1,7 +1,7 @@
 // @flow
 import * as React from "react";
 import { connect } from "react-redux";
-import DatasetActionsView from "oxalis/view/action-bar/dataset_actions_view";
+import TracingActionsView from "oxalis/view/action-bar/tracing_actions_view";
 import DatasetPositionView from "oxalis/view/action-bar/dataset_position_view";
 import ViewModesView from "oxalis/view/action-bar/view_modes_view";
 import VolumeActionsView from "oxalis/view/action-bar/volume_actions_view";
@@ -24,7 +24,7 @@ class ActionBarView extends React.PureComponent<Props> {
 
     return (
       <div className="action-bar">
-        {isTraceMode ? <DatasetActionsView /> : null}
+        {isTraceMode ? <TracingActionsView /> : null}
         {hasAdvancedOptions ? <DatasetPositionView /> : null}
         {isVolumeMode && hasAdvancedOptions ? <VolumeActionsView /> : null}
         {!isVolumeMode && isTraceMode && hasAdvancedOptions ? <ViewModesView /> : null}

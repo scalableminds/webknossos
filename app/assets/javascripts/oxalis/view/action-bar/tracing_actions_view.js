@@ -35,7 +35,7 @@ type State = {
   isUserScriptsModalOpen: boolean,
 };
 
-class DatasetActionsView extends PureComponent<Props, State> {
+class TracingActionsView extends PureComponent<Props, State> {
   state = {
     isShareModalOpen: false,
     isMergeModalOpen: false,
@@ -258,4 +258,4 @@ function mapStateToProps(state: OxalisState) {
   };
 }
 
-export default connect(mapStateToProps)(DatasetActionsView);
+export default connect(mapStateToProps)(TracingActionsView);

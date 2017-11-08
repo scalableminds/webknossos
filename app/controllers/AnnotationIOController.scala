@@ -14,14 +14,12 @@ import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
-import org.apache.commons.io.FilenameUtils
 import oxalis.security.{Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
-import play.api.mvc.MultipartFormData
 
 import scala.concurrent.Future
 
@@ -39,17 +37,6 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       None
 
   def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
-    def isZipFile(f: MultipartFormData.FilePart[TemporaryFile]): Boolean =
-      f.contentType.contains("application/zip") || FilenameUtils.isExtension(f.filename, "zip")
-
-    def parseFile(f: MultipartFormData.FilePart[TemporaryFile]) = {
-      if (isZipFile(f)) {
-        NmlService.extractFromZip(f.ref.file, Some(f.filename))
-      } else {
-        val nml = NmlService.extractFromNml(f.ref.file, f.filename)
-        NmlService.ZipParseResult(List(nml), Map.empty)
-      }
-    }
 
     def returnError(zipParseResult: NmlService.ZipParseResult) = {
       if (zipParseResult.containsFailure) {
@@ -73,18 +60,20 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
 
     val parsedFiles = request.body.files.foldLeft(NmlService.ZipParseResult()) {
-      case (acc, next) => acc.combineWith(parseFile(next))
+      case (acc, next) => acc.combineWith(NmlService.extractFromFile(next.ref.file, next.filename))
     }
 
+    val parseResultsPrefixed = NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
+
     if (!parsedFiles.isEmpty) {
-      val parseSuccess = parsedFiles.parseResults.filter(_.succeeded)
+      val parseSuccess = parseResultsPrefixed.filter(_.succeeded)
       val fileNames = parseSuccess.map(_.fileName)
       val tracings = parseSuccess.flatMap(_.tracing)
       val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(fileNames)
       if (volumeTracings.nonEmpty) {
         for {
-          dataSet: DataSet <- DataSetDAO.findOneBySourceName(volumeTracings.head._1.dataSetName).toFox
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(volumeTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", volumeTracings.head._1.dataSetName)
           tracingReference <- dataSet.dataStore.saveVolumeTracing(volumeTracings.head._1, parsedFiles.otherFiles.get(volumeTracings.head._2).map(_.file))
           annotation <- AnnotationService.createFrom(
             request.user, dataSet, tracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(tracingReference.typ), name, volumeTracings.head._3)
@@ -94,7 +83,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         )
       } else if (skeletonTracings.nonEmpty) {
         for {
-          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head._1.dataSetName).toFox
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", skeletonTracings.head._1.dataSetName)
           mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings.map(_._1), dataSet)
           annotation <- AnnotationService.createFrom(
             request.user, dataSet, mergedTracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(mergedTracingReference.typ), name, skeletonTracings.head._2)

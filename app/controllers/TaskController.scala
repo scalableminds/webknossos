@@ -9,8 +9,8 @@ import com.scalableminds.braingames.datastore.tracings.{ProtoGeometryImplicits, 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
-import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.annotation.nml.NmlService
+import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.binary.DataSetDAO
 import models.project.{Project, ProjectDAO}
 import models.task._
@@ -21,7 +21,6 @@ import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee._
-import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.api.mvc.Result
 import play.twirl.api.Html
@@ -107,8 +106,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   private def parseResultToSkeletonTracingFox(parseResult: NmlService.NmlParseResult): Fox[SkeletonTracing] = parseResult match {
     case NmlService.NmlParseFailure(fileName, error) =>
       Fox.failure(Messages("nml.file.invalid", fileName, error))
-    case NmlService.NmlParseSuccess(fileName, tracing) =>
-      Fox.successful(tracing.asInstanceOf[SkeletonTracing])
+    case NmlService.NmlParseSuccess(fileName, (Left(skeletonTracing), description)) =>
+      Fox.successful(skeletonTracing)
+    case _ =>
+      Fox.failure(Messages("nml.file.invalid"))
   }
 
   private def buildFullParams(nmlParams: NmlTaskParameters, tracing: SkeletonTracing) = {
@@ -179,7 +180,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         _script = params.scriptId,
         editPosition = params.editPosition,
         editRotation = params.editRotation,
-        boundingBox = params.boundingBox)
+        boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) })
       _ <- TaskService.insert(task, project)
     } yield task
   }

@@ -7,6 +7,7 @@ import { connect } from "react-redux";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
 import {
@@ -14,12 +15,12 @@ import {
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import type { OxalisState, TracingType, DatasetType, TaskType } from "oxalis/store";
+import type { OxalisState, TracingType, DatasetType, TaskType, FlycamType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
   tracing: TracingType,
   dataset: DatasetType,
-  zoomStep: number,
+  flycam: FlycamType,
   task: ?TaskType,
 };
 
@@ -30,13 +31,13 @@ type DatasetInfoTabProps = DatasetInfoTabStateProps & {
 
 class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   calculateZoomLevel(): number {
+    const zoom = getPlaneScalingFactor(this.props.flycam);
     let width;
-    const zoom = this.props.zoomStep;
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     if (constants.MODES_PLANE.includes(viewMode)) {
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
-      width = constants.ARBITRARY_WIDTH;
+      width = constants.VIEWPORT_WIDTH;
     } else {
       throw Error(`Model mode not recognized: ${viewMode}`);
     }
@@ -173,7 +174,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
 const mapStateToProps = (state: OxalisState): DatasetInfoTabStateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
-  zoomStep: state.flycam.zoomStep,
+  flycam: state.flycam,
   task: state.task,
 });
 

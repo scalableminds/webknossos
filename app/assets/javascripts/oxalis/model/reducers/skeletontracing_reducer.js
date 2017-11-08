@@ -21,7 +21,7 @@ import {
   mergeTrees,
   toggleAllTreesReducer,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
   getSkeletonTracing,
   findTreeByNodeId,
@@ -123,7 +123,8 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.boundingBox),
+        boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
+        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
         isPublic: action.annotation.isPublic,
         tags: action.annotation.tags,
         description: action.annotation.description,

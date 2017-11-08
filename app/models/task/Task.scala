@@ -211,7 +211,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     }
 
     val idsFilter = idsOpt match {
-      case Some(ids) => Json.obj(("_id") -> Json.obj("$in" -> ids.map(id => Json.obj("$oid" -> id))))
+      case Some(ids) => Json.obj(("_id") -> Json.obj("$in" -> ids.filter(BSONObjectID.parse(_).isSuccess).map(id => Json.obj("$oid" -> id))))
       case None => Json.obj()
     }
 

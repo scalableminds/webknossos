@@ -9,7 +9,6 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
 mockRequire("libs/window", {});
-mockRequire("jquery", { fn: {} });
 mockRequire("libs/request", null);
 require("libs/core_ext");
 

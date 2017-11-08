@@ -173,42 +173,45 @@ td.nowrap * {
 
   @keyframes alert-wiggle {
     0% {
-      transform: translateX(0px);
+      transform: translateX(0px) translateY(0px);
     }
     2% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     4% {
-      transform: translateX(-10px);
+      transform: translateX(-8px) translateY(8px);
     }
     6% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     8% {
-      transform: translateX(-10px);
+      transform: translateX(-8px) translateY(8px);
     }
     10% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     12% {
-      transform: translateX(-10px);
+      transform: translateX(-8px) translateY(8px);
     }
     14% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     16% {
-      transform: translateX(-10px);
+      transform: translateX(-8px) translateY(8px);
     }
     18% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     20% {
-      transform: translateX(0px);
+      transform: translateX(0px) translateY(0px);
     }
   }
 
-  &.alert-wiggle {
-    animation: alert-wiggle 5s infinite;
+  .alert-wiggle {
+    animation-name: alert-wiggle;
+    animation-duration: 5s;
+    animation-delay: 0s;
+    animation-iteration-count: infinite;
   }
 }
 

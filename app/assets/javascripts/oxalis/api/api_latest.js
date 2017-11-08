@@ -777,7 +777,7 @@ class UtilsApi {
    */
   showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
     Toast.message(type, message, timeout === 0, timeout);
-    return Toast.close(message);
+    return () => Toast.close(message);
   }
 
   /**

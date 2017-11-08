@@ -1,6 +1,6 @@
 // @flow
 import React from "react";
-import { notification } from "antd";
+import { notification, Icon } from "antd";
 
 export type ToastStyleType = "info" | "warning" | "success" | "error";
 
@@ -31,6 +31,7 @@ const Toast = {
     }
 
     let toastConfig = {
+      icon: undefined,
       key: toastMessage,
       duration: sticky ? 0 : timeout,
       message: toastMessage,
@@ -40,12 +41,12 @@ const Toast = {
 
     if (type === "error") {
       toastConfig = Object.assign(toastConfig, {
+        icon: <Icon type="cross-circle-o" className="alert-wiggle" style={{ color: "#a94442" }} />,
         style: {
           backgroundColor: "#f2dede",
           borderColor: "#ebccd1",
           color: "#a94442",
         },
-        className: "alert-wiggle",
       });
     }
 

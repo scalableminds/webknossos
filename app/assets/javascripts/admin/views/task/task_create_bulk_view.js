@@ -76,7 +76,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       isNaN(task.openInstances) ||
       isNaN(task.neededExperience.value) ||
       // Bounding Box is optional and can be null
-      (boundingBox != null && boundingBox !== undefined
+      (boundingBox != null
         ? boundingBox.topLeft.some(isNaN) ||
           isNaN(boundingBox.width) ||
           isNaN(boundingBox.height) ||

@@ -180,7 +180,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         _script = params.scriptId,
         editPosition = params.editPosition,
         editRotation = params.editRotation,
-        boundingBox = params.boundingBox)
+        boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) })
       _ <- TaskService.insert(task, project)
     } yield task
   }

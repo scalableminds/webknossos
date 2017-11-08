@@ -239,17 +239,6 @@ class PlaneController extends React.PureComponent<Props> {
     };
 
     this.input.keyboard = new InputKeyboard({
-      // ScaleTrianglesPlane
-      l: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(-scaleValue * timeFactor);
-      },
-
-      k: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(scaleValue * timeFactor);
-      },
-
       // Move
       left: timeFactor => this.moveX(-getMoveValue(timeFactor)),
       right: timeFactor => this.moveX(getMoveValue(timeFactor)),
@@ -465,14 +454,6 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
-  }
-
-  scaleTrianglesPlane(delta: number): void {
-    let scale = Store.getState().userConfiguration.scale + delta;
-    scale = Math.min(constants.MAX_SCALE, scale);
-    scale = Math.max(constants.MIN_SCALE, scale);
-
-    Store.dispatch(updateUserSettingAction("scale", scale));
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

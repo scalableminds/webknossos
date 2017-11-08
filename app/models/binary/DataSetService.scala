@@ -3,13 +3,13 @@
  */
 package models.binary
 
-import com.scalableminds.braingames.binary.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.scalableminds.braingames.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.braingames.binary.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Full}
+import net.liftweb.common.Full
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -33,11 +33,13 @@ object DataSetService extends FoxImplicits with LazyLogging {
     findDataSource(name)(GlobalAccessContext).reverse
 
   def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
-    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map {
-      case Full(dataSet) =>
-        dataSet.defaultStart
-      case _             =>
-        Point3D(0, 0, 0)
+    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map { dataSetBox =>
+      (for {
+        dataSet <- dataSetBox
+        dataSource <- dataSet.dataSource.toUsable
+      } yield {
+        dataSource.center
+      }).getOrElse(Point3D(0, 0, 0))
     }
   }
 
@@ -99,12 +101,11 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] = {
-    DataStoreHandler.importDataSource(dataSet)
+    dataSet.dataStore.importDataSource
   }
 
   def getDataLayer(dataSet: DataSet, dataLayerName: String)(implicit ctx: DBAccessContext): Fox[DataLayer] = {
     dataSet.dataSource.toUsable.flatMap(_.getDataLayer(dataLayerName)).toFox
-    // TODO jfrohnhofen .orElse(UserDataLayerDAO.findOneByName(dataLayerName).filter(_.dataSourceName == dataSet.name).map(_.dataLayer))
   }
 
   def findDataSource(name: String)(implicit ctx: DBAccessContext): Fox[InboxDataSource] =

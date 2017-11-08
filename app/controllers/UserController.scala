@@ -3,7 +3,9 @@ package controllers
 import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.security.SCrypt._
+import com.scalableminds.util.tools.DefaultConverters._
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.team._
 import models.user._
 import models.user.time._
 import oxalis.security.Secured
@@ -18,15 +20,6 @@ import play.twirl.api.Html
 import views.html
 
 import scala.concurrent.Future
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.team._
-import play.api.libs.functional.syntax._
-import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
-import models.user.time._
-import com.scalableminds.util.tools.DefaultConverters._
-import models.annotation.{Annotation, AnnotationDAO}
-
-import scala.text
 
 class UserController @Inject()(val messagesApi: MessagesApi)
   extends Controller

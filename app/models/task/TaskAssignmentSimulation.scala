@@ -1,16 +1,15 @@
 package models.task
 
-import models.user.User
-import models.annotation.{Annotation, AnnotationType, AnnotationDAO, AnnotationService}
-
-import scala.concurrent.Future
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.libs.iteratee.Iteratee
-import reactivemongo.bson.BSONObjectID
-import scala.async.Async._
-import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import net.liftweb.common.{Failure, Full}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.AnnotationService
+import models.user.User
+import net.liftweb.common.Full
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.iteratee.Iteratee
+
+import scala.async.Async._
+import scala.concurrent.Future
 
 /**
  * Company: scalableminds

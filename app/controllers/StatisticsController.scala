@@ -5,28 +5,23 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationService}
-import models.task.{TaskService, TaskType}
-import models.task.OpenAssignmentService
-import oxalis.security.Secured
+import models.binary.DataSetDAO
+import models.project.Project
+import models.task.{OpenAssignmentService, TaskService, TaskType}
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
-import play.api.libs.json.Json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Json._
+import play.api.libs.json._
 import play.twirl.api.Html
-import models.user.{User, UserDAO, UserService}
-import scala.concurrent.duration.Duration
 
-import models.tracing.skeleton.DBTreeDAO
-import models.binary.DataSetDAO
-import models.project.Project
+import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 
 class StatisticsController @Inject()(val messagesApi: MessagesApi)
   extends Controller
@@ -49,7 +44,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     Ok(views.html.main()(Html("")))
   }
 
-  def oxalis(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
+  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
@@ -57,7 +52,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
           numberOfUsers <- UserService.countNonAnonymousUsers
           numberOfDatasets <- DataSetDAO.count(Json.obj())
           numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfTrees <- DBTreeDAO.count(Json.obj())
           numberOfAssignments <- OpenAssignmentService.countOpenAssignments
         } yield {
           Ok(Json.obj(
@@ -66,7 +60,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
             "numberOfUsers" -> numberOfUsers,
             "numberOfDatasets" -> numberOfDatasets,
             "numberOfAnnotations" -> numberOfAnnotations,
-            "numberOfTrees" -> numberOfTrees,
             "numberOfOpenAssignments" -> numberOfAssignments
           ))
         }

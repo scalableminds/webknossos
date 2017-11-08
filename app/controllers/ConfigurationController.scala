@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import models.binary.{DataSetDAO, DataSetService}
+import models.binary.DataSetDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.user.UserService
 import oxalis.security.Secured

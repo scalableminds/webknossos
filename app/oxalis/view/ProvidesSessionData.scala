@@ -1,9 +1,7 @@
 package oxalis.view
 
-import com.scalableminds.util.security._
 import oxalis.security._
 import play.api.mvc.Request
-import com.typesafe.scalalogging.LazyLogging
 
 trait ProvidesSessionData extends FlashMessages {
 

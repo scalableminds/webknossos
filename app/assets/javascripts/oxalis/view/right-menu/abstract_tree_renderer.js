@@ -5,9 +5,10 @@
 
 import _ from "lodash";
 import Backbone from "backbone";
-import type { Vector2 } from "oxalis/constants";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
+import { getNodeToEdgesMap } from "oxalis/model/accessors/skeletontracing_accessor";
+import type { Vector2 } from "oxalis/constants";
 import type { TreeType } from "oxalis/store";
 
 const NODE_RADIUS = 2;
@@ -87,21 +88,30 @@ class AbstractTreeRenderer {
     this.nodeList = [];
   }
 
-  buildNode(id: number): AbstractNodeType {
-    const edges = this.tree.edges;
-    const childrenIds = _.filter(edges, edge => edge.source === id).map(edge => edge.target);
-    const children = childrenIds.map(childId => this.buildNode(childId));
-
-    return {
-      id,
-      children,
-    };
-  }
-
   buildTree(): ?AbstractNodeType {
     // Asumption: Node with smallest id is root
     const rootId = _.min(_.map(this.tree.nodes, "id"));
-    const rootNode = this.buildNode(rootId);
+
+    const nodeToEdgesMap = getNodeToEdgesMap(this.tree, false);
+
+    const rootNode = { id: rootId, children: [] };
+    const queue = [rootNode];
+
+    // Build a tree like structure using Breadth-First-Search
+    while (queue.length) {
+      const { id: curNodeId, children: curChildren } = queue.shift();
+      const edges = nodeToEdgesMap[curNodeId] || [];
+      const childrenIds = edges.map(edge => edge.target);
+      for (const childId of childrenIds) {
+        const child = {
+          id: childId,
+          children: [],
+        };
+        queue.push(child);
+        curChildren.push(child);
+      }
+    }
+
     return rootNode;
   }
 
@@ -123,9 +133,7 @@ class AbstractTreeRenderer {
     // set global mode
     const mode = MODE_NOCHAIN;
 
-    // TODO: Actually, I though that buildTree() is pretty heavy, but
-    // I do not experience performance issues, even with large trees.
-    // Still, this might not need to be done on every single draw...
+    // TODO: This might not need to be done on every single draw...
     try {
       root = this.buildTree();
     } catch (e) {

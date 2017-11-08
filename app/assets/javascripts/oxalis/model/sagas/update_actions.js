@@ -1,5 +1,4 @@
 // @flow
-import Date from "libs/date";
 import type {
   SkeletonTracingType,
   VolumeTracingType,
@@ -7,32 +6,31 @@ import type {
   CommentType,
   TreeType,
   NodeType,
+  BoundingBoxObjectType,
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
+import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
+import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
 
 type UpdateTreeUpdateAction = {
-  action: "createTree" | "updateTree",
-  timestamp: number,
+  name: "createTree" | "updateTree",
   value: {
     id: number,
     updatedId: ?number,
     color: Vector3,
     name: string,
-    timestamp: number,
     comments: Array<CommentType>,
     branchPoints: Array<BranchPointType>,
   },
 };
 type DeleteTreeUpdateAction = {
-  action: "deleteTree",
-  timestamp: number,
+  name: "deleteTree",
   value: { id: number },
 };
 type MoveTreeComponentUpdateAction = {
-  action: "moveTreeComponent",
-  timestamp: number,
+  name: "moveTreeComponent",
   value: {
     sourceId: number,
     targetId: number,
@@ -40,41 +38,35 @@ type MoveTreeComponentUpdateAction = {
   },
 };
 type MergeTreeUpdateAction = {
-  action: "mergeTree",
-  timestamp: number,
+  name: "mergeTree",
   value: {
     sourceId: number,
     targetId: number,
   },
 };
 type CreateNodeUpdateAction = {
-  action: "createNode",
-  timestamp: number,
+  name: "createNode",
   value: NodeWithTreeIdType,
 };
 type UpdateNodeUpdateAction = {
-  action: "updateNode",
-  timestamp: number,
+  name: "updateNode",
   value: NodeWithTreeIdType,
 };
 type ToggleTreeUpdateAction = {
-  action: "toggleTree",
-  timestamp: number,
+  name: "toggleTree",
   value: {
     id: number,
   },
 };
 type DeleteNodeUpdateAction = {
-  action: "deleteNode",
-  timestamp: number,
+  name: "deleteNode",
   value: {
     treeId: number,
-    id: number,
+    nodeId: number,
   },
 };
 type CreateEdgeUpdateAction = {
-  action: "createEdge",
-  timestamp: number,
+  name: "createEdge",
   value: {
     treeId: number,
     source: number,
@@ -82,8 +74,7 @@ type CreateEdgeUpdateAction = {
   },
 };
 type DeleteEdgeUpdateAction = {
-  action: "deleteEdge",
-  timestamp: number,
+  name: "deleteEdge",
   value: {
     treeId: number,
     source: number,
@@ -91,21 +82,30 @@ type DeleteEdgeUpdateAction = {
   },
 };
 type UpdateSkeletonTracingUpdateAction = {
-  action: "updateTracing",
-  timestamp: number,
+  name: "updateTracing",
   value: {
-    activeNode?: number,
+    activeNode: ?number,
     editPosition: Vector3,
     editRotation: Vector3,
+    userBoundingBox: ?BoundingBoxObjectType,
     zoomLevel: number,
   },
 };
 type UpdateVolumeTracingUpdateAction = {
-  action: "updateTracing",
+  name: "updateTracing",
   value: {
-    activeCell: number,
+    activeSegmentId: number,
     editPosition: Vector3,
-    nextCell: number,
+    editRotation: Vector3,
+    largestSegmentId: number,
+    userBoundingBox: ?BoundingBoxObjectType,
+    zoomLevel: number,
+  },
+};
+type UpdateBucketUpdateAction = {
+  name: "updateBucket",
+  value: BucketInfo & {
+    base64Data: string,
   },
 };
 type UpdateTracingUpdateAction =
@@ -123,12 +123,12 @@ export type UpdateAction =
   | CreateEdgeUpdateAction
   | DeleteEdgeUpdateAction
   | UpdateTracingUpdateAction
+  | UpdateBucketUpdateAction
   | ToggleTreeUpdateAction;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
   return {
-    action: "createTree",
-    timestamp: Date.now(),
+    name: "createTree",
     value: {
       id: tree.treeId,
       updatedId: undefined,
@@ -142,8 +142,7 @@ export function createTree(tree: TreeType): UpdateTreeUpdateAction {
 }
 export function deleteTree(treeId: number): DeleteTreeUpdateAction {
   return {
-    action: "deleteTree",
-    timestamp: Date.now(),
+    name: "deleteTree",
     value: {
       id: treeId,
     },
@@ -151,8 +150,7 @@ export function deleteTree(treeId: number): DeleteTreeUpdateAction {
 }
 export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
   return {
-    action: "updateTree",
-    timestamp: Date.now(),
+    name: "updateTree",
     value: {
       id: tree.treeId,
       updatedId: tree.treeId,
@@ -166,8 +164,7 @@ export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
 }
 export function toggleTree(tree: TreeType): ToggleTreeUpdateAction {
   return {
-    action: "toggleTree",
-    timestamp: Date.now(),
+    name: "toggleTree",
     value: {
       id: tree.treeId,
     },
@@ -175,8 +172,7 @@ export function toggleTree(tree: TreeType): ToggleTreeUpdateAction {
 }
 export function mergeTree(sourceTreeId: number, targetTreeId: number): MergeTreeUpdateAction {
   return {
-    action: "mergeTree",
-    timestamp: Date.now(),
+    name: "mergeTree",
     value: {
       sourceId: sourceTreeId,
       targetId: targetTreeId,
@@ -189,8 +185,7 @@ export function createEdge(
   targetNodeId: number,
 ): CreateEdgeUpdateAction {
   return {
-    action: "createEdge",
-    timestamp: Date.now(),
+    name: "createEdge",
     value: {
       treeId,
       source: sourceNodeId,
@@ -204,8 +199,7 @@ export function deleteEdge(
   targetNodeId: number,
 ): DeleteEdgeUpdateAction {
   return {
-    action: "deleteEdge",
-    timestamp: Date.now(),
+    name: "deleteEdge",
     value: {
       treeId,
       source: sourceNodeId,
@@ -215,23 +209,20 @@ export function deleteEdge(
 }
 export function createNode(treeId: number, node: NodeType): CreateNodeUpdateAction {
   return {
-    action: "createNode",
-    timestamp: Date.now(),
+    name: "createNode",
     value: Object.assign({}, node, { treeId }),
   };
 }
 export function updateNode(treeId: number, node: NodeType): UpdateNodeUpdateAction {
   return {
-    action: "updateNode",
-    timestamp: Date.now(),
+    name: "updateNode",
     value: Object.assign({}, node, { treeId }),
   };
 }
 export function deleteNode(treeId: number, nodeId: number): DeleteNodeUpdateAction {
   return {
-    action: "deleteNode",
-    timestamp: Date.now(),
-    value: { treeId, id: nodeId },
+    name: "deleteNode",
+    value: { treeId, nodeId },
   };
 }
 export function updateSkeletonTracing(
@@ -240,25 +231,13 @@ export function updateSkeletonTracing(
   rotation: Vector3,
   zoomLevel: number,
 ): UpdateSkeletonTracingUpdateAction {
-  const curTime = Date.now();
-  if (tracing.activeNodeId != null) {
-    return {
-      action: "updateTracing",
-      timestamp: curTime,
-      value: {
-        activeNode: tracing.activeNodeId,
-        editPosition: position,
-        editRotation: rotation,
-        zoomLevel,
-      },
-    };
-  }
   return {
-    action: "updateTracing",
-    timestamp: curTime,
+    name: "updateTracing",
     value: {
+      activeNode: tracing.activeNodeId,
       editPosition: position,
       editRotation: rotation,
+      userBoundingBox: convertFrontendBoundingBoxToServer(tracing.userBoundingBox),
       zoomLevel,
     },
   };
@@ -269,8 +248,7 @@ export function moveTreeComponent(
   nodeIds: Array<number>,
 ): MoveTreeComponentUpdateAction {
   return {
-    action: "moveTreeComponent",
-    timestamp: Date.now(),
+    name: "moveTreeComponent",
     value: {
       sourceId: sourceTreeId,
       targetId: targetTreeId,
@@ -281,14 +259,26 @@ export function moveTreeComponent(
 export function updateVolumeTracing(
   tracing: VolumeTracingType,
   position: Vector3,
+  rotation: Vector3,
+  zoomLevel: number,
 ): UpdateVolumeTracingUpdateAction {
   return {
-    action: "updateTracing",
-    timestamp: Date.now(),
+    name: "updateTracing",
     value: {
-      activeCell: tracing.activeCellId,
+      activeSegmentId: tracing.activeCellId,
       editPosition: position,
-      nextCell: tracing.maxCellId + 1,
+      editRotation: rotation,
+      largestSegmentId: tracing.maxCellId,
+      userBoundingBox: convertFrontendBoundingBoxToServer(tracing.userBoundingBox),
+      zoomLevel,
     },
+  };
+}
+export function updateBucket(bucketInfo: BucketInfo, base64Data: string) {
+  return {
+    name: "updateBucket",
+    value: Object.assign({}, bucketInfo, {
+      base64Data,
+    }),
   };
 }

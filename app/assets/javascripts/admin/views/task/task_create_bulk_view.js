@@ -27,7 +27,7 @@ type State = {
 };
 
 export type NewTaskType = {
-  +boundingBox: BoundingBoxObjectType,
+  +boundingBox: ?BoundingBoxObjectType,
   +dataSet: string,
   +editPosition: Vector3,
   +editRotation: Vector3,
@@ -63,6 +63,8 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
   }
 
   isValidTask(task: NewTaskType): boolean {
+    const boundingBox = task.boundingBox;
+
     if (
       !_.isString(task.neededExperience.domain) ||
       !_.isString(task.dataSet) ||
@@ -71,12 +73,22 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       !_.isString(task.projectName) ||
       task.editPosition.some(isNaN) ||
       task.editRotation.some(isNaN) ||
-      task.boundingBox.topLeft.some(isNaN) ||
       isNaN(task.openInstances) ||
       isNaN(task.neededExperience.value) ||
-      isNaN(task.boundingBox.width) ||
-      isNaN(task.boundingBox.height) ||
-      isNaN(task.boundingBox.depth)
+      // Bounding Box is optional and can be null
+      (boundingBox != null && boundingBox !== undefined
+        ? boundingBox.topLeft.some(isNaN) ||
+          isNaN(boundingBox.width) ||
+          isNaN(boundingBox.height) ||
+          isNaN(boundingBox.depth) ||
+          // is editPosition within the BoundingBox?
+          task.editPosition[0] > boundingBox.topLeft[0] + boundingBox.width ||
+          task.editPosition[0] < boundingBox.topLeft[0] ||
+          task.editPosition[1] > boundingBox.topLeft[1] + boundingBox.height ||
+          task.editPosition[1] < boundingBox.topLeft[1] ||
+          task.editPosition[2] > boundingBox.topLeft[2] + boundingBox.depth ||
+          task.editPosition[2] < boundingBox.topLeft[2]
+        : false)
     ) {
       return false;
     }
@@ -116,14 +128,25 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const rotZ = parseInt(words[9]);
     const openInstances = parseInt(words[10]);
     const team = words[11];
-    const minX = parseInt(words[12]);
-    const minY = parseInt(words[13]);
-    const minZ = parseInt(words[14]);
+    const boundingBoxX = parseInt(words[12]);
+    const boundingBoxY = parseInt(words[13]);
+    const boundingBoxZ = parseInt(words[14]);
     const width = parseInt(words[15]);
     const height = parseInt(words[16]);
     const depth = parseInt(words[17]);
     const projectName = words[18];
     const scriptId = words[19] || undefined;
+
+    // BoundingBox is optional and can be set to null by using the format [0, 0, 0, 0, 0, 0]
+    const boundingBox =
+      width <= 0 || height <= 0 || depth <= 0
+        ? null
+        : {
+            topLeft: [boundingBoxX, boundingBoxY, boundingBoxZ],
+            width,
+            height,
+            depth,
+          };
 
     return {
       dataSet,
@@ -131,19 +154,14 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       taskTypeId,
       scriptId,
       openInstances,
+      boundingBox,
+      projectName,
       neededExperience: {
         value: minExperience,
         domain: experienceDomain,
       },
       editPosition: [x, y, z],
       editRotation: [rotX, rotY, rotZ],
-      boundingBox: {
-        topLeft: [minX, minY, minZ],
-        width,
-        height,
-        depth,
-      },
-      projectName,
       isForAnonymous: false,
     };
   }

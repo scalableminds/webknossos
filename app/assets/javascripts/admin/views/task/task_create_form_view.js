@@ -286,7 +286,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 {getFieldDecorator("scriptId")(
                   <Select
                     showSearch
-                    placeholder="Select a Project"
+                    placeholder="Select a Script"
                     optionFilterProp="children"
                     style={fullWidth}
                     autoFocus

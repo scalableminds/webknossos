@@ -240,7 +240,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
           <Card title={<h3>Bulk Create Tasks</h3>}>
             <p>
               Specify each new task on a separate line as comma seperated values (CSV) in the
-              followng format:
+              following format:
               <br />
               <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,
               experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
@@ -293,8 +293,8 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                     </p>
                     <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
                     <p>
-                      Upload a CSV files with your task specification in the same format as
-                      mentioned above.
+                      Upload a CSV file with your task specification in the same format as mentioned
+                      above.
                     </p>
                   </Upload.Dragger>,
                 )}

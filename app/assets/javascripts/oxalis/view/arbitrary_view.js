@@ -2,7 +2,6 @@
  * arbitrary_view.js
  * @flow
  */
-import $ from "jquery";
 import _ from "lodash";
 import app from "app";
 import Backbone from "backbone";
@@ -12,6 +11,7 @@ import Constants from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import { window } from "libs/window";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
@@ -81,7 +81,7 @@ class ArbitraryView {
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
-      $(window).on("resize", this.resize);
+      window.addEventListener("resize", this.resize);
     }
   }
 
@@ -95,7 +95,7 @@ class ArbitraryView {
 
       SceneController.rootGroup.remove(this.group);
 
-      $(window).off("resize", this.resize);
+      window.removeEventListener("resize", this.resize);
     }
   }
 

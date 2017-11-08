@@ -5,10 +5,11 @@
 /* globals JQueryInputEventObject:false */
 
 import * as React from "react";
+import { connect } from "react-redux";
 import Backbone from "backbone";
-import $ from "jquery";
 import _ from "lodash";
 import Utils from "libs/utils";
+import { document } from "libs/window";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
@@ -48,7 +49,6 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
-import { connect } from "react-redux";
 
 type OwnProps = {
   onRender: () => void,
@@ -190,7 +190,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   initTrackballControls(): void {
-    const view = $("#inputcatcher_TDView")[0];
+    const view = document.getElementById("inputcatcher_TDView");
     const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
     const tdCamera = this.planeView.getCameras()[OrthoViews.TDView];
     this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
@@ -211,10 +211,10 @@ class PlaneController extends React.PureComponent<Props> {
 
   initKeyboard(): void {
     // avoid scrolling while pressing space
-    $(document).keydown((event: JQueryInputEventObject) => {
+    document.addEventListener("keydown", (event: JQueryInputEventObject) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        !$(":focus").length
+        Utils.isNoElementFocussed()
       ) {
         event.preventDefault();
       }
@@ -302,7 +302,7 @@ class PlaneController extends React.PureComponent<Props> {
     // actually been rendered by React (InputCatchers Component)
     // DOM Elements get deleted when switching between ortho and arbitrary mode
     const initInputHandlers = () => {
-      if ($("#inputcatcher_TDView").length === 0) {
+      if (!document.getElementById("inputcatcher_TDView")) {
         window.requestAnimationFrame(initInputHandlers);
       } else if (this.isStarted) {
         this.initTrackballControls();
@@ -316,8 +316,6 @@ class PlaneController extends React.PureComponent<Props> {
     if (this.isStarted) {
       this.destroyInput();
       this.controls.destroy();
-
-      $("#TDViewControls button").off();
     }
 
     SceneController.stopPlaneMode();

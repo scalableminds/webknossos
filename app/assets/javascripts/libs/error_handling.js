@@ -3,7 +3,6 @@
  * @flow weak
  */
 import _ from "lodash";
-import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
 import Toast from "libs/toast";
 
@@ -24,7 +23,9 @@ class ErrorHandling {
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    this.commitHash = $("meta[name='commit-hash']").attr("content");
+    this.commitHash = document
+      .querySelectorAll("meta[name='commit-hash']")[0]
+      .getAttribute("content");
 
     this.initializeAirbrake();
   }
@@ -32,10 +33,10 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
-    const $scriptTag = $("[data-airbrake-project-id]");
-    const projectId = $scriptTag.data("airbrake-project-id");
-    const projectKey = $scriptTag.data("airbrake-project-key");
-    const envName = $scriptTag.data("airbrake-environment-name");
+    const scriptTag = document.querySelectorAll("[data-airbrake-project-id]")[0];
+    const projectId = scriptTag.dataset["airbrake-project-id"];
+    const projectKey = scriptTag.dataset["airbrake-project-key"];
+    const envName = scriptTag.dataset["airbrake-environment-name"];
 
     this.airbrake = new AirbrakeClient({
       projectId,

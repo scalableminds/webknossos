@@ -2,10 +2,8 @@
  * controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
 import * as React from "react";
-import $ from "jquery";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
@@ -32,6 +30,7 @@ import Modal from "oxalis/view/modal";
 import { connect } from "react-redux";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
+import { document } from "libs/window";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
@@ -115,7 +114,7 @@ class Controller extends React.PureComponent<Props, State> {
 
     // FPS stats
     this.stats = new Stats();
-    $("body").append(this.stats.domElement);
+    document.body.append(this.stats.domElement);
 
     this.initKeyboard();
     this.initTaskScript();
@@ -191,10 +190,10 @@ class Controller extends React.PureComponent<Props, State> {
 
   initKeyboard() {
     // avoid scrolling while pressing space
-    $(document).keydown((event: JQueryInputEventObject) => {
+    document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        !$(":focus").length
+        Utils.isNoElementFocussed()
       ) {
         event.preventDefault();
       }

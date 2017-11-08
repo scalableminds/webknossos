@@ -6,7 +6,7 @@
 import _ from "lodash";
 import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
-import window from "libs/window";
+import window, { document } from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
@@ -373,6 +373,12 @@ const Utils = {
 
   minutesToMilliseconds(min: number) {
     return min * 60000;
+  },
+
+  isNoElementFocussed(): boolean {
+    // checks whether an <input> or <button> element has the focus
+    // when no element is focused <body> gets the focus
+    return document.activeElement === document.body;
   },
 };
 

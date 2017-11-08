@@ -4,7 +4,6 @@
  */
 /* globals JQueryInputEventObject:false */
 
-import $ from "jquery";
 import * as THREE from "three";
 import _ from "lodash";
 import Store from "oxalis/store";
@@ -62,16 +61,6 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     const [x, y, z] = getPosition(Store.getState().flycam);
     this.setWaypoint([x + 1, y + 1, z], false);
     _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
-  }
-
-  start(): void {
-    super.start();
-    $(".skeleton-plane-controls").show();
-  }
-
-  stop(): void {
-    super.stop();
-    $(".skeleton-plane-controls").hide();
   }
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {

@@ -3,7 +3,6 @@
  * @flow weak
  */
 
-import $ from "jquery";
 import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
@@ -41,9 +40,6 @@ app.on("start", () => {
   app.vent = Backbone.Radio.channel("global");
 });
 
-$(() => {
-  // show the bootstrap flash modal on load
-  $("#flashModal").modal("show");
-
-  return app.start();
+document.addEventListener("DOMContentLoaded", () => {
+  app.start();
 });

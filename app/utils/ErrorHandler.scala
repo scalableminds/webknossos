@@ -29,7 +29,8 @@ class ErrorHandler @Inject() (
   override def onNotAuthenticated(request: RequestHeader, messages: Messages): Option[Future[Result]] = {
       val autoLogin = Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get
       if(autoLogin){
-        Some(Future.successful(Redirect(request.path)))
+        //in dev mode we automatically attach a cookie. The first request does not have it yet so we simply load it again
+        Some(Future.successful(Redirect(request.uri)))
       }else{
         Some(Future.successful(Redirect(Authentication.getLoginRoute())))
       }

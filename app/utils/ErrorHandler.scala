@@ -9,13 +9,13 @@ import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.mvc.Results._
 import play.api.mvc.{RequestHeader, Result}
 import play.api.routing.Router
-import play.api.{Configuration, OptionalSourceMapper}
-
+import play.api.{Configuration, OptionalSourceMapper, Play}
 import controllers.Authentication.getLoginRoute
 
 import scala.concurrent.Future
-import controllers.routes
+import controllers.{Authentication, routes}
 import play.api.http.Status.OK
+import play.api.Play.current
 
 class ErrorHandler @Inject() (
                                val messagesApi: MessagesApi,
@@ -26,12 +26,18 @@ class ErrorHandler @Inject() (
   extends DefaultHttpErrorHandler(env, config, sourceMapper, router)
     with SecuredErrorHandler with I18nSupport {
 
-  override def onNotAuthenticated(request: RequestHeader, messages: Messages): Option[Future[Result]] =
-    Some(Future.successful(Redirect(getLoginRoute)))
-
+  override def onNotAuthenticated(request: RequestHeader, messages: Messages): Option[Future[Result]] = {
+      val autoLogin = Play.configuration.getBoolean("application.authentication.enableDevAutoLogin").get
+      if(autoLogin){
+        Some(Future.successful(Redirect(request.path)))
+      }else{
+        Some(Future.successful(Redirect(Authentication.getLoginRoute())))
+      }
+  }
+  /*
   override def onNotAuthorized(request: RequestHeader, messages: Messages): Option[Future[Result]] =
     Some(Future.successful(Redirect(getLoginRoute).flashing("error" -> Messages("error.accessDenied")(messages))))
-
+  */
   /**
   override def onNotFound(request: RequestHeader, message: String): Future[Result] =
     Future.successful(Ok(views.html.errors.notFound(request)))

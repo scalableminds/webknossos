@@ -187,7 +187,7 @@ object AnnotationService
     val initialTree = Tree(1, Seq(initialNode), Seq(), Some(Color(1, 0, 0, 1)), Seq(), Seq(), "", System.currentTimeMillis())
     SkeletonTracingDefaults.createInstance.copy(
       dataSetName = dataSetName,
-      boundingBox = boundingBox,
+      boundingBox = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) },
       editPosition = startPosition,
       editRotation = startRotation,
       activeNodeId = Some(1),

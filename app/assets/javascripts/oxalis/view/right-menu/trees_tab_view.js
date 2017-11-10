@@ -1,6 +1,6 @@
 /**
  * list_tree_view.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";

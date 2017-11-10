@@ -4,7 +4,7 @@
 import * as React from "react";
 import Request from "libs/request";
 import TemplateHelpers from "libs/template_helpers";
-import type { APIDatasetType } from "admin/api_flow_types";
+import type { APIDatasetType, APIUserType } from "admin/api_flow_types";
 import { Spin, Tag } from "antd";
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
 };
 
 type State = {
-  datasetUsers: any,
+  datasetUsers: Array<APIUserType>,
   isLoading: boolean,
 };
 
@@ -28,7 +28,7 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
 
   async fetchData(): Promise<void> {
     this.setState({ isLoading: true });
-    const datasetUsers = await Request.receiveJSON(
+    const datasetUsers: Array<APIUserType> = await Request.receiveJSON(
       `/api/datasets/${this.props.dataset.name}/accessList`,
     );
 

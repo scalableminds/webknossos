@@ -7,6 +7,17 @@ import FormatUtils from "libs/format_utils";
 import Request from "libs/request";
 import C3Chart from "react-c3js";
 
+type TimeIntervalType = {
+  paymentInterval: {
+    month: number,
+    year: number,
+  },
+  durationInSeconds: number,
+};
+type UserLoggedTimeType = {
+  loggedTime: Array<TimeIntervalType>,
+};
+
 const { Column } = Table;
 
 type Props = {
@@ -31,7 +42,7 @@ export default class LoggedTimeView extends React.PureComponent<Props, State> {
       ? `/api/users/${this.props.userID}/loggedTime`
       : "/api/user/loggedTime";
 
-    Request.receiveJSON(url).then(response => {
+    Request.receiveJSON(url).then((response: UserLoggedTimeType) => {
       const timeEntries = response.loggedTime
         .map(entry => {
           const interval = entry.paymentInterval;

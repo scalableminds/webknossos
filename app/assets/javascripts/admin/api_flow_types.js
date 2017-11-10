@@ -79,7 +79,7 @@ export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type APISettingsType = {
   +advancedOptionsAllowed: boolean,
   +allowedModes: Array<APIAllowedModeType>,
-  +preferredMode: APIAllowedModeType,
+  +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
 };

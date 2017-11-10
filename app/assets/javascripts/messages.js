@@ -23,6 +23,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.no_access": "You are not allowed to access this tracing.",
   "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
+  "tracing.tree_viewer_no_cyclic_trees":
+    "Cyclic trees are not supported by the abstract tree viewer.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "task.user_script_retrieval_error": "Unable to retrieve script",

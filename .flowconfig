@@ -28,3 +28,7 @@ module.name_mapper.extension='less' -> '<PROJECT_ROOT>/app/assets/javascripts/fl
 
 [libs]
 app/assets/javascripts/flow/custom-libdefs
+
+[lints]
+all=error
+sketchy-null=warn

@@ -18,6 +18,7 @@ import {
   createTreeAction,
   deleteTreeAction,
   shuffleTreeColorAction,
+  shuffleAllTreeColorsAction,
   selectNextTreeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
@@ -31,6 +32,7 @@ const InputGroup = Input.Group;
 
 type Props = {
   onShuffleTreeColor: number => void,
+  onShuffleAllTreeColors: () => void,
   onSortTree: boolean => void,
   onSelectNextTreeForward: () => void,
   onSelectNextTreeBackward: () => void,
@@ -59,9 +61,7 @@ class TreesTabView extends React.Component<Props> {
   };
 
   shuffleAllTreeColors = () => {
-    for (const tree of _.values(this.props.skeletonTracing.trees)) {
-      this.props.onShuffleTreeColor(tree.treeId);
-    }
+    this.props.onShuffleAllTreeColors();
   };
 
   toggleAllTrees() {
@@ -165,6 +165,9 @@ const mapStateToProps = (state: OxalisState) => ({
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onShuffleTreeColor(treeId) {
     dispatch(shuffleTreeColorAction(treeId));
+  },
+  onShuffleAllTreeColors() {
+    dispatch(shuffleAllTreeColorsAction());
   },
   onSortTree(shouldSortTreesByName) {
     dispatch(updateUserSettingAction("sortTreesByName", shouldSortTreesByName));

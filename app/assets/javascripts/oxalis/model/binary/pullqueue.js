@@ -85,7 +85,6 @@ class PullQueue {
     const roundTripBeginTime = new Date();
 
     try {
-      // throw new Error();
       const responseBuffer = await this.layer.requestFromStore(batch);
       let bucketData;
       this.connectionInfo.log(

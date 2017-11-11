@@ -4,9 +4,9 @@
 import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
+import DiffableMap from "libs/diffable_map";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
-import DiffableMap from "libs/diffable_map";
 
 mockRequire.stopAll();
 

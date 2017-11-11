@@ -2,7 +2,6 @@
  * model.js
  * @flow
  */
-
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
@@ -220,50 +219,9 @@ export class OxalisModel {
       } else {
         const skeletonTracing: ServerSkeletonTracingType = (tracing: any);
 
-        const treecount = 1;
-        let currentNewNodeId = 1;
-        let currentTreeId = 1;
-        function generateDummyTree(nodeCount) {
-          const nodes = [];
-          const edges = [];
-          let counter = -1;
-          const initialNodeId = currentNewNodeId;
-          while (counter++ < nodeCount) {
-            nodes.push({
-              id: currentNewNodeId++,
-              position: [
-                5120 + 5000 * counter / nodeCount,
-                3725 + (currentTreeId - 1) * treecount / 10,
-                1545,
-              ],
-              rotation: [0, 270, 0],
-              radius: 112.39999389648438,
-              viewport: 1,
-              resolution: 1,
-              bitDepth: 4,
-              interpolation: true,
-              createdTimestamp: 1507550793899,
-            });
-          }
-
-          counter = 0;
-          while (counter++ < nodeCount) {
-            edges.push({ source: initialNodeId + counter, target: initialNodeId + counter - 1 });
-          }
-
-          return {
-            treeId: currentTreeId++,
-            nodes,
-            edges,
-            color: [Math.random(), Math.random(), Math.random()],
-            branchPoints: [],
-            comments: [],
-            name: "explorative_2017-10-09_SCM_Boy_023",
-            createdTimestamp: 1507550576213,
-          };
-        }
-
-        tracing.trees = _.range(treecount).map(() => generateDummyTree(1000000));
+        // To generate a huge amount of dummy trees, use:
+        // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
+        // tracing.trees = generateDummyTrees(1, 1000000);
         Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }
     }

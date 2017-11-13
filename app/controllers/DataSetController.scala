@@ -2,25 +2,24 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
-
+import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.DefaultConverters._
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
 import oxalis.ndstore.{ND2WK, NDServerConnection}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
-import play.api.Play.current
 import play.api.cache.Cache
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import play.api.Play.current
+import scala.concurrent.ExecutionContext.Implicits._
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
@@ -34,13 +33,13 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
-  def view(dataSetName: String) = UserAwareAction.async { implicit request =>
-    for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-    } yield {
-      Ok(views.html.main()(Html("")))
-    }
-  }
+  // def view(dataSetName: String) = UserAwareAction.async { implicit request =>
+  //   for {
+  //     dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+  //   } yield {
+  //     Ok(views.html.main()(Html("")))
+  //   }
+  // }
 
   def thumbnail(dataSetName: String, dataLayerName: String) = UserAwareAction.async { implicit request =>
 
@@ -50,7 +49,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         case Some(a: Array[Byte]) =>
           Fox.successful(a)
         case _ =>
-          DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
+          dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
             result =>
               Cache.set(s"thumbnail-$dataSetName*$dataLayerName",
                 result,

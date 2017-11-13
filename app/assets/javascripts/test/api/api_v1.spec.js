@@ -1,94 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
-import mockRequire from "mock-require";
 import sinon from "sinon";
-import _ from "lodash";
-import Backbone from "backbone";
 import "backbone.marionette";
-import { ControlModeEnum } from "oxalis/constants";
 import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
-import TRACING_OBJECT from "../fixtures/skeletontracing_object";
+import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 
-function makeModelMock() {
-  class ModelMock {}
-  ModelMock.prototype.fetch = sinon.stub();
-  ModelMock.prototype.fetch.returns(Promise.resolve());
-  return ModelMock;
-}
-
-const User = makeModelMock();
-const DatasetConfiguration = makeModelMock();
-const Request = {
-  receiveJSON: sinon.stub(),
-  sendJSONReceiveJSON: sinon.stub(),
-  sendArraybufferReceiveArraybuffer: sinon.stub(),
-  always: () => Promise.resolve(),
-};
-const ErrorHandling = {
-  assertExtendContext: _.noop,
-  assertExists: _.noop,
-  assert: _.noop,
-};
-const window = {
-  location: {
-    pathname: "annotationUrl",
-  },
-  alert: console.log.bind(console),
-};
-const currentUser = {
-  firstName: "SCM",
-  lastName: "Boy",
-};
-const app = {
-  vent: Backbone.Radio.channel("global"),
-  currentUser,
-};
-const KeyboardJS = {
-  bind: _.noop,
-  unbind: _.noop,
-};
-
-mockRequire("libs/toast", { error: _.noop });
-mockRequire("libs/window", window);
-mockRequire("libs/request", Request);
-mockRequire("libs/error_handling", ErrorHandling);
-mockRequire("app", app);
-mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
-mockRequire("oxalis/model/user", User);
-mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
-mockRequire("libs/keyboard", KeyboardJS);
-
-// Avoid node caching and make sure all mockRequires are applied
-const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
-const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
-const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
-const Store = mockRequire.reRequire("oxalis/store").default;
-
-test.beforeEach(t => {
-  UrlManager.initialState = { position: [1, 2, 3] };
-  const model = new Model();
-  t.context.model = model;
-
-  const webknossos = new OxalisApi(model);
-  t.context.webknossos = webknossos;
-
-  Request.receiveJSON.returns(Promise.resolve(_.cloneDeep(TRACING_OBJECT)));
-  User.prototype.fetch.returns(Promise.resolve());
-
-  return model
-    .fetch("tracingTypeValue", "tracingIdValue", ControlModeEnum.TRACE, true)
-    .then(() => {
-      // Trigger the event ourselves, as the OxalisController is not instantiated
-      app.vent.trigger("webknossos:ready");
-      webknossos.apiReady(1).then(apiObject => {
-        t.context.api = apiObject;
-      });
-    })
-    .catch(error => {
-      console.error("model.fetch() failed", error);
-      t.fail(error.message);
-    });
-});
+// All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
+// Use API_VERSION 1
+test.beforeEach(t => setupOxalis(t, "skeleton", 1));
 
 test("getActiveNodeId should get the active node id", t => {
   const api = t.context.api;
@@ -165,7 +84,7 @@ test("getBoundingBox should throw an error if the layer name is not valid", t =>
 
 test("getBoundingBox should get the bounding box of a layer", t => {
   const api = t.context.api;
-  const correctBoundingBox = [[3840, 4220, 2304], [3968, 4351, 2688]];
+  const correctBoundingBox = [[0, 0, 0], [1024, 1024, 1024]];
   const boundingBox = api.data.getBoundingBox("color");
   t.deepEqual(boundingBox, correctBoundingBox);
 });
@@ -229,7 +148,7 @@ test("registerOverwrite should overwrite newAddNode", t => {
   };
   api.utils.registerOverwrite("addNode", newAddNode);
 
-  Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1));
+  t.context.Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1));
 
   // The added instructions should have been executed
   t.true(bool);
@@ -244,8 +163,8 @@ test("registerOverwrite should overwrite deleteActiveNode", t => {
   };
   api.utils.registerOverwrite("deleteActiveNode", deleteNode);
 
-  Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1, 0));
-  Store.dispatch(deleteNodeAction(0, 0));
+  t.context.Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1, 0));
+  t.context.Store.dispatch(deleteNodeAction(0, 0));
 
   // The added instructions should have been executed
   t.true(bool);

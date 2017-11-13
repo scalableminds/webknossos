@@ -129,6 +129,7 @@ class PlaneController extends React.PureComponent<Props> {
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
       },
+      pinch: delta => this.zoomTDView(delta, true),
     };
   }
 
@@ -138,7 +139,7 @@ class PlaneController extends React.PureComponent<Props> {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
         const viewportScale = Store.getState().userConfiguration.scale;
-        return this.move([
+        return this.movePlane([
           delta.x * mouseInversionX / viewportScale,
           delta.y * mouseInversionY / viewportScale,
           0,
@@ -149,6 +150,7 @@ class PlaneController extends React.PureComponent<Props> {
       over: () => {
         Store.dispatch(setViewportAction(planeId));
       },
+      pinch: delta => this.zoom(delta, true),
     };
   }
 
@@ -237,17 +239,6 @@ class PlaneController extends React.PureComponent<Props> {
     };
 
     this.input.keyboard = new InputKeyboard({
-      // ScaleTrianglesPlane
-      l: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(-scaleValue * timeFactor);
-      },
-
-      k: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(scaleValue * timeFactor);
-      },
-
       // Move
       left: timeFactor => this.moveX(-getMoveValue(timeFactor)),
       right: timeFactor => this.moveX(getMoveValue(timeFactor)),
@@ -358,21 +349,17 @@ class PlaneController extends React.PureComponent<Props> {
     this.props.onRender();
   }
 
-  move = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
+  movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
     const activeViewport = Store.getState().viewModeData.plane.activeViewport;
-    if (activeViewport !== OrthoViews.TDView) {
-      Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
-    } else {
-      this.moveTDView({ x: -v[0], y: -v[1] });
-    }
+    Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
   };
 
   moveX = (x: number): void => {
-    this.move([x, 0, 0]);
+    this.movePlane([x, 0, 0]);
   };
 
   moveY = (y: number): void => {
-    this.move([0, y, 0]);
+    this.movePlane([0, y, 0]);
   };
 
   moveZ = (z: number, oneSlide: boolean): void => {
@@ -392,7 +379,7 @@ class PlaneController extends React.PureComponent<Props> {
         ),
       );
     } else {
-      this.move([0, 0, z], false);
+      this.movePlane([0, 0, z], false);
     }
   };
 
@@ -428,7 +415,6 @@ class PlaneController extends React.PureComponent<Props> {
   moveTDView(delta: Point2): void {
     const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
     const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
-
     Store.dispatch(moveTDViewXAction(delta.x * mouseInversionX));
     Store.dispatch(moveTDViewYAction(delta.y * mouseInversionY));
   }
@@ -468,14 +454,6 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
-  }
-
-  scaleTrianglesPlane(delta: number): void {
-    let scale = Store.getState().userConfiguration.scale + delta;
-    scale = Math.min(constants.MAX_SCALE, scale);
-    scale = Math.max(constants.MIN_SCALE, scale);
-
-    Store.dispatch(updateUserSettingAction("scale", scale));
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

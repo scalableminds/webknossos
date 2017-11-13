@@ -1,8 +1,7 @@
 /*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
 package controllers
-
 import javax.inject.Inject
 
 import scala.concurrent.Future
@@ -127,7 +126,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
         tasks <- project.tasks
-        js <- Fox.serialSequence(tasks)(t => Task.transformToJson(t, Some(request.identity)))
+        js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
       } yield {
         Ok(Json.toJson(js))
       }

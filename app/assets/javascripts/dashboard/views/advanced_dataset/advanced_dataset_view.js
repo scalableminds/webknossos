@@ -79,7 +79,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="allowedTeams"
             key="allowedTeams"
             width={150}
-            render={(teams, dataset: DatasetType) =>
+            render={(teams: Array<string>, dataset: DatasetType) =>
               teams.map(team => (
                 <Tag
                   color={TemplateHelpers.stringToColor(team)}

@@ -1,8 +1,5 @@
 package models.user
 
-import play.api.Play
-import play.api.Play.current
-import play.api.libs.concurrent.Akka
 import java.util.UUID
 
 import com.mohiva.play.silhouette.api.LoginInfo
@@ -14,9 +11,12 @@ import play.api.{Application, Logger}
 
 import scala.concurrent.duration._
 import oxalis.user.UserCache
+import com.scalableminds.util.mail.Send
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.security.SCrypt._
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
-import reactivemongo.bson.BSONObjectID
 import oxalis.mail.DefaultMails
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import controllers.Application
@@ -27,12 +27,20 @@ import com.scalableminds.util.security.SCrypt
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
 import net.liftweb.common.Box
+import oxalis.user.UserCache
+import play.api.{Logger, Play}
+import play.api.Play.current
+import play.api.libs.concurrent.Akka
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 object UserService extends FoxImplicits with IdentityService[User] {
+
   lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 

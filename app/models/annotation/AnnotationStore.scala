@@ -1,31 +1,24 @@
 package models.annotation
 
-import scala.concurrent.duration._
-
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
-import models.user.User
-import net.liftweb.common.Failure
-import models.annotation.handler.AnnotationInformationHandler
 import com.typesafe.scalalogging.LazyLogging
-import play.api.Play.current
-import play.api.cache.Cache
+import models.annotation.handler.AnnotationInformationHandler
+import models.user.User
+import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
+
+import scala.concurrent.duration._
 
 object AnnotationStore extends LazyLogging {
 
-  private val maxCacheTime = 5 minutes
+  private val cacheTimeout = 5 minutes
 
-  case class StoredResult(result: Fox[AnnotationLike], timestamp: Long = System.currentTimeMillis)
-
-  def cachedAnnotation(annotationId: AnnotationIdentifier): Option[StoredResult] = {
-    Cache.getAs[StoredResult](annotationId.toUniqueString)
-  }
+  case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
 
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     requestFromCache(id)
-    .getOrElse(requestFromHandler(id, user)(ctx))
+    .getOrElse(requestFromHandler(id, user))
     .futureBox
     .recover {
       case e =>
@@ -35,71 +28,40 @@ object AnnotationStore extends LazyLogging {
     }
   }
 
-  def mergeAnnotation(
-    annotation: Fox[AnnotationLike],
-    annotationSec: Fox[AnnotationLike],
-    readOnly: Boolean,
-    user: User)(implicit ctx: DBAccessContext) = {
-
-    executeAnnotationMerge(annotation, annotationSec, readOnly, user)(ctx)
-    .flatten
-    .futureBox
-    .recover {
-      case e =>
-        logger.error("AnnotationStore ERROR: " + e)
-        e.printStackTrace()
-        Failure("AnnotationStore ERROR: " + e)
-    }
-  }
-
-  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[AnnotationLike]] = {
+  private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
     val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     if (handler.cache) {
-      cachedAnnotation(id).map(_.result)
+      val cached = getFromCache(id)
+      cached
     } else
-        None
+      None
   }
 
   private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
-    try {
-      val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
-      val f: Fox[AnnotationLike] =
-        handler.provideAnnotation(id.identifier, user)
+    val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
+    for {
+      annotation <- handler.provideAnnotation(id.identifier, user)
+    } yield {
       if (handler.cache) {
-        val stored = StoredResult(f)
-        Cache.set(id.toUniqueString, stored, maxCacheTime)
+        storeInCache(id, annotation)
       }
-      f
-    } catch {
-      case e: Exception =>
-        logger.error("Request Annotaton in AnnotationStore failed: " + e)
-        throw e
+      annotation
     }
   }
 
-  private def executeAnnotationMerge(
-    annotation: Fox[AnnotationLike],
-    annotationSec: Fox[AnnotationLike],
-    readOnly: Boolean,
-    user: User)(implicit ctx: DBAccessContext) = {
+  private def storeInCache(id: AnnotationIdentifier, annotation: Annotation) = {
+    TemporaryAnnotationStore.insert(id.toUniqueString, annotation, Some(cacheTimeout))
+  }
 
-    try {
-      for {
-        ann <- annotation
-        annSec <- annotationSec
-        newId = BSONObjectID.generate()
-        mergedAnnotation = AnnotationService.merge(newId, readOnly, user._id, annSec.team, AnnotationType.Explorational, ann, annSec)
-      } yield {
-        // Caching of merged annotation
-        val storedMerge = StoredResult(mergedAnnotation)
-        val mID = AnnotationIdentifier(AnnotationType.Explorational, newId.stringify)
-        Cache.set(mID.toUniqueString, storedMerge, maxCacheTime)
-        mergedAnnotation
-      }
-    } catch {
-      case e: Exception =>
-        logger.error("Request Annotation in AnnotationStore failed: " + e)
-        throw e
+  private def getFromCache(annotationId: AnnotationIdentifier): Option[Fox[Annotation]] = {
+    TemporaryAnnotationStore.find(annotationId.toUniqueString).map(Fox.successful(_))
+  }
+
+  def findCachedByTracingId(tracingId: String): Box[Annotation] = {
+    val annotationOpt = TemporaryAnnotationStore.findAll.find(a => a.tracingReference.id == tracingId)
+    annotationOpt match {
+      case Some(annotation) => Full(annotation)
+      case None => Empty
     }
   }
 }

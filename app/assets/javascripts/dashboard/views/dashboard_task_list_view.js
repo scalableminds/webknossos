@@ -187,7 +187,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     const url = `/annotations/Task/${annotationId}/reset`;
 
     Request.receiveJSON(url).then(jsonData => {
-      Toast.message(jsonData.messages);
+      Toast.messages(jsonData.messages);
     });
   }
 

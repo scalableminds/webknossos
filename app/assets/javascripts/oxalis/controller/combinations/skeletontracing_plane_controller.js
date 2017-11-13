@@ -17,6 +17,7 @@ import { OrthoViews } from "oxalis/constants";
 import {
   setActiveNodeAction,
   deleteNodeAction,
+  deleteEdgeAction,
   createTreeAction,
   createNodeAction,
   createBranchPointAction,
@@ -76,7 +77,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
       leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
-        this.onClick(pos, event.shiftKey, event.altKey, plane),
+        this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, plane),
       rightClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
         this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
     });
@@ -85,7 +86,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
   getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
       leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
-        this.onClick(pos, event.shiftKey, event.altKey, OrthoViews.TDView),
+        this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, OrthoViews.TDView),
     });
   }
 
@@ -122,6 +123,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     position: Point2,
     shiftPressed: boolean,
     altPressed: boolean,
+    ctrlPressed: boolean,
     plane: OrthoViewType,
   ): void => {
     if (!shiftPressed) {
@@ -146,13 +148,17 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     SceneController.skeleton.stopPicking();
 
     // prevent flickering sometimes caused by picking
-    this.planeView.renderFunction();
+    this.planeView.renderFunction(true);
 
     // otherwise we have hit the background and do nothing
     if (nodeId > 0) {
       if (altPressed) {
         getActiveNode(Store.getState().tracing).map(activeNode =>
           Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
+        );
+      } else if (ctrlPressed) {
+        getActiveNode(Store.getState().tracing).map(activeNode =>
+          Store.dispatch(deleteEdgeAction(activeNode.id, nodeId)),
         );
       } else {
         Store.dispatch(setActiveNodeAction(nodeId));

@@ -3,16 +3,39 @@
  * @flow
  */
 
+import _ from "lodash";
 import update from "immutability-helper";
+import Date from "libs/date";
+import Utils from "libs/utils";
+import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { OxalisState } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 
 function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
   switch (action.type) {
     case "PUSH_SAVE_QUEUE": {
-      return update(state, {
-        save: { queue: { $push: action.items.length ? [action.items] : [] } },
-      });
+      // Only report tracing statistics, if a "real" update to the tracing happened
+      const stats = _.some(action.items, ua => ua.name !== "updateTracing")
+        ? Utils.toNullable(getStats(state.tracing))
+        : null;
+      if (action.items.length > 0) {
+        return update(state, {
+          save: {
+            queue: {
+              $push: [
+                {
+                  // Placeholder, the version number will be updated before sending to the server
+                  version: -1,
+                  timestamp: Date.now(),
+                  actions: action.items,
+                  stats,
+                },
+              ],
+            },
+          },
+        });
+      }
+      return state;
     }
 
     case "SHIFT_SAVE_QUEUE": {
@@ -22,6 +45,12 @@ function SaveReducer(state: OxalisState, action: ActionType): OxalisState {
         });
       }
       return state;
+    }
+
+    case "DISCARD_SAVE_QUEUE": {
+      return update(state, {
+        save: { queue: { $set: [] } },
+      });
     }
 
     case "SET_SAVE_BUSY": {

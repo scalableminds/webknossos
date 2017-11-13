@@ -10,7 +10,6 @@
       data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
       data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
       data-airbrake-environment-name=@play.api.Play.current.configuration.getString("airbrake.environment")></script>
-    <script type="text/javascript" src="@routes.Assets.at("javascripts/routes.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script type="text/javascript" src="@routes.Assets.at("bundle/manifest.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script type="text/javascript" src="@routes.Assets.at("bundle/vendor.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script type="text/javascript" src="@routes.Assets.at("bundle/main.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>

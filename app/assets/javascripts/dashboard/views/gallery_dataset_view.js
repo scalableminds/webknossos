@@ -56,7 +56,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       <Menu>
         <Menu.Item key="existing">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=true`}
+            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=true`}
             onClick={this.createTracing}
             title="Create volume tracing"
           >
@@ -65,7 +65,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         </Menu.Item>
         <Menu.Item key="new">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=false`}
+            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=false`}
             onClick={this.createTracing}
             title="Create volume tracing"
           >
@@ -94,7 +94,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             <img src="/assets/images/eye.svg" alt="Eye" />
           </a>
           <a
-            href={`/datasets/${dataset.name}/trace?typ=skeletonTracing`}
+            href={`/datasets/${dataset.name}/trace?typ=skeleton`}
             title="Create skeleton tracing"
             onClick={this.createTracing}
           >

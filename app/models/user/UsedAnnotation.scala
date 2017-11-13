@@ -1,12 +1,12 @@
 package models.user
 
-import models.basics.SecuredBaseDAO
-import reactivemongo.bson.BSONObjectID
-import play.api.libs.json.Json
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import models.annotation.AnnotationIdentifier
-import reactivemongo.play.json.BSONFormats._
+import models.basics.SecuredBaseDAO
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 case class UsedAnnotation(user: BSONObjectID, annotationId: AnnotationIdentifier, _id: BSONObjectID = BSONObjectID.generate)
 

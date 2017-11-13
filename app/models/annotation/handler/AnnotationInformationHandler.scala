@@ -1,45 +1,60 @@
 package models.annotation.handler
 
-import net.liftweb.common.Box
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
-import models.annotation.{AnnotationType, AnnotationLike}
+import oxalis.security.silhouetteOxalis.{SecuredRequest}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import models.basics.Implicits._
-import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
 import com.scalableminds.util.tools.Fox
+import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
+import models.basics.Implicits._
 import models.user.User
+import play.api.libs.concurrent.Execution.Implicits._
+
+import scala.concurrent.Future
 
 object AnnotationInformationHandler {
   val informationHandlers: Map[String, AnnotationInformationHandler] = Map(
-    AnnotationType.View.toString ->
-      DataSetInformationHandler,
-    AnnotationType.CompoundProject.toString ->
-      ProjectInformationHandler,
-    AnnotationType.CompoundTask.toString ->
-      TaskInformationHandler,
-    AnnotationType.CompoundTaskType.toString ->
-      TaskTypeInformationHandler).withDefaultValue(SavedTracingInformationHandler)
+    AnnotationType.CompoundProject.toString  -> ProjectInformationHandler,
+    AnnotationType.CompoundTask.toString     -> TaskInformationHandler,
+    AnnotationType.CompoundTaskType.toString -> TaskTypeInformationHandler)
+      .withDefaultValue(SavedTracingInformationHandler)
 }
 
 trait AnnotationInformationHandler {
 
-  type AType <: AnnotationLike
-
   def cache: Boolean = true
 
-  def provideAnnotation(identifier: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[AType]
+  def provideAnnotation(identifier: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 
-  /*def nameForAnnotation(identifier: String)(implicit request: AuthenticatedRequest[_]): Box[String] = {
-    withAnnotation(identifier)(nameForAnnotation)
-  } */
-
-  def nameForAnnotation(t: AnnotationLike)(implicit ctx: DBAccessContext): Future[String] = {
+  def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Future[String] = {
     Future.successful(t.id)
   }
 
-  def withAnnotation[A](identifier: String)(f: AType => A)(implicit request: SecuredRequest[_]): Fox[A] = {
+  def withAnnotation[A](identifier: String)(f: Annotation => A)(implicit request: SecuredRequest[_]): Fox[A] = {
     provideAnnotation(identifier, Some(request.identity)).map(f)
   }
 
+  def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
+
+  def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
+    def allOnSameDatasetIter(annotations: List[Annotation], dataSetName: String): Boolean =
+      annotations match {
+        case List() => true
+        case head :: tail => head.dataSetName == dataSetName && allOnSameDatasetIter(tail, dataSetName)
+      }
+    annotations match {
+      case List() => Fox.successful(true)
+      case head :: tail => {
+        if (allOnSameDatasetIter(annotations, annotations.head.dataSetName))
+          Fox.successful(true)
+        else
+          Fox.failure("Cannot create compound annotation spanning multiple datasets")
+      }
+    }
+  }
+
+  def assertNonEmpty(annotations: List[Annotation]): Fox[Boolean] = {
+    annotations match {
+      case List() => Fox.failure("no annotations")
+      case _ => Fox.successful(true)
+    }
+  }
 }

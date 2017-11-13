@@ -1,239 +1,259 @@
-import _ from "lodash";
-import FormSyphon from "form-syphon";
-import Marionette from "backbone.marionette";
-import UserCollection from "admin/models/user/user_collection";
-import TeamCollection from "admin/models/team/team_collection";
-import SelectionView from "admin/views/selection_view";
-import Store from "oxalis/store";
+// @flow
+import React from "react";
+import { connect } from "react-redux";
+import { Form, Input, Select, Button, Card, InputNumber } from "antd";
+import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";
+import type { APIUserType, APITeamType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react_router";
+import type { OxalisState } from "oxalis/store";
 
-class ProjectCreateView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="row">
-  <div class="col-sm-12">
-    <div class="well">
-      <div class="col-sm-9 col-sm-offset-2">
-        <h3>Create Project</h3>
+const FormItem = Form.Item;
+const Option = Select.Option;
+const TextArea = Input.TextArea;
+
+type Props = {
+  form: Object,
+  projectName: ?string,
+  history: ReactRouterHistoryType,
+  activeUser: APIUserType,
+};
+
+type State = {
+  teams: Array<APITeamType>,
+  users: Array<APIUserType>,
+  isMTurkProject: boolean,
+};
+
+class ProjectCreateView extends React.PureComponent<Props, State> {
+  state = {
+    teams: [],
+    users: [],
+    isMTurkProject: false,
+  };
+
+  componentDidMount() {
+    this.fetchData();
+    this.applyDefaults();
+  }
+
+  async fetchData() {
+    const users = await getUsers();
+    const teams = await getTeams();
+
+    this.setState({
+      users: users.filter(user => user.isActive),
+      teams,
+    });
+  }
+
+  async applyDefaults() {
+    const project = this.props.projectName ? await getProject(this.props.projectName) : null;
+    const defaultValues = {
+      priority: 100,
+      expectedTime: 90,
+      assignmentConfiguration: {
+        location: "webknossos",
+      },
+    };
+
+    const defaultFormValues = Object.assign({}, defaultValues, project, {
+      owner: project ? project.owner.id : this.props.activeUser.id,
+    });
+    this.props.form.setFieldsValue(defaultFormValues);
+  }
+
+  handleSubmit = e => {
+    e.preventDefault();
+    this.props.form.validateFields(async (err, formValues) => {
+      if (!err) {
+        if (this.props.projectName) {
+          await updateProject(this.props.projectName, formValues);
+        } else {
+          await createProject(formValues);
+        }
+        this.props.history.push("/projects");
+      }
+    });
+  };
+
+  render() {
+    const { getFieldDecorator } = this.props.form;
+    const isEditMode = this.props.projectName != null;
+    const titlePrefix = isEditMode ? "Update " : "Create";
+    const fullWidth = { width: "100%" };
+
+    return (
+      <div className="row container wide project-administration">
+        <Card title={<h3>{titlePrefix} Project</h3>}>
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            <FormItem label="Project Name" hasFeedback>
+              {getFieldDecorator("name", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                  { min: 3 },
+                ],
+              })(<Input autoFocus disabled={isEditMode} />)}
+            </FormItem>
+
+            <FormItem label="Team" hasFeedback>
+              {getFieldDecorator("team", {
+                rules: [{ required: true }],
+              })(
+                <Select
+                  showSearch
+                  placeholder="Select a Team"
+                  optionFilterProp="children"
+                  style={fullWidth}
+                  disabled={isEditMode}
+                >
+                  {this.state.teams.map((team: APITeamType) => (
+                    <Option key={team.id} value={team.name}>
+                      {team.name}
+                    </Option>
+                  ))}
+                </Select>,
+              )}
+            </FormItem>
+
+            <FormItem label="Owner" hasFeedback>
+              {getFieldDecorator("owner", {
+                rules: [{ required: true }],
+              })(
+                <Select
+                  showSearch
+                  placeholder="Select a User"
+                  optionFilterProp="children"
+                  style={fullWidth}
+                  disabled={isEditMode}
+                >
+                  {this.state.users.map((user: APIUserType) => (
+                    <Option key={user.id} value={user.id}>
+                      {`${user.lastName}, ${user.firstName} ${user.email}`}
+                    </Option>
+                  ))}
+                </Select>,
+              )}
+            </FormItem>
+
+            <FormItem label="Priority" hasFeedback>
+              {getFieldDecorator("priority", {
+                rules: [{ required: true }, { type: "number" }],
+              })(<InputNumber style={fullWidth} />)}
+            </FormItem>
+
+            <FormItem label="Time Limit (Minutes)" hasFeedback>
+              {getFieldDecorator("expectedTime", {
+                rules: [{ required: true }, { type: "number", min: 1 }],
+              })(<InputNumber style={fullWidth} />)}
+            </FormItem>
+
+            <FormItem label="Project Type" hasFeedback>
+              {getFieldDecorator("assignmentConfiguration.location", {
+                rules: [{ required: true }],
+              })(
+                <Select
+                  allowClear
+                  optionFilterProp="children"
+                  style={fullWidth}
+                  disabled={isEditMode}
+                  onChange={(value: string) => this.setState({ isMTurkProject: value === "mturk" })}
+                >
+                  <Option value="webknossos">webKnossos</Option>
+                  <Option value="mturk">Mechanical Turk</Option>
+                </Select>,
+              )}
+            </FormItem>
+
+            {this.state.isMTurkProject ? (
+              <div>
+                <FormItem label="Mechanical Turk: Required Qualification" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.requiredQualification", {
+                    rules: [{ required: true }],
+                    initialValue: "mt-everyone",
+                  })(
+                    <Select allowClear style={fullWidth} disabled={isEditMode}>
+                      <Option value="mt-everyone">None</Option>
+                      <Option value="mt-expert">Expert</Option>
+                      <Option value="mpi-branchpoint">MPI Branchpoint</Option>
+                      <Option value="mt-max-10k-hits">
+                        Worker with less than 10k approved HITs
+                      </Option>
+                      <Option value="mt-min-10k-hits">
+                        Worker with more than 10k approved HITs
+                      </Option>
+                    </Select>,
+                  )}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Assignment Duration in Seconds" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration[assignmentDurationInSeconds]", {
+                    rules: [{ required: true }],
+                    initialValue: 3600,
+                  })(<InputNumber style={fullWidth} disabled={isEditMode} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Reward in USD" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.rewardInDollar", {
+                    rules: [{ required: true }],
+                    initialValue: 0.05,
+                  })(<InputNumber style={fullWidth} disabled={isEditMode} step={0.01} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Auto Approval Delay in Seconds" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.autoApprovalDelayInSeconds", {
+                    rules: [{ required: true }],
+                    initialValue: 60000.0,
+                  })(<InputNumber style={fullWidth} disabled={isEditMode} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: HIT Template" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.template", {
+                    rules: [{ required: true }],
+                    initialValue: "default_template",
+                  })(
+                    <Select allowClear style={fullWidth} disabled={isEditMode}>
+                      <Option value="default_template">Default flight template</Option>
+                      <Option value="branchpoint_template">Branchpoint template</Option>
+                    </Select>,
+                  )}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Title" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.title", {
+                    rules: [{ required: true }],
+                  })(<Input disabled={isEditMode} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Keywords (Comma Separated)" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.keywords", {
+                    rules: [{ required: true }],
+                  })(<Input disabled={isEditMode} />)}
+                </FormItem>
+
+                <FormItem label="Mechanical Turk: Description" hasFeedback>
+                  {getFieldDecorator("assignmentConfiguration.description", {
+                    rules: [{ required: true }],
+                  })(<TextArea disabled={isEditMode} rows={3} />)}
+                </FormItem>
+              </div>
+            ) : null}
+
+            <FormItem>
+              <Button type="primary" htmlType="submit">
+                {titlePrefix} Project
+              </Button>
+            </FormItem>
+          </Form>
+        </Card>
       </div>
-
-      <form method="POST" class="form-horizontal">
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="name">Project Name</label>
-          <div class="col-sm-9">
-          <input type="text" id="name" name="name" value="" class="form-control"
-             required pattern=".{3,100}" title="Please use at least 3 and max 100 characters ." autofocus>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="team">Team</label>
-          <div class="col-sm-9 team">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="owner">Owner</label>
-          <div class="col-sm-9 owner">
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="priority">Priority</label>
-          <div class="col-sm-9">
-            <input type="number" class="form-control" name="priority" value="100" required>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="expectedTime">Time Limit</label>
-          <div class="col-sm-9">
-            <div class="input-group">
-            <input type="number" id="expectedTime" name="expectedTime"
-              value="90" min="1" input-append="minutes" class="form-control" required>
-              <span class="input-group-addon">minutes</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="col-sm-2 control-label">Project Type</label>
-          <div class="col-sm-9">
-            <label class="radio-inline">
-              <input type="radio" name="assignmentConfiguration[location]" value="webknossos" checked />
-                webKnossos
-            </label>
-            <label class="radio-inline">
-              <input type="radio" name="assignmentConfiguration[location]" value="mturk" />
-                Mechanical Turk
-            </label>
-          </div>
-        </div>
-
-        <div class="mturk-settings">
-          <h4>Mechanical Turk settings</h4>
-
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="requiredQualification">Required qualification</label>
-            <div class="col-sm-9">
-              <select class="form-control" name="assignmentConfiguration[requiredQualification]" disabled>
-                <option value="mt-everyone" selected>None</option>
-                <option value="mt-expert">Expert</option>
-                <option value="mpi-branchpoint">MPI Branchpoint</option>
-                <option value="mt-max-10k-hits">Worker with less than 10k approved HITs</option>
-                <option value="mt-min-10k-hits">Worker with more than 10k approved HITs</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="assignmentDurationInSeconds">Assignment duration in seconds</label>
-            <div class="col-sm-9">
-              <input type="number" class="form-control" name="assignmentConfiguration[assignmentDurationInSeconds]" value="3600" disabled required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="rewardInDollar">Reward in USD</label>
-            <div class="col-sm-9">
-              <input type="number" class="form-control" name="assignmentConfiguration[rewardInDollar]" value="0.05" step="0.01" disabled required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="autoApprovalDelayInSeconds">Auto approval delay in seconds</label>
-            <div class="col-sm-9">
-              <input type="number" class="form-control" name="assignmentConfiguration[autoApprovalDelayInSeconds]" value="60000" disabled required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="template">HIT Template</label>
-            <div class="col-sm-9">
-              <select class="form-control" name="assignmentConfiguration[template]" disabled>
-                <option value="default_template" selected>Default flight template</option>
-                <option value="branchpoint_template">Branchpoint template</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="title">Title</label>
-            <div class="col-sm-9">
-              <input type="text" class="form-control" name="assignmentConfiguration[title]" disabled required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="keywords">Keywords (comma separated)</label>
-            <div class="col-sm-9">
-              <input type="text" class="form-control" name="assignmentConfiguration[keywords]" disabled required>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label class="col-sm-2 control-label" for="description">Description</label>
-            <div class="col-sm-9">
-              <textarea class="form-control" name="assignmentConfiguration[description]" disabled required rows="3"></textarea>
-            </div>
-          </div>
-
-        <div class="form-group">
-          <div class="col-sm-2 col-sm-offset-9">
-          <button type="submit" class="form-control btn btn-primary">Create Project</button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>\
-`);
-    this.prototype.className = "container wide project-administration";
-
-    this.prototype.footerTemplate = `\
-<button type="submit" class="btn btn-primary">Create</button>
-<a href="#" class="btn btn-default" data-dismiss="modal">Close</a>\
-`;
-
-    this.prototype.regions = {
-      team: ".team",
-      owner: ".owner",
-    };
-
-    this.prototype.events = {
-      "submit form": "createProject",
-      "change @ui.projectTypeInput": "changeProjectType",
-    };
-
-    this.prototype.ui = {
-      name: ".project-name",
-      form: "form",
-      projectTypeInput: "[name='assignmentConfiguration[location]']",
-      mturkSettingsInputs:
-        ".mturk-settings input, .mturk-settings textarea, .mturk-settings select",
-    };
-  }
-
-  initialize() {
-    this.model.isReallyNew = true;
-
-    this.userSelectionView = new SelectionView({
-      collection: new UserCollection(),
-      childViewOptions: {
-        defaultItem: { email: Store.getState().activeUser.email },
-        modelValue() {
-          return this.model.id;
-        },
-        modelLabel() {
-          return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get(
-            "email",
-          )})`;
-        },
-      },
-      filter: model => model.get("isActive"),
-      name: "owner",
-      data: "isAdmin=true",
-    });
-    this.teamSelectionView = new SelectionView({
-      collection: new TeamCollection(),
-      childViewOptions: {
-        modelValue() {
-          return `${this.model.get("name")}`;
-        },
-      },
-      data: "amIAnAdmin=true",
-      name: "team",
-    });
-  }
-
-  changeProjectType() {
-    const projectType = this.ui.projectTypeInput.filter(":checked").val();
-    if (projectType === "mturk") {
-      this.ui.mturkSettingsInputs.prop("disabled", false);
-    } else {
-      this.ui.mturkSettingsInputs.prop("disabled", true);
-    }
-  }
-
-  onRender() {
-    this.showChildView("owner", this.userSelectionView);
-    this.showChildView("team", this.teamSelectionView);
-  }
-
-  createProject(evt) {
-    evt.preventDefault();
-
-    if (this.ui.form[0].checkValidity()) {
-      const formValues = FormSyphon.serialize(this.ui.form);
-
-      // convert expectedTime from minutes to milliseconds
-      formValues.expectedTime *= 60000;
-
-      this.model.save(formValues).then(() => this.props.history.push("/projects"));
-    } else {
-      this.ui.name.focus();
-    }
+    );
   }
 }
-ProjectCreateView.initClass();
 
-export default ProjectCreateView;
+const mapStateToProps = (state: OxalisState) => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(Form.create()(ProjectCreateView));

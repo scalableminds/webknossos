@@ -1,5 +1,6 @@
 // @flow
-/* eslint-disable import/prefer-default-export */
+import type { BoundingBoxType } from "oxalis/constants";
+
 type SetAnnotationNameActionType = {
   type: "SET_ANNOTATION_NAME",
   name: string,
@@ -15,10 +16,16 @@ type SetAnnotationDescriptionActionType = {
   description: string,
 };
 
+type SetUserBoundingBoxType = {
+  type: "SET_USER_BOUNDING_BOX",
+  userBoundingBox: ?BoundingBoxType,
+};
+
 export type AnnotationActionTypes =
   | SetAnnotationNameActionType
   | SetAnnotationPubliceActionType
-  | SetAnnotationDescriptionActionType;
+  | SetAnnotationDescriptionActionType
+  | SetUserBoundingBoxType;
 
 export const setAnnotationNameAction = (name: string): SetAnnotationNameActionType => ({
   type: "SET_ANNOTATION_NAME",
@@ -35,4 +42,13 @@ export const setAnnotationDescriptionAction = (
 ): SetAnnotationDescriptionActionType => ({
   type: "SET_ANNOTATION_DESCRIPTION",
   description,
+});
+
+// Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with
+// the tracing, hence no ANNOTATION in the action type.
+export const setUserBoundingBoxAction = (
+  userBoundingBox: ?BoundingBoxType,
+): SetUserBoundingBoxType => ({
+  type: "SET_USER_BOUNDING_BOX",
+  userBoundingBox,
 });

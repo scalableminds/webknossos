@@ -767,7 +767,7 @@ class UtilsApi {
   /**
    * Show a toast to the user. Returns a function which can be used to remove the toast again.
    *
-   * @param {string} type - Can be one of the following: "info", "warning", "success" or "danger"
+   * @param {string} type - Can be one of the following: "info", "warning", "success" or "error"
    * @param {string} message - The message string you want to show
    * @param {number} timeout - Time period in milliseconds after which the toast will be hidden. Time is measured as soon as the user moves the mouse. A value of 0 means that the toast will only hide by clicking on it's X button.
    * @example // Show a toast for 5 seconds
@@ -776,8 +776,8 @@ class UtilsApi {
    * // removeToast();
    */
   showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
-    const noop = () => {};
-    return Toast.message(type, message, timeout === 0, timeout).remove || noop;
+    Toast.message(type, message, timeout === 0, timeout);
+    return () => Toast.close(message);
   }
 
   /**

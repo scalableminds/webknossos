@@ -103,7 +103,7 @@ export type APITaskTypeType = {
   +settings: SettingsType,
 };
 
-type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
+export type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
 
 export type APIScriptType = {
   +id: string,

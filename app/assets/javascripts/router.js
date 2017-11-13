@@ -12,7 +12,6 @@ import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeTracingEnum } from "admin/api_flow_types";
 import BaseRouter from "libs/base_router";
 import ReactBackboneWrapper from "libs/react_backbone_wrapper";
-import PaginationCollection from "admin/models/pagination_collection";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
@@ -198,30 +197,18 @@ class Router extends BaseRouter {
    */
   taskCreate() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskCreateView = admin.TaskCreateView;
-      const TaskModel = admin.TaskModel;
-
-      const model = new TaskModel();
-      const view = new TaskCreateView({ model });
-
+      const view = new ReactBackboneWrapper(admin.TaskCreateView, {});
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 
   /**
    * Load item view which displays an editable task.
    */
-  taskEdit(taskID) {
+  taskEdit(taskId) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskCreateFromView = admin.TaskCreateFromView;
-      const TaskModel = admin.TaskModel;
-
-      const model = new TaskModel({ id: taskID });
-      const view = new TaskCreateFromView({ model, type: "from_form" });
-
+      const view = new ReactBackboneWrapper(admin.TaskCreateFormView, { taskId });
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 
@@ -252,23 +239,6 @@ class Router extends BaseRouter {
   spotlight() {
     const view = new ReactBackboneWrapper(SpotlightView, {});
     this.changeView(view);
-  }
-
-  showWithPagination(view, collection, options = {}) {
-    _.defaults(options, { addButtonText: null });
-
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      collection = new admin[collection](null, options);
-      const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
-      view = new admin[view]({ collection: paginatedCollection });
-      const paginationView = new admin.PaginationView({
-        collection: paginatedCollection,
-        addButtonText: options.addButtonText,
-      });
-
-      this.changeView(paginationView, view);
-      this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
-    });
   }
 
   changeView(...views) {

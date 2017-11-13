@@ -23,6 +23,7 @@ import controllers.Application
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.mail.Send
+import com.scalableminds.util.security.SCrypt
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationService
 import net.liftweb.common.Box
@@ -201,6 +202,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def createPasswordInfo(pw: String): PasswordInfo ={
-    PasswordInfo("SCrypt", "")
+    PasswordInfo("SCrypt", SCrypt.hashPassword(pw))
   }
 }

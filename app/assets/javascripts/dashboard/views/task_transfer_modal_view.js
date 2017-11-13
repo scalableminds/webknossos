@@ -57,10 +57,10 @@ class TaskTransferModalView extends ModalView {
   transferTask(evt) {
     evt.preventDefault();
 
-    const userID = this.$("select :selected").attr("id");
+    const userId = this.$("select :selected").attr("id");
     return Request.sendJSONReceiveJSON(this.url, {
       data: {
-        userId: userID,
+        userId,
       },
     }).then(() => this.destroy());
   }

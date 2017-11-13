@@ -20,10 +20,6 @@ import play.api.libs.json.{JsValue, Json}
 import play.twirl.api.Html
 
 class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controller {
-  def empty(name: String) = SecuredAction {
-    implicit request =>
-      Ok(views.html.main()(Html("")))
-  }
 
   def list = SecuredAction.async {
     implicit request =>

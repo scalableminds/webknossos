@@ -5,6 +5,9 @@
 /* globals JQueryInputEventObject:false */
 
 import * as React from "react";
+import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
+import { Spin } from "antd";
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -29,12 +32,12 @@ import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
-import { connect } from "react-redux";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { ReactRouterHistoryType } from "react_router";
 
 type Props = {
   initialTracingType: SkeletonTracingTypeTracingType,
@@ -42,6 +45,7 @@ type Props = {
   initialControlmode: ControlModeType,
   // Delivered by connect()
   viewMode: ModeType,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -74,8 +78,6 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    app.router.showLoadingSpinner();
-
     _.extend(this, Backbone.Events);
 
     UrlManager.initialize();
@@ -100,7 +102,7 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    app.router.on("beforeunload", () => {
+    this.props.history.block(() => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());
@@ -128,7 +130,6 @@ class Controller extends React.PureComponent<Props, State> {
 
     window.webknossos = new ApiLoader(Model);
 
-    app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
     this.setState({ ready: true });
@@ -262,7 +263,7 @@ class Controller extends React.PureComponent<Props, State> {
 
   render() {
     if (!this.state.ready) {
-      return null;
+      return <Spin spinning />;
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
@@ -312,4 +313,4 @@ function mapStateToProps(state: OxalisState) {
   };
 }
 
-export default connect(mapStateToProps)(Controller);
+export default withRouter(connect(mapStateToProps)(Controller));

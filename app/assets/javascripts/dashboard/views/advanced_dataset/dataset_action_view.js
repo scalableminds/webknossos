@@ -2,6 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Dropdown, Menu } from "antd";
 import type { APIDatasetType } from "admin/api_flow_types";
 
@@ -48,9 +49,9 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
       <div>
         {dataset.dataSource.dataLayers == null ? (
           <div>
-            <a href={`/datasets/${dataset.name}/import`} className=" import-dataset">
+            <Link to={`/datasets/${dataset.name}/import`} className="import-dataset">
               <i className="fa fa-plus-circle" />Import
-            </a>
+            </Link>
 
             <div className="text-danger">{dataset.dataSource.status}</div>
           </div>
@@ -58,9 +59,9 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
             {dataset.isEditable ? (
-              <a href={`/datasets/${dataset.name}/edit`} title="Edit dataset">
+              <Link to={`/datasets/${dataset.name}/edit`} title="Edit dataset">
                 <i className="fa fa-pencil" /> Edit
-              </a>
+              </Link>
             ) : null}
             <a href={`/datasets/${dataset.name}/view`} title="View dataset">
               <img src="/assets/images/eye.svg" alt="eye icon" /> View

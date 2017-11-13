@@ -149,11 +149,9 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   <br />
                   <span>
                     <i className="fa fa-clock-o" />
-                    {annotation.tracingTime ? (
-                      FormatUtils.formatSeconds(annotation.tracingTime / 1000)
-                    ) : (
-                      0
-                    )}
+                    {annotation.tracingTime
+                      ? FormatUtils.formatSeconds(annotation.tracingTime / 1000)
+                      : 0}
                   </span>
                 </td>
                 <td className="nowrap">
@@ -173,7 +171,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             annotationId={this.state.currentAnnotation.id}
             onCancel={() => this.setState({ isTransferModalVisible: false })}
             onChange={this.updateAnnotationState}
-            userID={this.state.currentAnnotation.user.id}
+            userId={this.state.currentAnnotation.user.id}
           />
         ) : null}
       </div>

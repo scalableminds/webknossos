@@ -1,10 +1,10 @@
 import _ from "lodash";
-import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import UserCollection from "admin/models/user/user_collection";
 import SelectionView from "admin/views/selection_view";
 import Toast from "libs/toast";
+import Store from "oxalis/store";
 
 class ScriptCreateView extends Marionette.View {
   static initClass() {
@@ -86,12 +86,12 @@ class ScriptCreateView extends Marionette.View {
 
     const formValues = FormSyphon.serialize(this.ui.form);
 
-    this.model.save(formValues).then(() => app.router.navigate("/scripts", { trigger: true }));
+    this.model.save(formValues).then(() => this.props.history.push("/scripts"));
   }
 
   onRender() {
     const owner = this.model.get("owner");
-    const defaultUserId = owner ? owner.id : app.currentUser.id;
+    const defaultUserId = owner ? owner.id : Store.getState().activeUser.id;
     const userSelectionView = new SelectionView({
       collection: new UserCollection(),
       childViewOptions: {

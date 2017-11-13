@@ -21,10 +21,6 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
       (__ \ 'team).read[String] and
       (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
 
-  def empty(id: String) = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {

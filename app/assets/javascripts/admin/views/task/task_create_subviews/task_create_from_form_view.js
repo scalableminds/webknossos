@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import Marionette from "backbone.marionette";
 import DatasetCollection from "admin/models/dataset/dataset_collection";
 import SelectionView from "admin/views/selection_view";
@@ -91,7 +90,7 @@ class TaskCreateFromFormView extends Marionette.View {
         params: { type: "default" },
       });
       if (this.parent.isEditingMode) {
-        app.router.loadURL("/tasks");
+        this.props.history.push("/tasks");
       } else {
         this.parent.showSaveSuccess(response);
       }

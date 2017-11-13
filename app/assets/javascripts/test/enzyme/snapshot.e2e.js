@@ -31,14 +31,15 @@ mockRequire("antd/lib/button", props => (
   </div>
 ));
 
-const ProjectListView = mockRequire.reRequire("admin/admin").ProjectListView;
+const ProjectListView = mockRequire.reRequire("../../admin/views/project/project_list_view")
+  .default;
 const Dashboard = mockRequire.reRequire("../../dashboard/views/dashboard_view").default;
 const UserListView = mockRequire.reRequire("../../admin/views/user/user_list_view").default;
 // Cannot be rendered for some reason
 // const TracingLayoutView = mockRequire.reRequire("../../oxalis/view/tracing_layout_view").default;
 
 test("Dashboard", async t => {
-  const dashboard = mount(<Dashboard userID={null} isAdminView={false} />);
+  const dashboard = mount(<Dashboard userId={null} isAdminView={false} />);
   await waitForAllRequests();
   t.is(dashboard.find(".TestDatasetHeadline").length, 1);
 

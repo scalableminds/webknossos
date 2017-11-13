@@ -1,10 +1,10 @@
 import _ from "lodash";
-import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import UserCollection from "admin/models/user/user_collection";
 import TeamCollection from "admin/models/team/team_collection";
 import SelectionView from "admin/views/selection_view";
+import Store from "oxalis/store";
 
 class ProjectCreateView extends Marionette.View {
   static initClass() {
@@ -179,7 +179,7 @@ class ProjectCreateView extends Marionette.View {
     this.userSelectionView = new SelectionView({
       collection: new UserCollection(),
       childViewOptions: {
-        defaultItem: { email: app.currentUser.email },
+        defaultItem: { email: Store.getState().activeUser.email },
         modelValue() {
           return this.model.id;
         },
@@ -228,7 +228,7 @@ class ProjectCreateView extends Marionette.View {
       // convert expectedTime from minutes to milliseconds
       formValues.expectedTime *= 60000;
 
-      this.model.save(formValues).then(() => app.router.navigate("/projects", { trigger: true }));
+      this.model.save(formValues).then(() => this.props.history.push("/projects"));
     } else {
       this.ui.name.focus();
     }

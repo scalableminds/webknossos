@@ -2,24 +2,31 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import * as React from "react";
+import { connect } from "react-redux";
 import Request from "libs/request";
 import { Spin, Tabs } from "antd";
-import app from "app";
 import Utils from "libs/utils";
 import DatasetView from "dashboard/views/dataset_view";
 import DashboardTaskListView from "dashboard/views/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/views/explorative_annotations_view";
 import LoggedTimeView from "dashboard/views/logged_time_view";
 import type { APIUserType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 
 const TabPane = Tabs.TabPane;
 
 const validTabKeys = ["datasets", "advanced-datasets", "tasks", "explorativeAnnotations"];
 
-type Props = {
-  userID: ?string,
+type OwnProps = {
+  userId: ?string,
   isAdminView: boolean,
 };
+
+type StoreProps = {
+  activeUser: ?APIUserType,
+};
+
+type Props = OwnProps & StoreProps;
 
 type State = {
   activeTabKey: string,
@@ -44,7 +51,7 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = this.props.userID ? `/api/users/${this.props.userID}` : "/api/user";
+    const url = this.props.userId ? `/api/users/${this.props.userId}` : "/api/user";
     const user = await Request.receiveJSON(url);
 
     this.setState({
@@ -53,35 +60,39 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   getTabs(user: APIUserType) {
-    const isUserAdmin = Utils.isUserAdmin(app.currentUser);
-    const isAdminView = this.props.isAdminView;
+    if (this.props.activeUser) {
+      const isUserAdmin = Utils.isUserAdmin(this.props.activeUser);
+      const isAdminView = this.props.isAdminView;
 
-    return [
-      !isAdminView ? (
-        <TabPane tab="Dataset Gallery" key="datasets">
-          <DatasetView user={user} dataViewType="gallery" />
-        </TabPane>
-      ) : null,
-      !isAdminView && isUserAdmin ? (
-        <TabPane tab="Datasets" key="advanced-datasets">
-          <DatasetView user={user} dataViewType="advanced" />
-        </TabPane>
-      ) : null,
-      <TabPane tab="Tasks" key="tasks">
-        <DashboardTaskListView isAdminView={this.props.isAdminView} userID={this.props.userID} />
-      </TabPane>,
-      <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
-        <ExplorativeAnnotationsView
-          isAdminView={this.props.isAdminView}
-          userID={this.props.userID}
-        />
-      </TabPane>,
-      isAdminView ? (
-        <TabPane tab="Tracked Time" key="trackedTime">
-          <LoggedTimeView userID={this.props.userID} />
-        </TabPane>
-      ) : null,
-    ];
+      return [
+        !isAdminView ? (
+          <TabPane tab="Dataset Gallery" key="datasets">
+            <DatasetView user={user} dataViewType="gallery" />
+          </TabPane>
+        ) : null,
+        !isAdminView && isUserAdmin ? (
+          <TabPane tab="Datasets" key="advanced-datasets">
+            <DatasetView user={user} dataViewType="advanced" />
+          </TabPane>
+        ) : null,
+        <TabPane tab="Tasks" key="tasks">
+          <DashboardTaskListView isAdminView={this.props.isAdminView} userId={this.props.userId} />
+        </TabPane>,
+        <TabPane tab="Explorative Annotations" key="explorativeAnnotations">
+          <ExplorativeAnnotationsView
+            isAdminView={this.props.isAdminView}
+            userId={this.props.userId}
+          />
+        </TabPane>,
+        isAdminView ? (
+          <TabPane tab="Tracked Time" key="trackedTime">
+            <LoggedTimeView userId={this.props.userId} />
+          </TabPane>
+        ) : null,
+      ];
+    } else {
+      return null;
+    }
   }
 
   render() {
@@ -118,4 +129,8 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 }
 
-export default DashboardView;
+const mapStateToProps = (state: OxalisState): StoreProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(DashboardView);

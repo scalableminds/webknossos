@@ -22,10 +22,6 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
       (__ \ 'gist).read[String] and
       (__ \ 'ownerId).read[String]) (Script.fromForm _)
 
-  def empty(id: String) = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {

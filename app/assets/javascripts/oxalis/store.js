@@ -4,7 +4,6 @@
  */
 
 /* eslint-disable no-useless-computed-key */
-
 import { createStore, applyMiddleware } from "redux";
 import createSagaMiddleware from "redux-saga";
 import reduceReducers from "oxalis/model/helpers/reduce_reducers";
@@ -17,6 +16,7 @@ import ReadOnlyTracingReducer from "oxalis/model/reducers/readonlytracing_reduce
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
+import UserReducer from "oxalis/model/reducers/user_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
@@ -33,6 +33,7 @@ import type {
 import type { Matrix4x4 } from "libs/mjs";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
+import type { APIUserType } from "admin/api_flow_types";
 
 export type CommentType = {
   +node: number,
@@ -345,6 +346,7 @@ export type OxalisState = {
   +save: SaveStateType,
   +flycam: FlycamType,
   +viewModeData: ViewModeData,
+  +activeUser: ?APIUserType,
 };
 
 export const defaultState: OxalisState = {
@@ -456,6 +458,7 @@ export const defaultState: OxalisState = {
     arbitrary: null,
     flight: null,
   },
+  activeUser: null,
 };
 
 const sagaMiddleware = createSagaMiddleware();
@@ -472,6 +475,7 @@ const combinedReducers = reduceReducers(
   FlycamReducer,
   ViewModeReducer,
   AnnotationReducer,
+  UserReducer,
 );
 
 const store = createStore(

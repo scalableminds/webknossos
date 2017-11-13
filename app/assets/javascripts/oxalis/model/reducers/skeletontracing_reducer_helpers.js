@@ -8,7 +8,6 @@
 
 import _ from "lodash";
 import Maybe from "data.maybe";
-import app from "app";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
@@ -33,8 +32,11 @@ import type {
 } from "oxalis/store";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
-  let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
-  user = user.replace(/ /g, "_"); // Replace spaces in user names
+  let user = "";
+  if (state.activeUser) {
+    user = `${state.activeUser.firstName}_${state.activeUser.lastName}`;
+    user = user.replace(/ /g, "_"); // Replace spaces in user names
+  }
 
   let prefix = "Tree";
   if (state.tracing.tracingType === "Explorational") {

@@ -64,10 +64,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       (__ \ 'editPosition).read[Point3D] and
       (__ \ 'editRotation).read[Vector3D]).tupled
 
-  def empty = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
   def read(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")

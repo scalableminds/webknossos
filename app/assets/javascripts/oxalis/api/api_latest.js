@@ -43,8 +43,7 @@ import type {
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import Request from "libs/request";
-import app from "app";
-import window from "libs/window";
+import window, { location } from "libs/window";
 import Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -293,14 +292,14 @@ class TracingApi {
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
-        app.router.loadURL(newTaskUrl);
+        location.pathname = newTaskUrl;
       } else {
         await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
       await Utils.sleep(2000);
-      app.router.loadURL("/dashboard");
+      location.pathname = "/dashboard";
     }
   }
 

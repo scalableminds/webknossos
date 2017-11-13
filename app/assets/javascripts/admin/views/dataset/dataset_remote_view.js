@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import Marionette from "backbone.marionette";
 import Toast from "libs/toast";
 import Request from "libs/request";
@@ -89,7 +88,7 @@ class DatasetRemoteView extends Marionette.View {
       }).then(
         () => {
           Toast.success();
-          app.router.navigate("/dashboard", { trigger: true });
+          this.props.history.push("/dashboard");
         },
         () => {}, // NOOP
       );

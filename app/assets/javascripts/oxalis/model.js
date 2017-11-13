@@ -37,7 +37,7 @@ import {
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
-import window from "libs/window";
+import window, { location } from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
@@ -135,7 +135,7 @@ export class OxalisModel {
     let infoUrl;
     if (controlMode === ControlModeEnum.TRACE) {
       // Include /readOnly part whenever it is in the pathname
-      const isReadOnly = window.location.pathname.endsWith("/readOnly");
+      const isReadOnly = location.pathname.endsWith("/readOnly");
       const readOnlyPart = isReadOnly ? "readOnly/" : "";
       infoUrl = `/annotations/${tracingType}/${tracingId}/${readOnlyPart}info`;
     } else {

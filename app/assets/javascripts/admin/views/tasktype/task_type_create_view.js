@@ -1,5 +1,4 @@
 import _ from "lodash";
-import app from "app";
 import FormSyphon from "form-syphon";
 import Marionette from "backbone.marionette";
 import "bootstrap-multiselect";
@@ -145,7 +144,7 @@ class TaskTypeCreateView extends Marionette.View {
       return;
     }
 
-    this.model.save(formValues).then(() => app.router.navigate("/taskTypes", { trigger: true }));
+    this.model.save(formValues).then(() => this.props.history.push("/taskTypes"));
   }
 
   onRender() {

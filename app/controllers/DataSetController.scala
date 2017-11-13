@@ -71,19 +71,6 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def empty = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  // TODO: find a better way to ignore parameters
-  def emptyWithWildcard(param: String) = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  def userAwareEmpty = UserAwareAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
   def list = UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>

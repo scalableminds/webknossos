@@ -130,6 +130,11 @@ export async function deleteProject(projectName: string): Promise<void> {
   });
 }
 
+// ### Active User
+export async function getActiveUser(options: Object = {}) {
+  return Request.receiveJSON("/api/user", options);
+}
+
 // ### Tasks
 export async function getAnnotationsForTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);

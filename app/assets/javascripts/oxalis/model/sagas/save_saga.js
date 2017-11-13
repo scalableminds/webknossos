@@ -146,7 +146,7 @@ export function toggleErrorHighlighting(state: boolean) {
   if (state) {
     Toast.error(messages["save.failed"], true);
   } else {
-    Toast.delete("danger", messages["save.failed"]);
+    Toast.close(messages["save.failed"]);
   }
 }
 

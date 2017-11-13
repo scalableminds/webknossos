@@ -15,8 +15,10 @@ import type {
   NDStoreConfigType,
   DatasetConfigType,
   APIRoleType,
+  APIDatasetType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
+import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -30,6 +32,35 @@ function assertResponseLimit(collection) {
   if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
     Toast.warning(messages["request.max_item_count_alert"], true);
   }
+}
+
+// ### Do with userToken
+
+let tokenRequestPromise;
+function requestUserToken(): Promise<string> {
+  if (tokenRequestPromise) {
+    return tokenRequestPromise;
+  }
+
+  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
+    tokenRequestPromise = null;
+    return tokenObj.token;
+  });
+
+  return tokenRequestPromise;
+}
+
+let tokenPromise;
+export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  if (!tokenPromise) tokenPromise = requestUserToken();
+  return tokenPromise.then(fn).catch(error => {
+    if (error.status === 403) {
+      console.warn("Token expired. Requesting new token...");
+      tokenPromise = requestUserToken();
+      return doWithToken(fn);
+    }
+    throw error;
+  });
 }
 
 // ### Users
@@ -60,6 +91,7 @@ export async function getUser(userId: string): Promise<APIUserType> {
 
 export async function updateUser(newUser: APIUserType): Promise<APIUserType> {
   return Request.sendJSONReceiveJSON(`/api/users/${newUser.id}`, {
+    method: "PUT",
     data: newUser,
   });
 }
@@ -153,6 +185,13 @@ export async function getRootTeams(): Promise<Array<APITeamType>> {
   return teams;
 }
 
+export async function getAdminTeams(): Promise<Array<APITeamType>> {
+  const teams = await Request.receiveJSON("/api/teams?amIAnAdmin=true");
+  assertResponseLimit(teams);
+
+  return teams;
+}
+
 export async function createTeam(newTeam: NewTeamType): Promise<APITeamType> {
   return Request.sendJSONReceiveJSON("/api/teams", {
     data: newTeam,
@@ -166,65 +205,34 @@ export async function deleteTeam(teamId: string): Promise<void> {
 }
 
 // ### Projects
+function transformProject(response): APIProjectType {
+  return Object.assign(response, {
+    expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
+  });
+}
+
 export async function getProjects(): Promise<Array<APIProjectType>> {
   const responses = await Request.receiveJSON("/api/projects");
   assertResponseLimit(responses);
 
-  const projects = responses.map(response =>
-    Object.assign(response, { expectedTime: Utils.millisecondsToMinutes(response.expectedTime) }),
-  );
-  return projects;
+  return responses.map(transformProject);
 }
 
 export async function getProjectsWithOpenAssignments(): Promise<Array<APIProjectType>> {
   const responses = await Request.receiveJSON("/api/projects/assignments");
   assertResponseLimit(responses);
 
-  const projects = responses.map(response =>
-    Object.assign(response, { expectedTime: Utils.millisecondsToMinutes(response.expectedTime) }),
-  );
-  return projects;
+  return responses.map(transformProject);
 }
 
 export async function getProject(projectName: string): Promise<APIProjectType> {
   const project = await Request.receiveJSON(`/api/projects/${projectName}`);
-  return Object.assign(project, {
-    expectedTime: Utils.millisecondsToMinutes(project.expectedTime),
-  });
+  return transformProject(project);
 }
 
 export async function deleteProject(projectName: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",
-  });
-}
-
-// ### Do with userToken
-
-let tokenRequestPromise;
-function requestUserToken(): Promise<string> {
-  if (tokenRequestPromise) {
-    return tokenRequestPromise;
-  }
-
-  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
-    tokenRequestPromise = null;
-    return tokenObj.token;
-  });
-
-  return tokenRequestPromise;
-}
-
-let tokenPromise;
-export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
-  if (!tokenPromise) tokenPromise = requestUserToken();
-  return tokenPromise.then(fn).catch(error => {
-    if (error.status === 403) {
-      console.warn("Token expired. Requesting new token...");
-      tokenPromise = requestUserToken();
-      return doWithToken(fn);
-    }
-    throw error;
   });
 }
 
@@ -253,12 +261,14 @@ export async function updateProject(
   });
 }
 
-export function pauseProject(projectName: string): Promise<void> {
-  return Request.receiveJSON(`/api/projects/${projectName}/pause`);
+export async function pauseProject(projectName: string): Promise<APIProjectType> {
+  const project = await Request.receiveJSON(`/api/projects/${projectName}/pause`);
+  return transformProject(project);
 }
 
-export function resumeProject(projectName: string): Promise<void> {
-  return Request.receiveJSON(`/api/projects/${projectName}/resume`);
+export async function resumeProject(projectName: string): Promise<APIProjectType> {
+  const project = await Request.receiveJSON(`/api/projects/${projectName}/resume`);
+  return transformProject(project);
 }
 
 // ### Tasks
@@ -271,34 +281,67 @@ export async function deleteTask(taskId: string): Promise<void> {
     method: "DELETE",
   });
 }
+function transformTask(response): APITaskType {
+  // apply some defaults
+  response.type = {
+    summary: Utils.__guard__(response.type, x => x.summary) || "<deleted>",
+    id: Utils.__guard__(response.type, x1 => x1.id) || "",
+  };
+
+  if (response.tracingTime == null) {
+    response.tracingTime = 0;
+  }
+  // convert bounding box
+  if (response.boundingBox != null) {
+    const { topLeft, width, height, depth } = response.boundingBox;
+    response.boundingBoxVec6 = topLeft.concat([width, height, depth]);
+  } else {
+    response.boundingBoxVec6 = [];
+  }
+
+  return response;
+}
 
 export async function getTasks(queryObject: QueryObjectType): Promise<Array<APITaskType>> {
   const responses = await Request.sendJSONReceiveJSON("/api/tasks/list", {
     data: queryObject,
   });
 
-  const tasks = responses.map(response => {
-    // apply some defaults
-    response.type = {
-      summary: Utils.__guard__(response.type, x => x.summary) || "<deleted>",
-      id: Utils.__guard__(response.type, x1 => x1.id) || "",
-    };
+  return responses.map(response => transformTask(response));
+}
 
-    if (response.tracingTime == null) {
-      response.tracingTime = 0;
-    }
-    // convert bounding box
-    if (response.boundingBox != null) {
-      const { topLeft, width, height, depth } = response.boundingBox;
-      response.boundingBoxVec6 = topLeft.concat([width, height, depth]);
-    } else {
-      response.boundingBoxVec6 = [];
-    }
-
-    return response;
+// TODO fix return types
+export async function createTasks(
+  tasks: Array<NewTaskType>,
+): Promise<Array<TaskCreationResponseType>> {
+  return Request.sendJSONReceiveJSON("/api/tasks", {
+    data: tasks,
   });
+}
 
-  return tasks;
+// TODO fix return types
+export async function createTaskFromNML(
+  task: NewTaskType,
+): Promise<Array<TaskCreationResponseType>> {
+  return Request.sendMultipartFormReceiveJSON("/api/tasks/createFromFile", {
+    data: {
+      nmlFile: task.nmlFile,
+      formJSON: JSON.stringify(task),
+    },
+  });
+}
+
+export async function getTask(taskId: string): Promise<APITaskType> {
+  const task = await Request.receiveJSON(`/api/tasks/${taskId}`);
+  return transformTask(task);
+}
+
+export async function updateTask(taskId: string, task: NewTaskType): Promise<APITaskType> {
+  const updatedTask = await Request.sendJSONReceiveJSON(`/api/tasks/${taskId}`, {
+    method: "PUT",
+    data: task,
+  });
+  return transformTask(updatedTask);
 }
 
 // ### Annotations
@@ -320,15 +363,21 @@ export async function deleteAnnotation(annotationId: string): Promise<APIAnnotat
   });
 }
 
-// #### Datastores
-export async function getDatastores(): Promise<Array<APIDatastoreType>> {
-  const datastores = await Request.receiveJSON("/api/datastores");
-  assertResponseLimit(datastores);
+// ### Datasets
+export async function getDatasets(): Promise<Array<APIDatasetType>> {
+  const datasets = await Request.receiveJSON("/api/datasets");
+  assertResponseLimit(datasets);
 
-  return datastores;
+  return datasets;
 }
 
-// ### Datasets
+export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
+  const datasets = await Request.receiveJSON("/api/datasets?isActive=true");
+  assertResponseLimit(datasets);
+
+  return datasets;
+}
+
 export async function addNDStoreDataset(
   ndstoreConfig: NDStoreConfigType,
 ): Promise<APIAnnotationType> {
@@ -344,4 +393,12 @@ export async function addDataset(datatsetConfig: DatasetConfigType): Promise<API
       host: datatsetConfig.datastore,
     }),
   );
+}
+
+// #### Datastores
+export async function getDatastores(): Promise<Array<APIDatastoreType>> {
+  const datastores = await Request.receiveJSON("/api/datastores");
+  assertResponseLimit(datastores);
+
+  return datastores;
 }

@@ -34,6 +34,35 @@ function assertResponseLimit(collection) {
   }
 }
 
+// ### Do with userToken
+
+let tokenRequestPromise;
+function requestUserToken(): Promise<string> {
+  if (tokenRequestPromise) {
+    return tokenRequestPromise;
+  }
+
+  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
+    tokenRequestPromise = null;
+    return tokenObj.token;
+  });
+
+  return tokenRequestPromise;
+}
+
+let tokenPromise;
+export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  if (!tokenPromise) tokenPromise = requestUserToken();
+  return tokenPromise.then(fn).catch(error => {
+    if (error.status === 403) {
+      console.warn("Token expired. Requesting new token...");
+      tokenPromise = requestUserToken();
+      return doWithToken(fn);
+    }
+    throw error;
+  });
+}
+
 // ### Users
 export async function getUsers(): Promise<Array<APIUserType>> {
   const users = await Request.receiveJSON("/api/users");
@@ -176,65 +205,34 @@ export async function deleteTeam(teamId: string): Promise<void> {
 }
 
 // ### Projects
+function transformProject(response): APIProjectType {
+  return Object.assign(response, {
+    expectedTime: Utils.millisecondsToMinutes(response.expectedTime),
+  });
+}
+
 export async function getProjects(): Promise<Array<APIProjectType>> {
   const responses = await Request.receiveJSON("/api/projects");
   assertResponseLimit(responses);
 
-  const projects = responses.map(response =>
-    Object.assign(response, { expectedTime: Utils.millisecondsToMinutes(response.expectedTime) }),
-  );
-  return projects;
+  return responses.map(transformProject);
 }
 
 export async function getProjectsWithOpenAssignments(): Promise<Array<APIProjectType>> {
   const responses = await Request.receiveJSON("/api/projects/assignments");
   assertResponseLimit(responses);
 
-  const projects = responses.map(response =>
-    Object.assign(response, { expectedTime: Utils.millisecondsToMinutes(response.expectedTime) }),
-  );
-  return projects;
+  return responses.map(transformProject);
 }
 
 export async function getProject(projectName: string): Promise<APIProjectType> {
   const project = await Request.receiveJSON(`/api/projects/${projectName}`);
-  return Object.assign(project, {
-    expectedTime: Utils.millisecondsToMinutes(project.expectedTime),
-  });
+  return transformProject(project);
 }
 
 export async function deleteProject(projectName: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",
-  });
-}
-
-// ### Do with userToken
-
-let tokenRequestPromise;
-function requestUserToken(): Promise<string> {
-  if (tokenRequestPromise) {
-    return tokenRequestPromise;
-  }
-
-  tokenRequestPromise = Request.receiveJSON("/api/userToken/generate").then(tokenObj => {
-    tokenRequestPromise = null;
-    return tokenObj.token;
-  });
-
-  return tokenRequestPromise;
-}
-
-let tokenPromise;
-export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
-  if (!tokenPromise) tokenPromise = requestUserToken();
-  return tokenPromise.then(fn).catch(error => {
-    if (error.status === 403) {
-      console.warn("Token expired. Requesting new token...");
-      tokenPromise = requestUserToken();
-      return doWithToken(fn);
-    }
-    throw error;
   });
 }
 
@@ -263,12 +261,14 @@ export async function updateProject(
   });
 }
 
-export function pauseProject(projectName: string): Promise<void> {
-  return Request.receiveJSON(`/api/projects/${projectName}/pause`);
+export async function pauseProject(projectName: string): Promise<APIProjectType> {
+  const project = await Request.receiveJSON(`/api/projects/${projectName}/pause`);
+  return transformProject(project);
 }
 
-export function resumeProject(projectName: string): Promise<void> {
-  return Request.receiveJSON(`/api/projects/${projectName}/resume`);
+export async function resumeProject(projectName: string): Promise<APIProjectType> {
+  const project = await Request.receiveJSON(`/api/projects/${projectName}/resume`);
+  return transformProject(project);
 }
 
 // ### Tasks

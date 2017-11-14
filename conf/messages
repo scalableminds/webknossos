@@ -228,4 +228,4 @@ point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mturk.qualification.invalid=The entered qualification is unknown
 
-script.norFound=Task couldn''t be found
+script.notFound=Script couldn''t be found

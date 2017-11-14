@@ -164,13 +164,13 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield Ok(Json.toJson(result))
   }
 
-  private def validateScript(scriptId: Option[String])(implicit request: AuthenticatedRequest[_]): Fox[Option[String]] = {
-    scriptId match {
-      case Some(scriptIdString) =>
+  private def validateScript(scriptIdOpt: Option[String])(implicit request: AuthenticatedRequest[_]): Fox[Option[String]] = {
+    scriptIdOpt match {
+      case Some(scriptId) =>
         for {
-          _ <- ScriptDAO.findOneById(scriptIdString) ?~> Messages("script.notFound")
+          _ <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
         } yield {
-          Some(scriptIdString)
+          Some(scriptId)
         }
       case _ => None
     }

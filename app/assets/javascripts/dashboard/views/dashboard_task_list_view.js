@@ -2,6 +2,8 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 
 import * as React from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag } from "antd";
@@ -9,16 +11,21 @@ import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
-import app from "app";
 import TransferTaskModal from "dashboard/views/transfer_task_modal";
-import type { APITaskWithAnnotationType } from "admin/api_flow_types";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { APITaskWithAnnotationType, APIUserType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 
-type Props = {
-  userID: ?string,
-  isAdminView: boolean,
+type StateProps = {
+  activeUser: APIUserType,
 };
+
+type Props = {
+  userId: ?string,
+  isAdminView: boolean,
+} & StateProps;
 
 type State = {
   showFinishedTasks: boolean,
@@ -35,7 +42,9 @@ const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnot
   if (!task) {
     // This should never be the case unless tasks were deleted in the DB.
     throw Error(
-      `[Dashboard Tasks] Annotation ${annotation.id} has no task assigned. Please inform your admin.`,
+      `[Dashboard Tasks] Annotation ${
+        annotation.id
+      } has no task assigned. Please inform your admin.`,
     );
   }
 
@@ -51,7 +60,7 @@ const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnot
   return task;
 };
 
-export default class DashboardTaskListView extends React.PureComponent<Props, State> {
+class DashboardTaskListView extends React.PureComponent<Props, State> {
   state = {
     showFinishedTasks: false,
     finishedTasks: [],
@@ -91,8 +100,8 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
   async fetchData(): Promise<void> {
     this.setState({ isLoading: true });
     const isFinished = this.state.showFinishedTasks;
-    const url = this.props.userID
-      ? `/api/users/${this.props.userID}/tasks?isFinished=${isFinished.toString()}`
+    const url = this.props.userId
+      ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
       : `/api/user/tasks?isFinished=${isFinished.toString()}`;
     const annotationsWithTasks = await Request.receiveJSON(url);
 
@@ -117,7 +126,7 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
 
   renderActions = (task: APITaskWithAnnotationType) => {
     const annotation = task.annotation;
-    const isAdmin = app.currentUser.teams
+    const isAdmin = this.props.activeUser.teams
       .filter(team => team.role.name === "admin")
       .map(team => team.team)
       .includes(task.team);
@@ -133,10 +142,10 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
     ) : (
       <ul>
         <li>
-          <a href={`/annotations/Task/${annotation.id}`}>
+          <Link to={`/annotations/Task/${annotation.id}`}>
             <i className="fa fa-random" />
             <strong>{label}</strong>
-          </a>
+          </Link>
         </li>
         {isAdmin || this.props.isAdminView ? (
           <li>
@@ -149,10 +158,10 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
         {isAdmin ? (
           <div>
             <li>
-              <a href={`/annotations/Task/${annotation.id}/download`}>
+              <Link to={`/annotations/Task/${annotation.id}/download`}>
                 <i className="fa fa-download" />
                 Download
-              </a>
+              </Link>
             </li>
             <li>
               <a href="#" onClick={() => this.resetTask(annotation.id)}>
@@ -184,7 +193,7 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
     const url = `/annotations/Task/${annotationId}/reset`;
 
     Request.receiveJSON(url).then(jsonData => {
-      Toast.message(jsonData.messages);
+      Toast.messages(jsonData.messages);
     });
   }
 
@@ -325,10 +334,10 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
     return (
       <div>
         <div className="pull-right">
-          {this.props.isAdminView && this.props.userID ? (
-            <a href={`/api/users/${this.props.userID}/annotations/download`}>
+          {this.props.isAdminView && this.props.userId ? (
+            <Link to={`/api/users/${this.props.userId}/annotations/download`}>
               <Button icon="download">Download All Finished Tracings</Button>
-            </a>
+            </Link>
           ) : (
             <AsyncButton type="primary" icon="file-add" onClick={() => this.confirmGetNewTask()}>
               Get a New Task
@@ -355,9 +364,15 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
           annotationId={this.state.currentAnnotationId}
           onCancel={() => this.setState({ isTransferModalVisible: false })}
           onChange={() => this.handleTransferredTask()}
-          userID={this.props.userID}
+          userId={this.props.userId}
         />
       </div>
     );
   }
 }
+
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(DashboardTaskListView);

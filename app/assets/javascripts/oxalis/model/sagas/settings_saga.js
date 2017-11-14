@@ -1,5 +1,4 @@
 // @flow
-import app from "app";
 import { throttle, call, select, put, take } from "redux-saga/effects";
 import Request from "libs/request";
 import { initializeSettingsAction } from "oxalis/model/actions/settings_actions";
@@ -16,13 +15,17 @@ export function* initializeSettingsAsync(): Generator<*, *, *> {
 }
 
 function* pushUserSettingsAsync() {
-  if (app.currentUser == null) return;
+  const activeUser = yield select(state => state.activeUser);
+  if (activeUser == null) return;
+
   const payload = yield select(state => state.userConfiguration);
   yield call(Request.sendJSONReceiveJSON, "/api/user/userConfiguration", { data: payload });
 }
 
 function* pushDatasetSettingsAsync() {
-  if (app.currentUser == null) return;
+  const activeUser = yield select(state => state.activeUser);
+  if (activeUser == null) return;
+
   const datasetName = yield select(state => state.dataset.name);
   const payload = yield select(state => state.datasetConfiguration);
   yield call(Request.sendJSONReceiveJSON, `/api/dataSetConfigurations/${datasetName}`, {

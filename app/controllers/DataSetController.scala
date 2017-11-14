@@ -2,25 +2,24 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
-
+import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.DefaultConverters._
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
 import oxalis.ndstore.{ND2WK, NDServerConnection}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
-import play.api.Play.current
 import play.api.cache.Cache
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import play.api.Play.current
+import scala.concurrent.ExecutionContext.Implicits._
+
+import scala.concurrent.Future
+import scala.concurrent.duration._
 
 class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
@@ -50,7 +49,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         case Some(a: Array[Byte]) =>
           Fox.successful(a)
         case _ =>
-          DataStoreHandler.requestDataLayerThumbnail(dataSet, dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
+          dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
             result =>
               Cache.set(s"thumbnail-$dataSetName*$dataLayerName",
                 result,
@@ -69,19 +68,6 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         CONTENT_TYPE -> play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
       )
     }
-  }
-
-  def empty = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  // TODO: find a better way to ignore parameters
-  def emptyWithWildcard(param: String) = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  def userAwareEmpty = UserAwareAction { implicit request =>
-    Ok(views.html.main()(Html("")))
   }
 
   def list = UserAwareAction.async { implicit request =>

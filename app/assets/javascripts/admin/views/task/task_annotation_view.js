@@ -109,7 +109,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         <Item key={`${annotation.id}-delete`}>
           <span onClick={() => this.deleteAnnotation(annotation)}>
             <i className="fa fa-trash-o" />
-            Delete
+            Cancel
           </span>
         </Item>
         {annotation.state.isFinished ? (
@@ -136,44 +136,47 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
       <div>
         <table>
           <tbody>
-            {this.state.annotations.map((annotation: APIAnnotationType) => (
-              <tr key={`${annotation.id}-tr`}>
-                <td>{`${annotation.user.firstName} ${annotation.user.lastName} ( ${annotation.user
-                  .email} )`}</td>
-                <td>{moment(annotation.modified).format("YYYY-MM-DD HH:SS")}</td>
-                <td>
-                  <span>
-                    <i className="fa fa-check-circle-o" />
-                    {annotation.stateLabel}
-                  </span>
-                  <br />
-                  <span>
-                    <i className="fa fa-clock-o" />
-                    {annotation.tracingTime ? (
-                      FormatUtils.formatSeconds(annotation.tracingTime / 1000)
-                    ) : (
-                      0
-                    )}
-                  </span>
-                </td>
-                <td className="nowrap">
-                  <Dropdown overlay={this.getDropdownMenu(annotation)} trigger={["click"]}>
-                    <a className="ant-dropdown-link" href="#">
-                      Actions <Icon type="down" />
-                    </a>
-                  </Dropdown>
-                </td>
-              </tr>
-            ))}
+            {this.state.annotations.map((annotation: APIAnnotationType) => {
+              const userString = annotation.user
+                ? `${annotation.user.firstName} ${annotation.user.lastName} ( ${annotation.user
+                    .email} )`
+                : "<no user>";
+              return (
+                <tr key={`${annotation.id}-tr`}>
+                  <td>{userString}</td>
+                  <td>{moment(annotation.modified).format("YYYY-MM-DD HH:SS")}</td>
+                  <td>
+                    <span>
+                      <i className="fa fa-check-circle-o" />
+                      {`${annotation.state.isFinished ? "Finished" : "In Progress"}?`}
+                    </span>
+                    <br />
+                    <span>
+                      <i className="fa fa-clock-o" />
+                      {annotation.tracingTime
+                        ? FormatUtils.formatSeconds(annotation.tracingTime / 1000)
+                        : 0}
+                    </span>
+                  </td>
+                  <td className="nowrap">
+                    <Dropdown overlay={this.getDropdownMenu(annotation)} trigger={["click"]}>
+                      <a className="ant-dropdown-link" href="#">
+                        Actions <Icon type="down" />
+                      </a>
+                    </Dropdown>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
-        {this.state.currentAnnotation ? (
+        {this.state.currentAnnotation && this.state.currentAnnotation.user ? (
           <TransferTaskModal
             visible={this.state.isTransferModalVisible}
             annotationId={this.state.currentAnnotation.id}
             onCancel={() => this.setState({ isTransferModalVisible: false })}
             onChange={this.updateAnnotationState}
-            userID={this.state.currentAnnotation.user.id}
+            userId={this.state.currentAnnotation.user.id}
           />
         ) : null}
       </div>

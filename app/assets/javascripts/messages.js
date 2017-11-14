@@ -20,14 +20,29 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+  "tracing.segmentation_zoom_warning":
+    "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
+  "tracing.no_access": "You are not allowed to access this tracing.",
+  "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
+  "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
+  "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
+  "task.bulk_create_invalid":
+    "Can not parse task specification. It includes at least one invalid task.",
   "dataset.upload_success": "The dataset was uploaded successfully",
+  "dataset.ndstore_success":
+    "The dataset was successfully added to webKnossos from the specified NDStore.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
+  "dataset.does_not_exist": "Selected dataset doesn't exist!",
+  "dataset.no_data": "No data available! Something seems to be wrong with the dataset.",
+  "dataset.not_imported": "Please double check if you have the dataset imported:",
+  "dataset.changed_without_reload":
+    "Model.fetch was called for a task with another dataset, without reloading the page.",
   "annotation.delete": "Do you really want to delete this annotation?",
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
@@ -41,8 +56,8 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_password_confirm": "Please confirm your password!",
   "auth.registration_password_missmatch": "Passwords do not match!",
   "auth.registration_password_length": "Passwords needs min. 8 characters.",
-  "auth.registration_firstName_input": "Please input your password!",
-  "auth.registration_lastName_input": "Please input your password!",
+  "auth.registration_firstName_input": "Please input your first name!",
+  "auth.registration_lastName_input": "Please input your last name!",
   "auth.registration_team_input": "Please select a team!",
   "auth.reset_logout": "You will be logged out, after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
@@ -51,10 +66,11 @@ In order to restore the current window, a reload is necessary.`,
   "auth.reset_token": "Please input the token!",
   "auth.reset_email_notification":
     "An email with instructions to reset your password has been send to you.",
-  "auth.reset_reset_pw_confirmation": "Your password was successfully changed",
+  "auth.reset_pw_confirmation": "Your password was successfully changed",
   "auth.account_created":
     "Your account has been created. An administrator is going to unlock you soon.",
   "auth.automatic_user_activation": "User was activated automatically",
+  "auth.error_no_user": "No active user is logged in.",
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
 };

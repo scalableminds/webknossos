@@ -1,12 +1,7 @@
 package models.configuration
 
-import play.api.Play.current
-import com.scalableminds.util.security.SCrypt._
-import scala.collection.mutable.Stack
-import play.api.libs.json.JsValue
-import play.api.libs.json.JsBoolean
-import play.api.libs.json._
 import models.basics.BasicSettings
+import play.api.libs.json.{JsBoolean, JsValue, _}
 
 case class UserConfiguration(configuration: Map[String, JsValue]) {
 

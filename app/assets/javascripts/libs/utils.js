@@ -6,7 +6,7 @@
 import _ from "lodash";
 import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
-import window from "libs/window";
+import window, { location } from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
@@ -70,13 +70,28 @@ const Utils = {
     return [r, g, b, 1];
   },
 
-  computeBoundingBoxFromArray(bb: Vector6): BoundingBoxType {
+  computeBoundingBoxFromArray(bb: ?Vector6): ?BoundingBoxType {
+    if (bb == null) return null;
+
     const [x, y, z, width, height, depth] = bb;
 
     return {
       min: [x, y, z],
       max: [x + width, y + height, z + depth],
     };
+  },
+
+  computeArrayFromBoundingBox(bb: ?BoundingBoxType): ?Vector6 {
+    return bb != null
+      ? [
+          bb.min[0],
+          bb.min[1],
+          bb.min[2],
+          bb.max[0] - bb.min[0],
+          bb.max[1] - bb.min[1],
+          bb.max[2] - bb.min[2],
+        ]
+      : null;
   },
 
   compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
@@ -151,14 +166,6 @@ const Utils = {
     return output;
   },
 
-  loaderTemplate(): string {
-    return `\
-<div id="loader-icon">
-  <i class="fa fa-spinner fa-spin fa-4x"></i>
-  <br>Loading
-</div>`;
-  },
-
   isElementInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
     return (
@@ -185,7 +192,7 @@ const Utils = {
 
   getUrlParamsObject(): { [key: string]: string | boolean } {
     // Parse the URL parameters as objects and return it or just a single param
-    return window.location.search
+    return location.search
       .substring(1)
       .split("&")
       .reduce((result, value): void => {
@@ -350,6 +357,14 @@ const Utils = {
         ),
       );
     }
+  },
+
+  millisecondsToMinutes(ms: number) {
+    return ms / 60000;
+  },
+
+  minutesToMilliseconds(min: number) {
+    return min * 60000;
   },
 };
 

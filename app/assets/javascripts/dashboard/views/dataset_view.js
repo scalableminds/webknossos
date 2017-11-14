@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link } from "react-router-dom";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
@@ -124,11 +125,11 @@ class DatasetView extends React.PureComponent<Props, State> {
 
     const adminHeader = Utils.isUserAdmin(this.props.user) ? (
       <div className="pull-right">
-        <a href="/datasets/upload" style={margin}>
+        <Link to="/datasets/upload" style={margin}>
           <Button type="primary" icon="plus">
             Add Dataset
           </Button>
-        </a>
+        </Link>
         {search}
       </div>
     ) : (

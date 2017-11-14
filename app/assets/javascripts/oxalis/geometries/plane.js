@@ -15,7 +15,7 @@ import {
 import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
-import {
+import Constants, {
   OrthoViews,
   OrthoViewColors,
   OrthoViewCrosshairColors,
@@ -30,20 +30,16 @@ class Plane {
 
   plane: THREE.Mesh;
   planeID: OrthoViewType;
-  planeWidth: number;
-  textureWidth: number;
-  displayCosshair: boolean;
+  displayCrosshair: boolean;
   scaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
 
-  constructor(planeWidth: number, textureWidth: number, planeID: OrthoViewType) {
+  constructor(planeID: OrthoViewType) {
     this.planeID = planeID;
-    this.planeWidth = planeWidth;
-    this.textureWidth = textureWidth;
-    this.displayCosshair = true;
+    this.displayCrosshair = true;
 
-    // planeWidth means that the plane should be that many voxels wide in the
+    // PLANE_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
     // is smaller in voxels, so that it is squared in nm.
     // --> scaleInfo.baseVoxel
@@ -51,10 +47,12 @@ class Plane {
     const scaleArray = Dimensions.transDim(baseVoxelFactors, this.planeID);
     this.scaleVector = new THREE.Vector3(...scaleArray);
 
-    this.createMeshes(planeWidth, textureWidth);
+    this.createMeshes();
   }
 
-  createMeshes(pWidth: number, tWidth: number): void {
+  createMeshes(): void {
+    const pWidth = Constants.PLANE_WIDTH;
+    const tWidth = Constants.TEXTURE_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
     const textureMaterial = new PlaneMaterialFactory(tWidth).getMaterial();
@@ -93,7 +91,7 @@ class Plane {
   }
 
   setDisplayCrosshair = (value: boolean): void => {
-    this.displayCosshair = value;
+    this.displayCrosshair = value;
   };
 
   getLineBasicMaterial = _.memoize(
@@ -134,12 +132,12 @@ class Plane {
 
     this.plane.material.setScaleParams({
       repeat: {
-        x: (area[2] - area[0]) / this.textureWidth,
-        y: (area[3] - area[1]) / this.textureWidth,
+        x: (area[2] - area[0]) / Constants.TEXTURE_WIDTH,
+        y: (area[3] - area[1]) / Constants.TEXTURE_WIDTH,
       },
       offset: {
-        x: area[0] / this.textureWidth,
-        y: 1 - area[3] / this.textureWidth,
+        x: area[0] / Constants.TEXTURE_WIDTH,
+        y: 1 - area[3] / Constants.TEXTURE_WIDTH,
       },
     });
   }
@@ -180,8 +178,8 @@ class Plane {
   setVisible = (visible: boolean): void => {
     this.plane.visible = visible;
     this.TDViewBorders.visible = visible;
-    this.crosshair[0].visible = visible && this.displayCosshair;
-    this.crosshair[1].visible = visible && this.displayCosshair;
+    this.crosshair[0].visible = visible && this.displayCrosshair;
+    this.crosshair[1].visible = visible && this.displayCrosshair;
   };
 
   setSegmentationAlpha(alpha: number): void {

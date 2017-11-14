@@ -43,10 +43,10 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
           .sort(Utils.localeCompareBy("content", this.props.isSortedAscending))
           .map(comment => (
             <Comment
-              key={comment.node}
+              key={comment.nodeId}
               data={comment}
               treeId={this.props.tree.treeId}
-              isActive={comment.node === this.props.skeletonTracing.activeNodeId}
+              isActive={comment.nodeId === this.props.skeletonTracing.activeNodeId}
             />
           ))
       : null;

@@ -10,7 +10,7 @@ import C3Chart from "react-c3js";
 const { Column } = Table;
 
 type Props = {
-  userID: ?string,
+  userId: ?string,
 };
 
 type State = {
@@ -27,8 +27,8 @@ export default class LoggedTimeView extends React.PureComponent<Props, State> {
   }
 
   async fetch(): Promise<void> {
-    const url = this.props.userID
-      ? `/api/users/${this.props.userID}/loggedTime`
+    const url = this.props.userId
+      ? `/api/users/${this.props.userId}/loggedTime`
       : "/api/user/loggedTime";
 
     Request.receiveJSON(url).then(response => {

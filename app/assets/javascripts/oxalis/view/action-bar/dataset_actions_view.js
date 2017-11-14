@@ -1,9 +1,9 @@
 // @flow
 import React, { PureComponent } from "react";
+import { withRouter } from "react-router-dom";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import app from "app";
 import { Button, Dropdown, Menu, Icon } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
@@ -15,17 +15,21 @@ import messages from "messages";
 import api from "oxalis/api/internal_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
+import type { APIUserType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react_router";
 
 type Props = {
   // eslint-disable-next-line react/no-unused-prop-types
   tracingType: string,
   // eslint-disable-next-line react/no-unused-prop-types
-  tracingId: string,
+  annotationId: string,
   // eslint-disable-next-line react/no-unused-prop-types
   restrictions: RestrictionsType & SettingsType,
   // eslint-disable-next-line react/no-unused-prop-types
   dispatch: Dispatch<*>,
   task: ?TaskType,
+  activeUser: APIUserType,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -52,16 +56,18 @@ class DatasetActionsView extends PureComponent<Props, State> {
 
   handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/duplicate`;
-    app.router.loadURL(url);
+    const url = `/annotations/${this.props.tracingType}/${this.props.annotationId}/duplicate`;
+    this.props.history.push(url);
   };
 
   handleFinish = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${this.props.tracingId}/finishAndRedirect`;
+    const url = `/annotations/${this.props.tracingType}/${
+      this.props.annotationId
+    }/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
-      app.router.loadURL(url);
+      this.props.history.push(url);
     }
   };
 
@@ -79,7 +85,9 @@ class DatasetActionsView extends PureComponent<Props, State> {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    const downloadUrl = `/annotations/${this.props.tracingType}/${this.props.tracingId}/download`;
+    const downloadUrl = `/annotations/${this.props.tracingType}/${
+      this.props.annotationId
+    }/download`;
     win.location.href = downloadUrl;
     win.document.body.innerHTML = messages["download.close_window"];
   };
@@ -191,7 +199,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
       );
     }
 
-    if (isSkeletonMode && app.currentUser != null) {
+    if (isSkeletonMode && this.props.activeUser != null) {
       elements.push(
         <Menu.Item key="merge-button">
           <div onClick={this.handleMergeOpen}>
@@ -231,10 +239,11 @@ class DatasetActionsView extends PureComponent<Props, State> {
 function mapStateToProps(state: OxalisState) {
   return {
     tracingType: state.tracing.tracingType,
-    tracingId: state.tracing.tracingId,
+    annotationId: state.tracing.annotationId,
     restrictions: state.tracing.restrictions,
     task: state.task,
+    activeUser: state.activeUser,
   };
 }
 
-export default connect(mapStateToProps)(DatasetActionsView);
+export default withRouter(connect(mapStateToProps)(DatasetActionsView));

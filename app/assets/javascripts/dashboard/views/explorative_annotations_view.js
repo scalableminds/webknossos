@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Modal, Tag } from "antd";
@@ -11,18 +12,19 @@ import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
 import update from "immutability-helper";
-import app from "app";
 import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FileUpload from "components/file_upload";
+import type { ReactRouterHistoryType } from "react_router";
 
 const { Column } = Table;
 const { Search } = Input;
 
 type Props = {
-  userID: ?string,
+  userId: ?string,
   isAdminView: boolean,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -39,7 +41,7 @@ type State = {
   tags: Array<string>,
 };
 
-export default class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state = {
     shouldShowArchivedTracings: false,
     archivedTracings: [],
@@ -91,8 +93,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     }
 
     const isFinishedString = this.state.shouldShowArchivedTracings.toString();
-    const url = this.props.userID
-      ? `/api/users/${this.props.userID}/annotations?isFinished=${isFinishedString}`
+    const url = this.props.userId
+      ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
 
     this.enterRequest();
@@ -126,14 +128,13 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
-    const controller = jsRoutes.controllers.AnnotationController;
     const url =
       type === "finish"
-        ? controller.finish(tracing.typ, tracing.id).url
-        : controller.reopen(tracing.typ, tracing.id).url;
+        ? `/annotations/${tracing.typ}/${tracing.id}/finish`
+        : `/annotations/${tracing.typ}/${tracing.id}/reopen`;
 
     const newTracing = await Request.receiveJSON(url);
-    Toast.message(newTracing.messages);
+    Toast.messages(newTracing.messages);
 
     const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
 
@@ -152,9 +153,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
 
   handleNMLUpload = (response: Object) => {
     response.messages.map(m => Toast.success(m.success));
-    app.router.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`, {
-      trigger: true,
-    });
+    this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
   };
 
   renderActions = (tracing: APIAnnotationType) => {
@@ -162,20 +161,19 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
       return null;
     }
 
-    const controller = jsRoutes.controllers.AnnotationController;
     const { typ, id } = tracing;
     if (!this.state.shouldShowArchivedTracings) {
       return (
         <div>
-          <a href={controller.trace(typ, id).url}>
+          <Link to={`/annotations/${typ}/${id}`}>
             <i className="fa fa-random" />
             <strong>Trace</strong>
-          </a>
+          </Link>
           <br />
-          <a href={jsRoutes.controllers.AnnotationIOController.download(typ, id).url}>
+          <Link to={`/annotations/${typ}/${id}/download`}>
             <i className="fa fa-download" />
             Download
-          </a>
+          </Link>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
             <i className="fa fa-archive" />
@@ -228,7 +226,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     const payload = { data: { name } };
 
     Request.sendJSONReceiveJSON(url, payload).then(response => {
-      Toast.message(response.messages);
+      Toast.messages(response.messages);
     });
   }
 
@@ -244,7 +242,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
             annotations: selectedAnnotationIds,
           },
         });
-        Toast.message(data.messages);
+        Toast.messages(data.messages);
 
         this.setState({
           archivedTracings: this.state.archivedTracings.concat(selectedAnnotations),
@@ -327,7 +325,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         <Column
           title="#"
           dataIndex="id"
-          render={(__, tracing) => FormatUtils.formatHash(tracing.id)}
+          render={(__, tracing: APIAnnotationType) => FormatUtils.formatHash(tracing.id)}
           sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />
@@ -335,7 +333,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           title="Name"
           dataIndex="name"
           sorter={Utils.localeCompareBy("name")}
-          render={(name, tracing) => (
+          render={(name: string, tracing: APIAnnotationType) => (
             <EditableTextLabel
               value={name}
               onChange={newName => this.renameTracing(tracing, newName)}
@@ -344,22 +342,22 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         />
         <Column
           title="Stats"
-          render={(__, tracing) =>
-            tracing.stats && tracing.contentType === "skeletonTracing" ? (
+          render={(__, tracing: APIAnnotationType) =>
+            tracing.stats && tracing.content.typ === "skeleton" ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />
-                  {tracing.stats.numberOfTrees}
+                  {tracing.stats.treeCount}
                 </span>
                 <br />
                 <span title="Nodes">
                   <i className="fa fa-bull" />
-                  {tracing.stats.numberOfNodes}
+                  {tracing.stats.nodeCount}
                 </span>
                 <br />
                 <span title="Edges">
                   <i className="fa fa-arrows-h" />
-                  {tracing.stats.numberOfEdges}
+                  {tracing.stats.edgeCount}
                 </span>
               </div>
             ) : null}
@@ -368,7 +366,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           title="Tags"
           dataIndex="tags"
           width={500}
-          render={(tags, tracing) => (
+          render={(tags: Array<string>, tracing: APIAnnotationType) => (
             <div>
               {tags.map(tag => (
                 <Tag
@@ -402,7 +400,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
           title="Actions"
           className="nowrap"
           key="action"
-          render={(__, tracing) => this.renderActions(tracing)}
+          render={(__, tracing: APIAnnotationType) => this.renderActions(tracing)}
         />
       </Table>
     );
@@ -439,10 +437,11 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
         ) : (
           <div className="pull-right">
             <FileUpload
-              url="/admin/nml/upload"
+              url="/annotations/upload"
               accept=".nml, .zip"
               name="nmlFile"
               multiple
+              showUploadList={false}
               onSuccess={this.handleNMLUpload}
               onUploading={() => this.setState({ isUploadingNML: true })}
               onError={() => this.setState({ isUploadingNML: false })}
@@ -478,3 +477,5 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     );
   }
 }
+
+export default withRouter(ExplorativeAnnotationsView);

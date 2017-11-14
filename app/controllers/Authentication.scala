@@ -1,51 +1,44 @@
 package controllers
 
+<<<<<<< HEAD
 import java.text.Normalizer
 
-import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
-import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
-import com.scalableminds.util.mail._
-import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Converter, Fox, FoxImplicits}
-import com.typesafe.scalalogging.LazyLogging
-import models.team.{Role, TeamService}
-import models.user.UserService.{Mailer => _, _}
-import models.user._
-import net.liftweb.common.{Empty, Failure, Full}
-import org.apache.commons.codec.binary.Base64
-import org.apache.commons.codec.digest.HmacUtils
-import oxalis.mail.DefaultMails
-import oxalis.security._
-import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
-import play.api.data.validation.Constraints
-import play.twirl.api.Html
-import oxalis.thirdparty.BrainTracing
-import oxalis.view.{ProvidesUnauthorizedSessionData, SessionData}
-import play.api.libs.concurrent.Akka
-import play.api.libs.concurrent.Execution.Implicits._
-import play.api.mvc.Action
+=======
 import java.util.UUID
 import javax.inject.Inject
 
-import scala.concurrent.Future
-import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
-import net.ceedubs.ficus.Ficus._
-import net.ceedubs.ficus.readers.ArbitraryTypeReader._
 import com.mohiva.play.silhouette.api.Authenticator.Implicits._
 import com.mohiva.play.silhouette.api.{Environment, LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
-import play.api._
+>>>>>>> bce9d7d23fbd8695c5c98004a5269f60518a7e22
+import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
+import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
+import com.scalableminds.util.mail._
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.team.Role
+import models.user.UserService
+import models.user.UserService.{Mailer => _, _}
+import models.user.UserTokenService
+import models.user.UserToken2
+import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
+import net.liftweb.common.{Empty, Failure, Full}
+import oxalis.mail.DefaultMails
+import oxalis.security._
+import oxalis.thirdparty.BrainTracing
+import oxalis.view.ProvidesUnauthorizedSessionData
 import play.api.Play.current
+import play.api._
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
-import play.api.mvc._
-import play.api.i18n.{I18nSupport, Messages, MessagesApi}
+import play.api.i18n.{Messages, MessagesApi}
+import play.api.libs.concurrent.Akka
+import play.api.mvc.{Action, _}
+import play.twirl.api.Html
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import models.user.UserService
+import scala.concurrent.Future
 
 
 object AuthForms {
@@ -122,7 +115,15 @@ class Authentication @Inject()(
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
 
-  def empty = Action { implicit request =>
+  def empty = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
+  def emptyWithWildcard(param: String) = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
+  def emptyWithWildcards(param1: String, param2: String) = UserAwareAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
@@ -173,7 +174,7 @@ class Authentication @Inject()(
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
-            } yield Ok.withCookies(value) //result
+            } yield result
             case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
         }.recover {
@@ -189,7 +190,7 @@ class Authentication @Inject()(
       user <- UserService.defaultUser
       authenticator <- env.authenticatorService.create(user.loginInfo)
       value <- env.authenticatorService.init(authenticator)
-      result <- env.authenticatorService.embed(value, Redirect("/dashboard"))
+      result <- env.authenticatorService.embed(value, Ok)
     } yield result
   }
 
@@ -216,7 +217,7 @@ class Authentication @Inject()(
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => for {
-          token <- userTokenService.save(UserToken.create(user._id, email, isLogin = false))
+          token <- userTokenService.save(UserToken2.create(user._id, email, isLogin = false))
         } yield {
           Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email, token.id.toString))
           Ok
@@ -272,7 +273,7 @@ class Authentication @Inject()(
   }
 
   def logout = SecuredAction.async { implicit request =>
-    env.authenticatorService.discard(request.authenticator, Redirect(routes.Application.index()))
+    env.authenticatorService.discard(request.authenticator, Ok)
   }
 }
 

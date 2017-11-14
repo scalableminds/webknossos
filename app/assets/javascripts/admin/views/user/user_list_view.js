@@ -3,13 +3,14 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input } from "antd";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import type { APIUserType, APITeamRoleType } from "admin/api_flow_types";
+import type { APIUserType, APITeamRoleType, ExperienceMapType } from "admin/api_flow_types";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -186,7 +187,7 @@ class UserListView extends React.PureComponent<{}, State> {
             dataIndex="experiences"
             key="experiences"
             width={300}
-            render={(experiences, user: APIUserType) =>
+            render={(experiences: ExperienceMapType, user: APIUserType) =>
               _.map(experiences, (value, domain) => (
                 <Tag key={`experience_${user.id}_${domain}`}>
                   {domain} : {value}
@@ -229,9 +230,9 @@ class UserListView extends React.PureComponent<{}, State> {
             key="actions"
             render={(__, user: APIUserType) => (
               <span>
-                <a href={`/users/${user.id}/details`}>
+                <Link to={`/users/${user.id}/details`}>
                   <Icon type="user" />Show Tracings
-                </a>
+                </Link>
                 <br />
                 <a
                   href={`/api/users/${user.id}/annotations/download`}

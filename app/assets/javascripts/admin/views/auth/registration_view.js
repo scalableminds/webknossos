@@ -1,17 +1,19 @@
 // @flow
 import React from "react";
+import { Link, withRouter } from "react-router-dom";
 import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
 import Request from "libs/request";
 import type { APITeamType } from "admin/api_flow_types";
 import Toast from "libs/toast";
-import app from "app";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
 type Props = {
   form: Object,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -43,7 +45,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/register", { data: formValues }).then(() => {
           Toast.success(messages["auth.account_created"]);
-          app.router.navigate("/login", { trigger: true });
+          this.props.history.push("/login");
         });
       }
     });
@@ -227,7 +229,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Register
               </Button>
-              <a href="/login">Already have an account? Logininstead.</a>
+              <Link to="/login">Already have an account? Login instead.</Link>
             </FormItem>
           </Form>
         </Col>
@@ -236,4 +238,4 @@ class RegistrationView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(RegistrationView);
+export default withRouter(Form.create()(RegistrationView));

@@ -7,6 +7,7 @@ import _ from "lodash";
 import Store from "oxalis/store";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
+import { doWithToken } from "admin/admin_rest_api";
 import type Layer from "oxalis/model/binary/layers/layer";
 import type { DataStoreInfoType, MappingType } from "oxalis/store";
 
@@ -18,7 +19,6 @@ class Mappings {
     [key: string]: MappingType,
   } = {};
   baseUrl: string;
-  doWithToken: Function;
 
   constructor(dataStoreInfo: DataStoreInfoType, layer: Layer) {
     const dataset = Store.getState().dataset;
@@ -26,15 +26,17 @@ class Mappings {
       throw new Error("Dataset needs to be available.");
     }
     const datasetName = dataset.name;
-    this.mappings = _.transform(
-      layer.mappings,
-      (result, mappingName) => {
-        result[mappingName] = { name: mappingName };
-      },
-      {},
-    );
+    this.mappings =
+      layer.mappings != null
+        ? _.transform(
+            layer.mappings,
+            (result, mappingName) => {
+              result[mappingName] = { name: mappingName };
+            },
+            {},
+          )
+        : {};
     this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
-    this.doWithToken = layer.doWithToken.bind(layer);
   }
 
   getMappingNames(): Array<string> {
@@ -60,7 +62,7 @@ class Mappings {
     if (mappingObject != null && mappingObject.classes != null) {
       return Promise.resolve(mappingObject);
     }
-    return this.doWithToken((token: string) =>
+    return doWithToken((token: string) =>
       Request.receiveJSON(`${this.baseUrl + mappingName}?token=${token}`).then(
         (mapping: MappingType) => {
           this.mappings[mappingName] = mapping;

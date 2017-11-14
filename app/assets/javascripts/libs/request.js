@@ -14,7 +14,7 @@ type RequestOptions = {
   timeout?: number,
 };
 
-type RequestOptionsWithData<T> = {
+export type RequestOptionsWithData<T> = {
   data: T,
   headers?: { [key: string]: string },
   method?: "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH",
@@ -101,7 +101,7 @@ class Request {
           }
         } else if (value instanceof File) {
           formData.append(`${formKey}[]`, value, value.name);
-        } else if (typeof value === "string") {
+        } else if (typeof value === "string" || value === null) {
           formData.append(formKey, value);
         } else {
           // nested object
@@ -276,7 +276,7 @@ class Request {
               json.status = error.status;
             }
 
-            Toast.message(json.messages);
+            Toast.messages(json.messages);
             return Promise.reject(json);
           } catch (jsonError) {
             Toast.error(text);

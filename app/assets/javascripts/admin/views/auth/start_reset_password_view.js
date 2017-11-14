@@ -1,15 +1,17 @@
 // @flow
 import React from "react";
+import { withRouter } from "react-router-dom";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
-import app from "app";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 
 type Props = {
   form: Object,
+  history: ReactRouterHistoryType,
 };
 
 class StartResetPasswordView extends React.PureComponent<Props> {
@@ -20,7 +22,7 @@ class StartResetPasswordView extends React.PureComponent<Props> {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/reset", { data: formValues }).then(() => {
           Toast.success(messages["auth.reset_email_notification"]);
-          app.router.navigate("/finishreset", { trigger: true });
+          this.props.history.push("/finishreset");
         });
       }
     });
@@ -61,4 +63,4 @@ class StartResetPasswordView extends React.PureComponent<Props> {
   }
 }
 
-export default Form.create()(StartResetPasswordView);
+export default withRouter(Form.create()(StartResetPasswordView));

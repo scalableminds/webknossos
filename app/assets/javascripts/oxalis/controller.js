@@ -5,13 +5,16 @@
 /* globals JQueryInputEventObject:false */
 
 import * as React from "react";
+import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
+import { Spin } from "antd";
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
 import Backbone from "backbone";
 import Stats from "stats.js";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
@@ -26,22 +29,23 @@ import ApiLoader from "oxalis/api/api_loader";
 import api from "oxalis/api/internal_api";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
-import { connect } from "react-redux";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { OxalisState, SkeletonTracingTypeTracingType } from "oxalis/store";
+import type { ReactRouterHistoryType } from "react_router";
+import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
 type Props = {
-  initialTracingType: SkeletonTracingTypeTracingType,
-  initialTracingId: string,
+  initialTracingType: TracingTypeTracingType,
+  initialAnnotationId: string,
   initialControlmode: ControlModeType,
   // Delivered by connect()
   viewMode: ModeType,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -49,6 +53,7 @@ type State = {
 };
 
 class Controller extends React.PureComponent<Props, State> {
+  keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 
@@ -74,8 +79,6 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    app.router.showLoadingSpinner();
-
     _.extend(this, Backbone.Events);
 
     UrlManager.initialize();
@@ -86,7 +89,7 @@ class Controller extends React.PureComponent<Props, State> {
 
     Model.fetch(
       this.props.initialTracingType,
-      this.props.initialTracingId,
+      this.props.initialAnnotationId,
       this.props.initialControlmode,
       true,
     )
@@ -100,7 +103,7 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    app.router.on("beforeunload", () => {
+    this.props.history.block(() => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());
@@ -128,7 +131,6 @@ class Controller extends React.PureComponent<Props, State> {
 
     window.webknossos = new ApiLoader(Model);
 
-    app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
     this.setState({ ready: true });
@@ -171,6 +173,14 @@ class Controller extends React.PureComponent<Props, State> {
       text = messages["task.no_description"];
     }
     Modal.show(text, title);
+  }
+
+  scaleTrianglesPlane(delta: number): void {
+    let scale = Store.getState().userConfiguration.scale + delta;
+    scale = Math.min(constants.MAX_SCALE, scale);
+    scale = Math.max(constants.MIN_SCALE, scale);
+
+    Store.dispatch(updateUserSettingAction("scale", scale));
   }
 
   isWebGlSupported() {
@@ -256,13 +266,26 @@ class Controller extends React.PureComponent<Props, State> {
     }
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
+
+    this.keyboard = new InputKeyboard({
+      // Scale planes
+      l: timeFactor => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(-scaleValue * timeFactor);
+      },
+
+      k: timeFactor => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(scaleValue * timeFactor);
+      },
+    });
   }
 
   updateStats = () => this.stats.update();
 
   render() {
     if (!this.state.ready) {
-      return null;
+      return <Spin spinning />;
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
@@ -312,4 +335,4 @@ function mapStateToProps(state: OxalisState) {
   };
 }
 
-export default connect(mapStateToProps)(Controller);
+export default withRouter(connect(mapStateToProps)(Controller));

@@ -10,6 +10,7 @@ import constants from "oxalis/constants";
 import Date from "libs/date";
 import type { Point2 } from "oxalis/constants";
 import KeyboardJS from "./keyboardjs_wrapper";
+import Hammer from "./hammerjs_wrapper";
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
@@ -38,6 +39,11 @@ type MouseHandlerType =
   | ((deltaY: number, modifier: ?ModifierKeys) => void)
   | ((position: Point2, id: ?string, event: JQueryInputEventObject) => void)
   | ((delta: Point2, position: Point2, id: ?string, event: JQueryInputEventObject) => void);
+type HammerJsEvent = {
+  center: Point2,
+  scale: number,
+  srcEvent: JQueryInputEventObject,
+};
 
 // Workaround: KeyboardJS fires event for "C" even if you press
 // "Ctrl + C".
@@ -238,7 +244,9 @@ class InputMouseButton {
   }
 
   handleMouseDown(event: JQueryInputEventObject): void {
-    if (event.which === this.which) {
+    // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
+    const eventWhich = event.which !== 0 ? event.which : 1;
+    if (eventWhich === this.which) {
       $(":focus").blur(); // see OX-159
 
       this.down = true;
@@ -248,7 +256,9 @@ class InputMouseButton {
   }
 
   handleMouseUp(event: JQueryInputEventObject): void {
-    if (event.which === this.which && this.down) {
+    // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
+    const eventWhich = event.which !== 0 ? event.which : 1;
+    if (eventWhich === this.which && this.down) {
       this.mouse.trigger(`${this.name}MouseUp`, event);
       if (this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
         this.mouse.trigger(`${this.name}Click`, this.mouse.lastPosition, this.id, event);
@@ -267,12 +277,14 @@ class InputMouseButton {
 
 export class InputMouse {
   $targetSelector: string;
+  hammerManager: Hammer;
   id: ?string;
 
   leftMouseButton: InputMouseButton;
   rightMouseButton: InputMouseButton;
   isMouseOver: boolean = false;
   lastPosition: ?Point2 = null;
+  lastScale: number = 1;
   position: ?Point2 = null;
 
   // Copied from backbone events (TODO: handle this better)
@@ -303,10 +315,21 @@ export class InputMouse {
         mousedown: this.mouseDown,
         mouseenter: this.mouseEnter,
         mouseleave: this.mouseLeave,
+        touchstart: this.mouseEnter,
+        touchend: this.mouseLeave,
         wheel: this.mouseWheel,
       },
       this.$targetSelector,
     );
+
+    this.hammerManager = new Hammer(document.querySelector(this.$targetSelector));
+    this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
+    this.hammerManager.get("pinch").set({ enable: true });
+    this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
+    this.hammerManager.on("panmove", (evt: HammerJsEvent) => this.mouseMove(evt.srcEvent));
+    this.hammerManager.on("panend", (evt: HammerJsEvent) => this.mouseUp(evt.srcEvent));
+    this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
+    this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
 
     this.on(initialBindings);
     this.attach = this.on;
@@ -323,10 +346,15 @@ export class InputMouse {
         mousedown: this.mouseDown,
         mouseenter: this.mouseEnter,
         mouseleave: this.mouseLeave,
+        touchstart: this.mouseEnter,
+        touchend: this.mouseLeave,
         wheel: this.mouseWheel,
       },
       this.$targetSelector,
     );
+
+    // Unbinds all events and input events
+    this.hammerManager.destroy();
   }
 
   isHit(event: JQueryInputEventObject) {
@@ -356,30 +384,23 @@ export class InputMouse {
   };
 
   mouseUp = (event: JQueryInputEventObject): void => {
-    if (this.isMouseOver) {
-      if (!this.isHit(event)) {
-        const eventCopy = _.clone(event);
-        eventCopy.which = 0;
-        this.mouseLeave(eventCopy);
-      }
-    } else if (this.isHit(event)) {
-      const eventCopy = _.clone(event);
-      eventCopy.which = 0;
-      this.mouseEnter(eventCopy);
-    }
-
     this.leftMouseButton.handleMouseUp(event);
     this.rightMouseButton.handleMouseUp(event);
+
+    if (this.isMouseOver) {
+      if (!this.isHit(event)) {
+        this.mouseLeave();
+      }
+    }
+    if (this.isHit(event)) {
+      this.mouseEnter();
+    }
   };
 
   mouseMove = (event: JQueryInputEventObject): void => {
-    const $target = $(this.$targetSelector);
     let delta = null;
 
-    this.position = {
-      x: event.pageX - $target.offset().left,
-      y: event.pageY - $target.offset().top,
-    };
+    this.position = this.getRelativeMousePosition(event);
 
     if (this.lastPosition != null) {
       delta = {
@@ -399,27 +420,41 @@ export class InputMouse {
     this.lastPosition = this.position;
   };
 
-  mouseEnter = (event: JQueryInputEventObject): void => {
-    if (!this.isButtonPressed(event)) {
+  mouseEnter = (evt?: JQueryInputEventObject): void => {
+    if (evt == null || !this.isButtonPressed(evt)) {
       this.isMouseOver = true;
       this.trigger("over");
     }
   };
 
-  mouseLeave = (event: JQueryInputEventObject): void => {
-    if (!this.isButtonPressed(event)) {
+  mouseLeave = (evt?: JQueryInputEventObject): void => {
+    if (evt == null || !this.isButtonPressed(evt)) {
       this.isMouseOver = false;
       this.trigger("out");
     }
   };
 
-  isButtonPressed(event: JQueryInputEventObject) {
-    // Workaround for Firefox: event.which is not set properly
-    if (event.originalEvent.buttons != null) {
-      return event.originalEvent.buttons !== 0;
+  isButtonPressed(evt: JQueryInputEventObject) {
+    if (evt.buttons != null) {
+      return evt.buttons !== 0;
+    } else {
+      // Safari doesn't support evt.buttons
+      return evt.which !== 0;
     }
-    return event.which !== 0;
   }
+
+  pinchStart = (evt: HammerJsEvent) => {
+    this.lastScale = 1;
+
+    // Save position so we can zoom to the pinch start position
+    this.position = this.getRelativeMousePosition({ pageX: evt.center.x, pageY: evt.center.y });
+  };
+
+  pinch = (evt: HammerJsEvent): void => {
+    const delta = evt.scale - this.lastScale;
+    this.lastScale = evt.scale;
+    this.trigger("pinch", 10 * delta);
+  };
 
   mouseWheel = (event: JQueryInputEventObject): void => {
     event.preventDefault();
@@ -436,5 +471,13 @@ export class InputMouse {
       modifier = "ctrl";
     }
     this.trigger("scroll", delta, modifier);
+  };
+
+  getRelativeMousePosition = (pagePosition: { pageX: number, pageY: number }) => {
+    const $target = $(this.$targetSelector);
+    return {
+      x: pagePosition.pageX - $target.offset().left,
+      y: pagePosition.pageY - $target.offset().top,
+    };
   };
 }

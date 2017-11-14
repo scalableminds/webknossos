@@ -1,36 +1,46 @@
 // @flow
 import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
+import { withRouter, Link } from "react-router-dom";
 import Request from "libs/request";
 import messages from "messages";
-import app from "app";
+import Store from "oxalis/throttled_store";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
+import { getActiveUser } from "admin/admin_rest_api";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 
 type Props = {
   form: Object,
+  layout: "horizontal" | "inline",
+  history: ReactRouterHistoryType,
 };
 
 class LoginView extends React.PureComponent<Props> {
   handleSubmit = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
 
-    this.props.form.validateFields((err: ?Object, formValues: Object) => {
+    this.props.form.validateFields(async (err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/login", { data: formValues }).then(() =>
-          app.router.navigate("/dashboard", { trigger: true }),
-        );
+        await Request.sendJSONReceiveJSON("/api/login", { data: formValues });
+        const user = await getActiveUser();
+        Store.dispatch(setActiveUserAction(user));
+        this.props.history.push("/dashboard");
       }
     });
   };
 
   render() {
     const { getFieldDecorator } = this.props.form;
+    const rowStyle = this.props.layout === "horizontal" ? { padding: 50 } : null;
+    const resetStyle = this.props.layout === "horizontal" ? { float: "right" } : null;
+    const linkStyle = this.props.layout === "inline" ? { paddingLeft: 10 } : null;
 
     return (
-      <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
+      <Row type="flex" justify="center" style={rowStyle} align="middle">
         <Col span={8}>
-          <Form onSubmit={this.handleSubmit}>
+          <Form onSubmit={this.handleSubmit} layout={this.props.layout}>
             <FormItem>
               {getFieldDecorator("email", {
                 rules: [
@@ -62,10 +72,12 @@ class LoginView extends React.PureComponent<Props> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Log in
               </Button>
-              <a href="/register">Register Now!</a>
-              <a style={{ float: "right" }} href="/reset">
+              <Link to="/register" style={linkStyle}>
+                Register Now!
+              </Link>
+              <Link to="/reset" style={Object.assign({}, linkStyle, resetStyle)}>
                 Forgot Password
-              </a>
+              </Link>
             </FormItem>
           </Form>
         </Col>
@@ -74,4 +86,4 @@ class LoginView extends React.PureComponent<Props> {
   }
 }
 
-export default Form.create()(LoginView);
+export default withRouter(Form.create()(LoginView));

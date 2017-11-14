@@ -1,13 +1,10 @@
 package models.basics
 
-import scala.language.implicitConversions
-
-import oxalis.security.silhouetteOxalis.UserAwareRequest
-import models.user.User
 import com.scalableminds.util.reactivemongo.{AuthorizedAccessContext, DBAccessContext}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest}
+import models.user.User
 
-import javax.inject.Inject
+import scala.language.implicitConversions
 
 /**
  * Company: scalableminds

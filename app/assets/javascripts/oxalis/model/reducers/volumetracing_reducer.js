@@ -15,7 +15,7 @@ import {
   resetContourReducer,
   hideBrushReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
-import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import { VolumeToolEnum } from "oxalis/constants";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {
@@ -23,19 +23,15 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
     case "INITIALIZE_VOLUMETRACING": {
       const restrictions = Object.assign(
         {},
-        action.tracing.restrictions,
-        action.tracing.content.settings,
+        action.annotation.restrictions,
+        action.annotation.settings,
       );
-      const { contentData } = action.tracing.content;
 
       // As the frontend doesn't know all cells, we have to keep track of the highest id
       // and cannot compute it
-      let maxCellId = 1;
-      if (contentData.nextCell != null) {
-        maxCellId = contentData.nextCell - 1;
-      }
-
+      const maxCellId = action.tracing.largestSegmentId;
       const volumeTracing: VolumeTracingType = {
+        annotationId: action.annotation.id,
         type: "volume",
         activeCellId: 0,
         lastCentroid: null,
@@ -44,18 +40,19 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         cells: {},
         restrictions,
         activeTool: VolumeToolEnum.MOVE,
-        name: action.tracing.name,
-        tracingType: action.tracing.typ,
-        tracingId: action.tracing.id,
+        name: action.annotation.name,
+        tracingType: action.annotation.typ,
+        tracingId: action.annotation.content.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.content.boundingBox),
-        isPublic: action.tracing.isPublic,
-        tags: action.tracing.tags,
-        description: action.tracing.description,
+        boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
+        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
+        isPublic: action.annotation.isPublic,
+        tags: action.annotation.tags,
+        description: action.annotation.description,
       };
 
       const newState = update(state, { tracing: { $set: volumeTracing } });
-      return createCellReducer(newState, volumeTracing, contentData.activeCell);
+      return createCellReducer(newState, volumeTracing, action.tracing.activeSegmentId);
     }
     default:
     // pass

@@ -146,7 +146,9 @@ function FlycamReducer(state: OxalisState, action: ActionType): OxalisState {
     case "SET_DATASET": {
       return update(state, {
         flycam: {
-          currentMatrix: { $set: resetMatrix(state.flycam.currentMatrix, action.dataset.scale) },
+          currentMatrix: {
+            $set: resetMatrix(state.flycam.currentMatrix, action.dataset.dataSource.scale),
+          },
         },
       });
     }

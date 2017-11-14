@@ -38,13 +38,12 @@ import type {
   DatasetConfigurationType,
   TreeMapType,
   TracingType,
-  SkeletonTracingTypeTracingType,
+  TracingTypeTracingType,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
 import Request from "libs/request";
-import app from "app";
-import window from "libs/window";
+import window, { location } from "libs/window";
 import Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
@@ -55,6 +54,9 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
+import { doWithToken } from "admin/admin_rest_api";
+import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
+import type { ToastStyleType } from "libs/toast";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -206,7 +208,7 @@ class TracingApi {
           assertExists(tree, `Couldn't find node ${nodeId}.`);
         }
         // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
-        const comment = tree.comments.find(__ => __.node === nodeId);
+        const comment = tree.comments.find(__ => __.nodeId === nodeId);
         return comment != null ? comment.content : null;
       })
       .getOrElse(null);
@@ -271,9 +273,9 @@ class TracingApi {
    */
   async finishAndGetNextTask() {
     const state = Store.getState();
-    const { tracingType, tracingId } = state.tracing;
+    const { tracingType, annotationId } = state.tracing;
     const task = state.task;
-    const finishUrl = `/annotations/${tracingType}/${tracingId}/finish`;
+    const finishUrl = `/annotations/${tracingType}/${annotationId}/finish`;
     const requestTaskUrl = "/user/tasks/request";
 
     await Model.save();
@@ -293,14 +295,14 @@ class TracingApi {
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
-        app.router.loadURL(newTaskUrl);
+        location.pathname = newTaskUrl;
       } else {
         await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
       await Utils.sleep(2000);
-      app.router.loadURL("/dashboard");
+      location.pathname = "/dashboard";
     }
   }
 
@@ -313,13 +315,14 @@ class TracingApi {
    *
    */
   async restart(
-    newTracingType: SkeletonTracingTypeTracingType,
-    newTracingId: string,
+    newTracingType: TracingTypeTracingType,
+    newAnnotationId: string,
     newControlMode: ControlModeType,
   ) {
     Store.dispatch(restartSagaAction());
     UrlManager.reset();
-    await Model.fetch(newTracingType, newTracingId, newControlMode, false);
+    await Model.fetch(newTracingType, newAnnotationId, newControlMode, false);
+    Store.dispatch(discardSaveQueueAction());
     Store.dispatch(wkReadyAction());
     UrlManager.updateUnthrottled(true);
   }
@@ -573,7 +576,7 @@ class DataApi {
   * @example // Using the await keyword instead of the promise syntax
   * const greyscaleColor = await api.data.getDataValue("binary", position);
   *
-  * @example // Get the segmentation id for a segementation layer
+  * @example // Get the segmentation id for a segmentation layer
   * const segmentId = await api.data.getDataValue("segmentation", position);
   */
   async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
@@ -611,7 +614,7 @@ class DataApi {
     const dataset = Store.getState().dataset;
     const layer = this.__getLayer(layerName);
 
-    return layer.layer.doWithToken(token => {
+    return doWithToken(token => {
       const downloadUrl =
         `${dataset.dataStore
           .url}/data/datasets/${dataset.name}/layers/${layer.name}/data?resolution=0&` +
@@ -624,6 +627,8 @@ class DataApi {
         `depth=${bottomRight[2] - topLeft[2]}`;
 
       window.open(downloadUrl);
+      // Theoretically the window.open call could fail if the token is expired, but that would be hard to check
+      return Promise.resolve();
     });
   }
 
@@ -761,7 +766,7 @@ class UtilsApi {
   /**
    * Show a toast to the user. Returns a function which can be used to remove the toast again.
    *
-   * @param {string} type - Can be one of the following: "info", "warning", "success" or "danger"
+   * @param {string} type - Can be one of the following: "info", "warning", "success" or "error"
    * @param {string} message - The message string you want to show
    * @param {number} timeout - Time period in milliseconds after which the toast will be hidden. Time is measured as soon as the user moves the mouse. A value of 0 means that the toast will only hide by clicking on it's X button.
    * @example // Show a toast for 5 seconds
@@ -769,9 +774,9 @@ class UtilsApi {
    * // ... optionally:
    * // removeToast();
    */
-  showToast(type: string, message: string, timeout: number): ?Function {
-    const noop = () => {};
-    return Toast.message(type, message, timeout === 0, timeout).remove || noop;
+  showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
+    Toast.message(type, message, timeout === 0, timeout);
+    return () => Toast.close(message);
   }
 
   /**

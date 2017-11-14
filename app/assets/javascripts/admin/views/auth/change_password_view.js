@@ -1,15 +1,17 @@
 // @flow
 import React from "react";
+import { withRouter } from "react-router-dom";
 import { Form, Icon, Input, Button, Col, Row, Alert } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
-import app from "app";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 
 type Props = {
   form: Object,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -27,8 +29,8 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/changepw", { data: formValues }).then(() => {
-          Toast.success(messages["auth.reset_reset_pw_confirmation"]);
-          app.router.navigate("/login", { trigger: true });
+          Toast.success(messages["auth.reset_pw_confirmation"]);
+          this.props.history.push("/login");
         });
       }
     });
@@ -39,6 +41,14 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
     this.setState({ confirmDirty: this.state.confirmDirty || !!value });
   };
 
+  checkConfirm = (rule, value, callback) => {
+    const form = this.props.form;
+    if (value && this.state.confirmDirty) {
+      form.validateFields(["confirm"], { force: true });
+    }
+    callback();
+  };
+
   checkPassword = (rule, value, callback) => {
     const form = this.props.form;
     if (value && value !== form.getFieldValue("password1")) {
@@ -46,14 +56,6 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
     } else {
       callback();
     }
-  };
-
-  checkConfirm = (rule, value, callback) => {
-    const form = this.props.form;
-    if (value && this.state.confirmDirty) {
-      form.validateFields(["confirm"], { force: true });
-    }
-    callback();
   };
 
   render() {
@@ -138,4 +140,4 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(ChangePasswordView);
+export default withRouter(Form.create()(ChangePasswordView));

@@ -141,7 +141,7 @@ GET           /api/tasks/:id/annotations                                        
 GET           /taskTypes                                                        controllers.Authentication.empty
 GET           /taskTypes/create                                                 controllers.Authentication.empty
 GET           /taskTypes/:id/tasks                                              controllers.Authentication.emptyWithWildcard(id: String)
-GET           /taskTypes/:id/edit                                               controllers.UserController.emptyWithWildcard(id: String)
+GET           /taskTypes/:id/edit                                               controllers.Authentication.emptyWithWildcard(id: String)
 
 GET           /api/taskTypes                                                    controllers.TaskTypeController.list
 POST          /api/taskTypes                                                    controllers.TaskTypeController.create

@@ -1,25 +1,23 @@
 package models.user
 
-import scala.concurrent.Future
-
+import com.mohiva.play.silhouette.api.util.PasswordInfo
+import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
+import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo._
+import com.scalableminds.util.tools.Fox
 import models.basics._
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
-import play.api.libs.json.Json._
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
-import com.scalableminds.util.tools.Fox
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
-import play.api.libs.json._
 import play.api.libs.json.Json._
+import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json._
 
-import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
-import com.mohiva.play.silhouette.api.util.PasswordInfo
-import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
+import scala.concurrent.Future
 
 case class User(
                  email: String,
@@ -36,9 +34,7 @@ case class User(
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate,
                  loginInfo: LoginInfo,
-                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity{
-
-  val dao = User
+                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity {
 
   def teamsWithRole(role: Role) = teams.filter(_.role == role)
 
@@ -113,7 +109,7 @@ case class User(
 object User {
 
   implicit val passwordInfoJsonFormat = Json.format[PasswordInfo]
-  implicit val userFormat: Format[User] = Json.format[User]
+  implicit val userFormat = Json.format[User]
 
   def userPublicWrites(requestingUser: User): Writes[User] =
     ((__ \ "id").write[String] and

@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 
 import com.scalableminds.braingames.datastore.tracings.TracingType
-import oxalis.security.silhouetteOxalis.{UserAwareAction, SecuredRequest, SecuredAction}
+import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction}
 import akka.util.Timeout
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -15,6 +15,8 @@ import models.user.{UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
+import play.twirl.api.Html
+import reactivemongo.core.nodeset.Authenticated
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -31,6 +33,15 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     with AnnotationInformationProvider {
 
   implicit val timeout = Timeout(5 seconds)
+
+
+  def empty(typ: String, id: String) = SecuredAction { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
+  def emptyReadOnly(typ: String, id: String) = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     val annotationId = AnnotationIdentifier(typ, id)

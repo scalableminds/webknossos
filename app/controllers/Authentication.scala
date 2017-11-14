@@ -114,6 +114,10 @@ class Authentication @Inject() (
     Ok(views.html.main()(Html("")))
   }
 
+  def emptyWithWildcards(param1: String, param2: String) = UserAwareAction { implicit request =>
+    Ok(views.html.main()(Html("")))
+  }
+
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
       bogusForm =>  Future.successful(BadRequest(bogusForm.toString)),

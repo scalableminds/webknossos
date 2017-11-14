@@ -5,31 +5,20 @@ package models.user
 
 import java.math.BigInteger
 import java.security.SecureRandom
+import java.util.UUID
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import models.basics.SecuredBaseDAO
+import com.scalableminds.util.tools.Fox
+import models.basics.{SecuredBaseDAO, UnsecuredBaseDAO}
+import org.joda.time.DateTime
 import play.api.libs.json.Json
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import java.util.UUID
-import org.joda.time.DateTime
-import play.api.Play.current
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
-import play.modules.reactivemongo.ReactiveMongoApi
-import play.modules.reactivemongo.json._
-import play.api.libs.json._
-import reactivemongo.play.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.collection.JSONCollection
-import play.modules.reactivemongo.json.BSONFormats.BSONObjectIDFormat
-import reactivemongo.bson._
-import reactivemongo.bson.utils.Converters
-import play.modules.reactivemongo.json.ImplicitBSONHandlers._
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration._
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 case class UserToken(_user: BSONObjectID,
                      token: String = UserToken.generateRandomToken,
@@ -42,14 +31,13 @@ object UserToken {
   val expirationTime = 24.hours
 
   private val generator = new SecureRandom()
-  implicit val jsonFormat:Format[UserToken] = Json.format[UserToken]
+  implicit val jsonFormat = Json.format[UserToken]
 
   def generateRandomToken =
     new BigInteger(130, generator).toString(32)
 }
 
 
-// Silhouette Branch:
 object UserTokenDAO extends SecuredBaseDAO[UserToken] {
 
   val collectionName = "userTokens"
@@ -67,12 +55,14 @@ object UserTokenDAO extends SecuredBaseDAO[UserToken] {
   }
 }
 
+// Silhouette Branch:
+
 case class UserToken2(id:UUID, userId:BSONObjectID, email:String, expirationTime:DateTime, isLogin:Boolean) {
   def isExpired = expirationTime.isBeforeNow
 }
 
 object UserToken2 {
-  implicit val toJson: Format[UserToken2] = Json.format[UserToken2]
+  implicit val jsonFormat = Json.format[UserToken2]
 
   def create(userId:BSONObjectID, email:String, isLogin:Boolean) =
     UserToken2(UUID.randomUUID(), userId, email, new DateTime().plusHours(12), isLogin)
@@ -81,27 +71,25 @@ object UserToken2 {
     UserToken2(UUID.randomUUID(), userId, email, new DateTime().plusYears(1), true)
 }
 
-trait UserTokenDao {
-  def find(id:UUID):Future[Option[UserToken2]]
-  def save(token:UserToken2):Future[UserToken2]
-  def remove(id:UUID):Future[Unit]
-}
+class MongoUserTokenDao extends UnsecuredBaseDAO[UserToken2] {
+  //lazy val reactiveMongoApi = current.injector.instanceOf[ReactiveMongoApi]
+//  val tokens = reactiveMongoApi.db.collection[JSONCollection]("tokens")
 
-class MongoUserTokenDao extends UserTokenDao {
-  lazy val reactiveMongoApi = current.injector.instanceOf[ReactiveMongoApi]
-  val tokens = reactiveMongoApi.db.collection[JSONCollection]("tokens")
+  val collectionName = "tokens"
+
+  val formatter = UserToken2.jsonFormat
 
   def find(id:UUID):Future[Option[UserToken2]] =
-    tokens.find(Json.obj("id" -> id)).one[UserToken2]
+    find(Json.obj("id" -> id)).one[UserToken2]
 
   def find(email: String): Future[List[UserToken2]] =
-    tokens.find(Json.obj("email" -> email)).cursor[UserToken2]().collect[List]()
+    find(Json.obj("email" -> email)).cursor[UserToken2]().collect[List]()
 
-  def save(token:UserToken2):Future[UserToken2] = for {
-    _ <- tokens.insert(token)
+  def save(token:UserToken2):Fox[UserToken2] = for {
+    _ <- insert(token)
   } yield token
 
-  def remove(id:UUID):Future[Unit] = for {
-    _ <- tokens.remove(Json.obj("id" -> id))
+  def remove(id:UUID):Fox[Unit] = for {
+    _ <- remove(Json.obj("id" -> id))
   } yield ()
 }

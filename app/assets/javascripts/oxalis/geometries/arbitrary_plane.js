@@ -175,7 +175,7 @@ class ArbitraryPlane {
   });
 
   setSphericalCapRadius(sphericalCapRadius: number) {
-    if (Store.getState().viewMode === constants.MODE_ARBITRARY) {
+    if (Store.getState().temporaryConfiguration.viewMode === constants.MODE_ARBITRARY) {
       this.queryVertices = this.calculateSphereVertices(sphericalCapRadius);
       this.isDirty = true;
     }

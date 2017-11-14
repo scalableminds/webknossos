@@ -29,7 +29,13 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType, NodeType, BranchPointType } from "oxalis/store";
+import type {
+  OxalisState,
+  SkeletonTracingType,
+  NodeType,
+  BranchPointType,
+  TreeType,
+} from "oxalis/store";
 import type { ServerNodeType, ServerBranchPointType } from "oxalis/model";
 import type { ActionType } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
@@ -65,17 +71,17 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       );
 
       const trees = _.keyBy(
-        action.tracing.trees.map(tree =>
-          update(tree, {
-            nodes: { $set: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id") },
-            color: {
-              $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
-            },
-            branchPoints: { $set: _.map(tree.branchPoints, serverBranchPointToBranchPoint) },
-            isVisible: { $set: true },
-            timestamp: { $set: tree.createdTimestamp },
-          }),
-        ),
+        action.tracing.trees.map((tree): TreeType => ({
+          comments: tree.comments,
+          edges: tree.edges,
+          name: tree.name,
+          treeId: tree.treeId,
+          nodes: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id"),
+          color: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
+          branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
+          isVisible: true,
+          timestamp: tree.createdTimestamp,
+        })),
         "treeId",
       );
 
@@ -106,7 +112,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         })
         .orElse(() => {
           // use last tree for active tree
-          const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), tree => tree.id));
+          const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), tree => tree.treeId));
           return lastTree.map(t => t.treeId);
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);

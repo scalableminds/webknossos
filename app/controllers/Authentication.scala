@@ -1,5 +1,7 @@
 package controllers
 
+import java.text.Normalizer
+
 import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
 import com.scalableminds.util.mail._
@@ -47,14 +49,15 @@ import models.user.UserService
 
 
 object AuthForms {
-  // Sign up
-  case class SignUpData(team:String, email:String, firstName:String, lastName:String, password:String)
 
-  def signUpForm(implicit messages:Messages) = Form(mapping(
+  // Sign up
+  case class SignUpData(team: String, email: String, firstName: String, lastName: String, password: String)
+
+  def signUpForm(implicit messages: Messages) = Form(mapping(
     "team" -> text,
     "email" -> email,
     "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText,//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
+    "password2" -> nonEmptyText, //.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
     "firstName" -> nonEmptyText,
     "lastName" -> nonEmptyText
   )
@@ -63,7 +66,8 @@ object AuthForms {
   )
 
   // Sign in
-  case class SignInData(email:String, password:String)
+  case class SignInData(email: String, password: String)
+
   val signInForm = Form(mapping(
     "email" -> email,
     "password" -> nonEmptyText
@@ -75,29 +79,31 @@ object AuthForms {
 
   // Password recovery
   case class ResetPasswordData(token: String, password1: String, password2: String)
-  def resetPasswordForm(implicit messages:Messages) = Form(mapping(
+
+  def resetPasswordForm(implicit messages: Messages) = Form(mapping(
     "token" -> text,
     "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
+    "password2" -> nonEmptyText //.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
   )(ResetPasswordData.apply)(ResetPasswordData.unapply)
   )
 
   case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
-  def changePasswordForm(implicit messages:Messages) = Form(mapping(
+
+  def changePasswordForm(implicit messages: Messages) = Form(mapping(
     "oldPassword" -> nonEmptyText,
     "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
+    "password2" -> nonEmptyText //.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
   )(ChangePasswordData.apply)(ChangePasswordData.unapply)
   )
 }
 
 
-class Authentication @Inject() (
-                       val messagesApi: MessagesApi,
-                       credentialsProvider: CredentialsProvider,
-                       userTokenService: UserTokenService,
-                       passwordHasher: PasswordHasher,
-                       configuration: Configuration)
+class Authentication @Inject()(
+                                val messagesApi: MessagesApi,
+                                credentialsProvider: CredentialsProvider,
+                                userTokenService: UserTokenService,
+                                passwordHasher: PasswordHasher,
+                                configuration: Configuration)
   extends Controller
     with ProvidesUnauthorizedSessionData
     with FoxImplicits {
@@ -120,9 +126,19 @@ class Authentication @Inject() (
     Ok(views.html.main()(Html("")))
   }
 
+  def normalizeName(name: String) = {
+    val replacementMap = Map("ü" -> "ue", "Ü" -> "Ue", "ö" -> "oe", "Ö" -> "Oe", "ä" -> "ae", "Ä" -> "Ae", "ß" -> "ss",
+      "é" -> "e", "è" -> "e", "ê" -> "e", "È" -> "E", "É" -> "E", "Ê" -> "E",
+      "Ç" -> "C", "ç" -> "c", "ñ" -> "n", "Ñ" -> "N", "ë" -> "e", "Ë" -> "E", "ï" -> "i", "Ï" -> "I",
+      "å" -> "a", "Å" -> "A", "œ" -> "oe", "Œ" -> "Oe", "æ" -> "ae", "Æ" -> "Ae",
+      "þ" -> "th", "Þ" -> "Th", "ø" -> "oe", "Ø" -> "Oe", "í" -> "i", "ì" -> "i")
+
+    name.map(c => replacementMap.getOrElse(c.toString,c.toString)).mkString.replaceAll("[^\\x00-\\x7F]", "")
+  }
+
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm =>  Future.successful(BadRequest(bogusForm.toString)),
+      bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
@@ -130,14 +146,13 @@ class Authentication @Inject() (
             Fox.successful(BadRequest(Messages("error.userExists", signUpData.email)))
           case Empty =>
             for {
-              user <- UserService.insert(signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
-                                         loginInfo, passwordHasher.hash(signUpData.password))
+              user <- UserService.insert(signUpData.team, signUpData.email, normalizeName(signUpData.firstName), normalizeName(signUpData.lastName), signUpData.password, automaticUserActivation, roleOnRegistration,
+                loginInfo, passwordHasher.hash(signUpData.password))
               brainDBResult <- BrainTracing.register(user).toFox
             } yield {
               Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
               Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
               Ok
-             // if (automaticUserActivation) { JsonOk(Messages("user.automaticUserActivation")) } else {JsonOk(Messages("user.accountCreated")) }
             }
           case f: Failure => Fox.failure(f.msg)
         }
@@ -154,15 +169,15 @@ class Authentication @Inject() (
           UserService.retrieve(loginInfo).flatMap {
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
-            case Some(user) if(user.isActive) => for {
+            case Some(user) if (user.isActive) => for {
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
-            } yield Ok.withCookies(value)//result
+            } yield Ok.withCookies(value) //result
             case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
         }.recover {
-          case e:ProviderException => BadRequest(Messages("error.invalidCredentials"))
+          case e: ProviderException => BadRequest(Messages("error.invalidCredentials"))
         }
       }
     )
@@ -179,7 +194,7 @@ class Authentication @Inject() (
   }
 
   def switchTo(email: String) = SecuredAction.async { implicit request =>
-    if(request.identity._isSuperUser.openOr(false)){
+    if (request.identity._isSuperUser.openOr(false)) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- findOneByEmail(email) ?~> Messages("user.notFound")
@@ -188,7 +203,7 @@ class Authentication @Inject() (
         value <- env.authenticatorService.init(authenticator)
         result <- env.authenticatorService.embed(value, Ok) //to login the new user
       } yield result
-    }else{
+    } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
       Future.successful(BadRequest(Messages("user.notAuthorised")))
     }
@@ -250,7 +265,7 @@ class Authentication @Inject() (
               }
           }
         }.recover {
-          case e:ProviderException => BadRequest(Messages("error.invalidCredentials"))
+          case e: ProviderException => BadRequest(Messages("error.invalidCredentials"))
         }
       }
     )

@@ -1,9 +1,6 @@
 package controllers
 
-<<<<<<< HEAD
-import java.text.Normalizer
 
-=======
 import java.util.UUID
 import javax.inject.Inject
 
@@ -11,7 +8,6 @@ import com.mohiva.play.silhouette.api.Authenticator.Implicits._
 import com.mohiva.play.silhouette.api.{Environment, LoginInfo, Silhouette}
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
->>>>>>> bce9d7d23fbd8695c5c98004a5269f60518a7e22
 import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
 import com.scalableminds.util.mail._
@@ -127,27 +123,32 @@ class Authentication @Inject()(
     Ok(views.html.main()(Html("")))
   }
 
-  def normalizeName(name: String) = {
+  def normalizeName(name: String):Option[String] = {
     val replacementMap = Map("ü" -> "ue", "Ü" -> "Ue", "ö" -> "oe", "Ö" -> "Oe", "ä" -> "ae", "Ä" -> "Ae", "ß" -> "ss",
       "é" -> "e", "è" -> "e", "ê" -> "e", "È" -> "E", "É" -> "E", "Ê" -> "E",
       "Ç" -> "C", "ç" -> "c", "ñ" -> "n", "Ñ" -> "N", "ë" -> "e", "Ë" -> "E", "ï" -> "i", "Ï" -> "I",
       "å" -> "a", "Å" -> "A", "œ" -> "oe", "Œ" -> "Oe", "æ" -> "ae", "Æ" -> "Ae",
       "þ" -> "th", "Þ" -> "Th", "ø" -> "oe", "Ø" -> "Oe", "í" -> "i", "ì" -> "i")
 
-    name.map(c => replacementMap.getOrElse(c.toString,c.toString)).mkString.replaceAll("[^\\x00-\\x7F]", "")
+    val finalName = name.map(c => replacementMap.getOrElse(c.toString,c.toString)).mkString.replaceAll("[^\\x00-\\x7F]", "")
+    if(finalName.isEmpty)
+      None
+    else
+      Some(finalName)
   }
 
   def handleRegistration = Action.async { implicit request =>
-    signUpForm.bindFromRequest.fold(
+    val boundForm = signUpForm.bindFromRequest
+    boundForm.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            Fox.successful(BadRequest(Messages("error.userExists", signUpData.email)))
+            Fox.successful(BadRequest(Messages("user.email.alreadyInUse"))) //other way of returning form error
           case Empty =>
             for {
-              user <- UserService.insert(signUpData.team, signUpData.email, normalizeName(signUpData.firstName), normalizeName(signUpData.lastName), signUpData.password, automaticUserActivation, roleOnRegistration,
+              user <- UserService.insert(signUpData.team, signUpData.email, normalizeName(signUpData.firstName).get, normalizeName(signUpData.lastName).get, signUpData.password, automaticUserActivation, roleOnRegistration,
                 loginInfo, passwordHasher.hash(signUpData.password))
               brainDBResult <- BrainTracing.register(user).toFox
             } yield {

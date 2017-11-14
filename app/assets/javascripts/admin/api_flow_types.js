@@ -59,6 +59,17 @@ export type APIUserType = {
   +teams: Array<APITeamRoleType>,
 };
 
+export type APITimeIntervalType = {
+  paymentInterval: {
+    month: number,
+    year: number,
+  },
+  durationInSeconds: number,
+};
+export type APIUserLoggedTimeType = {
+  loggedTime: Array<APITimeIntervalType>,
+};
+
 export type APITeamType = {
   +id: string,
   +name: string,

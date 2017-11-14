@@ -41,7 +41,7 @@ type Props = {
   userConfiguration: UserConfigurationType,
 };
 
-class TreesTabView extends React.Component<Props> {
+class TreesTabView extends React.PureComponent<Props> {
   handleChangeTreeName = evt => {
     this.props.onChangeTreeName(evt.target.value);
   };

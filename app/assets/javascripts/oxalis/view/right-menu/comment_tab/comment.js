@@ -11,7 +11,7 @@ type Props = {
   data: CommentType,
 };
 
-class Comment extends React.Component<Props> {
+class Comment extends React.PureComponent<Props> {
   comment: ?HTMLLIElement;
 
   componentDidUpdate() {

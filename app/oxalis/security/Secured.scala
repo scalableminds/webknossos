@@ -15,7 +15,7 @@ import com.mohiva.play.silhouette.api.{Environment, SecuredErrorHandler, Silhoue
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
 
 
-object silhouetteOxalis extends Silhouette[User, CookieAuthenticator] with FoxImplicits{
+object silhouetteOxalis extends Silhouette[User, CombinedAuthenticator] with FoxImplicits{
 
   val config = Play.configuration
   val lang = new DefaultLangs(config)
@@ -23,7 +23,7 @@ object silhouetteOxalis extends Silhouette[User, CookieAuthenticator] with FoxIm
 
   val environment = new EnvironmentOxalis(config)
 
-  override protected def env: Environment[User, CookieAuthenticator] = environment
+  override protected def env: Environment[User, CombinedAuthenticator] = environment
 
   override def messagesApi: MessagesApi = new DefaultMessagesApi(messagesAPIEnvironment, config, lang)
 }

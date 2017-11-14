@@ -67,6 +67,8 @@ case class CombinedAuthenticator(typ: String, //is there a way to force the typ 
 
 class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSettings,
                                    tokenSettings: BearerTokenAuthenticatorSettings,
+                                   //cookieDao: Option[AuthenticatorDAO[CookieAuthenticator]],
+                                   //tokenDao : AuthenticatorDAO[BearerTokenAuthenticator],
                                    cookieDao: Option[AuthenticatorDAO[CombinedAuthenticator]],
                                    tokenDao : AuthenticatorDAO[CombinedAuthenticator],
                                    fingerprintGenerator: FingerprintGenerator,

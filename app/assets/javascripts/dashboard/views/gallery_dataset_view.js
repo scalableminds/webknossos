@@ -7,7 +7,6 @@ import Utils from "libs/utils";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import messages from "messages";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { DatasetType } from "dashboard/views/dataset_view";
 import type { OxalisState } from "oxalis/store";
@@ -134,7 +133,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: state.activeUser,
 });
 
 export default connect(mapStateToProps)(GalleryDatasetView);

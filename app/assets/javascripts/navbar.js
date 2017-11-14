@@ -7,7 +7,6 @@ import { Layout, Menu, Icon } from "antd";
 import { connect } from "react-redux";
 import Request from "libs/request";
 import LoginView from "admin/views/auth/login_view";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -17,7 +16,7 @@ const { SubMenu } = Menu;
 const { Header } = Layout;
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: ?APIUserType,
 };
 
 type Props = {
@@ -43,7 +42,7 @@ class Navbar extends React.PureComponent<Props> {
               webKnossos
             </Link>
           </Menu.Item>
-          {this.props.isAuthenticated ? (
+          {this.props.isAuthenticated && this.props.activeUser != null ? (
             [
               <Menu.Item key="/dashboard">
                 <Link to="/dashboard">
@@ -161,7 +160,7 @@ class Navbar extends React.PureComponent<Props> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: state.activeUser,
 });
 
 export default withRouter(connect(mapStateToProps)(Navbar));

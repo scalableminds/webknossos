@@ -62,8 +62,9 @@ class DatasetActionsView extends PureComponent<Props, State> {
 
   handleFinish = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${this.props
-      .annotationId}/finishAndRedirect`;
+    const url = `/annotations/${this.props.tracingType}/${
+      this.props.annotationId
+    }/finishAndRedirect`;
     await this.handleSave();
     if (confirm(messages["finish.confirm"])) {
       this.props.history.push(url);
@@ -84,8 +85,9 @@ class DatasetActionsView extends PureComponent<Props, State> {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    const downloadUrl = `/annotations/${this.props.tracingType}/${this.props
-      .annotationId}/download`;
+    const downloadUrl = `/annotations/${this.props.tracingType}/${
+      this.props.annotationId
+    }/download`;
     win.location.href = downloadUrl;
     win.document.body.innerHTML = messages["download.close_window"];
   };

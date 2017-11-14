@@ -37,7 +37,7 @@ import type {
   APIAllowedModeType,
   APISettingsType,
   APIDataStoreType,
-  APITracingTypeTracingType,
+  APITracingType,
   APIScriptType,
   APITaskType,
   APIUserType,
@@ -144,7 +144,7 @@ export type DatasetType = {
 
 export type TreeMapType = { +[number]: TreeType };
 
-export type TracingTypeTracingType = APITracingTypeTracingType;
+export type TracingTypeTracingType = APITracingType;
 
 export type SkeletonTracingType = {
   +annotationId: string,

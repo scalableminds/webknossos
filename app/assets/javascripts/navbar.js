@@ -7,6 +7,7 @@ import { Layout, Menu, Icon } from "antd";
 import { connect } from "react-redux";
 import Request from "libs/request";
 import LoginView from "admin/views/auth/login_view";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -15,11 +16,14 @@ import type { ReactRouterHistoryType } from "react_router";
 const { SubMenu } = Menu;
 const { Header } = Layout;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   isAuthenticated: boolean,
-  activeUser: APIUserType,
   history: ReactRouterHistoryType,
-};
+} & StateProps;
 
 class Navbar extends React.PureComponent<Props> {
   render() {
@@ -156,8 +160,8 @@ class Navbar extends React.PureComponent<Props> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
-  activeUser: state.activeUser,
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
 });
 
 export default withRouter(connect(mapStateToProps)(Navbar));

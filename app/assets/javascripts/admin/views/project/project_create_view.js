@@ -3,6 +3,8 @@ import React from "react";
 import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card, InputNumber } from "antd";
 import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+
 import type { APIUserType, APITeamType } from "admin/api_flow_types";
 import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState } from "oxalis/store";
@@ -11,12 +13,15 @@ const FormItem = Form.Item;
 const Option = Select.Option;
 const TextArea = Input.TextArea;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   form: Object,
   projectName: ?string,
   history: ReactRouterHistoryType,
-  activeUser: APIUserType,
-};
+} & StateProps;
 
 type State = {
   teams: Array<APITeamType>,
@@ -252,8 +257,8 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
-  activeUser: state.activeUser,
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(Form.create()(ProjectCreateView));

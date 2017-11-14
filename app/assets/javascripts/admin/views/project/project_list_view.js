@@ -9,6 +9,7 @@ import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import messages from "messages";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getProjectsWithOpenAssignments,
   deleteProject,
@@ -21,7 +22,7 @@ import type { OxalisState } from "oxalis/store";
 const { Column } = Table;
 const { Search } = Input;
 
-type Props = {
+type StateProps = {
   activeUser: APIUserType,
 };
 
@@ -31,7 +32,7 @@ type State = {
   searchQuery: string,
 };
 
-class ProjectListView extends React.PureComponent<Props, State> {
+class ProjectListView extends React.PureComponent<StateProps, State> {
   state = {
     isLoading: true,
     projects: [],
@@ -143,7 +144,8 @@ class ProjectListView extends React.PureComponent<Props, State> {
                   project.priority.toString(),
                 )}
                 render={(priority, project: APIProjectType) =>
-                  `${priority} ${project.paused ? "(paused)" : ""}`}
+                  `${priority} ${project.paused ? "(paused)" : ""}`
+                }
               />
               <Column
                 title="Location"
@@ -164,7 +166,8 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 key="owner"
                 sorter={Utils.localeCompareBy((project: APIProjectType) => project.owner.lastName)}
                 render={owner =>
-                  owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"}
+                  owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"
+                }
               />
               <Column
                 title="Open Assignments"
@@ -248,8 +251,8 @@ class ProjectListView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
-  activeUser: state.activeUser,
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(ProjectListView);

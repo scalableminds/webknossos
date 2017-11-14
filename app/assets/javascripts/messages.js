@@ -70,6 +70,7 @@ In order to restore the current window, a reload is necessary.`,
   "auth.account_created":
     "Your account has been created. An administrator is going to unlock you soon.",
   "auth.automatic_user_activation": "User was activated automatically",
+  "auth.error_no_user": "No active user is logged in.",
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
 };

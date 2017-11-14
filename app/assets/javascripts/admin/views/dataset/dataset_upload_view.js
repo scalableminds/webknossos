@@ -6,15 +6,22 @@ import Toast from "libs/toast";
 import messages from "messages";
 import Utils from "libs/utils";
 import { getTeams, getDatastores, addDataset } from "admin/admin_rest_api";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import type { APITeamType, APIDatastoreType, APIUserType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
-type Props = {
-  form: Object,
+type StateProps = {
   activeUser: APIUserType,
 };
+
+type Props = {
+  form: Object,
+  history: ReactRouterHistoryType,
+} & StateProps;
 
 type State = {
   teams: Array<APITeamType>,
@@ -164,8 +171,8 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
-  activeUser: state.activeUser,
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(Form.create()(DatasetUploadView));

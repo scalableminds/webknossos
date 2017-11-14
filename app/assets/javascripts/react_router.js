@@ -8,7 +8,7 @@ import { Layout, LocaleProvider } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";
 
 import { ControlModeEnum } from "oxalis/constants";
-import { APITracingTypeTracingEnum } from "admin/api_flow_types";
+import { APITracingTypeEnum } from "admin/api_flow_types";
 import Navbar from "navbar";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
@@ -38,7 +38,7 @@ import TaskTypeCreateView from "admin/views/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/views/scripts/script_create_view";
 
 import type { OxalisState } from "oxalis/store";
-import type { APITracingTypeTracingType } from "admin/api_flow_types";
+import type { APITracingType } from "admin/api_flow_types";
 
 const { Content } = Layout;
 
@@ -100,12 +100,12 @@ const SecuredRoute = ({ component: Component, render, isAuthenticated, ...rest }
 class ReactRouter extends React.Component<*> {
   tracingView = ({ match }: ReactRouterArgumentsType) => {
     const tracingType = match.params.type;
-    if (Object.keys(APITracingTypeTracingEnum).includes(tracingType)) {
-      const saveTracingType = ((tracingType: any): APITracingTypeTracingEnumType);
+    if (Object.keys(APITracingTypeEnum).includes(tracingType)) {
+      const saveTracingType = ((tracingType: any): APITracingType);
       return (
         <TracingLayoutView
           initialTracingType={saveTracingType}
-          initialTracingId={match.params.id}
+          initialAnnotationId={match.params.id}
           initialControlmode={ControlModeEnum.TRACE}
         />
       );
@@ -116,8 +116,8 @@ class ReactRouter extends React.Component<*> {
 
   tracingViewPublic = ({ match }: ReactRouterArgumentsType) => (
     <TracingLayoutView
-      initialTracingType={APITracingTypeTracingType.View}
-      initialTracingId={match.params.id}
+      initialTracingType={APITracingTypeEnum.View}
+      initialAnnotationId={match.params.id}
       initialControlmode={ControlModeEnum.VIEW}
     />
   );

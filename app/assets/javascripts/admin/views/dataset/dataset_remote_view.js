@@ -5,18 +5,23 @@ import { Form, Input, Select, Button, Card } from "antd";
 import { getTeams, addNDStoreDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { APITeamType, NDStoreConfigType, APIUserType } from "admin/api_flow_types";
 import type { ReactRouterHistoryType } from "react_router";
+import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   form: Object,
   history: ReactRouterHistoryType,
-  activeUser: APIUserType,
-};
+} & StateProps;
 
 type State = {
   teams: Array<APITeamType>,
@@ -110,8 +115,8 @@ class DatasetRemoteView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
-  activeUser: state.activeUser,
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(Form.create()(DatasetRemoteView));

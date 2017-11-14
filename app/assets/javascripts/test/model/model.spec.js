@@ -3,6 +3,11 @@ import test from "ava";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
+import DATASET from "../fixtures/dataset_server_object";
+import {
+  tracing as TRACING,
+  annotation as ANNOTATION,
+} from "../fixtures/skeletontracing_server_objects";
 
 mockRequire.stopAll();
 
@@ -43,44 +48,29 @@ mockRequire("oxalis/model/binary/layers/wk_layer", Layer);
 mockRequire("oxalis/model/binary/layers/nd_store_layer", Layer);
 mockRequire("libs/window", {});
 
-const TRACING_OBJECT = {
-  content: {
-    dataSet: {
-      name: "DatasetName",
-      dataStore: {
-        url: "dataStoreUrl",
-        typ: "webknossos-store",
-      },
-      dataLayers: [
-        {
-          name: "layer1",
-          category: "color",
-          elementClass: "Uint32",
-          resolutions: [1],
-        },
-      ],
-    },
-    settings: {
-      allowedModes: [],
-    },
-    contentData: {
-      customLayers: [],
-    },
-  },
-};
-
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;
 
+const TRACING_TYPE = "tracingTypeValue";
+const ANNOTATION_ID = "annotationIdValue";
+
 test.beforeEach(t => {
-  const model = new Model({
-    tracingType: "tracingTypeValue",
-    tracingId: "tracingIdValue",
-  });
+  const model = new Model();
   t.context.model = model;
   model.state = { position: [1, 2, 3] };
 
-  Request.receiveJSON.returns(Promise.resolve(TRACING_OBJECT));
+  Request.receiveJSON
+    .withArgs(`/annotations/${TRACING_TYPE}/${ANNOTATION_ID}/info`)
+    .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
+  Request.receiveJSON
+    .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
+    .returns(Promise.resolve(_.cloneDeep(DATASET)));
+  Request.receiveJSON
+    .withArgs(
+      `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${ANNOTATION.content
+        .id}`,
+    )
+    .returns(Promise.resolve(_.cloneDeep(TRACING)));
   User.prototype.fetch.returns(Promise.resolve());
 });
 
@@ -96,15 +86,17 @@ test.beforeEach(t => {
 //   });
 // });
 
-test("Model Initialization: should throw a model.HANDLED_ERROR for missing dataset", t => {
+test("Model Initialization: should throw a model.HANDLED_ERROR for missing data layers", t => {
   t.plan(1);
   const { model } = t.context;
-  const tracingObject = _.clone(TRACING_OBJECT);
-  delete tracingObject.content.dataSet;
-  Request.receiveJSON.returns(Promise.resolve(tracingObject));
+  const datasetObject = _.clone(DATASET);
+  delete datasetObject.dataSource.dataLayers;
+  Request.receiveJSON
+    .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
+    .returns(Promise.resolve(_.cloneDeep(datasetObject)));
 
   return model
-    .fetch()
+    .fetch(TRACING_TYPE, ANNOTATION_ID, "VIEW", true)
     .then(() => {
       t.fail("Promise should not have been resolved.");
     })
@@ -116,10 +108,12 @@ test("Model Initialization: should throw a model.HANDLED_ERROR for missing datas
 test("Model Initialization: should throw an Error on unexpected failure", t => {
   t.plan(1);
   const { model } = t.context;
-  Request.receiveJSON.returns(Promise.reject(new Error("errorMessage")));
+  Request.receiveJSON
+    .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
+    .returns(Promise.reject(new Error("errorMessage")));
 
   return model
-    .fetch()
+    .fetch(TRACING_TYPE, ANNOTATION.dataSetName, "VIEW", true)
     .then(() => {
       t.fail("Promise should not have been resolved.");
     })

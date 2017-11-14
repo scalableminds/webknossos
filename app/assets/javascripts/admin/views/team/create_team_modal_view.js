@@ -1,3 +1,4 @@
+// @flow
 import * as React from "react";
 import { Modal, Input, Select, Spin, Button } from "antd";
 import { getRootTeams, createTeam } from "admin/admin_rest_api";
@@ -40,21 +41,20 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
   }
 
   onOk = async () => {
-    if (this.isInputValid()) {
+    if (this.state.newTeamName !== "" && this.state.parentTeam) {
       const newTeam = {
         name: this.state.newTeamName,
         parent: this.state.parentTeam,
         roles: [{ name: "admin" }, { name: "user" }],
-        isEditable: "true",
       };
 
-      const response = await createTeam(newTeam);
+      const team = await createTeam(newTeam);
       this.setState({
         newTeamName: "",
         parentTeam: undefined,
       });
 
-      this.props.onOk(response);
+      this.props.onOk(team);
     }
   };
 
@@ -79,7 +79,7 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
         <Spin spinning={this.state.isLoading} size="large">
           <Input
             value={this.state.newTeamName}
-            onChange={(event: SyntheticInputEvent) =>
+            onChange={(event: SyntheticInputEvent<*>) =>
               this.setState({ newTeamName: event.target.value })}
             icon="tag-o"
             placeholder="Team Name"

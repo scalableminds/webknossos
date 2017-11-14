@@ -12,16 +12,20 @@ import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
 import TransferTaskModal from "dashboard/views/transfer_task_modal";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import type { APITaskWithAnnotationType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   userId: ?string,
   isAdminView: boolean,
-  activeUser: APIUserType,
-};
+} & StateProps;
 
 type State = {
   showFinishedTasks: boolean,
@@ -38,7 +42,9 @@ const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnot
   if (!task) {
     // This should never be the case unless tasks were deleted in the DB.
     throw Error(
-      `[Dashboard Tasks] Annotation ${annotation.id} has no task assigned. Please inform your admin.`,
+      `[Dashboard Tasks] Annotation ${
+        annotation.id
+      } has no task assigned. Please inform your admin.`,
     );
   }
 
@@ -187,7 +193,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     const url = `/annotations/Task/${annotationId}/reset`;
 
     Request.receiveJSON(url).then(jsonData => {
-      Toast.message(jsonData.messages);
+      Toast.messages(jsonData.messages);
     });
   }
 
@@ -365,8 +371,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
-  activeUser: state.activeUser,
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(DashboardTaskListView);

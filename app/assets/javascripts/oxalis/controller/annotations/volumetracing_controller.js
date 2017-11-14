@@ -9,7 +9,11 @@ import $ from "jquery";
 import Backbone from "backbone";
 import { InputKeyboardNoLoop } from "libs/input";
 import Store from "oxalis/store";
-import { cycleToolAction, setActiveCellAction } from "oxalis/model/actions/volumetracing_actions";
+import {
+  cycleToolAction,
+  copySegmentationLayerAction,
+  setActiveCellAction,
+} from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId } from "oxalis/model/accessors/volumetracing_accessor";
 
 class VolumeTracingController {
@@ -41,6 +45,12 @@ class VolumeTracingController {
       },
       "1": () => {
         Store.dispatch(cycleToolAction());
+      },
+      v: () => {
+        Store.dispatch(copySegmentationLayerAction());
+      },
+      "shift + v": () => {
+        Store.dispatch(copySegmentationLayerAction(true));
       },
     });
 

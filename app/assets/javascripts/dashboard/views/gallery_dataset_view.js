@@ -7,16 +7,20 @@ import Utils from "libs/utils";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import messages from "messages";
+
 import type { DatasetType } from "dashboard/views/dataset_view";
 import type { OxalisState } from "oxalis/store";
 
 const padding = 16;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   datasets: Array<DatasetType>,
   searchQuery: string,
-  activeUser: string,
-};
+} & StateProps;
 
 class GalleryDatasetView extends React.PureComponent<Props> {
   static defaultProps = {
@@ -56,7 +60,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       <Menu>
         <Menu.Item key="existing">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=true`}
+            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=true`}
             onClick={this.createTracing}
             title="Create volume tracing"
           >
@@ -65,7 +69,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         </Menu.Item>
         <Menu.Item key="new">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volumeTracing&withFallback=false`}
+            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=false`}
             onClick={this.createTracing}
             title="Create volume tracing"
           >
@@ -94,7 +98,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             <img src="/assets/images/eye.svg" alt="Eye" />
           </a>
           <a
-            href={`/datasets/${dataset.name}/trace?typ=skeletonTracing`}
+            href={`/datasets/${dataset.name}/trace?typ=skeleton`}
             title="Create skeleton tracing"
             onClick={this.createTracing}
           >
@@ -128,7 +132,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 

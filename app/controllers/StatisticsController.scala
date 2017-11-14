@@ -5,31 +5,28 @@ package controllers
 
 import javax.inject.Inject
 
-import scala.concurrent.Future
-
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationService}
 import models.task.{TaskService, TaskType}
 import models.task.OpenAssignmentService
+import models.binary.DataSetDAO
+import models.project.Project
+import models.task.{OpenAssignmentService, TaskService, TaskType}
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
-import play.api.libs.json.Json._
 import play.api.libs.functional.syntax._
+import play.api.libs.json.Json._
+import play.api.libs.json._
 import play.twirl.api.Html
-import models.user.{User, UserDAO, UserService}
+
+import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
-import models.tracing.skeleton.DBTreeDAO
-import models.binary.DataSetDAO
-import models.project.Project
-
 class StatisticsController @Inject()(val messagesApi: MessagesApi)
-  extends Controller
-  with UserAssignments {
+  extends Controller {
 
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
@@ -44,7 +41,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     )
   }
 
-  def oxalis(interval: String, start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
+  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
@@ -52,7 +49,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
           numberOfUsers <- UserService.countNonAnonymousUsers
           numberOfDatasets <- DataSetDAO.count(Json.obj())
           numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfTrees <- DBTreeDAO.count(Json.obj())
           numberOfAssignments <- OpenAssignmentService.countOpenAssignments
         } yield {
           Ok(Json.obj(
@@ -61,7 +57,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
             "numberOfUsers" -> numberOfUsers,
             "numberOfDatasets" -> numberOfDatasets,
             "numberOfAnnotations" -> numberOfAnnotations,
-            "numberOfTrees" -> numberOfTrees,
             "numberOfOpenAssignments" -> numberOfAssignments
           ))
         }
@@ -84,64 +79,6 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
         )
       }
       Ok(Json.toJson(json))
-    }
-  }
-}
-
-trait UserAssignments extends Dashboard with FoxImplicits { this: Controller =>
-  private case class UserWithTaskInfos(
-    user: User,
-    taskTypes: List[TaskType],
-    projects: List[Project],
-    futureTaskType: Option[TaskType],
-    workingTime: Long)
-
-  private object UserWithTaskInfos {
-    def userInfosPublicWrites(requestingUser: User): Writes[UserWithTaskInfos] =
-      ( (__ \ "user").write(User.userPublicWrites(requestingUser)) and
-        (__ \ "taskTypes").write[List[TaskType]] and
-        (__ \ "projects").write[List[Project]] and
-        (__ \ "futureTaskType").write[Option[TaskType]] and
-        (__ \ "workingTime").write[Long])( u =>
-        (u.user, u.taskTypes, u.projects, u.futureTaskType, u.workingTime))
-  }
-
-  def assignmentStatistics(start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
-
-    def getUserInfos(users: List[User]) = {
-
-      val futureTaskTypeMap = for {
-        futureTasks <- TaskService.simulateTaskAssignment(users)
-        futureTaskTypes <- Fox.serialSequence(futureTasks.toList){
-          case (user, task) => task.taskType.map(user -> _)
-        }.map(_.flatten)
-      } yield futureTaskTypes.toMap
-
-      Future.traverse(users){user =>
-        for {
-          annotations <- AnnotationService.openTasksFor(user).getOrElse(Nil)
-          tasks <- Fox.serialSequence(annotations)(_.task).map(_.flatten)
-          projects <- Fox.serialSequence(tasks)(_.project).map(_.flatten)
-          taskTypes <- Fox.serialSequence(tasks)(_.taskType).map(_.flatten)
-          taskTypeMap <- futureTaskTypeMap.getOrElse(Map.empty)
-          workingTime <- TimeSpanService.totalTimeOfUser(user, start, end).futureBox
-        } yield {
-          UserWithTaskInfos(
-            user,
-            taskTypes.distinct,
-            projects.distinct,
-            taskTypeMap.get(user),
-            workingTime.map(_.toMillis).toOption.getOrElse(0)
-          )
-        }
-      }
-    }
-
-    for {
-      users <- UserService.findAllNonAnonymous()
-      userInfos <- getUserInfos(users)
-    } yield {
-      Ok(Writes.list(UserWithTaskInfos.userInfosPublicWrites(request.identity)).writes(userInfos))
     }
   }
 }

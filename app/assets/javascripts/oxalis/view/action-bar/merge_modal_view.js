@@ -20,17 +20,22 @@ type TaskTypeInfoType = {
   label: string,
 };
 
+type ProjectInfoType = {
+  id: string,
+  label: string,
+};
+
 type Props = {
   isVisible: boolean,
   onOk: () => void,
-  tracingId: string,
+  annotationId: string,
   tracingType: string,
   history: ReactRouterHistoryType,
 };
 
 type MergeModalViewState = {
   taskTypes: Array<TaskTypeInfoType>,
-  projects: Array<string>,
+  projects: Array<ProjectInfoType>,
   selectedTaskType: ?string,
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
@@ -68,21 +73,15 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       const projects = await Request.receiveJSON("/api/projects", { doNotCatch: true });
       this.setState({
         taskTypes: taskTypes.map(taskType => ({ id: taskType.id, label: taskType.summary })),
-        projects: projects.map(project => project.name),
+        projects: projects.map(project => ({ id: project.id, label: project.name })),
       });
     })();
   }
 
-  validateId(id: string) {
-    return Request.receiveJSON(`/api/find?q=${id}&type=id`);
-  }
-
   async merge(url: string) {
     await api.tracing.save();
-    const annotation = await Request.receiveJSON(
-      `${url}/${this.state.readOnly ? "true" : "false"}`,
-    );
-    Toast.message(annotation.messages);
+    const annotation = await Request.receiveJSON(url);
+    Toast.messages(annotation.messages);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
     this.props.history.push(redirectUrl);
   }
@@ -104,14 +103,14 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   ) => {
     if (info.file.status === "done") {
       const { annotation } = info.file.response;
-      Toast.message(info.file.response.messages);
+      Toast.messages(info.file.response.messages);
       this.setState({ isUploading: false });
       const url =
         `/annotations/${annotation.typ}/${annotation.id}/merge/` +
-        `${this.props.tracingType}/${this.props.tracingId}`;
+        `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     } else if (info.file.status === "error") {
-      Toast.message(info.file.response.messages);
+      Toast.messages(info.file.response.messages);
       this.setState({ isUploading: false });
     }
   };
@@ -126,7 +125,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     if (selectedTaskType != null) {
       const url =
         `/annotations/CompoundTaskType/${selectedTaskType}/` +
-        `merge/${this.props.tracingType}/${this.props.tracingId}`;
+        `merge/${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
   };
@@ -137,7 +136,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     if (selectedProject != null) {
       const url =
         `/annotations/CompoundProject/${selectedProject}/merge/` +
-        `${this.props.tracingType}/${this.props.tracingId}`;
+        `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
   };
@@ -147,10 +146,9 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      await this.validateId(selectedExplorativeAnnotation);
       const url =
         `/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-        `${this.props.tracingType}/${this.props.tracingId}`;
+        `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
   };
@@ -180,7 +178,12 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               </Select>
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="default"
+                disabled={this.state.selectedTaskType == null}
+              >
                 Merge
               </Button>
             </Form.Item>
@@ -194,14 +197,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={this.handleChangeMergeProject}
               >
                 {this.state.projects.map(project => (
-                  <Select.Option key={project} value={project}>
-                    {project}
+                  <Select.Option key={project.id} value={project.id}>
+                    {project.label}
                   </Select.Option>
                 ))}
               </Select>
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="default"
+                disabled={this.state.selectedProject == null}
+              >
                 Merge
               </Button>
             </Form.Item>
@@ -211,7 +219,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             <Form.Item label="NML">
               <Upload
                 name="nmlFile"
-                action={jsRoutes.controllers.AnnotationIOController.upload().url}
+                action={"/annotations/upload"}
                 headers={{ authorization: "authorization-text" }}
                 beforeUpload={this.handleBeforeUploadNML}
                 onChange={this.handleChangeNML}
@@ -235,21 +243,18 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               />
             </Form.Item>
             <Form.Item>
-              <Button type="primary" htmlType="submit" size="default">
+              <Button
+                type="primary"
+                htmlType="submit"
+                size="default"
+                disabled={this.state.selectedExplorativeAnnotation.length !== 24}
+              >
                 Merge
               </Button>
             </Form.Item>
           </Form>
           <hr />
           <p>The merged tracing will be saved as a new explorative tracing.</p>
-          {/* <p>
-            <Switch
-              value={this.state.readOnly}
-              onChange={value => this.setState({ readOnly: value })}
-              style={{ marginRight: 5 }}
-            />
-            The merged tracing will be {this.state.readOnly ? "read-only" : "writeable"}.
-          </p> */}
         </Spin>
       </Modal>
     );
@@ -258,7 +263,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
 function mapStateToProps(state: OxalisState) {
   return {
-    tracingId: state.tracing.tracingId,
+    annotationId: state.tracing.annotationId,
     tracingType: state.tracing.tracingType,
   };
 }

@@ -1,36 +1,23 @@
 package models.user
 
-import java.util.UUID
-
-import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.mohiva.play.silhouette.api.util.PasswordInfo
+import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
-import play.api.Play.current
-import com.scalableminds.util.security.SCrypt._
-import net.liftweb.common.Box
-import reactivemongo.api.commands.WriteResult
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import com.scalableminds.util.reactivemongo._
+import com.scalableminds.util.tools.Fox
+import models.basics._
+import models.configuration.{DataSetConfiguration, UserConfiguration}
+import models.team._
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.functional.syntax._
+import play.api.libs.json.Json._
+import play.api.libs.json._
+import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json._
 
 import scala.concurrent.Future
-
-//import scala.collection.mutable.Stack
-//import play.api.libs.json.{Json, JsValue}
-import play.api.libs.json.Json._
-import models.basics._
-import models.team._
-import models.configuration.{UserConfiguration, DataSetConfiguration}
-import com.scalableminds.util.reactivemongo._
-//import scala.concurrent.Future
-import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
-import reactivemongo.api.indexes.{IndexType, Index}
-import reactivemongo.api.indexes.Index
-import play.api.libs.json._
-import play.api.libs.functional.syntax._
-import reactivemongo.core.commands.LastError
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{DenyEveryone, AllowIf}
-import com.scalableminds.util.tools.Fox
-import com.typesafe.scalalogging.LazyLogging
 
 case class User(
                  email: String,
@@ -47,9 +34,7 @@ case class User(
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate,
                  loginInfo: LoginInfo,
-                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity{
-
-  val dao = User
+                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity {
 
   def teamsWithRole(role: Role) = teams.filter(_.role == role)
 
@@ -75,6 +60,8 @@ case class User(
   def roleInTeam(team: String) = teams.find(_.team == team).map(_.role)
 
   def isAdminOf(team: String) = adminTeamNames.contains(team)
+
+  def isAdmin = adminTeams.nonEmpty
 
   override def toString = email
 
@@ -122,7 +109,7 @@ case class User(
 object User {
 
   implicit val passwordInfoJsonFormat = Json.format[PasswordInfo]
-  private[user] val userFormat = Json.format[User]
+  implicit val userFormat = Json.format[User]
 
   def userPublicWrites(requestingUser: User): Writes[User] =
     ((__ \ "id").write[String] and

@@ -2,38 +2,15 @@ package controllers
 
 import javax.inject.Inject
 
-import models.analytics.{AnalyticsDAO, AnalyticsEntry, UserAgentTrackingDAO}
-import play.api._
+import oxalis.security.silhouetteOxalis.{UserAwareAction, SecuredAction}
+import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
-import play.api.mvc.Action
-import play.api.routing.JavaScriptReverseRouter
 import play.twirl.api.Html
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 
 class Application @Inject()(val messagesApi: MessagesApi) extends Controller{
 
-  def javascriptRoutes = Action { implicit request =>
-    Ok(
-      JavaScriptReverseRouter("jsRoutes")(//fill in stuff which should be able to be called from js
-        controllers.routes.javascript.TaskController.request,
-        controllers.routes.javascript.AnnotationController.annotationsForTask,
-        controllers.routes.javascript.AnnotationController.trace,
-        controllers.routes.javascript.AnnotationController.finish,
-        controllers.routes.javascript.AnnotationController.finishAll,
-        controllers.routes.javascript.AnnotationController.reopen,
-        controllers.routes.javascript.AnnotationController.editAnnotation,
-        controllers.routes.javascript.AnnotationController.createExplorational,
-        controllers.routes.javascript.AnnotationIOController.download,
-        controllers.routes.javascript.AnnotationIOController.taskDownload,
-        controllers.routes.javascript.AnnotationIOController.projectDownload,
-        controllers.routes.javascript.AnnotationIOController.userDownload,
-        controllers.routes.javascript.AnnotationIOController.upload
-      )).as("text/javascript")
-  }
-
   def index() = UserAwareAction { implicit request =>
-    UserAgentTrackingDAO.trackUserAgent(request.identity.map(_._id), request.headers.get("user-agent").getOrElse("<none>"))
     request.identity match {
       case Some(user) if user.isAnonymous =>
         Redirect("/info")

@@ -20,7 +20,6 @@ mockRequire("app", {
 mockRequire("antd/lib/upload", () => <div />);
 mockRequire("c3", () => {});
 mockRequire("react-c3js", () => <div />);
-mockRequire("bootstrap-multiselect", {});
 
 // Antd makes use of fancy effects, which is why the rendering output is not reliable.
 // Mock these components to avoid this issue.

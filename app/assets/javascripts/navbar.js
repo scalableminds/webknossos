@@ -15,11 +15,14 @@ import type { ReactRouterHistoryType } from "react_router";
 const { SubMenu } = Menu;
 const { Header } = Layout;
 
+type StateProps = {
+  activeUser: ?APIUserType,
+};
+
 type Props = {
   isAuthenticated: boolean,
-  activeUser: APIUserType,
   history: ReactRouterHistoryType,
-};
+} & StateProps;
 
 class Navbar extends React.PureComponent<Props> {
   render() {
@@ -39,7 +42,7 @@ class Navbar extends React.PureComponent<Props> {
               webKnossos
             </Link>
           </Menu.Item>
-          {this.props.isAuthenticated ? (
+          {this.props.isAuthenticated && this.props.activeUser != null ? (
             [
               <Menu.Item key="/dashboard">
                 <Link to="/dashboard">
@@ -156,7 +159,7 @@ class Navbar extends React.PureComponent<Props> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 

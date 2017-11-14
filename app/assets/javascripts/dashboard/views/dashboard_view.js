@@ -10,6 +10,8 @@ import DatasetView from "dashboard/views/dataset_view";
 import DashboardTaskListView from "dashboard/views/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/views/explorative_annotations_view";
 import LoggedTimeView from "dashboard/views/logged_time_view";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+
 import type { APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 
@@ -22,11 +24,11 @@ type OwnProps = {
   isAdminView: boolean,
 };
 
-type StoreProps = {
-  activeUser: ?APIUserType,
+type StateProps = {
+  activeUser: APIUserType,
 };
 
-type Props = OwnProps & StoreProps;
+type Props = OwnProps & StateProps;
 
 type State = {
   activeTabKey: string,
@@ -129,8 +131,8 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StoreProps => ({
-  activeUser: state.activeUser,
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(DashboardView);

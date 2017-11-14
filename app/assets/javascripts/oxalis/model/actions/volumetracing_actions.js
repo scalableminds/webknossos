@@ -3,11 +3,13 @@
  * @flow
  */
 import type { Vector2, Vector3, OrthoViewType, VolumeToolType } from "oxalis/constants";
-import type { ServerTracing, VolumeContentDataType } from "oxalis/model";
+import type { ServerVolumeTracingType } from "oxalis/model";
+import type { APIAnnotationType } from "admin/api_flow_types";
 
 type InitializeVolumeTracingActionType = {
   type: "INITIALIZE_VOLUMETRACING",
-  tracing: ServerTracing<VolumeContentDataType>,
+  annotation: APIAnnotationType,
+  tracing: ServerVolumeTracingType,
 };
 type CreateCellActionType = { type: "CREATE_CELL", cellId: ?number };
 type StartEditingActionType = { type: "START_EDITING", position: Vector3, planeId: OrthoViewType };
@@ -16,6 +18,10 @@ type FinishEditingActionType = { type: "FINISH_EDITING" };
 type SetActiveCellActionType = { type: "SET_ACTIVE_CELL", cellId: number };
 type SetToolActionType = { type: "SET_TOOL", tool: VolumeToolType };
 type CycleToolActionType = { type: "CYCLE_TOOL" };
+export type CopySegmentationLayerActionType = {
+  type: "COPY_SEGMENTATION_LAYER",
+  source: "previousLayer" | "nextLayer",
+};
 type UpdateDirectionActionType = { type: "UPDATE_DIRECTION", centroid: Vector3 };
 type ResetContourActionType = { type: "RESET_CONTOUR" };
 type SetBrushPositionActionType = { type: "SET_BRUSH_POSITION", position: Vector2 };
@@ -35,14 +41,21 @@ export type VolumeTracingActionType =
   | ResetContourActionType
   | SetBrushPositionActionType
   | HideBrushActionType
-  | SetBrushSizeActionType;
+  | SetBrushSizeActionType
+  | CopySegmentationLayerActionType;
 
-export const VolumeTracingSaveRelevantActions = ["CREATE_CELL", "SET_ACTIVE_CELL"];
+export const VolumeTracingSaveRelevantActions = [
+  "CREATE_CELL",
+  "SET_ACTIVE_CELL",
+  "SET_USER_BOUNDING_BOX",
+];
 
 export const initializeVolumeTracingAction = (
-  tracing: ServerTracing<VolumeContentDataType>,
+  annotation: APIAnnotationType,
+  tracing: ServerVolumeTracingType,
 ): InitializeVolumeTracingActionType => ({
   type: "INITIALIZE_VOLUMETRACING",
+  annotation,
   tracing,
 });
 
@@ -81,6 +94,13 @@ export const setToolAction = (tool: VolumeToolType): SetToolActionType => ({
 
 export const cycleToolAction = (): CycleToolActionType => ({
   type: "CYCLE_TOOL",
+});
+
+export const copySegmentationLayerAction = (
+  fromNext?: boolean,
+): CopySegmentationLayerActionType => ({
+  type: "COPY_SEGMENTATION_LAYER",
+  source: fromNext ? "nextLayer" : "previousLayer",
 });
 
 export const updateDirectionAction = (centroid: Vector3): UpdateDirectionActionType => ({

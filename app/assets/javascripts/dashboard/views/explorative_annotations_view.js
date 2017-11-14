@@ -128,14 +128,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
-    const controller = jsRoutes.controllers.AnnotationController;
     const url =
       type === "finish"
-        ? controller.finish(tracing.typ, tracing.id).url
-        : controller.reopen(tracing.typ, tracing.id).url;
+        ? `/annotations/${tracing.typ}/${tracing.id}/finish`
+        : `/annotations/${tracing.typ}/${tracing.id}/reopen`;
 
     const newTracing = await Request.receiveJSON(url);
-    Toast.message(newTracing.messages);
+    Toast.messages(newTracing.messages);
 
     const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
 
@@ -162,17 +161,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return null;
     }
 
-    const controller = jsRoutes.controllers.AnnotationController;
     const { typ, id } = tracing;
     if (!this.state.shouldShowArchivedTracings) {
       return (
         <div>
-          <Link to={controller.trace(typ, id).url}>
+          <Link to={`/annotations/${typ}/${id}`}>
             <i className="fa fa-random" />
             <strong>Trace</strong>
           </Link>
           <br />
-          <Link to={jsRoutes.controllers.AnnotationIOController.download(typ, id).url}>
+          <Link to={`/annotations/${typ}/${id}/download`}>
             <i className="fa fa-download" />
             Download
           </Link>
@@ -228,7 +226,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     const payload = { data: { name } };
 
     Request.sendJSONReceiveJSON(url, payload).then(response => {
-      Toast.message(response.messages);
+      Toast.messages(response.messages);
     });
   }
 
@@ -244,7 +242,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             annotations: selectedAnnotationIds,
           },
         });
-        Toast.message(data.messages);
+        Toast.messages(data.messages);
 
         this.setState({
           archivedTracings: this.state.archivedTracings.concat(selectedAnnotations),
@@ -327,7 +325,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="#"
           dataIndex="id"
-          render={(__, tracing) => FormatUtils.formatHash(tracing.id)}
+          render={(__, tracing: APIAnnotationType) => FormatUtils.formatHash(tracing.id)}
           sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />
@@ -335,7 +333,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Name"
           dataIndex="name"
           sorter={Utils.localeCompareBy("name")}
-          render={(name, tracing) => (
+          render={(name: string, tracing: APIAnnotationType) => (
             <EditableTextLabel
               value={name}
               onChange={newName => this.renameTracing(tracing, newName)}
@@ -344,22 +342,22 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         />
         <Column
           title="Stats"
-          render={(__, tracing) =>
-            tracing.stats && tracing.contentType === "skeletonTracing" ? (
+          render={(__, tracing: APIAnnotationType) =>
+            tracing.stats && tracing.content.typ === "skeleton" ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />
-                  {tracing.stats.numberOfTrees}
+                  {tracing.stats.treeCount}
                 </span>
                 <br />
                 <span title="Nodes">
                   <i className="fa fa-bull" />
-                  {tracing.stats.numberOfNodes}
+                  {tracing.stats.nodeCount}
                 </span>
                 <br />
                 <span title="Edges">
                   <i className="fa fa-arrows-h" />
-                  {tracing.stats.numberOfEdges}
+                  {tracing.stats.edgeCount}
                 </span>
               </div>
             ) : null}
@@ -368,7 +366,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Tags"
           dataIndex="tags"
           width={500}
-          render={(tags, tracing) => (
+          render={(tags: Array<string>, tracing: APIAnnotationType) => (
             <div>
               {tags.map(tag => (
                 <Tag
@@ -402,7 +400,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="Actions"
           className="nowrap"
           key="action"
-          render={(__, tracing) => this.renderActions(tracing)}
+          render={(__, tracing: APIAnnotationType) => this.renderActions(tracing)}
         />
       </Table>
     );
@@ -439,10 +437,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         ) : (
           <div className="pull-right">
             <FileUpload
-              url="/admin/nml/upload"
+              url="/annotations/upload"
               accept=".nml, .zip"
               name="nmlFile"
               multiple
+              showUploadList={false}
               onSuccess={this.handleNMLUpload}
               onUploading={() => this.setState({ isUploadingNML: true })}
               onError={() => this.setState({ isUploadingNML: false })}

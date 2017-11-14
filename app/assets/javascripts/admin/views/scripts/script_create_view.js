@@ -1,117 +1,138 @@
-import _ from "lodash";
-import FormSyphon from "form-syphon";
-import Marionette from "backbone.marionette";
-import UserCollection from "admin/models/user/user_collection";
-import SelectionView from "admin/views/selection_view";
-import Toast from "libs/toast";
-import Store from "oxalis/store";
+// @flow
+import React from "react";
+import { connect } from "react-redux";
+import { Form, Input, Select, Button, Card } from "antd";
+import { getAdminUsers, updateScript, createScript, getScript } from "admin/admin_rest_api";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
-class ScriptCreateView extends Marionette.View {
-  static initClass() {
-    this.prototype.template = _.template(`\
-<div class="row">
-  <div class="col-sm-12">
-    <div class="well">
-      <div class="col-sm-9 col-sm-offset-2">
-        <h3><%- getTitle() %> Scripts</h3>
-      </div>
+import type { APIUserType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react_router";
+import type { OxalisState } from "oxalis/store";
 
-      <form method="POST" class="form-horizontal">
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="name">Script Name</label>
-          <div class="col-sm-9">
-            <input type="text" id="name" name="name" value="<%- name %>" class="form-control"
-             required pattern=".{3,}" title="Please use at least 3 characters.">
-          </div>
-        </div>
+const FormItem = Form.Item;
+const Option = Select.Option;
 
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="gist">Gist URL</label>
-          <div class="col-sm-9">
-            <input type="url" id="gist" name="gist" value="<%- gist %>" class="form-control">
-          </div>
-        </div>
+type StateProps = {
+  activeUser: APIUserType,
+};
 
-        <div class="form-group">
-          <label class="col-sm-2 control-label" for="ownerId">Owner</label>
-          <div class="col-sm-9 ownerId">
-          </div>
-        </div>
+type Props = {
+  scriptId: ?string,
+  form: Object,
+  history: ReactRouterHistoryType,
+} & StateProps;
 
-        <div class="form-group">
-          <div class="col-sm-2 col-sm-offset-9">
-          <button type="submit" class="form-control btn btn-primary"><%- getTitle() %></button>
-          </div>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>\
-`);
-    this.prototype.className = "container wide";
+type State = {
+  users: Array<APIUserType>,
+};
 
-    this.prototype.events = { "submit form": "submitForm" };
+class ScriptCreateView extends React.PureComponent<Props, State> {
+  state = {
+    users: [],
+  };
+  componentDidMount() {
+    this.fetchData();
+    this.applyDefaults();
+  }
 
-    this.prototype.regions = {
-      ownerId: ".ownerId",
+  async fetchData() {
+    const users = await getAdminUsers();
+    this.setState({ users: users.filter(user => user.isActive) });
+  }
+
+  async applyDefaults() {
+    const script = this.props.scriptId ? await getScript(this.props.scriptId) : null;
+    const defaultValues = {
+      owner: script ? script.owner.id : this.props.activeUser.id,
     };
 
-    this.prototype.ui = {
-      form: "form",
-    };
+    const defaultFormValues = Object.assign({}, script, defaultValues);
+    this.props.form.setFieldsValue(defaultFormValues);
   }
 
-  templateContext() {
-    return {
-      getTitle: () => (this.isEditingMode ? "Update" : "Create"),
-    };
-  }
+  handleSubmit = e => {
+    e.preventDefault();
+    this.props.form.validateFields(async (err, formValues) => {
+      if (!err) {
+        if (this.props.scriptId) {
+          await updateScript(this.props.scriptId, formValues);
+        } else {
+          await createScript(formValues);
+        }
 
-  initialize() {
-    this.isEditingMode = _.isString(this.model.id);
-
-    if (this.isEditingMode) {
-      this.listenTo(this.model, "sync", this.render);
-      this.model.fetch();
-    }
-  }
-
-  submitForm(event) {
-    event.preventDefault();
-
-    if (!this.ui.form[0].checkValidity()) {
-      Toast.error("Please supply all needed values.");
-      return;
-    }
-
-    const formValues = FormSyphon.serialize(this.ui.form);
-
-    this.model.save(formValues).then(() => this.props.history.push("/scripts"));
-  }
-
-  onRender() {
-    const owner = this.model.get("owner");
-    const defaultUserId = owner ? owner.id : Store.getState().activeUser.id;
-    const userSelectionView = new SelectionView({
-      collection: new UserCollection(),
-      childViewOptions: {
-        modelValue() {
-          return this.model.id;
-        },
-        modelLabel() {
-          return `${this.model.get("lastName")}, ${this.model.get("firstName")} (${this.model.get(
-            "email",
-          )})`;
-        },
-        defaultItem: { id: defaultUserId },
-      },
-      filter: model => model.get("isActive"),
-      name: "ownerId",
-      data: "isAdmin=true",
+        this.props.history.push("/scripts");
+      }
     });
-    this.showChildView("ownerId", userSelectionView);
+  };
+
+  render() {
+    const { getFieldDecorator } = this.props.form;
+    const titlePrefix = this.props.scriptId ? "Update" : "Create";
+
+    return (
+      <div className="container wide" style={{ paddingTop: 20 }}>
+        <Card title={<h3>{titlePrefix} Script</h3>}>
+          <Form onSubmit={this.handleSubmit} layout="vertical">
+            <FormItem label="Script Name" hasFeedback>
+              {getFieldDecorator("name", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                  { min: 3 },
+                ],
+              })(<Input autoFocus />)}
+            </FormItem>
+
+            <FormItem label="Gist URL" hasFeedback>
+              {getFieldDecorator("gist", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                  { type: "url" },
+                ],
+              })(<Input />)}
+            </FormItem>
+
+            <FormItem label="Owner" hasFeedback>
+              {getFieldDecorator("owner", {
+                rules: [
+                  {
+                    required: true,
+                  },
+                ],
+              })(
+                <Select
+                  showSearch
+                  placeholder="Select a User"
+                  optionFilterProp="children"
+                  style={{ width: "100%" }}
+                >
+                  {this.state.users.map((user: APIUserType) => (
+                    <Option key={user.id} value={user.id}>
+                      {`${user.lastName}, ${user.firstName} ${user.email}`}
+                    </Option>
+                  ))}
+                </Select>,
+              )}
+            </FormItem>
+
+            <FormItem>
+              <Button type="primary" htmlType="submit">
+                {titlePrefix} Script
+              </Button>
+            </FormItem>
+          </Form>
+        </Card>
+      </div>
+    );
   }
 }
-ScriptCreateView.initClass();
 
-export default ScriptCreateView;
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(Form.create()(ScriptCreateView));
+

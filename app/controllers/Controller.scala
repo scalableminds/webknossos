@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.braingames.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
@@ -21,6 +22,7 @@ trait Controller extends PlayController
   with ExtendedController
   with ProvidesSessionData
   with models.basics.Implicits
+  with ValidationHelpers
   with I18nSupport
   with LazyLogging {
 
@@ -63,20 +65,15 @@ trait Controller extends PlayController
       )
     )
 
-  def bulk2StatusJson(results: List[Box[JsObject]]) = {
-    def singleResult2Status(e: Box[JsObject]) =
-      e match {
-        case Full(s)                                 =>
-          Json.obj("status" -> OK, jsonSuccess -> s)
-        case ParamFailure(msg, _, _, errorCode: Int) =>
-          Json.obj("status" -> errorCode, jsonError -> msg)
-        case Failure(msg, _, _)                      =>
-          Json.obj("status" -> BAD_REQUEST, jsonError -> msg)
-      }
-    val successful = results.count(_.isDefined)
-    val errors = results.exists(_.isEmpty)
-    val items = results.map(singleResult2Status)
-    Json.obj("errors" -> errors, "successful" -> successful, "items" -> items)
+  def bulk2StatusJson(results: List[Box[JsObject]])= {
+    results.map {
+      case Full(s)                                 =>
+        Json.obj("status" -> OK, jsonSuccess -> s)
+      case ParamFailure(msg, _, _, errorCode: Int) =>
+        Json.obj("status" -> errorCode, jsonError -> msg)
+      case Failure(msg, _, _)                      =>
+        Json.obj("status" -> BAD_REQUEST, jsonError -> msg)
+    }
   }
 
   def withJsonBodyAs[A](f: A => Fox[Result])(implicit rds: Reads[A], request: Request[JsValue]): Fox[Result] = {

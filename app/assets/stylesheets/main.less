@@ -1,10 +1,7 @@
 @import "../../../node_modules/bootstrap/less/bootstrap.less";
 @import "../../../node_modules/antd/dist/antd.css";
 @import (inline) "../../../node_modules/c3/c3.css";
-@import (inline) "../../../node_modules/bootstrap-daterangepicker/daterangepicker.css";
-@import (inline) "../../../node_modules/nouislider/distribute/nouislider.min.css";
 @import "../../../node_modules/font-awesome/less/font-awesome.less";
-@import "../../../node_modules/bootstrap-multiselect/dist/less/bootstrap-multiselect.less";
 @import "../../../node_modules/jasny-bootstrap/less/build/jasny-bootstrap.less";
 
 @import "_variables.less";
@@ -157,20 +154,14 @@ td.nowrap * {
   display: inline;
 }
 
-#alert-container {
-  position: fixed;
-  right: 20px;
-  top: 60px;
-  z-index: @zindex-modal + 1;
+.ant-notification {
+  z-index: 1040; // make sure we are above nav bar
+  width: auto;
+  max-width: 80vw;
+}
 
-  .alert {
-    cursor: default;
-    position: relative;
-  }
-  .alert:hover {
-    box-shadow: 0 0 10px rgba(100, 100, 100, 0.2);
-  }
-  .alert iframe {
+.ant-notification-notice {
+  iframe {
     border: none;
     height: 200px;
     width: 500px;
@@ -180,41 +171,45 @@ td.nowrap * {
 
   @keyframes alert-wiggle {
     0% {
-      transform: translateX(0px);
+      transform: translateX(0px) translateY(0px);
     }
     2% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     4% {
-      transform: translateX(-10px);
+      transform: translateX(-8px) translateY(8px);
     }
     6% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     8% {
-      transform: translateX(-10px);
+      transform: translateX(-8px) translateY(8px);
     }
     10% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     12% {
-      transform: translateX(-10px);
+      transform: translateX(-8px) translateY(8px);
     }
     14% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     16% {
-      transform: translateX(-10px);
+      transform: translateX(-8px) translateY(8px);
     }
     18% {
-      transform: translateX(10px);
+      transform: translateX(8px) translateY(-8px);
     }
     20% {
-      transform: translateX(0px);
+      transform: translateX(0px) translateY(0px);
     }
   }
+
   .alert-wiggle {
-    animation: alert-wiggle 5s infinite;
+    animation-name: alert-wiggle;
+    animation-duration: 5s;
+    animation-delay: 0s;
+    animation-iteration-count: infinite;
   }
 }
 

@@ -6,11 +6,13 @@
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
     @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
+    @if(play.api.Play.current.configuration.getBoolean("application.authentication.enableDevAutoLogin")){
+      <script src="/autoLogin"></script>
+    }
     <script type="text/javascript"
       data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
       data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
       data-airbrake-environment-name=@play.api.Play.current.configuration.getString("airbrake.environment")></script>
-    <script type="text/javascript" src="@routes.Assets.at("javascripts/routes.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script type="text/javascript" src="@routes.Assets.at("bundle/manifest.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script type="text/javascript" src="@routes.Assets.at("bundle/vendor.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
     <script type="text/javascript" src="@routes.Assets.at("bundle/main.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>

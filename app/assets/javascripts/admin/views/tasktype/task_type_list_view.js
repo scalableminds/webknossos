@@ -174,7 +174,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                     </Link>
                     <br />
                     <Link to={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
-                      <Icon type="book" />Tasks
+                      <Icon type="schedule" />Tasks
                     </Link>
                     <br />
                     <Link

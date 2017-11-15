@@ -13,24 +13,22 @@ import SaveButton from "oxalis/view/action-bar/save_button";
 import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
-import type { Dispatch } from "redux";
+import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
 import type { ReactRouterHistoryType } from "react_router";
 
-type Props = {
-  // eslint-disable-next-line react/no-unused-prop-types
+type StateProps = {
   tracingType: string,
-  // eslint-disable-next-line react/no-unused-prop-types
   annotationId: string,
-  // eslint-disable-next-line react/no-unused-prop-types
   restrictions: RestrictionsType & SettingsType,
-  // eslint-disable-next-line react/no-unused-prop-types
-  dispatch: Dispatch<*>,
   task: ?TaskType,
-  activeUser: APIUserType,
-  history: ReactRouterHistoryType,
+  activeUser: ?APIUserType,
 };
+
+type Props = {
+  history: ReactRouterHistoryType,
+} & StateProps;
 
 type State = {
   isShareModalOpen: boolean,
@@ -38,7 +36,7 @@ type State = {
   isUserScriptsModalOpen: boolean,
 };
 
-class DatasetActionsView extends PureComponent<Props, State> {
+class TracingActionsView extends PureComponent<Props, State> {
   state = {
     isShareModalOpen: false,
     isMergeModalOpen: false,
@@ -52,6 +50,14 @@ class DatasetActionsView extends PureComponent<Props, State> {
       event.target.blur();
     }
     await Model.save();
+  };
+
+  handleUndo = () => {
+    Store.dispatch(undoAction());
+  };
+
+  handleRedo = () => {
+    Store.dispatch(redoAction());
   };
 
   handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
@@ -120,18 +126,28 @@ class DatasetActionsView extends PureComponent<Props, State> {
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.restrictions;
 
-    const saveButton = restrictions.allowUpdate ? (
-      <SaveButton onClick={this.handleSave} />
-    ) : (
-      [
-        <ButtonComponent key="read-only-button" type="primary" disabled>
-          Read only
-        </ButtonComponent>,
-        <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
-          Copy To My Account
-        </ButtonComponent>,
-      ]
-    );
+    const saveButton = restrictions.allowUpdate
+      ? [
+          isSkeletonMode
+            ? [
+                <ButtonComponent key="undo-button" title="Undo (Ctrl+Z)" onClick={this.handleUndo}>
+                  <i className="fa fa-undo" aria-hidden="true" />
+                </ButtonComponent>,
+                <ButtonComponent key="redo-button" title="Redo (Ctrl+Y)" onClick={this.handleRedo}>
+                  <i className="fa fa-repeat" aria-hidden="true" />
+                </ButtonComponent>,
+              ]
+            : null,
+          <SaveButton key="save-button" onClick={this.handleSave} />,
+        ]
+      : [
+          <ButtonComponent key="read-only-button" type="primary" disabled>
+            Read only
+          </ButtonComponent>,
+          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+            Copy To My Account
+          </ButtonComponent>,
+        ];
 
     const finishAndNextTaskButton =
       hasAdvancedOptions && restrictions.allowFinish && this.props.task ? (
@@ -236,7 +252,7 @@ class DatasetActionsView extends PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     tracingType: state.tracing.tracingType,
     annotationId: state.tracing.annotationId,
@@ -246,4 +262,4 @@ function mapStateToProps(state: OxalisState) {
   };
 }
 
-export default withRouter(connect(mapStateToProps)(DatasetActionsView));
+export default withRouter(connect(mapStateToProps)(TracingActionsView));

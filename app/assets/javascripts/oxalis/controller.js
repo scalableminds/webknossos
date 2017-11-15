@@ -39,14 +39,16 @@ import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
+type StateProps = {
+  viewMode: ModeType,
+};
+
 type Props = {
+  history: ReactRouterHistoryType,
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,
-  // Delivered by connect()
-  viewMode: ModeType,
-  history: ReactRouterHistoryType,
-};
+} & StateProps;
 
 type State = {
   ready: boolean,
@@ -329,7 +331,7 @@ class Controller extends React.PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
   };

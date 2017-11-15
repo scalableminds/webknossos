@@ -536,7 +536,7 @@ class Skeleton {
    * Calculates a resizing factor for the active node's radius every time the
    * active node id changes. In essence this animates the node's radius to grow/shrink a little.
    */
-  animateNodeScale(from: number, to: number) {
+  animateNodeScale(from: number, to: number): Promise<void> {
     return new Promise((resolve, reject) => {
       const setScaleFactor = scale => {
         this.nodes.material.uniforms.activeNodeScaleFactor.value = scale;

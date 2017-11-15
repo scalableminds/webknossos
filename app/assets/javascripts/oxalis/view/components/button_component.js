@@ -17,12 +17,11 @@ class ButtonComponent extends React.PureComponent<ButtonComponentPropType> {
     onClick: _.noop,
   };
 
-  handleClick = (e: Event & { currentTarget: HTMLButtonElement }) => {
+  handleClick = (e: SyntheticEvent<HTMLButtonElement>) => {
     // For antd buttons e.target seems to be the span with the button description, whereas
     // e.currentTarget is the actual button
-    if (e != null && e.currentTarget != null) {
-      e.currentTarget.blur();
-    }
+    e.currentTarget.blur();
+
     if (this.props.onClick) {
       this.props.onClick(e);
     }

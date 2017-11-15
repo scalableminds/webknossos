@@ -86,13 +86,13 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
   }
 
   setTeams = () => {
-    const newTeams: Array<APITeamRoleType> = this.state.selectedTeams.filter(
-      team => team.role != null,
-    );
+    const newTeams = this.state.selectedTeams.filter(team => team.role != null);
+    // flow does not understand the purpose of .filter()
+    const newerTeams = ((newTeams: any): Array<APITeamRoleType>);
 
     const newUserPromises = this.props.users.map(user => {
       if (this.props.selectedUserIds.includes(user.id)) {
-        const newUser = Object.assign({}, user, { teams: newTeams });
+        const newUser = Object.assign({}, user, { teams: newerTeams });
 
         // server-side validation can reject a user's new teams
         return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(user));

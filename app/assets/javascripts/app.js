@@ -3,7 +3,7 @@
  * @flow
  */
 import Marionette from "backbone.marionette";
-import typeof OxalisController from "oxalis/controller";
+import OxalisController from "oxalis/controller";
 import window from "libs/window";
 
 class OxalisApplication extends Marionette.Application {

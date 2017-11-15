@@ -238,3 +238,4 @@ point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 mturk.qualification.invalid=The entered qualification is unknown
 
 mail.welcome.subject = Welcome to ScalableMinds
+script.notFound=Script couldn''t be found

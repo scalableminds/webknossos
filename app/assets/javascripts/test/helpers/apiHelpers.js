@@ -90,8 +90,9 @@ export function setupOxalis(t, mode, apiVersion = 2) {
     .returns(Promise.resolve(_.cloneDeep(DATASET)));
   Request.receiveJSON
     .withArgs(
-      `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${ANNOTATION.content
-        .id}?token=${TOKEN}`,
+      `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${
+        ANNOTATION.content.id
+      }?token=${TOKEN}`,
     )
     .returns(Promise.resolve(_.cloneDeep(modelData[mode].tracing)));
   Request.receiveJSON

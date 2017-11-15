@@ -67,8 +67,9 @@ test.beforeEach(t => {
     .returns(Promise.resolve(_.cloneDeep(DATASET)));
   Request.receiveJSON
     .withArgs(
-      `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${ANNOTATION.content
-        .id}`,
+      `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${
+        ANNOTATION.content.id
+      }`,
     )
     .returns(Promise.resolve(_.cloneDeep(TRACING)));
   User.prototype.fetch.returns(Promise.resolve());

@@ -162,8 +162,9 @@ export class OxalisModel {
       const nonNullAnnotation = annotation;
       tracing = await doWithToken(token =>
         Request.receiveJSON(
-          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content
-            .typ}/${nonNullAnnotation.content.id}?token=${token}`,
+          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content.typ}/${
+            nonNullAnnotation.content.id
+          }?token=${token}`,
         ),
       );
       tracing.id = annotation.content.id;

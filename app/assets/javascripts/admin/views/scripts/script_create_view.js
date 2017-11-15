@@ -135,4 +135,3 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 export default connect(mapStateToProps)(Form.create()(ScriptCreateView));
-

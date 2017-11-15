@@ -88,7 +88,8 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         <Item key={`${annotation.id}-transfer`}>
           <span
             onClick={() =>
-              this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })}
+              this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })
+            }
           >
             <i className="fa fa-share" />
             Transfer
@@ -138,8 +139,9 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           <tbody>
             {this.state.annotations.map((annotation: APIAnnotationType) => {
               const userString = annotation.user
-                ? `${annotation.user.firstName} ${annotation.user.lastName} ( ${annotation.user
-                    .email} )`
+                ? `${annotation.user.firstName} ${annotation.user.lastName} ( ${
+                    annotation.user.email
+                  } )`
                 : "<no user>";
               return (
                 <tr key={`${annotation.id}-tr`}>

@@ -36,7 +36,9 @@ class Mappings {
             {},
           )
         : {};
-    this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
+    this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${
+      layer.name
+    }/mappings/`;
   }
 
   getMappingNames(): Array<string> {

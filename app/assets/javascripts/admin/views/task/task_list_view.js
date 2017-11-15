@@ -183,7 +183,8 @@ class TaskListView extends React.PureComponent<Props, State> {
                     <Tag>
                       {neededExperience.domain} : {neededExperience.value}
                     </Tag>
-                  ) : null}
+                  ) : null
+                }
               />
               <Column
                 title="Creation Date"

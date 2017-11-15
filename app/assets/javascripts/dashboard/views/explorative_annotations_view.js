@@ -233,7 +233,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   archiveAll = () => {
     const selectedAnnotations = this.getFilteredTracings();
     Modal.confirm({
-      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags?`,
+      content: `Are you sure you want to archive all ${
+        selectedAnnotations.length
+      } explorative annotations matching the current search query / tags?`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map(t => t.id);
         const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
@@ -360,7 +362,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   {tracing.stats.edgeCount}
                 </span>
               </div>
-            ) : null}
+            ) : null
+          }
         />
         <Column
           title="Tags"

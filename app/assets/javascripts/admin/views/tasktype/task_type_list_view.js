@@ -142,7 +142,8 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                     <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
                       {mode}
                     </Tag>
-                  ))}
+                  ))
+                }
               />
               <Column
                 title="Settings"

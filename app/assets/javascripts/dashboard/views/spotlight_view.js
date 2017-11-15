@@ -1,4 +1,4 @@
-// flow
+// @flow
 import * as React from "react";
 import { transformDatasets } from "dashboard/views/dataset_view";
 import GalleryDatasetView from "dashboard/views/gallery_dataset_view";
@@ -10,7 +10,7 @@ const { Header, Content, Footer } = Layout;
 
 type State = {
   datasets: Array<DatasetType>,
-  isLoading: false,
+  isLoading: boolean,
 };
 
 class SpotlightView extends React.PureComponent<{}, State> {

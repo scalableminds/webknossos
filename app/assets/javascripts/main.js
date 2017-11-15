@@ -1,6 +1,6 @@
 /**
  * main.js
- * @flow weak
+ * @flow
  */
 
 import $ from "jquery";

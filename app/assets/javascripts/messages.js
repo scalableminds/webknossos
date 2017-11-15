@@ -10,6 +10,8 @@ In order to restore the current window, a reload is necessary.`,
   "save.leave_page_unfinished":
     "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.",
   "save.failed": "Failed to save tracing. Retrying.",
+  "undo.no_undo": "There is no action that could be undone.",
+  "undo.no_redo": "There is no action that could be redone.",
   "finish.confirm": "Are you sure you want to permanently finish this tracing?",
   "download.wait": "Please wait...",
   "download.close_window": "You may close this window after the download has started.",
@@ -20,6 +22,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
     "You didn't add a node after jumping to this branchpoint, do you really want to jump again?",
+  "tracing.segmentation_zoom_warning":
+    "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
   "tracing.no_access": "You are not allowed to access this tracing.",
   "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
@@ -29,6 +33,8 @@ In order to restore the current window, a reload is necessary.`,
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
+  "task.bulk_create_invalid":
+    "Can not parse task specification. It includes at least one invalid task.",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.ndstore_success":
     "The dataset was successfully added to webKnossos from the specified NDStore.",

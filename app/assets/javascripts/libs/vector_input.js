@@ -1,13 +1,14 @@
 // @flow
-import type { Vector3 } from "oxalis/constants";
+/* eslint-disable prefer-default-export */
+import type { Vector3, Vector6 } from "oxalis/constants";
 import * as React from "react";
 import Utils from "libs/utils";
 import _ from "lodash";
 import { Input } from "antd";
 
-type Vector3InputPropTypes = {
-  value: Vector3,
-  onChange: (value: Vector3) => void,
+type BaseProps<T> = {
+  value: T | string,
+  onChange: (value: T) => void,
 };
 
 type State = {
@@ -16,26 +17,34 @@ type State = {
   text: string,
 };
 
-export default class Vector3Input extends React.PureComponent<Vector3InputPropTypes, State> {
-  constructor(props: Vector3InputPropTypes) {
+// Accepts both a string or a VectorX as input and always outputs a valid VectorX
+class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>, State> {
+  defaultValue: T;
+
+  constructor(props: BaseProps<T>) {
     super(props);
     this.state = {
       isEditing: false,
       isValid: true,
-      text: props.value.join(", "),
+      text: this.getText(props.value),
     };
   }
 
-  componentWillReceiveProps(newProps: Vector3InputPropTypes) {
+  componentWillReceiveProps(newProps: BaseProps<T>) {
     if (!this.state.isEditing) {
       this.setState({
         isValid: true,
-        text: newProps.value.join(", "),
+        text: this.getText(newProps.value),
       });
     }
   }
 
-  defaultValue: Vector3 = [0, 0, 0];
+  getText(value: T | string): string {
+    if (Array.isArray(value)) {
+      return value.join(", ");
+    }
+    return value;
+  }
 
   handleBlur = () => {
     this.setState({
@@ -44,7 +53,7 @@ export default class Vector3Input extends React.PureComponent<Vector3InputPropTy
     if (this.state.isValid) {
       this.setState({
         isValid: true,
-        text: this.props.value.join(", "),
+        text: this.getText(this.props.value),
       });
     } else {
       this.props.onChange(this.defaultValue);
@@ -58,7 +67,7 @@ export default class Vector3Input extends React.PureComponent<Vector3InputPropTy
   handleFocus = () => {
     this.setState({
       isEditing: true,
-      text: this.props.value.join(", "),
+      text: this.getText(this.props.value),
       isValid: true,
     });
   };
@@ -69,10 +78,11 @@ export default class Vector3Input extends React.PureComponent<Vector3InputPropTy
     // only numbers, commas and whitespace is allowed
     const isValidInput = /^[\d\s,]*$/g.test(text);
     const value = Utils.stringToNumberArray(text);
-    const isValidFormat = value.length === 3;
+    const isValidFormat = value.length === this.defaultValue.length;
 
     if (isValidFormat && isValidInput) {
-      this.props.onChange(Utils.numberArrayToVector3(value));
+      const vector = ((value: any): T);
+      this.props.onChange(vector);
     }
 
     this.setState({
@@ -93,4 +103,12 @@ export default class Vector3Input extends React.PureComponent<Vector3InputPropTy
       />
     );
   }
+}
+
+export class Vector3Input extends BaseVector<Vector3> {
+  defaultValue: Vector3 = [0, 0, 0];
+}
+
+export class Vector6Input extends BaseVector<Vector6> {
+  defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
 }

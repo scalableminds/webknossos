@@ -103,7 +103,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               `This tracing was initialized with an active node ID, which does not
               belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
               the last tree instead.`,
-              null,
+              undefined,
               true,
             );
             activeNodeId = null;

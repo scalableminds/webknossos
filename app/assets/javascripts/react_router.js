@@ -201,14 +201,14 @@ class ReactRouter extends React.Component<*> {
                   isAuthenticated={isAuthenticated}
                   path="/projects/:projectName/tasks"
                   render={({ match }: ReactRouterArgumentsType) => (
-                    <ProjectCreateView projectName={match.params.projectName} />
+                    <TaskListView initialFieldValues={{ projectName: match.params.projectName }} />
                   )}
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
-                  path="/projects/:id/edit"
+                  path="/projects/:projectName/edit"
                   render={({ match }: ReactRouterArgumentsType) => (
-                    <TaskListView initialFieldValues={{ projectName: match.params.projectName }} />
+                    <ProjectCreateView projectName={match.params.projectName} />
                   )}
                 />
                 <SecuredRoute
@@ -259,7 +259,7 @@ class ReactRouter extends React.Component<*> {
                   isAuthenticated={isAuthenticated}
                   path="/taskTypes/:taskTypeId/edit"
                   render={({ match }: ReactRouterArgumentsType) => (
-                    <TaskTypeCreateView id={match.params.taskTypeId} />
+                    <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                   )}
                 />
                 <SecuredRoute

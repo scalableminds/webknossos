@@ -58,11 +58,7 @@ object NmlTaskParameters {
   implicit val nmlTaskParametersFormat = Json.format[NmlTaskParameters]
 }
 
-<<<<<<< HEAD
 class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with FoxImplicits {
-=======
-class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with Secured with FoxImplicits {
->>>>>>> 3f3782f6d202f56d75bcdf84f5d7683bc19acf26
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -149,17 +145,10 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
       taskObjects: List[Fox[Task]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
       annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
-<<<<<<< HEAD
-                                                                taskFox = tuple._3,
-                                                                request.identity._id,
-                                                                tracingReferenceBox=tuple._2,
-                                                                dataSetName))
-=======
         taskFox = tuple._3,
-        request.user._id,
+        request.identity._id,
         tracingReferenceBox = tuple._2,
         dataSetName))
->>>>>>> 3f3782f6d202f56d75bcdf84f5d7683bc19acf26
       zippedTasksAndAnnotations = taskObjects zip annotationBases
       taskJsons = zippedTasksAndAnnotations.map(tuple => Task.transformToJsonFoxed(tuple._1, tuple._2))
       result <- {
@@ -171,14 +160,7 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield Ok(Json.toJson(result))
   }
 
-<<<<<<< HEAD
-  private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: SecuredRequest[_]): Fox[Task] = {
-    for {
-      taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
-      project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- ensureTeamAdministration(request.identity, params.team)
-=======
-  private def validateScript(scriptIdOpt: Option[String])(implicit request: AuthenticatedRequest[_]): Fox[Option[String]] = {
+  private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[_]): Fox[Option[String]] = {
     scriptIdOpt match {
       case Some(scriptId) =>
         for {
@@ -190,13 +172,12 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-  private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: AuthenticatedRequest[_]): Fox[Task] = {
+  private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: SecuredRequest[_]): Fox[Task] = {
     for {
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       script <- validateScript(params.scriptId)
-      _ <- ensureTeamAdministration(request.user, params.team)
->>>>>>> 3f3782f6d202f56d75bcdf84f5d7683bc19acf26
+      _ <- ensureTeamAdministration(request.identity, params.team)
       task = Task(
         taskType._id,
         params.team,
@@ -256,11 +237,7 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-<<<<<<< HEAD
-  def list = SecuredAction.async{ implicit request =>
-=======
-  def list = Authenticated.async { implicit request =>
->>>>>>> 3f3782f6d202f56d75bcdf84f5d7683bc19acf26
+  def list = SecuredAction.async { implicit request =>
     for {
 
       tasks <- TaskService.findAllAdministratable(request.identity, limit = 10000)

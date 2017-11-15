@@ -1,6 +1,6 @@
 /**
  * admin.js
- * @flow weak
+ * @flow
  */
 
 import DatasetAddView from "admin/views/dataset/dataset_add_view";

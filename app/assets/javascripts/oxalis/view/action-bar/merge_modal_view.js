@@ -24,12 +24,14 @@ type ProjectInfoType = {
   label: string,
 };
 
-type Props = {
-  isVisible: boolean,
-  onOk: () => void,
+type StateProps = {
   annotationId: string,
   tracingType: string,
 };
+type Props = {
+  isVisible: boolean,
+  onOk: () => void,
+} & StateProps;
 
 type MergeModalViewState = {
   taskTypes: Array<TaskTypeInfoType>,
@@ -259,7 +261,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     annotationId: state.tracing.annotationId,
     tracingType: state.tracing.tracingType,

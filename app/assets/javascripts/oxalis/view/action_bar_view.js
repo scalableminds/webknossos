@@ -32,7 +32,7 @@ class ActionBarView extends React.PureComponent<Props> {
     );
   }
 }
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: OxalisState): Props => ({
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
   restrictions: state.tracing.restrictions,

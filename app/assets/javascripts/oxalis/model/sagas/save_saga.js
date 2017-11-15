@@ -331,7 +331,7 @@ export function performDiffTracing(
   }
 }
 
-export function* saveTracingAsync(): Generator<*, *, *> {
+export function* saveTracingAsync(): Generator<any, any, any> {
   const { initSkeleton } = yield race({
     initSkeleton: take("INITIALIZE_SKELETONTRACING"),
     initVolume: take("INITIALIZE_VOLUMETRACING"),

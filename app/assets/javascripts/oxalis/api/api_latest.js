@@ -1,6 +1,6 @@
 /*
  * api_latest.js
- * @flow strict
+ * @flow
  */
 
 import _ from "lodash";

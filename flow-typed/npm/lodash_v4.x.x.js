@@ -197,7 +197,8 @@ declare module 'lodash' {
     includes(str: string, value: string, fromIndex?: number): bool;
     invokeMap<T>(array: ?Array<T>, path: ((value: T) => Array<string>|string)|Array<string>|string, ...args?: Array<any>): Array<any>;
     invokeMap<T: Object>(object: T, path: ((value: any) => Array<string>|string)|Array<string>|string, ...args?: Array<any>): Array<any>;
-    keyBy<T, V>(array: ?Array<T>, iteratee?: ValueOnlyIteratee<T>): {[key: V]: T};
+    keyBy<T, V>(array: ?Array<T>, iteratee?: (value: T) => V): {[key: V]: T};
+    keyBy<T: Object, V: string>(array: ?Array<T>, iteratee?: V): {[key: $ElementType<T, V>]: T};
     keyBy<V, A, I, T: {[id: I]: A}>(object: T, iteratee?: ValueOnlyIteratee<A>): {[key: V]: ?A};
     map<T, U>(array: ?Array<T>, iteratee?: MapIterator<T, U>): Array<U>;
     map<V, T: Object, U>(object: ?T, iteratee?: OMapIterator<V, T, U>): Array<U>;
@@ -410,6 +411,7 @@ declare module 'lodash' {
     unset(object?: ?Object, path?: ?Array<string>|string): bool;
     update(object: Object, path: string[]|string, updater: Function): Object;
     updateWith(object: Object, path: string[]|string, updater: Function, customizer?: Function): Object;
+    values<K,V>(object?: {[key: K]: V}): Array<V>;
     values(object?: ?Object): Array<any>;
     valuesIn(object?: ?Object): Array<any>;
 
@@ -460,10 +462,10 @@ declare module 'lodash' {
     cond(pairs: NestedArray<Function>): Function;
     conforms(source: Object): Function;
     constant<T>(value: T): () => T;
-    defaultTo<T1:string|boolean|Object,T2>(value: T1, default: T2): T1;
+    defaultTo<T1:string|boolean|Object,T2>(value: T1, defaultTo: T2): T1;
     // NaN is a number instead of its own type, otherwise it would behave like null/void
-    defaultTo<T1:number,T2>(value: T1, default: T2): T1|T2;
-    defaultTo<T1:void|null,T2>(value: T1, default: T2): T2;
+    defaultTo<T1:number,T2>(value: T1, defaultTo: T2): T1|T2;
+    defaultTo<T1:void|null,T2>(value: T1, defaultTo: T2): T2;
     flow(...funcs?: Array<Function>): Function;
     flow(funcs?: Array<Function>): Function;
     flowRight(...funcs?: Array<Function>): Function;

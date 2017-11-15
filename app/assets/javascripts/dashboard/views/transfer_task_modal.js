@@ -11,9 +11,6 @@ const { Option } = Select;
 
 type Props = {
   onChange: (updatedAnnotation: APIAnnotationType) => void,
-  // Somehow, eslint doesn't recognize that annotationId is used in
-  // the async functions
-  // eslint-disable-next-line react/no-unused-prop-types
   annotationId: ?string,
   onCancel: Function,
   visible: boolean,

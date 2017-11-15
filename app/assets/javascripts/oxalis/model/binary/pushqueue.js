@@ -37,7 +37,7 @@ class PushQueue {
     });
     this.taskQueue.on("success", () => {
       $("body").removeClass("save-error");
-      Toast.delete("danger", autoSaveFailureMessage);
+      Toast.close(autoSaveFailureMessage);
     });
   }
 

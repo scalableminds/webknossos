@@ -154,7 +154,7 @@ export function toggleErrorHighlighting(state: boolean) {
   if (state) {
     Toast.error(messages["save.failed"], true);
   } else {
-    Toast.delete("danger", messages["save.failed"]);
+    Toast.close(messages["save.failed"]);
   }
 }
 
@@ -232,9 +232,11 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
   for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
     const oldTreeId = movedPairings[0][1].value.treeId;
     const newTreeId = movedPairings[0][0].value.treeId;
-    const nodeIds = movedPairings
-      .filter(([createUA]) => createUA.name === "createNode")
-      .map(([createUA]) => createUA.value.id);
+    // This could be done with a .filter(...).map(...), but flow cannot comprehend that
+    const nodeIds = movedPairings.reduce((agg, [createUA]) => {
+      if (createUA.name === "createNode") agg.push(createUA.value.id);
+      return agg;
+    }, []);
     // The moveTreeComponent update action needs to be placed:
     // BEFORE the possible deleteTree update action of the oldTreeId and
     // AFTER the possible createTree update action of the newTreeId
@@ -337,7 +339,7 @@ export function performDiffTracing(
   }
 }
 
-export function* saveTracingAsync(): Generator<*, *, *> {
+export function* saveTracingAsync(): Generator<any, any, any> {
   const { initSkeleton } = yield race({
     initSkeleton: take("INITIALIZE_SKELETONTRACING"),
     initVolume: take("INITIALIZE_VOLUMETRACING"),

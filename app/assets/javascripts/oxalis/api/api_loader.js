@@ -1,6 +1,6 @@
 /*
  * api.js
- * @flow strict
+ * @flow
  */
 
 // only relative imports are followed by documentationjs

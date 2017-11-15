@@ -14,18 +14,12 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import type { Dispatch } from "redux";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 
 type Props = {
-  // eslint-disable-next-line react/no-unused-prop-types
   tracingType: string,
-  // eslint-disable-next-line react/no-unused-prop-types
   annotationId: string,
-  // eslint-disable-next-line react/no-unused-prop-types
   restrictions: RestrictionsType & SettingsType,
-  // eslint-disable-next-line react/no-unused-prop-types
-  dispatch: Dispatch<*>,
   task: ?TaskType,
 };
 
@@ -249,7 +243,7 @@ class TracingActionsView extends PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): Props {
   return {
     tracingType: state.tracing.tracingType,
     annotationId: state.tracing.annotationId,

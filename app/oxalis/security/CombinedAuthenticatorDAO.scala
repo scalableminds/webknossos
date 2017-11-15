@@ -66,7 +66,7 @@ class CombinedAuthenticatorDAO extends AuthenticatorDAO[CombinedAuthenticator] w
   }
 
   override def update(authenticator: CombinedAuthenticator): Future[CombinedAuthenticator] =
-    findAndModify(Json.obj("loginInfo" -> LoginInfo(CredentialsProvider.ID, authenticator.loginInfo.providerKey)), Json.obj("$set" -> Json.obj(
+    findAndModify(Json.obj("loginInfoParameter" -> LoginInfo(CredentialsProvider.ID, authenticator.loginInfo.providerKey)), Json.obj("$set" -> Json.obj(
       "id" -> authenticator.id,
       "lastUsedDateTime" -> authenticator.lastUsedDateTime,
       "expirationDateTime" -> authenticator.expirationDateTime,
@@ -78,9 +78,9 @@ class CombinedAuthenticatorDAO extends AuthenticatorDAO[CombinedAuthenticator] w
     ()
   }
 
-  def findByLoginInfo(loginInfo: LoginInfo): Future[Option[CombinedAuthenticator]] = findOne("loginInfo", loginInfo)(implicitly[Writes[LoginInfo]],GlobalAccessContext).futureBox.map(box => box.toOption)
+  def findByLoginInfo(loginInfo: LoginInfo): Future[Option[CombinedAuthenticator]] = findOne("loginInfoParameter", loginInfo)(implicitly[Writes[LoginInfo]],GlobalAccessContext).futureBox.map(box => box.toOption)
 
-  def removeByEmail(email: String):Fox[WriteResult] = remove("loginInfo", LoginInfo(CredentialsProvider.ID, email))(implicitly[Writes[LoginInfo]], GlobalAccessContext)
+  def removeByEmail(email: String):Fox[WriteResult] = remove("loginInfoParameter", LoginInfo(CredentialsProvider.ID, email))(implicitly[Writes[LoginInfo]], GlobalAccessContext)
 }
 
 object JsonUtil {

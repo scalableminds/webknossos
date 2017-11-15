@@ -29,6 +29,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
+import play.api.libs.json.Json
 import play.api.mvc.{Action, _}
 import play.twirl.api.Html
 
@@ -252,6 +253,24 @@ class Authentication @Inject() (
         }
       }
     )
+  }
+
+  def getToken = SecuredAction.async { implicit request =>
+    for{
+      combinedAuthenticator <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
+    }yield{
+      Ok(Json.obj("token" -> combinedAuthenticator.id))
+    }
+  }
+
+  def deleteToken = SecuredAction.async { implicit request =>
+    for{
+      maybeOldAuthenticator <- env.combinedAuthenticatorService.tokenDao.findByLoginInfo(request.identity.loginInfo)
+      _ <- maybeOldAuthenticator.isDefined ?~> Messages("auth.noToken")
+      _ <- env.combinedAuthenticatorService.tokenDao.removeByEmail(request.identity.loginInfo.providerKey) ?~> Messages("fail") //would it be better to use the discardToken method from the combinedAuthenticator (instead of accessing the DAO directly)?
+    } yield {                                                                                                                   // for the discardToken method you ould need the authenticator itself and not the email of the user
+      JsonOk("success")
+    }
   }
 
   def logout = SecuredAction.async { implicit request =>

@@ -23,9 +23,10 @@ class EnvironmentOxalis @Inject()(configuration: Configuration)(implicit val exe
   val tokenSettings = BearerTokenAuthenticatorSettings("X-Auth-Token", None, 365 days) //maybe change the authenticatorExpiry and write it in a .conf file
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
   val idGenerator = new SecureRandomIDGenerator()
+  val tokenDAO = new CombinedAuthenticatorDAO
   //val authenticatorServiceObject = new CookieAuthenticatorService(cookieSettings, None, fingerprintGenerator, idGenerator, Clock())
 
-  val combinedAuthenticatorService = new CombinedAuthenticatorService(cookieSettings, tokenSettings, None, new CombinedAuthenticatorDAO, fingerprintGenerator, idGenerator, Clock())
+  val combinedAuthenticatorService = CombinedAuthenticatorService(cookieSettings, tokenSettings, None, tokenDAO, fingerprintGenerator, idGenerator, Clock())
 
   override def identityService: IdentityService[User] = UserService
 

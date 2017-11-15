@@ -65,12 +65,12 @@ case class CombinedAuthenticator(typ: String, //is there a way to force the typ 
 }
 
 
-class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSettings,
+case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSettings,
                                    tokenSettings: BearerTokenAuthenticatorSettings,
                                    //cookieDao: Option[AuthenticatorDAO[CookieAuthenticator]],
                                    //tokenDao : AuthenticatorDAO[BearerTokenAuthenticator],
-                                   cookieDao: Option[AuthenticatorDAO[CombinedAuthenticator]],
-                                   tokenDao : AuthenticatorDAO[CombinedAuthenticator],
+                                   cookieDao: Option[CombinedAuthenticatorDAO],
+                                   tokenDao : CombinedAuthenticatorDAO,
                                    fingerprintGenerator: FingerprintGenerator,
                                    idGenerator: IDGenerator,
                                    clock: Clock)(implicit val executionContext: ExecutionContext)
@@ -106,6 +106,13 @@ class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSettings,
     }
   }
 
+  /**
+    * Creates a new authenticator for the specified login info and adds it to the DAO.
+    *
+    * @param loginInfo The login info for which the authenticator should be created.
+    * @param request   The request header.
+    * @return An authenticator.
+    */
   def createToken(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
     idGenerator.generate.flatMap { id =>
       val now = clock.now

@@ -59,45 +59,29 @@ class Navbar extends React.PureComponent<Props> {
                 }
               >
                 <Menu.Item key="/users">
-                  {" "}
                   <Link to="/users">Users</Link>
                 </Menu.Item>
                 <Menu.Item key="/teams">
-                  {" "}
                   <Link to="/teams">Teams</Link>
                 </Menu.Item>
                 <Menu.Item key="/projects">
-                  {" "}
                   <Link to="/projects">Projects</Link>
                 </Menu.Item>
                 <Menu.Item key="/tasks">
-                  {" "}
                   <Link to="/tasks">Tasks</Link>
                 </Menu.Item>
                 <Menu.Item key="/taskTypes">
-                  {" "}
                   <Link to="/taskTypes">Task Types</Link>
                 </Menu.Item>
                 <Menu.Item key="/scripts">
-                  {" "}
                   <Link to="/scripts">Scripts</Link>
                 </Menu.Item>
               </SubMenu>,
-              <SubMenu
-                key="sub2"
-                title={
-                  <span>
-                    <Icon type="line-chart" />Statistics
-                  </span>
-                }
-              >
-                <Menu.Item key="/tasks/overview">
-                  <Link to="/tasks/overview">Overview</Link>
-                </Menu.Item>
-                <Menu.Item key="/statistics">
-                  <Link to="/statistics">Weekly</Link>
-                </Menu.Item>
-              </SubMenu>,
+              <Menu.Item key="/statistics">
+                <Link to="/statistics">
+                  <Icon type="line-chart" />Statistics
+                </Link>
+              </Menu.Item>,
               <SubMenu
                 key="sub3"
                 title={

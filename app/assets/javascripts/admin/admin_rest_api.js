@@ -16,6 +16,8 @@ import type {
   DatasetConfigType,
   APIRoleType,
   APIDatasetType,
+  APITimeIntervalType,
+  APIUserLoggedTimeType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
@@ -94,6 +96,13 @@ export async function updateUser(newUser: APIUserType): Promise<APIUserType> {
     method: "PUT",
     data: newUser,
   });
+}
+
+export async function getLoggedTimes(userID: ?string): Promise<Array<APITimeIntervalType>> {
+  const url = userID != null ? `/api/users/${userID}/loggedTime` : "/api/user/loggedTime";
+
+  const response: APIUserLoggedTimeType = await Request.receiveJSON(url);
+  return response.loggedTime;
 }
 
 // ### Scripts
@@ -376,6 +385,10 @@ export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   assertResponseLimit(datasets);
 
   return datasets;
+}
+
+export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
+  return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
 
 export async function addNDStoreDataset(

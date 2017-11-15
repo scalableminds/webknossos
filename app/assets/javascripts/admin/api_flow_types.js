@@ -59,6 +59,17 @@ export type APIUserType = {
   +teams: Array<APITeamRoleType>,
 };
 
+export type APITimeIntervalType = {
+  paymentInterval: {
+    month: number,
+    year: number,
+  },
+  durationInSeconds: number,
+};
+export type APIUserLoggedTimeType = {
+  loggedTime: Array<APITimeIntervalType>,
+};
+
 export type APITeamType = {
   +id: string,
   +name: string,
@@ -79,7 +90,7 @@ export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type APISettingsType = {
   +advancedOptionsAllowed: boolean,
   +allowedModes: Array<APIAllowedModeType>,
-  +preferredMode: APIAllowedModeType,
+  +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
 };

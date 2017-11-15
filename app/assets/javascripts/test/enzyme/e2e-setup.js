@@ -25,7 +25,7 @@ async function waitForAllRequests() {
   await tolerantWait();
 }
 
-function wait(milliseconds: number) {
+function wait(milliseconds: number): Promise<number> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 

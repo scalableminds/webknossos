@@ -46,7 +46,7 @@ class ViewModesView extends PureComponent<Props> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): Props {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     allowedModes: state.tracing.restrictions.allowedModes,

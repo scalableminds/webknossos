@@ -1,10 +1,19 @@
-import React, { Component } from "react";
+// @flow
+import * as React from "react";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import classNames from "classnames";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";
+import type { CommentType } from "oxalis/store";
 
-class Comment extends Component {
+type Props = {
+  isActive: boolean,
+  data: CommentType,
+};
+
+class Comment extends React.PureComponent<Props> {
+  comment: ?HTMLLIElement;
+
   componentDidUpdate() {
     this.ensureVisible();
   }

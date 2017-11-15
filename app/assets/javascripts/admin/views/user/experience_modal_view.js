@@ -79,11 +79,11 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   /**
-  * Save a user object to the server using an API call.
-  * @param newUser - A modified user object intended to be saved.
-  * @param oldUser - The original user object of `newUser`. Returned in case API call fails
-  *
-  */
+   * Save a user object to the server using an API call.
+   * @param newUser - A modified user object intended to be saved.
+   * @param oldUser - The original user object of `newUser`. Returned in case API call fails
+   *
+   */
   sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
     const url = `/api/users/${newUser.id}`;
     return Request.sendJSONReceiveJSON(url, {

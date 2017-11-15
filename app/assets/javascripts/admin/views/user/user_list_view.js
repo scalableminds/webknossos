@@ -162,7 +162,8 @@ class UserListView extends React.PureComponent<{}, State> {
           onChange={(pagination, filters) =>
             this.setState({
               activationFilter: filters.isActive,
-            })}
+            })
+          }
         >
           <Column
             title="Last name"
@@ -192,7 +193,8 @@ class UserListView extends React.PureComponent<{}, State> {
                 <Tag key={`experience_${user.id}_${domain}`}>
                   {domain} : {value}
                 </Tag>
-              ))}
+              ))
+            }
           />
           <Column
             title="Teams - Role"
@@ -207,7 +209,8 @@ class UserListView extends React.PureComponent<{}, State> {
                 >
                   {team.team}: {team.role.name}
                 </Tag>
-              ))}
+              ))
+            }
           />
           <Column
             title="Status"

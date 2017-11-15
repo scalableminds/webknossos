@@ -78,7 +78,8 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
         optionFilterProp="children"
         style={{ width: "100%" }}
         filterOption={(input, option) =>
-          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+        }
       >
         {this.state.users.filter(u => u.id !== this.props.userId).map(user => (
           <Option key={user.id} value={user.id}>

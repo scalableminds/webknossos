@@ -30,7 +30,7 @@ const Toast = {
       toastMessage = message;
     }
 
-    const timeOutSeconds = parseInt(timeout / 1000);
+    const timeOutSeconds = timeout / 1000;
 
     let toastConfig = {
       icon: undefined,

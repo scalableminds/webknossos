@@ -30,6 +30,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
+import play.api.libs.json._
 import play.api.mvc.{Action, _}
 import play.twirl.api.Html
 
@@ -130,7 +131,7 @@ class Authentication @Inject()(
       "å" -> "a", "Å" -> "A", "œ" -> "oe", "Œ" -> "Oe", "æ" -> "ae", "Æ" -> "Ae",
       "þ" -> "th", "Þ" -> "Th", "ø" -> "oe", "Ø" -> "Oe", "í" -> "i", "ì" -> "i")
 
-    val finalName = name.map(c => replacementMap.getOrElse(c.toString,c.toString)).mkString.replaceAll("[^\\x00-\\x7F]", "")
+    val finalName = name.map(c => replacementMap.getOrElse(c.toString,c.toString)).mkString.replaceAll("[^A-Za-z0-9_\\-\\s]", "")
     if(finalName.isEmpty)
       None
     else
@@ -138,24 +139,34 @@ class Authentication @Inject()(
   }
 
   def handleRegistration = Action.async { implicit request =>
-    val boundForm = signUpForm.bindFromRequest
-    boundForm.fold(
+      signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
+        var errorMap = List[String]()
+        normalizeName(signUpData.firstName).getOrElse(errorMap ::= Messages("user.firstName.invalid"))
+        normalizeName(signUpData.lastName).getOrElse(errorMap ::= Messages("user.lastName.invalid"))
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            Fox.successful(BadRequest(Messages("user.email.alreadyInUse"))) //other way of returning form error
+            errorMap ::= Messages("user.email.alreadyInUse")
+            Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errorMap.map(t => Json.obj("error" -> t))))))
           case Empty =>
-            for {
-              user <- UserService.insert(signUpData.team, signUpData.email, normalizeName(signUpData.firstName).get, normalizeName(signUpData.lastName).get, signUpData.password, automaticUserActivation, roleOnRegistration,
-                loginInfo, passwordHasher.hash(signUpData.password))
-              brainDBResult <- BrainTracing.register(user).toFox
-            } yield {
-              Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
-              Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
-              Ok
+            if(errorMap.isEmpty){
+              Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errorMap.map(t => Json.obj("error" -> t))))))
+            } else {
+              for {
+                user <- UserService.insert(signUpData.team, signUpData.email, normalizeName(signUpData.firstName).get, normalizeName(signUpData.lastName).get, signUpData.password, automaticUserActivation, roleOnRegistration,
+                  loginInfo, passwordHasher.hash(signUpData.password))
+                brainDBResult <- BrainTracing.register(user).toFox
+              } yield {
+                Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
+                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
+                Ok
+              }
             }
+
+
+
           case f: Failure => Fox.failure(f.msg)
         }
       }

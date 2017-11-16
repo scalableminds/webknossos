@@ -65,7 +65,7 @@ class RightMenuView extends React.PureComponent<Props> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): Props {
   return {
     controlMode: state.temporaryConfiguration.controlMode,
     viewMode: state.temporaryConfiguration.viewMode,

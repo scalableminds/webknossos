@@ -11,7 +11,7 @@ import Store from "oxalis/store";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { Input, Tooltip } from "antd";
-import Vector3Input from "libs/vector3_input";
+import { Vector3Input } from "libs/vector_input";
 import ButtonComponent from "oxalis/view/components/button_component";
 import message from "messages";
 
@@ -83,7 +83,7 @@ class DatasetPositionView extends PureComponent<Props> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): Props {
   return {
     flycam: state.flycam,
     viewMode: state.temporaryConfiguration.viewMode,

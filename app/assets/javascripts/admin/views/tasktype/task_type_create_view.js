@@ -82,11 +82,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
             <FormItem label="Team" hasFeedback>
               {getFieldDecorator("team", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(
                 <Select
                   allowClear
@@ -121,21 +117,13 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               hasFeedback
             >
               {getFieldDecorator("description", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(<TextArea rows={3} />)}
             </FormItem>
 
             <FormItem label="Allowed Modes" hasFeedback>
               {getFieldDecorator("settings.allowedModes", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(
                 <Select
                   mode="multiple"
@@ -169,13 +157,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             </FormItem>
 
             <FormItem label="Preferred Mode" hasFeedback>
-              {getFieldDecorator("settings.preferredMode", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
-              })(
+              {getFieldDecorator("settings.preferredMode")(
                 <Select allowClear optionFilterProp="children" style={{ width: "100%" }}>
                   <Option value={null}>Any</Option>
                   <Option value="orthogonal">Orthogonal</Option>

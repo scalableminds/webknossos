@@ -4,8 +4,8 @@ import * as React from "react";
 import moment from "moment";
 import { Table, Row, Col } from "antd";
 import FormatUtils from "libs/format_utils";
-import Request from "libs/request";
 import C3Chart from "react-c3js";
+import { getLoggedTimes } from "admin/admin_rest_api";
 
 const { Column } = Table;
 
@@ -14,7 +14,11 @@ type Props = {
 };
 
 type State = {
-  timeEntries: Array<Object>,
+  timeEntries: Array<{
+    interval: Object,
+    time: Object,
+    months: number,
+  }>,
 };
 
 export default class LoggedTimeView extends React.PureComponent<Props, State> {
@@ -27,25 +31,21 @@ export default class LoggedTimeView extends React.PureComponent<Props, State> {
   }
 
   async fetch(): Promise<void> {
-    const url = this.props.userID
-      ? `/api/users/${this.props.userID}/loggedTime`
-      : "/api/user/loggedTime";
+    const loggedTime = await getLoggedTimes(this.props.userID);
 
-    Request.receiveJSON(url).then(response => {
-      const timeEntries = response.loggedTime
-        .map(entry => {
-          const interval = entry.paymentInterval;
-          return {
-            interval: moment(`${interval.year} ${interval.month}`, "YYYY MM"),
-            time: moment.duration(entry.durationInSeconds, "seconds"),
-            months: interval.year * 12 + interval.month,
-          };
-        })
-        .sort((a, b) => b.months - a.months);
+    const timeEntries = loggedTime
+      .map(entry => {
+        const interval = entry.paymentInterval;
+        return {
+          interval: moment(`${interval.year} ${interval.month}`, "YYYY MM"),
+          time: moment.duration(entry.durationInSeconds, "seconds"),
+          months: interval.year * 12 + interval.month,
+        };
+      })
+      .sort((a, b) => b.months - a.months);
 
-      this.setState({
-        timeEntries,
-      });
+    this.setState({
+      timeEntries,
     });
   }
 

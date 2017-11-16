@@ -7,12 +7,14 @@ import javax.inject.Inject
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationService}
+import models.task.{TaskService, TaskType}
+import models.task.OpenAssignmentService
 import models.binary.DataSetDAO
 import models.project.Project
 import models.task.{OpenAssignmentService, TaskService, TaskType}
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.Secured
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -24,8 +26,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 
 class StatisticsController @Inject()(val messagesApi: MessagesApi)
-  extends Controller
-  with Secured {
+  extends Controller {
 
   val intervalHandler = Map(
     "month" -> TimeSpan.groupByMonth _,
@@ -40,11 +41,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     )
   }
 
-  def empty = Authenticated { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = Authenticated.async { implicit request =>
+  def webKnossos(interval: String, start: Option[Long], end: Option[Long]) = SecuredAction.async { implicit request =>
     intervalHandler.get(interval) match {
       case Some(handler) =>
         for {
@@ -68,7 +65,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = Authenticated.async { implicit request =>
+  def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
       users <- UserDAO.findAll

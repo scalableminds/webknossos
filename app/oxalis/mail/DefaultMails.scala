@@ -65,6 +65,14 @@ object DefaultMails {
       recipients = List(receiver))
   }
 
+  def resetPasswordMail(name: String, receiver: String, token: String) = {
+    Mail(
+      from = defaultFrom,
+      subject = "Your Oxalis password was reset",
+      bodyText = html.mail.resetPassword(name, uri, token).body,
+      recipients = List(receiver))
+  }
+
   def availableTaskCountMail(tableRows: List[(String, Int, String)]) = {
     Mail(
       from = defaultFrom,

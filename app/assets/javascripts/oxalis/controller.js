@@ -4,6 +4,9 @@
  */
 
 import * as React from "react";
+import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
+import { Spin } from "antd";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
@@ -27,21 +30,24 @@ import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
-import { connect } from "react-redux";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
+import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
+type StateProps = {
+  viewMode: ModeType,
+};
+
 type Props = {
+  history: ReactRouterHistoryType,
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,
-  // Delivered by connect()
-  viewMode: ModeType,
-};
+} & StateProps;
 
 type State = {
   ready: boolean,
@@ -74,8 +80,6 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    app.router.showLoadingSpinner();
-
     _.extend(this, Backbone.Events);
 
     UrlManager.initialize();
@@ -100,7 +104,7 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    app.router.on("beforeunload", () => {
+    this.props.history.block(() => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());
@@ -128,7 +132,6 @@ class Controller extends React.PureComponent<Props, State> {
 
     window.webknossos = new ApiLoader(Model);
 
-    app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
     this.setState({ ready: true });
@@ -283,7 +286,7 @@ class Controller extends React.PureComponent<Props, State> {
 
   render() {
     if (!this.state.ready) {
-      return null;
+      return <Spin spinning />;
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
@@ -327,10 +330,10 @@ class Controller extends React.PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
   };
 }
 
-export default connect(mapStateToProps)(Controller);
+export default withRouter(connect(mapStateToProps)(Controller));

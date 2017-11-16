@@ -5,7 +5,7 @@ import javax.inject.Inject
 import models.binary.DataSetDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.user.UserService
-import oxalis.security.Secured
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.JsObject
@@ -15,14 +15,14 @@ import play.api.mvc.Action
 /**
  * Controller that handles the CRUD api for configurations (mostly settings for the tracing view)
  */
-class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
+class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
   def default = Action { implicit request =>
     Ok(toJson(UserConfiguration.default.configuration))
   }
 
   def read = UserAwareAction.async { implicit request =>
-    request.userOpt.toFox.flatMap { user =>
+    request.identity.toFox.flatMap { user =>
       UserService.findOneById(user.id, useCache = false)
       .map(_.userConfiguration.configurationOrDefaults)
     }
@@ -30,11 +30,11 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
     .map(configuration => Ok(toJson(configuration)))
   }
 
-  def update = Authenticated.async(parse.json(maxLength = 20480)) { implicit request =>
+  def update = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.invalid")
       conf = jsConfiguration.fields.toMap
-      _ <- UserService.updateUserConfiguration(request.user, UserConfiguration(conf))
+      _ <- UserService.updateUserConfiguration(request.identity, UserConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.updated"))
     }
@@ -45,7 +45,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
   }
 
   def readDataSet(dataSetName: String) = UserAwareAction.async { implicit request =>
-    request.userOpt.toFox.flatMap { user =>
+    request.identity.toFox.flatMap { user =>
       UserService.findOneById(user.id, useCache = false)
       .flatMap(_.dataSetConfigurations.get(dataSetName))
     }
@@ -54,11 +54,11 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
     .map(configuration => Ok(toJson(configuration.configurationOrDefaults)))
   }
 
-  def updateDataSet(dataSetName: String) = Authenticated.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDataSet(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
       conf = jsConfiguration.fields.toMap
-      _ <- UserService.updateDataSetConfiguration(request.user, dataSetName, DataSetConfiguration(conf))
+      _ <- UserService.updateDataSetConfiguration(request.identity, dataSetName, DataSetConfiguration(conf))
     } yield {
       JsonOk(Messages("user.configuration.dataset.updated"))
     }

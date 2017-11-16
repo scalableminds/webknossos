@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import React from "react";
+import { Link } from "react-router-dom";
 import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
 import Utils from "libs/utils";
 import Clipboard from "clipboard-js";
@@ -19,7 +20,7 @@ import type { QueryObjectType } from "admin/views/task/task_search_form";
 const { Column } = Table;
 const { Search, TextArea } = Input;
 
-type Props = { initialFieldValues: Object };
+type Props = { initialFieldValues?: Object };
 
 type State = {
   isLoading: boolean,
@@ -100,11 +101,11 @@ class TaskListView extends React.PureComponent<Props, State> {
       <div className="container wide task-administration">
         <div style={{ marginTop: 20 }}>
           <div className="pull-right">
-            <a href="/tasks/create">
+            <Link to="/tasks/create">
               <Button icon="plus" style={marginRight} type="primary">
                 Add Task
               </Button>
-            </a>
+            </Link>
             <Search
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
@@ -182,7 +183,8 @@ class TaskListView extends React.PureComponent<Props, State> {
                     <Tag>
                       {neededExperience.domain} : {neededExperience.value}
                     </Tag>
-                  ) : null}
+                  ) : null
+                }
               />
               <Column
                 title="Creation Date"

@@ -88,7 +88,8 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         <Item key={`${annotation.id}-transfer`}>
           <span
             onClick={() =>
-              this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })}
+              this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })
+            }
           >
             <i className="fa fa-share" />
             Transfer
@@ -138,8 +139,9 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           <tbody>
             {this.state.annotations.map((annotation: APIAnnotationType) => {
               const userString = annotation.user
-                ? `${annotation.user.firstName} ${annotation.user.lastName} ( ${annotation.user
-                    .email} )`
+                ? `${annotation.user.firstName} ${annotation.user.lastName} ( ${
+                    annotation.user.email
+                  } )`
                 : "<no user>";
               return (
                 <tr key={`${annotation.id}-tr`}>
@@ -153,11 +155,9 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                     <br />
                     <span>
                       <i className="fa fa-clock-o" />
-                      {annotation.tracingTime ? (
-                        FormatUtils.formatSeconds(annotation.tracingTime / 1000)
-                      ) : (
-                        0
-                      )}
+                      {annotation.tracingTime
+                        ? FormatUtils.formatSeconds(annotation.tracingTime / 1000)
+                        : 0}
                     </span>
                   </td>
                   <td className="nowrap">
@@ -178,7 +178,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             annotationId={this.state.currentAnnotation.id}
             onCancel={() => this.setState({ isTransferModalVisible: false })}
             onChange={this.updateAnnotationState}
-            userID={this.state.currentAnnotation.user.id}
+            userId={this.state.currentAnnotation.user.id}
           />
         ) : null}
       </div>

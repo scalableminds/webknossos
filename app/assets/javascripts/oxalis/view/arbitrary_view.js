@@ -11,7 +11,7 @@ import Constants from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import { window } from "libs/window";
+import window from "libs/window";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)

@@ -81,7 +81,8 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
             onChange={this.selectTeams}
             value={this.state.selectedTeams}
             filterOption={(input, option) =>
-              option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+              option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+            }
           >
             {this.state.teams.map(team => (
               <Option key={team.name} value={team.name}>

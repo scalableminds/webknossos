@@ -1,9 +1,9 @@
 // @flow
 import React from "react";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
-import app from "app";
 import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -12,6 +12,7 @@ const TextArea = Input.TextArea;
 type Props = {
   taskTypeId: ?string,
   form: Object,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -55,8 +56,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         } else {
           await createTaskType(formValues);
         }
-
-        app.router.navigate("/taskTypes", { trigger: true });
+        this.props.history.push("/taskTypes");
       }
     });
   };
@@ -82,11 +82,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
 
             <FormItem label="Team" hasFeedback>
               {getFieldDecorator("team", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(
                 <Select
                   allowClear
@@ -121,21 +117,13 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               hasFeedback
             >
               {getFieldDecorator("description", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(<TextArea rows={3} />)}
             </FormItem>
 
             <FormItem label="Allowed Modes" hasFeedback>
               {getFieldDecorator("settings.allowedModes", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
+                rules: [{ required: true }],
               })(
                 <Select
                   mode="multiple"
@@ -169,13 +157,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             </FormItem>
 
             <FormItem label="Preferred Mode" hasFeedback>
-              {getFieldDecorator("settings.preferredMode", {
-                rules: [
-                  {
-                    required: true,
-                  },
-                ],
-              })(
+              {getFieldDecorator("settings.preferredMode")(
                 <Select allowClear optionFilterProp="children" style={{ width: "100%" }}>
                   <Option value={null}>Any</Option>
                   <Option value="orthogonal">Orthogonal</Option>

@@ -2,26 +2,26 @@ package controllers
 
 import javax.inject.Inject
 
+import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
-import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.DefaultConverters._
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
 import oxalis.ndstore.{ND2WK, NDServerConnection}
-import oxalis.security.{AuthenticatedRequest, Secured}
-import play.api.Play.current
 import play.api.cache.Cache
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
+import play.api.Play.current
+import scala.concurrent.ExecutionContext.Implicits._
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
+class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
   val ThumbnailWidth = 200
   val ThumbnailHeight = 200
@@ -70,34 +70,21 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def empty = Authenticated { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  // TODO: find a better way to ignore parameters
-  def emptyWithWildcard(param: String) = Authenticated { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  def userAwareEmpty = UserAwareAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
   def list = UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>
-        el.isEditableBy(request.userOpt) && value || !el.isEditableBy(request.userOpt) && !value),
+        el.isEditableBy(request.identity) && value || !el.isEditableBy(request.identity) && !value),
       Filter("isActive", (value: Boolean, el: DataSet) =>
         el.isActive == value)
     ) { filter =>
       DataSetDAO.findAll.map {
         dataSets =>
-          Ok(Writes.list(DataSet.dataSetPublicWrites(request.userOpt)).writes(filter.applyOn(dataSets)))
+          Ok(Writes.list(DataSet.dataSetPublicWrites(request.identity)).writes(filter.applyOn(dataSets)))
       }
     }
   }
 
-  def accessList(dataSetName: String) = Authenticated.async { implicit request =>
+  def accessList(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       users <- UserService.findByTeams(dataSet.allowedTeams, includeAnonymous = false)
@@ -110,25 +97,25 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
     } yield {
-      Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(dataSet))
+      Ok(DataSet.dataSetPublicWrites(request.identity).writes(dataSet))
     }
   }
 
-  def update(dataSetName: String) = Authenticated.async(parse.json) { implicit request =>
+  def update(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(dataSetPublicReads) {
       case (description, isPublic) =>
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-        _ <- allowedToAdministrate(request.user, dataSet)
+        _ <- allowedToAdministrate(request.identity, dataSet)
         updatedDataSet <- DataSetService.update(dataSet, description, isPublic)
       } yield {
-        Ok(DataSet.dataSetPublicWrites(request.userOpt).writes(updatedDataSet))
+        Ok(DataSet.dataSetPublicWrites(Some(request.identity)).writes(updatedDataSet))
       }
     }
   }
 
 
-  def importDataSet(dataSetName: String) = Authenticated.async { implicit request =>
+  def importDataSet(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
       _ <- DataSetService.isProperDataSetName(dataSetName) ?~> Messages("dataSet.import.impossible.name")
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
@@ -138,12 +125,12 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def updateTeams(dataSetName: String) = Authenticated.async(parse.json) { implicit request =>
+  def updateTeams(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyAs[List[String]] { teams =>
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-        _ <- allowedToAdministrate(request.user, dataSet)
-        userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.user)))
+        _ <- allowedToAdministrate(request.identity, dataSet)
+        userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.identity)))
         teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_.name == t))
         teamsWithUpdate = teams.filter(t => userTeams.exists(_.name == t))
         _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
@@ -158,19 +145,19 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       (__ \ 'token).read[String] and
       (__ \ 'team).read[String]).tupled
 
-  private def createNDStoreDataSet(implicit request: AuthenticatedRequest[JsValue]) =
+  private def createNDStoreDataSet(implicit request: SecuredRequest[JsValue]) =
     withJsonBodyUsing(externalDataSetFormReads){
       case (server, name, token, team) =>
         for {
           _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
-          _ <- ensureTeamAdministration(request.user, team)
+          _ <- ensureTeamAdministration(request.identity, team)
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
           dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
           _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)
         } yield JsonOk(Messages("dataSet.create.success"))
     }
 
-  def create(typ: String) = Authenticated.async(parse.json) { implicit request =>
+  def create(typ: String) = SecuredAction.async(parse.json) { implicit request =>
     typ match {
       case "ndstore" =>
         createNDStoreDataSet(request)

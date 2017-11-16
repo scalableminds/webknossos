@@ -2,6 +2,10 @@ error.email=Please supply a valid email address
 error.required=Please supply all needed values
 error.minLength=Please use at least 3 characters.
 error.unknown=Unknown error
+error.invalidCredentials=Email or Password is wrong
+error.noUser=There is no user to this email
+error.invalidToken=The token is invalid
+error.notInDev=This feature is only available in dev mode
 
 notAllowed=You are not allowed to view this resource
 
@@ -41,6 +45,8 @@ team.noOwner=This action is restricted to the creator of the team.
 team.admin.notAllowed=You are not allowed to administrate team {0}.
 team.notFound=Team could not be found.
 
+user.automaticUserActivation=User was activated automatically
+user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
 user.activated={0} has been activated
 user.notFound=User not found
 user.deactivated=Your account hasn''t been activated yet
@@ -66,6 +72,9 @@ user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 user.email.invalid=At least one Email is invalid
 user.notAuthorised=Missing Authorisation
+user.maxLoginTokenLimit=You already have a login-token. If you want a new one you need to deactivate the old one first.
+user.loginTokenDeleted=Your login-token has been deleted.
+user.noLoginToken=You dont have a login-token.
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
@@ -227,3 +236,6 @@ time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mturk.qualification.invalid=The entered qualification is unknown
+
+mail.welcome.subject = Welcome to ScalableMinds
+script.notFound=Script couldn''t be found

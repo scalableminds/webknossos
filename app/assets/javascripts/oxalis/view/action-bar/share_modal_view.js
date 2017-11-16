@@ -12,6 +12,7 @@ import type { OxalisState, RestrictionsType, SettingsType } from "oxalis/store";
 type ShareModalPropType = {
   // eslint-disable-next-line react/no-unused-prop-types
   isPublic: boolean,
+  isDatasetPublic: boolean,
   isVisible: boolean,
   onOk: () => void,
   restrictions: RestrictionsType & SettingsType,

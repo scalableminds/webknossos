@@ -1,10 +1,10 @@
 package models.annotation
 
+import oxalis.security.silhouetteOxalis.{UserAwareRequest}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType._
 import models.annotation.handler.AnnotationInformationHandler
-import oxalis.security.{AuthenticatedRequest, UserAwareRequest}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 
@@ -34,7 +34,7 @@ trait AnnotationInformationProvider
   }
 
   def findAnnotation(annotationId: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[Annotation] = {
-    AnnotationStore.requestAnnotation(annotationId, request.userOpt)
+    AnnotationStore.requestAnnotation(annotationId, request.identity)
   }
 
   def nameForAnnotation(annotation: Annotation)(implicit request: UserAwareRequest[_]): Fox[String] = {

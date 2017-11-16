@@ -1,11 +1,11 @@
 package models.annotation.handler
 
+import oxalis.security.silhouetteOxalis.{SecuredRequest}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
 import models.basics.Implicits._
 import models.user.User
-import oxalis.security.AuthenticatedRequest
 import play.api.libs.concurrent.Execution.Implicits._
 
 import scala.concurrent.Future
@@ -28,8 +28,8 @@ trait AnnotationInformationHandler {
     Future.successful(t.id)
   }
 
-  def withAnnotation[A](identifier: String)(f: Annotation => A)(implicit request: AuthenticatedRequest[_]): Fox[A] = {
-    provideAnnotation(identifier, Some(request.user)).map(f)
+  def withAnnotation[A](identifier: String)(f: Annotation => A)(implicit request: SecuredRequest[_]): Fox[A] = {
+    provideAnnotation(identifier, Some(request.identity)).map(f)
   }
 
   def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]

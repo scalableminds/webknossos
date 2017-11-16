@@ -213,11 +213,9 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           />
           <NumberSliderSetting
             label={
-              this.props.userConfiguration.overrideNodeRadius ? (
-                "Particle Size"
-              ) : (
-                "Min. Particle Size"
-              )
+              this.props.userConfiguration.overrideNodeRadius
+                ? "Particle Size"
+                : "Min. Particle Size"
             }
             min={Constants.MIN_PARTICLE_SIZE}
             max={Constants.MAX_PARTICLE_SIZE}
@@ -240,7 +238,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       );
     } else if (
       mode === Constants.MODE_VOLUME &&
-      !this.props.isPublicViewMode &&
+      !isPublicViewMode &&
       this.props.tracing.type === "volume"
     ) {
       return (

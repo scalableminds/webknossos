@@ -16,7 +16,7 @@ import models.project.{Project, ProjectDAO}
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.security.{AuthenticatedRequest, Secured}
+import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -32,7 +32,7 @@ import scala.util.Success
 case class TaskParameters(
                            taskTypeId: String,
                            neededExperience: Experience,
-                           status: CompletionStatus,
+                           openInstances: Int,
                            team: String,
                            projectName: String,
                            scriptId: Option[String],
@@ -48,7 +48,7 @@ object TaskParameters {
 case class NmlTaskParameters(
                               taskTypeId: String,
                               neededExperience: Experience,
-                              status: CompletionStatus,
+                              openInstances: Int,
                               team: String,
                               projectName: String,
                               scriptId: Option[String],
@@ -58,15 +58,11 @@ object NmlTaskParameters {
   implicit val nmlTaskParametersFormat = Json.format[NmlTaskParameters]
 }
 
-class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with Secured with FoxImplicits {
+class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
-  def empty = Authenticated { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  def read(taskId: String) = Authenticated.async { implicit request =>
+  def read(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
       js <- Task.transformToJson(task)
@@ -75,23 +71,24 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def create = Authenticated.async(validateJson[List[TaskParameters]]) { implicit request =>
+
+  def create = SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
     createTasks(request.body.map { params =>
       val tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       (params, tracing)
     })
   }
 
-  def createFromFile = Authenticated.async { implicit request =>
+  def createFromFile = SecuredAction.async {implicit request =>
 
     for {
       body <- request.body.asMultipartFormData ?~> Messages("invalid")
-      inputFile <- body.file("nmlFile") ?~> Messages("nml.file.notFound")
+      inputFile <- body.file("nmlFile[]") ?~> Messages("nml.file.notFound")
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- ensureTeamAdministration(request.user, params.team)
+      _ <- ensureTeamAdministration(request.identity, params.team)
 
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       tracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
@@ -100,7 +97,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield {
       result
     }
-
   }
 
   private def parseResultToSkeletonTracingFox(parseResult: NmlService.NmlParseResult): Fox[SkeletonTracing] = parseResult match {
@@ -116,7 +112,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     TaskParameters(
       nmlParams.taskTypeId,
       nmlParams.neededExperience,
-      nmlParams.status,
+      nmlParams.openInstances,
       nmlParams.team,
       nmlParams.projectName,
       nmlParams.scriptId,
@@ -126,7 +122,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       tracing.editRotation)
   }
 
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: AuthenticatedRequest[_]): Fox[Result] = {
+  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: SecuredRequest[_]): Fox[Result] = {
     def assertAllOnSameDataset(): Fox[String] = {
       def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)], dataSetName: String): Boolean = {
         requestedTasksRest match {
@@ -134,6 +130,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
         }
       }
+
       val firstDataSetName = requestedTasks.head._1.dataSet
       if (allOnSameDatasetIter(requestedTasks, requestedTasks.head._1.dataSet))
         Fox.successful(firstDataSetName)
@@ -143,64 +140,74 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
     for {
       dataSetName <- assertAllOnSameDataset()
-      dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataset.notFound")
+      dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
       tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       taskObjects: List[Fox[Task]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
       annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
-                                                                taskFox = tuple._3,
-                                                                request.user._id,
-                                                                tracingReferenceBox=tuple._2,
-                                                                dataSetName))
+        taskFox = tuple._3,
+        request.identity._id,
+        tracingReferenceBox = tuple._2,
+        dataSetName))
       zippedTasksAndAnnotations = taskObjects zip annotationBases
       taskJsons = zippedTasksAndAnnotations.map(tuple => Task.transformToJsonFoxed(tuple._1, tuple._2))
       result <- {
         val taskJsonFuture: Future[List[Box[JsObject]]] = Fox.sequence(taskJsons)
-        taskJsonFuture.map {taskJsonBoxes =>
-          val js = bulk2StatusJson(taskJsonBoxes)
-          JsonOk(js, Messages("task.bulk.processed"))
+        taskJsonFuture.map { taskJsonBoxes =>
+          bulk2StatusJson(taskJsonBoxes)
         }
       }
-    } yield result
+    } yield Ok(Json.toJson(result))
   }
 
+  private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[_]): Fox[Option[String]] = {
+    scriptIdOpt match {
+      case Some(scriptId) =>
+        for {
+          _ <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+        } yield {
+          Some(scriptId)
+        }
+      case _ => None
+    }
+  }
 
-
-  private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: AuthenticatedRequest[_]): Fox[Task] = {
+  private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: SecuredRequest[_]): Fox[Task] = {
     for {
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- ensureTeamAdministration(request.user, params.team)
+      script <- validateScript(params.scriptId)
+      _ <- ensureTeamAdministration(request.identity, params.team)
       task = Task(
         taskType._id,
         params.team,
         params.neededExperience,
-        params.status.open,
+        params.openInstances,
         _project = project.name,
-        _script = params.scriptId,
+        _script = script,
         editPosition = params.editPosition,
         editRotation = params.editRotation,
-        boundingBox = params.boundingBox)
+        boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) })
       _ <- TaskService.insert(task, project)
     } yield task
   }
 
 
   // TODO: properly handle task update with amazon turk
-  def update(taskId: String) = Authenticated.async(validateJson[TaskParameters]) { implicit request =>
+  def update(taskId: String) = SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
     val params = request.body
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.user, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       openInstanceCount <- task.remainingInstances
-      _ <- (params.status.open == openInstanceCount || project.assignmentConfiguration.supportsChangeOfNumInstances) ?~> Messages("task.instances.changeImpossible")
+      _ <- (params.openInstances == openInstanceCount || project.assignmentConfiguration.supportsChangeOfNumInstances) ?~> Messages("task.instances.changeImpossible")
       updatedTask <- TaskDAO.update(
         _task = task._id,
         _taskType = taskType._id,
         neededExperience = params.neededExperience,
-        instances = task.instances + params.status.open - openInstanceCount,
+        instances = task.instances + params.openInstances - openInstanceCount,
         team = params.team,
         _script = params.scriptId,
         _project = Some(project.name),
@@ -209,37 +216,38 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         editRotation = params.editRotation)
       _ <- AnnotationService.updateAllOfTask(updatedTask, taskType.settings)
 
-      newTracingBase = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition,  params.editRotation)
+      newTracingBase = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       dataSet <- DataSetDAO.findOneBySourceName(params.dataSet).toFox ?~> Messages("dataSet.notFound", params.dataSet)
       newTracingBaseReference <- dataSet.dataStore.saveSkeletonTracing(newTracingBase) ?~> "Failed to save skeleton tracing."
-       _ <- AnnotationService.updateAnnotationBase(updatedTask, newTracingBaseReference)
+      _ <- AnnotationService.updateAnnotationBase(updatedTask, newTracingBaseReference)
       json <- Task.transformToJson(updatedTask)
-      _ <- OpenAssignmentService.updateRemainingInstances(updatedTask, project, params.status.open)
+      _ <- OpenAssignmentService.updateRemainingInstances(updatedTask, project, params.openInstances)
     } yield {
       JsonOk(json, Messages("task.editSuccess"))
     }
   }
 
-  def delete(taskId: String) = Authenticated.async { implicit request =>
+  def delete(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.user, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
       _ <- TaskService.remove(task._id)
     } yield {
       JsonOk(Messages("task.removed"))
     }
   }
 
-  def list = Authenticated.async{ implicit request =>
+  def list = SecuredAction.async { implicit request =>
     for {
-      tasks <- TaskService.findAllAdministratable(request.user, limit = 10000)
+
+      tasks <- TaskService.findAllAdministratable(request.identity, limit = 10000)
       js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
     } yield {
       Ok(Json.toJson(js))
     }
   }
 
-  def listTasksForType(taskTypeId: String) = Authenticated.async { implicit request =>
+  def listTasksForType(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       tasks <- TaskService.findAllByTaskType(taskTypeId)
       js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
@@ -254,12 +262,12 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       case _ => Fox(Future.successful(Empty))
     }
 
-  def listTasks() = Authenticated.async(parse.json) { implicit request =>
+  def listTasks() = SecuredAction.async(parse.json) { implicit request =>
 
     val userOpt = (request.body \ "user").asOpt[String]
-    val projectOpt =  (request.body \ "project").asOpt[String]
+    val projectOpt = (request.body \ "project").asOpt[String]
     val idsOpt = (request.body \ "ids").asOpt[List[String]]
-    val taskTypeOpt =  (request.body \ "taskType").asOpt[String]
+    val taskTypeOpt = (request.body \ "taskType").asOpt[String]
 
     userOpt match {
       case Some(userId) => {
@@ -305,7 +313,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
     Fox.serialSequence(tasks)(_.project).map(_.flatten).map(_.distinct)
 
-
   def tryToGetNextAssignmentFor(user: User, teams: List[String], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
     val s = System.currentTimeMillis()
     TaskService.findAssignableFor(user, teams).futureBox.flatMap {
@@ -313,17 +320,17 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
         TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.take(assignment)).flatMap {
           updateResult =>
-          if (updateResult.n >= 1)
-            Fox.successful(assignment)
-          else if (retryCount > 0)
-            tryToGetNextAssignmentFor(user, teams, retryCount - 1)
-          else {
-            val e = System.currentTimeMillis()
-            logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
-              s"Result: $updateResult n:${updateResult.n} ok:${updateResult.ok} " +
-              s"code:${updateResult.code} TOOK: ${e-s}ms")
-            Fox.failure(Messages("task.unavailable"))
-          }
+            if (updateResult.n >= 1)
+              Fox.successful(assignment)
+            else if (retryCount > 0)
+              tryToGetNextAssignmentFor(user, teams, retryCount - 1)
+            else {
+              val e = System.currentTimeMillis()
+              logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
+                s"Result: $updateResult n:${updateResult.n} ok:${updateResult.ok} " +
+                s"code:${updateResult.code} TOOK: ${e - s}ms")
+              Fox.failure(Messages("task.unavailable"))
+            }
         }.futureBox
       case f: Failure =>
         logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
@@ -339,8 +346,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def request = Authenticated.async { implicit request =>
-    val user = request.user
+  def request = SecuredAction.async { implicit request =>
+    val user = request.identity
     val id = UUID.randomUUID().toString
     for {
       teams <- getAllowedTeamsForNextTask(user)
@@ -354,8 +361,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def peekNext(limit: Int) = Authenticated.async { implicit request =>
-    val user = request.user
+  def peekNext(limit: Int) = SecuredAction.async { implicit request =>
+    val user = request.identity
 
     def takeUpTo[E](n: Int, filter: (Seq[E], E) => Boolean): Iteratee[E, Seq[E]] = {
       def stepWith(accum: Seq[E]): Iteratee[E, Seq[E]] = {
@@ -365,12 +372,13 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           case Input.Empty =>
             stepWith(accum)
           case Input.El(el) =>
-            if(filter(accum, el))
+            if (filter(accum, el))
               stepWith(accum :+ el)
             else
               stepWith(accum)
         }
       }
+
       stepWith(Seq.empty)
     }
 

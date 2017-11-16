@@ -1,6 +1,6 @@
 /*
  * api.js
- * @flow strict
+ * @flow
  */
 
 // only relative imports are followed by documentationjs
@@ -16,8 +16,8 @@ class Api {
   apiInterface: Object;
   model: OxalisModel;
   /**
-  * @private
-  */
+   * @private
+   */
   constructor(oxalisModel: OxalisModel) {
     this.readyPromise = new Promise(resolve => {
       app.vent.listenTo(app.vent, "webknossos:ready", resolve);
@@ -27,19 +27,19 @@ class Api {
   }
 
   /**
-  * API initializer. Will be called as soon as the webKnossos API is ready.
-  * @name apiReady
-  * @memberof Api
-  * @instance
-  * @param {number} version
-  *
-  * @example
-  * window.webknossos.apiReady(2).then((api) => {
-  *   // Your cool user script / wK plugin
-  *   const nodes = api.tracing.getAllNodes();
-  *   ...
-  * });
-  */
+   * API initializer. Will be called as soon as the webKnossos API is ready.
+   * @name apiReady
+   * @memberof Api
+   * @instance
+   * @param {number} version
+   *
+   * @example
+   * window.webknossos.apiReady(2).then((api) => {
+   *   // Your cool user script / wK plugin
+   *   const nodes = api.tracing.getAllNodes();
+   *   ...
+   * });
+   */
   apiReady(version: number = 1): Promise<Object> {
     if (process.env.BABEL_ENV !== "test") {
       if (version !== latestVersion) {

@@ -1,5 +1,5 @@
 // @flow
-/* eslint-disable react/no-unused-prop-types, react/no-unused-props, react/jsx-no-bind, react/no-multi-comp  */
+/* eslint-disable react/jsx-no-bind, react/no-multi-comp  */
 import * as React from "react";
 import { Button, Spin } from "antd";
 

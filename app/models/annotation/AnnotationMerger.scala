@@ -1,12 +1,12 @@
 package models.annotation
 
+import oxalis.security.silhouetteOxalis.{SecuredRequest}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType.AnnotationType
 import models.binary.DataSetDAO
-import oxalis.security.AuthenticatedRequest
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 
@@ -21,14 +21,14 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
                 idB: String,
                 typB: AnnotationType,
                 persistTracing: Boolean
-              )(implicit request: AuthenticatedRequest[_], ctx: DBAccessContext): Fox[Annotation] = {
+              )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[Annotation] = {
 
     val identifierA = AnnotationIdentifier(typA, idA)
     val identifierB = AnnotationIdentifier(typB, idB)
 
     for {
-      annotationA: Annotation <- AnnotationStore.requestAnnotation(identifierA, request.userOpt) ?~> "Request Annotation in AnnotationStore failed"
-      annotationB: Annotation <- AnnotationStore.requestAnnotation(identifierB, request.userOpt) ?~> "Request Annotation in AnnotationStore failed"
+      annotationA: Annotation <- AnnotationStore.requestAnnotation(identifierA, Some(request.identity)) ?~> "Request Annotation in AnnotationStore failed"
+      annotationB: Annotation <- AnnotationStore.requestAnnotation(identifierB, Some(request.identity)) ?~> "Request Annotation in AnnotationStore failed"
       mergedAnnotation <- mergeTwo(annotationA, annotationB, persistTracing)
     } yield mergedAnnotation
   }
@@ -37,9 +37,9 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
     annotationA: Annotation,
     annotationB: Annotation,
     persistTracing: Boolean
-    )(implicit request: AuthenticatedRequest[_], ctx: DBAccessContext): Fox[Annotation] = {
+    )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[Annotation] = {
     val newId = BSONObjectID.generate()
-    mergeN(newId, persistTracing, Some(request.user._id), annotationB.dataSetName, annotationB.team, AnnotationType.Explorational, List(annotationA, annotationB))
+    mergeN(newId, persistTracing, Some(request.identity._id), annotationB.dataSetName, annotationB.team, AnnotationType.Explorational, List(annotationA, annotationB))
   }
 
   def mergeN(

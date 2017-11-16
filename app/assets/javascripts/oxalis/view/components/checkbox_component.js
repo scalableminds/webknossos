@@ -17,12 +17,11 @@ class CheckboxComponent extends React.PureComponent<CheckboxComponentPropType> {
     onClick: _.noop,
   };
 
-  handleClick = (e: Event & { currentTarget: HTMLElement }) => {
+  handleClick = (e: SyntheticEvent<HTMLInputElement>) => {
     // For antd checkboxs e.target seems to be the span with the checkbox description, whereas
     // e.currentTarget is the actual checkbox
-    if (e != null && e.currentTarget != null) {
-      e.currentTarget.blur();
-    }
+    e.currentTarget.blur();
+
     if (this.props.onClick) {
       this.props.onClick(e);
     }

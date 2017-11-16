@@ -37,7 +37,7 @@ import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
-import type { Vector3, Point3, ControlModeType } from "oxalis/constants";
+import type { Vector3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
@@ -80,8 +80,8 @@ type ServerTracingBaseType = {
   boundingBox?: BoundingBoxObjectType,
   userBoundingBox?: BoundingBoxObjectType,
   createdTimestamp: number,
-  editPosition: Point3,
-  editRotation: Point3,
+  editPosition: Vector3,
+  editRotation: Vector3,
   error?: string,
   version: number,
   zoomLevel: number,
@@ -94,6 +94,7 @@ export type ServerSkeletonTracingType = ServerTracingBaseType & {
 
 export type ServerVolumeTracingType = ServerTracingBaseType & {
   activeSegmentId?: number,
+  boundingBox: BoundingBoxObjectType,
   elementClass: ElementClassType,
   fallbackLayer?: string,
   largestSegmentId: number,
@@ -332,9 +333,13 @@ export class OxalisModel {
   getLayerInfos(tracing: ?ServerTracingType) {
     // Overwrite or extend layers with volumeTracingLayer
     let layers = _.clone(Store.getState().dataset.dataLayers);
+    // $FlowFixMe TODO Why does Flow complain about this check
     if (tracing == null || tracing.elementClass == null) {
       return layers;
     }
+
+    // Flow doesn't check that as the tracing has the elementClass property it has to be a volumeTracing
+    tracing = ((tracing: any): ServerVolumeTracingType);
 
     // This code will only be executed for volume tracings as only those have a dataLayer.
     // The tracing always contains the layer information for the user segmentation.

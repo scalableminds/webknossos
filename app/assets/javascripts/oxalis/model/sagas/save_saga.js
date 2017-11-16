@@ -58,14 +58,22 @@ export function* collectUndoStates(): Generator<*, *, *> {
         undoStack.push(prevTracing);
         if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
       }
-    } else if (undo && undoStack.length) {
-      redoStack.push(prevTracing);
-      const newTracing = undoStack.pop();
-      yield put(setTracingAction(newTracing));
-    } else if (redo && redoStack.length) {
-      undoStack.push(prevTracing);
-      const newTracing = redoStack.pop();
-      yield put(setTracingAction(newTracing));
+    } else if (undo) {
+      if (undoStack.length) {
+        redoStack.push(prevTracing);
+        const newTracing = undoStack.pop();
+        yield put(setTracingAction(newTracing));
+      } else {
+        Toast.info(messages["undo.no_undo"]);
+      }
+    } else if (redo) {
+      if (redoStack.length) {
+        undoStack.push(prevTracing);
+        const newTracing = redoStack.pop();
+        yield put(setTracingAction(newTracing));
+      } else {
+        Toast.info(messages["undo.no_redo"]);
+      }
     }
     // We need the updated tracing here
     prevTracing = yield select(state => state.tracing);
@@ -146,7 +154,7 @@ export function toggleErrorHighlighting(state: boolean) {
   if (state) {
     Toast.error(messages["save.failed"], true);
   } else {
-    Toast.delete("danger", messages["save.failed"]);
+    Toast.close(messages["save.failed"]);
   }
 }
 
@@ -331,7 +339,7 @@ export function performDiffTracing(
   }
 }
 
-export function* saveTracingAsync(): Generator<*, *, *> {
+export function* saveTracingAsync(): Generator<any, any, any> {
   const { initSkeleton } = yield race({
     initSkeleton: take("INITIALIZE_SKELETONTRACING"),
     initVolume: take("INITIALIZE_VOLUMETRACING"),

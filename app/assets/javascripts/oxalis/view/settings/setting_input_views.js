@@ -314,7 +314,6 @@ export class Vector6InputSetting extends React.PureComponent<
 }
 
 type ColorSettingPropTypes = {
-  // eslint-disable-next-line react/no-unused-prop-types
   value: string,
   label: string,
   onChange: (value: Vector3) => void,

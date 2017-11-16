@@ -74,7 +74,7 @@ class MappingInfoView extends Component<Props> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): Props {
   return { position: getPosition(state.flycam) };
 }
 

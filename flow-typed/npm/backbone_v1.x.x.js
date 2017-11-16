@@ -214,7 +214,7 @@ declare module 'backbone' {
     static extend<P, CP>(instanceProperies: P, classProperties?: CP): Class<View & P> & CP;
     constructor(): this;
     initialize(options?: Object): this;
-    el: HTMLElement | string;
+    el: HTMLElement;
     $el: any;
     setElement(el: HTMLElement): this;
     attributes: AttributesHasMap | () => AttributesHasMap;

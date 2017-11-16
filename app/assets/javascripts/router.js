@@ -1,10 +1,7 @@
 /**
  * router.js
- * @flow weak
+ * @flow
  */
-
-// Remove these linting rules after refactoring
-/* eslint-disable global-require, import/no-dynamic-require, no-param-reassign */
 
 import $ from "jquery";
 import _ from "lodash";
@@ -12,13 +9,14 @@ import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeTracingEnum } from "admin/api_flow_types";
 import BaseRouter from "libs/base_router";
 import ReactBackboneWrapper from "libs/react_backbone_wrapper";
-import PaginationCollection from "admin/models/pagination_collection";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
 
 import SpotlightView from "dashboard/views/spotlight_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
+
+import type { TracingTypeTracingType } from "oxalis/store";
 
 // #####
 // This Router contains all the routes for views that have been
@@ -57,8 +55,8 @@ class Router extends BaseRouter {
     };
   }
 
-  constructor(...args) {
-    super(...args);
+  constructor() {
+    super();
     this.$loadingSpinner = $("#loader");
     this.$mainContainer = $("#main-container");
     this.initialize();
@@ -72,7 +70,7 @@ class Router extends BaseRouter {
     this.$loadingSpinner.addClass("hidden");
   }
 
-  tracingView(type, id) {
+  tracingView(type: TracingTypeTracingType, id: string) {
     const view = new ReactBackboneWrapper(TracingLayoutView, {
       initialTracingType: type,
       initialAnnotationId: id,
@@ -82,7 +80,7 @@ class Router extends BaseRouter {
     this.changeView(view);
   }
 
-  tracingViewPublic(id) {
+  tracingViewPublic(id: string) {
     const view = new ReactBackboneWrapper(TracingLayoutView, {
       initialTracingType: APITracingTypeTracingEnum.View,
       initialAnnotationId: id,
@@ -99,7 +97,7 @@ class Router extends BaseRouter {
     });
   }
 
-  projectCreate(projectName) {
+  projectCreate(projectName: string) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const view = new ReactBackboneWrapper(admin.ProjectCreateView, { projectName });
       this.changeView(view);
@@ -120,7 +118,7 @@ class Router extends BaseRouter {
     });
   }
 
-  datasetEdit(name) {
+  datasetEdit(name: string) {
     const view = new ReactBackboneWrapper(DatasetImportView, {
       datasetName: name,
       isEditingMode: true,
@@ -128,7 +126,7 @@ class Router extends BaseRouter {
     this.changeView(view);
   }
 
-  datasetImport(name) {
+  datasetImport(name: string) {
     const view = new ReactBackboneWrapper(DatasetImportView, {
       datasetName: name,
       isEditingMode: false,
@@ -157,7 +155,7 @@ class Router extends BaseRouter {
     });
   }
 
-  projectTasks(projectName) {
+  projectTasks(projectName: string) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const view = new ReactBackboneWrapper(admin.TaskListView, {
         // See format for `mapPropsToFields`
@@ -168,7 +166,7 @@ class Router extends BaseRouter {
     });
   }
 
-  taskTypesTasks(taskTypeId) {
+  taskTypesTasks(taskTypeId: string) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const view = new ReactBackboneWrapper(admin.TaskListView, {
         // See format for `mapPropsToFields`
@@ -198,41 +196,29 @@ class Router extends BaseRouter {
    */
   taskCreate() {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskCreateView = admin.TaskCreateView;
-      const TaskModel = admin.TaskModel;
-
-      const model = new TaskModel();
-      const view = new TaskCreateView({ model });
-
+      const view = new ReactBackboneWrapper(admin.TaskCreateView, {});
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 
   /**
    * Load item view which displays an editable task.
    */
-  taskEdit(taskID) {
+  taskEdit(taskId: string) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      const TaskCreateFromView = admin.TaskCreateFromView;
-      const TaskModel = admin.TaskModel;
-
-      const model = new TaskModel({ id: taskID });
-      const view = new TaskCreateFromView({ model, type: "from_form" });
-
+      const view = new ReactBackboneWrapper(admin.TaskCreateFormView, { taskId });
       this.changeView(view);
-      this.hideLoadingSpinner();
     });
   }
 
-  taskTypesCreate(taskTypeId) {
+  taskTypesCreate(taskTypeId: string) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const view = new ReactBackboneWrapper(admin.TaskTypeCreateView, { taskTypeId });
       this.changeView(view);
     });
   }
 
-  scriptsCreate(scriptId) {
+  scriptsCreate(scriptId: string) {
     import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
       const view = new ReactBackboneWrapper(admin.ScriptCreateView, { scriptId });
       this.changeView(view);
@@ -240,7 +226,7 @@ class Router extends BaseRouter {
     });
   }
 
-  dashboard(userID) {
+  dashboard(userID: string) {
     const isAdminView = userID !== null;
     const view = new ReactBackboneWrapper(DashboardView, {
       userID,
@@ -254,24 +240,7 @@ class Router extends BaseRouter {
     this.changeView(view);
   }
 
-  showWithPagination(view, collection, options = {}) {
-    _.defaults(options, { addButtonText: null });
-
-    import(/* webpackChunkName: "admin" */ "admin/admin").then(admin => {
-      collection = new admin[collection](null, options);
-      const paginatedCollection = new PaginationCollection([], { fullCollection: collection });
-      view = new admin[view]({ collection: paginatedCollection });
-      const paginationView = new admin.PaginationView({
-        collection: paginatedCollection,
-        addButtonText: options.addButtonText,
-      });
-
-      this.changeView(paginationView, view);
-      this.listenTo(collection, "sync", () => this.hideLoadingSpinner());
-    });
-  }
-
-  changeView(...views) {
+  changeView(...views: Array<ReactBackboneWrapper<*, *>>) {
     if (_.isEqual(this.activeViews, views)) {
       return;
     }

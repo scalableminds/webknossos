@@ -148,9 +148,7 @@ class AbstractTreeRenderer {
     } catch (e) {
       console.log("Error:", e);
       if (e.message === CYCLIC_TREE_ERROR) {
-        this.drawErrorMessage(
-          `${messages["tracing.tree_viewer_no_cyclic_trees"]} \n(Tree ID ${tree.treeId})`,
-        );
+        this.drawErrorMessage(messages["tracing.tree_viewer_no_cyclic_trees"]);
         return;
       }
     }
@@ -505,7 +503,7 @@ class AbstractTreeRenderer {
   */
   drawErrorMessage(message: string) {
     this.ctx.font = "16px serif";
-    this.ctx.fillText(message, 50, 50);
+    this.ctx.fillText(message, 10, 50);
   }
 
   /**

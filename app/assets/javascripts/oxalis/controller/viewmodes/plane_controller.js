@@ -2,7 +2,6 @@
  * plane_controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
 import * as React from "react";
 import { connect } from "react-redux";
@@ -139,7 +138,7 @@ class PlaneController extends React.PureComponent<Props> {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
         const viewportScale = Store.getState().userConfiguration.scale;
-        debugger;
+
         return this.movePlane([
           delta.x * mouseInversionX / viewportScale,
           delta.y * mouseInversionY / viewportScale,
@@ -212,7 +211,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   initKeyboard(): void {
     // avoid scrolling while pressing space
-    document.addEventListener("keydown", (event: JQueryInputEventObject) => {
+    document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
         Utils.isNoElementFocussed()
@@ -404,11 +403,9 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   zoomTDView(value: number, zoomToMouse: boolean = true): void {
-    debugger;
     let zoomToPosition;
     if (zoomToMouse) {
       zoomToPosition = this.input.mouseControllers[OrthoViews.TDView].position;
-      console.log(zoomToPosition);
     }
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, this.planeView.curWidth));
   }

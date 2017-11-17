@@ -37,7 +37,6 @@ class ArbitraryView {
   geometries: Array<THREE.Geometry> = [];
   group: THREE.Object3D;
   cameraPosition: Array<number>;
-  container: JQuery;
 
   constructor() {
     this.animate = this.animateImpl.bind(this);

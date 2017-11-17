@@ -332,14 +332,14 @@ export class InputMouse {
     Utils.addEventListenerWithDelegation(document, "touchend", this.targetSelector, this.mouseOut);
     Utils.addEventListenerWithDelegation(document, "wheel", this.targetSelector, this.mouseWheel);
 
-    // this.hammerManager = new Hammer(this.domElement);
-    // this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
-    // this.hammerManager.get("pinch").set({ enable: true });
-    // this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
-    // this.hammerManager.on("panmove", (evt: HammerJsEvent) => this.mouseMove(evt.srcEvent));
-    // this.hammerManager.on("panend", (evt: HammerJsEvent) => this.mouseUp(evt.srcEvent));
-    // this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
-    // this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
+    this.hammerManager = new Hammer(this.domElement);
+    this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
+    this.hammerManager.get("pinch").set({ enable: true });
+    this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
+    this.hammerManager.on("panmove", (evt: HammerJsEvent) => this.mouseMove(evt.srcEvent));
+    this.hammerManager.on("panend", (evt: HammerJsEvent) => this.mouseUp(evt.srcEvent));
+    this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
+    this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
 
     this.on(initialBindings);
   }
@@ -466,10 +466,6 @@ export class InputMouse {
 
   getRelativeMousePosition = (pagePosition: { pageX: number, pageY: number }) => {
     const offset = this.getOffset();
-    console.log(offset, {
-      x: pagePosition.pageX - offset.left - window.pageXOffset,
-      y: pagePosition.pageY - offset.top - window.pageYOffset,
-    });
 
     return {
       x: pagePosition.pageX - offset.left - window.pageXOffset,

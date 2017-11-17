@@ -2,7 +2,6 @@
  * skeletontracing_plane_controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
 import * as THREE from "three";
 import _ from "lodash";
@@ -65,16 +64,16 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+      leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) =>
         this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, plane),
-      rightClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+      rightClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) =>
         this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
     });
   }
 
   getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
-      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+      leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) =>
         this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, OrthoViews.TDView),
     });
   }

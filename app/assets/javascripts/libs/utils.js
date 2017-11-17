@@ -372,6 +372,27 @@ const Utils = {
     // when no element is focused <body> gets the focus
     return document.activeElement === document.body;
   },
+
+  // https://stackoverflow.com/questions/25248286/native-js-equivalent-to-jquery-delegation#
+  addEventListenerWithDelegation(
+    element: HTMLElement,
+    eventName: string,
+    delegateSelector: string,
+    handlerFunc: Function,
+  ) {
+    return element.addEventListener(
+      eventName,
+      function(event: Event) {
+        for (let target = event.target; target && target !== this; target = target.parentNode) {
+          if (target.matches(delegateSelector)) {
+            handlerFunc.call(target, event);
+            break;
+          }
+        }
+      },
+      false,
+    );
+  },
 };
 
 export default Utils;

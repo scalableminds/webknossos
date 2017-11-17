@@ -139,6 +139,7 @@ class PlaneController extends React.PureComponent<Props> {
         const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
         const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
         const viewportScale = Store.getState().userConfiguration.scale;
+        debugger;
         return this.movePlane([
           delta.x * mouseInversionX / viewportScale,
           delta.y * mouseInversionY / viewportScale,
@@ -403,9 +404,11 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   zoomTDView(value: number, zoomToMouse: boolean = true): void {
+    debugger;
     let zoomToPosition;
     if (zoomToMouse) {
       zoomToPosition = this.input.mouseControllers[OrthoViews.TDView].position;
+      console.log(zoomToPosition);
     }
     Store.dispatch(zoomTDViewAction(value, zoomToPosition, this.planeView.curWidth));
   }

@@ -495,11 +495,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
 
     if (_state === STATE.TOUCH_ROTATE && !_this.noRotate) {
       _rotateStart.copy(
-        _this.getMouseProjectionOnBall(
-          event.changedTouches[0].pageX,
-          event.changedTouches[0].pageY,
-          _rotateEnd,
-        ),
+        _this.getMouseProjectionOnBall(event.touches[0].pageX, event.touches[0].pageY, _rotateEnd),
       );
     } else if (_state === STATE.TOUCH_ZOOM && !_this.noZoom) {
       _touchZoomDistanceStart = 0;

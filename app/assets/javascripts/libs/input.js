@@ -466,7 +466,11 @@ export class InputMouse {
   pinchStart = (evt: HammerJsEvent) => {
     this.lastScale = evt.scale;
     // Save position so we can zoom to the pinch start position
-    this.position = this.getRelativeMousePosition({ pageX: evt.center.x, pageY: evt.center.y });
+    // Calculate gesture center ourself as there is a bug in the HammerJS calculation
+    this.position = this.getRelativeMousePosition({
+      pageX: (evt.pointers[0].pageX + evt.pointers[1].pageX) / 2,
+      pageY: (evt.pointers[0].pageY + evt.pointers[1].pageY) / 2,
+    });
   };
 
   pinch = (evt: HammerJsEvent): void => {

@@ -20,7 +20,8 @@ import { getActiveUser } from "admin/admin_rest_api";
 // $FlowFixMe: CSS/LESS imports are a special WebPack feature
 import "../stylesheets/main.less";
 
-ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
+document.addEventListener("DOMContentLoaded", async () => {
+  ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
   const containerElement = document.getElementById("main-container");
   if (containerElement) {

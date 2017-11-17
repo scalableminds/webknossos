@@ -121,7 +121,7 @@ class DashboardView extends React.PureComponent<Props, State> {
     ) : null;
 
     return (
-      <div id="dashboard" className="container wide">
+      <div className="container wide">
         {userHeader}
         <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange} style={{ marginTop: 20 }}>
           {this.getTabs(user)}

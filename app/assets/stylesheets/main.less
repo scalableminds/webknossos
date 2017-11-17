@@ -4,12 +4,8 @@
 @import "../../../node_modules/font-awesome/less/font-awesome.less";
 
 @import "_variables.less";
-@import "admin/_team.less";
-@import "admin/_dataset.less";
-@import "admin/_pagination.less";
 @import "admin/_task.less";
 @import "admin/_statistics.less";
-@import "_bootstrap_addons.less";
 @import "_dashboard.less";
 @import "trace_view/_tracing_view.less";
 @import "trace_view/_action_bar.less";
@@ -27,10 +23,7 @@ body {
   -webkit-font-smoothing: antialised;
   height: ~"calc(100vh - 41px)";
 }
-body:-webkit-full-screen {
-  width: 100%;
-  height: 100%;
-}
+
 .save-error .navbar {
   background-color: #c00;
 }
@@ -55,14 +48,6 @@ body:-webkit-full-screen {
   }
 }
 
-.label {
-  margin-right: 0.2em;
-}
-
-.well form {
-  margin-bottom: 0;
-}
-
 .container.wide {
   margin-left: 20px;
   margin-right: 20px;
@@ -82,56 +67,6 @@ td.nowrap * {
   white-space: nowrap;
 }
 
-.table-details {
-  .details-row > td {
-    box-shadow: inset 0 0 10px rgba(180, 180, 180, 0.2);
-  }
-  .details-toggle,
-  .details-toggle-all {
-    cursor: pointer;
-
-    .caret-down {
-      display: none;
-    }
-
-    &.open {
-      .caret-right {
-        display: none;
-      }
-      .caret-down {
-        display: inline-block;
-      }
-    }
-  }
-}
-
-.table {
-  a [class^="fa-"],
-  a [class*=" fa-"] {
-    color: #000;
-  }
-}
-
-.light-caret {
-  display: inline-block;
-  width: 0;
-  height: 0;
-  vertical-align: middle;
-  content: "";
-}
-.caret-right {
-  .light-caret;
-  border-left: 4px solid #888;
-  border-top: 4px solid transparent;
-  border-bottom: 4px solid transparent;
-}
-.caret-down {
-  .light-caret;
-  border-top: 4px solid #888;
-  border-right: 4px solid transparent;
-  border-left: 4px solid transparent;
-}
-
 .fa-random {
   width: 14px;
   background-position: -217px -120px;
@@ -146,69 +81,6 @@ td.nowrap * {
 
 .inline-block {
   display: inline-block;
-}
-
-.inline {
-  display: inline;
-}
-
-.ant-notification {
-  z-index: 1040; // make sure we are above nav bar
-  width: auto;
-  max-width: 80vw;
-}
-
-.ant-notification-notice {
-  iframe {
-    border: none;
-    height: 200px;
-    width: 500px;
-    max-width: 80vw;
-    resize: both;
-  }
-
-  @keyframes alert-wiggle {
-    0% {
-      transform: translateX(0px) translateY(0px);
-    }
-    2% {
-      transform: translateX(8px) translateY(-8px);
-    }
-    4% {
-      transform: translateX(-8px) translateY(8px);
-    }
-    6% {
-      transform: translateX(8px) translateY(-8px);
-    }
-    8% {
-      transform: translateX(-8px) translateY(8px);
-    }
-    10% {
-      transform: translateX(8px) translateY(-8px);
-    }
-    12% {
-      transform: translateX(-8px) translateY(8px);
-    }
-    14% {
-      transform: translateX(8px) translateY(-8px);
-    }
-    16% {
-      transform: translateX(-8px) translateY(8px);
-    }
-    18% {
-      transform: translateX(8px) translateY(-8px);
-    }
-    20% {
-      transform: translateX(0px) translateY(0px);
-    }
-  }
-
-  .alert-wiggle {
-    animation-name: alert-wiggle;
-    animation-duration: 5s;
-    animation-delay: 0s;
-    animation-iteration-count: infinite;
-  }
 }
 
 #stats {
@@ -270,10 +142,6 @@ td.nowrap * {
   }
 }
 
-.space-top {
-  margin-top: 30px;
-}
-
 // Fixing font awesome
 .btn [class^="fa-"],
 .nav [class^="fa-"],
@@ -282,33 +150,9 @@ td.nowrap * {
   line-height: normal;
 }
 
-#merge {
-  width: 280px;
-  padding: 10px;
-  position: absolute;
-  top: 240px;
-  left: 0px;
-  background-color: #aaf;
-  visibility: hidden;
-}
-
-//submit issue form
-textarea[name="description"] {
-  height: 100px;
-}
 // make sure text and icons have space between them
 i {
   margin-right: 5px;
-}
-
-.v-center > .v-center-agent {
-  display: table-cell;
-  vertical-align: middle;
-}
-
-.v-center {
-  display: table;
-  height: 100%;
 }
 
 .flex-column {
@@ -327,10 +171,6 @@ i {
   height: 0;
 }
 
-.pagination > li > a {
-  cursor: pointer;
-}
-
 .monospace-id {
   // break long IDs
   word-wrap: break-word;
@@ -341,4 +181,24 @@ i {
 
 img.img-50 {
   width: 47%;
+}
+
+.divider-vertical {
+  display: inline-block;
+  vertical-align: middle;
+  height: 25px;
+  margin: 0 8px;
+  border-right: 1px solid #e5e5e5;
+}
+
+.table-nohead {
+  thead tr th {
+    border: none;
+  }
+  tbody tr:first-child {
+    td,
+    th {
+      border-top: none;
+    }
+  }
 }

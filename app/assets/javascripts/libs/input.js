@@ -3,7 +3,7 @@
  * @flow
  */
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import constants from "oxalis/constants";
 import Date from "libs/date";
 import { document } from "libs/window";
@@ -298,7 +298,7 @@ export class InputMouse {
     initialBindings: BindingMap<MouseHandlerType> = {},
     id: ?string = null,
   ) {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
     this.targetSelector = targetSelector;
     this.domElement = document.querySelector(targetSelector);
     this.id = id;

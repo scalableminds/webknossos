@@ -10,7 +10,7 @@ import { Spin, Modal } from "antd";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import Stats from "stats.js";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
@@ -79,7 +79,7 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     UrlManager.initialize();
 

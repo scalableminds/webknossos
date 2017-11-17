@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
@@ -45,7 +45,7 @@ class ArbitraryPlane {
     this.isDirty = true;
     this.height = 0;
     this.width = constants.VIEWPORT_WIDTH;
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     this.mesh = this.createMesh();
 

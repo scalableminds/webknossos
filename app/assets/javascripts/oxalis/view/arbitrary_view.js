@@ -4,7 +4,7 @@
  */
 import _ from "lodash";
 import app from "app";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Constants from "oxalis/constants";
@@ -42,7 +42,7 @@ class ArbitraryView {
     this.animate = this.animateImpl.bind(this);
     this.resize = this.resizeImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the

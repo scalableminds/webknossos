@@ -3,9 +3,7 @@
  * @flow
  */
 
-import Backbone from "backbone";
 import ErrorHandling from "libs/error_handling";
-import app from "app";
 
 import React from "react";
 import ReactRouter from "react_router";
@@ -14,12 +12,8 @@ import { Provider } from "react-redux";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 
-import "bootstrap";
-import "jasny-bootstrap";
 import "whatwg-fetch";
 import "es6-promise";
-import "libs/core_ext";
-import "backbone.marionette";
 
 import { getActiveUser } from "admin/admin_rest_api";
 
@@ -28,7 +22,6 @@ import "../stylesheets/main.less";
 
 ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
-app.on("start", async () => {
   const containerElement = document.getElementById("main-container");
   if (containerElement) {
     ReactDOM.render(
@@ -38,9 +31,8 @@ app.on("start", async () => {
       containerElement,
     );
   }
-});
 
-app.on("start", async () => {
+  // try retreive the currently active user if logged in
   try {
     const user = await getActiveUser({ doNotCatch: true });
     Store.dispatch(setActiveUserAction(user));
@@ -48,13 +40,4 @@ app.on("start", async () => {
   } catch (e) {
     // pass
   }
-});
-
-app.on("start", () => {
-  // set app.vent to the global radio channel
-  app.vent = Backbone.Radio.channel("global");
-});
-
-document.addEventListener("DOMContentLoaded", () => {
-  app.start();
 });

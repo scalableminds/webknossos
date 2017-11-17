@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import { InputKeyboardNoLoop } from "libs/input";
 import Store from "oxalis/store";
 import {
@@ -32,7 +32,7 @@ class VolumeTracingController {
   constructor() {
     this.inDeleteMode = false;
 
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     // Keyboard shortcuts
     this.keyboardNoLoop = new InputKeyboardNoLoop({

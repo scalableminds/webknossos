@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
 import { document } from "libs/window";
@@ -78,7 +78,7 @@ class PlaneController extends React.PureComponent<Props> {
   stopListening: Function;
 
   componentDidMount() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
     this.input = {
       mouseControllers: {},
     };

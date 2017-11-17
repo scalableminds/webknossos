@@ -1,7 +1,6 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
 import sinon from "sinon";
-import "backbone.marionette";
 import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 

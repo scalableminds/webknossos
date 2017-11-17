@@ -1,6 +1,6 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-import Backbone from "backbone";
 import mockRequire from "mock-require";
+import BackboneEvents from "backbone-events-standalone";
 import sinon from "sinon";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
@@ -32,14 +32,10 @@ const window = {
   alert: console.log.bind(console),
   open: sinon.spy(),
 };
-const currentUser = {
-  firstName: "SCM",
-  lastName: "Boy",
-};
 const app = {
-  vent: Backbone.Radio.channel("global"),
-  currentUser,
+  vent: Object.assign({}, BackboneEvents),
 };
+
 export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,

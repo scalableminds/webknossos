@@ -419,7 +419,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
     if (_this.enabled === false) return;
 
     switch (event.touches.length) {
-      case 1:
+      case 3:
         _state = STATE.TOUCH_ROTATE;
         _rotateEnd.copy(
           _this.getMouseProjectionOnBall(
@@ -440,7 +440,7 @@ function TrackballControls(object, domElement, target, updateCallback) {
         break;
       }
 
-      case 3:
+      case 1:
         _state = STATE.TOUCH_PAN;
         _panEnd.copy(
           _this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panStart),
@@ -459,8 +459,8 @@ function TrackballControls(object, domElement, target, updateCallback) {
     event.preventDefault();
 
     switch (event.touches.length) {
-      case 1:
-        if (_state === STATE.ROTATE && !_this.noRotate) {
+      case 3:
+        if (_state === STATE.TOUCH_ROTATE && !_this.noRotate) {
           _this.getMouseProjectionOnBall(
             event.touches[0].pageX,
             event.touches[0].pageY,
@@ -470,14 +470,18 @@ function TrackballControls(object, domElement, target, updateCallback) {
         break;
 
       case 2: {
-        const dx = event.touches[0].pageX - event.touches[1].pageX;
-        const dy = event.touches[0].pageY - event.touches[1].pageY;
-        _touchZoomDistanceEnd = Math.sqrt(dx * dx + dy * dy);
+        if (_state === STATE.TOUCH_ZOOM && !_this.noZoom) {
+          const dx = event.touches[0].pageX - event.touches[1].pageX;
+          const dy = event.touches[0].pageY - event.touches[1].pageY;
+          _touchZoomDistanceEnd = Math.sqrt(dx * dx + dy * dy);
+        }
         break;
       }
 
-      case 3:
-        _this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panEnd);
+      case 1:
+        if (_state === STATE.TOUCH_PAN && !_this.noPan) {
+          _this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panEnd);
+        }
         break;
 
       default:
@@ -489,30 +493,21 @@ function TrackballControls(object, domElement, target, updateCallback) {
   function touchend(event) {
     if (_this.enabled === false) return;
 
-    switch (event.touches.length) {
-      case 1:
-        _rotateStart.copy(
-          _this.getMouseProjectionOnBall(
-            event.touches[0].pageX,
-            event.touches[0].pageY,
-            _rotateEnd,
-          ),
-        );
-        break;
-
-      case 2:
-        _touchZoomDistanceStart = 0;
-        _touchZoomDistanceEnd = 0;
-        break;
-
-      case 3:
-        _panStart.copy(
-          _this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panEnd),
-        );
-        break;
-
-      default:
-      // Do nothing
+    if (_state === STATE.TOUCH_ROTATE && !_this.noRotate) {
+      _rotateStart.copy(
+        _this.getMouseProjectionOnBall(
+          event.changedTouches[0].pageX,
+          event.changedTouches[0].pageY,
+          _rotateEnd,
+        ),
+      );
+    } else if (_state === STATE.TOUCH_ZOOM && !_this.noZoom) {
+      _touchZoomDistanceStart = 0;
+      _touchZoomDistanceEnd = 0;
+    } else if (_state === STATE.TOUCH_PAN && !_this.noPan) {
+      _panStart.copy(
+        _this.getMouseOnScreen(event.touches[0].pageX, event.touches[0].pageY, _panEnd),
+      );
     }
 
     _state = STATE.NONE;

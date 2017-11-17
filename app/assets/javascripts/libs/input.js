@@ -8,8 +8,8 @@ import constants from "oxalis/constants";
 import Date from "libs/date";
 import { document } from "libs/window";
 import Utils from "libs/utils";
-import KeyboardJS from "./keyboardjs_wrapper";
-import Hammer from "./hammerjs_wrapper";
+import KeyboardJS from "libs/keyboardjs_wrapper";
+import Hammer from "libs/hammerjs_wrapper";
 import type { Point2 } from "oxalis/constants";
 
 // This is the main Input implementation.

@@ -383,7 +383,9 @@ const Utils = {
     return element.addEventListener(
       eventName,
       function(event: Event) {
+        // $FlowFixMe Flow doesn't know native InputEvents
         for (let target = event.target; target && target !== this; target = target.parentNode) {
+          // $FlowFixMe Flow doesn't know native InputEvents
           if (target.matches(delegateSelector)) {
             handlerFunc.call(target, event);
             break;

@@ -6,7 +6,7 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import { Spin } from "antd";
+import { Spin, Modal } from "antd";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
@@ -29,7 +29,6 @@ import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
-import Modal from "oxalis/view/modal";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
@@ -173,7 +172,11 @@ class Controller extends React.PureComponent<Props, State> {
     } else {
       text = messages["task.no_description"];
     }
-    Modal.show(text, title);
+
+    Modal.info({
+      title,
+      content: text,
+    });
   }
 
   scaleTrianglesPlane(delta: number): void {

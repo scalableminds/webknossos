@@ -217,7 +217,7 @@ class Authentication @Inject() (
         val id = UUID.fromString(passwords.token)
         userTokenService.find(id).flatMap {
           case None =>
-            Future.successful(BadRequest(Messages("error.invalidToken")))
+            Future.successful(BadRequest(Messages("auth.invalidToken")))
           case Some(token) if !token.isLogin && !token.isExpired =>
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
@@ -257,19 +257,26 @@ class Authentication @Inject() (
 
   def getToken = SecuredAction.async { implicit request =>
     for{
+      maybeOldAuthenticator <- env.combinedAuthenticatorService.tokenDao.findByLoginInfo(request.identity.loginInfo)
       combinedAuthenticator <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
     }yield{
-      Ok(Json.obj("token" -> combinedAuthenticator.id))
+      var js = Json.obj()
+      if(maybeOldAuthenticator.isDefined){
+        js = Json.obj("token" -> combinedAuthenticator.id, "msg" -> Messages("auth.addedNewToken"))
+      } else {
+        js = Json.obj("token" -> combinedAuthenticator.id)
+      }
+      Ok(js)
     }
   }
 
   def deleteToken = SecuredAction.async { implicit request =>
     for{
       maybeOldAuthenticator <- env.combinedAuthenticatorService.tokenDao.findByLoginInfo(request.identity.loginInfo)
-      _ <- maybeOldAuthenticator.isDefined ?~> Messages("auth.noToken")
-      _ <- env.combinedAuthenticatorService.tokenDao.removeByEmail(request.identity.loginInfo.providerKey) ?~> Messages("fail") //would it be better to use the discardToken method from the combinedAuthenticator (instead of accessing the DAO directly)?
-    } yield {                                                                                                                   // for the discardToken method you ould need the authenticator itself and not the email of the user
-      JsonOk("success")
+      oldAuthenticator <- maybeOldAuthenticator ?~> Messages("auth.noToken")
+      result <- env.combinedAuthenticatorService.discardToken(oldAuthenticator, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
+    } yield {
+      result
     }
   }
 

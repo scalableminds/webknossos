@@ -37,7 +37,6 @@ import play.api.libs.json.Writes._
 
 /**
   *
-  * @param typ                to specify whether to use Cookie or Token
   * @param id                 The authenticator ID.
   * @param loginInfoParameter The linked login info for an identity.
   * @param lastUsedDateTime   The last used date/time.
@@ -46,8 +45,7 @@ import play.api.libs.json.Writes._
   * @param cookieMaxAge       [Only useful for Cookies, but not necessary] The duration a cookie expires. `None` for a transient cookie.
   * @param fingerprint        [Only useful for Cookies, but not necessary] Maybe a fingerprint of the user.
   */
-case class CombinedAuthenticator(typ: String, //is there a way to force the typ to be "COOKIE" or "TOKEN" or is that not necessary?
-                                 id: String,
+case class CombinedAuthenticator(id: String,
                                  loginInfoParameter: LoginInfo,
                                  lastUsedDateTime: DateTime,
                                  expirationDateTime: DateTime,
@@ -92,7 +90,6 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     idGenerator.generate.map { id =>
       val now = clock.now
       CombinedAuthenticator(
-        typ = "COOKIE",
         id = id,
         loginInfoParameter = loginInfo,
         lastUsedDateTime = now,
@@ -117,14 +114,13 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     idGenerator.generate.flatMap { id =>
       val now = clock.now
       val authenticator = CombinedAuthenticator(
-        typ = "TOKEN",
         id = id,
         loginInfoParameter = loginInfo,
         lastUsedDateTime = now,
-        expirationDateTime = now.plusSeconds(cookieSettings.authenticatorExpiry.toSeconds.toInt),
-        idleTimeout = cookieSettings.authenticatorIdleTimeout,
-        cookieMaxAge = cookieSettings.cookieMaxAge,
-        fingerprint = if (cookieSettings.useFingerprinting) Some(fingerprintGenerator.generate) else None
+        expirationDateTime = now.plusSeconds(tokenSettings.authenticatorExpiry.toSeconds.toInt),
+        idleTimeout = tokenSettings.authenticatorIdleTimeout,
+        cookieMaxAge = None,
+        fingerprint = None
       )
       tokenDao.add(authenticator).map { a =>
         a
@@ -355,7 +351,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     }
   }
 
-  def discardToken(authenticator: BearerTokenAuthenticator, result: Result)(
+  def discardToken(authenticator: CombinedAuthenticator, result: Result)(
     implicit request: RequestHeader): Future[AuthenticatorResult] = {
 
     tokenDao.remove(authenticator.id).map { _ =>
@@ -368,10 +364,6 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
 
 object CombinedAuthenticator {
-  val CookieTyp = "COOKIE"
-  val TokenTyp = "TOKEN"
-
-  val WrongTypError = "The Typ of the Authenticator is wrong. Use " + CookieTyp + " or " + TokenTyp + " for this." //maybe put this in Messages
 
   implicit object FiniteDurationFormat extends Format[FiniteDuration] {
     def reads(json: JsValue): JsResult[FiniteDuration] = LongReads.reads(json).map(_.seconds)

@@ -4,7 +4,6 @@ error.minLength=Please use at least 3 characters.
 error.unknown=Unknown error
 error.invalidCredentials=Email or Password is wrong
 error.noUser=There is no user to this email
-error.invalidToken=The token is invalid
 error.notInDev=This feature is only available in dev mode
 
 notAllowed=You are not allowed to view this resource
@@ -35,6 +34,10 @@ query.type.invalid=Invalid query type argument
 format.json.invalid=Invalid Json format
 
 image.create.failed=Failed to create image
+
+auth.addedNewToken=Your old token was deleted
+auth.noToken=You do not have a token
+auth.invalidToken=The token is invalid
 
 team.created=Team got created
 team.name.alreadyTaken=The teams name is already in use.

@@ -57,9 +57,6 @@ case class CombinedAuthenticator(id: String,
   override type Settings = this.type
 
   override def loginInfo: LoginInfo = loginInfoParameter
-
-  val cookieAuthenticator = CookieAuthenticator(id, loginInfo, lastUsedDateTime, expirationDateTime, idleTimeout, cookieMaxAge, fingerprint)
-  val tokenAuthenticator = BearerTokenAuthenticator(id, loginInfo, lastUsedDateTime, expirationDateTime, idleTimeout)
 }
 
 

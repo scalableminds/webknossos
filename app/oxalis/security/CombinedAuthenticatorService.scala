@@ -48,22 +48,26 @@ import play.api.libs.json.Writes._
 case class CombinedAuthenticator(id: String,
                                  loginInfoParameter: LoginInfo,
                                  lastUsedDateTime: DateTime,
-                                 expirationDateTime: DateTime,
+                                 expirationDateTime: Option[DateTime],
                                  idleTimeout: Option[FiniteDuration],
                                  cookieMaxAge: Option[FiniteDuration],
                                  fingerprint: Option[String])
-  extends StorableAuthenticator with ExpirableAuthenticator {
-  override type Value = Cookie //maybe change this
+  extends StorableAuthenticator {
+  override type Value = Cookie
   override type Settings = this.type
 
   override def loginInfo: LoginInfo = loginInfoParameter
+
+  override def isValid: Boolean = !isExpired && !isTimedOut
+
+  def isExpired = expirationDateTime.isDefined && expirationDateTime.get.isBeforeNow
+
+  def isTimedOut = idleTimeout.isDefined && (lastUsedDateTime.plusSeconds(idleTimeout.get.toSeconds.toInt)).isBeforeNow
 }
 
 
 case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSettings,
                                    tokenSettings: BearerTokenAuthenticatorSettings,
-                                   //cookieDao: Option[AuthenticatorDAO[CookieAuthenticator]],
-                                   //tokenDao : AuthenticatorDAO[BearerTokenAuthenticator],
                                    cookieDao: Option[CombinedAuthenticatorDAO],
                                    tokenDao : CombinedAuthenticatorDAO,
                                    fingerprintGenerator: FingerprintGenerator,
@@ -90,7 +94,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
         id = id,
         loginInfoParameter = loginInfo,
         lastUsedDateTime = now,
-        expirationDateTime = now.plusSeconds(cookieSettings.authenticatorExpiry.toSeconds.toInt),
+        expirationDateTime = Some(now.plusSeconds(cookieSettings.authenticatorExpiry.toSeconds.toInt)),
         idleTimeout = cookieSettings.authenticatorIdleTimeout,
         cookieMaxAge = cookieSettings.cookieMaxAge,
         fingerprint = if (cookieSettings.useFingerprinting) Some(fingerprintGenerator.generate) else None
@@ -114,7 +118,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
         id = id,
         loginInfoParameter = loginInfo,
         lastUsedDateTime = now,
-        expirationDateTime = now.plusSeconds(tokenSettings.authenticatorExpiry.toSeconds.toInt),
+        expirationDateTime = None,
         idleTimeout = tokenSettings.authenticatorIdleTimeout,
         cookieMaxAge = None,
         fingerprint = None

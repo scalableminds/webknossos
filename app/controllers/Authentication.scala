@@ -124,38 +124,38 @@ class Authentication @Inject()(
     Ok(views.html.main()(Html("")))
   }
 
-  def normalizeName(name: String):Option[String] = {
+  def normalizeName(name: String): Option[String] = {
     val replacementMap = Map("ü" -> "ue", "Ü" -> "Ue", "ö" -> "oe", "Ö" -> "Oe", "ä" -> "ae", "Ä" -> "Ae", "ß" -> "ss",
       "é" -> "e", "è" -> "e", "ê" -> "e", "È" -> "E", "É" -> "E", "Ê" -> "E",
       "Ç" -> "C", "ç" -> "c", "ñ" -> "n", "Ñ" -> "N", "ë" -> "e", "Ë" -> "E", "ï" -> "i", "Ï" -> "I",
       "å" -> "a", "Å" -> "A", "œ" -> "oe", "Œ" -> "Oe", "æ" -> "ae", "Æ" -> "Ae",
       "þ" -> "th", "Þ" -> "Th", "ø" -> "oe", "Ø" -> "Oe", "í" -> "i", "ì" -> "i")
 
-    val finalName = name.map(c => replacementMap.getOrElse(c.toString,c.toString)).mkString.replaceAll("[^A-Za-z0-9_\\-\\s]", "")
-    if(finalName.isEmpty)
+    val finalName = name.map(c => replacementMap.getOrElse(c.toString, c.toString)).mkString.replaceAll("[^A-Za-z0-9_\\-\\s]", "")
+    if (finalName.isEmpty)
       None
     else
       Some(finalName)
   }
 
   def handleRegistration = Action.async { implicit request =>
-      signUpForm.bindFromRequest.fold(
+    signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
-        var errorMap = List[String]()
-        normalizeName(signUpData.firstName).getOrElse(errorMap ::= Messages("user.firstName.invalid"))
-        normalizeName(signUpData.lastName).getOrElse(errorMap ::= Messages("user.lastName.invalid"))
+        var errors = List[String]()
+        val firstName = normalizeName(signUpData.firstName).getOrElse { errors ::= Messages("user.firstName.invalid"); "" }
+        val lastName = normalizeName(signUpData.lastName).getOrElse { errors ::= Messages("user.lastName.invalid"); "" }
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            errorMap ::= Messages("user.email.alreadyInUse")
-            Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errorMap.map(t => Json.obj("error" -> t))))))
+            errors ::= Messages("user.email.alreadyInUse")
+            Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
           case Empty =>
-            if(errorMap.isEmpty){
-              Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errorMap.map(t => Json.obj("error" -> t))))))
+            if (!errors.isEmpty) {
+              Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                user <- UserService.insert(signUpData.team, signUpData.email, normalizeName(signUpData.firstName).get, normalizeName(signUpData.lastName).get, signUpData.password, automaticUserActivation, roleOnRegistration,
+                user <- UserService.insert(signUpData.team, signUpData.email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
                 brainDBResult <- BrainTracing.register(user).toFox
               } yield {
@@ -164,9 +164,6 @@ class Authentication @Inject()(
                 Ok
               }
             }
-
-
-
           case f: Failure => Fox.failure(f.msg)
         }
       }

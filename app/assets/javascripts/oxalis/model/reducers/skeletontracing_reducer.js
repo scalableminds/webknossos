@@ -103,7 +103,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               `This tracing was initialized with an active node ID, which does not
               belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
               the last tree instead.`,
-              null,
+              undefined,
               true,
             );
             activeNodeId = null;
@@ -388,6 +388,22 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }),
             )
             .getOrElse(state);
+        }
+
+        case "SHUFFLE_ALL_TREE_COLORS": {
+          const newColors = ColorGenerator.getNRandomColors(_.size(skeletonTracing.trees));
+          return update(state, {
+            tracing: {
+              trees: {
+                $apply: oldTrees =>
+                  _.mapValues(oldTrees, tree =>
+                    update(tree, {
+                      color: { $set: newColors.shift() },
+                    }),
+                  ),
+              },
+            },
+          });
         }
 
         case "CREATE_COMMENT": {

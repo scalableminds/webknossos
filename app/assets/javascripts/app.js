@@ -5,7 +5,7 @@
 
 import Marionette from "backbone.marionette";
 import type Router from "router";
-import typeof OxalisController from "oxalis/controller";
+import OxalisController from "oxalis/controller";
 import window from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";
 

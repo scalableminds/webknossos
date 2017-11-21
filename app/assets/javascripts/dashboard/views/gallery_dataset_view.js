@@ -1,4 +1,4 @@
-// flow
+// @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 import * as React from "react";
 import { Row, Col, Modal, Card, Dropdown, Menu } from "antd";

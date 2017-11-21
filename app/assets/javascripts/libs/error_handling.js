@@ -1,11 +1,17 @@
 /**
  * error_handling.js
- * @flow weak
+ * @flow
  */
 import _ from "lodash";
 import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
 import Toast from "libs/toast";
+import type { APIUserType } from "admin/api_flow_types";
+
+type ErrorHandlingOptionsType = {
+  throwAssertions: boolean,
+  sendLocalErrors: boolean,
+};
 
 class ErrorWithParams extends Error {
   params: ?mixed;
@@ -17,7 +23,7 @@ class ErrorHandling {
   commitHash: ?string;
   airbrake: AirbrakeClient;
 
-  initialize(options) {
+  initialize(options: ErrorHandlingOptionsType) {
     if (options == null) {
       options = { throwAssertions: false, sendLocalErrors: false };
     }
@@ -56,11 +62,10 @@ class ErrorHandling {
       );
     }
 
-    window.onerror = (message, file, line, colno, error) => {
+    window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
       if (error == null) {
         // older browsers don't deliver the error parameter
-        // $FlowFixMe
-        error = new Error(message, file, line);
+        error = new Error(message);
       }
       console.error(error);
       this.airbrake.notify(error);
@@ -71,14 +76,19 @@ class ErrorHandling {
     this.airbrake.notify(error);
   }
 
-  assertExtendContext(additionalContext) {
+  assertExtendContext(additionalContext: Object) {
     this.airbrake.addFilter(notice => {
       Object.assign(notice.context, additionalContext);
       return notice;
     });
   }
 
-  assert = (bool, message, assertionContext, dontThrowError) => {
+  assert = (
+    bool: boolean,
+    message: string,
+    assertionContext?: Object,
+    dontThrowError?: boolean = false,
+  ) => {
     if (bool) {
       return;
     }
@@ -99,28 +109,28 @@ class ErrorHandling {
     }
   };
 
-  assertExists(variable, message, assertionContext) {
+  assertExists(variable: any, message: string, assertionContext?: Object) {
     if (variable != null) {
       return;
     }
     this.assert(false, `${message} (variable is ${variable})`, assertionContext);
   }
 
-  assertEquals(actual, wanted, message, assertionContext) {
+  assertEquals(actual: any, wanted: any, message: string, assertionContext?: Object) {
     if (actual === wanted) {
       return;
     }
     this.assert(false, `${message} (${actual} != ${wanted})`, assertionContext);
   }
 
-  setCurrentUser(user) {
+  setCurrentUser(user: APIUserType) {
     this.airbrake.addFilter(notice => {
       notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
       return notice;
     });
   }
 
-  trimCallstack(callstack) {
+  trimCallstack(callstack: string) {
     // cut function calls caused by ErrorHandling so that Airbrake won't cluster all assertions into one group
     const trimmedCallstack = [];
 

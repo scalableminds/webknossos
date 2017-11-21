@@ -36,7 +36,7 @@ type CommentTabStateType = {
   isSortedAscending: boolean,
 };
 
-class CommentTabView extends React.Component<Props, CommentTabStateType> {
+class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   state = {
     isSortedAscending: true,
   };

@@ -236,6 +236,13 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         Json.obj("state.isAssigned" -> true),
         Json.obj("state.isFinished" -> true))))
 
+  def findAllUnfinishedByTaskIds(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
+    find(Json.obj(
+      "_task" -> Json.obj("$in" -> Json.toJson(taskIds)),
+      "state.isFinished" -> false
+    )).cursor[Annotation]().collect[List]()
+  }
+
   def findByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     findOne(Json.obj(
       "tracingReference.id" -> tracingId

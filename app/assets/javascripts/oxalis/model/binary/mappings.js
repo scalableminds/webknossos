@@ -81,7 +81,7 @@ class Mappings {
 
     for (const currentMappingName of this.getMappingChain(mappingName)) {
       const mappingObject = this.mappings[currentMappingName];
-      ErrorHandling.assert(
+      ErrorHandling.assertExists(
         mappingObject.classes,
         "mappingObject classes must have been fetched at this point",
       );

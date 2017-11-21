@@ -2,7 +2,7 @@
 
 /*
  * api_v1.js
- * @flow strict
+ * @flow
  */
 
 import _ from "lodash";

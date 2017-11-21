@@ -30,12 +30,15 @@ import "../stylesheets/main.less";
 ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
 app.on("start", async () => {
-  ReactDOM.render(
-    <Provider store={Store}>
-      <ReactRouter />
-    </Provider>,
-    document.getElementById("main-container"),
-  );
+  const containerElement = document.getElementById("main-container");
+  if (containerElement) {
+    ReactDOM.render(
+      <Provider store={Store}>
+        <ReactRouter />
+      </Provider>,
+      containerElement,
+    );
+  }
 });
 
 app.on("start", async () => {

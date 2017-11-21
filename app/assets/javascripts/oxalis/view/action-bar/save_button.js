@@ -1,16 +1,15 @@
+// @flow
 import React from "react";
-import { connect } from "react-redux";
 import Model from "oxalis/model";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { OxalisState } from "oxalis/store";
+
+type Props = {
+  onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
+};
 
 const SAVED_POLLING_INTERVAL = 100;
 
-class SaveButton extends React.PureComponent {
-  props: {
-    onClick: Function,
-  };
-
+class SaveButton extends React.PureComponent<Props> {
   componentDidMount() {
     // Polling can be removed once VolumeMode saving is reactive
     this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVED_POLLING_INTERVAL);
@@ -47,10 +46,4 @@ class SaveButton extends React.PureComponent {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
-  return {
-    save: state.save, // Used to force updates in a reactive and immediate way. Works well for skeleton tracings (but not volume)
-  };
-}
-
-export default connect(mapStateToProps)(SaveButton);
+export default SaveButton;

@@ -39,7 +39,7 @@ class LoginView extends React.PureComponent<Props> {
 
     return (
       <Row type="flex" justify="center" style={rowStyle} align="middle">
-        <Col span={8}>
+        <Col span={this.props.layout === "inline" ? 24 : 8}>
           <Form onSubmit={this.handleSubmit} layout={this.props.layout}>
             <FormItem>
               {getFieldDecorator("email", {
@@ -72,6 +72,8 @@ class LoginView extends React.PureComponent<Props> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Log in
               </Button>
+            </FormItem>
+            <FormItem>
               <Link to="/register" style={linkStyle}>
                 Register Now!
               </Link>

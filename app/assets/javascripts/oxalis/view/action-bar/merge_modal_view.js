@@ -25,13 +25,15 @@ type ProjectInfoType = {
   label: string,
 };
 
+type StateProps = {
+  annotationId: string,
+  tracingType: string,
+};
 type Props = {
   isVisible: boolean,
   onOk: () => void,
-  annotationId: string,
-  tracingType: string,
   history: ReactRouterHistoryType,
-};
+} & StateProps;
 
 type MergeModalViewState = {
   taskTypes: Array<TaskTypeInfoType>,
@@ -261,7 +263,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     annotationId: state.tracing.annotationId,
     tracingType: state.tracing.tracingType,

@@ -69,7 +69,7 @@ object DefaultMails {
     Mail(
       from = defaultFrom,
       subject = "Your Oxalis password was reset",
-      bodyText = "You are receiving this mail because you requested to change your password.\nTo change your password go to /finishreset and use this token: "+token + "to authenticate yourself",
+      bodyText = html.mail.resetPassword(name, uri, token).body,
       recipients = List(receiver))
   }
 

@@ -21,9 +21,6 @@ const rawRgbs = [
   255,
   214,
   61,
-  35,
-  35,
-  9,
   20,
   102,
   125,
@@ -1506,6 +1503,9 @@ const rawRgbs = [
   0,
   255,
   255,
+  35,
+  35,
+  9,
 ];
 
 const rgbs: Array<Vector3> = _.chunk(rawRgbs, 3).map(rgb =>
@@ -1516,6 +1516,11 @@ const rgbs: Array<Vector3> = _.chunk(rawRgbs, 3).map(rgb =>
 const ColorGenerator = {
   distinctColorForId(id: number): Vector3 {
     return rgbs[(id - 1 + rgbs.length) % rgbs.length];
+  },
+
+  getNRandomColors(n: number): Array<Vector3> {
+    // Take the first n colors and shuffle these
+    return _.shuffle(rgbs.slice(0, Math.min(n, rgbs.length)));
   },
 };
 

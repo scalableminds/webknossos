@@ -60,6 +60,7 @@ type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetN
 type SetTreeNameActionType = { type: "SET_TREE_NAME", name: ?string, treeId: ?number };
 type SelectNextTreeActionType = { type: "SELECT_NEXT_TREE", forward: ?boolean };
 type ShuffleTreeColorActionType = { type: "SHUFFLE_TREE_COLOR", treeId?: number };
+type ShuffleAllTreeColorsActionType = { type: "SHUFFLE_ALL_TREE_COLORS", treeId?: number };
 type CreateCommentActionType = {
   type: "CREATE_COMMENT",
   commentText: string,
@@ -87,6 +88,7 @@ export type SkeletonTracingActionType =
   | SetTreeNameActionType
   | SelectNextTreeActionType
   | ShuffleTreeColorActionType
+  | ShuffleAllTreeColorsActionType
   | CreateCommentActionType
   | DeleteCommentActionType
   | ToggleTreeActionType
@@ -110,6 +112,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
+  "SHUFFLE_ALL_TREE_COLORS",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_USER_BOUNDING_BOX",
@@ -264,6 +267,10 @@ export const selectNextTreeAction = (forward: ?boolean = true): SelectNextTreeAc
 export const shuffleTreeColorAction = (treeId: number): ShuffleTreeColorActionType => ({
   type: "SHUFFLE_TREE_COLOR",
   treeId,
+});
+
+export const shuffleAllTreeColorsAction = (): ShuffleAllTreeColorsActionType => ({
+  type: "SHUFFLE_ALL_TREE_COLORS",
 });
 
 export const createCommentAction = (

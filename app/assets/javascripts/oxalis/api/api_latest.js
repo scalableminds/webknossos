@@ -797,6 +797,7 @@ class UtilsApi {
    *   - MERGE_TREES
    *   - SELECT_NEXT_TREE
    *   - SHUFFLE_TREE_COLOR
+   *   - SHUFFLE_ALL_TREE_COLORS
    *   - CREATE_COMMENT
    *   - DELETE_COMMENT
    *
@@ -808,6 +809,7 @@ class UtilsApi {
    *   // ... do something after the original function ...
    * });
    */
+
   registerOverwrite<S, A>(
     actionName: string,
     overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => void,

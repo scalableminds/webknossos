@@ -14,6 +14,8 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import { copyAnnotationToUserAccount } from "admin/admin_rest_api";
+import { location } from "libs/window";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
 import type { ReactRouterHistoryType } from "react_router";
@@ -62,8 +64,11 @@ class TracingActionsView extends PureComponent<Props, State> {
 
   handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${this.props.annotationId}/duplicate`;
-    this.props.history.push(url);
+    const newAnnotation = await copyAnnotationToUserAccount(
+      this.props.annotationId,
+      this.props.tracingType,
+    );
+    location.href = `/annotations/Explorational/${newAnnotation.id}`;
   };
 
   handleFinish = async (event: SyntheticInputEvent<>) => {

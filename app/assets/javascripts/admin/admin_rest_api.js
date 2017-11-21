@@ -372,6 +372,14 @@ export async function deleteAnnotation(annotationId: string): Promise<APIAnnotat
   });
 }
 
+export async function copyAnnotationToUserAccount(
+  annotationId: string,
+  tracingType: string,
+): Promise<APIAnnotationType> {
+  const url = `/annotations/${tracingType}/${annotationId}/duplicate`;
+  return Request.receiveJSON(url);
+}
+
 // ### Datasets
 export async function getDatasets(): Promise<Array<APIDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets");

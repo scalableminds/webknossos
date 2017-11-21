@@ -160,15 +160,13 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield Ok(Json.toJson(result))
   }
 
-  private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[_]): Fox[Option[String]] = {
+  private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[_]): Fox[Unit] = {
     scriptIdOpt match {
       case Some(scriptId) =>
         for {
           _ <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
-        } yield {
-          Some(scriptId)
-        }
-      case _ => None
+        } yield ()
+      case _ => Fox.successful(())
     }
   }
 
@@ -176,7 +174,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     for {
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      script <- validateScript(params.scriptId)
+      _ <- validateScript(params.scriptId)
       _ <- ensureTeamAdministration(request.identity, params.team)
       task = Task(
         taskType._id,
@@ -184,7 +182,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         params.neededExperience,
         params.openInstances,
         _project = project.name,
-        _script = script,
+        _script = params.scriptId,
         editPosition = params.editPosition,
         editRotation = params.editRotation,
         boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) })

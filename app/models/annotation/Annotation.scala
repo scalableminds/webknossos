@@ -123,6 +123,8 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
 
   underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("tracingReference.id" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending, "typ" -> IndexType.Ascending)))
 
   override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     super.find(query ++ Json.obj("isActive" -> true))

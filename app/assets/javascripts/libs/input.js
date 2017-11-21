@@ -247,7 +247,7 @@ class InputMouseButton {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
     const eventWhich = event.which !== 0 ? event.which : 1;
     if (eventWhich === this.which) {
-      document.activeElement.blur(); // see OX-159
+      document.activeElement.blur();
 
       this.down = true;
       this.moveDelta = 0;
@@ -474,10 +474,6 @@ export class InputMouse {
   };
 
   getOffset() {
-    const boundingRect = this.domElement.getBoundingClientRect();
-    return Object.assign({}, boundingRect, {
-      top: boundingRect.top, // + document.body.scrollTop,
-      left: boundingRect.left, // + document.body.scrollLeft,
-    });
+    return this.domElement.getBoundingClientRect();
   }
 }

@@ -39,7 +39,9 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
-    const scriptTag = document.querySelectorAll("[data-airbrake-project-id]")[0];
+    const scriptTag = document.querySelector("[data-airbrake-project-id]");
+    if (!scriptTag) throw new Error("failed to initialize airbrake");
+
     const projectId = scriptTag.dataset["airbrake-project-id"];
     const projectKey = scriptTag.dataset["airbrake-project-key"];
     const envName = scriptTag.dataset["airbrake-environment-name"];

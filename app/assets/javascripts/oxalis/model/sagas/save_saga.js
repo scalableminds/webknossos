@@ -84,15 +84,20 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
   yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   yield put(setLastSaveTimestampAction());
   while (true) {
-    const pushAction = yield take("PUSH_SAVE_QUEUE");
-    if (!pushAction.pushNow) {
-      yield race({
-        timeout: call(delay, PUSH_THROTTLE_TIME),
-        forcePush: take("SAVE_NOW"),
-      });
+    let saveQueue;
+    // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
+    // could have been triggered during the call to sendRequestToServer
+    saveQueue = yield select(state => state.save.queue);
+    if (saveQueue.length === 0) {
+      // Save queue is empty, wait for push event
+      yield take("PUSH_SAVE_QUEUE");
     }
+    yield race({
+      timeout: call(delay, PUSH_THROTTLE_TIME),
+      forcePush: take("SAVE_NOW"),
+    });
     yield put(setSaveBusyAction(true));
-    const saveQueue = yield select(state => state.save.queue);
+    saveQueue = yield select(state => state.save.queue);
     if (saveQueue.length > 0) {
       yield call(sendRequestToServer);
     }

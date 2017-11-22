@@ -317,7 +317,9 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
     data: queryObject,
   });
 
-  return responses.map(response => transformTask(response));
+  const tasks = responses.map(response => transformTask(response));
+  assertResponseLimit(tasks);
+  return tasks;
 }
 
 // TODO fix return types

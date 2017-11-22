@@ -19,8 +19,7 @@ services:
     links:
       - mongo-dev
     command: >
-      bash -c
-      "sbt -v -d -jvm-debug 5005 \"run
+      sbt -v -d -jvm-debug 5005 "run
       -Djava.net.preferIPv4Stack=true
       -Dhttp.address=0.0.0.0
       -Dhttp.port=$${PORT}
@@ -28,7 +27,7 @@ services:
       -Dmongodb.url=$${MONGO_HOST}
       -Dmongodb.port=$${MONGO_PORT}
       -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
-      \""
+      "
     environment:
       - PORT=9000
       - MONGO_HOST=mongo-dev
@@ -82,8 +81,7 @@ services:
     extends:
       service: base
     command: >
-      bash -c
-      "sbt -v -d \"test-only * --
+      sbt -v -d "test-only * --
       -Dconfig.file=./conf/application_$${MODE}.conf
       -Djava.net.preferIPv4Stack=true
       -Dhttp.address=0.0.0.0
@@ -92,7 +90,7 @@ services:
       -Dmongodb.url=$${MONGO_HOST}
       -Dmongodb.port=$${MONGO_PORT}
       -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
-      \""
+      "
     ports:
       - "9000:9000"
     links:

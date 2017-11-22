@@ -15,6 +15,7 @@ object TimeSpanDAO extends SecuredBaseDAO[TimeSpan] {
   val formatter = TimeSpan.timeSpanFormat
 
   underlying.indexesManager.ensure(Index(List("timestamp" -> IndexType.Descending)))
+  underlying.indexesManager.ensure(Index(List("annotation" -> IndexType.Ascending)))
 
   def intervalFilter(start: Option[Long], end: Option[Long]) = {
 

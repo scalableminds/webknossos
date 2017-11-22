@@ -11,10 +11,15 @@ wrap(repo: "scalableminds/webknossos") {
 
     def commit = gitCommit()
 
-    env.DOCKER_CACHE_PREFIX = "~/.webknossos-build-cache"
+    env.DOCKER_CACHE_PREFIX = "~/.webknossos-cache"
     env.COMPOSE_PROJECT_NAME = "webknossos_${env.BRANCH_NAME}_${commit}"
+    env.USER_NAME = env.USER
+    env.USER_UID = sh(returnStdout: true, script: 'id -u').trim()
+    env.USER_GID = sh(returnStdout: true, script: 'id -g').trim()
+    env.TZ = readFile('/etc/timezone').trim()
     sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
-    sh "docker-compose pull sbt"
+    sh "docker-compose pull base"
+    sh "docker-compose pull mongo"
   }
 
 
@@ -22,8 +27,8 @@ wrap(repo: "scalableminds/webknossos") {
 
     sh "docker-compose run frontend-dependencies"
     sh "docker-compose run frontend-docs"
-    sh "docker-compose run sbt clean compile stage"
-    sh "docker build -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
+    sh "docker-compose run base sbt clean compile stage"
+    sh "docker build --no-cache --pull -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
   }
 
 

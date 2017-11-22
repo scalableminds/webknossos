@@ -174,6 +174,7 @@ PUT           /api/projects/:name                                               
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
+GET           /api/projects/:name/usersWithOpenTasks                            controllers.ProjectController.usersWithOpenTasks(name:String)
 
 # Statistics
 GET           /statistics                                                       controllers.StatisticsController.empty

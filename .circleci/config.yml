@@ -71,4 +71,4 @@ workflows:
   version: 2
   default:
     jobs:
-      - build_run_deploy
+      - build_test_deploy

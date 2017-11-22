@@ -4,6 +4,7 @@ jobs:
     machine: true
     environment:
       SBT_VERSION_TAG: sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
+      CACHE_VERSION: 1
       USER_NAME: circleci
       USER_UID: 1001
       USER_GID: 1001
@@ -14,6 +15,7 @@ jobs:
           command: docker pull scalableminds/sbt:$SBT_VERSION_TAG
       - restore_cache:
           keys:
+            - cache-{{ .Branch }}-{{ .Environment.CACHE_VERSION }}
             - cache-{{ .Branch }}
             - cache
       - run:
@@ -30,7 +32,7 @@ jobs:
           name: build code
           command: docker-compose run base sbt clean compile stage
       - save_cache:
-          key: cache-{{ .Branch }}
+          key: cache-{{ .Branch }}-{{ .Environment.CACHE_VERSION }}
           paths:
             - "~/.m2"
             - "~/.ivy2"

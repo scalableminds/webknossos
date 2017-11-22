@@ -6,7 +6,6 @@
  */
 import Store from "oxalis/store";
 import { getActiveNode, getTree } from "oxalis/model/accessors/skeletontracing_accessor";
-import Window from "libs/window";
 import messages from "messages";
 import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";

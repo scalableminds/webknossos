@@ -11,7 +11,10 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common._
 import play.api.i18n.Messages
 import play.api.libs.json._
+import play.api.libs.json.Reads._
+import play.api.libs.json.Writes._
 
+import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
 
 object JsonHelper extends BoxImplicits with LazyLogging {
@@ -79,6 +82,28 @@ object JsonHelper extends BoxImplicits with LazyLogging {
       case Full(t) => Json.obj("status" -> "Full", "value" -> Json.toJson(t))
       case Empty => Json.obj("status" -> "Empty")
       case f: Failure => Json.obj("status" -> "Failure", "value" -> f.msg)
+    }
+  }
+
+  def oFormat[T](format:Format[T]) : OFormat[T] = {
+    val oFormat: OFormat[T] = new OFormat[T](){
+      override def writes(o: T): JsObject = format.writes(o).as[JsObject]
+      override def reads(json: JsValue): JsResult[T] = format.reads(json)
+    }
+    oFormat
+  }
+
+  implicit object FiniteDurationFormat extends Format[FiniteDuration] {
+    def reads(json: JsValue): JsResult[FiniteDuration] = LongReads.reads(json).map(_.seconds)
+    def writes(o: FiniteDuration): JsValue = LongWrites.writes(o.toSeconds)
+  }
+
+  implicit def optionFormat[T: Format]: Format[Option[T]] = new Format[Option[T]]{
+    override def reads(json: JsValue): JsResult[Option[T]] = json.validateOpt[T]
+
+    override def writes(o: Option[T]): JsValue = o match {
+      case Some(t) ⇒ implicitly[Writes[T]].writes(t)
+      case None ⇒ JsNull
     }
   }
 

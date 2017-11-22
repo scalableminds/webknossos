@@ -14,26 +14,26 @@ wrap(repo: "scalableminds/webknossos") {
     env.DOCKER_CACHE_PREFIX = "~/.webknossos-cache"
     env.COMPOSE_PROJECT_NAME = "webknossos_${env.BRANCH_NAME}_${commit}"
     sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
-    sh "docker-compose pull sbt"
+    sh "docker-compose pull base"
   }
 
 
   stage("Build") {
 
-    sh "docker-compose run frontend-dependencies"
-    sh "docker-compose run frontend-docs"
-    sh "docker-compose run sbt clean compile stage"
-    sh "docker build -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
+    sh "TZ=$(date +%Z) uid=$(id -u) gid=$(id -g) docker-compose run frontend-dependencies"
+    sh "TZ=$(date +%Z) uid=$(id -u) gid=$(id -g) docker-compose run frontend-docs"
+    sh "TZ=$(date +%Z) uid=$(id -u) gid=$(id -g) docker-compose run base sbt clean compile stage"
+    sh "TZ=$(date +%Z) uid=$(id -u) gid=$(id -g) docker build -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
   }
 
 
   stage("Test") {
 
-    sh "docker-compose run frontend-linting"
-    sh "docker-compose run frontend-flow"
-    sh "docker-compose run frontend-tests"
+    sh "TZ=$(date +%Z) uid=$(id -u) gid=$(id -g) docker-compose run frontend-linting"
+    sh "TZ=$(date +%Z) uid=$(id -u) gid=$(id -g) docker-compose run frontend-flow"
+    sh "TZ=$(date +%Z) uid=$(id -u) gid=$(id -g) docker-compose run frontend-tests"
 //    retry (3) {
-//      sh "docker-compose run e2e-tests"
+//      sh "TZ=$(date +%Z) uid=$(id -u) gid=$(id -g) docker-compose run e2e-tests"
 //    }
     sh """
       DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &

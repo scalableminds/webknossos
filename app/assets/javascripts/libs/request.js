@@ -2,11 +2,10 @@
  * request.js
  * @flow
  */
-/* globals $TypedArray:false */
 
 import _ from "lodash";
-import pako from "pako";
 import Toast from "libs/toast";
+import Utils from "libs/utils";
 
 type RequestOptions = {
   headers?: { [key: string]: string },
@@ -30,8 +29,10 @@ class Request {
       _.defaultsDeep(options, { headers: { Accept: "application/json" } }),
       this.handleEmptyJsonResponse,
     );
-
-  prepareJSON = (url: string, options: RequestOptionsWithData<any>): RequestOptions => {
+  prepareJSON = async (
+    url: string,
+    options: RequestOptionsWithData<any>,
+  ): Promise<RequestOptions> => {
     // Sanity check
     // Requests without body should not send 'json' header and use 'receiveJSON' instead
     if (!options.data) {
@@ -44,7 +45,7 @@ class Request {
     let body = _.isString(options.data) ? options.data : JSON.stringify(options.data);
 
     if (options.compress) {
-      body = pako.gzip(body);
+      body = await Utils.compress(body);
       if (options.headers == null) {
         options.headers = {
           "Content-Encoding": "gzip",
@@ -65,8 +66,8 @@ class Request {
 
   // IN:  json
   // OUT: json
-  sendJSONReceiveJSON = (url: string, options: RequestOptionsWithData<any>): Promise<any> =>
-    this.receiveJSON(url, this.prepareJSON(url, options));
+  sendJSONReceiveJSON = async (url: string, options: RequestOptionsWithData<any>): Promise<any> =>
+    this.receiveJSON(url, await this.prepareJSON(url, options));
 
   // IN:  multipart formdata
   // OUT: json
@@ -146,46 +147,12 @@ class Request {
       response => response.arrayBuffer(),
     );
 
-  // IN:  arraybuffer
-  // OUT: arraybuffer
-  sendArraybufferReceiveArraybuffer = (
-    url: string,
-    options: RequestOptionsWithData<ArrayBuffer | $TypedArray>,
-  ): Promise<ArrayBuffer> => {
-    let body =
-      options.data instanceof ArrayBuffer
-        ? options.data
-        : options.data.buffer.slice(0, options.data.byteLength);
-
-    if (options.compress) {
-      body = pako.gzip(body);
-      if (options.headers == null) {
-        options.headers = {
-          "Content-Encoding": "gzip",
-        };
-      } else {
-        options.headers["Content-Encoding"] = "gzip";
-      }
-    }
-
-    return this.receiveArraybuffer(
-      url,
-      _.defaultsDeep(options, {
-        method: "POST",
-        body,
-        headers: {
-          "Content-Type": "application/octet-stream",
-        },
-      }),
-    );
-  };
-
   // IN:  JSON
   // OUT: arraybuffer
-  sendJSONReceiveArraybuffer = (
+  sendJSONReceiveArraybuffer = async (
     url: string,
     options: RequestOptionsWithData<any>,
-  ): Promise<ArrayBuffer> => this.receiveArraybuffer(url, this.prepareJSON(url, options));
+  ): Promise<ArrayBuffer> => this.receiveArraybuffer(url, await this.prepareJSON(url, options));
 
   // TODO: babel doesn't support generic arrow-functions yet
   triggerRequest<T>(

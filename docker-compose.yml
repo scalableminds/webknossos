@@ -40,9 +40,9 @@ services:
     ports:
       - "5005:5005"
     environment:
-      - USER_NAME=$USER
-      - USER_UID=$uid
-      - USER_GID=$gid
+      - USER_NAME
+      - USER_UID
+      - USER_GID
       - TZ
     working_dir: /home/$USER/webknossos
     volumes:

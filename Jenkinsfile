@@ -13,6 +13,10 @@ wrap(repo: "scalableminds/webknossos") {
 
     env.DOCKER_CACHE_PREFIX = "~/.webknossos-cache"
     env.COMPOSE_PROJECT_NAME = "webknossos_${env.BRANCH_NAME}_${commit}"
+    env.USER_NAME = env.USER
+    env.USER_UID = sh(returnStdout: true, script: 'id -u').trim()
+    env.USER_GID = sh(returnStdout: true, script: 'id -g').trim()
+    env.TZ = readFile('/etc/timezone').trim()
     sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
     sh "docker-compose pull base"
   }

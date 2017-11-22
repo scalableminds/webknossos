@@ -140,7 +140,7 @@ object NmlWriter {
   }
 
   def writeNodesAsXml(nodes: Seq[Node])(implicit writer: XMLStreamWriter) = {
-    nodes.foreach { n =>
+    nodes.toSet.foreach { n: Node => //TODO 2017: once the tracings with duplicate nodes are fixed in the DB, remove the toSet workaround
       Xml.withinElementSync("node") {
         writer.writeAttribute("id", n.id.toString)
         writer.writeAttribute("radius", n.radius.toString)

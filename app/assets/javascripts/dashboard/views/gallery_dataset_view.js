@@ -1,4 +1,4 @@
-// flow
+// @flow
 /* eslint-disable jsx-a11y/href-no-hash */
 import * as React from "react";
 import { connect } from "react-redux";
@@ -10,11 +10,12 @@ import messages from "messages";
 
 import type { DatasetType } from "dashboard/views/dataset_view";
 import type { OxalisState } from "oxalis/store";
+import type { APIUserType } from "admin/api_flow_types";
 
 const padding = 16;
 
 type StateProps = {
-  activeUser: APIUserType,
+  activeUser: ?APIUserType,
 };
 
 type Props = {
@@ -23,10 +24,6 @@ type Props = {
 } & StateProps;
 
 class GalleryDatasetView extends React.PureComponent<Props> {
-  static defaultProps = {
-    searchQuery: "",
-  };
-
   createTracing = (event: Event) => {
     if (this.props.activeUser == null) {
       event.preventDefault();

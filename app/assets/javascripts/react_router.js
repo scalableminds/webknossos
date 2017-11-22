@@ -38,7 +38,7 @@ import TaskTypeCreateView from "admin/views/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/views/scripts/script_create_view";
 
 import type { OxalisState } from "oxalis/store";
-import type { APITracingType } from "admin/api_flow_types";
+import type { APITracingType, APIUserType } from "admin/api_flow_types";
 
 const { Content } = Layout;
 
@@ -77,6 +77,12 @@ type ReactRouterArgumentsType = {
   history: ReactRouterHistoryType,
 };
 
+type StateProps = {
+  activeUser: ?APIUserType,
+};
+
+type Props = StateProps;
+
 const browserHistory = createBrowserHistory();
 browserHistory.listen(location => {
   if (typeof window.ga !== "undefined" && window.ga !== null) {
@@ -97,7 +103,7 @@ const SecuredRoute = ({ component: Component, render, isAuthenticated, ...rest }
   />
 );
 
-class ReactRouter extends React.Component<*> {
+class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ReactRouterArgumentsType) => {
     const tracingType = match.params.type;
     if (Object.keys(APITracingTypeEnum).includes(tracingType)) {
@@ -201,14 +207,14 @@ class ReactRouter extends React.Component<*> {
                   isAuthenticated={isAuthenticated}
                   path="/projects/:projectName/tasks"
                   render={({ match }: ReactRouterArgumentsType) => (
-                    <ProjectCreateView projectName={match.params.projectName} />
+                    <TaskListView initialFieldValues={{ projectName: match.params.projectName }} />
                   )}
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
-                  path="/projects/:id/edit"
+                  path="/projects/:projectName/edit"
                   render={({ match }: ReactRouterArgumentsType) => (
-                    <TaskListView initialFieldValues={{ projectName: match.params.projectName }} />
+                    <ProjectCreateView projectName={match.params.projectName} />
                   )}
                 />
                 <SecuredRoute
@@ -259,7 +265,7 @@ class ReactRouter extends React.Component<*> {
                   isAuthenticated={isAuthenticated}
                   path="/taskTypes/:taskTypeId/edit"
                   render={({ match }: ReactRouterArgumentsType) => (
-                    <TaskTypeCreateView id={match.params.taskTypeId} />
+                    <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                   )}
                 />
                 <SecuredRoute
@@ -308,7 +314,7 @@ class ReactRouter extends React.Component<*> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 

@@ -1,9 +1,9 @@
 // @flow
 import * as React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
-import Request from "libs/request";
 import update from "immutability-helper";
-import type { APITeamType, APIUserType, APIRoleType } from "admin/api_flow_types";
+import { updateUser, getAdminTeams } from "admin/admin_rest_api";
+import type { APITeamType, APIUserType, APIRoleType, APITeamRoleType } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -72,8 +72,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
   }
 
   async fetchData() {
-    const url = "/api/teams?amIAnAdmin=true";
-    const teams = await Request.receiveJSON(url);
+    const teams = await getAdminTeams();
 
     const selectedTeams = teams.map(team => ({
       team: team.name,
@@ -87,17 +86,16 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
   }
 
   setTeams = () => {
-    const newTeams = this.state.selectedTeams.filter(team => team.role !== null);
+    const newTeams = this.state.selectedTeams.filter(team => team.role != null);
+    // flow does not understand the purpose of .filter()
+    const newerTeams = ((newTeams: any): Array<APITeamRoleType>);
 
     const newUserPromises = this.props.users.map(user => {
       if (this.props.selectedUserIds.includes(user.id)) {
-        const newUser = Object.assign({}, user, { teams: newTeams });
+        const newUser = Object.assign({}, user, { teams: newerTeams });
 
         // server-side validation can reject a user's new teams
-        const url = `/api/users/${user.id}`;
-        return Request.sendJSONReceiveJSON(url, {
-          data: newUser,
-        }).then(() => Promise.resolve(newUser), () => Promise.reject(user));
+        return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(user));
       }
       return Promise.resolve(user);
     });

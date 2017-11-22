@@ -20,7 +20,7 @@ import type { QueryObjectType } from "admin/views/task/task_search_form";
 const { Column } = Table;
 const { Search, TextArea } = Input;
 
-type Props = { initialFieldValues: Object };
+type Props = { initialFieldValues?: Object };
 
 type State = {
   isLoading: boolean,

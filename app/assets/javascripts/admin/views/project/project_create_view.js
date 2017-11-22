@@ -84,12 +84,15 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditMode = this.props.projectName != null;
-    const titlePrefix = isEditMode ? "Update " : "Create";
+    const title =
+      isEditMode && this.props.projectName
+        ? `Update Project ${this.props.projectName}`
+        : "Create Project";
     const fullWidth = { width: "100%" };
 
     return (
       <div className="row container wide project-administration">
-        <Card title={<h3>{titlePrefix} Project</h3>}>
+        <Card title={<h3>{title}</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Project Name" hasFeedback>
               {getFieldDecorator("name", {
@@ -247,7 +250,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 
             <FormItem>
               <Button type="primary" htmlType="submit">
-                {titlePrefix} Project
+                {title}
               </Button>
             </FormItem>
           </Form>

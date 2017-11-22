@@ -1,5 +1,6 @@
 // @flow
 import React from "react";
+import { withRouter } from "react-router-dom";
 import {
   Form,
   Input,
@@ -408,4 +409,4 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(TaskCreateFormView);
+export default withRouter(Form.create()(TaskCreateFormView));

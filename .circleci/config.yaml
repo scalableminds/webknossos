@@ -8,13 +8,12 @@ jobs:
       - checkout
       - run:
           name: prepare docker
-          command: |
-            docker login -u $DOCKER_USER -p $DOCKER_PASS
-            docker pull scalableminds/sbt:$SBT_VERSION_TAG
+          command: docker pull scalableminds/sbt:$SBT_VERSION_TAG
       - restore_cache:
           keys:
             - cache-{{ .Branch }}
             - cache
+
       - run:
           name: build frontend-dependencies
           command: docker-compose run frontend-dependencies
@@ -63,6 +62,7 @@ jobs:
       #     name: deployment
       #     command: |
       #       set -x
+      #       docker login -u $DOCKER_USER -p $DOCKER_PASS
       #       docker tag scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
       #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
       #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}

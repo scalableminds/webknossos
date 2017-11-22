@@ -59,7 +59,7 @@ jobs:
           name: test integration
           command: |
             set -x
-            DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up -d webknossos
+            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos
             sleep 10
             ./test/infrastructure/deployment.bash
             docker-compose down --volumes --remove-orphans

@@ -1,8 +1,9 @@
 // @flow
 import Request from "libs/request";
 import Toast from "libs/toast";
-import messages from "messages";
 import Utils from "libs/utils";
+import { location } from "libs/window";
+import messages from "messages";
 import type {
   APIUserType,
   APIScriptType,
@@ -378,6 +379,17 @@ export async function copyAnnotationToUserAccount(
 ): Promise<APIAnnotationType> {
   const url = `/annotations/${tracingType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url);
+}
+
+export async function getAnnotationInformation(
+  annotationId: string,
+  tracingType: string,
+): Promise<APIAnnotationType> {
+  // Include /readOnly part whenever it is in the pathname
+  const isReadOnly = location.pathname.endsWith("/readOnly");
+  const readOnlyPart = isReadOnly ? "readOnly/" : "";
+  const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+  return Request.receiveJSON(infoUrl);
 }
 
 // ### Datasets

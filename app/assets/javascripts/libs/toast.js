@@ -20,7 +20,7 @@ const Toast = {
     type: ToastStyleType,
     message: string,
     sticky: boolean = false,
-    timeout: number = 6,
+    timeout: number = 6000,
   ): void {
     let toastMessage;
     if (message.match(/<html[^>]*>/)) {
@@ -30,10 +30,12 @@ const Toast = {
       toastMessage = message;
     }
 
+    const timeOutSeconds = timeout / 1000;
+
     let toastConfig = {
       icon: undefined,
       key: toastMessage,
-      duration: sticky ? 0 : timeout,
+      duration: sticky ? 0 : timeOutSeconds,
       message: toastMessage,
       style: {},
       className: "",

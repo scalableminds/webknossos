@@ -16,7 +16,7 @@ import models.project.{Project, ProjectDAO}
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._

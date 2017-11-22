@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import com.scalableminds.util.tools.FoxImplicits
 import models.binary.{DataStore, DataStoreDAO}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Writes

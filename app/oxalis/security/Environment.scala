@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.FiniteDuration
 
 
-class EnvironmentOxalis @Inject()(configuration: Configuration)(implicit val executionContext: ExecutionContext) extends Environment[User ,CookieAuthenticator]{
+class WebknossosEnvironment @Inject()(configuration: Configuration)(implicit val executionContext: ExecutionContext) extends Environment[User ,CookieAuthenticator]{
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
   val idGenerator = new SecureRandomIDGenerator()
   val eventBusObject = EventBus()

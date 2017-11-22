@@ -10,7 +10,7 @@ import models.project.{Project, ProjectDAO}
 import models.task.{Task, TaskService, TaskTypeDAO}
 import models.user.time.{TimeSpan, TimeSpanDAO}
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}

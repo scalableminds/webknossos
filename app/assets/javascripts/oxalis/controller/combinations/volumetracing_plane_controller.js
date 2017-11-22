@@ -143,7 +143,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
       mouseMove: (delta: Point2, position: Point2) => {
         const tool = getVolumeTool(Store.getState().tracing).get();
-        debugger;
         if (tool === VolumeToolEnum.BRUSH) {
           Store.dispatch(setBrushPositionAction([position.x, position.y]));
         }

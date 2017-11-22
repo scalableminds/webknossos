@@ -28,10 +28,7 @@ jobs:
           command: docker-compose run base yarn run docs
       - run:
           name: build code
-          command: |
-            set -x
-            sudo chown -R circleci:circleci ~
-            docker-compose run base sbt clean compile stage
+          command: docker-compose run base sbt clean compile stage
       - save_cache:
           key: cache-{{ .Branch }}
           paths:

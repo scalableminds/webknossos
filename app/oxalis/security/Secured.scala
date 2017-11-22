@@ -15,13 +15,13 @@ import com.mohiva.play.silhouette.api.{Environment, SecuredErrorHandler, Silhoue
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
 
 
-object silhouetteOxalis extends Silhouette[User, CombinedAuthenticator] with FoxImplicits{
+object WebknossosSilhouette extends Silhouette[User, CombinedAuthenticator] with FoxImplicits{
 
   val config = Play.configuration
   val lang = new DefaultLangs(config)
   val messagesAPIEnvironment  = play.api.Environment.simple()
 
-  val environment = new EnvironmentOxalis(config)
+  val environment = new WebknossosEnvironment(config)
 
   override protected def env: Environment[User, CombinedAuthenticator] = environment
 

@@ -17,7 +17,7 @@ import scala.concurrent.duration.FiniteDuration
 import org.joda.time.DateTime
 
 
-class EnvironmentOxalis @Inject()(configuration: Configuration)(implicit val executionContext: ExecutionContext) extends Environment[User ,CombinedAuthenticator]{
+class WebknossosEnvironment @Inject()(configuration: Configuration)(implicit val executionContext: ExecutionContext) extends Environment[User ,CombinedAuthenticator]{
   val eventBusObject = EventBus()
   val cookieSettings = configuration.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
   val tokenSettings = configuration.underlying.as[BearerTokenAuthenticatorSettings]("silhouette.tokenAuthenticator")

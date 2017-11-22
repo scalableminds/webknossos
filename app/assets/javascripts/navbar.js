@@ -54,7 +54,7 @@ class Navbar extends React.PureComponent<Props> {
               webKnossos
             </Link>
           </Menu.Item>
-          {isAuthenticated
+          {isAuthenticated && this.props.activeUser != null
             ? [
                 <Menu.Item key="/dashboard">
                   <Link to="/dashboard">

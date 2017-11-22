@@ -16,7 +16,7 @@ import models.user.UserService
 import models.user.UserService.{Mailer => _, _}
 import models.user.UserTokenService
 import models.user.UserToken2
-import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import net.liftweb.common.{Empty, Failure, Full}
 import oxalis.mail.DefaultMails
 import oxalis.security._
@@ -95,7 +95,7 @@ class Authentication @Inject() (
 
   import AuthForms._
 
-  val env = silhouetteOxalis.environment
+  val env = WebknossosSilhouette.environment
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -293,8 +293,8 @@ object Authentication {
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email)
     for {
-      authenticator <- silhouetteOxalis.environment.authenticatorService.create(loginInfo)
-      value <- silhouetteOxalis.environment.authenticatorService.init(authenticator)
+      authenticator <- WebknossosSilhouette.environment.authenticatorService.create(loginInfo)
+      value <- WebknossosSilhouette.environment.authenticatorService.init(authenticator)
     } yield {
       value
     }

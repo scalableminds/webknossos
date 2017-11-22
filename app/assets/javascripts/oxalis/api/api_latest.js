@@ -809,7 +809,6 @@ class UtilsApi {
    *   // ... do something after the original function ...
    * });
    */
-
   registerOverwrite<S, A>(
     actionName: string,
     overwriteFunction: (store: S, next: (action: A) => void, originalAction: A) => void,

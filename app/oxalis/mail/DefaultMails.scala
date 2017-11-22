@@ -60,7 +60,7 @@ object DefaultMails {
   def changePasswordMail(name: String, receiver: String) = {
     Mail(
       from = defaultFrom,
-      subject = "Your Oxalis password was changed",
+      subject = "Your webKnossos password was changed",
       bodyText = html.mail.passwordChanged(name).body,
       recipients = List(receiver))
   }
@@ -68,7 +68,7 @@ object DefaultMails {
   def resetPasswordMail(name: String, receiver: String, token: String) = {
     Mail(
       from = defaultFrom,
-      subject = "Your Oxalis password was reset",
+      subject = "Your webKnossos password was reset",
       bodyText = html.mail.resetPassword(name, uri, token).body,
       recipients = List(receiver))
   }

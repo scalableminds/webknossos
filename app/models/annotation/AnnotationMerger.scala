@@ -1,6 +1,6 @@
 package models.annotation
 
-import oxalis.security.silhouetteOxalis.{SecuredRequest}
+import oxalis.security.WebknossosSilhouette.{SecuredRequest}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

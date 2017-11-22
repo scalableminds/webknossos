@@ -7,6 +7,8 @@
 import Store from "oxalis/store";
 import { getActiveNode, getTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import Window from "libs/window";
+import messages from "messages";
+import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
 import type { ServerSkeletonTracingType } from "oxalis/model";
 import type { APIAnnotationType } from "admin/api_flow_types";
@@ -174,9 +176,15 @@ export const deleteNodeWithConfirmAction = (
       nodeId = nodeId != null ? nodeId : activeNode.id;
       if (state.task != null && nodeId === 1) {
         // Let the user confirm the deletion of the initial node (node with id 1) of a task
-        if (!Window.confirm("Do you really want to delete the initial node?")) {
-          return noAction();
-        }
+        Modal.confirm({
+          title: messages["tracing.delete_initial_node"],
+          onOk: () => {
+            Store.dispatch(deleteNodeAction(nodeId, treeId));
+          },
+        });
+        // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+        // if the user confirms
+        return noAction();
       }
       return deleteNodeAction(nodeId, treeId);
     })
@@ -243,28 +251,29 @@ export const deleteTreeAction = (
   timestamp,
 });
 
-export const deleteTreeWithConfirmAction = (
-  treeId?: number,
-): DeleteTreeActionType | NoActionType => {
+export const deleteTreeWithConfirmAction = (treeId?: number): NoActionType => {
   const state = Store.getState();
-  return getTree(state.tracing, treeId)
-    .map(tree => {
-      if (state.task != null && tree.nodes[1] != null) {
-        // Let the user confirm the deletion of the initial node (node with id 1) of a task
-        if (
-          !Window.confirm(
-            "This tree contains the initial node. Do you really want to delete the whole tree?",
-          )
-        ) {
-          return noAction();
-        }
-      } else if (!Window.confirm("Do you really want to delete the whole tree?")) {
-        return noAction();
-      }
-
-      return deleteTreeAction(treeId);
-    })
-    .getOrElse(noAction());
+  getTree(state.tracing, treeId).map(tree => {
+    if (state.task != null && tree.nodes[1] != null) {
+      // Let the user confirm the deletion of the initial node (node with id 1) of a task
+      Modal.confirm({
+        title: messages["tracing.delete_tree_with_initial_node"],
+        onOk: () => {
+          Store.dispatch(deleteTreeAction(treeId));
+        },
+      });
+    } else {
+      Modal.confirm({
+        title: messages["tracing.delete_tree"],
+        onOk: () => {
+          Store.dispatch(deleteTreeAction(treeId));
+        },
+      });
+    }
+  });
+  // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+  // if the user confirms
+  return noAction();
 };
 
 export const toggleTreeAction = (

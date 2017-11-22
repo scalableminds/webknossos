@@ -22,13 +22,16 @@ jobs:
 
       - run:
           name: build frontend-dependencies
-          command: docker-compose run frontend-dependencies
+          command: docker-compose run base yarn install
       - run:
           name: build frontend-docs
-          command: docker-compose run frontend-docs
+          command: docker-compose run base yarn run docs
       - run:
           name: build code
-          command: docker-compose run base sbt clean compile stage
+          command: |
+            set -x
+            sudo chown -R circleci:circleci ~
+            docker-compose run base sbt clean compile stage
       - save_cache:
           key: cache-{{ .Branch }}
           paths:
@@ -42,19 +45,16 @@ jobs:
 
       - run:
           name: test frontend-linting
-          command: docker-compose run frontend-linting
+          command: docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
       - run:
           name: test frontend-flow
-          command: docker-compose run frontend-flow
+          command: docker-compose run base yarn flow
       - run:
           name: test frontend-tests
-          command: docker-compose run frontend-tests
-      - run:
-          name: test e2e-tests
-          command: docker-compose run e2e-tests
-      - run:
-          name: test e2e-tests
-          command: docker-compose run e2e-tests
+          command: docker-compose run base yarn test-verbose
+      # - run:
+      #     name: test e2e-tests
+      #     command: docker-compose run e2e-tests
       - run:
           name: test integration
           command: |

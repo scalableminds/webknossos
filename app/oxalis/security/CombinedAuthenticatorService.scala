@@ -62,7 +62,7 @@ case class CombinedAuthenticator(id: String,
 
   def isExpired = expirationDateTime.isDefined && expirationDateTime.get.isBeforeNow
 
-  def isTimedOut = idleTimeout.isDefined && (lastUsedDateTime.plusSeconds(idleTimeout.get.toSeconds.toInt)).isBeforeNow
+  def isTimedOut = idleTimeout.isDefined && lastUsedDateTime.plusSeconds(idleTimeout.get.toSeconds.toInt).isBeforeNow
 }
 
 

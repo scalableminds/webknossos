@@ -61,7 +61,7 @@ class CombinedAuthenticatorDAO extends AuthenticatorDAO[CombinedAuthenticator] w
     maybeOldAuthenticator <- findByLoginInfo(authenticator.loginInfo)
     _ <- insert(authenticator)(GlobalAccessContext).futureBox
   }yield{
-    if(maybeOldAuthenticator.isDefined) remove(maybeOldAuthenticator.get.id)
+    maybeOldAuthenticator.map(a => remove(a.id))
     authenticator
   }
 
@@ -80,12 +80,6 @@ class CombinedAuthenticatorDAO extends AuthenticatorDAO[CombinedAuthenticator] w
 
   def findByLoginInfo(loginInfo: LoginInfo): Future[Option[CombinedAuthenticator]] =
     findOne("loginInfoParameter", loginInfo)(implicitly[Writes[LoginInfo]],GlobalAccessContext).futureBox.map(box => box.toOption)
-
-  //this method was used for deleting all tokens of one user, but because a user is only allowed to have one token, it is not necessary. Should it be removed?
-  def removeByEmail(email: String):Fox[WriteResult] = {
-    val test = remove("loginInfoParameter", LoginInfo(CredentialsProvider.ID, email))(implicitly[Writes[LoginInfo]], GlobalAccessContext)
-    return test
-  }
 }
 
 object JsonUtil {

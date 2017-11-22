@@ -257,14 +257,14 @@ class Authentication @Inject() (
 
   def getToken = SecuredAction.async { implicit request =>
     for{
-      maybeOldAuthenticator <- env.combinedAuthenticatorService.tokenDao.findByLoginInfo(request.identity.loginInfo)
-      combinedAuthenticator <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
+      maybeOldToken <- env.combinedAuthenticatorService.tokenDao.findByLoginInfo(request.identity.loginInfo)
+      newToken <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
     }yield{
       var js = Json.obj()
-      if(maybeOldAuthenticator.isDefined){
-        js = Json.obj("token" -> combinedAuthenticator.id, "msg" -> Messages("auth.addedNewToken"))
+      if(maybeOldToken.isDefined){
+        js = Json.obj("token" -> newToken.id, "msg" -> Messages("auth.addedNewToken"))
       } else {
-        js = Json.obj("token" -> combinedAuthenticator.id)
+        js = Json.obj("token" -> newToken.id)
       }
       Ok(js)
     }
@@ -272,9 +272,9 @@ class Authentication @Inject() (
 
   def deleteToken = SecuredAction.async { implicit request =>
     for{
-      maybeOldAuthenticator <- env.combinedAuthenticatorService.tokenDao.findByLoginInfo(request.identity.loginInfo)
-      oldAuthenticator <- maybeOldAuthenticator ?~> Messages("auth.noToken")
-      result <- env.combinedAuthenticatorService.discardToken(oldAuthenticator, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
+      maybeOldToken <- env.combinedAuthenticatorService.tokenDao.findByLoginInfo(request.identity.loginInfo)
+      oldToken <- maybeOldToken ?~> Messages("auth.noToken")
+      result <- env.combinedAuthenticatorService.discardToken(oldToken, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
     } yield {
       result
     }

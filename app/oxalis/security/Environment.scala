@@ -20,7 +20,6 @@ import org.joda.time.DateTime
 class EnvironmentOxalis @Inject()(configuration: Configuration)(implicit val executionContext: ExecutionContext) extends Environment[User ,CombinedAuthenticator]{
   val eventBusObject = EventBus()
   val cookieSettings = configuration.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
-  //val tokenSettings = BearerTokenAuthenticatorSettings("X-Auth-Token", None, 365 days) //maybe change the authenticatorExpiry and write it in a .conf file
   val tokenSettings = configuration.underlying.as[BearerTokenAuthenticatorSettings]("silhouette.tokenAuthenticator")
   val fingerprintGenerator = new DefaultFingerprintGenerator(false)
   val idGenerator = new SecureRandomIDGenerator()

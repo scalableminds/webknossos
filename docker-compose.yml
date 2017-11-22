@@ -13,7 +13,7 @@ services:
 
   dev:
     extends:
-      service: sbt
+      service: base
     ports:
       - "9000:9000"
     links:
@@ -35,7 +35,7 @@ services:
       - MONGO_DB=webknossos-dev
     stdin_open: true
 
-  sbt:
+  base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
     ports:
       - "5005:5005"
@@ -44,8 +44,9 @@ services:
       - USER_UID=$uid
       - USER_GID=$gid
       - TZ
+    working_dir: /home/$USER/webknossos
     volumes:
-      - ".:/project"
+      - ".:/home/$USER/webknossos"
       - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/$USER/.m2"
       - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/$USER/.ivy2"
       - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/$USER/.sbt"
@@ -53,32 +54,32 @@ services:
 
   frontend-dependencies:
     extends:
-      service: sbt
+      service: base
     command: yarn install
 
   frontend-linting:
     extends:
-      service: sbt
+      service: base
     command: yarn run lint && yarn run am-i-pretty
 
   frontend-flow:
     extends:
-      service: sbt
+      service: base
     command: yarn run flow
 
   frontend-tests:
     extends:
-      service: sbt
+      service: base
     command: yarn test-verbose
 
   frontend-docs:
     extends:
-      service: sbt
+      service: base
     command: yarn run docs
 
   e2e-tests:
     extends:
-      service: sbt
+      service: base
     command: >
       sbt -v -d "test-only * --
       -Dconfig.file=./conf/application_$${MODE}.conf

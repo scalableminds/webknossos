@@ -28,7 +28,7 @@ wrap(repo: "scalableminds/webknossos") {
     sh "docker-compose run frontend-dependencies"
     sh "docker-compose run frontend-docs"
     sh "docker-compose run base sbt clean compile stage"
-    sh "docker build --no-cache --pull -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
+    sh "docker build --pull -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
   }
 
 

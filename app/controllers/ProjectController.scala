@@ -7,9 +7,11 @@ import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import models.annotation.AnnotationDAO
 import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
 import models.project.{Project, ProjectDAO, ProjectService, WebknossosAssignmentConfig}
 import models.task._
+import models.user.UserDAO
 import net.liftweb.common.Empty
 import oxalis.security.{AuthenticatedRequest, Secured}
 import play.api.i18n.{Messages, MessagesApi}
@@ -134,6 +136,18 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
       } yield {
         Ok(Json.toJson(js))
+      }
+  }
+
+  def usersWithOpenTasks(projectName: String) = Authenticated.async {
+    implicit request =>
+      for {
+        tasks <- TaskDAO.findAllByProject(projectName)
+        annotations <- AnnotationDAO.findAllUnfinishedByTaskIds(tasks.map(_._id))
+        userIds = annotations.map(_._user).flatten
+        users <- UserDAO.findAllByIds(userIds)
+      } yield {
+        Ok(Json.toJson(users.map(_.email)))
       }
   }
 }

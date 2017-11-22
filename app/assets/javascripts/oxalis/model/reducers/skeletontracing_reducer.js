@@ -390,6 +390,22 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .getOrElse(state);
         }
 
+        case "SHUFFLE_ALL_TREE_COLORS": {
+          const newColors = ColorGenerator.getNRandomColors(_.size(skeletonTracing.trees));
+          return update(state, {
+            tracing: {
+              trees: {
+                $apply: oldTrees =>
+                  _.mapValues(oldTrees, tree =>
+                    update(tree, {
+                      color: { $set: newColors.shift() },
+                    }),
+                  ),
+              },
+            },
+          });
+        }
+
         case "CREATE_COMMENT": {
           const { commentText, nodeId, treeId } = action;
           return getNodeAndTree(skeletonTracing, nodeId, treeId)

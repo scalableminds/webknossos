@@ -1,0 +1,74 @@
+version: 2
+jobs:
+  build_test_deploy:
+    machine: true
+    environment:
+      SBT_VERSION_TAG: sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
+    steps:
+      - checkout
+      - run:
+          name: prepare docker
+          command: |
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            docker pull scalableminds/sbt:$SBT_VERSION_TAG
+      - restore_cache:
+          keys:
+            - cache-{{ .Branch }}
+            - cache
+      - run:
+          name: build frontend-dependencies
+          command: docker-compose run frontend-dependencies
+      - run:
+          name: build frontend-docs
+          command: docker-compose run frontend-docs
+      - run:
+          name: build code
+          command: docker-compose run base sbt clean compile stage
+      - save_cache:
+          key: cache-{{ .Branch }}
+          paths:
+            - "~/.m2"
+            - "~/.ivy2"
+            - "~/.sbt"
+            - "~/.yarn-cache"
+      - run:
+          name: build docker image
+          command: docker build --no-cache --pull -t scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} .
+
+      - run:
+          name: test frontend-linting
+          command: docker-compose run frontend-linting
+      - run:
+          name: test frontend-flow
+          command: docker-compose run frontend-flow
+      - run:
+          name: test frontend-tests
+          command: docker-compose run frontend-tests
+      - run:
+          name: test e2e-tests
+          command: docker-compose run e2e-tests
+      - run:
+          name: test e2e-tests
+          command: docker-compose run e2e-tests
+      - run:
+          name: test integration
+          command: |
+            set -x
+            DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up -d webknossos
+            sleep 10
+            ./test/infrastructure/deployment.bash
+            docker-compose down --volumes --remove-orphans
+
+      # - run:
+      #     name: deployment
+      #     command: |
+      #       set -x
+      #       docker tag scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
+      #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+      #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}
+      #       docker logout
+workflows:
+  version: 2
+  default:
+    jobs:
+      - build_run_deploy

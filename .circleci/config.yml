@@ -4,9 +4,9 @@ jobs:
     machine: true
     environment:
       SBT_VERSION_TAG: sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
-      USER_NAME: ${USER}
-      USER_UID: $(id -u)
-      USER_GID: $(id -g)
+      USER_NAME: circleci
+      USER_UID: 1001
+      USER_GID: 1001
     steps:
       - checkout
       - run:
@@ -17,9 +17,6 @@ jobs:
             - cache-{{ .Branch }}
             - cache
 
-      - run:
-          name: info
-          command: id
       - run:
           name: build frontend-dependencies
           command: docker-compose run frontend-dependencies

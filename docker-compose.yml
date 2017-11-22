@@ -13,14 +13,13 @@ services:
 
   dev:
     extends:
-      service: sbt
+      service: base
     ports:
       - "9000:9000"
     links:
       - mongo-dev
     command: >
-      bash -c
-      "sbt -v -d -jvm-debug 5005 \"run
+      sbt -v -d -jvm-debug 5005 "run
       -Djava.net.preferIPv4Stack=true
       -Dhttp.address=0.0.0.0
       -Dhttp.port=$${PORT}
@@ -28,7 +27,7 @@ services:
       -Dmongodb.url=$${MONGO_HOST}
       -Dmongodb.port=$${MONGO_PORT}
       -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
-      \""
+      "
     environment:
       - PORT=9000
       - MONGO_HOST=mongo-dev
@@ -36,48 +35,53 @@ services:
       - MONGO_DB=webknossos-dev
     stdin_open: true
 
-  sbt:
+  base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
     ports:
       - "5005:5005"
+    environment:
+      - USER_NAME
+      - USER_UID
+      - USER_GID
+      - TZ
+    working_dir: /home/$USER/webknossos
     volumes:
-      - ".:/project"
-      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
+      - ".:/home/$USER/webknossos"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/$USER/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/$USER/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/$USER/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
 
   frontend-dependencies:
     extends:
-      service: sbt
-    command: bash -c "yarn install"
+      service: base
+    command: yarn install
 
   frontend-linting:
     extends:
-      service: sbt
-    command: bash -c "yarn run lint && yarn run am-i-pretty"
+      service: base
+    command: yarn run lint && yarn run am-i-pretty
 
   frontend-flow:
     extends:
-      service: sbt
-    command: bash -c "yarn run flow"
+      service: base
+    command: yarn run flow
 
   frontend-tests:
     extends:
-      service: sbt
-    command: bash -c "yarn test-verbose"
+      service: base
+    command: yarn test-verbose
 
   frontend-docs:
     extends:
-      service: sbt
-    command: bash -c "yarn run docs"
+      service: base
+    command: yarn run docs
 
   e2e-tests:
     extends:
-      service: sbt
+      service: base
     command: >
-      bash -c
-      "sbt -v -d \"test-only * --
+      sbt -v -d "test-only * --
       -Dconfig.file=./conf/application_$${MODE}.conf
       -Djava.net.preferIPv4Stack=true
       -Dhttp.address=0.0.0.0
@@ -86,7 +90,7 @@ services:
       -Dmongodb.url=$${MONGO_HOST}
       -Dmongodb.port=$${MONGO_PORT}
       -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
-      \""
+      "
     ports:
       - "9000:9000"
     links:

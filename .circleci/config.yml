@@ -12,13 +12,13 @@ jobs:
       - run:
           name: prepare docker
           command: docker pull scalableminds/sbt:$SBT_VERSION_TAG
-      - run:
-          name: chown
-          command: sudo chown -R circleci:circleci .
       - restore_cache:
           keys:
             - cache-{{ .Branch }}
             - cache
+      - run:
+          name: chown
+          command: sudo chown -R circleci:circleci ~
 
       - run:
           name: build frontend-dependencies

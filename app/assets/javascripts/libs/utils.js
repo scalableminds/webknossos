@@ -7,6 +7,7 @@ import _ from "lodash";
 import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
 import window, { location } from "libs/window";
+import pako from "pako";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
@@ -365,6 +366,22 @@ const Utils = {
 
   minutesToMilliseconds(min: number) {
     return min * 60000;
+  },
+
+  async compress(data: Uint8Array | string): Promise<Uint8Array> {
+    const DEFLATE_PUSH_SIZE = 65536;
+
+    const deflator = new pako.Deflate({ gzip: true });
+    for (let offset = 0; offset < data.length; offset += DEFLATE_PUSH_SIZE) {
+      // The second parameter to push indicates whether this is the last chunk to be deflated
+      deflator.push(
+        data.slice(offset, offset + DEFLATE_PUSH_SIZE),
+        offset + DEFLATE_PUSH_SIZE >= data.length,
+      );
+      // eslint-disable-next-line no-await-in-loop
+      await Utils.sleep(1);
+    }
+    return deflator.result;
   },
 };
 

@@ -17,7 +17,6 @@ import DATASET from "../fixtures/dataset_server_object";
 const Request = {
   receiveJSON: sinon.stub(),
   sendJSONReceiveJSON: sinon.stub(),
-  sendArraybufferReceiveArraybuffer: sinon.stub(),
   always: () => Promise.resolve(),
 };
 const ErrorHandling = {
@@ -45,7 +44,7 @@ export const KeyboardJS = {
   unbind: _.noop,
 };
 mockRequire("libs/keyboard", KeyboardJS);
-mockRequire("libs/toast", { error: _.noop, warning: _.noop });
+mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop });
 mockRequire("libs/window", window);
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);

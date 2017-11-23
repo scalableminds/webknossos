@@ -274,7 +274,7 @@ class Authentication @Inject() (
     for{
       maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
       oldToken <- maybeOldToken ?~> Messages("auth.noToken")
-      result <- env.combinedAuthenticatorService.discardToken(oldToken, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
+      result <- env.combinedAuthenticatorService.discard(oldToken, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
     } yield {
       result
     }

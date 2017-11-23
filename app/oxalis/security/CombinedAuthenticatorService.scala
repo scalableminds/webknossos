@@ -34,13 +34,13 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   //is actually createCookie, called as "create" because it is the default
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
-    val cookieAuthenticator: Future[CookieAuthenticator] = cookieAuthenticatorService.create(loginInfo)
-    cookieAuthenticator.map(CombinedAuthenticator(_))
+    cookieAuthenticatorService.create(loginInfo).map(CombinedAuthenticator(_))
   }
 
   def createToken(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
-    val cookieAuthenticator: Future[CookieAuthenticator] = cookieAuthenticatorService.create(loginInfo)
-    cookieAuthenticator.map(CombinedAuthenticator(_))
+    val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo)
+    tokenAuthenticator.map(tokenAuthenticatorService.init(_))
+    tokenAuthenticator.map(CombinedAuthenticator(_))
   }
 
   override def retrieve(implicit request: RequestHeader): Future[Option[CombinedAuthenticator]] = {
@@ -68,9 +68,11 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   override def embed(cookie: Cookie, request: RequestHeader): RequestHeader =
     cookieAuthenticatorService.embed(cookie, request)
 
-  // only called in the cookie case
   override def touch(authenticator: CombinedAuthenticator): Either[CombinedAuthenticator, CombinedAuthenticator] = {
-    val touchedAuthenticator = cookieAuthenticatorService.touch(authenticator.actualAuthenticator.asInstanceOf[CookieAuthenticator])
+    val touchedAuthenticator = authenticator.actualAuthenticator match {
+      case a: CookieAuthenticator => cookieAuthenticatorService.touch(a)
+      case a: BearerTokenAuthenticator => tokenAuthenticatorService.touch(a)
+    }
     touchedAuthenticator match {
       case Left(c) => Left(CombinedAuthenticator(c))
       case Right(c) => Right(CombinedAuthenticator(c))
@@ -79,8 +81,10 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   // only called in the cookie case
   override def update(authenticator: CombinedAuthenticator, result: Result)
-                     (implicit request: RequestHeader): Future[AuthenticatorResult] =
-    cookieAuthenticatorService.update(authenticator.actualAuthenticator.asInstanceOf[CookieAuthenticator], result)
+                     (implicit request: RequestHeader): Future[AuthenticatorResult] = authenticator.actualAuthenticator match {
+    case a: CookieAuthenticator => cookieAuthenticatorService.update(a, result)
+    case a: BearerTokenAuthenticator => tokenAuthenticatorService.update(a, result)
+  }
 
   // only called in the cookie case
   override def renew(authenticator: CombinedAuthenticator)(implicit request: RequestHeader): Future[Cookie] =
@@ -92,9 +96,9 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   //is actually discardCookie, called as "discard" because it is the default
   override def discard(authenticator: CombinedAuthenticator, result: Result)(implicit request: RequestHeader): Future[AuthenticatorResult] =
-    cookieAuthenticatorService.discard(authenticator.actualAuthenticator.asInstanceOf[CookieAuthenticator], result)
-
-  def discardToken(authenticator: CombinedAuthenticator, result: Result)(implicit request: RequestHeader): Future[AuthenticatorResult] =
-    tokenAuthenticatorService.discard(authenticator.actualAuthenticator.asInstanceOf[BearerTokenAuthenticator], result)
+    authenticator.actualAuthenticator match {
+      case a: CookieAuthenticator => cookieAuthenticatorService.discard(a, result)
+      case a: BearerTokenAuthenticator => tokenAuthenticatorService.discard(a, result)
+    }
 }
 

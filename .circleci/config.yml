@@ -17,13 +17,13 @@ jobs:
           keys:
             - cache-v{{ .Environment.CACHE_VERSION }}-{{ .Branch }}
             - cache-v{{ .Environment.CACHE_VERSION }}
-      - run:
+      - run: &fix-permissions
           name: Fix folder permissions
           command: sudo chown -R circleci:circleci ~
-
       - run:
           name: Install frontend dependencies
           command: docker-compose run base yarn install
+      - run: *fix-permissions
       - run:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs

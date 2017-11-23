@@ -7,16 +7,20 @@ wrap(repo: "scalableminds/webknossos-datastore") {
   stage("Prepare") {
     checkout scm
 
-    env.DOCKER_CACHE_PREFIX = "~/.webknossos-datastore-build-cache"
+    env.DOCKER_CACHE_PREFIX = "~/.webknossos-datastore-cache"
     env.COMPOSE_PROJECT_NAME = "webknossos_datastore_${env.BRANCH_NAME}_${gitCommit()}"
+    env.USER_NAME = env.USER
+    env.USER_UID = sh(returnStdout: true, script: 'id -u').trim()
+    env.USER_GID = sh(returnStdout: true, script: 'id -g').trim()
+    env.TZ = readFile('/etc/timezone').trim()
     // env.DOCKER_HOST = 'tcp://localhost:2375'
     sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
-    sh "docker-compose pull sbt"
+    sh "docker-compose pull base"
   }
   
   stage("Build") {
-    sh "docker-compose run sbt clean compile stage"
-    sh "docker build -t scalableminds/webknossos-datastore:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
+    sh "docker-compose run base sbt clean compile stage"
+    sh "docker build --pull -t scalableminds/webknossos-datastore:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
   }
 
 

@@ -6,17 +6,23 @@ services:
     ports:
       - "9090:9090"
 
-  sbt:
+  base:
     image: scalableminds/sbt:$SBT_VERSION_TAG
+    environment:
+      - USER_NAME
+      - USER_UID
+      - USER_GID
+      - TZ
+    working_dir: /home/$USER_NAME/webknossos
     volumes:
-      - ".:/project"
-      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
+      - ".:/home/$USER_NAME/webknossos"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/$USER_NAME/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/$USER_NAME/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/$USER_NAME/.sbt"
 
   dev:
     extends:
-      service: sbt
+      service: base
     ports:
       - "9090:9090"
       - "5005:5005"

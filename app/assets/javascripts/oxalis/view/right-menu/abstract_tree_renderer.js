@@ -500,7 +500,7 @@ class AbstractTreeRenderer {
   /**
    *
    * @param   {String} message
-  */
+   */
   drawErrorMessage(message: string) {
     this.ctx.font = "16px serif";
     this.ctx.fillText(message, 10, 50);

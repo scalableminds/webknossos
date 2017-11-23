@@ -4,7 +4,7 @@ jobs:
     machine: true
     environment:
       SBT_VERSION_TAG: sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
-      CACHE_VERSION: 1
+      CACHE_VERSION: 2
       USER_NAME: circleci
       USER_UID: 1001
       USER_GID: 1001
@@ -13,17 +13,17 @@ jobs:
       - run:
           name: Pull sbt docker image
           command: docker pull scalableminds/sbt:$SBT_VERSION_TAG
+      - run:
+          name: Prepare dependency folders
+          command: mkdir -p ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
       - restore_cache:
           keys:
-            - cache-v{{ .Environment.CACHE_VERSION }}-{{ .Branch }}
-            - cache-v{{ .Environment.CACHE_VERSION }}-master
-      - run: &fix-permissions
-          name: Fix folder permissions
-          command: sudo chown -R circleci:circleci ~
+            - cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+            - cache-{{ checksum ".circleci/cache_version" }}-master
+
       - run:
           name: Install frontend dependencies
           command: docker-compose run base yarn install
-      - run: *fix-permissions
       - run:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
@@ -32,7 +32,7 @@ jobs:
           command: docker-compose run base sbt clean compile stage
 
       - save_cache:
-          key: cache-v{{ .Environment.CACHE_VERSION }}-{{ .Branch }}
+          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
           paths:
             - "~/.m2"
             - "~/.ivy2"

@@ -16,7 +16,7 @@ jobs:
       - restore_cache:
           keys:
             - cache-v{{ .Environment.CACHE_VERSION }}-{{ .Branch }}
-            - cache-v{{ .Environment.CACHE_VERSION }}
+            - cache-v{{ .Environment.CACHE_VERSION }}-master
       - run: &fix-permissions
           name: Fix folder permissions
           command: sudo chown -R circleci:circleci ~

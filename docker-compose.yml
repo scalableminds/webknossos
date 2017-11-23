@@ -41,16 +41,16 @@ services:
     ports:
       - "5005:5005"
     environment:
-      - USER_NAME
+      - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
       - USER_GID
       - TZ
-    working_dir: /home/$USER/webknossos
+    working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
-      - ".:/home/$USER/webknossos"
-      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/$USER/.m2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/$USER/.ivy2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/$USER/.sbt"
+      - ".:/home/${USER_NAME:-sbt-user}/webknossos"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/${USER_NAME:-sbt-user}/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/${USER_NAME:-sbt-user}/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/${USER_NAME:-sbt-user}/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
 
   frontend-dependencies:

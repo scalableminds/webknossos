@@ -289,7 +289,23 @@ class Controller extends React.PureComponent<Props, State> {
 
   render() {
     if (!this.state.ready) {
-      return <Spin spinning />;
+      return (
+        <Spin
+          spinning
+          size="large"
+          style={{
+            position: "fixed",
+            top: "64px",
+            left: "0px",
+            right: "0px",
+            bottom: "0px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        />
+      );
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;

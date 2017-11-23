@@ -11,14 +11,14 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Pull sbt docker image 🐳
+          name: Pull sbt docker image
           command: docker pull scalableminds/sbt:$SBT_VERSION_TAG
       - restore_cache:
           keys:
             - cache-v{{ .Environment.CACHE_VERSION }}-{{ .Branch }}
             - cache-v{{ .Environment.CACHE_VERSION }}-master
       - run: &fix-permissions
-          name: Fix folder permissions 🔧
+          name: Fix folder permissions
           command: sudo chown -R circleci:circleci ~
       - run:
           name: Install frontend dependencies
@@ -28,7 +28,7 @@ jobs:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
       - run:
-          name: Build code (sbt and webpack) 🐌
+          name: Build code (sbt and webpack)
           command: docker-compose run base sbt clean compile stage
 
       - save_cache:
@@ -40,7 +40,7 @@ jobs:
             - "~/.yarn-cache"
 
       - run:
-          name: Build docker image 🐳
+          name: Build docker image
           command: docker build --no-cache --pull -t scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} .
 
       - run:
@@ -56,7 +56,7 @@ jobs:
       #     name: Run end-to-end tests
       #     command: docker-compose run e2e-tests
       - run:
-          name: Run smoke test 🚬
+          name: Run smoke test
           command: |
             set -x
             DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos
@@ -65,7 +65,7 @@ jobs:
             docker-compose down --volumes --remove-orphans
 
       # - run:
-      #     name: Deploy docker images 🐱
+      #     name: Deploy docker images
       #     command: |
       #       set -x
       #       docker login -u $DOCKER_USER -p $DOCKER_PASS

@@ -15,9 +15,8 @@ jobs:
           command: docker pull scalableminds/sbt:$SBT_VERSION_TAG
       - restore_cache:
           keys:
-            - cache-{{ .Branch }}-{{ .Environment.CACHE_VERSION }}
-            - cache-{{ .Branch }}
-            - cache
+            - cache-v{{ .Environment.CACHE_VERSION }}-{{ .Branch }}
+            - cache-v{{ .Environment.CACHE_VERSION }}
       - run:
           name: Fix folder permissions
           command: sudo chown -R circleci:circleci ~
@@ -33,7 +32,7 @@ jobs:
           command: docker-compose run base sbt clean compile stage
 
       - save_cache:
-          key: cache-{{ .Branch }}-{{ .Environment.CACHE_VERSION }}
+          key: cache-v{{ .Environment.CACHE_VERSION }}-{{ .Branch }}
           paths:
             - "~/.m2"
             - "~/.ivy2"

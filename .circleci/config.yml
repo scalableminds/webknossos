@@ -56,7 +56,7 @@ jobs:
       #     name: Run end-to-end tests
       #     command: docker-compose run e2e-tests
       - run:
-          name: Run integration test
+          name: Run smoke test
           command: |
             set -x
             DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos

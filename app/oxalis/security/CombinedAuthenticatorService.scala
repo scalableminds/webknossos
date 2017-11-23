@@ -79,7 +79,6 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
     }
   }
 
-  // only called in the cookie case
   override def update(authenticator: CombinedAuthenticator, result: Result)
                      (implicit request: RequestHeader): Future[AuthenticatorResult] = authenticator.actualAuthenticator match {
     case a: CookieAuthenticator => cookieAuthenticatorService.update(a, result)
@@ -94,7 +93,6 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   override def renew(authenticator: CombinedAuthenticator, result: Result)(implicit request: RequestHeader): Future[AuthenticatorResult] =
     cookieAuthenticatorService.renew(authenticator.actualAuthenticator.asInstanceOf[CookieAuthenticator], result)
 
-  //is actually discardCookie, called as "discard" because it is the default
   override def discard(authenticator: CombinedAuthenticator, result: Result)(implicit request: RequestHeader): Future[AuthenticatorResult] =
     authenticator.actualAuthenticator match {
       case a: CookieAuthenticator => cookieAuthenticatorService.discard(a, result)

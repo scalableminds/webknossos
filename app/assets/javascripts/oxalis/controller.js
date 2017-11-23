@@ -246,24 +246,26 @@ class Controller extends React.PureComponent<Props, State> {
           Store.dispatch(redoAction());
         },
         "ctrl + y": () => Store.dispatch(redoAction()),
-
-        // In the long run this should probably live in a user script
-        "3": function toggleSegmentationOpacity() {
-          // Flow cannot infer the return type of getConfiguration :(
-          // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
-          const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
-          let newSegAlpha = 0;
-
-          if (curSegAlpha > 0) {
-            prevSegAlpha = curSegAlpha;
-          } else {
-            newSegAlpha = prevSegAlpha;
-          }
-
-          api.data.setConfiguration("segmentationOpacity", newSegAlpha);
-        },
       });
     }
+
+    _.extend(keyboardControls, {
+      // In the long run this should probably live in a user script
+      "3": function toggleSegmentationOpacity() {
+        // Flow cannot infer the return type of getConfiguration :(
+        // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
+        const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
+        let newSegAlpha = 0;
+
+        if (curSegAlpha > 0) {
+          prevSegAlpha = curSegAlpha;
+        } else {
+          newSegAlpha = prevSegAlpha;
+        }
+
+        api.data.setConfiguration("segmentationOpacity", newSegAlpha);
+      },
+    });
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 

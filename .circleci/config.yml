@@ -4,7 +4,6 @@ jobs:
     machine: true
     environment:
       SBT_VERSION_TAG: sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
-      CACHE_VERSION: 2
       USER_NAME: circleci
       USER_UID: 1001
       USER_GID: 1001

@@ -137,6 +137,7 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
     yield call(toggleErrorHighlighting, true);
     if (error.status >= 400 && error.status < 500) {
       // HTTP Code 409 'conflict' for dirty state
+      window.onbeforeunload = null;
       if (error.status === 409) {
         yield call(alert, messages["save.failed_simultaneous_tracing"]);
       } else {

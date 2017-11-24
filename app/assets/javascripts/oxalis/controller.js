@@ -105,14 +105,18 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    this.props.history.block(() => {
+    const beforeUnload = () => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());
+        window.onbeforeunload = null;
         return messages["save.leave_page_unfinished"];
       }
       return null;
-    });
+    };
+
+    this.props.history.block(beforeUnload);
+    window.onbeforeunload = beforeUnload;
 
     UrlManager.startUrlUpdater();
     SceneController.initialize();

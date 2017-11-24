@@ -5,6 +5,9 @@
 /* globals JQueryInputEventObject:false */
 
 import * as React from "react";
+import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
+import { Spin } from "antd";
 import $ from "jquery";
 import _ from "lodash";
 import app from "app";
@@ -29,17 +32,19 @@ import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import Modal from "oxalis/view/modal";
-import { connect } from "react-redux";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
+import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
 type StateProps = {
   viewMode: ModeType,
 };
+
 type Props = {
+  history: ReactRouterHistoryType,
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,
@@ -76,8 +81,6 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    app.router.showLoadingSpinner();
-
     _.extend(this, Backbone.Events);
 
     UrlManager.initialize();
@@ -102,7 +105,7 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    app.router.on("beforeunload", () => {
+    this.props.history.block(() => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());
@@ -130,7 +133,6 @@ class Controller extends React.PureComponent<Props, State> {
 
     window.webknossos = new ApiLoader(Model);
 
-    app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
     this.setState({ ready: true });
@@ -287,7 +289,23 @@ class Controller extends React.PureComponent<Props, State> {
 
   render() {
     if (!this.state.ready) {
-      return null;
+      return (
+        <Spin
+          spinning
+          size="large"
+          style={{
+            position: "fixed",
+            top: "64px",
+            left: "0px",
+            right: "0px",
+            bottom: "0px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        />
+      );
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
@@ -337,4 +355,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(mapStateToProps)(Controller);
+export default withRouter(connect(mapStateToProps)(Controller));

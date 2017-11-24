@@ -3,8 +3,8 @@
 import _ from "lodash";
 import * as React from "react";
 import { Modal, Button, Input, Icon } from "antd";
-import Request from "libs/request";
 import update from "immutability-helper";
+import { updateUser } from "admin/admin_rest_api";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Props = {
@@ -45,11 +45,6 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
             experiences: { [domain]: { $set: newExperienceLevel } },
           });
 
-          const url = `/api/users/${user.id}`;
-          Request.sendJSONReceiveJSON(url, {
-            data: newUser,
-          });
-
           return this.sendUserToServer(newUser, user);
         }
         return Promise.resolve(user);
@@ -79,16 +74,13 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
   };
 
   /**
-  * Save a user object to the server using an API call.
-  * @param newUser - A modified user object intended to be saved.
-  * @param oldUser - The original user object of `newUser`. Returned in case API call fails
-  *
-  */
+   * Save a user object to the server using an API call.
+   * @param newUser - A modified user object intended to be saved.
+   * @param oldUser - The original user object of `newUser`. Returned in case API call fails
+   *
+   */
   sendUserToServer(newUser: APIUserType, oldUser: APIUserType): Promise<APIUserType> {
-    const url = `/api/users/${newUser.id}`;
-    return Request.sendJSONReceiveJSON(url, {
-      data: newUser,
-    }).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
+    return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(oldUser));
   }
 
   closeModal(usersPromises: Array<Promise<APIUserType>>): void {

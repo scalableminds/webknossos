@@ -96,9 +96,10 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           "SCM",
           "Boy",
           true,
-          SCrypt.hashPassword(password),
           SCrypt.md5(password),
-          List(TeamMembership(mpi.name, Role.Admin)))
+          List(TeamMembership(mpi.name, Role.Admin)),
+          loginInfo = UserService.createLoginInfo(email),
+          passwordInfo = UserService.createPasswordInfo(password))
         )
     }
   }

@@ -3,22 +3,17 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
-import com.mohiva.play.silhouette.api.Authenticator.Implicits._
-import com.mohiva.play.silhouette.api.{Environment, LoginInfo, Silhouette}
+import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
-import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
-import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
-import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
+import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team.Role
-import models.user.UserService
 import models.user.UserService.{Mailer => _, _}
-import models.user.UserTokenService
-import models.user.UserToken2
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
+import models.user.{UserService, UserToken2, UserTokenService}
 import net.liftweb.common.{Empty, Failure, Full}
 import oxalis.mail.DefaultMails
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.ProvidesUnauthorizedSessionData
@@ -220,7 +215,7 @@ class Authentication @Inject() (
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        val id = UUID.fromString(passwords.token)
+        val id = UUID.fromString(passwords.token.trim)
         userTokenService.find(id).flatMap {
           case None =>
             Future.successful(BadRequest(Messages("error.invalidToken")))

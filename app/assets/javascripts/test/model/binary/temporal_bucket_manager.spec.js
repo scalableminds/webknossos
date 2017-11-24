@@ -9,9 +9,7 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
 mockRequire("libs/window", {});
-mockRequire("jquery", { fn: {} });
 mockRequire("libs/request", null);
-require("libs/core_ext");
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/binary/bucket");
 const TemporalBucketManager = mockRequire.reRequire("oxalis/model/binary/temporal_bucket_manager")

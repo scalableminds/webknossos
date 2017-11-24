@@ -1,6 +1,6 @@
 package models.annotation.handler
 
-import oxalis.security.silhouetteOxalis.{SecuredRequest}
+import oxalis.security.WebknossosSilhouette.{SecuredRequest}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
@@ -26,10 +26,6 @@ trait AnnotationInformationHandler {
 
   def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Future[String] = {
     Future.successful(t.id)
-  }
-
-  def withAnnotation[A](identifier: String)(f: Annotation => A)(implicit request: SecuredRequest[_]): Fox[A] = {
-    provideAnnotation(identifier, Some(request.identity)).map(f)
   }
 
   def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]

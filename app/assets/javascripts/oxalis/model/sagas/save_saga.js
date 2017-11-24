@@ -57,14 +57,22 @@ export function* collectUndoStates(): Generator<*, *, *> {
         undoStack.push(prevTracing);
         if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
       }
-    } else if (undo && undoStack.length) {
-      redoStack.push(prevTracing);
-      const newTracing = undoStack.pop();
-      yield put(setTracingAction(newTracing));
-    } else if (redo && redoStack.length) {
-      undoStack.push(prevTracing);
-      const newTracing = redoStack.pop();
-      yield put(setTracingAction(newTracing));
+    } else if (undo) {
+      if (undoStack.length) {
+        redoStack.push(prevTracing);
+        const newTracing = undoStack.pop();
+        yield put(setTracingAction(newTracing));
+      } else {
+        Toast.info(messages["undo.no_undo"]);
+      }
+    } else if (redo) {
+      if (redoStack.length) {
+        undoStack.push(prevTracing);
+        const newTracing = redoStack.pop();
+        yield put(setTracingAction(newTracing));
+      } else {
+        Toast.info(messages["undo.no_redo"]);
+      }
     }
     // We need the updated tracing here
     prevTracing = yield select(state => state.tracing);
@@ -75,15 +83,20 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
   yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   yield put(setLastSaveTimestampAction());
   while (true) {
-    const pushAction = yield take("PUSH_SAVE_QUEUE");
-    if (!pushAction.pushNow) {
-      yield race({
-        timeout: call(delay, PUSH_THROTTLE_TIME),
-        forcePush: take("SAVE_NOW"),
-      });
+    let saveQueue;
+    // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
+    // could have been triggered during the call to sendRequestToServer
+    saveQueue = yield select(state => state.save.queue);
+    if (saveQueue.length === 0) {
+      // Save queue is empty, wait for push event
+      yield take("PUSH_SAVE_QUEUE");
     }
+    yield race({
+      timeout: call(delay, PUSH_THROTTLE_TIME),
+      forcePush: take("SAVE_NOW"),
+    });
     yield put(setSaveBusyAction(true));
-    const saveQueue = yield select(state => state.save.queue);
+    saveQueue = yield select(state => state.save.queue);
     if (saveQueue.length > 0) {
       yield call(sendRequestToServer);
     }
@@ -329,7 +342,7 @@ export function performDiffTracing(
   }
 }
 
-export function* saveTracingAsync(): Generator<*, *, *> {
+export function* saveTracingAsync(): Generator<any, any, any> {
   const { initSkeleton } = yield race({
     initSkeleton: take("INITIALIZE_SKELETONTRACING"),
     initVolume: take("INITIALIZE_VOLUMETRACING"),

@@ -1,11 +1,14 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
 import sinon from "sinon";
-import "backbone.marionette";
-import { createNodeAction, deleteNodeAction } from "oxalis/model/actions/skeletontracing_actions";
 import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
+import mockRequire from "mock-require";
 
-// All the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
+const { createNodeAction, deleteNodeAction } = mockRequire.reRequire(
+  "oxalis/model/actions/skeletontracing_actions",
+);
+
+// Most of the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
 // Use API_VERSION 1
 test.beforeEach(t => setupOxalis(t, "skeleton", 1));
 

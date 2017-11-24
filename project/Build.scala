@@ -14,7 +14,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "11.3.4"
+  val braingamesVersion = "11.3.6"
 
   val twelvemonkeysVersion = "3.1.2"
 
@@ -98,8 +98,8 @@ object Dependencies{
       "com.twelvemonkeys.imageio" % "imageio-jpeg" % twelvemonkeysVersion,
       "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeysVersion
     )
-  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.33.0"
-  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % "3.33.0"
+  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.44.1"
+  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % "3.44.1"
 }
 
 object Resolvers {

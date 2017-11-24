@@ -16,7 +16,7 @@ import models.project.{Project, ProjectDAO}
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -130,6 +130,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
         }
       }
+
       val firstDataSetName = requestedTasks.head._1.dataSet
       if (allOnSameDatasetIter(requestedTasks, requestedTasks.head._1.dataSet))
         Fox.successful(firstDataSetName)
@@ -144,25 +145,36 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       taskObjects: List[Fox[Task]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
       annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
-                                                                taskFox = tuple._3,
-                                                                request.identity._id,
-                                                                tracingReferenceBox=tuple._2,
-                                                                dataSetName))
+        taskFox = tuple._3,
+        request.identity._id,
+        tracingReferenceBox = tuple._2,
+        dataSetName))
       zippedTasksAndAnnotations = taskObjects zip annotationBases
       taskJsons = zippedTasksAndAnnotations.map(tuple => Task.transformToJsonFoxed(tuple._1, tuple._2))
       result <- {
         val taskJsonFuture: Future[List[Box[JsObject]]] = Fox.sequence(taskJsons)
-        taskJsonFuture.map {taskJsonBoxes =>
+        taskJsonFuture.map { taskJsonBoxes =>
           bulk2StatusJson(taskJsonBoxes)
         }
       }
     } yield Ok(Json.toJson(result))
   }
 
+  private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[_]): Fox[Unit] = {
+    scriptIdOpt match {
+      case Some(scriptId) =>
+        for {
+          _ <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+        } yield ()
+      case _ => Fox.successful(())
+    }
+  }
+
   private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: SecuredRequest[_]): Fox[Task] = {
     for {
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      _ <- validateScript(params.scriptId)
       _ <- ensureTeamAdministration(request.identity, params.team)
       task = Task(
         taskType._id,
@@ -202,10 +214,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         editRotation = params.editRotation)
       _ <- AnnotationService.updateAllOfTask(updatedTask, taskType.settings)
 
-      newTracingBase = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition,  params.editRotation)
+      newTracingBase = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       dataSet <- DataSetDAO.findOneBySourceName(params.dataSet).toFox ?~> Messages("dataSet.notFound", params.dataSet)
       newTracingBaseReference <- dataSet.dataStore.saveSkeletonTracing(newTracingBase) ?~> "Failed to save skeleton tracing."
-       _ <- AnnotationService.updateAnnotationBase(updatedTask, newTracingBaseReference)
+      _ <- AnnotationService.updateAnnotationBase(updatedTask, newTracingBaseReference)
       json <- Task.transformToJson(updatedTask)
       _ <- OpenAssignmentService.updateRemainingInstances(updatedTask, project, params.openInstances)
     } yield {
@@ -223,7 +235,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def list = SecuredAction.async{ implicit request =>
+  def list = SecuredAction.async { implicit request =>
     for {
 
       tasks <- TaskService.findAllAdministratable(request.identity, limit = 10000)
@@ -251,9 +263,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def listTasks() = SecuredAction.async(parse.json) { implicit request =>
 
     val userOpt = (request.body \ "user").asOpt[String]
-    val projectOpt =  (request.body \ "project").asOpt[String]
+    val projectOpt = (request.body \ "project").asOpt[String]
     val idsOpt = (request.body \ "ids").asOpt[List[String]]
-    val taskTypeOpt =  (request.body \ "taskType").asOpt[String]
+    val taskTypeOpt = (request.body \ "taskType").asOpt[String]
 
     userOpt match {
       case Some(userId) => {
@@ -306,17 +318,17 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
         TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.take(assignment)).flatMap {
           updateResult =>
-          if (updateResult.n >= 1)
-            Fox.successful(assignment)
-          else if (retryCount > 0)
-            tryToGetNextAssignmentFor(user, teams, retryCount - 1)
-          else {
-            val e = System.currentTimeMillis()
-            logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
-              s"Result: $updateResult n:${updateResult.n} ok:${updateResult.ok} " +
-              s"code:${updateResult.code} TOOK: ${e-s}ms")
-            Fox.failure(Messages("task.unavailable"))
-          }
+            if (updateResult.n >= 1)
+              Fox.successful(assignment)
+            else if (retryCount > 0)
+              tryToGetNextAssignmentFor(user, teams, retryCount - 1)
+            else {
+              val e = System.currentTimeMillis()
+              logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
+                s"Result: $updateResult n:${updateResult.n} ok:${updateResult.ok} " +
+                s"code:${updateResult.code} TOOK: ${e - s}ms")
+              Fox.failure(Messages("task.unavailable"))
+            }
         }.futureBox
       case f: Failure =>
         logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
@@ -358,12 +370,13 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
           case Input.Empty =>
             stepWith(accum)
           case Input.El(el) =>
-            if(filter(accum, el))
+            if (filter(accum, el))
               stepWith(accum :+ el)
             else
               stepWith(accum)
         }
       }
+
       stepWith(Seq.empty)
     }
 

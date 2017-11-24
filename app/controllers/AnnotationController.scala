@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 
 import com.scalableminds.braingames.datastore.tracings.TracingType
-import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import akka.util.Timeout
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -274,8 +274,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
         newAnnotation <- duplicateAnnotation(annotation, request.identity)
+        restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
+        json <- newAnnotation.toJson(Some(request.identity), Some(restrictions))
       } yield {
-        Redirect(routes.AnnotationController.empty(newAnnotation.typ, newAnnotation.id))
+        JsonOk(json)
       }
     }(securedRequestToUserAwareRequest)
   }

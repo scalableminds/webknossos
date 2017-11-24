@@ -2,12 +2,13 @@
  * app.js
  * @flow
  */
-import Marionette from "backbone.marionette";
-import typeof OxalisController from "oxalis/controller";
+import type OxalisController from "oxalis/controller";
 import window from "libs/window";
+import BackboneEvents from "backbone-events-standalone";
 
-class OxalisApplication extends Marionette.Application {
+class OxalisApplication {
   oxalis: ?OxalisController;
+  vent = Object.assign({}, BackboneEvents);
 }
 
 // eslint-disable-next-line no-unused-vars

@@ -61,7 +61,7 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
     return (
       <div>
         <li className={liClassName}>
-          <a href="#toggle-comment" onClick={this.handleToggleComment}>
+          <a onClick={this.handleToggleComment}>
             <i className={iClassName} />
           </a>
           {this.props.tree.treeId} - {this.props.tree.name}

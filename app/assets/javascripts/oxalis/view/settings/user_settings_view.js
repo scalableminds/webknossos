@@ -238,7 +238,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       );
     } else if (
       mode === Constants.MODE_VOLUME &&
-      !this.props.isPublicViewMode &&
+      !isPublicViewMode &&
       this.props.tracing.type === "volume"
     ) {
       return (

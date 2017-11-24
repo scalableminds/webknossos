@@ -2,16 +2,16 @@
  * arbitrary_view.js
  * @flow
  */
-import $ from "jquery";
 import _ from "lodash";
 import app from "app";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
 import Constants from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import window from "libs/window";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
@@ -37,13 +37,12 @@ class ArbitraryView {
   geometries: Array<THREE.Geometry> = [];
   group: THREE.Object3D;
   cameraPosition: Array<number>;
-  container: JQuery;
 
   constructor() {
     this.animate = this.animateImpl.bind(this);
     this.resize = this.resizeImpl.bind(this);
     this.setClippingDistance = this.setClippingDistanceImpl.bind(this);
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
@@ -81,7 +80,7 @@ class ArbitraryView {
       // start the rendering loop
       this.animationRequestId = window.requestAnimationFrame(this.animate);
       // Dont forget to handle window resizing!
-      $(window).on("resize", this.resize);
+      window.addEventListener("resize", this.resize);
     }
   }
 
@@ -95,7 +94,7 @@ class ArbitraryView {
 
       SceneController.rootGroup.remove(this.group);
 
-      $(window).off("resize", this.resize);
+      window.removeEventListener("resize", this.resize);
     }
   }
 

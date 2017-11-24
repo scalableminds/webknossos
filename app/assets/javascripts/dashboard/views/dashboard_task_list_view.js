@@ -11,7 +11,9 @@ import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
+import messages from "messages";
 import TransferTaskModal from "dashboard/views/transfer_task_modal";
+import { deleteAnnotation, resetAnnotation } from "admin/admin_rest_api";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import type { APITaskWithAnnotationType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -78,7 +80,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   confirmFinish(task: APITaskWithAnnotationType) {
     Modal.confirm({
-      content: "Are you sure you want to permanently finish this tracing?",
+      content: messages["annotation.finish"],
       onOk: async () => {
         const annotation = task.annotation;
         const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
@@ -189,21 +191,18 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     );
   };
 
-  resetTask(annotationId: string) {
-    const url = `/annotations/Task/${annotationId}/reset`;
-
-    Request.receiveJSON(url).then(jsonData => {
-      Toast.messages(jsonData.messages);
-    });
+  async resetTask(annotationId: string) {
+    await resetAnnotation(annotationId);
+    Toast.success(messages["task.reset_success"]);
   }
 
   cancelAnnotation(annotationId: string) {
     const wasFinished = this.state.showFinishedTasks;
 
     Modal.confirm({
-      content: "Do you really want to cancel this annotation?",
+      content: messages["annotation.delete"],
       onOk: async () => {
-        await Request.triggerRequest(`/annotations/Task/${annotationId}`, { method: "DELETE" });
+        await deleteAnnotation(annotationId);
         if (wasFinished) {
           this.setState({
             finishedTasks: this.state.finishedTasks.filter(t => t.annotation.id !== annotationId),

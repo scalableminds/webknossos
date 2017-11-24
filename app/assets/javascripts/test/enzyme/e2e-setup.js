@@ -25,7 +25,7 @@ async function waitForAllRequests() {
   await tolerantWait();
 }
 
-function wait(milliseconds: number) {
+function wait(milliseconds: number): Promise<number> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
@@ -34,6 +34,10 @@ global.fetch = function fetchWrapper(url, options) {
   if (url.indexOf("http:") === -1) {
     newUrl = `http://localhost:9000${url}`;
   }
+  options.headers.append(
+    "X-Auth-Token",
+    "10a262ba07c59611e1a344ca4f52c9f2aedcb5f7867eaa1bc1fa282e2729dfb053296d63c63db7248ad5acc877744b26da0731a2e47e4254fb3ec40c71195ace4e2986b20a6ee7b9c6ffe5b74bb2ed73fbd2fffd52018a09c89fd7ab54fdc10098cb273ccb6e6ca8ddec5e4e239b7095072458fd66cc8f513d9ecfbea9c1385c",
+  );
   const promise = fetch(newUrl, options);
   requests.push(promise);
   console.log("Fetching", newUrl);

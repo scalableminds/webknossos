@@ -201,16 +201,13 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     // returns the index / line number of an invalidly parsed task
     // returned indicies start at 1 for easier matching by non-CS people
     const isValidTasks = tasks.map(this.isValidTask);
-    const invalidTasks = isValidTasks.reduce(
-      (result: Array<number>, isValid: boolean, i: number) => {
-        if (!isValid) {
-          result.push(i + 1);
-        }
-        return result;
-      },
-      [],
-    );
-    return invalidTasks;
+    const invalidTasks: Array<number> = [];
+    return isValidTasks.reduce((result, isValid: boolean, i: number) => {
+      if (!isValid) {
+        result.push(i + 1);
+      }
+      return result;
+    }, invalidTasks);
   }
 
   async batchUpload(tasks: Array<NewTaskType>) {
@@ -277,9 +274,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                         return _.isString(value) && invalidTaskIndices.length === 0
                           ? callback()
                           : callback(
-                              `${Messages[
-                                "task.bulk_create_invalid"
-                              ]} Error in line ${invalidTaskIndices.join(", ")}`,
+                              `${
+                                Messages["task.bulk_create_invalid"]
+                              } Error in line ${invalidTaskIndices.join(", ")}`,
                             );
                       },
                     },

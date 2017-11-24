@@ -103,7 +103,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               `This tracing was initialized with an active node ID, which does not
               belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
               the last tree instead.`,
-              null,
+              undefined,
               true,
             );
             activeNodeId = null;
@@ -113,7 +113,12 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         .orElse(() => {
           // use last tree for active tree
           const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), tree => tree.treeId));
-          return lastTree.map(t => t.treeId);
+          return lastTree.map(t => {
+            // use last node for active node
+            const lastNode = _.maxBy(_.values(t.nodes), node => node.id);
+            activeNodeId = lastNode != null ? lastNode.id : null;
+            return t.treeId;
+          });
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
 
@@ -388,6 +393,22 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }),
             )
             .getOrElse(state);
+        }
+
+        case "SHUFFLE_ALL_TREE_COLORS": {
+          const newColors = ColorGenerator.getNRandomColors(_.size(skeletonTracing.trees));
+          return update(state, {
+            tracing: {
+              trees: {
+                $apply: oldTrees =>
+                  _.mapValues(oldTrees, tree =>
+                    update(tree, {
+                      color: { $set: newColors.shift() },
+                    }),
+                  ),
+              },
+            },
+          });
         }
 
         case "CREATE_COMMENT": {

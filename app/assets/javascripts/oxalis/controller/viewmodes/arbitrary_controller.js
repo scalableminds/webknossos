@@ -4,7 +4,7 @@
  */
 
 import * as React from "react";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
 import type { ModifierKeys } from "libs/input";
@@ -20,7 +20,7 @@ import {
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
-  deleteNodeAction,
+  deleteNodeWithConfirmAction,
   createNodeAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
@@ -75,7 +75,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   stopListening: Function;
 
   componentDidMount() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
     this.input = {};
     this.storePropertyUnsubscribers = [];
     this.start();
@@ -232,7 +232,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
       // Delete active node and recenter last node
       "shift + space": () => {
-        Store.dispatch(deleteNodeAction());
+        Store.dispatch(deleteNodeWithConfirmAction());
       },
     });
   }

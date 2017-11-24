@@ -1,13 +1,12 @@
 /**
  * list_tree_view.js
- * @flow weak
+ * @flow
  */
 
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu } from "antd";
-import Window from "libs/window";
 import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -16,8 +15,9 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
-  deleteTreeAction,
+  deleteTreeWithConfirmAction,
   shuffleTreeColorAction,
+  shuffleAllTreeColorsAction,
   selectNextTreeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
@@ -31,6 +31,7 @@ const InputGroup = Input.Group;
 
 type Props = {
   onShuffleTreeColor: number => void,
+  onShuffleAllTreeColors: () => void,
   onSortTree: boolean => void,
   onSelectNextTreeForward: () => void,
   onSelectNextTreeBackward: () => void,
@@ -41,15 +42,13 @@ type Props = {
   userConfiguration: UserConfigurationType,
 };
 
-class TreesTabView extends React.Component<Props> {
+class TreesTabView extends React.PureComponent<Props> {
   handleChangeTreeName = evt => {
     this.props.onChangeTreeName(evt.target.value);
   };
 
   deleteTree = () => {
-    if (Window.confirm("Do you really want to delete the whole tree?")) {
-      this.props.onDeleteTree();
-    }
+    this.props.onDeleteTree();
   };
 
   shuffleTreeColor = () => {
@@ -59,9 +58,7 @@ class TreesTabView extends React.Component<Props> {
   };
 
   shuffleAllTreeColors = () => {
-    for (const tree of _.values(this.props.skeletonTracing.trees)) {
-      this.props.onShuffleTreeColor(tree.treeId);
-    }
+    this.props.onShuffleAllTreeColors();
   };
 
   toggleAllTrees() {
@@ -166,6 +163,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onShuffleTreeColor(treeId) {
     dispatch(shuffleTreeColorAction(treeId));
   },
+  onShuffleAllTreeColors() {
+    dispatch(shuffleAllTreeColorsAction());
+  },
   onSortTree(shouldSortTreesByName) {
     dispatch(updateUserSettingAction("sortTreesByName", shouldSortTreesByName));
   },
@@ -179,7 +179,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(createTreeAction());
   },
   onDeleteTree() {
-    dispatch(deleteTreeAction());
+    dispatch(deleteTreeWithConfirmAction());
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));

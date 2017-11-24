@@ -13,6 +13,7 @@ import Request from "libs/request";
 import Store from "oxalis/store";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
+import Utils from "libs/utils";
 import type { Vector4 } from "oxalis/constants";
 import type { DataLayerType, DataStoreInfoType } from "oxalis/store";
 import type { DataBucket } from "oxalis/model/binary/bucket";
@@ -50,8 +51,9 @@ class WkLayer extends Layer {
 
     const datasetName = this.getDatasetName();
     const responseBuffer = await Request.sendJSONReceiveArraybuffer(
-      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this
-        .name}/data?token=${token}`,
+      `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${this.name}/data?token=${
+        token
+      }`,
       {
         data: batch,
         timeout: REQUEST_TIMEOUT,
@@ -83,11 +85,18 @@ class WkLayer extends Layer {
   }
 
   async sendToStoreImpl(batch: Array<DataBucket>): Promise<void> {
-    const items = batch.map(bucket => {
+    const YIELD_AFTER_X_BUCKETS = 3;
+    let counter = 0;
+    const items = [];
+    for (const bucket of batch) {
+      counter++;
+      // Do not block the main thread for too long as Base64.fromByteArray is performance heavy
+      // eslint-disable-next-line no-await-in-loop
+      if (counter % YIELD_AFTER_X_BUCKETS === 0) await Utils.sleep(1);
       const bucketData = bucket.getData();
       const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress);
-      return updateBucket(bucketInfo, Base64.fromByteArray(bucketData));
-    });
+      items.push(updateBucket(bucketInfo, Base64.fromByteArray(bucketData)));
+    }
     Store.dispatch(pushSaveQueueAction(items));
   }
 }

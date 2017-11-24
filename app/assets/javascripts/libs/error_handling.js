@@ -1,11 +1,16 @@
 /**
  * error_handling.js
- * @flow weak
+ * @flow
  */
 import _ from "lodash";
-import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
 import Toast from "libs/toast";
+import type { APIUserType } from "admin/api_flow_types";
+
+type ErrorHandlingOptionsType = {
+  throwAssertions: boolean,
+  sendLocalErrors: boolean,
+};
 
 class ErrorWithParams extends Error {
   params: ?mixed;
@@ -17,14 +22,15 @@ class ErrorHandling {
   commitHash: ?string;
   airbrake: AirbrakeClient;
 
-  initialize(options) {
+  initialize(options: ErrorHandlingOptionsType) {
     if (options == null) {
       options = { throwAssertions: false, sendLocalErrors: false };
     }
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    this.commitHash = $("meta[name='commit-hash']").attr("content");
+    const metaElement = document.querySelector("meta[name='commit-hash']");
+    this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
 
     this.initializeAirbrake();
   }
@@ -32,10 +38,12 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
-    const $scriptTag = $("[data-airbrake-project-id]");
-    const projectId = $scriptTag.data("airbrake-project-id");
-    const projectKey = $scriptTag.data("airbrake-project-key");
-    const envName = $scriptTag.data("airbrake-environment-name");
+    const scriptTag = document.querySelector("[data-airbrake-project-id]");
+    if (!scriptTag) throw new Error("failed to initialize airbrake");
+
+    const projectId = scriptTag.dataset["airbrake-project-id"];
+    const projectKey = scriptTag.dataset["airbrake-project-key"];
+    const envName = scriptTag.dataset["airbrake-environment-name"];
 
     this.airbrake = new AirbrakeClient({
       projectId,
@@ -56,11 +64,10 @@ class ErrorHandling {
       );
     }
 
-    window.onerror = (message, file, line, colno, error) => {
+    window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
       if (error == null) {
         // older browsers don't deliver the error parameter
-        // $FlowFixMe
-        error = new Error(message, file, line);
+        error = new Error(message);
       }
       console.error(error);
       this.airbrake.notify(error);
@@ -71,14 +78,19 @@ class ErrorHandling {
     this.airbrake.notify(error);
   }
 
-  assertExtendContext(additionalContext) {
+  assertExtendContext(additionalContext: Object) {
     this.airbrake.addFilter(notice => {
       Object.assign(notice.context, additionalContext);
       return notice;
     });
   }
 
-  assert = (bool, message, assertionContext, dontThrowError) => {
+  assert = (
+    bool: boolean,
+    message: string,
+    assertionContext?: Object,
+    dontThrowError?: boolean = false,
+  ) => {
     if (bool) {
       return;
     }
@@ -99,28 +111,28 @@ class ErrorHandling {
     }
   };
 
-  assertExists(variable, message, assertionContext) {
+  assertExists(variable: any, message: string, assertionContext?: Object) {
     if (variable != null) {
       return;
     }
     this.assert(false, `${message} (variable is ${variable})`, assertionContext);
   }
 
-  assertEquals(actual, wanted, message, assertionContext) {
+  assertEquals(actual: any, wanted: any, message: string, assertionContext?: Object) {
     if (actual === wanted) {
       return;
     }
     this.assert(false, `${message} (${actual} != ${wanted})`, assertionContext);
   }
 
-  setCurrentUser(user) {
+  setCurrentUser(user: APIUserType) {
     this.airbrake.addFilter(notice => {
       notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
       return notice;
     });
   }
 
-  trimCallstack(callstack) {
+  trimCallstack(callstack: string) {
     // cut function calls caused by ErrorHandling so that Airbrake won't cluster all assertions into one group
     const trimmedCallstack = [];
 

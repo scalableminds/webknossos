@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.data.Forms._
 import play.api.data._
 import play.api.i18n.{Messages, MessagesApi}

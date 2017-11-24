@@ -4,22 +4,17 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
-import com.mohiva.play.silhouette.api.Authenticator.Implicits._
-import com.mohiva.play.silhouette.api.{Environment, LoginInfo, Silhouette}
+import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
-import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
-import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
-import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
+import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team.Role
-import models.user.UserService
 import models.user.UserService.{Mailer => _, _}
-import models.user.UserTokenService
-import models.user.UserToken2
-import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
+import models.user.{UserService, UserToken2, UserTokenService}
 import net.liftweb.common.{Empty, Failure, Full}
 import oxalis.mail.DefaultMails
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.ProvidesUnauthorizedSessionData
@@ -40,19 +35,23 @@ import scala.concurrent.Future
 
 object AuthForms {
 
+  val passwordMinLength = 6
+
   // Sign up
   case class SignUpData(team: String, email: String, firstName: String, lastName: String, password: String)
 
   def signUpForm(implicit messages: Messages) = Form(mapping(
     "team" -> text,
     "email" -> email,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText, //.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
     "firstName" -> nonEmptyText,
     "lastName" -> nonEmptyText
   )
-  ((team, email, password1, password2, firstName, lastName) => SignUpData(team, email, firstName, lastName, password1))
-  (signUpData => Some((signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, "", "")))
+  ((team, email, password, firstName, lastName) => SignUpData(team, email, firstName, lastName, password._1))
+  (signUpData => Some((signUpData.team, signUpData.email, ("",""), signUpData.firstName, signUpData.lastName)))
   )
 
   // Sign in
@@ -72,18 +71,24 @@ object AuthForms {
 
   def resetPasswordForm(implicit messages: Messages) = Form(mapping(
     "token" -> text,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText //.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
-  )(ResetPasswordData.apply)(ResetPasswordData.unapply)
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+  )((token, password) => ResetPasswordData(token, password._1, password._2))
+  (resetPasswordData => Some(resetPasswordData.token, (resetPasswordData.password1, resetPasswordData.password1)))
   )
 
   case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
 
   def changePasswordForm(implicit messages: Messages) = Form(mapping(
     "oldPassword" -> nonEmptyText,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText //.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
-  )(ChangePasswordData.apply)(ChangePasswordData.unapply)
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+  )((oldPassword, password) => ChangePasswordData(oldPassword, password._1, password._2))
+  (changePasswordData => Some(changePasswordData.oldPassword, (changePasswordData.password1, changePasswordData.password2)))
   )
 }
 
@@ -100,7 +105,7 @@ class Authentication @Inject()(
 
   import AuthForms._
 
-  val env = silhouetteOxalis.environment
+  val env = WebknossosSilhouette.environment
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -240,10 +245,10 @@ class Authentication @Inject()(
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        val id = UUID.fromString(passwords.token)
+        val id = UUID.fromString(passwords.token.trim)
         userTokenService.find(id).flatMap {
           case None =>
-            Future.successful(BadRequest(Messages("error.invalidToken")))
+            Future.successful(BadRequest(Messages("auth.invalidToken")))
           case Some(token) if !token.isLogin && !token.isExpired =>
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
@@ -281,6 +286,31 @@ class Authentication @Inject()(
     )
   }
 
+  def getToken = SecuredAction.async { implicit request =>
+    for{
+      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
+      newToken <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
+    }yield{
+      var js = Json.obj()
+      if(maybeOldToken.isDefined){
+        js = Json.obj("token" -> newToken.id, "msg" -> Messages("auth.addedNewToken"))
+      } else {
+        js = Json.obj("token" -> newToken.id)
+      }
+      Ok(js)
+    }
+  }
+
+  def deleteToken = SecuredAction.async { implicit request =>
+    for{
+      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
+      oldToken <- maybeOldToken ?~> Messages("auth.noToken")
+      result <- env.combinedAuthenticatorService.discard(oldToken, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
+    } yield {
+      result
+    }
+  }
+
   def logout = SecuredAction.async { implicit request =>
     env.authenticatorService.discard(request.authenticator, Ok)
   }
@@ -294,8 +324,8 @@ object Authentication {
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email)
     for {
-      authenticator <- silhouetteOxalis.environment.authenticatorService.create(loginInfo)
-      value <- silhouetteOxalis.environment.authenticatorService.init(authenticator)
+      authenticator <- WebknossosSilhouette.environment.authenticatorService.create(loginInfo)
+      value <- WebknossosSilhouette.environment.authenticatorService.init(authenticator)
     } yield {
       value
     }

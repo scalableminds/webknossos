@@ -9,7 +9,7 @@ import Constants from "oxalis/constants";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
 import { InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import {
-  deleteNodeAction,
+  deleteNodeWithConfirmAction,
   createBranchPointAction,
   requestDeleteBranchPointAction,
 } from "oxalis/model/actions/skeletontracing_actions";
@@ -98,7 +98,7 @@ class MinimalSkeletonTracingArbitraryController extends ArbitraryController {
 
       // Delete active node and recenter last node
       "shift + space": () => {
-        Store.dispatch(deleteNodeAction());
+        Store.dispatch(deleteNodeWithConfirmAction());
       },
     });
   }

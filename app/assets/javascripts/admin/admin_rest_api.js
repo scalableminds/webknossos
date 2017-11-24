@@ -1,8 +1,9 @@
 // @flow
 import Request from "libs/request";
 import Toast from "libs/toast";
-import messages from "messages";
 import Utils from "libs/utils";
+import { location } from "libs/window";
+import messages from "messages";
 import type {
   APIUserType,
   APIScriptType,
@@ -16,6 +17,8 @@ import type {
   DatasetConfigType,
   APIRoleType,
   APIDatasetType,
+  APITimeIntervalType,
+  APIUserLoggedTimeType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
@@ -94,6 +97,13 @@ export async function updateUser(newUser: APIUserType): Promise<APIUserType> {
     method: "PUT",
     data: newUser,
   });
+}
+
+export async function getLoggedTimes(userID: ?string): Promise<Array<APITimeIntervalType>> {
+  const url = userID != null ? `/api/users/${userID}/loggedTime` : "/api/user/loggedTime";
+
+  const response: APIUserLoggedTimeType = await Request.receiveJSON(url);
+  return response.loggedTime;
 }
 
 // ### Scripts
@@ -307,7 +317,9 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
     data: queryObject,
   });
 
-  return responses.map(response => transformTask(response));
+  const tasks = responses.map(response => transformTask(response));
+  assertResponseLimit(tasks);
+  return tasks;
 }
 
 // TODO fix return types
@@ -363,6 +375,25 @@ export async function deleteAnnotation(annotationId: string): Promise<APIAnnotat
   });
 }
 
+export async function copyAnnotationToUserAccount(
+  annotationId: string,
+  tracingType: string,
+): Promise<APIAnnotationType> {
+  const url = `/annotations/${tracingType}/${annotationId}/duplicate`;
+  return Request.receiveJSON(url);
+}
+
+export async function getAnnotationInformation(
+  annotationId: string,
+  tracingType: string,
+): Promise<APIAnnotationType> {
+  // Include /readOnly part whenever it is in the pathname
+  const isReadOnly = location.pathname.endsWith("/readOnly");
+  const readOnlyPart = isReadOnly ? "readOnly/" : "";
+  const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+  return Request.receiveJSON(infoUrl);
+}
+
 // ### Datasets
 export async function getDatasets(): Promise<Array<APIDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets");
@@ -376,6 +407,10 @@ export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   assertResponseLimit(datasets);
 
   return datasets;
+}
+
+export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
+  return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
 
 export async function addNDStoreDataset(

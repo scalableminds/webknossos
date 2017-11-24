@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.silhouetteOxalis.{UserAwareRequest, UserAwareAction, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{UserAwareRequest, UserAwareAction, SecuredRequest, SecuredAction}
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}

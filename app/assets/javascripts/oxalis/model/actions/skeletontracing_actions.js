@@ -4,6 +4,10 @@
  * skeletontracing_actions.js
  * @flow
  */
+import Store from "oxalis/store";
+import { getActiveNode, getTree } from "oxalis/model/accessors/skeletontracing_accessor";
+import messages from "messages";
+import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
 import type { ServerSkeletonTracingType } from "oxalis/model";
 import type { APIAnnotationType } from "admin/api_flow_types";
@@ -60,6 +64,7 @@ type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetN
 type SetTreeNameActionType = { type: "SET_TREE_NAME", name: ?string, treeId: ?number };
 type SelectNextTreeActionType = { type: "SELECT_NEXT_TREE", forward: ?boolean };
 type ShuffleTreeColorActionType = { type: "SHUFFLE_TREE_COLOR", treeId?: number };
+type ShuffleAllTreeColorsActionType = { type: "SHUFFLE_ALL_TREE_COLORS", treeId?: number };
 type CreateCommentActionType = {
   type: "CREATE_COMMENT",
   commentText: string,
@@ -68,6 +73,7 @@ type CreateCommentActionType = {
 };
 type DeleteCommentActionType = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: number };
 type SetTracingActionType = { type: "SET_TRACING", tracing: SkeletonTracingType };
+type NoActionType = { type: "NONE" };
 
 export type SkeletonTracingActionType =
   | InitializeSkeletonTracingActionType
@@ -87,11 +93,13 @@ export type SkeletonTracingActionType =
   | SetTreeNameActionType
   | SelectNextTreeActionType
   | ShuffleTreeColorActionType
+  | ShuffleAllTreeColorsActionType
   | CreateCommentActionType
   | DeleteCommentActionType
   | ToggleTreeActionType
   | ToggleAllTreesActionType
   | ToggleInactiveTreesActionType
+  | NoActionType
   | SetTracingActionType;
 
 export const SkeletonTracingSaveRelevantActions = [
@@ -110,10 +118,15 @@ export const SkeletonTracingSaveRelevantActions = [
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
   "SHUFFLE_TREE_COLOR",
+  "SHUFFLE_ALL_TREE_COLORS",
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_USER_BOUNDING_BOX",
 ];
+
+const noAction = (): NoActionType => ({
+  type: "NONE",
+});
 
 export const initializeSkeletonTracingAction = (
   annotation: APIAnnotationType,
@@ -151,6 +164,31 @@ export const deleteNodeAction = (
   treeId,
   timestamp,
 });
+
+export const deleteNodeWithConfirmAction = (
+  nodeId?: number,
+  treeId?: number,
+): DeleteNodeActionType | NoActionType => {
+  const state = Store.getState();
+  return getActiveNode(state.tracing)
+    .map(activeNode => {
+      nodeId = nodeId != null ? nodeId : activeNode.id;
+      if (state.task != null && nodeId === 1) {
+        // Let the user confirm the deletion of the initial node (node with id 1) of a task
+        Modal.confirm({
+          title: messages["tracing.delete_initial_node"],
+          onOk: () => {
+            Store.dispatch(deleteNodeAction(nodeId, treeId));
+          },
+        });
+        // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+        // if the user confirms
+        return noAction();
+      }
+      return deleteNodeAction(nodeId, treeId);
+    })
+    .getOrElse(noAction());
+};
 
 export const deleteEdgeAction = (
   sourceNodeId: number,
@@ -212,6 +250,31 @@ export const deleteTreeAction = (
   timestamp,
 });
 
+export const deleteTreeWithConfirmAction = (treeId?: number): NoActionType => {
+  const state = Store.getState();
+  getTree(state.tracing, treeId).map(tree => {
+    if (state.task != null && tree.nodes[1] != null) {
+      // Let the user confirm the deletion of the initial node (node with id 1) of a task
+      Modal.confirm({
+        title: messages["tracing.delete_tree_with_initial_node"],
+        onOk: () => {
+          Store.dispatch(deleteTreeAction(treeId));
+        },
+      });
+    } else {
+      Modal.confirm({
+        title: messages["tracing.delete_tree"],
+        onOk: () => {
+          Store.dispatch(deleteTreeAction(treeId));
+        },
+      });
+    }
+  });
+  // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+  // if the user confirms
+  return noAction();
+};
+
 export const toggleTreeAction = (
   treeId?: number,
   timestamp: number = Date.now(),
@@ -264,6 +327,10 @@ export const selectNextTreeAction = (forward: ?boolean = true): SelectNextTreeAc
 export const shuffleTreeColorAction = (treeId: number): ShuffleTreeColorActionType => ({
   type: "SHUFFLE_TREE_COLOR",
   treeId,
+});
+
+export const shuffleAllTreeColorsAction = (): ShuffleAllTreeColorsActionType => ({
+  type: "SHUFFLE_ALL_TREE_COLORS",
 });
 
 export const createCommentAction = (

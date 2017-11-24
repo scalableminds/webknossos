@@ -26,14 +26,26 @@ type Props = {
 
 class Navbar extends React.PureComponent<Props> {
   render() {
-    const navbarStyle = { padding: 0, position: "fixed", width: "100%", zIndex: 1000, height: 48 };
+    const navbarStyle = {
+      padding: 0,
+      position: "fixed",
+      width: "100%",
+      zIndex: 1000,
+      height: 48,
+      display: "flex",
+      alignItems: "center",
+      color: "rgba(255, 255, 255, 0.67)",
+      background: "#404040",
+    };
+
+    const isAuthenticated = this.props.isAuthenticated && this.props.activeUser != null;
 
     return (
       <Header style={navbarStyle}>
         <Menu
           mode="horizontal"
           defaultSelectedkeys={[this.props.history.location.pathname]}
-          style={{ lineHeight: "48px" }}
+          style={{ lineHeight: "48px", flex: isAuthenticated ? "1" : undefined }}
           theme="dark"
         >
           <Menu.Item key="0">
@@ -42,118 +54,109 @@ class Navbar extends React.PureComponent<Props> {
               webKnossos
             </Link>
           </Menu.Item>
-          {this.props.isAuthenticated && this.props.activeUser != null ? (
-            [
-              <Menu.Item key="/dashboard">
-                <Link to="/dashboard">
-                  <Icon type="home" />
-                  Dashboard
-                </Link>
-              </Menu.Item>,
-              <SubMenu
-                key="sub1"
-                title={
-                  <span>
-                    <Icon type="setting" />Administration
-                  </span>
-                }
-              >
-                <Menu.Item key="/users">
-                  {" "}
-                  <Link to="/users">Users</Link>
-                </Menu.Item>
-                <Menu.Item key="/teams">
-                  {" "}
-                  <Link to="/teams">Teams</Link>
-                </Menu.Item>
-                <Menu.Item key="/projects">
-                  {" "}
-                  <Link to="/projects">Projects</Link>
-                </Menu.Item>
-                <Menu.Item key="/tasks">
-                  {" "}
-                  <Link to="/tasks">Tasks</Link>
-                </Menu.Item>
-                <Menu.Item key="/taskTypes">
-                  {" "}
-                  <Link to="/taskTypes">Task Types</Link>
-                </Menu.Item>
-                <Menu.Item key="/scripts">
-                  {" "}
-                  <Link to="/scripts">Scripts</Link>
-                </Menu.Item>
-              </SubMenu>,
-              <SubMenu
-                key="sub2"
-                title={
-                  <span>
-                    <Icon type="line-chart" />Statistics
-                  </span>
-                }
-              >
-                <Menu.Item key="/tasks/overview">
-                  <Link to="/tasks/overview">Overview</Link>
-                </Menu.Item>
-                <Menu.Item key="/statistics">
-                  <Link to="/statistics">Weekly</Link>
-                </Menu.Item>
-              </SubMenu>,
-              <SubMenu
-                key="sub3"
-                title={
-                  <span>
-                    <Icon type="medicine-box" />Help
-                  </span>
-                }
-              >
-                <Menu.Item key="11">
-                  <a target="_blank" href="/assets/docs/frontend-api/index.html">
-                    Frontend API Documentation
-                  </a>
-                </Menu.Item>
-                <Menu.Item key="/help/keyboardshortcuts">
-                  <a target="_blank" href="/help/keyboardshortcuts">
-                    Keyboard Shortcuts
-                  </a>
-                </Menu.Item>
-              </SubMenu>,
-              <Menu.Item key="13">
-                <a href="https://discuss.webknossos.org" target="_blank" rel="noopener noreferrer">
-                  <Icon type="notification" />
-                  Discussion Board
-                </a>
-              </Menu.Item>,
-              <SubMenu
-                key="sub4"
-                className="pull-right"
-                title={
-                  <span>
-                    <Icon type="user" />
-                    {`${this.props.activeUser.firstName} ${this.props.activeUser.lastName}`}
-                  </span>
-                }
-              >
-                <Menu.Item key="resetpassword">
-                  <Link to="/changepassword">Change Password</Link>
-                </Menu.Item>
-                <Menu.Item key="logout">
-                  <Link
-                    to="/"
-                    onClick={() => {
-                      Request.receiveJSON("/api/logout").then(() => window.location.reload());
-                    }}
-                  >
-                    Logout
+          {isAuthenticated && this.props.activeUser != null
+            ? [
+                <Menu.Item key="/dashboard">
+                  <Link to="/dashboard">
+                    <Icon type="home" />
+                    Dashboard
                   </Link>
-                </Menu.Item>
-              </SubMenu>,
-            ]
-          ) : (
-            <Menu.Item key="login">
-              <LoginView layout="inline" />
-            </Menu.Item>
-          )}
+                </Menu.Item>,
+                <SubMenu
+                  key="sub1"
+                  title={
+                    <span>
+                      <Icon type="setting" />Administration
+                    </span>
+                  }
+                >
+                  <Menu.Item key="/users">
+                    <Link to="/users">Users</Link>
+                  </Menu.Item>
+                  <Menu.Item key="/teams">
+                    <Link to="/teams">Teams</Link>
+                  </Menu.Item>
+                  <Menu.Item key="/projects">
+                    <Link to="/projects">Projects</Link>
+                  </Menu.Item>
+                  <Menu.Item key="/tasks">
+                    <Link to="/tasks">Tasks</Link>
+                  </Menu.Item>
+                  <Menu.Item key="/taskTypes">
+                    <Link to="/taskTypes">Task Types</Link>
+                  </Menu.Item>
+                  <Menu.Item key="/scripts">
+                    <Link to="/scripts">Scripts</Link>
+                  </Menu.Item>
+                </SubMenu>,
+                <Menu.Item key="/statistics">
+                  <Link to="/statistics">
+                    <Icon type="line-chart" />Statistics
+                  </Link>
+                </Menu.Item>,
+                <SubMenu
+                  key="sub3"
+                  title={
+                    <span>
+                      <Icon type="medicine-box" />Help
+                    </span>
+                  }
+                >
+                  <Menu.Item key="11">
+                    <a target="_blank" href="/assets/docs/frontend-api/index.html">
+                      Frontend API Documentation
+                    </a>
+                  </Menu.Item>
+                  <Menu.Item key="/help/keyboardshortcuts">
+                    <a target="_blank" href="/help/keyboardshortcuts">
+                      Keyboard Shortcuts
+                    </a>
+                  </Menu.Item>
+                </SubMenu>,
+                <Menu.Item key="13">
+                  <a
+                    href="https://discuss.webknossos.org"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Icon type="notification" />
+                    Discussion Board
+                  </a>
+                </Menu.Item>,
+                <SubMenu
+                  key="sub4"
+                  className="pull-right"
+                  title={
+                    <span>
+                      <Icon type="user" />
+                      {`${this.props.activeUser.firstName} ${this.props.activeUser.lastName}`}
+                    </span>
+                  }
+                >
+                  <Menu.Item key="resetpassword">
+                    <Link to="/changepassword">Change Password</Link>
+                  </Menu.Item>
+                  <Menu.Item key="logout">
+                    <Link
+                      to="/"
+                      onClick={() => {
+                        Request.receiveJSON("/api/logout").then(() =>
+                          setTimeout(() => window.location.reload(), 500),
+                        );
+                      }}
+                    >
+                      Logout
+                    </Link>
+                  </Menu.Item>
+                </SubMenu>,
+              ]
+            : null}
         </Menu>
+        {!isAuthenticated ? (
+          <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
+            <LoginView layout="inline" />
+          </div>
+        ) : null}
       </Header>
     );
   }

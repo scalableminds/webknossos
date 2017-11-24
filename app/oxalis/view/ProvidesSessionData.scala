@@ -1,6 +1,6 @@
 package oxalis.view
 
-import oxalis.security.silhouetteOxalis.{UserAwareRequest, SecuredRequest}
+import oxalis.security.WebknossosSilhouette.{UserAwareRequest, SecuredRequest}
 import play.api.mvc.Request
 
 trait ProvidesSessionData extends FlashMessages {

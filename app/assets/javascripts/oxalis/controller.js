@@ -2,17 +2,15 @@
  * controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
 import * as React from "react";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import { Spin } from "antd";
-import $ from "jquery";
+import { Spin, Modal } from "antd";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import Stats from "stats.js";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
@@ -31,22 +29,24 @@ import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
-import Modal from "oxalis/view/modal";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
+import { document } from "libs/window";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
+type StateProps = {
+  viewMode: ModeType,
+};
+
 type Props = {
+  history: ReactRouterHistoryType,
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,
-  // Delivered by connect()
-  viewMode: ModeType,
-  history: ReactRouterHistoryType,
-};
+} & StateProps;
 
 type State = {
   ready: boolean,
@@ -79,7 +79,7 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     UrlManager.initialize();
 
@@ -117,7 +117,7 @@ class Controller extends React.PureComponent<Props, State> {
 
     // FPS stats
     this.stats = new Stats();
-    $("body").append(this.stats.domElement);
+    document.body.append(this.stats.domElement);
 
     this.initKeyboard();
     this.initTaskScript();
@@ -172,7 +172,11 @@ class Controller extends React.PureComponent<Props, State> {
     } else {
       text = messages["task.no_description"];
     }
-    Modal.show(text, title);
+
+    Modal.info({
+      title,
+      content: text,
+    });
   }
 
   scaleTrianglesPlane(delta: number): void {
@@ -192,10 +196,10 @@ class Controller extends React.PureComponent<Props, State> {
 
   initKeyboard() {
     // avoid scrolling while pressing space
-    $(document).keydown((event: JQueryInputEventObject) => {
+    document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        !$(":focus").length
+        Utils.isNoElementFocussed()
       ) {
         event.preventDefault();
       }
@@ -246,24 +250,26 @@ class Controller extends React.PureComponent<Props, State> {
           Store.dispatch(redoAction());
         },
         "ctrl + y": () => Store.dispatch(redoAction()),
-
-        // In the long run this should probably live in a user script
-        "3": function toggleSegmentationOpacity() {
-          // Flow cannot infer the return type of getConfiguration :(
-          // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
-          const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
-          let newSegAlpha = 0;
-
-          if (curSegAlpha > 0) {
-            prevSegAlpha = curSegAlpha;
-          } else {
-            newSegAlpha = prevSegAlpha;
-          }
-
-          api.data.setConfiguration("segmentationOpacity", newSegAlpha);
-        },
       });
     }
+
+    _.extend(keyboardControls, {
+      // In the long run this should probably live in a user script
+      "3": function toggleSegmentationOpacity() {
+        // Flow cannot infer the return type of getConfiguration :(
+        // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
+        const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
+        let newSegAlpha = 0;
+
+        if (curSegAlpha > 0) {
+          prevSegAlpha = curSegAlpha;
+        } else {
+          newSegAlpha = prevSegAlpha;
+        }
+
+        api.data.setConfiguration("segmentationOpacity", newSegAlpha);
+      },
+    });
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 
@@ -285,7 +291,23 @@ class Controller extends React.PureComponent<Props, State> {
 
   render() {
     if (!this.state.ready) {
-      return <Spin spinning />;
+      return (
+        <Spin
+          spinning
+          size="large"
+          style={{
+            position: "fixed",
+            top: "64px",
+            left: "0px",
+            right: "0px",
+            bottom: "0px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        />
+      );
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
@@ -329,7 +351,7 @@ class Controller extends React.PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
   };

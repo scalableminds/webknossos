@@ -26,6 +26,8 @@ GET           /finishreset                                                      
 POST          /api/register                                                     controllers.Authentication.handleRegistration
 POST          /api/login                                                        controllers.Authentication.authenticate
 GET           /autoLogin                                                        controllers.Authentication.autoLogin
+GET           /api/getToken                                                     controllers.Authentication.getToken
+GET           /api/deleteToken                                                  controllers.Authentication.deleteToken
 GET           /api/switch                                                       controllers.Authentication.switchTo(to: String)
 POST          /api/reset                                                        controllers.Authentication.handleStartResetPassword
 POST          /api/changepw                                                     controllers.Authentication.changePassword
@@ -52,7 +54,7 @@ GET           /api/user/tasks                                                   
 GET           /api/user/annotations                                             controllers.UserController.annotations(isFinished: Option[Boolean], limit: Option[Int])
 GET           /api/user/loggedTime                                              controllers.UserController.loggedTime
 GET           /api/users/:id                                                    controllers.UserController.user(id: String)
-POST          /api/users/:id                                                    controllers.UserController.update(id: String)
+PUT           /api/users/:id                                                    controllers.UserController.update(id: String)
 GET           /api/users/:id/tasks                                              controllers.UserController.userTasks(id: String, isFinished: Option[Boolean], limit: Option[Int])
 GET           /api/users/:id/loggedTime                                         controllers.UserController.userLoggedTime(id: String)
 POST          /api/users/loggedTime                                             controllers.UserController.usersLoggedTime
@@ -177,6 +179,7 @@ PUT           /api/projects/:name                                               
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
+GET           /api/projects/:name/usersWithOpenTasks                            controllers.ProjectController.usersWithOpenTasks(name:String)
 
 # GET           /api/statistics/webknossos                                        controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
 # GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)

@@ -50,10 +50,13 @@ type SetControlModeActionType = { type: "SET_CONTROL_MODE", controlMode: Control
 export type SettingActionType =
   | UpdateUserSettingActionType
   | UpdateDatasetSettingActionType
+  | UpdateTemporarySettingActionType
   | ToggleTemporarySettingActionType
   | InitializeSettingsAction
   | UpdateLayerSettingActionType
   | SetDatasetAction
+  | SetViewModeActionType
+  | SetFlightmodeRecordingActionType
   | SetControlModeActionType;
 
 export const updateUserSettingAction = (

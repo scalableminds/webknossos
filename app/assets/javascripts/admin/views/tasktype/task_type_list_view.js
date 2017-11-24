@@ -142,7 +142,8 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                     <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
                       {mode}
                     </Tag>
-                  ))}
+                  ))
+                }
               />
               <Column
                 title="Settings"
@@ -177,12 +178,12 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                       <Icon type="schedule" />Tasks
                     </Link>
                     <br />
-                    <Link
-                      to={`/api/taskTypes/${taskType.id}/download`}
+                    <a
+                      href={`/annotations/CompoundTaskType/${taskType.id}/download`}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />Download
-                    </Link>
+                    </a>
                     <br />
                     <a href="#" onClick={_.partial(this.deleteTaskType, taskType)}>
                       <Icon type="delete" />Delete

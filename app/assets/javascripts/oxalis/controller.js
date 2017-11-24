@@ -2,17 +2,15 @@
  * controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
 import * as React from "react";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import { Spin } from "antd";
-import $ from "jquery";
+import { Spin, Modal } from "antd";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import Stats from "stats.js";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
@@ -31,9 +29,9 @@ import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
-import Modal from "oxalis/view/modal";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
+import { document } from "libs/window";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { ReactRouterHistoryType } from "react_router";
@@ -81,7 +79,7 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     UrlManager.initialize();
 
@@ -123,7 +121,7 @@ class Controller extends React.PureComponent<Props, State> {
 
     // FPS stats
     this.stats = new Stats();
-    $("body").append(this.stats.domElement);
+    document.body.append(this.stats.domElement);
 
     this.initKeyboard();
     this.initTaskScript();
@@ -178,7 +176,11 @@ class Controller extends React.PureComponent<Props, State> {
     } else {
       text = messages["task.no_description"];
     }
-    Modal.show(text, title);
+
+    Modal.info({
+      title,
+      content: text,
+    });
   }
 
   scaleTrianglesPlane(delta: number): void {
@@ -198,10 +200,10 @@ class Controller extends React.PureComponent<Props, State> {
 
   initKeyboard() {
     // avoid scrolling while pressing space
-    $(document).keydown((event: JQueryInputEventObject) => {
+    document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        !$(":focus").length
+        Utils.isNoElementFocussed()
       ) {
         event.preventDefault();
       }

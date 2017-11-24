@@ -15,7 +15,6 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
 mockRequire("app", {});
-mockRequire("jquery", { fn: {} });
 mockRequire("libs/error_handling", {
   assertExists(expr) {
     this.assert(expr != null);

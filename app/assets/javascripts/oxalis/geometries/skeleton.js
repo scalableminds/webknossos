@@ -383,14 +383,16 @@ class Skeleton {
     return this.rootNode;
   }
 
-  startPicking(): THREE.Object3D {
+  startPicking(isTouch: boolean): THREE.Object3D {
     this.pickingNode.matrixAutoUpdate = false;
     this.pickingNode.matrix.copy(this.rootNode.matrixWorld);
+    this.nodes.material.uniforms.isTouch.value = isTouch ? 1 : 0;
     this.nodes.material.uniforms.isPicking.value = 1;
     return this.pickingNode;
   }
 
   stopPicking(): void {
+    this.nodes.material.uniforms.isTouch.value = 0;
     this.nodes.material.uniforms.isPicking.value = 0;
   }
 

@@ -184,9 +184,4 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 }
 
-// const mapPropsToFields = props => {
-//   debugger;
-//   return props.initialFieldValues;
-// };
-
 export default Form.create()(TaskSearchForm);

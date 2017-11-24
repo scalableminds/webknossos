@@ -2,7 +2,6 @@
 @import "../../../node_modules/antd/dist/antd.css";
 @import (inline) "../../../node_modules/c3/c3.css";
 @import "../../../node_modules/font-awesome/less/font-awesome.less";
-@import "../../../node_modules/jasny-bootstrap/less/build/jasny-bootstrap.less";
 
 @import "_variables.less";
 @import "admin/_team.less";
@@ -16,7 +15,6 @@
 @import "trace_view/_action_bar.less";
 @import "trace_view/_right_menu.less";
 @import "_help.less";
-@import "_sort_table_icons.less";
 @import "antd_overwrites.less";
 
 // ----------------------- MAIN STYLES
@@ -33,8 +31,11 @@ body:-webkit-full-screen {
   width: 100%;
   height: 100%;
 }
-.save-error .navbar {
-  background-color: #c00;
+.save-error {
+  .ant-layout-header,
+  .ant-menu {
+    background-color: #c00 !important;
+  }
 }
 .logo {
   background: url(/assets/images/oxalis-white.png) 15px center no-repeat;

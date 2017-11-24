@@ -2,9 +2,7 @@
  * skeletontracing_plane_controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
-import $ from "jquery";
 import * as THREE from "three";
 import _ from "lodash";
 import Store from "oxalis/store";
@@ -64,37 +62,18 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
 
-  start(): void {
-    super.start();
-    $(".skeleton-plane-controls").show();
-  }
-
-  stop(): void {
-    super.stop();
-    $(".skeleton-plane-controls").hide();
-  }
-
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-      leftClick: (
-        pos: Point2,
-        plane: OrthoViewType,
-        event: JQueryInputEventObject,
-        isTouch: boolean,
-      ) => this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
-      rightClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+      leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
+        this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
+      rightClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) =>
         this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
     });
   }
 
   getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
-      leftClick: (
-        pos: Point2,
-        plane: OrthoViewType,
-        event: JQueryInputEventObject,
-        isTouch: boolean,
-      ) =>
+      leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
         this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, OrthoViews.TDView, isTouch),
     });
   }

@@ -4,7 +4,7 @@
  */
 import _ from "lodash";
 import app from "app";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
@@ -26,7 +26,7 @@ class PlaneView {
   curWidth: number;
 
   constructor() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     this.running = false;
     const { scene, renderer } = SceneController;

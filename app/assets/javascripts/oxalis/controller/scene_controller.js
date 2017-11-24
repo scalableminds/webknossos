@@ -6,7 +6,7 @@
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import { V3 } from "libs/mjs";
 import {
@@ -52,7 +52,7 @@ class SceneController {
   // This class collects all the meshes displayed in the Skeleton View and updates position and scale of each
   // element depending on the provided flycam.
   constructor() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
     this.current = 0;
     this.displayPlane = {
       [OrthoViews.PLANE_XY]: true,

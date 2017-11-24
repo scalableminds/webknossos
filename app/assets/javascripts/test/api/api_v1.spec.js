@@ -1,7 +1,6 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
 import sinon from "sinon";
-import "backbone.marionette";
 import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
 import mockRequire from "mock-require";
 

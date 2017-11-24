@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import Dimensions from "oxalis/model/dimensions";
 import constants from "oxalis/constants";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
@@ -97,7 +97,7 @@ class Plane2D {
     MAPPED_DATA_BIT_DEPTH: number,
     isSegmentation: boolean,
   ) {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
     this.index = index;
     this.cube = cube;
     this.DATA_BIT_DEPTH = DATA_BIT_DEPTH;

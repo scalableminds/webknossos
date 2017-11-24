@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import Utils from "libs/utils";
 import { getNodeToEdgesMap } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
@@ -78,7 +78,7 @@ class AbstractTreeRenderer {
   }
 
   constructor(canvas: HTMLCanvasElement) {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     this.canvas = canvas;
     const ctx = canvas.getContext("2d");

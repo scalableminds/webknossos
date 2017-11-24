@@ -3,22 +3,17 @@ package controllers
 import java.util.UUID
 import javax.inject.Inject
 
-import com.mohiva.play.silhouette.api.Authenticator.Implicits._
-import com.mohiva.play.silhouette.api.{Environment, LoginInfo, Silhouette}
+import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
-import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
-import com.mohiva.play.silhouette.api.util.{Clock, Credentials, FingerprintGenerator, IDGenerator}
-import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticatorService
+import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team.Role
-import models.user.UserService
 import models.user.UserService.{Mailer => _, _}
-import models.user.UserTokenService
-import models.user.UserToken2
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
+import models.user.{UserService, UserToken2, UserTokenService}
 import net.liftweb.common.{Empty, Failure, Full}
 import oxalis.mail.DefaultMails
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import oxalis.security._
 import oxalis.thirdparty.BrainTracing
 import oxalis.view.ProvidesUnauthorizedSessionData
@@ -44,13 +39,15 @@ object AuthForms {
   def signUpForm(implicit messages:Messages) = Form(mapping(
     "team" -> text,
     "email" -> email,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText,//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
     "firstName" -> nonEmptyText,
     "lastName" -> nonEmptyText
   )
-  ((team, email, password1, password2, firstName, lastName) => SignUpData(team, email, firstName, lastName, password1))
-  (signUpData => Some((signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, "", "")))
+  ((team, email, password, firstName, lastName) => SignUpData(team, email, firstName, lastName, password._1))
+  (signUpData => Some((signUpData.team, signUpData.email, ("",""), signUpData.firstName, signUpData.lastName)))
   )
 
   // Sign in
@@ -68,17 +65,23 @@ object AuthForms {
   case class ResetPasswordData(token: String, password1: String, password2: String)
   def resetPasswordForm(implicit messages:Messages) = Form(mapping(
     "token" -> text,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
-  )(ResetPasswordData.apply)(ResetPasswordData.unapply)
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+  )((token, password) => ResetPasswordData(token, password._1, password._2))
+  (resetPasswordData => Some(resetPasswordData.token, (resetPasswordData.password1, resetPasswordData.password1)))
   )
 
   case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
   def changePasswordForm(implicit messages:Messages) = Form(mapping(
     "oldPassword" -> nonEmptyText,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
-  )(ChangePasswordData.apply)(ChangePasswordData.unapply)
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+  )((oldPassword, password) => ChangePasswordData(oldPassword, password._1, password._2))
+  (changePasswordData => Some(changePasswordData.oldPassword, (changePasswordData.password1, changePasswordData.password2)))
   )
 }
 
@@ -136,7 +139,6 @@ class Authentication @Inject() (
               Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
               Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
               Ok
-             // if (automaticUserActivation) { JsonOk(Messages("user.automaticUserActivation")) } else {JsonOk(Messages("user.accountCreated")) }
             }
           case f: Failure => Fox.failure(f.msg)
         }
@@ -214,7 +216,7 @@ class Authentication @Inject() (
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        val id = UUID.fromString(passwords.token)
+        val id = UUID.fromString(passwords.token.trim)
         userTokenService.find(id).flatMap {
           case None =>
             Future.successful(BadRequest(Messages("auth.invalidToken")))

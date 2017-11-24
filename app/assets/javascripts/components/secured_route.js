@@ -46,7 +46,7 @@ class SecuredRoute extends React.PureComponent<Props, State> {
       ...rest
     } = this.props;
 
-    const isCompletlyAuthenticated = serverAuthenticationCallback
+    const isCompletelyAuthenticated = serverAuthenticationCallback
       ? isAuthenticated || this.state.isAddtionallyAuthenticated
       : isAuthenticated;
 
@@ -54,11 +54,11 @@ class SecuredRoute extends React.PureComponent<Props, State> {
       <Route
         {...rest}
         render={props => {
-          if (isCompletlyAuthenticated) {
+          if (isCompletelyAuthenticated) {
             return Component ? <Component {...props} /> : render(props);
           }
 
-          return <LoginView />;
+          return <LoginView layout="horizontal" />;
         }}
       />
     );

@@ -30,6 +30,13 @@ import "../stylesheets/main.less";
 ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
 app.on("start", async () => {
+  try {
+    const user = await getActiveUser({ doNotCatch: true });
+    Store.dispatch(setActiveUserAction(user));
+    ErrorHandling.setCurrentUser(user);
+  } catch (e) {
+    // pass
+  }
   const containerElement = document.getElementById("main-container");
   if (containerElement) {
     ReactDOM.render(
@@ -38,16 +45,6 @@ app.on("start", async () => {
       </Provider>,
       containerElement,
     );
-  }
-});
-
-app.on("start", async () => {
-  try {
-    const user = await getActiveUser({ doNotCatch: true });
-    Store.dispatch(setActiveUserAction(user));
-    ErrorHandling.setCurrentUser(user);
-  } catch (e) {
-    // pass
   }
 });
 

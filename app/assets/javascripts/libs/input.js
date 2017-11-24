@@ -383,7 +383,7 @@ export class InputMouse {
 
   mouseDown = (event: MouseEvent): void => {
     event.preventDefault();
-    this.lastPosition = this.position;
+    this.lastPosition = this.getRelativeMousePosition(event);
 
     this.leftMouseButton.handleMouseDown(event);
     this.rightMouseButton.handleMouseDown(event);

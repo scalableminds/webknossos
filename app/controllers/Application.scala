@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.silhouetteOxalis.{UserAwareAction, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, SecuredAction}
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json

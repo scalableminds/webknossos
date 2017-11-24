@@ -5,9 +5,9 @@
 
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
-import Toast from "libs/toast";
 import Utils from "libs/utils";
 import { getNodeToEdgesMap } from "oxalis/model/accessors/skeletontracing_accessor";
+import messages from "messages";
 import type { Vector2 } from "oxalis/constants";
 import type { TreeType } from "oxalis/store";
 
@@ -39,12 +39,13 @@ export type NodeListItemType = {
   id: number,
 };
 
+const CYCLIC_TREE_ERROR = "CyclicTree";
+
 class AbstractTreeRenderer {
   canvas: HTMLCanvasElement;
   ctx: CanvasRenderingContext2D;
   nodeList: Array<NodeListItemType>;
   activeNodeId: number;
-  cyclicTreeWarningIssued: boolean;
   tree: TreeType;
   nodeDistance: number;
 
@@ -96,10 +97,18 @@ class AbstractTreeRenderer {
 
     const rootNode = { id: rootId, children: [] };
     const queue = [rootNode];
+    const visitedNodes = {};
 
     // Build a tree like structure using Breadth-First-Search
     while (queue.length) {
       const { id: curNodeId, children: curChildren } = queue.shift();
+
+      if (visitedNodes[curNodeId]) {
+        throw Error(CYCLIC_TREE_ERROR);
+      } else {
+        visitedNodes[curNodeId] = true;
+      }
+
       const edges = nodeToEdgesMap[curNodeId] || [];
       const childrenIds = edges.map(edge => edge.target);
       for (const childId of childrenIds) {
@@ -138,15 +147,8 @@ class AbstractTreeRenderer {
       root = this.buildTree();
     } catch (e) {
       console.log("Error:", e);
-      if (e === "CyclicTree") {
-        if (!this.cyclicTreeWarningIssued) {
-          Toast.error(
-            `Cyclic trees (Tree-ID: ${
-              tree.treeId
-            }) are not supported by webKnossos. Please check the .nml file.`,
-          );
-          this.cyclicTreeWarningIssued = true;
-        }
+      if (e.message === CYCLIC_TREE_ERROR) {
+        this.drawErrorMessage(messages["tracing.tree_viewer_no_cyclic_trees"]);
         return;
       }
     }
@@ -493,6 +495,15 @@ class AbstractTreeRenderer {
     }
     this.ctx.stroke();
     this.ctx.lineWidth = 1;
+  }
+
+  /**
+   *
+   * @param   {String} message
+   */
+  drawErrorMessage(message: string) {
+    this.ctx.font = "16px serif";
+    this.ctx.fillText(message, 10, 50);
   }
 
   /**

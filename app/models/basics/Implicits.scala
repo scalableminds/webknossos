@@ -1,7 +1,7 @@
 package models.basics
 
 import com.scalableminds.util.reactivemongo.{AuthorizedAccessContext, DBAccessContext}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest}
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest}
 import models.user.User
 
 import scala.language.implicitConversions

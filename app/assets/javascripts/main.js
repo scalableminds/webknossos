@@ -23,6 +23,15 @@ import "../stylesheets/main.less";
 document.addEventListener("DOMContentLoaded", async () => {
   ErrorHandling.initialize({ throwAssertions: false, sendLocalErrors: false });
 
+  // try retreive the currently active user if logged in
+  try {
+    const user = await getActiveUser({ doNotCatch: true });
+    Store.dispatch(setActiveUserAction(user));
+    ErrorHandling.setCurrentUser(user);
+  } catch (e) {
+    // pass
+  }
+
   const containerElement = document.getElementById("main-container");
   if (containerElement) {
     ReactDOM.render(
@@ -31,14 +40,5 @@ document.addEventListener("DOMContentLoaded", async () => {
       </Provider>,
       containerElement,
     );
-  }
-
-  // try retreive the currently active user if logged in
-  try {
-    const user = await getActiveUser({ doNotCatch: true });
-    Store.dispatch(setActiveUserAction(user));
-    ErrorHandling.setCurrentUser(user);
-  } catch (e) {
-    // pass
   }
 });

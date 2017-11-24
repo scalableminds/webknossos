@@ -16,7 +16,7 @@ import models.user.UserService
 import models.user.UserService.{Mailer => _, _}
 import models.user.UserTokenService
 import models.user.UserToken2
-import oxalis.security.silhouetteOxalis.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import net.liftweb.common.{Empty, Failure, Full}
 import oxalis.mail.DefaultMails
 import oxalis.security._
@@ -43,13 +43,15 @@ object AuthForms {
   def signUpForm(implicit messages:Messages) = Form(mapping(
     "team" -> text,
     "email" -> email,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText,//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
     "firstName" -> nonEmptyText,
     "lastName" -> nonEmptyText
   )
-  ((team, email, password1, password2, firstName, lastName) => SignUpData(team, email, firstName, lastName, password1))
-  (signUpData => Some((signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, "", "")))
+  ((team, email, password, firstName, lastName) => SignUpData(team, email, firstName, lastName, password._1))
+  (signUpData => Some((signUpData.team, signUpData.email, ("",""), signUpData.firstName, signUpData.lastName)))
   )
 
   // Sign in
@@ -67,17 +69,23 @@ object AuthForms {
   case class ResetPasswordData(token: String, password1: String, password2: String)
   def resetPasswordForm(implicit messages:Messages) = Form(mapping(
     "token" -> text,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
-  )(ResetPasswordData.apply)(ResetPasswordData.unapply)
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+  )((token, password) => ResetPasswordData(token, password._1, password._2))
+  (resetPasswordData => Some(resetPasswordData.token, (resetPasswordData.password1, resetPasswordData.password1)))
   )
 
   case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
   def changePasswordForm(implicit messages:Messages) = Form(mapping(
     "oldPassword" -> nonEmptyText,
-    "password1" -> nonEmptyText.verifying(minLength(8)),
-    "password2" -> nonEmptyText//.verifying(Messages("error.passwordsDontMatch"), password2 => password1 == password2),
-  )(ChangePasswordData.apply)(ChangePasswordData.unapply)
+    "password" -> tuple(
+      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password2" -> nonEmptyText
+    ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+  )((oldPassword, password) => ChangePasswordData(oldPassword, password._1, password._2))
+  (changePasswordData => Some(changePasswordData.oldPassword, (changePasswordData.password1, changePasswordData.password2)))
   )
 }
 
@@ -94,7 +102,7 @@ class Authentication @Inject() (
 
   import AuthForms._
 
-  val env = silhouetteOxalis.environment
+  val env = WebknossosSilhouette.environment
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -135,7 +143,6 @@ class Authentication @Inject() (
               Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
               Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
               Ok
-             // if (automaticUserActivation) { JsonOk(Messages("user.automaticUserActivation")) } else {JsonOk(Messages("user.accountCreated")) }
             }
           case f: Failure => Fox.failure(f.msg)
         }
@@ -267,8 +274,8 @@ object Authentication {
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email)
     for {
-      authenticator <- silhouetteOxalis.environment.authenticatorService.create(loginInfo)
-      value <- silhouetteOxalis.environment.authenticatorService.init(authenticator)
+      authenticator <- WebknossosSilhouette.environment.authenticatorService.create(loginInfo)
+      value <- WebknossosSilhouette.environment.authenticatorService.init(authenticator)
     } yield {
       value
     }

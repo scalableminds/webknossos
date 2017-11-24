@@ -31,7 +31,7 @@ import {
   setRotationAction,
 } from "oxalis/model/actions/flycam_actions";
 import { saveNowAction } from "oxalis/model/actions/save_actions";
-import window, { location } from "libs/window";
+import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
@@ -44,7 +44,7 @@ import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
-import { doWithToken } from "admin/admin_rest_api";
+import { doWithToken, getAnnotationInformation } from "admin/admin_rest_api";
 import messages from "messages";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
@@ -124,22 +124,11 @@ export class OxalisModel {
     let annotation: ?APIAnnotationType;
     let datasetName;
     if (controlMode === ControlModeEnum.TRACE) {
-      // Include /readOnly part whenever it is in the pathname
-      const isReadOnly = location.pathname.endsWith("/readOnly");
-      const readOnlyPart = isReadOnly ? "readOnly/" : "";
-      const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
-      annotation = await Request.receiveJSON(infoUrl);
+      annotation = await getAnnotationInformation(annotationId, tracingType);
       datasetName = annotation.dataSetName;
 
-      let error;
-      if (annotation.error) {
-        ({ error } = annotation);
-      } else if (!annotation.restrictions.allowAccess) {
-        error = messages["tracing.no_access"];
-      }
-
-      if (error) {
-        Toast.error(error);
+      if (!annotation.restrictions.allowAccess) {
+        Toast.error(messages["tracing.no_access"]);
         throw this.HANDLED_ERROR;
       }
 

@@ -58,7 +58,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
   checkPassword = (rule, value, callback) => {
     const form = this.props.form;
-    if (value && value !== form.getFieldValue("password1")) {
+    if (value && value !== form.getFieldValue("password.password1")) {
       callback(messages["auth.registration_password_missmatch"]);
     } else {
       callback();
@@ -179,7 +179,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               )}
             </FormItem>
             <FormItem hasFeedback>
-              {getFieldDecorator("password1", {
+              {getFieldDecorator("password.password1", {
                 rules: [
                   {
                     required: true,
@@ -202,7 +202,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               )}
             </FormItem>
             <FormItem hasFeedback>
-              {getFieldDecorator("password2", {
+              {getFieldDecorator("password.password2", {
                 rules: [
                   {
                     required: true,

@@ -77,7 +77,7 @@ class TracingActionsView extends PureComponent<Props, State> {
       this.props.annotationId
     }/finishAndRedirect`;
     await this.handleSave();
-    if (confirm(messages["finish.confirm"])) {
+    if (confirm(messages["annotation.finish"])) {
       this.props.history.push(url);
     }
   };

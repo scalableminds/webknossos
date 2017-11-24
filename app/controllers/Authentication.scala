@@ -24,6 +24,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
+import play.api.libs.json.Json
 import play.api.mvc.{Action, _}
 import play.twirl.api.Html
 
@@ -218,7 +219,7 @@ class Authentication @Inject() (
         val id = UUID.fromString(passwords.token.trim)
         userTokenService.find(id).flatMap {
           case None =>
-            Future.successful(BadRequest(Messages("error.invalidToken")))
+            Future.successful(BadRequest(Messages("auth.invalidToken")))
           case Some(token) if !token.isLogin && !token.isExpired =>
             val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
             for {
@@ -254,6 +255,31 @@ class Authentication @Inject() (
         }
       }
     )
+  }
+
+  def getToken = SecuredAction.async { implicit request =>
+    for{
+      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
+      newToken <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
+    }yield{
+      var js = Json.obj()
+      if(maybeOldToken.isDefined){
+        js = Json.obj("token" -> newToken.id, "msg" -> Messages("auth.addedNewToken"))
+      } else {
+        js = Json.obj("token" -> newToken.id)
+      }
+      Ok(js)
+    }
+  }
+
+  def deleteToken = SecuredAction.async { implicit request =>
+    for{
+      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
+      oldToken <- maybeOldToken ?~> Messages("auth.noToken")
+      result <- env.combinedAuthenticatorService.discard(oldToken, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
+    } yield {
+      result
+    }
   }
 
   def logout = SecuredAction.async { implicit request =>

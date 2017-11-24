@@ -6,7 +6,7 @@
 import _ from "lodash";
 import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constants";
 import Maybe from "data.maybe";
-import window from "libs/window";
+import window, { location } from "libs/window";
 import pako from "pako";
 import type { APIUserType } from "admin/api_flow_types";
 
@@ -167,14 +167,6 @@ const Utils = {
     return output;
   },
 
-  loaderTemplate(): string {
-    return `\
-<div id="loader-icon">
-  <i class="fa fa-spinner fa-spin fa-4x"></i>
-  <br>Loading
-</div>`;
-  },
-
   isElementInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
     return (
@@ -201,7 +193,7 @@ const Utils = {
 
   getUrlParamsObject(): { [key: string]: string | boolean } {
     // Parse the URL parameters as objects and return it or just a single param
-    return window.location.search
+    return location.search
       .substring(1)
       .split("&")
       .reduce((result, value): void => {

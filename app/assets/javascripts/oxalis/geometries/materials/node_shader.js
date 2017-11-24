@@ -73,6 +73,10 @@ class NodeShader {
         type: "i",
         value: 0,
       },
+      isTouch: {
+        type: "i",
+        value: 0,
+      },
     };
   }
 
@@ -98,6 +102,7 @@ uniform float activeNodeScaleFactor; // used for the "new node" animation
 uniform float overrideParticleSize; // node radius for equally size nodes
 uniform int overrideNodeRadius; // bool activates equaly node radius for all nodes
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
+uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
 
 uniform sampler2D treeColors;
 
@@ -166,7 +171,8 @@ void main() {
       // - each digit is divided by 255 again, since color values in OpenGL must be in the range [0, 1]
       // - finally, the non-fractional part of each digit is removed (since it is covered by a more significant digit)
       color = fract(floor(nodeId / vec3(255.0 * 255.0, 255.0, 1.0)) / 255.0);
-      gl_PointSize *= 1.5;
+      // Enlarge the nodes on mobile, so they're easier to select
+      gl_PointSize = isTouch == 1 ? max(gl_PointSize * 1.5, 30.0) : gl_PointSize * 1.5;
       return;
     }
 

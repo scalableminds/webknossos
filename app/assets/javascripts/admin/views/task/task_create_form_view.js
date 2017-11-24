@@ -1,5 +1,6 @@
 // @flow
 import React from "react";
+import { withRouter } from "react-router-dom";
 import {
   Form,
   Input,
@@ -24,6 +25,8 @@ import {
   createTaskFromNML,
   updateTask,
 } from "admin/admin_rest_api";
+import { Vector3Input, Vector6Input } from "libs/vector_input";
+
 import type {
   APIDatasetType,
   APITaskTypeType,
@@ -32,11 +35,10 @@ import type {
   APITeamType,
   APITaskType,
 } from "admin/api_flow_types";
-import app from "app";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
 import type { TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
-import { Vector3Input, Vector6Input } from "libs/vector_input";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -45,6 +47,7 @@ const RadioGroup = Radio.Group;
 type Props = {
   form: Object,
   taskId: ?string,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -75,7 +78,9 @@ export function handleTaskCreationResponse(responses: Array<TaskCreationResponse
   });
 
   Modal.info({
-    title: `${successfulTasks.length} tasks were successfully created. ${failedTasks.length} tasks failed.`,
+    title: `${successfulTasks.length} tasks were successfully created. ${
+      failedTasks.length
+    } tasks failed.`,
     content: (
       <div>
         {successfulTasks.length > 0 ? (
@@ -161,7 +166,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         if (this.props.taskId) {
           // either update an existing task
           await updateTask(this.props.taskId, formValues);
-          app.router.loadURL("/tasks");
+          this.props.history.push("/tasks");
         } else {
           this.setState({ isUploading: true });
 
@@ -315,7 +320,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                 <RadioGroup
                   value={this.state.isNMLSpecification ? "nml" : "manual"}
                   onChange={(evt: SyntheticInputEvent<*>) =>
-                    this.setState({ isNMLSpecification: evt.target.value === "nml" })}
+                    this.setState({ isNMLSpecification: evt.target.value === "nml" })
+                  }
                 >
                   <Radio value="manual">Manually Specify Starting Postion</Radio>
                   <Radio value="nml" disabled={isEditingMode}>
@@ -403,4 +409,4 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(TaskCreateFormView);
+export default withRouter(Form.create()(TaskCreateFormView));

@@ -2,36 +2,4 @@
 
 @import com.scalableminds.util.tools.Reflect
 
-@pageSkeleton{
-    @mainHeader(showNavButtons)
-    <div id="alert-container">
-      @session.flash.data.map{ f =>
-        @if(f._1 == "modal"){
-          <div id="flashModal" class="modal modal-message fade" role="dialog" aria-describedby="modalDescription" aria-hidden="true">
-            <div class="modal-dialog">
-              <div class="modal-content">
-                <div class="modal-body" id="modalDescription">
-                  <p>@f._2</p>
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-default" data-dismiss="modal">Ok</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        } else {
-          <div class="alert alert-@f._1">
-            <a href="#" class="close" data-dismiss="alert">×</a>
-            @f._2
-          </div>
-        }
-      }
-    </div>
-    <div id="loader" class="hidden">
-      <div id="loader-background"></div>
-      <div id="loader-icon"><i class="fa fa-spinner fa-spin fa-4x"></i><br>Loading</div>
-    </div>
-    <div id="main-container">
-      @body
-    </div>
-}
+@pageSkeleton()

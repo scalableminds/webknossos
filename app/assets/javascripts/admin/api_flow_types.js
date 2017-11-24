@@ -95,7 +95,7 @@ export type APISettingsType = {
   +somaClickingAllowed: boolean,
 };
 
-export const APITracingTypeTracingEnum = {
+export const APITracingTypeEnum = {
   Explorational: "Explorational",
   Task: "Task",
   View: "View",
@@ -104,7 +104,7 @@ export const APITracingTypeTracingEnum = {
   CompoundTaskType: "CompoundTaskType",
 };
 
-export type APITracingTypeTracingType = $Keys<typeof APITracingTypeTracingEnum>;
+export type APITracingType = $Keys<typeof APITracingTypeEnum>;
 
 export type APITaskTypeType = {
   +id: string,
@@ -182,7 +182,7 @@ export type APIAnnotationType = {
   +tags: Array<string>,
   +task: APITaskType,
   +tracingTime: number,
-  +typ: APITracingTypeTracingType,
+  +typ: APITracingType,
   +user?: APIUserType,
 };
 

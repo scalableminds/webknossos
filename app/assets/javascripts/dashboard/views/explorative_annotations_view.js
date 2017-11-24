@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Modal, Tag } from "antd";
@@ -11,18 +12,19 @@ import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
 import update from "immutability-helper";
-import app from "app";
 import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FileUpload from "components/file_upload";
+import type { ReactRouterHistoryType } from "react_router";
 
 const { Column } = Table;
 const { Search } = Input;
 
 type Props = {
-  userID: ?string,
+  userId: ?string,
   isAdminView: boolean,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -39,7 +41,7 @@ type State = {
   tags: Array<string>,
 };
 
-export default class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
+class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state = {
     shouldShowArchivedTracings: false,
     archivedTracings: [],
@@ -91,8 +93,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     }
 
     const isFinishedString = this.state.shouldShowArchivedTracings.toString();
-    const url = this.props.userID
-      ? `/api/users/${this.props.userID}/annotations?isFinished=${isFinishedString}`
+    const url = this.props.userId
+      ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
 
     this.enterRequest();
@@ -151,9 +153,7 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
 
   handleNMLUpload = (response: Object) => {
     response.messages.map(m => Toast.success(m.success));
-    app.router.navigate(`/annotations/${response.annotation.typ}/${response.annotation.id}`, {
-      trigger: true,
-    });
+    this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
   };
 
   renderActions = (tracing: APIAnnotationType) => {
@@ -165,15 +165,15 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     if (!this.state.shouldShowArchivedTracings) {
       return (
         <div>
-          <a href={`/annotations/${typ}/${id}`}>
+          <Link to={`/annotations/${typ}/${id}`}>
             <i className="fa fa-random" />
             <strong>Trace</strong>
-          </a>
+          </Link>
           <br />
-          <a href={`/annotations/${typ}/${id}/download`}>
+          <Link to={`/annotations/${typ}/${id}/download`}>
             <i className="fa fa-download" />
             Download
-          </a>
+          </Link>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
             <i className="fa fa-archive" />
@@ -233,7 +233,9 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
   archiveAll = () => {
     const selectedAnnotations = this.getFilteredTracings();
     Modal.confirm({
-      content: `Are you sure you want to archive all ${selectedAnnotations.length} explorative annotations matching the current search query / tags?`,
+      content: `Are you sure you want to archive all ${
+        selectedAnnotations.length
+      } explorative annotations matching the current search query / tags?`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map(t => t.id);
         const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
@@ -360,7 +362,8 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
                   {tracing.stats.edgeCount}
                 </span>
               </div>
-            ) : null}
+            ) : null
+          }
         />
         <Column
           title="Tags"
@@ -477,3 +480,5 @@ export default class ExplorativeAnnotationsView extends React.PureComponent<Prop
     );
   }
 }
+
+export default withRouter(ExplorativeAnnotationsView);

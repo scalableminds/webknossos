@@ -29,9 +29,8 @@ class ErrorHandling {
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    this.commitHash = document
-      .querySelectorAll("meta[name='commit-hash']")[0]
-      .getAttribute("content");
+    const metaElement = document.querySelector("meta[name='commit-hash']");
+    this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
 
     this.initializeAirbrake();
   }

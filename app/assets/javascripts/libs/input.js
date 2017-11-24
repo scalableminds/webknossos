@@ -431,7 +431,14 @@ export class InputMouse {
   };
 
   isButtonPressed(evt: MouseEvent): boolean {
-    return evt.button !== 0;
+    if (evt.buttons != null) {
+      return evt.buttons !== 0;
+    } else if (evt.which) {
+      // Safari doesn't support evt.buttons
+      return evt.which !== 0;
+    }
+
+    return false;
   }
 
   pinchStart = (evt: HammerJsEvent) => {

@@ -191,7 +191,7 @@ export default class DashboardTaskListView extends React.PureComponent<Props, St
     const wasFinished = this.state.showFinishedTasks;
 
     Modal.confirm({
-      content: messages["task.delete"],
+      content: messages["annotation.delete"],
       onOk: async () => {
         await deleteAnnotation(annotationId);
         if (wasFinished) {

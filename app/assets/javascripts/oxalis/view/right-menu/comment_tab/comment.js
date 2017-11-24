@@ -45,9 +45,7 @@ class Comment extends React.PureComponent<Props> {
         }}
       >
         <i className={iClassName} />
-        <a href="#jump-to-comment" onClick={this.handleClick}>
-          {`${data.nodeId} - ${data.content}`}
-        </a>
+        <a onClick={this.handleClick}>{`${data.nodeId} - ${data.content}`}</a>
       </li>
     );
   }

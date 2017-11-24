@@ -3,21 +3,28 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { connect } from "react-redux";
+import { Link } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
-import app from "app";
 import messages from "messages";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getProjectsWithOpenAssignments,
   deleteProject,
   pauseProject,
   resumeProject,
 } from "admin/admin_rest_api";
-import type { APIProjectType } from "admin/api_flow_types";
+import type { APIProjectType, APIUserType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 const { Search } = Input;
+
+type StateProps = {
+  activeUser: APIUserType,
+};
 
 type State = {
   isLoading: boolean,
@@ -25,7 +32,7 @@ type State = {
   searchQuery: string,
 };
 
-class ProjectListView extends React.PureComponent<{}, State> {
+class ProjectListView extends React.PureComponent<StateProps, State> {
   state = {
     isLoading: true,
     projects: [],
@@ -83,11 +90,11 @@ class ProjectListView extends React.PureComponent<{}, State> {
       <div className="container wide TestProjectListView">
         <div style={{ marginTop: 20 }}>
           <div className="pull-right">
-            <a href="/projects/create">
+            <Link to="/projects/create">
               <Button icon="plus" style={marginRight} type="primary">
                 Add Project
               </Button>
-            </a>
+            </Link>
             <Search
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
@@ -137,7 +144,8 @@ class ProjectListView extends React.PureComponent<{}, State> {
                   project.priority.toString(),
                 )}
                 render={(priority, project: APIProjectType) =>
-                  `${priority} ${project.paused ? "(paused)" : ""}`}
+                  `${priority} ${project.paused ? "(paused)" : ""}`
+                }
               />
               <Column
                 title="Location"
@@ -158,7 +166,8 @@ class ProjectListView extends React.PureComponent<{}, State> {
                 key="owner"
                 sorter={Utils.localeCompareBy((project: APIProjectType) => project.owner.lastName)}
                 render={owner =>
-                  owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"}
+                  owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"
+                }
               />
               <Column
                 title="Open Assignments"
@@ -182,16 +191,16 @@ class ProjectListView extends React.PureComponent<{}, State> {
                 key="actions"
                 render={(__, project: APIProjectType) => (
                   <span>
-                    <a
-                      href={`/annotations/CompoundProject/${project.id}`}
+                    <Link
+                      to={`/annotations/CompoundProject/${project.id}`}
                       title="View all Finished Tracings"
                     >
                       <Icon type="eye-o" />View
-                    </a>
+                    </Link>
                     <br />
-                    <a href={`/projects/${project.name}/edit`} title="Edit Project">
+                    <Link to={`/projects/${project.name}/edit`} title="Edit Project">
                       <Icon type="edit" />Edit
-                    </a>
+                    </Link>
                     <br />
                     {project.paused ? (
                       <div>
@@ -214,18 +223,19 @@ class ProjectListView extends React.PureComponent<{}, State> {
                         <br />
                       </div>
                     )}
-                    <a href={`/projects/${project.name}/tasks`} title="View Tasks">
+                    <Link to={`/projects/${project.id}/tasks`} title="View Tasks">
                       <Icon type="schedule" />Tasks
-                    </a>
+                    </Link>
                     <br />
-                    <a
-                      href={`/annotations/CompoundProject/${project.id}/download`}
+                    <Link
+                      to={`/annotations/CompoundProject/${project.id}/download`}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />Download
-                    </a>
+                    </Link>
                     <br />
-                    {project.owner.email === app.currentUser.email ? (
+
+                    {project.owner.email === this.props.activeUser.email ? (
                       <a onClick={_.partial(this.deleteProject, project)}>
                         <Icon type="delete" />Delete
                       </a>
@@ -241,4 +251,8 @@ class ProjectListView extends React.PureComponent<{}, State> {
   }
 }
 
-export default ProjectListView;
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(ProjectListView);

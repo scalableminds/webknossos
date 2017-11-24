@@ -53,6 +53,19 @@ object Team extends FoxImplicits {
       )
     }
 
+  def teamPublicWritesBasic(team: Team)(implicit ctx: DBAccessContext): Future[JsObject] =
+    for {
+      owner <- team.owner.toFox.flatMap(UserDAO.findOneById(_).map(User.userCompactWrites.writes)).futureBox
+    } yield {
+      Json.obj(
+        "id" -> team.id,
+        "name" -> team.name,
+        "parent" -> team.parent,
+        "roles" -> team.roles,
+        "owner" -> owner.toOption
+      )
+    }
+
   def teamPublicReads(requestingUser: User): Reads[Team] =
     ((__ \ "name").read[String](Reads.minLength[String](3)) and
       (__ \ "roles").read[List[Role]] and

@@ -39,6 +39,12 @@ object Dependencies{
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val resourceManager = "com.jsuereth" %% "scala-arm" % "2.0"
+  val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
+  val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
+  val ceedubs = "net.ceedubs" %% "ficus" % "1.1.2"
+  val scalaGuice = "net.codingwell" %% "scala-guice" % "4.0.0"
+  val webjars = "org.webjars" %% "webjars-play" % "2.4.0"
+  val bootstrap = "com.adrianhurt" %% "play-bootstrap3" % "0.4.4-P24"
 
   // Unfortunately, we need to list all mturk dependencies seperately since mturk is not published on maven but rather
   // added to the project as a JAR. To keep the number of JARs added to this repo as small as possible, everthing that
@@ -107,6 +113,7 @@ object Resolvers {
   val scmSnaps = "scm.io snapshots S3 bucket" at "https://s3-eu-central-1.amazonaws.com/maven.scm.io/snapshots/"
   val teamon = "teamon.eu repo" at "http://repo.teamon.eu"
   val bintray = "scalaz-bintray" at "http://dl.bintray.com/scalaz/releases"
+  val atlassian = "Atlassian Releases" at "https://maven.atlassian.com/public/"
 }
 
 object AssetCompilation {
@@ -220,6 +227,12 @@ object ApplicationBuild extends Build {
     newrelic,
     newrelicApi,
     resourceManager,
+    silhouette,
+    silhouetteTestkit,
+    ceedubs,
+    scalaGuice,
+    webjars,
+    bootstrap,
     specs2 % Test) ++ tiff ++ mturk
 
   val dependencyResolvers = Seq(
@@ -232,7 +245,8 @@ object ApplicationBuild extends Build {
     scmRel,
     scmSnaps,
     bintray,
-    teamon
+    teamon,
+    atlassian
   )
 
   lazy val oxalisSettings = Seq(

@@ -10,7 +10,7 @@ import { getLoggedTimes } from "admin/admin_rest_api";
 const { Column } = Table;
 
 type Props = {
-  userID: ?string,
+  userId: ?string,
 };
 
 type State = {
@@ -31,7 +31,7 @@ export default class LoggedTimeView extends React.PureComponent<Props, State> {
   }
 
   async fetch(): Promise<void> {
-    const loggedTime = await getLoggedTimes(this.props.userID);
+    const loggedTime = await getLoggedTimes(this.props.userId);
 
     const timeEntries = loggedTime
       .map(entry => {

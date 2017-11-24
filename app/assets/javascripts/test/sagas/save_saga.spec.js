@@ -14,8 +14,7 @@ const DateMock = {
   now: () => TIMESTAMP,
 };
 mockRequire("libs/date", DateMock);
-mockRequire("libs/window", { alert: console.log.bind(console) });
-mockRequire("app", { router: { off: _.noop, reload: _.noop } });
+mockRequire("libs/window", { alert: console.log.bind(console), location: { reload: _.noop } });
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });

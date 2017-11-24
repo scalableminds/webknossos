@@ -8,7 +8,6 @@
 
 import _ from "lodash";
 import Maybe from "data.maybe";
-import app from "app";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ColorGenerator from "libs/color_generator";
 import update from "immutability-helper";
@@ -34,8 +33,11 @@ import type {
 } from "oxalis/store";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
-  let user = `${app.currentUser.firstName}_${app.currentUser.lastName}`;
-  user = user.replace(/ /g, "_"); // Replace spaces in user names
+  let user = "";
+  if (state.activeUser) {
+    user = `${state.activeUser.firstName}_${state.activeUser.lastName}`;
+    user = user.replace(/ /g, "_"); // Replace spaces in user names
+  }
 
   let prefix = "Tree";
   if (state.tracing.tracingType === "Explorational") {
@@ -221,14 +223,16 @@ function splitTreeByNodes(
 ): TreeMapType {
   // This function splits a given tree by deleting the given edges and making the
   // given node ids the new tree roots.
+  // Not every node id is guaranteed to be a new tree root as there may be cyclic trees.
 
   let newTrees = skeletonTracing.trees;
   const nodeToEdgesMap = getNodeToEdgesMap(activeTree);
 
-  // Traverse from each new root node in all directions (i.e., use each edge) and
+  // Traverse from each possible new root node in all directions (i.e., use each edge) and
   // remember which edges were already visited.
   const visitedEdges = {};
   const getEdgeHash = edge => `${edge.source}-${edge.target}`;
+  const visitedNodes = {};
 
   // Mark deletedEdges as visited, so they are not traversed.
   deletedEdges.forEach(deletedEdge => {
@@ -236,6 +240,7 @@ function splitTreeByNodes(
   });
 
   const traverseTree = (nodeId: number, newTree: TemporaryMutableTreeType) => {
+    visitedNodes[nodeId] = true;
     const edges = nodeToEdgesMap[nodeId];
 
     newTree.nodes[nodeId] = activeTree.nodes[nodeId];
@@ -257,34 +262,43 @@ function splitTreeByNodes(
   // care of generating non-colliding tree names, ids and colors
   let intermediateState = state;
   // For each new tree root create a new tree
-  const cutTrees = newTreeRootIds.map((rootNodeId, index) => {
-    let newTree;
-    if (index === 0) {
-      // Reuse the first tree
-      newTree = {
-        branchPoints: [],
-        color: activeTree.color,
-        comments: [],
-        edges: [],
-        name: activeTree.name,
-        nodes: {},
-        timestamp: activeTree.timestamp,
-        treeId: activeTree.treeId,
-        isVisible: true,
-      };
-    } else {
-      const immutableNewTree = createTree(intermediateState, timestamp).get();
-      // Cast to mutable tree type since we want to mutably do the split
-      // in this reducer for performance reasons.
-      newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
-      intermediateState = update(intermediateState, {
-        tracing: { trees: { [newTree.treeId]: { $set: newTree } } },
-      });
-    }
+  const cutTrees = _.compact(
+    newTreeRootIds.map((rootNodeId, index) => {
+      // The rootNodeId could have already been traversed from another rootNodeId
+      // as there are cyclic trees
+      // In this case we do not need to create a new tree for this rootNodeId
+      if (visitedNodes[rootNodeId] === true) {
+        return null;
+      }
 
-    traverseTree(rootNodeId, newTree);
-    return newTree;
-  });
+      let newTree;
+      if (index === 0) {
+        // Reuse the properties of the original tree for the first tree
+        newTree = {
+          branchPoints: [],
+          color: activeTree.color,
+          comments: [],
+          edges: [],
+          name: activeTree.name,
+          nodes: {},
+          timestamp: activeTree.timestamp,
+          treeId: activeTree.treeId,
+          isVisible: true,
+        };
+      } else {
+        const immutableNewTree = createTree(intermediateState, timestamp).get();
+        // Cast to mutable tree type since we want to mutably do the split
+        // in this reducer for performance reasons.
+        newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
+        intermediateState = update(intermediateState, {
+          tracing: { trees: { [newTree.treeId]: { $set: newTree } } },
+        });
+      }
+
+      traverseTree(rootNodeId, newTree);
+      return newTree;
+    }),
+  );
 
   // Write branchpoints into correct trees
   activeTree.branchPoints.forEach(branchpoint => {

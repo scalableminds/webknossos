@@ -44,7 +44,7 @@ import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
-import { doWithToken } from "admin/admin_rest_api";
+import { doWithToken, getAnnotationInformation } from "admin/admin_rest_api";
 import messages from "messages";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
@@ -124,22 +124,11 @@ export class OxalisModel {
     let annotation: ?APIAnnotationType;
     let datasetName;
     if (controlMode === ControlModeEnum.TRACE) {
-      // Include /readOnly part whenever it is in the pathname
-      const isReadOnly = window.location.pathname.endsWith("/readOnly");
-      const readOnlyPart = isReadOnly ? "readOnly/" : "";
-      const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
-      annotation = await Request.receiveJSON(infoUrl);
+      annotation = await getAnnotationInformation(annotationId, tracingType);
       datasetName = annotation.dataSetName;
 
-      let error;
-      if (annotation.error) {
-        ({ error } = annotation);
-      } else if (!annotation.restrictions.allowAccess) {
-        error = messages["tracing.no_access"];
-      }
-
-      if (error) {
-        Toast.error(error);
+      if (!annotation.restrictions.allowAccess) {
+        Toast.error(messages["tracing.no_access"]);
         throw this.HANDLED_ERROR;
       }
 
@@ -163,8 +152,9 @@ export class OxalisModel {
       const nonNullAnnotation = annotation;
       tracing = await doWithToken(token =>
         Request.receiveJSON(
-          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content
-            .typ}/${nonNullAnnotation.content.id}?token=${token}`,
+          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content.typ}/${
+            nonNullAnnotation.content.id
+          }?token=${token}`,
         ),
       );
       tracing.id = annotation.content.id;

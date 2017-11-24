@@ -119,7 +119,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         }
       },
 
-      rightMouseDown: (pos: Point2, plane: OrthoViewType) => {
+      rightMouseDown: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
         if (!event.shiftKey) {
           this.volumeTracingController.enterDeleteMode();
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));

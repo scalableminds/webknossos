@@ -7,10 +7,8 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
 import test from "ava";
-
 import _ from "lodash";
 import mock from "mock-require";
-import * as SkeletonTracingActions from "oxalis/model/actions/skeletontracing_actions";
 import ChainReducer from "test/helpers/chainReducer";
 import update from "immutability-helper";
 
@@ -19,6 +17,7 @@ mock("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mock("libs/window", { confirm: () => true });
 const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontracing_reducer")
   .default;
+const SkeletonTracingActions = mock.reRequire("oxalis/model/actions/skeletontracing_actions");
 
 function deepEqualObjectContaining(t: Object, actual: Object, expected: Object) {
   Object.keys(expected).forEach(key => {

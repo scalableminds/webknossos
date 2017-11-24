@@ -107,7 +107,11 @@ class Controller extends React.PureComponent<Props, State> {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());
-        window.onbeforeunload = null;
+        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+        window.setTimeout(() => {
+          // restore the event handler in case a user chose to stay on the page
+          window.onbeforeunload = beforeUnload;
+        }, 500);
         return messages["save.leave_page_unfinished"];
       }
       return null;

@@ -76,8 +76,12 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
-        this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, plane),
+      leftClick: (
+        pos: Point2,
+        plane: OrthoViewType,
+        event: JQueryInputEventObject,
+        isTouch: boolean,
+      ) => this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
       rightClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
         this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
     });
@@ -85,8 +89,13 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
 
   getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
-      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
-        this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, OrthoViews.TDView),
+      leftClick: (
+        pos: Point2,
+        plane: OrthoViewType,
+        event: JQueryInputEventObject,
+        isTouch: boolean,
+      ) =>
+        this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, OrthoViews.TDView, isTouch),
     });
   }
 
@@ -125,15 +134,16 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     altPressed: boolean,
     ctrlPressed: boolean,
     plane: OrthoViewType,
+    isTouch: boolean,
   ): void => {
-    if (!shiftPressed) {
+    if (!shiftPressed && !isTouch) {
       // do nothing
       return;
     }
 
     // render the clicked viewport with picking enabled
     // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
-    const pickingNode = SceneController.skeleton.startPicking();
+    const pickingNode = SceneController.skeleton.startPicking(isTouch);
     const pickingScene = new THREE.Scene();
     pickingScene.add(pickingNode);
 

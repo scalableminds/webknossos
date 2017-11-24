@@ -47,7 +47,7 @@ class SpotlightView extends React.PureComponent<{}, State> {
           {this.state.isLoading ? (
             <Spin size="large" />
           ) : (
-            <GalleryDatasetView datasets={this.state.datasets} />
+            <GalleryDatasetView datasets={this.state.datasets} searchQuery="" />
           )}
           <div id="spotlight-footnote">
             Visit <a href="https://www.webknossos.org/">webknossos.org</a> to learn more about

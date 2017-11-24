@@ -7,12 +7,11 @@ import models.annotation.{AnnotationDAO, AnnotationService}
 import models.mturk.{MTurkAnnotationReference, MTurkAssignment, MTurkAssignmentDAO}
 import models.task.Task
 import models.user.{User, UserService}
-import oxalis.security.Secured
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.mvc.Action
 
-class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
+class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
   /**
     * This is the entry point for amazon turk tracers. The link provided in their description will lead them to this
@@ -52,7 +51,8 @@ class MTurkController @Inject()(val messagesApi: MessagesApi) extends Controller
         annotation <- annotationForAssignment(mturkAssignment, user, task) ?~> Messages("annotation.creationFailed")
       } yield {
         Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
-        .withSession(Secured.createSession(user))
+        //.withSession(Secured.createSession(user))
+        // TODO fix this
       }
   }
 }

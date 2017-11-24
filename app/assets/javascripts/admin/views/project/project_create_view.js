@@ -1,18 +1,27 @@
 // @flow
 import React from "react";
+import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card, InputNumber } from "antd";
-import app from "app";
 import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+
 import type { APIUserType, APITeamType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react_router";
+import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 const TextArea = Input.TextArea;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   form: Object,
   projectName: ?string,
-};
+  history: ReactRouterHistoryType,
+} & StateProps;
 
 type State = {
   teams: Array<APITeamType>,
@@ -53,7 +62,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
     };
 
     const defaultFormValues = Object.assign({}, defaultValues, project, {
-      owner: project ? project.owner.id : app.currentUser.id,
+      owner: project ? project.owner.id : this.props.activeUser.id,
     });
     this.props.form.setFieldsValue(defaultFormValues);
   }
@@ -67,7 +76,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
         } else {
           await createProject(formValues);
         }
-        app.router.navigate("/projects", { trigger: true });
+        this.props.history.push("/projects");
       }
     });
   };
@@ -75,12 +84,15 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
   render() {
     const { getFieldDecorator } = this.props.form;
     const isEditMode = this.props.projectName != null;
-    const titlePrefix = isEditMode ? "Update " : "Create";
+    const title =
+      isEditMode && this.props.projectName
+        ? `Update Project ${this.props.projectName}`
+        : "Create Project";
     const fullWidth = { width: "100%" };
 
     return (
       <div className="row container wide project-administration">
-        <Card title={<h3>{titlePrefix} Project</h3>}>
+        <Card title={<h3>{title}</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Project Name" hasFeedback>
               {getFieldDecorator("name", {
@@ -238,7 +250,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 
             <FormItem>
               <Button type="primary" htmlType="submit">
-                {titlePrefix} Project
+                {title}
               </Button>
             </FormItem>
           </Form>
@@ -248,4 +260,8 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(ProjectCreateView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(Form.create()(ProjectCreateView));

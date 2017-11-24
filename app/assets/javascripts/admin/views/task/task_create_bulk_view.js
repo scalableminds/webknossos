@@ -274,9 +274,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                         return _.isString(value) && invalidTaskIndices.length === 0
                           ? callback()
                           : callback(
-                              `${Messages[
-                                "task.bulk_create_invalid"
-                              ]} Error in line ${invalidTaskIndices.join(", ")}`,
+                              `${
+                                Messages["task.bulk_create_invalid"]
+                              } Error in line ${invalidTaskIndices.join(", ")}`,
                             );
                       },
                     },

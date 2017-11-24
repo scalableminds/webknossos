@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
@@ -66,11 +67,11 @@ class ScriptListView extends React.PureComponent<{}, State> {
       <div className="container wide">
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
-            <a href="/scripts/create">
+            <Link to="/scripts/create">
               <Button icon="plus" style={marginRight} type="primary">
                 Add Script
               </Button>
-            </a>
+            </Link>
             <Search
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
@@ -125,9 +126,9 @@ class ScriptListView extends React.PureComponent<{}, State> {
                 key="actions"
                 render={(__, script: APIScriptType) => (
                   <span>
-                    <a href={`/scripts/${script.id}/edit`}>
+                    <Link to={`/scripts/${script.id}/edit`}>
                       <Icon type="edit" />Edit
-                    </a>
+                    </Link>
                     <br />
                     <a href="#" onClick={_.partial(this.deleteScript, script)}>
                       <Icon type="delete" />Delete

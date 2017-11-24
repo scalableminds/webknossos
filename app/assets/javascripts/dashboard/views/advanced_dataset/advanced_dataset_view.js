@@ -71,7 +71,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="scale"
             key="scale"
             render={(__, dataset: DatasetType) =>
-              TemplateHelpers.formatTuple(dataset.dataSource.scale)}
+              TemplateHelpers.formatTuple(dataset.dataSource.scale)
+            }
           />
 
           <Column
@@ -88,12 +89,14 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                     this.setState({
                       selectedDataset: dataset,
                       isTeamAssignmentModalVisible: true,
-                    })}
+                    })
+                  }
                 >
                   {team === dataset.owningTeam ? <i className="fa fa-lock" /> : null}
                   {team}
                 </Tag>
-              ))}
+              ))
+            }
           />
           <Column
             title="Active"
@@ -123,7 +126,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
                 </Tag>
-              ))}
+              ))
+            }
           />
 
           <Column
@@ -140,7 +144,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             onCancel={() =>
               this.setState({
                 isTeamAssignmentModalVisible: false,
-              })}
+              })
+            }
             onOk={(updatedDataset: DatasetType) => {
               this.props.updateDataset(updatedDataset);
               this.setState({

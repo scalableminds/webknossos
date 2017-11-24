@@ -16,7 +16,7 @@ import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
 import {
   setActiveNodeAction,
-  deleteNodeAction,
+  deleteNodeWithConfirmAction,
   deleteEdgeAction,
   createTreeAction,
   createNodeAction,
@@ -105,7 +105,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
       // Delete active node
-      delete: () => Store.dispatch(deleteNodeAction()),
+      delete: () => Store.dispatch(deleteNodeWithConfirmAction()),
       c: () => Store.dispatch(createTreeAction()),
 
       // Branches

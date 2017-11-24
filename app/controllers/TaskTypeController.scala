@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationSettings}
 import models.task._
-import oxalis.security.Secured
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -13,7 +13,7 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.twirl.api.Html
 
-class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits{
+class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits{
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
@@ -21,14 +21,10 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
       (__ \ 'team).read[String] and
       (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
 
-  def empty(id: String) = Authenticated { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  def create = Authenticated.async(parse.json) { implicit request =>
+  def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- ensureTeamAdministration(request.user, taskType.team)
+        _ <- ensureTeamAdministration(request.identity, taskType.team)
         _ <- TaskTypeDAO.insert(taskType)
       } yield {
         JsonOk(TaskType.transformToJson(taskType))
@@ -36,17 +32,17 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     }
   }
 
-  def get(taskTypeId: String) = Authenticated.async { implicit request =>
+  def get(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, taskType.team)
+      _ <- ensureTeamAdministration(request.identity, taskType.team)
     } yield {
       JsonOk(TaskType.transformToJson(taskType))
     }
   }
 
 
-  def list = Authenticated.async { implicit request =>
+  def list = SecuredAction.async { implicit request =>
     for {
       taskTypes <- TaskTypeDAO.findAll
     } yield {
@@ -54,13 +50,13 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     }
   }
 
-  def update(taskTypeId: String) = Authenticated.async(parse.json) { implicit request =>
+  def update(taskTypeId: String) = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { tt =>
       for {
         taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
         updatedTaskType = tt.copy(_id = taskType._id)
-        _ <- ensureTeamAdministration(request.user, taskType.team)
-        _ <- ensureTeamAdministration(request.user, updatedTaskType.team)
+        _ <- ensureTeamAdministration(request.identity, taskType.team)
+        _ <- ensureTeamAdministration(request.identity, updatedTaskType.team)
         _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
         _ <- Fox.serialSequence(tasks)(task => AnnotationDAO.updateSettingsForAllOfTask(task, updatedTaskType.settings))
@@ -70,10 +66,10 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     }
   }
 
-  def delete(taskTypeId: String) = Authenticated.async { implicit request =>
+  def delete(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.user, taskType.team)
+      _ <- ensureTeamAdministration(request.identity, taskType.team)
       updatedTaskType = taskType.copy(isActive = false)
       _ <- TaskTypeDAO.update(taskType._id, updatedTaskType) ?~> Messages("taskType.deleteFailure")
     } yield {

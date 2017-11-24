@@ -10,10 +10,7 @@ import models.project.{Project, ProjectDAO}
 import models.task.{Task, TaskService, TaskTypeDAO}
 import models.user.time.{TimeSpan, TimeSpanDAO}
 import models.user.{User, UserDAO, UserService}
-import net.liftweb.common.{Box, Full}
-import oxalis.mail.DefaultMails
-import oxalis.security.{AuthenticatedRequest, Secured}
-import oxalis.thirdparty.BrainTracing.Mailer
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -23,15 +20,15 @@ import play.api.i18n.{Messages, MessagesApi}
 import scala.concurrent.Future
 import scala.util.Failure
 
-class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with Secured with FoxImplicits {
+class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
   // REST API
 
   //all users with working hours > 0
-  def getWorkingHoursOfAllUsers(year: Int, month: Int) = Authenticated.async { implicit request =>
+  def getWorkingHoursOfAllUsers(year: Int, month: Int) = SecuredAction.async { implicit request =>
     for {
       users <- UserDAO.findAll
-      filteredUsers = users.filter(user => request.user.isAdminOf(user))
+      filteredUsers = users.filter(user => request.identity.isAdminOf(user))
       js <- loggedTimeForUserList(filteredUsers, year, month)
     } yield {
       Ok(js)
@@ -39,10 +36,10 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   }
 
   //list user with working hours > 0 (only one user is also possible)
-  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int) = Authenticated.async { implicit request =>
+  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int) = SecuredAction.async { implicit request =>
     for {
       users <- Fox.combined(userString.split(",").toList.map(email => UserService.findOneByEmail(email))) ?~> Messages("user.email.invalid")
-      _ <- users.forall(u => request.user.isAdminOf(u)) ?~> Messages("user.notAuthorised")
+      _ <- users.forall(u => request.identity.isAdminOf(u)) ?~> Messages("user.notAuthorised")
       js <- loggedTimeForUserList(users, year, month)
     } yield {
       Ok(js)
@@ -51,7 +48,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   //helper methods
 
-  def loggedTimeForUserList(users: List[User], year: Int, month: Int) (implicit request: AuthenticatedRequest[AnyContent]): Fox[JsValue] =  {
+  def loggedTimeForUserList(users: List[User], year: Int, month: Int) (implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
     startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
@@ -63,7 +60,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     Fox.combined(futureJsObjects).map(jsObjectList => Json.toJson(jsObjectList))
   }
 
-  def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: AuthenticatedRequest[AnyContent]): Fox[JsObject] = {
+  def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {
     for {
       timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
       timeListWithTask <- getOnlyTimeSpansWithTask(timeList)
@@ -76,11 +73,11 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-  def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: AuthenticatedRequest[AnyContent]): Fox[List[(TimeSpan, Task)]] = {
+  def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: SecuredRequest[AnyContent]): Fox[List[(TimeSpan, Task)]] = {
     Fox.sequence(l.map(getTimeSpanOptionTask)).map(_.flatten)
   }
 
-  def getTimeSpanOptionTask(t: TimeSpan)(implicit request: AuthenticatedRequest[AnyContent]): Fox[(TimeSpan,Task)] = {
+  def getTimeSpanOptionTask(t: TimeSpan)(implicit request: SecuredRequest[AnyContent]): Fox[(TimeSpan,Task)] = {
     for {
       annotationId <- t.annotation.toFox
       annotation <- AnnotationDAO.findOneById(annotationId)
@@ -91,7 +88,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-  def timeWrites(tuple:(TimeSpan,Task))(implicit request: AuthenticatedRequest[AnyContent]): Fox[JsObject] = {
+  def timeWrites(tuple:(TimeSpan,Task))(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {
     for {
       tasktype <- TaskTypeDAO.findOneById(tuple._2._taskType)
       project <- ProjectDAO.findOneByName(tuple._2._project)

@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import app from "app";
 import Request from "libs/request";
 import Date from "libs/date";
 import messages from "messages";
@@ -25,7 +24,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { alert } from "libs/window";
+import { alert, location } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -137,14 +136,13 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
   } catch (error) {
     yield call(toggleErrorHighlighting, true);
     if (error.status >= 400 && error.status < 500) {
-      app.router.off("beforeunload");
       // HTTP Code 409 'conflict' for dirty state
       if (error.status === 409) {
         yield call(alert, messages["save.failed_simultaneous_tracing"]);
       } else {
         yield call(alert, messages["save.failed_client_error"]);
       }
-      app.router.reload();
+      location.reload();
       return;
     }
     yield delay(SAVE_RETRY_WAITING_TIME);

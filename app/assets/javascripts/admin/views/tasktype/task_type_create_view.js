@@ -1,9 +1,9 @@
 // @flow
 import React from "react";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
-import app from "app";
 import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -12,6 +12,7 @@ const TextArea = Input.TextArea;
 type Props = {
   taskTypeId: ?string,
   form: Object,
+  history: ReactRouterHistoryType,
 };
 
 type State = {
@@ -55,8 +56,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         } else {
           await createTaskType(formValues);
         }
-
-        app.router.navigate("/taskTypes", { trigger: true });
+        this.props.history.push("/taskTypes");
       }
     });
   };

@@ -26,10 +26,10 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   override def find(id: String): Future[Option[BearerTokenAuthenticator]] = findOne("id", id)(implicitly[Writes[String]],GlobalAccessContext).futureBox.map(box => box.toOption)
 
   //adds the new token (and removes the old one)
-  override def add(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = for{
+  override def add(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = for {
     maybeOldAuthenticator <- findByLoginInfo(authenticator.loginInfo)
     _ <- insert(authenticator)(GlobalAccessContext).futureBox
-  }yield{
+  } yield {
     maybeOldAuthenticator.map(a => remove(a.id))
     authenticator
   }

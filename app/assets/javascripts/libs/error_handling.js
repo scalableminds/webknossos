@@ -41,9 +41,9 @@ class ErrorHandling {
     const scriptTag = document.querySelector("[data-airbrake-project-id]");
     if (!scriptTag) throw new Error("failed to initialize airbrake");
 
-    const projectId = scriptTag.dataset["airbrake-project-id"];
-    const projectKey = scriptTag.dataset["airbrake-project-key"];
-    const envName = scriptTag.dataset["airbrake-environment-name"];
+    const projectId = scriptTag.dataset.airbrakeProjectId;
+    const projectKey = scriptTag.dataset.airbrakeProjectKey;
+    const envName = scriptTag.dataset.airbrakeEnvironmentName;
 
     this.airbrake = new AirbrakeClient({
       projectId,

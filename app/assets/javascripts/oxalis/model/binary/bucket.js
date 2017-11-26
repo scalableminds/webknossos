@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import type { Vector4 } from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import Utils from "libs/utils";
@@ -40,7 +40,7 @@ export class DataBucket {
     zoomedAddress: Vector4,
     temporalBucketManager: TemporalBucketManager,
   ) {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
     this.BIT_DEPTH = BIT_DEPTH;
     this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
     this.BYTE_OFFSET = this.BIT_DEPTH >> 3;

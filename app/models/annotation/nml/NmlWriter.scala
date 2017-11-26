@@ -79,6 +79,16 @@ object NmlWriter {
     Xml.withinElementSync("zoomLevel") {
       writer.writeAttribute("zoom", tracing.zoomLevel.toString)
     }
+    tracing.userBoundingBox.map { b =>
+      Xml.withinElementSync("userBoundingBox") {
+        writer.writeAttribute("topLeftX", b.topLeft.x.toString)
+        writer.writeAttribute("topLeftY", b.topLeft.y.toString)
+        writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
+        writer.writeAttribute("width", b.width.toString)
+        writer.writeAttribute("height", b.height.toString)
+        writer.writeAttribute("depth", b.depth.toString)
+      }
+    }
   }
 
   def writeParametersAsXml(tracing: VolumeTracing, description: String, scale: Scale)(implicit writer: XMLStreamWriter) = {
@@ -130,7 +140,7 @@ object NmlWriter {
   }
 
   def writeNodesAsXml(nodes: Seq[Node])(implicit writer: XMLStreamWriter) = {
-    nodes.foreach { n =>
+    nodes.toSet.foreach { n: Node => //TODO 2017: once the tracings with duplicate nodes are fixed in the DB, remove the toSet workaround
       Xml.withinElementSync("node") {
         writer.writeAttribute("id", n.id.toString)
         writer.writeAttribute("radius", n.radius.toString)

@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import Markdown from "react-remarkable";
 import Utils from "libs/utils";
@@ -67,11 +68,11 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
       <div className="container wide">
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
-            <a href="/taskTypes/create">
+            <Link to="/taskTypes/create">
               <Button icon="plus" style={marginRight} type="primary">
                 Add TaskType
               </Button>
-            </a>
+            </Link>
             <Search
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
@@ -141,7 +142,8 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                     <Tag key={mode} color={mode === settings.preferredMode ? "blue" : null}>
                       {mode}
                     </Tag>
-                  ))}
+                  ))
+                }
               />
               <Column
                 title="Settings"
@@ -164,17 +166,17 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 key="actions"
                 render={(__, taskType: APITaskTypeType) => (
                   <span>
-                    <a href={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
+                    <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
                       <Icon type="edit" />Edit
-                    </a>
+                    </Link>
                     <br />
-                    <a href={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
+                    <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
                       <Icon type="eye-o" />View
-                    </a>
+                    </Link>
                     <br />
-                    <a href={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
-                      <Icon type="book" />Tasks
-                    </a>
+                    <Link to={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">
+                      <Icon type="schedule" />Tasks
+                    </Link>
                     <br />
                     <a
                       href={`/annotations/CompoundTaskType/${taskType.id}/download`}

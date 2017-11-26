@@ -63,7 +63,7 @@ function* warnOfTooLowOpacity(): Generator<*, *, *> {
   }
 }
 
-export function* editVolumeLayerAsync(): Generator<*, *, *> {
+export function* editVolumeLayerAsync(): Generator<any, any, any> {
   yield take("INITIALIZE_VOLUMETRACING");
   const allowUpdate = yield select(state => state.tracing.restrictions.allowUpdate);
 
@@ -122,7 +122,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
   const binary = yield call([Model, Model.getSegmentationBinary]);
   const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
   const zoom = yield select(state => state.flycam.zoomStep);
-  const halfViewportWidth = Math.round(Constants.VIEWPORT_WIDTH / 2 * zoom);
+  const halfViewportWidth = Math.round(Constants.PLANE_WIDTH / 2 * zoom);
   const activeCellId = yield select(state => state.tracing.activeCellId);
 
   const copyVoxelLabel = function(voxelTemplateAddress, voxelTargetAddress) {

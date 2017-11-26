@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
+import oxalis.security.WebknossosSilhouette.{UserAwareRequest, UserAwareAction, SecuredRequest, SecuredAction}
 import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -14,7 +15,6 @@ import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
-import oxalis.security.{Secured, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -23,9 +23,9 @@ import play.api.libs.json.Json
 
 import scala.concurrent.Future
 
+
 class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   extends Controller
-    with Secured
     with AnnotationInformationProvider
     with FoxImplicits
     with LazyLogging {
@@ -36,7 +36,8 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     else
       None
 
-  def upload = Authenticated.async(parse.multipartFormData) { implicit request =>
+
+  def upload = SecuredAction.async(parse.multipartFormData) { implicit request =>
 
     def returnError(zipParseResult: NmlService.ZipParseResult) = {
       if (zipParseResult.containsFailure) {
@@ -63,28 +64,30 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       case (acc, next) => acc.combineWith(NmlService.extractFromFile(next.ref.file, next.filename))
     }
 
+    val parseResultsPrefixed = NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
+
     if (!parsedFiles.isEmpty) {
-      val parseSuccess = parsedFiles.parseResults.filter(_.succeeded)
+      val parseSuccess = parseResultsPrefixed.filter(_.succeeded)
       val fileNames = parseSuccess.map(_.fileName)
       val tracings = parseSuccess.flatMap(_.tracing)
       val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
       val name = nameForNmls(fileNames)
       if (volumeTracings.nonEmpty) {
         for {
-          dataSet: DataSet <- DataSetDAO.findOneBySourceName(volumeTracings.head._1.dataSetName).toFox
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(volumeTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", volumeTracings.head._1.dataSetName)
           tracingReference <- dataSet.dataStore.saveVolumeTracing(volumeTracings.head._1, parsedFiles.otherFiles.get(volumeTracings.head._2).map(_.file))
           annotation <- AnnotationService.createFrom(
-            request.user, dataSet, tracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(tracingReference.typ), name, volumeTracings.head._3)
+            request.identity, dataSet, tracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(tracingReference.typ), name, volumeTracings.head._3)
         } yield JsonOk(
           Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
           Messages("nml.file.uploadSuccess")
         )
       } else if (skeletonTracings.nonEmpty) {
         for {
-          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head._1.dataSetName).toFox
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", skeletonTracings.head._1.dataSetName)
           mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings.map(_._1), dataSet)
           annotation <- AnnotationService.createFrom(
-            request.user, dataSet, mergedTracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(mergedTracingReference.typ), name, skeletonTracings.head._2)
+            request.identity, dataSet, mergedTracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(mergedTracingReference.typ), name, skeletonTracings.head._2)
         } yield JsonOk(
           Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
           Messages("nml.file.uploadSuccess")
@@ -97,24 +100,18 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def download(typ: String, id: String) = UserAwareAction.async { implicit request =>
+  def download(typ: String, id: String) = SecuredAction.async { implicit request =>
     logger.trace(s"Requested download for annotation: $typ/$id")
-    request.userOpt match {
-      case Some(user) => typ match {
-        case AnnotationType.View => Fox.failure("Cannot download View annotation")
-        case AnnotationType.CompoundProject => downloadProject(id, user)
-        case AnnotationType.CompoundTask => downloadTask(id, user)
-        case AnnotationType.CompoundTaskType => downloadTaskType(id, user)
-        case _ => downloadExplorational(id, typ, request.userOpt)
-      }
-      case None => {
-        if (typ == AnnotationType.Explorational.toString) downloadExplorational(id, typ, request.userOpt)
-        else Fox.failure("Failed to download annotation")
-      }
+    typ match {
+      case AnnotationType.View => Fox.failure("Cannot download View annotation")
+      case AnnotationType.CompoundProject => downloadProject(id, request.identity)
+      case AnnotationType.CompoundTask => downloadTask(id, request.identity)
+      case AnnotationType.CompoundTaskType => downloadTaskType(id, request.identity)
+      case _ => downloadExplorational(id, typ, request.identity)(securedRequestToUserAwareRequest)
     }
   }
 
-  def downloadExplorational(annotationId: String, typ: String, user: Option[User])(implicit request: UserAwareRequest[_]) = {
+  def downloadExplorational(annotationId: String, typ: String, user: User)(implicit request: UserAwareRequest[_]) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
@@ -210,10 +207,10 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     } yield Ok.sendFile(zip.file)
   }
 
-  def userDownload(userId: String) = Authenticated.async { implicit request =>
+  def userDownload(userId: String) = SecuredAction.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.user) ?~> Messages("notAllowed")
+      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
       annotations <- AnnotationService.findTasksOf(user, isFinished = Some(true), limit = Int.MaxValue)
       zipped <- AnnotationService.zipAnnotations(annotations, user.abreviatedName + "_nmls.zip")
     } yield {

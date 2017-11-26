@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import app from "app";
 import Request from "libs/request";
 import Date from "libs/date";
 import messages from "messages";
@@ -25,7 +24,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import { VolumeTracingSaveRelevantActions } from "oxalis/model/actions/volumetracing_actions";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
-import { alert } from "libs/window";
+import { alert, location } from "libs/window";
 import { diffSkeletonTracing } from "oxalis/model/sagas/skeletontracing_saga";
 import { diffVolumeTracing } from "oxalis/model/sagas/volumetracing_saga";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
@@ -58,14 +57,22 @@ export function* collectUndoStates(): Generator<*, *, *> {
         undoStack.push(prevTracing);
         if (undoStack.length > UNDO_HISTORY_SIZE) undoStack.shift();
       }
-    } else if (undo && undoStack.length) {
-      redoStack.push(prevTracing);
-      const newTracing = undoStack.pop();
-      yield put(setTracingAction(newTracing));
-    } else if (redo && redoStack.length) {
-      undoStack.push(prevTracing);
-      const newTracing = redoStack.pop();
-      yield put(setTracingAction(newTracing));
+    } else if (undo) {
+      if (undoStack.length) {
+        redoStack.push(prevTracing);
+        const newTracing = undoStack.pop();
+        yield put(setTracingAction(newTracing));
+      } else {
+        Toast.info(messages["undo.no_undo"]);
+      }
+    } else if (redo) {
+      if (redoStack.length) {
+        undoStack.push(prevTracing);
+        const newTracing = redoStack.pop();
+        yield put(setTracingAction(newTracing));
+      } else {
+        Toast.info(messages["undo.no_redo"]);
+      }
     }
     // We need the updated tracing here
     prevTracing = yield select(state => state.tracing);
@@ -76,15 +83,20 @@ export function* pushAnnotationAsync(): Generator<*, *, *> {
   yield take(["INITIALIZE_SKELETONTRACING", "INITIALIZE_VOLUMETRACING"]);
   yield put(setLastSaveTimestampAction());
   while (true) {
-    const pushAction = yield take("PUSH_SAVE_QUEUE");
-    if (!pushAction.pushNow) {
-      yield race({
-        timeout: call(delay, PUSH_THROTTLE_TIME),
-        forcePush: take("SAVE_NOW"),
-      });
+    let saveQueue;
+    // Check whether the save queue is actually empty, the PUSH_SAVE_QUEUE action
+    // could have been triggered during the call to sendRequestToServer
+    saveQueue = yield select(state => state.save.queue);
+    if (saveQueue.length === 0) {
+      // Save queue is empty, wait for push event
+      yield take("PUSH_SAVE_QUEUE");
     }
+    yield race({
+      timeout: call(delay, PUSH_THROTTLE_TIME),
+      forcePush: take("SAVE_NOW"),
+    });
     yield put(setSaveBusyAction(true));
-    const saveQueue = yield select(state => state.save.queue);
+    saveQueue = yield select(state => state.save.queue);
     if (saveQueue.length > 0) {
       yield call(sendRequestToServer);
     }
@@ -124,14 +136,14 @@ export function* sendRequestToServer(timestamp: number = Date.now()): Generator<
   } catch (error) {
     yield call(toggleErrorHighlighting, true);
     if (error.status >= 400 && error.status < 500) {
-      app.router.off("beforeunload");
       // HTTP Code 409 'conflict' for dirty state
+      window.onbeforeunload = null;
       if (error.status === 409) {
         yield call(alert, messages["save.failed_simultaneous_tracing"]);
       } else {
         yield call(alert, messages["save.failed_client_error"]);
       }
-      app.router.reload();
+      location.reload();
       return;
     }
     yield delay(SAVE_RETRY_WAITING_TIME);
@@ -146,7 +158,7 @@ export function toggleErrorHighlighting(state: boolean) {
   if (state) {
     Toast.error(messages["save.failed"], true);
   } else {
-    Toast.delete("danger", messages["save.failed"]);
+    Toast.close(messages["save.failed"]);
   }
 }
 
@@ -224,9 +236,11 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
   for (const movedPairings of _.values(groupedMovedNodesAndEdges)) {
     const oldTreeId = movedPairings[0][1].value.treeId;
     const newTreeId = movedPairings[0][0].value.treeId;
-    const nodeIds = movedPairings
-      .filter(([createUA]) => createUA.name === "createNode")
-      .map(([createUA]) => createUA.value.id);
+    // This could be done with a .filter(...).map(...), but flow cannot comprehend that
+    const nodeIds = movedPairings.reduce((agg, [createUA]) => {
+      if (createUA.name === "createNode") agg.push(createUA.value.id);
+      return agg;
+    }, []);
     // The moveTreeComponent update action needs to be placed:
     // BEFORE the possible deleteTree update action of the oldTreeId and
     // AFTER the possible createTree update action of the newTreeId
@@ -329,7 +343,7 @@ export function performDiffTracing(
   }
 }
 
-export function* saveTracingAsync(): Generator<*, *, *> {
+export function* saveTracingAsync(): Generator<any, any, any> {
   const { initSkeleton } = yield race({
     initSkeleton: take("INITIALIZE_SKELETONTRACING"),
     initVolume: take("INITIALIZE_VOLUMETRACING"),

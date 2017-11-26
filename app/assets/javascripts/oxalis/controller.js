@@ -2,16 +2,17 @@
  * controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
 import * as React from "react";
-import $ from "jquery";
+import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
+import { Spin, Modal } from "antd";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import Stats from "stats.js";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import Store from "oxalis/store";
 import PlaneController from "oxalis/controller/viewmodes/plane_controller";
@@ -26,29 +27,33 @@ import ApiLoader from "oxalis/api/api_loader";
 import api from "oxalis/api/internal_api";
 import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { setViewModeAction } from "oxalis/model/actions/settings_actions";
+import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
-import Modal from "oxalis/view/modal";
-import { connect } from "react-redux";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
+import { document } from "libs/window";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
+import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 
+type StateProps = {
+  viewMode: ModeType,
+};
+
 type Props = {
+  history: ReactRouterHistoryType,
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,
-  // Delivered by connect()
-  viewMode: ModeType,
-};
+} & StateProps;
 
 type State = {
   ready: boolean,
 };
 
 class Controller extends React.PureComponent<Props, State> {
+  keyboard: InputKeyboard;
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 
@@ -74,9 +79,7 @@ class Controller extends React.PureComponent<Props, State> {
   // cross in this matrix.
 
   componentDidMount() {
-    app.router.showLoadingSpinner();
-
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     UrlManager.initialize();
 
@@ -100,21 +103,29 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    app.router.on("beforeunload", () => {
+    const beforeUnload = () => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());
+        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+        window.setTimeout(() => {
+          // restore the event handler in case a user chose to stay on the page
+          window.onbeforeunload = beforeUnload;
+        }, 500);
         return messages["save.leave_page_unfinished"];
       }
       return null;
-    });
+    };
+
+    this.props.history.block(beforeUnload);
+    window.onbeforeunload = beforeUnload;
 
     UrlManager.startUrlUpdater();
     SceneController.initialize();
 
     // FPS stats
     this.stats = new Stats();
-    $("body").append(this.stats.domElement);
+    document.body.append(this.stats.domElement);
 
     this.initKeyboard();
     this.initTaskScript();
@@ -128,7 +139,6 @@ class Controller extends React.PureComponent<Props, State> {
 
     window.webknossos = new ApiLoader(Model);
 
-    app.router.hideLoadingSpinner();
     app.vent.trigger("webknossos:ready");
     Store.dispatch(wkReadyAction());
     this.setState({ ready: true });
@@ -170,7 +180,19 @@ class Controller extends React.PureComponent<Props, State> {
     } else {
       text = messages["task.no_description"];
     }
-    Modal.show(text, title);
+
+    Modal.info({
+      title,
+      content: text,
+    });
+  }
+
+  scaleTrianglesPlane(delta: number): void {
+    let scale = Store.getState().userConfiguration.scale + delta;
+    scale = Math.min(constants.MAX_SCALE, scale);
+    scale = Math.max(constants.MIN_SCALE, scale);
+
+    Store.dispatch(updateUserSettingAction("scale", scale));
   }
 
   isWebGlSupported() {
@@ -182,10 +204,10 @@ class Controller extends React.PureComponent<Props, State> {
 
   initKeyboard() {
     // avoid scrolling while pressing space
-    $(document).keydown((event: JQueryInputEventObject) => {
+    document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        !$(":focus").length
+        Utils.isNoElementFocussed()
       ) {
         event.preventDefault();
       }
@@ -236,33 +258,64 @@ class Controller extends React.PureComponent<Props, State> {
           Store.dispatch(redoAction());
         },
         "ctrl + y": () => Store.dispatch(redoAction()),
-
-        // In the long run this should probably live in a user script
-        "3": function toggleSegmentationOpacity() {
-          // Flow cannot infer the return type of getConfiguration :(
-          // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
-          const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
-          let newSegAlpha = 0;
-
-          if (curSegAlpha > 0) {
-            prevSegAlpha = curSegAlpha;
-          } else {
-            newSegAlpha = prevSegAlpha;
-          }
-
-          api.data.setConfiguration("segmentationOpacity", newSegAlpha);
-        },
       });
     }
 
+    _.extend(keyboardControls, {
+      // In the long run this should probably live in a user script
+      "3": function toggleSegmentationOpacity() {
+        // Flow cannot infer the return type of getConfiguration :(
+        // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
+        const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
+        let newSegAlpha = 0;
+
+        if (curSegAlpha > 0) {
+          prevSegAlpha = curSegAlpha;
+        } else {
+          newSegAlpha = prevSegAlpha;
+        }
+
+        api.data.setConfiguration("segmentationOpacity", newSegAlpha);
+      },
+    });
+
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
+
+    this.keyboard = new InputKeyboard({
+      // Scale planes
+      l: timeFactor => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(-scaleValue * timeFactor);
+      },
+
+      k: timeFactor => {
+        const scaleValue = Store.getState().userConfiguration.scaleValue;
+        this.scaleTrianglesPlane(scaleValue * timeFactor);
+      },
+    });
   }
 
   updateStats = () => this.stats.update();
 
   render() {
     if (!this.state.ready) {
-      return null;
+      return (
+        <Spin
+          spinning
+          size="large"
+          style={{
+            position: "fixed",
+            top: "64px",
+            left: "0px",
+            right: "0px",
+            bottom: "0px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        />
+      );
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;
@@ -306,10 +359,10 @@ class Controller extends React.PureComponent<Props, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
   };
 }
 
-export default connect(mapStateToProps)(Controller);
+export default withRouter(connect(mapStateToProps)(Controller));

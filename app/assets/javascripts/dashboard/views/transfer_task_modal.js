@@ -11,13 +11,10 @@ const { Option } = Select;
 
 type Props = {
   onChange: (updatedAnnotation: APIAnnotationType) => void,
-  // Somehow, eslint doesn't recognize that annotationId is used in
-  // the async functions
-  // eslint-disable-next-line react/no-unused-prop-types
   annotationId: ?string,
   onCancel: Function,
   visible: boolean,
-  userID: ?string,
+  userId: ?string,
 };
 
 type State = {
@@ -78,9 +75,10 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
         optionFilterProp="children"
         style={{ width: "100%" }}
         filterOption={(input, option) =>
-          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+        }
       >
-        {this.state.users.filter(u => u.id !== this.props.userID).map(user => (
+        {this.state.users.filter(u => u.id !== this.props.userId).map(user => (
           <Option key={user.id} value={user.id}>
             {`${user.lastName}, ${user.firstName} ${user.email}`}
           </Option>

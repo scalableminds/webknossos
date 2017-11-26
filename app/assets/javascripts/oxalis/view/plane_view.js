@@ -4,7 +4,7 @@
  */
 import _ from "lodash";
 import app from "app";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
@@ -26,7 +26,7 @@ class PlaneView {
   curWidth: number;
 
   constructor() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     this.running = false;
     const { scene, renderer } = SceneController;
@@ -57,7 +57,10 @@ class PlaneView {
     }
 
     // Attach the canvas to the container
-    renderer.setSize(2 * this.curWidth + 20, 2 * this.curWidth + 20);
+    renderer.setSize(
+      2 * this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+      2 * this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+    );
 
     this.needsRerender = true;
     app.vent.on("rerender", () => {
@@ -132,10 +135,13 @@ class PlaneView {
       this.trigger("render");
 
       const viewport: OrthoViewMapType<Vector2> = {
-        [OrthoViews.PLANE_XY]: [0, this.curWidth + 20],
-        [OrthoViews.PLANE_YZ]: [this.curWidth + 20, this.curWidth + 20],
+        [OrthoViews.PLANE_XY]: [0, this.curWidth + Constants.VIEWPORT_GAP_WIDTH],
+        [OrthoViews.PLANE_YZ]: [
+          this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+          this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+        ],
         [OrthoViews.PLANE_XZ]: [0, 0],
-        [OrthoViews.TDView]: [this.curWidth + 20, 0],
+        [OrthoViews.TDView]: [this.curWidth + Constants.VIEWPORT_GAP_WIDTH, 0],
       };
       renderer.autoClear = true;
 
@@ -178,7 +184,7 @@ class PlaneView {
     const viewportWidth = Math.round(
       Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH,
     );
-    const canvasWidth = viewportWidth * 2 + 20;
+    const canvasWidth = viewportWidth * 2 + Constants.VIEWPORT_GAP_WIDTH;
     this.curWidth = viewportWidth;
 
     SceneController.renderer.setSize(canvasWidth, canvasWidth);

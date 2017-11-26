@@ -3,11 +3,11 @@
  * @flow
  */
 import _ from "lodash";
+import { Modal } from "antd";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import messages from "messages";
 import Store from "oxalis/store";
-import Modal from "oxalis/view/modal";
 import { put, take, takeEvery, select, race } from "redux-saga/effects";
 import {
   deleteBranchPointAction,
@@ -63,16 +63,14 @@ function* watchBranchPointDeletion(): Generator<*, *, *> {
         if (lastActionCreatedNode === true) {
           yield put(deleteBranchPointAction());
         } else {
-          Modal.show(messages["tracing.branchpoint_jump_twice"], "Jump again?", [
-            {
-              id: "jump-button",
-              label: "Jump again",
-              callback: () => {
-                Store.dispatch(deleteBranchPointAction());
-              },
+          Modal.confirm({
+            title: "Jump again?",
+            content: messages["tracing.branchpoint_jump_twice"],
+            okText: "Jump again!",
+            onOk: () => {
+              Store.dispatch(deleteBranchPointAction());
             },
-            { id: "cancel-button", label: "Cancel" },
-          ]);
+          });
         }
         lastActionCreatedNode = false;
       } else {

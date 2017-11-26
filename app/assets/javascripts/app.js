@@ -2,17 +2,13 @@
  * app.js
  * @flow
  */
-
-import Marionette from "backbone.marionette";
-import type Router from "router";
-import typeof OxalisController from "oxalis/controller";
+import type OxalisController from "oxalis/controller";
 import window from "libs/window";
-import type { APIUserType } from "admin/api_flow_types";
+import BackboneEvents from "backbone-events-standalone";
 
-class OxalisApplication extends Marionette.Application {
-  router: Router;
+class OxalisApplication {
   oxalis: ?OxalisController;
-  currentUser: APIUserType;
+  vent = Object.assign({}, BackboneEvents);
 }
 
 // eslint-disable-next-line no-unused-vars

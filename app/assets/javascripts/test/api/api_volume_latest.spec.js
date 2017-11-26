@@ -1,6 +1,5 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
-import "backbone.marionette";
 import sinon from "sinon";
 import mockRequire from "mock-require";
 import { VolumeToolEnum } from "oxalis/constants";

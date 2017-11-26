@@ -37,14 +37,14 @@ import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
-import type { Vector3, Point3, ControlModeType } from "oxalis/constants";
+import type { Vector3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
-import { doWithToken } from "admin/admin_rest_api";
+import { doWithToken, getAnnotationInformation } from "admin/admin_rest_api";
 import messages from "messages";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
@@ -78,9 +78,10 @@ type ServerSkeletonTracingTreeType = {
 type ServerTracingBaseType = {
   id: string,
   boundingBox?: BoundingBoxObjectType,
+  userBoundingBox?: BoundingBoxObjectType,
   createdTimestamp: number,
-  editPosition: Point3,
-  editRotation: Point3,
+  editPosition: Vector3,
+  editRotation: Vector3,
   error?: string,
   version: number,
   zoomLevel: number,
@@ -93,6 +94,7 @@ export type ServerSkeletonTracingType = ServerTracingBaseType & {
 
 export type ServerVolumeTracingType = ServerTracingBaseType & {
   activeSegmentId?: number,
+  boundingBox: BoundingBoxObjectType,
   elementClass: ElementClassType,
   fallbackLayer?: string,
   largestSegmentId: number,
@@ -122,22 +124,11 @@ export class OxalisModel {
     let annotation: ?APIAnnotationType;
     let datasetName;
     if (controlMode === ControlModeEnum.TRACE) {
-      // Include /readOnly part whenever it is in the pathname
-      const isReadOnly = window.location.pathname.endsWith("/readOnly");
-      const readOnlyPart = isReadOnly ? "readOnly/" : "";
-      const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
-      annotation = await Request.receiveJSON(infoUrl);
+      annotation = await getAnnotationInformation(annotationId, tracingType);
       datasetName = annotation.dataSetName;
 
-      let error;
-      if (annotation.error) {
-        ({ error } = annotation);
-      } else if (!annotation.restrictions.allowAccess) {
-        error = messages["tracing.no_access"];
-      }
-
-      if (error) {
-        Toast.error(error);
+      if (!annotation.restrictions.allowAccess) {
+        Toast.error(messages["tracing.no_access"]);
         throw this.HANDLED_ERROR;
       }
 
@@ -161,8 +152,9 @@ export class OxalisModel {
       const nonNullAnnotation = annotation;
       tracing = await doWithToken(token =>
         Request.receiveJSON(
-          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content
-            .typ}/${nonNullAnnotation.content.id}?token=${token}`,
+          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content.typ}/${
+            nonNullAnnotation.content.id
+          }?token=${token}`,
         ),
       );
       tracing.id = annotation.content.id;
@@ -331,9 +323,13 @@ export class OxalisModel {
   getLayerInfos(tracing: ?ServerTracingType) {
     // Overwrite or extend layers with volumeTracingLayer
     let layers = _.clone(Store.getState().dataset.dataLayers);
+    // $FlowFixMe TODO Why does Flow complain about this check
     if (tracing == null || tracing.elementClass == null) {
       return layers;
     }
+
+    // Flow doesn't check that as the tracing has the elementClass property it has to be a volumeTracing
+    tracing = ((tracing: any): ServerVolumeTracingType);
 
     // This code will only be executed for volume tracings as only those have a dataLayer.
     // The tracing always contains the layer information for the user segmentation.

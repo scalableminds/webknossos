@@ -21,7 +21,7 @@ import {
   mergeTrees,
   toggleAllTreesReducer,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
-import { convertBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
   getSkeletonTracing,
   findTreeByNodeId,
@@ -29,7 +29,13 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
-import type { OxalisState, SkeletonTracingType, NodeType, BranchPointType } from "oxalis/store";
+import type {
+  OxalisState,
+  SkeletonTracingType,
+  NodeType,
+  BranchPointType,
+  TreeType,
+} from "oxalis/store";
 import type { ServerNodeType, ServerBranchPointType } from "oxalis/model";
 import type { ActionType } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
@@ -65,17 +71,17 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       );
 
       const trees = _.keyBy(
-        action.tracing.trees.map(tree =>
-          update(tree, {
-            nodes: { $set: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id") },
-            color: {
-              $set: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
-            },
-            branchPoints: { $set: _.map(tree.branchPoints, serverBranchPointToBranchPoint) },
-            isVisible: { $set: true },
-            timestamp: { $set: tree.createdTimestamp },
-          }),
-        ),
+        action.tracing.trees.map((tree): TreeType => ({
+          comments: tree.comments,
+          edges: tree.edges,
+          name: tree.name,
+          treeId: tree.treeId,
+          nodes: _.keyBy(_.map(tree.nodes, serverNodeToNode), "id"),
+          color: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
+          branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
+          isVisible: true,
+          timestamp: tree.createdTimestamp,
+        })),
         "treeId",
       );
 
@@ -97,7 +103,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               `This tracing was initialized with an active node ID, which does not
               belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
               the last tree instead.`,
-              null,
+              undefined,
               true,
             );
             activeNodeId = null;
@@ -106,8 +112,13 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         })
         .orElse(() => {
           // use last tree for active tree
-          const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), tree => tree.id));
-          return lastTree.map(t => t.treeId);
+          const lastTree = Maybe.fromNullable(_.maxBy(_.values(trees), tree => tree.treeId));
+          return lastTree.map(t => {
+            // use last node for active node
+            const lastNode = _.maxBy(_.values(t.nodes), node => node.id);
+            activeNodeId = lastNode != null ? lastNode.id : null;
+            return t.treeId;
+          });
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
 
@@ -123,7 +134,8 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,
         version: action.tracing.version,
-        boundingBox: convertBoundingBox(action.tracing.boundingBox),
+        boundingBox: convertServerBoundingBoxToFrontend(action.tracing.boundingBox),
+        userBoundingBox: convertServerBoundingBoxToFrontend(action.tracing.userBoundingBox),
         isPublic: action.annotation.isPublic,
         tags: action.annotation.tags,
         description: action.annotation.description,
@@ -381,6 +393,22 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               update(state, { tracing: { trees: { [treeId]: { $set: tree } } } }),
             )
             .getOrElse(state);
+        }
+
+        case "SHUFFLE_ALL_TREE_COLORS": {
+          const newColors = ColorGenerator.getNRandomColors(_.size(skeletonTracing.trees));
+          return update(state, {
+            tracing: {
+              trees: {
+                $apply: oldTrees =>
+                  _.mapValues(oldTrees, tree =>
+                    update(tree, {
+                      color: { $set: newColors.shift() },
+                    }),
+                  ),
+              },
+            },
+          });
         }
 
         case "CREATE_COMMENT": {

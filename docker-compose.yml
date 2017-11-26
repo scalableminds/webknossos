@@ -13,7 +13,7 @@ services:
 
   dev:
     extends:
-      service: sbt
+      service: base
     ports:
       - "9000:9000"
     links:
@@ -36,45 +36,51 @@ services:
       - MONGO_DB=webknossos-dev
     stdin_open: true
 
-  sbt:
+  base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
     ports:
       - "5005:5005"
+    environment:
+      - USER_NAME=${USER_NAME:-sbt-user}
+      - USER_UID
+      - USER_GID
+      - TZ
+    working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
-      - ".:/project"
-      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
+      - ".:/home/${USER_NAME:-sbt-user}/webknossos"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/${USER_NAME:-sbt-user}/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/${USER_NAME:-sbt-user}/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/${USER_NAME:-sbt-user}/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
 
   frontend-dependencies:
     extends:
-      service: sbt
-    command: bash -c "yarn install"
+      service: base
+    command: yarn install
 
   frontend-linting:
     extends:
-      service: sbt
-    command: bash -c "yarn run lint && yarn run am-i-pretty"
+      service: base
+    command: yarn run lint && yarn run am-i-pretty
 
   frontend-flow:
     extends:
-      service: sbt
-    command: bash -c "yarn run flow"
+      service: base
+    command: yarn run flow
 
   frontend-tests:
     extends:
-      service: sbt
-    command: bash -c "yarn test-verbose"
+      service: base
+    command: yarn test-verbose
 
   frontend-docs:
     extends:
-      service: sbt
-    command: bash -c "yarn run docs"
+      service: base
+    command: yarn run docs
 
   e2e-tests:
     extends:
-      service: sbt
+      service: base
     command: >
       bash -c
       "sbt -v -d \"test-only * --

@@ -15,11 +15,10 @@
 <PROJECT_ROOT>/node_modules/flow-coverage-report/
 <PROJECT_ROOT>/node_modules/draft-js/
 <PROJECT_ROOT>/node_modules/documentation/
+<PROJECT_ROOT>/node_modules/immutable/
 
 [options]
 module.ignore_non_literal_requires=true
-module.name_mapper='jasny-bootstrap' -> '<PROJECT_ROOT>/node_modules/jasny-bootstrap/dist/js/jasny-bootstrap.js'
-module.name_mapper='backbone\.marionette' -> '<PROJECT_ROOT>/node_modules/backbone\.marionette/lib/backbone.marionette.js'
 module.name_mapper='three' -> '<PROJECT_ROOT>/node_modules/three.js/build/three.js'
 
 module.name_mapper='^\([^.].*\)' -> '<PROJECT_ROOT>/app/assets/javascripts/\1'
@@ -27,3 +26,7 @@ module.name_mapper.extension='less' -> '<PROJECT_ROOT>/app/assets/javascripts/fl
 
 [libs]
 app/assets/javascripts/flow/custom-libdefs
+
+[lints]
+all=error
+sketchy-null=warn

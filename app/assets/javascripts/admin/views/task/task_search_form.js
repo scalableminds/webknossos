@@ -11,6 +11,7 @@ type Props = {
   form: Object,
   onChange: Function,
   initialFieldValues?: Object,
+  isLoading: boolean,
 };
 
 type State = {
@@ -165,7 +166,12 @@ class TaskSearchForm extends React.Component<Props, State> {
         </Row>
         <Row>
           <Col span={24} style={{ textAlign: "right" }}>
-            <Button type="primary" htmlType="submit">
+            <Button
+              type="primary"
+              htmlType="submit"
+              disabled={this.props.isLoading}
+              loading={this.props.isLoading}
+            >
               Search
             </Button>
             <Button style={{ marginLeft: 8 }} onClick={this.handleReset}>
@@ -177,10 +183,5 @@ class TaskSearchForm extends React.Component<Props, State> {
     );
   }
 }
-
-// const mapPropsToFields = props => {
-//   debugger;
-//   return props.initialFieldValues;
-// };
 
 export default Form.create()(TaskSearchForm);

@@ -4,13 +4,13 @@
  */
 
 import _ from "lodash";
-import $ from "jquery";
 import type Layer from "oxalis/model/binary/layers/layer";
 import AsyncTaskQueue from "libs/async_task_queue";
 import type { Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { DataBucket } from "oxalis/model/binary/bucket";
 import Toast from "libs/toast";
+import { document } from "libs/window";
 
 const BATCH_SIZE = 32;
 const DEBOUNCE_TIME = 1000;
@@ -32,12 +32,12 @@ class PushQueue {
 
     const autoSaveFailureMessage = "Auto-Save failed!";
     this.taskQueue.on("failure", () => {
-      $("body").addClass("save-error");
+      document.body.classList.add("save-error");
       Toast.error(autoSaveFailureMessage, true);
     });
     this.taskQueue.on("success", () => {
-      $("body").removeClass("save-error");
-      Toast.delete("danger", autoSaveFailureMessage);
+      document.body.classList.remove("save-error");
+      Toast.close(autoSaveFailureMessage);
     });
   }
 

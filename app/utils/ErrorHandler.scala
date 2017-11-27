@@ -27,6 +27,6 @@ class ErrorHandler @Inject() (
     with SecuredErrorHandler with I18nSupport {
 
   override def onNotAuthenticated(request: RequestHeader, messages: Messages): Option[Future[Result]] = {
-    Some(Future.successful(Redirect(Authentication.getLoginRoute())))
+    Some(Future.successful(Unauthorized(Messages("user.notAuthorised"))))
   }
 }

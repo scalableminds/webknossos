@@ -1,5 +1,6 @@
 package controllers
 
+import java.net.URLEncoder
 import java.util.UUID
 import javax.inject.Inject
 
@@ -12,6 +13,8 @@ import models.team.Role
 import models.user.UserService.{Mailer => _, _}
 import models.user.{UserService, UserToken2, UserTokenService}
 import net.liftweb.common.{Empty, Failure, Full}
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import oxalis.security._
@@ -102,6 +105,9 @@ class Authentication @Inject() (
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+
+  private lazy val ssoKey =
+    configuration.getString("application.authentication.ssoKey").getOrElse("")
 
   val automaticUserActivation: Boolean =
     configuration.getBoolean("application.authentication.enableDevAutoVerify").getOrElse(false)
@@ -285,6 +291,35 @@ class Authentication @Inject() (
   def logout = SecuredAction.async { implicit request =>
     env.authenticatorService.discard(request.authenticator, Ok)
   }
+
+  def singleSignOn(sso: String, sig: String) = SecuredAction.async { implicit request =>
+    if(ssoKey == "")
+      logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
+
+    // Check if the request we recieved was signed using our private sso-key
+    if (HmacUtils.hmacSha256Hex(ssoKey, sso) == sig) {
+      val payload = new String(Base64.decodeBase64(sso))
+      val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
+      for {
+        nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
+        returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
+      } yield {
+        val returnPayload =
+          s"nonce=$nonce&" +
+            s"email=${URLEncoder.encode(request.identity.email, "UTF-8")}&" +
+            s"external_id=${URLEncoder.encode(request.identity.id, "UTF-8")}&" +
+            s"username=${URLEncoder.encode(request.identity.abreviatedName, "UTF-8")}&" +
+            s"name=${URLEncoder.encode(request.identity.name, "UTF-8")}"
+        val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
+        val returnSignature = HmacUtils.hmacSha256Hex(ssoKey, encodedReturnPayload)
+        val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
+        Redirect(returnUrl + "?" + query)
+      }
+    } else {
+      Fox.successful(BadRequest("Invalid signature"))
+    }
+  }
+
 }
 
 object Authentication {

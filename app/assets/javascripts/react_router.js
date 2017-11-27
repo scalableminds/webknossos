@@ -38,6 +38,7 @@ import TaskCreateView from "admin/views/task/task_create_view";
 import TaskCreateFormView from "admin/views/task/task_create_form_view";
 import TaskTypeCreateView from "admin/views/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/views/scripts/script_create_view";
+import TimeLineView from "admin/views/time/time_line_view";
 
 import type { OxalisState } from "oxalis/store";
 import type { APITracingType, APIUserType } from "admin/api_flow_types";
@@ -296,6 +297,11 @@ class ReactRouter extends React.Component<Props> {
                   isAuthenticated={isAuthenticated}
                   path="/help/keyboardshortcuts"
                   component={KeyboardShortcutView}
+                />
+                <SecuredRoute
+                  isAuthenticated={isAuthenticated}
+                  path="/timetracking"
+                  component={TimeLineView}
                 />
                 <Route path="/login" render={() => <LoginView layout="horizontal" />} />
                 <Route path="/register" component={RegistrationView} />

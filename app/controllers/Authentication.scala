@@ -126,13 +126,14 @@ class Authentication @Inject() (
     signUpForm.bindFromRequest.fold(
       bogusForm =>  Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
-        val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
+        val email = signUpData.email.toLowerCase
+        val loginInfo = LoginInfo(CredentialsProvider.ID, email)
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            Fox.successful(BadRequest(Messages("error.userExists", signUpData.email)))
+            Fox.successful(BadRequest(Messages("error.userExists", email)))
           case Empty =>
             for {
-              user <- UserService.insert(signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+              user <- UserService.insert(signUpData.team, email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                                          loginInfo, passwordHasher.hash(signUpData.password))
               brainDBResult <- BrainTracing.register(user).toFox
             } yield {
@@ -150,7 +151,8 @@ class Authentication @Inject() (
     signInForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signInData => {
-        val credentials = Credentials(signInData.email, signInData.password)
+        val email = signInData.email.toLowerCase
+        val credentials = Credentials(email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
           UserService.retrieve(loginInfo).flatMap {
             case None =>
@@ -199,12 +201,12 @@ class Authentication @Inject() (
   def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-      email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
+      email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => for {
-          token <- userTokenService.save(UserToken2.create(user._id, email, isLogin = false))
+          token <- userTokenService.save(UserToken2.create(user._id, email.toLowerCase, isLogin = false))
         } yield {
-          Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email, token.id.toString))
+          Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token.id.toString))
           Ok
         }
       }
@@ -293,7 +295,7 @@ object Authentication {
   }
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
-    val loginInfo = LoginInfo(CredentialsProvider.ID, email)
+    val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)
     for {
       authenticator <- WebknossosSilhouette.environment.authenticatorService.create(loginInfo)
       value <- WebknossosSilhouette.environment.authenticatorService.init(authenticator)

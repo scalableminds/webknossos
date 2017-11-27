@@ -11,7 +11,7 @@ import type { APIUserType } from "admin/api_flow_types";
 const FormItem = Form.Item;
 const Option = Select.Option;
 
-type state = {
+type State = {
   userEmail: ?string,
   users: Array<APIUserType>,
   date: Date,
@@ -36,11 +36,19 @@ class TimeLineView extends React.PureComponent<*, State> {
   }
 
   async fetchTimeTrackingData() {
-    const url = `/api/time/userlist/${this.state.date.getFullYear()}/${this.state.date.getMonth() +
-      1}?email=${this.state.userEmail}`;
-    const timeTrackingData = await Request.receiveJSON(url);
+    if (this.state.userEmail != null) {
+      const month = this.state.date.getMonth() + 1;
+      const year = this.state.date.getFullYear();
+      const startDay = this.state.date.getDate();
+      const endDay = startDay + 1;
 
-    this.setState({ timeTrackingData: timeTrackingData[0].timelogs });
+      const url = `/api/time/userlist/${year}/${month}?email=${this.state.userEmail}&startDay=${
+        startDay
+      }&endDay=${endDay}`;
+      const timeTrackingData = await Request.receiveJSON(url);
+
+      this.setState({ timeTrackingData: timeTrackingData[0].timelogs });
+    }
   }
 
   handleUserChange = async (userEmail: string) => {
@@ -105,22 +113,22 @@ class TimeLineView extends React.PureComponent<*, State> {
           </Row>
         </Card>
 
-        {this.state.timeTrackingData.length > 0 ? (
-          <div style={{ marginTop: 20 }}>
+        <div style={{ marginTop: 20 }}>
+          {this.state.timeTrackingData.length > 0 ? (
             <Chart
               chartType="Timeline"
               columns={columns}
               rows={rows}
               graph_id="TimeLineGraph"
-              chartPackages={["corechart", "timeline"]}
+              chartPackages={["timeline"]}
               width="100%"
               height="400px"
               legend_toggle
             />
-          </div>
-        ) : (
-          <div>No TimeTracking Data for the selected Day</div>
-        )}
+          ) : (
+            <div>No TimeTracking Data for the selected User or Day</div>
+          )}
+        </div>
       </div>
     );
   }

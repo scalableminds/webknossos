@@ -61,8 +61,6 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     val sDay = startDay.getOrElse(startDate.getActualMinimum(Calendar.DAY_OF_MONTH))
     val eDay = endDay.getOrElse(endDate.getActualMaximum(Calendar.DAY_OF_MONTH))
 
-    val test2 = startDate.getActualMinimum(Calendar.DAY_OF_MONTH)
-
     startDate.set(fullYear, month - 1, sDay, 0, 0, 0)
     startDate.set(Calendar.MILLISECOND, 0)
     endDate.set(fullYear, month - 1, eDay, 23, 59, 59)

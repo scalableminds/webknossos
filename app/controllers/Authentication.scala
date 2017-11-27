@@ -152,7 +152,8 @@ class Authentication @Inject()(
     signUpForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
-        val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
+        val email = signUpData.email.toLowerCase
+        val loginInfo = LoginInfo(CredentialsProvider.ID, email)
         var errors = List[String]()
         val firstName = normalizeName(signUpData.firstName).getOrElse { errors ::= Messages("user.firstName.invalid"); "" }
         val lastName = normalizeName(signUpData.lastName).getOrElse { errors ::= Messages("user.lastName.invalid"); "" }
@@ -165,7 +166,7 @@ class Authentication @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                user <- UserService.insert(signUpData.team, signUpData.email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+                user <- UserService.insert(signUpData.team, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
                 brainDBResult <- BrainTracing.register(user).toFox
               } yield {
@@ -184,7 +185,8 @@ class Authentication @Inject()(
     signInForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signInData => {
-        val credentials = Credentials(signInData.email, signInData.password)
+        val email = signInData.email.toLowerCase
+        val credentials = Credentials(email, signInData.password)
         credentialsProvider.authenticate(credentials).flatMap { loginInfo =>
           UserService.retrieve(loginInfo).flatMap {
             case None =>
@@ -233,12 +235,12 @@ class Authentication @Inject()(
   def handleStartResetPassword = Action.async { implicit request =>
     emailForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
-      email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email)).flatMap {
+      email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => for {
-          token <- userTokenService.save(UserToken2.create(user._id, email, isLogin = false))
+          token <- userTokenService.save(UserToken2.create(user._id, email.toLowerCase, isLogin = false))
         } yield {
-          Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email, token.id.toString))
+          Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token.id.toString))
           Ok
         }
       }
@@ -356,7 +358,7 @@ object Authentication {
   }
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
-    val loginInfo = LoginInfo(CredentialsProvider.ID, email)
+    val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)
     for {
       authenticator <- WebknossosSilhouette.environment.authenticatorService.create(loginInfo)
       value <- WebknossosSilhouette.environment.authenticatorService.init(authenticator)

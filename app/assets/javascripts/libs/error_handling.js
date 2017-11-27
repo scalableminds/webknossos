@@ -3,7 +3,6 @@
  * @flow
  */
 import _ from "lodash";
-import $ from "jquery";
 import AirbrakeClient from "airbrake-js";
 import Toast from "libs/toast";
 import type { APIUserType } from "admin/api_flow_types";
@@ -30,7 +29,8 @@ class ErrorHandling {
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    this.commitHash = $("meta[name='commit-hash']").attr("content");
+    const metaElement = document.querySelector("meta[name='commit-hash']");
+    this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
 
     this.initializeAirbrake();
   }
@@ -38,10 +38,12 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
-    const $scriptTag = $("[data-airbrake-project-id]");
-    const projectId = $scriptTag.data("airbrake-project-id");
-    const projectKey = $scriptTag.data("airbrake-project-key");
-    const envName = $scriptTag.data("airbrake-environment-name");
+    const scriptTag = document.querySelector("[data-airbrake-project-id]");
+    if (!scriptTag) throw new Error("failed to initialize airbrake");
+
+    const projectId = scriptTag.dataset.airbrakeProjectId;
+    const projectKey = scriptTag.dataset.airbrakeProjectKey;
+    const envName = scriptTag.dataset.airbrakeEnvironmentName;
 
     this.airbrake = new AirbrakeClient({
       projectId,

@@ -4,7 +4,7 @@
  */
 
 import * as React from "react";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import { InputKeyboard, InputMouse, InputKeyboardNoLoop } from "libs/input";
 import type { ModifierKeys } from "libs/input";
@@ -75,7 +75,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   stopListening: Function;
 
   componentDidMount() {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
     this.input = {};
     this.storePropertyUnsubscribers = [];
     this.start();

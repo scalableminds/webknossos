@@ -1,5 +1,6 @@
 package controllers
 
+import java.net.URLEncoder
 import java.util.UUID
 import javax.inject.Inject
 
@@ -12,6 +13,8 @@ import models.team.Role
 import models.user.UserService.{Mailer => _, _}
 import models.user.{UserService, UserToken2, UserTokenService}
 import net.liftweb.common.{Empty, Failure, Full}
+import org.apache.commons.codec.binary.Base64
+import org.apache.commons.codec.digest.HmacUtils
 import oxalis.mail.DefaultMails
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import oxalis.security._
@@ -24,7 +27,7 @@ import play.api.data.Forms._
 import play.api.data.validation.Constraints._
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
-import play.api.libs.json.Json
+import play.api.libs.json._
 import play.api.mvc.{Action, _}
 import play.twirl.api.Html
 
@@ -33,14 +36,17 @@ import scala.concurrent.Future
 
 
 object AuthForms {
-  // Sign up
-  case class SignUpData(team:String, email:String, firstName:String, lastName:String, password:String)
 
-  def signUpForm(implicit messages:Messages) = Form(mapping(
+  val passwordMinLength = 6
+
+  // Sign up
+  case class SignUpData(team: String, email: String, firstName: String, lastName: String, password: String)
+
+  def signUpForm(implicit messages: Messages) = Form(mapping(
     "team" -> text,
     "email" -> email,
     "password" -> tuple(
-      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
       "password2" -> nonEmptyText
     ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
     "firstName" -> nonEmptyText,
@@ -51,7 +57,8 @@ object AuthForms {
   )
 
   // Sign in
-  case class SignInData(email:String, password:String)
+  case class SignInData(email: String, password: String)
+
   val signInForm = Form(mapping(
     "email" -> email,
     "password" -> nonEmptyText
@@ -63,10 +70,11 @@ object AuthForms {
 
   // Password recovery
   case class ResetPasswordData(token: String, password1: String, password2: String)
-  def resetPasswordForm(implicit messages:Messages) = Form(mapping(
+
+  def resetPasswordForm(implicit messages: Messages) = Form(mapping(
     "token" -> text,
     "password" -> tuple(
-      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
       "password2" -> nonEmptyText
     ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
   )((token, password) => ResetPasswordData(token, password._1, password._2))
@@ -74,10 +82,11 @@ object AuthForms {
   )
 
   case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
-  def changePasswordForm(implicit messages:Messages) = Form(mapping(
+
+  def changePasswordForm(implicit messages: Messages) = Form(mapping(
     "oldPassword" -> nonEmptyText,
     "password" -> tuple(
-      "password1" -> nonEmptyText.verifying(minLength(6)),
+      "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
       "password2" -> nonEmptyText
     ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
   )((oldPassword, password) => ChangePasswordData(oldPassword, password._1, password._2))
@@ -86,12 +95,12 @@ object AuthForms {
 }
 
 
-class Authentication @Inject() (
-                       val messagesApi: MessagesApi,
-                       credentialsProvider: CredentialsProvider,
-                       userTokenService: UserTokenService,
-                       passwordHasher: PasswordHasher,
-                       configuration: Configuration)
+class Authentication @Inject()(
+                                val messagesApi: MessagesApi,
+                                credentialsProvider: CredentialsProvider,
+                                userTokenService: UserTokenService,
+                                passwordHasher: PasswordHasher,
+                                configuration: Configuration)
   extends Controller
     with ProvidesUnauthorizedSessionData
     with FoxImplicits {
@@ -102,6 +111,9 @@ class Authentication @Inject() (
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
+
+  private lazy val ssoKey =
+    configuration.getString("application.authentication.ssoKey").getOrElse("")
 
   val automaticUserActivation: Boolean =
     configuration.getBoolean("application.authentication.enableDevAutoVerify").getOrElse(false)
@@ -122,23 +134,45 @@ class Authentication @Inject() (
     Ok(views.html.main()(Html("")))
   }
 
+  def normalizeName(name: String): Option[String] = {
+    val replacementMap = Map("ü" -> "ue", "Ü" -> "Ue", "ö" -> "oe", "Ö" -> "Oe", "ä" -> "ae", "Ä" -> "Ae", "ß" -> "ss",
+      "é" -> "e", "è" -> "e", "ê" -> "e", "È" -> "E", "É" -> "E", "Ê" -> "E",
+      "Ç" -> "C", "ç" -> "c", "ñ" -> "n", "Ñ" -> "N", "ë" -> "e", "Ë" -> "E", "ï" -> "i", "Ï" -> "I",
+      "å" -> "a", "Å" -> "A", "œ" -> "oe", "Œ" -> "Oe", "æ" -> "ae", "Æ" -> "Ae",
+      "þ" -> "th", "Þ" -> "Th", "ø" -> "oe", "Ø" -> "Oe", "í" -> "i", "ì" -> "i")
+
+    val finalName = name.map(c => replacementMap.getOrElse(c.toString, c.toString)).mkString.replaceAll("[^A-Za-z0-9_\\-\\s]", "")
+    if (finalName.isEmpty)
+      None
+    else
+      Some(finalName)
+  }
+
   def handleRegistration = Action.async { implicit request =>
     signUpForm.bindFromRequest.fold(
-      bogusForm =>  Future.successful(BadRequest(bogusForm.toString)),
+      bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       signUpData => {
         val loginInfo = LoginInfo(CredentialsProvider.ID, signUpData.email)
+        var errors = List[String]()
+        val firstName = normalizeName(signUpData.firstName).getOrElse { errors ::= Messages("user.firstName.invalid"); "" }
+        val lastName = normalizeName(signUpData.lastName).getOrElse { errors ::= Messages("user.lastName.invalid"); "" }
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
-            Fox.successful(BadRequest(Messages("error.userExists", signUpData.email)))
+            errors ::= Messages("user.email.alreadyInUse")
+            Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
           case Empty =>
-            for {
-              user <- UserService.insert(signUpData.team, signUpData.email, signUpData.firstName, signUpData.lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
-                                         loginInfo, passwordHasher.hash(signUpData.password))
-              brainDBResult <- BrainTracing.register(user).toFox
-            } yield {
-              Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
-              Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
-              Ok
+            if (!errors.isEmpty) {
+              Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
+            } else {
+              for {
+                user <- UserService.insert(signUpData.team, signUpData.email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+                  loginInfo, passwordHasher.hash(signUpData.password))
+                brainDBResult <- BrainTracing.register(user).toFox
+              } yield {
+                Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
+                Mailer ! Send(DefaultMails.registerAdminNotifyerMail(user, user.email, brainDBResult))
+                Ok
+              }
             }
           case f: Failure => Fox.failure(f.msg)
         }
@@ -155,7 +189,7 @@ class Authentication @Inject() (
           UserService.retrieve(loginInfo).flatMap {
             case None =>
               Future.successful(BadRequest(Messages("error.noUser")))
-            case Some(user) if(user.isActive) => for {
+            case Some(user) if (user.isActive) => for {
               authenticator <- env.authenticatorService.create(loginInfo)
               value <- env.authenticatorService.init(authenticator)
               result <- env.authenticatorService.embed(value, Ok)
@@ -163,7 +197,7 @@ class Authentication @Inject() (
             case Some(user) => Future.successful(BadRequest(Messages("user.deactivated")))
           }
         }.recover {
-          case e:ProviderException => BadRequest(Messages("error.invalidCredentials"))
+          case e: ProviderException => BadRequest(Messages("error.invalidCredentials"))
         }
       }
     )
@@ -180,7 +214,7 @@ class Authentication @Inject() (
   }
 
   def switchTo(email: String) = SecuredAction.async { implicit request =>
-    if(request.identity._isSuperUser.openOr(false)){
+    if (request.identity._isSuperUser.openOr(false)) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- findOneByEmail(email) ?~> Messages("user.notFound")
@@ -189,7 +223,7 @@ class Authentication @Inject() (
         value <- env.authenticatorService.init(authenticator)
         result <- env.authenticatorService.embed(value, Ok) //to login the new user
       } yield result
-    }else{
+    } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
       Future.successful(BadRequest(Messages("user.notAuthorised")))
     }
@@ -251,7 +285,7 @@ class Authentication @Inject() (
               }
           }
         }.recover {
-          case e:ProviderException => BadRequest(Messages("error.invalidCredentials"))
+          case e: ProviderException => BadRequest(Messages("error.invalidCredentials"))
         }
       }
     )
@@ -285,6 +319,35 @@ class Authentication @Inject() (
   def logout = SecuredAction.async { implicit request =>
     env.authenticatorService.discard(request.authenticator, Ok)
   }
+
+  def singleSignOn(sso: String, sig: String) = SecuredAction.async { implicit request =>
+    if(ssoKey == "")
+      logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
+
+    // Check if the request we recieved was signed using our private sso-key
+    if (HmacUtils.hmacSha256Hex(ssoKey, sso) == sig) {
+      val payload = new String(Base64.decodeBase64(sso))
+      val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
+      for {
+        nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
+        returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
+      } yield {
+        val returnPayload =
+          s"nonce=$nonce&" +
+            s"email=${URLEncoder.encode(request.identity.email, "UTF-8")}&" +
+            s"external_id=${URLEncoder.encode(request.identity.id, "UTF-8")}&" +
+            s"username=${URLEncoder.encode(request.identity.abreviatedName, "UTF-8")}&" +
+            s"name=${URLEncoder.encode(request.identity.name, "UTF-8")}"
+        val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
+        val returnSignature = HmacUtils.hmacSha256Hex(ssoKey, encodedReturnPayload)
+        val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
+        Redirect(returnUrl + "?" + query)
+      }
+    } else {
+      Fox.successful(BadRequest("Invalid signature"))
+    }
+  }
+
 }
 
 object Authentication {

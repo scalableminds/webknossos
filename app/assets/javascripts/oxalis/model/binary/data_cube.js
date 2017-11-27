@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
@@ -80,7 +80,7 @@ class DataCube {
     this.upperBoundary = upperBoundary;
     this.ZOOM_STEP_COUNT = zoomStepCount;
     this.BIT_DEPTH = bitDepth;
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     this.LOOKUP_DEPTH_UP = this.ZOOM_STEP_COUNT - 1;
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;

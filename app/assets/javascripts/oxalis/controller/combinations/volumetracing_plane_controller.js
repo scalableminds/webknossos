@@ -2,7 +2,6 @@
  * volumetracing_plane_controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
 import _ from "lodash";
 import Store from "oxalis/store";
@@ -103,7 +102,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         }
       },
 
-      leftMouseDown: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
+      leftMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
         if (!event.shiftKey) {
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
@@ -132,7 +131,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         this.volumeTracingController.restoreAfterDeleteMode();
       },
 
-      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
+      leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
         if (event.shiftKey) {
           const cellId = Model.getSegmentationBinary().cube.getDataValue(
             this.calculateGlobalPos(pos),

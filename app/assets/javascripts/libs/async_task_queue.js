@@ -8,7 +8,7 @@
 
 import Utils from "libs/utils";
 import Deferred from "libs/deferred";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 
 type AsyncTask = () => Promise<void>;
@@ -36,7 +36,7 @@ class AsyncTaskQueue {
   trigger: Function;
 
   constructor(maxRetry: number = 3, retryTimeMs: number = 1000, failureEventThreshold: number = 3) {
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
     this.maxRetry = maxRetry;
     this.retryTimeMs = retryTimeMs;
     this.failureEventThreshold = failureEventThreshold;

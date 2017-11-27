@@ -19,6 +19,7 @@ import type {
   APIDatasetType,
   APITimeIntervalType,
   APIUserLoggedTimeType,
+  APITimeTrackingType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
@@ -441,4 +442,24 @@ export async function getDatastores(): Promise<Array<APIDatastoreType>> {
 // ### Active User
 export async function getActiveUser(options: Object = {}) {
   return Request.receiveJSON("/api/user", options);
+}
+
+// ### TimeTracking
+export async function getTimeTrackingForUserByDay(
+  userEmail: string,
+  day: Date,
+): Promise<Array<APITimeTrackingType>> {
+  const month = day.getMonth() + 1;
+  const year = day.getFullYear();
+  const startDay = day.getDate();
+  const endDay = startDay + 1;
+
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/userlist/${year}/${month}?email=${userEmail}&startDay=${startDay}&endDay=${endDay}`,
+  );
+
+  const timelogs = timeTrackingData[0].timelogs;
+  assertResponseLimit(timelogs);
+
+  return timelogs;
 }

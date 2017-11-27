@@ -3,10 +3,9 @@ import * as React from "react";
 import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import moment from "moment";
 import { Chart } from "react-google-charts";
-import Request from "libs/request";
-import { getUsers } from "admin/admin_rest_api";
+import { getUsers, getTimeTrackingForUserByDay } from "admin/admin_rest_api";
 
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, APITimeTrackingType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -15,7 +14,7 @@ type State = {
   userEmail: ?string,
   users: Array<APIUserType>,
   date: Date,
-  timeTrackingData: Array<string | number>,
+  timeTrackingData: Array<APITimeTrackingType>,
 };
 
 class TimeLineView extends React.PureComponent<*, State> {
@@ -37,17 +36,11 @@ class TimeLineView extends React.PureComponent<*, State> {
 
   async fetchTimeTrackingData() {
     if (this.state.userEmail != null) {
-      const month = this.state.date.getMonth() + 1;
-      const year = this.state.date.getFullYear();
-      const startDay = this.state.date.getDate();
-      const endDay = startDay + 1;
-
-      const url = `/api/time/userlist/${year}/${month}?email=${this.state.userEmail}&startDay=${
-        startDay
-      }&endDay=${endDay}`;
-      const timeTrackingData = await Request.receiveJSON(url);
-
-      this.setState({ timeTrackingData: timeTrackingData[0].timelogs });
+      const timeTrackingData = await getTimeTrackingForUserByDay(
+        this.state.userEmail,
+        this.state.date,
+      );
+      this.setState({ timeTrackingData });
     }
   }
 
@@ -68,7 +61,7 @@ class TimeLineView extends React.PureComponent<*, State> {
       { id: "End", type: "date" },
     ];
 
-    const rows = this.state.timeTrackingData.map(datum => [
+    const rows = this.state.timeTrackingData.map((datum: APITimeTrackingType) => [
       datum.annotation,
       new Date(datum.timestamp),
       new Date(datum.timestamp + moment.duration(datum.time).asMilliseconds()),
@@ -104,6 +97,7 @@ class TimeLineView extends React.PureComponent<*, State> {
             <Col span={12}>
               <FormItem {...formItemLayout} label="Date">
                 <DatePicker
+                  allowClear={false}
                   style={{ width: "100%" }}
                   value={moment(this.state.date)}
                   onChange={this.handleDateChange}

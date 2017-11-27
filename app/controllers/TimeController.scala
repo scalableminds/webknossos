@@ -16,6 +16,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.AnyContent
 import play.api.i18n.{Messages, MessagesApi}
+import java.text.SimpleDateFormat
 
 import scala.concurrent.Future
 import scala.util.Failure
@@ -25,22 +26,22 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   // REST API
 
   //all users with working hours > 0
-  def getWorkingHoursOfAllUsers(year: Int, month: Int) = SecuredAction.async { implicit request =>
+  def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       users <- UserDAO.findAll
       filteredUsers = users.filter(user => request.identity.isAdminOf(user))
-      js <- loggedTimeForUserList(filteredUsers, year, month)
+      js <- loggedTimeForUserList(filteredUsers, year, month, startDay, endDay)
     } yield {
       Ok(js)
     }
   }
 
   //list user with working hours > 0 (only one user is also possible)
-  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int) = SecuredAction.async { implicit request =>
+  def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       users <- Fox.combined(userString.split(",").toList.map(email => UserService.findOneByEmail(email))) ?~> Messages("user.email.invalid")
       _ <- users.forall(u => request.identity.isAdminOf(u)) ?~> Messages("user.notAuthorised")
-      js <- loggedTimeForUserList(users, year, month)
+      js <- loggedTimeForUserList(users, year, month, startDay, endDay)
     } yield {
       Ok(js)
     }
@@ -48,12 +49,23 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   //helper methods
 
-  def loggedTimeForUserList(users: List[User], year: Int, month: Int) (implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
+  def loggedTimeForUserList(users: List[User], year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) (implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
-    startDate.set(year, month - 1, startDate.getActualMinimum(Calendar.DAY_OF_MONTH), 0, 0, 0)
+
+    val input = new SimpleDateFormat("yy")
+    val output = new SimpleDateFormat("yyyy")
+    var date = input.parse(year.toString)
+    val fullYear = output.format(date).toInt
+
+    val sDay = startDay.getOrElse(startDate.getActualMinimum(Calendar.DAY_OF_MONTH))
+    val eDay = endDay.getOrElse(endDate.getActualMaximum(Calendar.DAY_OF_MONTH))
+
+    val test2 = startDate.getActualMinimum(Calendar.DAY_OF_MONTH)
+
+    startDate.set(fullYear, month - 1, sDay, 0, 0, 0)
     startDate.set(Calendar.MILLISECOND, 0)
-    endDate.set(year, month - 1, endDate.getActualMaximum(Calendar.DAY_OF_MONTH), 23, 59, 59)
+    endDate.set(fullYear, month - 1, eDay, 23, 59, 59)
     endDate.set(Calendar.MILLISECOND, 999)
 
     val futureJsObjects = users.map(user => getUserHours(user, startDate, endDate))

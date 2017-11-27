@@ -91,7 +91,7 @@ class TimeLineView extends React.PureComponent<*, State> {
                       {`${user.lastName}, ${user.firstName} ${user.email}`}
                     </Option>
                   ))}
-                </Select>,
+                </Select>
               </FormItem>
             </Col>
             <Col span={12}>

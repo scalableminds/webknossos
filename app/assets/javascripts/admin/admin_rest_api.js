@@ -1,4 +1,5 @@
 // @flow
+import moment from "moment";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
@@ -449,10 +450,11 @@ export async function getTimeTrackingForUserByDay(
   userEmail: string,
   day: Date,
 ): Promise<Array<APITimeTrackingType>> {
-  const month = day.getMonth() + 1;
-  const year = day.getFullYear();
-  const startDay = day.getDate();
-  const endDay = startDay + 1;
+  const momentDate = moment(day);
+  const month = momentDate.format("M");
+  const year = momentDate.format("YYYY");
+  const startDay = momentDate.format("D");
+  const endDay = parseInt(startDay) + 1;
 
   const timeTrackingData = await Request.receiveJSON(
     `/api/time/userlist/${year}/${month}?email=${userEmail}&startDay=${startDay}&endDay=${endDay}`,

@@ -196,5 +196,5 @@ GET           /assets/*file                                                     
 
 #Timelogging
 GET           /timetracking                                                     controllers.Authentication.empty
-GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int)
-GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int)
+GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
+GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])

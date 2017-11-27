@@ -227,12 +227,12 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                       <Icon type="schedule" />Tasks
                     </Link>
                     <br />
-                    <Link
-                      to={`/annotations/CompoundProject/${project.id}/download`}
+                    <a
+                      href={`/annotations/CompoundProject/${project.id}/download`}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />Download
-                    </Link>
+                    </a>
                     <br />
 
                     {project.owner.email === this.props.activeUser.email ? (

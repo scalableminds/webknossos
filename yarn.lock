@@ -4833,6 +4833,10 @@ loader-utils@^1.0.2, loader-utils@^1.1.0:
     emojis-list "^2.0.0"
     json5 "^0.5.0"
 
+loadjs@^3.3.1:
+  version "3.5.1"
+  resolved "https://registry.yarnpkg.com/loadjs/-/loadjs-3.5.1.tgz#01ce858f841d4f424a018214642e03f2f9a9dfde"
+
 locate-path@^2.0.0:
   version "2.0.0"
   resolved "https://registry.yarnpkg.com/locate-path/-/locate-path-2.0.0.tgz#2b568b265eec944c6d9c0de9c3dbbbca0354cd8e"
@@ -6687,7 +6691,7 @@ react-dom@15.5.4:
     object-assign "^4.1.0"
     prop-types "~15.5.7"
 
-react-dom@^15.5.4:
+react-dom@^15.3.2, react-dom@^15.5.4:
   version "15.6.2"
   resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-15.6.2.tgz#41cfadf693b757faf2708443a1d1fd5a02bef730"
   dependencies:
@@ -6695,6 +6699,16 @@ react-dom@^15.5.4:
     loose-envify "^1.1.0"
     object-assign "^4.1.0"
     prop-types "^15.5.10"
+
+react-google-charts@^1.5.5:
+  version "1.5.5"
+  resolved "https://registry.yarnpkg.com/react-google-charts/-/react-google-charts-1.5.5.tgz#ffeaeca752a820a05029bd6a23516be2432d7df5"
+  dependencies:
+    debug "^2.2.0"
+    loadjs "^3.3.1"
+    prop-types "^15.5.8"
+    react "^15.3.2"
+    react-dom "^15.3.2"
 
 react-lazy-load@^3.0.12:
   version "3.0.12"
@@ -6773,7 +6787,7 @@ react@15.5.4:
     object-assign "^4.1.0"
     prop-types "^15.5.7"
 
-react@^15.5.4:
+react@^15.3.2, react@^15.5.4:
   version "15.6.2"
   resolved "https://registry.yarnpkg.com/react/-/react-15.6.2.tgz#dba0434ab439cfe82f108f0f511663908179aa72"
   dependencies:

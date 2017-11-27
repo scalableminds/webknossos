@@ -225,4 +225,15 @@ export type DatasetConfigType = {
   +zipFile: File,
 };
 
+export type APITimeTrackingType = {
+  time: string,
+  timestamp: number,
+  annotation: string,
+  _id: string,
+  task_id: string,
+  project_name: string,
+  tasktype_id: string,
+  tasktype_summary: string,
+};
+
 export default {};

@@ -235,7 +235,6 @@ class ReactRouter extends React.Component<Props> {
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
                   path="/datasets/:datasetName/import"
-                  component={DatasetImportView}
                   render={({ match }: ReactRouterArgumentsType) => (
                     <DatasetImportView
                       isEditingMode={false}

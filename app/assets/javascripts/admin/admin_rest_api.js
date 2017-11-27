@@ -1,5 +1,4 @@
 // @flow
-import moment from "moment";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
@@ -448,12 +447,11 @@ export async function getActiveUser(options: Object = {}) {
 // ### TimeTracking
 export async function getTimeTrackingForUserByDay(
   userEmail: string,
-  day: Date,
+  day: moment$Moment,
 ): Promise<Array<APITimeTrackingType>> {
-  const momentDate = moment(day);
-  const month = momentDate.format("M");
-  const year = momentDate.format("YYYY");
-  const startDay = momentDate.format("D");
+  const month = day.format("M");
+  const year = day.format("YYYY");
+  const startDay = day.format("D");
   const endDay = parseInt(startDay) + 1;
 
   const timeTrackingData = await Request.receiveJSON(

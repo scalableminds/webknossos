@@ -1,8 +1,9 @@
 // @flow
 import * as React from "react";
-import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import moment from "moment";
+import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import { Chart } from "react-google-charts";
+import FormatUtils from "libs/format_utils";
 import { getUsers, getTimeTrackingForUserByDay } from "admin/admin_rest_api";
 
 import type { APIUserType, APITimeTrackingType } from "admin/api_flow_types";
@@ -11,17 +12,17 @@ const FormItem = Form.Item;
 const Option = Select.Option;
 
 type State = {
-  userEmail: ?string,
+  user: ?APIUserType,
   users: Array<APIUserType>,
-  date: Date,
+  date: moment$Moment,
   timeTrackingData: Array<APITimeTrackingType>,
 };
 
 class TimeLineView extends React.PureComponent<*, State> {
   state = {
-    userEmail: null,
+    user: null,
     users: [],
-    date: new Date(),
+    date: moment(),
     timeTrackingData: [],
   };
 
@@ -35,22 +36,23 @@ class TimeLineView extends React.PureComponent<*, State> {
   }
 
   async fetchTimeTrackingData() {
-    if (this.state.userEmail != null) {
+    if (this.state.user != null) {
       const timeTrackingData = await getTimeTrackingForUserByDay(
-        this.state.userEmail,
+        this.state.user.email,
         this.state.date,
       );
       this.setState({ timeTrackingData });
     }
   }
 
-  handleUserChange = async (userEmail: string) => {
-    await this.setState({ userEmail });
+  handleUserChange = async (userId: number) => {
+    const user = this.state.users.find(u => u.id === userId);
+    await this.setState({ user });
     this.fetchTimeTrackingData();
   };
 
   handleDateChange = async (date: moment$Moment) => {
-    await this.setState({ date: date.toDate() });
+    await this.setState({ date });
     this.fetchTimeTrackingData();
   };
 
@@ -61,11 +63,21 @@ class TimeLineView extends React.PureComponent<*, State> {
       { id: "End", type: "date" },
     ];
 
-    const rows = this.state.timeTrackingData.map((datum: APITimeTrackingType) => [
-      datum.annotation,
-      new Date(datum.timestamp),
-      new Date(datum.timestamp + moment.duration(datum.time).asMilliseconds()),
-    ]);
+    let timeTrackingSum = 0;
+    const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
+    const timeTrackingRowTotal = []; // show all times spans in a single row
+
+    this.state.timeTrackingData.forEach((datum: APITimeTrackingType) => {
+      const duration = moment.duration(datum.time).asMilliseconds();
+      const start = new Date(datum.timestamp);
+      const end = new Date(datum.timestamp + duration);
+
+      timeTrackingSum += duration;
+      timeTrackingRowGrouped.push([datum.annotation, start, end]);
+      timeTrackingRowTotal.push(["Sum Tracking Time", start, end]);
+    });
+
+    const rows = timeTrackingRowTotal.concat(timeTrackingRowGrouped);
 
     const formItemLayout = {
       labelCol: { span: 5 },
@@ -75,6 +87,16 @@ class TimeLineView extends React.PureComponent<*, State> {
     return (
       <div className="container wide">
         <Card title={<h4>Time Tracking </h4>}>
+          <p>
+            The time tracking information display here only includes data acquired when working on
+            &quot;tasks&quot;.
+          </p>
+          {this.state.user != null ? (
+            <p>{`${this.state.user.firstName} worked ${FormatUtils.formatSeconds(
+              timeTrackingSum / 1000,
+            )} on ${this.state.date.format("dddd")}, ${this.state.date.format("DD.MM.YYYY")}.`}</p>
+          ) : null}
+          <hr />
           <Row gutter={40}>
             <Col span={12}>
               <FormItem {...formItemLayout} label="User">
@@ -87,7 +109,7 @@ class TimeLineView extends React.PureComponent<*, State> {
                   onChange={this.handleUserChange}
                 >
                   {this.state.users.filter(u => u.isActive).map((user: APIUserType) => (
-                    <Option key={user.id} value={user.email}>
+                    <Option key={user.id} value={user.id}>
                       {`${user.lastName}, ${user.firstName} ${user.email}`}
                     </Option>
                   ))}
@@ -116,11 +138,13 @@ class TimeLineView extends React.PureComponent<*, State> {
               graph_id="TimeLineGraph"
               chartPackages={["timeline"]}
               width="100%"
-              height="400px"
+              height="600px"
               legend_toggle
             />
           ) : (
-            <div>No TimeTracking Data for the selected User or Day</div>
+            <div style={{ textAlign: "center" }}>
+              No Time Tracking Data for the Selected User or Day.
+            </div>
           )}
         </div>
       </div>

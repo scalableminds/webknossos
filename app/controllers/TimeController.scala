@@ -1,25 +1,20 @@
 package controllers
 
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import javax.inject.Inject
 
-import com.scalableminds.util.mail.Send
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO}
-import models.project.{Project, ProjectDAO}
+import models.annotation.AnnotationDAO
+import models.project.ProjectDAO
 import models.task.{Task, TaskService, TaskTypeDAO}
 import models.user.time.{TimeSpan, TimeSpanDAO}
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
-import play.api.i18n.MessagesApi
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
+import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.AnyContent
-import play.api.i18n.{Messages, MessagesApi}
-import java.text.SimpleDateFormat
-
-import scala.concurrent.Future
-import scala.util.Failure
 
 class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
@@ -87,12 +82,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     sDate.setTimeInMillis(startDate)
     eDate.setTimeInMillis(endDate)
 
-    for {
-      js <- getUserHours(user, sDate, eDate)
-    } yield {
-      js
-    }
-    // Json.toJson(js))
+    getUserHours(user, sDate, eDate)
   }
 
   def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {

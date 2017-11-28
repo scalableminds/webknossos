@@ -1,7 +1,10 @@
 // @flow
 import React from "react";
 import { Form, Input, Button, Col, Row, Spin } from "antd";
+import Clipboard from "clipboard-js";
+import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
 import Request from "libs/request";
+import Toast from "libs/toast";
 
 const FormItem = Form.Item;
 
@@ -21,7 +24,7 @@ class AuthTokenView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    const { token } = await Request.receiveJSON("/api/auth/token");
+    const token = await getAuthToken();
 
     this.setState({
       isLoading: false,
@@ -29,19 +32,20 @@ class AuthTokenView extends React.PureComponent<{}, State> {
     });
   }
 
-  async revokeToken(): Promise<void> {
+  handleRevokeToken = async (): Promise<void> => {
     this.setState({ isLoading: true });
     try {
-      await Request.triggerRequest("/api/auth/token", { method: "DELETE" });
-      const { token } = await Request.receiveJSON("/api/auth/token");
+      await revokeAuthToken();
+      const token = await getAuthToken();
       this.setState({ currentToken: token });
     } finally {
       this.setState({ isLoading: false });
     }
-  }
+  };
 
-  handleRevokeToken = () => {
-    this.revokeToken();
+  copyTokenToClipboard = async () => {
+    await Clipboard.copy(this.state.currentToken);
+    Toast.success("Token copied to clipboard");
   };
 
   render() {
@@ -52,7 +56,10 @@ class AuthTokenView extends React.PureComponent<{}, State> {
             <h3>Auth Token</h3>
             <Form>
               <FormItem>
-                <Input value={this.state.currentToken} readOnly />
+                <Input.Group compact size="large">
+                  <Input value={this.state.currentToken} style={{ width: "90%" }} readOnly />
+                  <Button onClick={this.copyTokenToClipboard} size="large" icon="copy" />
+                </Input.Group>
               </FormItem>
               <FormItem>
                 <Button icon="swap" onClick={this.handleRevokeToken}>

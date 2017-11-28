@@ -101,6 +101,15 @@ export async function updateUser(newUser: APIUserType): Promise<APIUserType> {
   });
 }
 
+export async function getAuthToken(): Promise<string> {
+  const { token } = await Request.receiveJSON("/api/auth/token");
+  return token;
+}
+
+export async function revokeAuthToken(): Promise<void> {
+  await Request.receiveJSON("/api/auth/token", { method: "DELETE" });
+}
+
 export async function getLoggedTimes(userID: ?string): Promise<Array<APITimeIntervalType>> {
   const url = userID != null ? `/api/users/${userID}/loggedTime` : "/api/user/loggedTime";
 

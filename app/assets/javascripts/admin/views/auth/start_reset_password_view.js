@@ -20,7 +20,7 @@ class StartResetPasswordView extends React.PureComponent<Props> {
 
     this.props.form.validateFields((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/reset", { data: formValues }).then(() => {
+        Request.sendJSONReceiveJSON("/api/startResetPassword", { data: formValues }).then(() => {
           Toast.success(messages["auth.reset_email_notification"]);
           this.props.history.push("/finishreset");
         });

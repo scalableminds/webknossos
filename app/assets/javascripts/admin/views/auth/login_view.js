@@ -23,7 +23,7 @@ class LoginView extends React.PureComponent<Props> {
 
     this.props.form.validateFields(async (err: ?Object, formValues: Object) => {
       if (!err) {
-        await Request.sendJSONReceiveJSON("/api/login", { data: formValues });
+        await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
         const user = await getActiveUser();
         Store.dispatch(setActiveUserAction(user));
         this.props.history.push("/dashboard");

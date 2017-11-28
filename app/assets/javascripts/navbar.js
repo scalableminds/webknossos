@@ -140,7 +140,7 @@ class Navbar extends React.PureComponent<Props> {
                     <Link
                       to="/"
                       onClick={() => {
-                        Request.receiveJSON("/api/logout").then(() =>
+                        Request.receiveJSON("/api/auth/logout").then(() =>
                           setTimeout(() => window.location.reload(), 500),
                         );
                       }}

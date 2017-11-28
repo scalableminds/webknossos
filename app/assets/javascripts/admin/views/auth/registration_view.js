@@ -43,7 +43,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/register", { data: formValues }).then(() => {
+        Request.sendJSONReceiveJSON("/api/auth/register", { data: formValues }).then(() => {
           Toast.success(messages["auth.account_created"]);
           this.props.history.push("/login");
         });

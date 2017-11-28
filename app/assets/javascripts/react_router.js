@@ -21,6 +21,7 @@ import RegistrationView from "admin/views/auth/registration_view";
 import StartResetPasswordView from "admin/views/auth/start_reset_password_view";
 import FinishResetPasswordView from "admin/views/auth/finish_reset_password_view";
 import ChangePasswordView from "admin/views/auth/change_password_view";
+import UserTokenView from "admin/views/auth/user_token_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 
 // admin
@@ -308,6 +309,7 @@ class ReactRouter extends React.Component<Props> {
                 <Route path="/reset" component={StartResetPasswordView} />
                 <Route path="/finishreset" component={FinishResetPasswordView} />
                 <Route path="/changepassword" component={ChangePasswordView} />
+                <Route path="/token" component={UserTokenView} />
                 <Route path="/spotlight" component={SpotlightView} />
                 <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               </Switch>

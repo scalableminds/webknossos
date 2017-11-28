@@ -61,11 +61,18 @@ class TimeLineView extends React.PureComponent<*, State> {
       { id: "End", type: "date" },
     ];
 
-    const rows = this.state.timeTrackingData.map((datum: APITimeTrackingType) => [
-      datum.annotation,
-      new Date(datum.timestamp),
-      new Date(datum.timestamp + moment.duration(datum.time).asMilliseconds()),
-    ]);
+    const rows: Array<[string, Date, Date]> = [
+      ...this.state.timeTrackingData.map((datum: APITimeTrackingType) => [
+        "All",
+        new Date(datum.timestamp),
+        new Date(datum.timestamp + moment.duration(datum.time).asMilliseconds()),
+      ]),
+      ...this.state.timeTrackingData.map((datum: APITimeTrackingType) => [
+        datum.annotation,
+        new Date(datum.timestamp),
+        new Date(datum.timestamp + moment.duration(datum.time).asMilliseconds()),
+      ]),
+    ];
 
     const formItemLayout = {
       labelCol: { span: 5 },

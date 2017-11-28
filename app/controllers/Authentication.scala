@@ -296,10 +296,10 @@ class Authentication @Inject()(
   def getToken = SecuredAction.async { implicit request =>
     val futureOfFuture: Future[Future[Result]] = env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
       oldTokenOpt => {
-        if (oldTokenOpt.isDefined) Future.successful(Ok(oldTokenOpt.get.id))
+        if (oldTokenOpt.isDefined) Future.successful(Ok(Json.obj("token" -> oldTokenOpt.get.id)))
         else {
           env.combinedAuthenticatorService.createToken(request.identity.loginInfo).map {
-            newToken => Ok(newToken.id)
+            newToken => Ok(Json.obj("token" -> newToken.id))
           }
         }
       }
@@ -314,7 +314,7 @@ class Authentication @Inject()(
     for {
       oldTokenOpt <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
       oldToken <- oldTokenOpt ?~> Messages("auth.noToken")
-      result <- env.combinedAuthenticatorService.discard(oldToken, Ok(Messages("auth.tokenDeleted")))
+      result <- env.combinedAuthenticatorService.discard(oldToken, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
     } yield {
       result
     }

@@ -45,28 +45,22 @@ class AuthTokenView extends React.PureComponent<{}, State> {
   };
 
   render() {
-    if (this.state.isLoading) {
-      return (
-        <div className="text-center">
-          <Spin size="large" />
-        </div>
-      );
-    }
-
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
-          <h3>Auth Token</h3>
-          <Form>
-            <FormItem>
-              <Input value={this.state.currentToken} readOnly />
-            </FormItem>
-            <FormItem>
-              <Button icon="swap" onClick={this.handleRevokeToken}>
-                Revoke Token
-              </Button>
-            </FormItem>
-          </Form>
+          <Spin size="large" spinning={this.state.isLoading}>
+            <h3>Auth Token</h3>
+            <Form>
+              <FormItem>
+                <Input value={this.state.currentToken} readOnly />
+              </FormItem>
+              <FormItem>
+                <Button icon="swap" onClick={this.handleRevokeToken}>
+                  Revoke Token
+                </Button>
+              </FormItem>
+            </Form>
+          </Spin>
         </Col>
       </Row>
     );

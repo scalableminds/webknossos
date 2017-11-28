@@ -4,6 +4,8 @@ import * as React from "react";
 import moment from "moment";
 import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import { Chart } from "react-google-charts";
+import Toast from "libs/toast";
+import messages from "messages";
 import FormatUtils from "libs/format_utils";
 import { getUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 
@@ -100,6 +102,12 @@ class TimeLineView extends React.PureComponent<*, State> {
   };
 
   handleDateChange = async (dates: DateRangeType) => {
+    // to ease the load on the server restrict date range selection to a month
+    if (dates[0].diff(dates[1], "days") > 31) {
+      Toast.error(messages["timetracking.date_range_too_long"]);
+      return;
+    }
+
     // for same day use start and end timestamps
     const dateRange = dates[0].isSame(dates[1], "day")
       ? [dates[0].startOf("day"), dates[1].endOf("day")]

@@ -284,7 +284,7 @@ class ReactRouter extends React.Component<Props> {
                   isAuthenticated={isAuthenticated}
                   path="/scripts/:scriptId/edit"
                   render={({ match }: ReactRouterArgumentsType) => (
-                    <ScriptCreateView id={match.params.scriptId} />
+                    <ScriptCreateView scriptId={match.params.scriptId} />
                   )}
                 />
                 <SecuredRoute

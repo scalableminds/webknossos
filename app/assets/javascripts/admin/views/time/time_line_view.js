@@ -27,8 +27,7 @@ type State = {
   user: ?APIUserType,
   users: Array<APIUserType>,
   dateRange: DateRangeType,
-  timeTrackingDataMonth: Array<APITimeTrackingType>,
-  timeTrackingDataDay: Array<APITimeTrackingType>,
+  timeTrackingData: Array<APITimeTrackingType>,
   stats: TimeTrackingStatsType,
 };
 
@@ -37,8 +36,7 @@ class TimeLineView extends React.PureComponent<*, State> {
     user: null,
     users: [],
     dateRange: [moment().startOf("day"), moment().endOf("day")],
-    timeTrackingDataMonth: [],
-    timeTrackingDataDay: [],
+    timeTrackingData: [],
     stats: {
       totalTime: 0,
       numberTasks: 0,
@@ -57,34 +55,25 @@ class TimeLineView extends React.PureComponent<*, State> {
 
   async fetchTimeTrackingData() {
     if (this.state.user != null) {
-      const timeTrackingDataMonth = await getTimeTrackingForUser(
+      const timeTrackingData = await getTimeTrackingForUser(
         this.state.user.id,
         this.state.dateRange[0],
         this.state.dateRange[1],
       );
 
-      const timeTrackingDataDay = timeTrackingDataMonth.filter(t =>
-        moment(t.timestamp).isBetween(...this.state.dateRange),
-      );
-
-      this.setState(
-        {
-          timeTrackingDataMonth,
-          timeTrackingDataDay,
-        },
-        this.calculateStats,
-      );
+      this.setState({ timeTrackingData }, this.calculateStats);
     }
   }
 
   calculateStats() {
-    const totalTime = _.sumBy(this.state.timeTrackingDataDay, timeSpan =>
+    const totalTime = _.sumBy(this.state.timeTrackingData, timeSpan =>
       moment.duration(timeSpan.time).asMilliseconds(),
     );
-    const numberTasks = _.uniq(this.state.timeTrackingDataDay.map(timeSpan => timeSpan.annotation))
+    const numberTasks = _.uniq(this.state.timeTrackingData.map(timeSpan => timeSpan.annotation))
       .length;
 
-    const averageTimePerTask = totalTime / numberTasks;
+    // prevent devision by zero
+    const averageTimePerTask = numberTasks === 0 ? 0 : totalTime / numberTasks;
 
     this.setState({
       stats: {
@@ -127,7 +116,7 @@ class TimeLineView extends React.PureComponent<*, State> {
     const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
     const timeTrackingRowTotal = []; // show all times spans in a single row
 
-    this.state.timeTrackingDataDay.forEach((datum: APITimeTrackingType) => {
+    this.state.timeTrackingData.forEach((datum: APITimeTrackingType) => {
       const duration = moment.duration(datum.time).asMilliseconds();
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
@@ -201,7 +190,7 @@ class TimeLineView extends React.PureComponent<*, State> {
         </Card>
 
         <div style={{ marginTop: 20 }}>
-          {this.state.timeTrackingDataDay.length > 0 ? (
+          {this.state.timeTrackingData.length > 0 ? (
             <Chart
               chartType="Timeline"
               columns={columns}

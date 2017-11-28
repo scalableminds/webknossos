@@ -75,10 +75,10 @@ class LoginView extends React.PureComponent<Props> {
               </Button>
             </FormItem>
             <FormItem>
-              <Link to="/register" style={linkStyle}>
+              <Link to="/auth/register" style={linkStyle}>
                 Register Now!
               </Link>
-              <Link to="/reset" style={Object.assign({}, linkStyle, resetStyle)}>
+              <Link to="/auth/resetPassword" style={Object.assign({}, linkStyle, resetStyle)}>
                 Forgot Password
               </Link>
             </FormItem>

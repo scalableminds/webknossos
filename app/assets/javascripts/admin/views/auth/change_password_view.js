@@ -30,7 +30,7 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/auth/changePassword", { data: formValues }).then(() => {
           Toast.success(messages["auth.reset_pw_confirmation"]);
-          this.props.history.push("/login");
+          this.props.history.push("/auth/login");
         });
       }
     });

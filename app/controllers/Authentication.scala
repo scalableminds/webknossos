@@ -354,7 +354,7 @@ class Authentication @Inject()(
 
 object Authentication {
   def getLoginRoute() = {
-    "/login"
+    "/auth/login"
   }
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {

@@ -6,6 +6,7 @@ import { Link, withRouter } from "react-router-dom";
 import { Layout, Menu, Icon } from "antd";
 import { connect } from "react-redux";
 import Request from "libs/request";
+import Utils from "libs/utils";
 import LoginView from "admin/views/auth/login_view";
 
 import type { OxalisState } from "oxalis/store";
@@ -25,6 +26,12 @@ type Props = {
 } & StateProps;
 
 class Navbar extends React.PureComponent<Props> {
+  handleLogout = async () => {
+    await Request.receiveJSON("/api/auth/logout");
+    await Utils.sleep(500);
+    window.location.reload();
+  };
+
   render() {
     const navbarStyle = {
       padding: 0,
@@ -134,20 +141,13 @@ class Navbar extends React.PureComponent<Props> {
                   }
                 >
                   <Menu.Item key="resetpassword">
-                    <Link to="/changepassword">Change Password</Link>
+                    <Link to="/auth/changePassword">Change Password</Link>
                   </Menu.Item>
                   <Menu.Item key="token">
-                    <Link to="/token">Token</Link>
+                    <Link to="/auth/token">Auth Token</Link>
                   </Menu.Item>
                   <Menu.Item key="logout">
-                    <Link
-                      to="/"
-                      onClick={() => {
-                        Request.receiveJSON("/api/auth/logout").then(() =>
-                          setTimeout(() => window.location.reload(), 500),
-                        );
-                      }}
-                    >
+                    <Link to="/" onClick={this.handleLogout}>
                       Logout
                     </Link>
                   </Menu.Item>

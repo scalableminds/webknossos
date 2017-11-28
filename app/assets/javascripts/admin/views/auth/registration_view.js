@@ -45,7 +45,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/auth/register", { data: formValues }).then(() => {
           Toast.success(messages["auth.account_created"]);
-          this.props.history.push("/login");
+          this.props.history.push("/auth/login");
         });
       }
     });
@@ -231,7 +231,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Register
               </Button>
-              <Link to="/login">Already have an account? Login instead.</Link>
+              <Link to="/auth/login">Already have an account? Login instead.</Link>
             </FormItem>
           </Form>
         </Col>

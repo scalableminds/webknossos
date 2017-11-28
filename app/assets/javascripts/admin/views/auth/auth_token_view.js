@@ -10,7 +10,7 @@ type State = {
   currentToken: string,
 };
 
-class UserTokenView extends React.PureComponent<{}, State> {
+class AuthTokenView extends React.PureComponent<{}, State> {
   state = {
     isLoading: true,
     currentToken: "",
@@ -56,7 +56,7 @@ class UserTokenView extends React.PureComponent<{}, State> {
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
-          <h3>Token</h3>
+          <h3>Auth Token</h3>
           <Form>
             <FormItem>
               <Input value={this.state.currentToken} readOnly />
@@ -73,4 +73,4 @@ class UserTokenView extends React.PureComponent<{}, State> {
   }
 }
 
-export default UserTokenView;
+export default AuthTokenView;

@@ -22,7 +22,7 @@ class StartResetPasswordView extends React.PureComponent<Props> {
       if (!err) {
         Request.sendJSONReceiveJSON("/api/startResetPassword", { data: formValues }).then(() => {
           Toast.success(messages["auth.reset_email_notification"]);
-          this.props.history.push("/finishreset");
+          this.props.history.push("/auth/finishResetPassword");
         });
       }
     });

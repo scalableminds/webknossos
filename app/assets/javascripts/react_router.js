@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable react/no-unused-prop-types */
 import React from "react";
-import { Router, Route, Switch } from "react-router-dom";
+import { Router, Route, Switch, Redirect } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
 import { connect } from "react-redux";
 import { Layout, LocaleProvider } from "antd";
@@ -21,7 +21,7 @@ import RegistrationView from "admin/views/auth/registration_view";
 import StartResetPasswordView from "admin/views/auth/start_reset_password_view";
 import FinishResetPasswordView from "admin/views/auth/finish_reset_password_view";
 import ChangePasswordView from "admin/views/auth/change_password_view";
-import UserTokenView from "admin/views/auth/user_token_view";
+import AuthTokenView from "admin/views/auth/auth_token_view";
 import DatasetImportView from "dashboard/views/dataset/dataset_import_view";
 
 // admin
@@ -304,12 +304,22 @@ class ReactRouter extends React.Component<Props> {
                   path="/timetracking"
                   component={TimeLineView}
                 />
-                <Route path="/login" render={() => <LoginView layout="horizontal" />} />
-                <Route path="/register" component={RegistrationView} />
-                <Route path="/reset" component={StartResetPasswordView} />
-                <Route path="/finishreset" component={FinishResetPasswordView} />
-                <Route path="/changepassword" component={ChangePasswordView} />
-                <Route path="/token" component={UserTokenView} />
+                <SecuredRoute
+                  isAuthenticated={isAuthenticated}
+                  path="/auth/token"
+                  component={AuthTokenView}
+                />
+                <SecuredRoute
+                  isAuthenticated={isAuthenticated}
+                  path="/auth/changePassword"
+                  component={ChangePasswordView}
+                />
+                <Route path="/login" render={() => <Redirect to="/auth/login" />} />
+                <Route path="/register" render={() => <Redirect to="/auth/register" />} />
+                <Route path="/auth/login" render={() => <LoginView layout="horizontal" />} />
+                <Route path="/auth/register" component={RegistrationView} />
+                <Route path="/auth/resetPassword" component={StartResetPasswordView} />
+                <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
                 <Route path="/spotlight" component={SpotlightView} />
                 <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               </Switch>

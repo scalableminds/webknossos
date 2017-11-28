@@ -461,3 +461,19 @@ export async function getTimeTrackingForUserByMonth(
 
   return timelogs;
 }
+
+export async function getTimeTrackingForUser(
+  userId: string,
+  startDate: moment$Moment,
+  endDate: moment$Moment,
+): Promise<Array<APITimeTrackingType>> {
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/user/${userId}?startDate=${startDate.unix() * 1000}&endDate=${endDate.unix() *
+      1000}`,
+  );
+
+  const timelogs = timeTrackingData.timelogs;
+  assertResponseLimit(timelogs);
+
+  return timelogs;
+}

@@ -5,25 +5,26 @@ import moment from "moment";
 import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import { Chart } from "react-google-charts";
 import FormatUtils from "libs/format_utils";
-import { getUsers, getTimeTrackingForUserByMonth } from "admin/admin_rest_api";
+import { getUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 
 import type { APIUserType, APITimeTrackingType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
+const RangePicker = DatePicker.RangePicker;
 
 type TimeTrackingStatsType = {
-  totalMonthlyTime: number,
-  totalDailyTime: number,
-  numberMonthlyTasks: number,
-  numberDailyTasks: number,
+  totalTime: number,
+  numberTasks: number,
   averageTimePerTask: number,
 };
+
+type DateRangeType = [moment$Moment, moment$Moment];
 
 type State = {
   user: ?APIUserType,
   users: Array<APIUserType>,
-  date: moment$Moment,
+  dateRange: DateRangeType,
   timeTrackingDataMonth: Array<APITimeTrackingType>,
   timeTrackingDataDay: Array<APITimeTrackingType>,
   stats: TimeTrackingStatsType,
@@ -33,14 +34,12 @@ class TimeLineView extends React.PureComponent<*, State> {
   state = {
     user: null,
     users: [],
-    date: moment(),
+    dateRange: [moment().startOf("day"), moment().endOf("day")],
     timeTrackingDataMonth: [],
     timeTrackingDataDay: [],
     stats: {
-      totalMonthlyTime: 0,
-      totalDailyTime: 0,
-      numberMonthlyTasks: 0,
-      numberDailyTasks: 0,
+      totalTime: 0,
+      numberTasks: 0,
       averageTimePerTask: 0,
     },
   };
@@ -56,13 +55,14 @@ class TimeLineView extends React.PureComponent<*, State> {
 
   async fetchTimeTrackingData() {
     if (this.state.user != null) {
-      const timeTrackingDataMonth = await getTimeTrackingForUserByMonth(
-        this.state.user.email,
-        this.state.date,
+      const timeTrackingDataMonth = await getTimeTrackingForUser(
+        this.state.user.id,
+        this.state.dateRange[0],
+        this.state.dateRange[1],
       );
 
       const timeTrackingDataDay = timeTrackingDataMonth.filter(t =>
-        moment(t.timestamp).isSame(this.state.date, "day"),
+        moment(t.timestamp).isBetween(...this.state.dateRange),
       );
 
       this.setState(
@@ -76,27 +76,18 @@ class TimeLineView extends React.PureComponent<*, State> {
   }
 
   calculateStats() {
-    const totalMonthlyTime = _.sumBy(this.state.timeTrackingDataMonth, timeSpan =>
+    const totalTime = _.sumBy(this.state.timeTrackingDataDay, timeSpan =>
       moment.duration(timeSpan.time).asMilliseconds(),
     );
-    const numberMonthlyTasks = _.uniq(
-      this.state.timeTrackingDataMonth.map(timeSpan => timeSpan.annotation),
-    ).length;
-    const averageTimePerTask = totalMonthlyTime / numberMonthlyTasks;
+    const numberTasks = _.uniq(this.state.timeTrackingDataDay.map(timeSpan => timeSpan.annotation))
+      .length;
 
-    const totalDailyTime = _.sumBy(this.state.timeTrackingDataDay, timeSpan =>
-      moment.duration(timeSpan.time).asMilliseconds(),
-    );
-    const numberDailyTasks = _.uniq(
-      this.state.timeTrackingDataDay.map(timeSpan => timeSpan.annotation),
-    ).length;
+    const averageTimePerTask = totalTime / numberTasks;
 
     this.setState({
       stats: {
-        totalMonthlyTime,
-        numberMonthlyTasks,
-        totalDailyTime,
-        numberDailyTasks,
+        totalTime,
+        numberTasks,
         averageTimePerTask,
       },
     });
@@ -108,8 +99,13 @@ class TimeLineView extends React.PureComponent<*, State> {
     this.fetchTimeTrackingData();
   };
 
-  handleDateChange = async (date: moment$Moment) => {
-    await this.setState({ date });
+  handleDateChange = async (dates: DateRangeType) => {
+    // for same day use start and end timestamps
+    const dateRange = dates[0].isSame(dates[1], "day")
+      ? [dates[0].startOf("day"), dates[1].endOf("day")]
+      : dates;
+
+    await this.setState({ dateRange });
     this.fetchTimeTrackingData();
   };
 
@@ -170,10 +166,10 @@ class TimeLineView extends React.PureComponent<*, State> {
                 </Select>
               </FormItem>
               <FormItem {...formItemLayout} label="Date">
-                <DatePicker
+                <RangePicker
                   allowClear={false}
                   style={{ width: "100%" }}
-                  value={moment(this.state.date)}
+                  value={this.state.dateRange}
                   onChange={this.handleDateChange}
                 />
               </FormItem>
@@ -182,19 +178,15 @@ class TimeLineView extends React.PureComponent<*, State> {
               <Row>
                 <Col span={8}>
                   <ul>
-                    <li>Total Time {this.state.date.format("MMMM YYYY")}:</li>
-                    <li style={paddingBottom}># Monthly Tasks:</li>
-                    <li>Total Time {this.state.date.format("MM/DD/YYYY")}:</li>
-                    <li style={paddingBottom}># Task {this.state.date.format("MM/DD/YYYY")}:</li>
+                    <li style={paddingBottom}>Total Time:</li>
+                    <li style={paddingBottom}>Number of Tasks:</li>
                     <li>Average Time per Task:</li>
                   </ul>
                 </Col>
                 <Col span={16}>
                   <ul>
-                    <li>{FormatUtils.formatMilliseconds(this.state.stats.totalMonthlyTime)}</li>
-                    <li style={paddingBottom}>{this.state.stats.numberMonthlyTasks}</li>
-                    <li>{FormatUtils.formatMilliseconds(this.state.stats.totalDailyTime)}</li>
-                    <li style={paddingBottom}>{this.state.stats.numberDailyTasks}</li>
+                    <li>{FormatUtils.formatMilliseconds(this.state.stats.totalTime)}</li>
+                    <li style={paddingBottom}>{this.state.stats.numberTasks}</li>
                     <li>{FormatUtils.formatMilliseconds(this.state.stats.averageTimePerTask)}</li>
                   </ul>
                 </Col>

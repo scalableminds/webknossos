@@ -1,25 +1,16 @@
 // @flow
 import React from "react";
-import { withRouter } from "react-router-dom";
-import { Form, Icon, Input, Button, Col, Row, Alert, Spin } from "antd";
+import { Form, Input, Button, Col, Row, Spin } from "antd";
 import Request from "libs/request";
-import messages from "messages";
-import Toast from "libs/toast";
-import { getEditableUsers, updateUser } from "admin/admin_rest_api";
-import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
-
-type Props = {
-  history: ReactRouterHistoryType,
-};
 
 type State = {
   isLoading: boolean,
   currentToken: string,
 };
 
-class UserTokenView extends React.PureComponent<Props, State> {
+class UserTokenView extends React.PureComponent<{}, State> {
   state = {
     isLoading: true,
     currentToken: "",
@@ -38,6 +29,21 @@ class UserTokenView extends React.PureComponent<Props, State> {
     });
   }
 
+  async revokeToken(): Promise<void> {
+    this.setState({ isLoading: true });
+    try {
+      await Request.triggerRequest("/api/auth/token", { method: "DELETE" });
+      const { token } = await Request.receiveJSON("/api/auth/token");
+      this.setState({ currentToken: token });
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  }
+
+  handleRevokeToken = () => {
+    this.revokeToken();
+  };
+
   render() {
     if (this.state.isLoading) {
       return (
@@ -50,17 +56,13 @@ class UserTokenView extends React.PureComponent<Props, State> {
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
-          <Alert
-            type="info"
-            message={messages["auth.reset_logout"]}
-            showIcon
-            style={{ marginBottom: 24 }}
-          />
+          <h3>Token</h3>
           <Form>
-            <FormItem><Input value={this.state.currentToken} readOnly />
+            <FormItem>
+              <Input value={this.state.currentToken} readOnly />
             </FormItem>
             <FormItem>
-              <Button type="primary" style={{ width: "100%" }}>
+              <Button icon="swap" onClick={this.handleRevokeToken}>
                 Revoke Token
               </Button>
             </FormItem>
@@ -71,4 +73,4 @@ class UserTokenView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(UserTokenView));
+export default UserTokenView;

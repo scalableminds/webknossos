@@ -40,6 +40,7 @@ class LoginView extends React.PureComponent<Props> {
     return (
       <Row type="flex" justify="center" style={rowStyle} align="middle">
         <Col span={this.props.layout === "inline" ? 24 : 8}>
+          {this.props.layout === "horizontal" ? <h3>Login</h3> : null}
           <Form onSubmit={this.handleSubmit} layout={this.props.layout}>
             <FormItem>
               {getFieldDecorator("email", {

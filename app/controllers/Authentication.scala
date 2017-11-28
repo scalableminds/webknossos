@@ -223,7 +223,7 @@ class Authentication @Inject()(
         _ <- env.authenticatorService.discard(request.authenticator, Ok) //to logout the admin
         authenticator <- env.authenticatorService.create(loginInfo)
         value <- env.authenticatorService.init(authenticator)
-        result <- env.authenticatorService.embed(value, Ok) //to login the new user
+        result <- env.authenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
       } yield result
     } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")

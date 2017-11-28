@@ -123,8 +123,10 @@ class RegistrationView extends React.PureComponent<Props, State> {
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
+          <h3>Registration</h3>
           <Card style={{ marginBottom: 24 }}>
-            Not a member of the listed teams?<br /> Contact webknossos@scalableminds.com to get more
+            Not a member of the listed teams?<br /> Contact{" "}
+            <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get more
             information about how to get to use webKnossos.
           </Card>
           <Form onSubmit={this.handleSubmit}>

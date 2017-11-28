@@ -311,13 +311,17 @@ class Authentication @Inject()(
   }
 
   def deleteToken = SecuredAction.async { implicit request =>
-    for {
+    val futureOfFuture: Future[Future[Result]] = for {
       oldTokenOpt <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
-      oldToken <- oldTokenOpt ?~> Messages("auth.noToken")
-      result <- env.combinedAuthenticatorService.discard(oldToken, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
     } yield {
-      result
+      if (oldTokenOpt.isDefined) env.combinedAuthenticatorService.discard(oldTokenOpt.get, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
+      else Future.successful(Ok)
     }
+
+    for {
+      resultFuture <- futureOfFuture
+      result <- resultFuture
+    } yield result
   }
 
   def logout = SecuredAction.async { implicit request =>

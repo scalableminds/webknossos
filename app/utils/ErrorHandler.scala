@@ -10,7 +10,6 @@ import play.api.mvc.Results._
 import play.api.mvc.{RequestHeader, Result}
 import play.api.routing.Router
 import play.api.{Configuration, OptionalSourceMapper, Play}
-import controllers.Authentication.getLoginRoute
 
 import scala.concurrent.Future
 import controllers.{Authentication, routes}

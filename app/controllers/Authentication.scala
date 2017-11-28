@@ -353,9 +353,6 @@ class Authentication @Inject()(
 }
 
 object Authentication {
-  def getLoginRoute() = {
-    "/login"
-  }
 
   def getCookie(email: String)(implicit requestHeader: RequestHeader): Future[Cookie] = {
     val loginInfo = LoginInfo(CredentialsProvider.ID, email.toLowerCase)

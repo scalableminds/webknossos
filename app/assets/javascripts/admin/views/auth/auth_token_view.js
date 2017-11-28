@@ -3,7 +3,6 @@ import React from "react";
 import { Form, Input, Button, Col, Row, Spin } from "antd";
 import Clipboard from "clipboard-js";
 import { getAuthToken, revokeAuthToken } from "admin/admin_rest_api";
-import Request from "libs/request";
 import Toast from "libs/toast";
 
 const FormItem = Form.Item;

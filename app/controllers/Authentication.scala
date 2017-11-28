@@ -294,25 +294,27 @@ class Authentication @Inject()(
   }
 
   def getToken = SecuredAction.async { implicit request =>
-    for{
-      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
-      newToken <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
-    }yield{
-      var js = Json.obj()
-      if(maybeOldToken.isDefined){
-        js = Json.obj("token" -> newToken.id, "msg" -> Messages("auth.addedNewToken"))
-      } else {
-        js = Json.obj("token" -> newToken.id)
+    val futureOfFuture: Future[Future[Result]] = env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
+      oldTokenOpt => {
+        if (oldTokenOpt.isDefined) Future.successful(Ok(oldTokenOpt.get.id))
+        else {
+          env.combinedAuthenticatorService.createToken(request.identity.loginInfo).map {
+            newToken => Ok(newToken.id)
+          }
+        }
       }
-      Ok(js)
     }
+    for {
+      resultFuture <- futureOfFuture
+      result <- resultFuture
+    } yield result
   }
 
   def deleteToken = SecuredAction.async { implicit request =>
-    for{
-      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
-      oldToken <- maybeOldToken ?~> Messages("auth.noToken")
-      result <- env.combinedAuthenticatorService.discard(oldToken, Ok) //maybe add a way to inform the user that the token was deleted
+    for {
+      oldTokenOpt <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
+      oldToken <- oldTokenOpt ?~> Messages("auth.noToken")
+      result <- env.combinedAuthenticatorService.discard(oldToken, Ok(Messages("auth.tokenDeleted")))
     } yield {
       result
     }

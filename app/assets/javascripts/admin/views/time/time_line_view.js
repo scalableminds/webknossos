@@ -142,11 +142,6 @@ class TimeLineView extends React.PureComponent<*, State> {
     return (
       <div className="container wide">
         <Card title={<h4>Time Tracking </h4>}>
-          <p>
-            The time tracking information display here only includes data acquired when working on
-            &quot;tasks&quot;.
-          </p>
-          <hr />
           <Row gutter={40}>
             <Col span={12}>
               <FormItem {...formItemLayout} label="User">
@@ -191,6 +186,8 @@ class TimeLineView extends React.PureComponent<*, State> {
                   </ul>
                 </Col>
               </Row>
+              The time tracking information display here only includes data acquired when working on
+              &quot;tasks&quot; and not explorative tracings.
             </Col>
           </Row>
         </Card>
@@ -209,7 +206,7 @@ class TimeLineView extends React.PureComponent<*, State> {
             />
           ) : (
             <div style={{ textAlign: "center" }}>
-              No Time Tracking Data for the Selected User or Day.
+              No Time Tracking Data for the Selected User or Date Range.
             </div>
           )}
         </div>

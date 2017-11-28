@@ -74,6 +74,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     for {
       tracingId <- (request.body \ "tracingId").asOpt[String].toFox
       annotation: Annotation <- AnnotationDAO.findByTracingId(tracingId)(GlobalAccessContext)
+      _ <- ensureAnnotationNotFinished(annotation)
       timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
       statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
       userTokenOpt = (request.body \ "userToken").asOpt[String]
@@ -87,6 +88,11 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       userBox.map(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
       Ok
     }
+  }
+
+  private def ensureAnnotationNotFinished(annotation: Annotation) = {
+    if (annotation.state.isFinished) Fox.failure("annotation already finshed")
+    else Fox.successful(())
   }
 }
 

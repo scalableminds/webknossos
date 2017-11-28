@@ -445,17 +445,15 @@ export async function getActiveUser(options: Object = {}) {
 }
 
 // ### TimeTracking
-export async function getTimeTrackingForUserByDay(
+export async function getTimeTrackingForUserByMonth(
   userEmail: string,
   day: moment$Moment,
 ): Promise<Array<APITimeTrackingType>> {
   const month = day.format("M");
   const year = day.format("YYYY");
-  const startDay = day.format("D");
-  const endDay = parseInt(startDay) + 1;
 
   const timeTrackingData = await Request.receiveJSON(
-    `/api/time/userlist/${year}/${month}?email=${userEmail}&startDay=${startDay}&endDay=${endDay}`,
+    `/api/time/userlist/${year}/${month}?email=${userEmail}`,
   );
 
   const timelogs = timeTrackingData[0].timelogs;

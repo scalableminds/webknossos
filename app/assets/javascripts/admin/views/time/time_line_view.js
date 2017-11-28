@@ -1,21 +1,32 @@
 // @flow
+import _ from "lodash";
 import * as React from "react";
 import moment from "moment";
 import { Select, Card, Form, Row, Col, DatePicker } from "antd";
 import { Chart } from "react-google-charts";
 import FormatUtils from "libs/format_utils";
-import { getUsers, getTimeTrackingForUserByDay } from "admin/admin_rest_api";
+import { getUsers, getTimeTrackingForUserByMonth } from "admin/admin_rest_api";
 
 import type { APIUserType, APITimeTrackingType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
+type TimeTrackingStatsType = {
+  totalMonthlyTime: number,
+  totalDailyTime: number,
+  numberMonthlyTasks: number,
+  numberDailyTasks: number,
+  averageTimePerTask: number,
+};
+
 type State = {
   user: ?APIUserType,
   users: Array<APIUserType>,
   date: moment$Moment,
-  timeTrackingData: Array<APITimeTrackingType>,
+  timeTrackingDataMonth: Array<APITimeTrackingType>,
+  timeTrackingDataDay: Array<APITimeTrackingType>,
+  stats: TimeTrackingStatsType,
 };
 
 class TimeLineView extends React.PureComponent<*, State> {
@@ -23,7 +34,15 @@ class TimeLineView extends React.PureComponent<*, State> {
     user: null,
     users: [],
     date: moment(),
-    timeTrackingData: [],
+    timeTrackingDataMonth: [],
+    timeTrackingDataDay: [],
+    stats: {
+      totalMonthlyTime: 0,
+      totalDailyTime: 0,
+      numberMonthlyTasks: 0,
+      numberDailyTasks: 0,
+      averageTimePerTask: 0,
+    },
   };
 
   componentDidMount() {
@@ -37,12 +56,50 @@ class TimeLineView extends React.PureComponent<*, State> {
 
   async fetchTimeTrackingData() {
     if (this.state.user != null) {
-      const timeTrackingData = await getTimeTrackingForUserByDay(
+      const timeTrackingDataMonth = await getTimeTrackingForUserByMonth(
         this.state.user.email,
         this.state.date,
       );
-      this.setState({ timeTrackingData });
+
+      const timeTrackingDataDay = timeTrackingDataMonth.filter(t =>
+        moment(t.timestamp).isSame(this.state.date, "day"),
+      );
+
+      this.setState(
+        {
+          timeTrackingDataMonth,
+          timeTrackingDataDay,
+        },
+        this.calculateStats,
+      );
     }
+  }
+
+  calculateStats() {
+    const totalMonthlyTime = _.sumBy(this.state.timeTrackingDataMonth, timeSpan =>
+      moment.duration(timeSpan.time).asMilliseconds(),
+    );
+    const numberMonthlyTasks = _.uniq(
+      this.state.timeTrackingDataMonth.map(timeSpan => timeSpan.annotation),
+    ).length;
+    const averageTimePerTask = totalMonthlyTime / numberMonthlyTasks;
+
+    const totalDailyTime = _.sumBy(this.state.timeTrackingDataDay, timeSpan =>
+      moment.duration(timeSpan.time).asMilliseconds(),
+    );
+    const numberDailyTasks = _.uniq(
+      this.state.timeTrackingDataDay.map(timeSpan => timeSpan.annotation),
+    ).length;
+
+    this.setState({
+      stats: {
+        totalMonthlyTime,
+        numberMonthlyTasks,
+        totalDailyTime,
+        numberDailyTasks,
+        averageTimePerTask,
+      },
+    });
   }
 
   handleUserChange = async (userId: number) => {
@@ -63,16 +120,14 @@ class TimeLineView extends React.PureComponent<*, State> {
       { id: "End", type: "date" },
     ];
 
-    let timeTrackingSum = 0;
     const timeTrackingRowGrouped = []; // shows each time span grouped by annotation id
     const timeTrackingRowTotal = []; // show all times spans in a single row
 
-    this.state.timeTrackingData.forEach((datum: APITimeTrackingType) => {
+    this.state.timeTrackingDataDay.forEach((datum: APITimeTrackingType) => {
       const duration = moment.duration(datum.time).asMilliseconds();
       const start = new Date(datum.timestamp);
       const end = new Date(datum.timestamp + duration);
 
-      timeTrackingSum += duration;
       timeTrackingRowGrouped.push([datum.annotation, start, end]);
       timeTrackingRowTotal.push(["Sum Tracking Time", start, end]);
     });
@@ -84,6 +139,10 @@ class TimeLineView extends React.PureComponent<*, State> {
       wrapperCol: { span: 19 },
     };
 
+    const paddingBottom = {
+      paddingBottom: 5,
+    };
+
     return (
       <div className="container wide">
         <Card title={<h4>Time Tracking </h4>}>
@@ -91,11 +150,6 @@ class TimeLineView extends React.PureComponent<*, State> {
             The time tracking information display here only includes data acquired when working on
             &quot;tasks&quot;.
           </p>
-          {this.state.user != null ? (
-            <p>{`${this.state.user.firstName} worked ${FormatUtils.formatSeconds(
-              timeTrackingSum / 1000,
-            )} on ${this.state.date.format("dddd")}, ${this.state.date.format("DD.MM.YYYY")}.`}</p>
-          ) : null}
           <hr />
           <Row gutter={40}>
             <Col span={12}>
@@ -115,8 +169,6 @@ class TimeLineView extends React.PureComponent<*, State> {
                   ))}
                 </Select>
               </FormItem>
-            </Col>
-            <Col span={12}>
               <FormItem {...formItemLayout} label="Date">
                 <DatePicker
                   allowClear={false}
@@ -126,11 +178,33 @@ class TimeLineView extends React.PureComponent<*, State> {
                 />
               </FormItem>
             </Col>
+            <Col span={12}>
+              <Row>
+                <Col span={8}>
+                  <ul>
+                    <li>Total Time {this.state.date.format("MMMM YYYY")}:</li>
+                    <li style={paddingBottom}># Monthly Tasks:</li>
+                    <li>Total Time {this.state.date.format("MM/DD/YYYY")}:</li>
+                    <li style={paddingBottom}># Task {this.state.date.format("MM/DD/YYYY")}:</li>
+                    <li>Average Time per Task:</li>
+                  </ul>
+                </Col>
+                <Col span={16}>
+                  <ul>
+                    <li>{FormatUtils.formatMilliseconds(this.state.stats.totalMonthlyTime)}</li>
+                    <li style={paddingBottom}>{this.state.stats.numberMonthlyTasks}</li>
+                    <li>{FormatUtils.formatMilliseconds(this.state.stats.totalDailyTime)}</li>
+                    <li style={paddingBottom}>{this.state.stats.numberDailyTasks}</li>
+                    <li>{FormatUtils.formatMilliseconds(this.state.stats.averageTimePerTask)}</li>
+                  </ul>
+                </Col>
+              </Row>
+            </Col>
           </Row>
         </Card>
 
         <div style={{ marginTop: 20 }}>
-          {this.state.timeTrackingData.length > 0 ? (
+          {this.state.timeTrackingDataDay.length > 0 ? (
             <Chart
               chartType="Timeline"
               columns={columns}

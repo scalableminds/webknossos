@@ -34,6 +34,7 @@ class StartResetPasswordView extends React.PureComponent<Props> {
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
+          <h3>Reset Password</h3>
           <Form onSubmit={this.handleSubmit}>
             <FormItem>
               {getFieldDecorator("email", {

@@ -64,6 +64,7 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
+          <h3>Reset Password</h3>
           <Alert
             type="info"
             message={messages["auth.reset_logout"]}

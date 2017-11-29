@@ -59,29 +59,35 @@
   },
   "scripts": {
     "test": "buildtools/test.sh prepare -q && buildtools/test.sh test --timeout=30s",
-    "test-verbose": "buildtools/test.sh prepare -q && buildtools/test.sh test --timeout=60s --verbose",
+    "test-verbose":
+      "buildtools/test.sh prepare -q && buildtools/test.sh test --timeout=60s --verbose",
     "test-only": "buildtools/test.sh test --timeout=30s",
     "test-watch": "buildtools/test.sh test --watch",
     "test-debug": "buildtools/test.sh test --debug",
     "test-prepare": "buildtools/test.sh prepare",
     "test-prepare-watch": "buildtools/test.sh prepare -w",
     "test-e2e": "node prepareTestDB.js && buildtools/test.sh test-e2e --timeout=60s --verbose",
-    "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
+    "test-help":
+      "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-snapshots": "rm -r app/assets/javascripts/test/snapshots/public",
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
-    "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"app/assets/javascripts/**/*.js\"",
-    "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"app/assets/javascripts/**/*.js\"",
+    "pretty":
+      "node_modules/.bin/prettier --write --config .prettierrc \"app/assets/javascripts/**/*.js\"",
+    "am-i-pretty":
+      "node_modules/.bin/prettier --list-different --config .prettierrc \"app/assets/javascripts/**/*.js\"",
     "lint-fix": "node_modules/.bin/eslint --fix --quiet app/assets/javascripts/",
-    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
-    "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
+    "flow-coverage":
+      "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
+    "docs":
+      "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "import-db": "./tools/import_export/import.sh webknossos-testing ./test/db/",
     "drop-db": "./tools/dropDB.sh webknossos-testing"
   },
   "dependencies": {
     "airbrake-js": "^0.5.8",
-    "antd": "^2.13.4",
+    "antd": "^2.13.10",
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
@@ -104,12 +110,12 @@
     "mjs": "^1.0.0",
     "moment": "^2.19.1",
     "pako": "^0.2.8",
-    "react": "^15.5.4",
-    "react-c3js": "^0.1.19",
-    "react-dom": "^15.5.4",
+    "react": "^16.2.0",
+    "react-c3js": "^0.1.20",
+    "react-dom": "^16.2.0",
     "react-google-charts": "^1.5.5",
-    "react-redux": "^5.0.2",
-    "react-remarkable": "^1.1.1",
+    "react-redux": "^5.0.6",
+    "react-remarkable": "^1.1.3",
     "react-router-dom": "^4.2.2",
     "redux": "^3.6.0",
     "redux-logger": "^3.0.0",
@@ -122,9 +128,7 @@
     "whatwg-fetch": "^1.1.0"
   },
   "ava": {
-    "source": [
-      "./public/test-bundle/**/*.{js,jsx}"
-    ],
+    "source": ["./public/test-bundle/**/*.{js,jsx}"],
     "snapshotDir": "app/assets/javascripts/test/snapshots",
     "concurrency": 8,
     "babel": {}

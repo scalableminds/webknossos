@@ -35,7 +35,7 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   }
 
   override def update(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
-    findAndModify(Json.obj("loginInfoParameter" -> LoginInfo(CredentialsProvider.ID, authenticator.loginInfo.providerKey)), Json.obj("$set" -> Json.obj(
+    findAndModify(Json.obj("loginInfo" -> LoginInfo(CredentialsProvider.ID, authenticator.loginInfo.providerKey)), Json.obj("$set" -> Json.obj(
       "id" -> authenticator.id,
       "lastUsedDateTime" -> authenticator.lastUsedDateTime,
       "expirationDateTime" -> authenticator.expirationDateTime,
@@ -48,6 +48,6 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   }
 
   def findByLoginInfo(loginInfo: LoginInfo): Future[Option[BearerTokenAuthenticator]] =
-    findOne("loginInfoParameter", loginInfo)(implicitly[Writes[LoginInfo]],GlobalAccessContext).futureBox.map(box => box.toOption)
+    findOne("loginInfo", loginInfo)(implicitly[Writes[LoginInfo]],GlobalAccessContext).futureBox.map(box => box.toOption)
 }
 

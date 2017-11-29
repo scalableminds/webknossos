@@ -223,7 +223,7 @@ class Authentication @Inject()(
         _ <- env.authenticatorService.discard(request.authenticator, Ok) //to logout the admin
         authenticator <- env.authenticatorService.create(loginInfo)
         value <- env.authenticatorService.init(authenticator)
-        result <- env.authenticatorService.embed(value, Ok) //to login the new user
+        result <- env.authenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
       } yield result
     } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
@@ -294,28 +294,34 @@ class Authentication @Inject()(
   }
 
   def getToken = SecuredAction.async { implicit request =>
-    for{
-      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
-      newToken <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
-    }yield{
-      var js = Json.obj()
-      if(maybeOldToken.isDefined){
-        js = Json.obj("token" -> newToken.id, "msg" -> Messages("auth.addedNewToken"))
-      } else {
-        js = Json.obj("token" -> newToken.id)
+    val futureOfFuture: Future[Future[Result]] = env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
+      oldTokenOpt => {
+        if (oldTokenOpt.isDefined) Future.successful(Ok(Json.obj("token" -> oldTokenOpt.get.id)))
+        else {
+          env.combinedAuthenticatorService.createToken(request.identity.loginInfo).map {
+            newToken => Ok(Json.obj("token" -> newToken.id))
+          }
+        }
       }
-      Ok(js)
     }
+    for {
+      resultFuture <- futureOfFuture
+      result <- resultFuture
+    } yield result
   }
 
   def deleteToken = SecuredAction.async { implicit request =>
-    for{
-      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
-      oldToken <- maybeOldToken ?~> Messages("auth.noToken")
-      result <- env.combinedAuthenticatorService.discard(oldToken, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
+    val futureOfFuture: Future[Future[Result]] = for {
+      oldTokenOpt <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
     } yield {
-      result
+      if (oldTokenOpt.isDefined) env.combinedAuthenticatorService.discard(oldTokenOpt.get, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
+      else Future.successful(Ok)
     }
+
+    for {
+      resultFuture <- futureOfFuture
+      result <- resultFuture
+    } yield result
   }
 
   def logout = SecuredAction.async { implicit request =>

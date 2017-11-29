@@ -1,25 +1,20 @@
 package controllers
 
+import java.text.SimpleDateFormat
 import java.util.Calendar
 import javax.inject.Inject
 
-import com.scalableminds.util.mail.Send
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO}
-import models.project.{Project, ProjectDAO}
+import models.annotation.AnnotationDAO
+import models.project.ProjectDAO
 import models.task.{Task, TaskService, TaskTypeDAO}
 import models.user.time.{TimeSpan, TimeSpanDAO}
 import models.user.{User, UserDAO, UserService}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
-import play.api.i18n.MessagesApi
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
+import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.AnyContent
-import play.api.i18n.{Messages, MessagesApi}
-import java.text.SimpleDateFormat
-
-import scala.concurrent.Future
-import scala.util.Failure
 
 class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
@@ -30,7 +25,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     for {
       users <- UserDAO.findAll
       filteredUsers = users.filter(user => request.identity.isAdminOf(user))
-      js <- loggedTimeForUserList(filteredUsers, year, month, startDay, endDay)
+      js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
     } yield {
       Ok(js)
     }
@@ -41,7 +36,17 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     for {
       users <- Fox.combined(userString.split(",").toList.map(email => UserService.findOneByEmail(email))) ?~> Messages("user.email.invalid")
       _ <- users.forall(u => request.identity.isAdminOf(u)) ?~> Messages("user.notAuthorised")
-      js <- loggedTimeForUserList(users, year, month, startDay, endDay)
+      js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
+    } yield {
+      Ok(js)
+    }
+  }
+
+  def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long) = SecuredAction.async { implicit request =>
+    for {
+      user <- UserService.findOneById(userId, false) ?~> Messages("user.notFound")
+      _ <- request.identity.isAdminOf(user) ?~> Messages("user.notAuthorised")
+      js <- loggedTimeForUserListByTimestamp(user,startDate, endDate)
     } yield {
       Ok(js)
     }
@@ -49,7 +54,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   //helper methods
 
-  def loggedTimeForUserList(users: List[User], year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) (implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
+  def loggedTimeForUserListByMonth(users: List[User], year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) (implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
     lazy val startDate = Calendar.getInstance()
     lazy val endDate = Calendar.getInstance()
 
@@ -68,6 +73,16 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
     val futureJsObjects = users.map(user => getUserHours(user, startDate, endDate))
     Fox.combined(futureJsObjects).map(jsObjectList => Json.toJson(jsObjectList))
+  }
+
+  def loggedTimeForUserListByTimestamp(user: User, startDate: Long, endDate: Long) (implicit request: SecuredRequest[AnyContent]): Fox[JsValue] =  {
+    lazy val sDate = Calendar.getInstance()
+    lazy val eDate = Calendar.getInstance()
+
+    sDate.setTimeInMillis(startDate)
+    eDate.setTimeInMillis(endDate)
+
+    getUserHours(user, sDate, eDate)
   }
 
   def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {

@@ -64,7 +64,6 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
 
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-
       leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
         this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
       rightClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) =>

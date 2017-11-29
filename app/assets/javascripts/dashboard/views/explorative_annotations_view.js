@@ -92,21 +92,25 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     this.setState({ isLoading: true });
     const tracings = await Request.receiveJSON(url);
     if (this.state.shouldShowArchivedTracings) {
-      this.setState({
-        isLoading: false,
-        archivedTracings: tracings,
-        didAlreadyFetchMetaInfo: {
-          isArchived: true,
-        },
-      });
+      this.setState(
+        update(this.state, {
+          isLoading: { $set: false },
+          archivedTracings: { $set: tracings },
+          didAlreadyFetchMetaInfo: {
+            isArchived: { $set: true },
+          },
+        }),
+      );
     } else {
-      this.setState({
-        isLoading: false,
-        unarchivedTracings: tracings,
-        didAlreadyFetchMetaInfo: {
-          isUnarchived: true,
-        },
-      });
+      this.setState(
+        update(this.state, {
+          isLoading: { $set: false },
+          unarchivedTracings: { $set: tracings },
+          didAlreadyFetchMetaInfo: {
+            isUnarchived: { $set: true },
+          },
+        }),
+      );
     }
   }
 

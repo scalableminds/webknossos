@@ -138,7 +138,8 @@ class TimeLineView extends React.PureComponent<*, State> {
 
     return (
       <div className="container wide">
-        <Card title={<h4>Time Tracking </h4>}>
+        <h3>Time Tracking</h3>
+        <Card>
           <Row gutter={40}>
             <Col span={12}>
               <FormItem {...formItemLayout} label="User">

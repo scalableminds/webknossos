@@ -125,10 +125,11 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         ) : null}
         {isPublicViewMode ? (
           <div>
-            <table className="table table-condensed table-nohead table-bordered">
+            <table style={{ marginTop: 20, marginBottom: 20 }}>
               <tbody>
                 <tr>
-                  <th colSpan="2">Controls</th>
+                  <th style={{ textAlign: "left" }}>Keyboard Shortcut</th>
+                  <th style={{ textAlign: "left" }}>Action</th>
                 </tr>
                 <tr>
                   <td>I,O or Alt + Mousewheel</td>

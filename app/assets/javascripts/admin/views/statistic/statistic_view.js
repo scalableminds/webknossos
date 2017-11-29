@@ -101,6 +101,11 @@ class StatisticView extends React.PureComponent<{}, State> {
       moment(item.start).format("YYYY-MM-DD"),
     );
 
+    const listStyle = {
+      width: 200,
+      display: "inline-block",
+    };
+
     return (
       <div className="statistics container wide">
         <Row gutter={16}>
@@ -139,30 +144,28 @@ class StatisticView extends React.PureComponent<{}, State> {
           <Col span={8}>
             <Card title="Achievements">
               <Spin spinning={this.state.isAchievementsLoading} size="large">
-                <table className="table">
-                  <tbody>
-                    <tr>
-                      <td>Number of Users</td>
-                      <td>{this.state.achievements.numberOfUsers}</td>
-                    </tr>
-                    <tr>
-                      <td>Number of Datasets</td>
-                      <td>{this.state.achievements.numberOfDatasets}</td>
-                    </tr>
-                    <tr>
-                      <td>Number of Annotations</td>
-                      <td>{this.state.achievements.numberOfAnnotations}</td>
-                    </tr>
-                    <tr>
-                      <td>Number of Trees</td>
-                      <td>{this.state.achievements.numberOfTrees}</td>
-                    </tr>
-                    <tr>
-                      <td>Number of Open Assignments</td>
-                      <td>{this.state.achievements.numberOfOpenAssignments}</td>
-                    </tr>
-                  </tbody>
-                </table>
+                <ul>
+                  <li>
+                    <div style={listStyle}>Number of Users</div>
+                    {this.state.achievements.numberOfUsers}
+                  </li>
+                  <li>
+                    <div style={listStyle}>Number of Datasets</div>
+                    {this.state.achievements.numberOfDatasets}
+                  </li>
+                  <li>
+                    <div style={listStyle}>Number of Annotations</div>
+                    {this.state.achievements.numberOfAnnotations}
+                  </li>
+                  <li>
+                    <div style={listStyle}>Number of Trees</div>
+                    {this.state.achievements.numberOfTrees}
+                  </li>
+                  <li>
+                    <div style={listStyle}>Number of Open Assignments</div>
+                    {this.state.achievements.numberOfOpenAssignments}
+                  </li>
+                </ul>
               </Spin>
             </Card>
           </Col>

@@ -5,6 +5,10 @@
 import moment from "moment";
 
 class FormatUtils {
+  static formatMilliseconds(durationMilliSeconds: number): string {
+    return FormatUtils.formatSeconds(durationMilliSeconds / 1000);
+  }
+
   static formatSeconds(durationSeconds: number): string {
     const t = moment.duration(durationSeconds, "seconds");
     const [days, hours, minutes, seconds] = [t.days(), t.hours(), t.minutes(), t.seconds()];

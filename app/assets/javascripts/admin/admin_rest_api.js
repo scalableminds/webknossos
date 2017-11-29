@@ -1,5 +1,4 @@
 // @flow
-import moment from "moment";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
@@ -446,21 +445,34 @@ export async function getActiveUser(options: Object = {}) {
 }
 
 // ### TimeTracking
-export async function getTimeTrackingForUserByDay(
+export async function getTimeTrackingForUserByMonth(
   userEmail: string,
-  day: Date,
+  day: moment$Moment,
 ): Promise<Array<APITimeTrackingType>> {
-  const momentDate = moment(day);
-  const month = momentDate.format("M");
-  const year = momentDate.format("YYYY");
-  const startDay = momentDate.format("D");
-  const endDay = parseInt(startDay) + 1;
+  const month = day.format("M");
+  const year = day.format("YYYY");
 
   const timeTrackingData = await Request.receiveJSON(
-    `/api/time/userlist/${year}/${month}?email=${userEmail}&startDay=${startDay}&endDay=${endDay}`,
+    `/api/time/userlist/${year}/${month}?email=${userEmail}`,
   );
 
   const timelogs = timeTrackingData[0].timelogs;
+  assertResponseLimit(timelogs);
+
+  return timelogs;
+}
+
+export async function getTimeTrackingForUser(
+  userId: string,
+  startDate: moment$Moment,
+  endDate: moment$Moment,
+): Promise<Array<APITimeTrackingType>> {
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/user/${userId}?startDate=${startDate.unix() * 1000}&endDate=${endDate.unix() *
+      1000}`,
+  );
+
+  const timelogs = timeTrackingData.timelogs;
   assertResponseLimit(timelogs);
 
   return timelogs;

@@ -32,8 +32,16 @@ const KeyboardShortcutView = () => (
           <td>Set node</td>
         </tr>
         <tr>
+          <td>Del</td>
+          <td>Delete node/Split trees</td>
+        </tr>
+        <tr>
           <td>Shift + Alt + Left click</td>
           <td>Merge two trees</td>
+        </tr>
+        <tr>
+          <td>Shift + Ctrl + Left click</td>
+          <td>Delete edge/Split trees</td>
         </tr>
         <tr>
           <td>K, L</td>
@@ -90,10 +98,6 @@ const KeyboardShortcutView = () => (
         <tr>
           <td>P, N</td>
           <td>Previous/Next comment</td>
-        </tr>
-        <tr>
-          <td>Del</td>
-          <td>Delete node/Split trees</td>
         </tr>
         <tr>
           <td>C</td>
@@ -222,6 +226,14 @@ const KeyboardShortcutView = () => (
         <tr>
           <td>Shift + Mousewheel</td>
           <td>Change brush size (Brush mode)</td>
+        </tr>
+        <tr>
+          <td>V</td>
+          <td>Copy segmentation of current cell from previous slice</td>
+        </tr>
+        <tr>
+          <td>Shift + V</td>
+          <td>Copy segmentation of current cell from next slice</td>
         </tr>
       </tbody>
     </table>

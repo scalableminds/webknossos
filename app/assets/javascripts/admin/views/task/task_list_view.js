@@ -98,165 +98,163 @@ class TaskListView extends React.PureComponent<Props, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="container wide task-administration">
-        <div style={{ marginTop: 20 }}>
-          <div className="pull-right">
-            <Link to="/tasks/create">
-              <Button icon="plus" style={marginRight} type="primary">
-                Add Task
-              </Button>
-            </Link>
-            <Search
-              style={{ width: 200 }}
-              onPressEnter={this.handleSearch}
-              onChange={this.handleSearch}
-            />
-          </div>
-          <h3>Tasks</h3>
-          <div className="clearfix" style={{ margin: "20px 0px" }} />
-
-          <Card title="Search for Tasks">
-            <TaskSearchForm
-              onChange={queryObject => this.fetchData(queryObject)}
-              initialFieldValues={this.props.initialFieldValues}
-              isLoading={this.state.isLoading}
-            />
-          </Card>
-
-          <Spin spinning={this.state.isLoading} size="large">
-            <Table
-              dataSource={Utils.filterWithSearchQueryAND(
-                this.state.tasks,
-                ["team", "projectName", "id", "dataSet", "created", "type", "neededExperience"],
-                this.state.searchQuery,
-              )}
-              rowKey="id"
-              pagination={{
-                defaultPageSize: 50,
-              }}
-              style={{ marginTop: 30, marginBotton: 30 }}
-              expandedRowRender={task => <TaskAnnotationView task={task} />}
-            >
-              <Column title="#" dataIndex="id" key="id" sorter={Utils.localeCompareBy("id")} />
-              <Column
-                title="Project"
-                dataIndex="projectName"
-                key="projectName"
-                sorter={Utils.localeCompareBy("projectName")}
-                render={(projectName: string) => (
-                  <a href={`/projects#${projectName}`}>{projectName}</a>
-                )}
-              />
-              <Column
-                title="Type"
-                dataIndex="type"
-                key="type"
-                sorter={Utils.localeCompareBy((task: APITaskType) => task.type.summary)}
-                render={(taskType: APITaskTypeType) => (
-                  <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
-                )}
-              />
-              <Column
-                title="Dataset"
-                dataIndex="dataSet"
-                key="dataSet"
-                sorter={Utils.localeCompareBy("dataSet")}
-              />
-              <Column
-                title="Edit Position / Bounding Box"
-                dataIndex="editPosition"
-                key="editPosition"
-                render={(__, task: APITaskType) => (
-                  <div className="nowrap">
-                    {TemplateHelpers.formatTuple(task.editPosition)} <br />
-                    <span>{TemplateHelpers.formatTuple(task.boundingBoxVec6)}</span>
-                  </div>
-                )}
-              />
-              <Column
-                title="Experience"
-                dataIndex="neededExperience"
-                key="neededExperience"
-                sorter={Utils.localeCompareBy(neededExperience => neededExperience.domain)}
-                render={neededExperience =>
-                  neededExperience.domain !== "" || neededExperience.value > 0 ? (
-                    <Tag>
-                      {neededExperience.domain} : {neededExperience.value}
-                    </Tag>
-                  ) : null
-                }
-              />
-              <Column
-                title="Creation Date"
-                dataIndex="created"
-                key="created"
-                sorter={Utils.localeCompareBy("created")}
-              />
-              <Column
-                title="Stats"
-                dataIndex="status"
-                key="status"
-                render={(status, task: APITaskType) => (
-                  <div className="nowrap">
-                    <span>
-                      <Icon type="play-circle-o" />
-                      {status.open}
-                    </span>
-                    <br />
-                    <span>
-                      <Icon type="fork" />
-                      {status.inProgress}
-                    </span>
-                    <br />
-                    <span>
-                      <Icon type="check-circle-o" />
-                      {status.completed}
-                    </span>
-                    <br />
-                    <span>
-                      <Icon type="clock-circle-o" />
-                      {FormatUtils.formatSeconds(task.tracingTime / 1000)}
-                    </span>
-                  </div>
-                )}
-              />
-              <Column
-                title="Action"
-                key="actions"
-                render={(__, task: APITaskType) => (
-                  <span>
-                    {task.status.completed > 0 ? (
-                      <a
-                        href={`/annotations/CompoundTask/${task.id}`}
-                        title="View all Finished Tracings"
-                      >
-                        <Icon type="eye-o" />View
-                      </a>
-                    ) : null}
-                    <br />
-                    <a href={`/tasks/${task.id}/edit`} title="Edit Task">
-                      <Icon type="edit" />Edit
-                    </a>
-                    <br />
-                    {task.status.completed > 0 ? (
-                      <a
-                        href={`/annotations/CompoundTask/${task.id}/download`}
-                        title="Download all Finished Tracings"
-                      >
-                        <Icon type="download" />Download
-                      </a>
-                    ) : null}
-                    <br />
-                    <a href="#" onClick={_.partial(this.deleteTask, task)}>
-                      <Icon type="delete" />Delete
-                    </a>
-                  </span>
-                )}
-              />
-            </Table>
-            {this.getAnonymousTaskLinkModal()}
-          </Spin>
+      <div className="container task-administration">
+        <div className="pull-right">
+          <Link to="/tasks/create">
+            <Button icon="plus" style={marginRight} type="primary">
+              Add Task
+            </Button>
+          </Link>
+          <Search
+            style={{ width: 200 }}
+            onPressEnter={this.handleSearch}
+            onChange={this.handleSearch}
+          />
         </div>
+        <h3>Tasks</h3>
+        <div className="clearfix" style={{ margin: "20px 0px" }} />
+
+        <Card title="Search for Tasks">
+          <TaskSearchForm
+            onChange={queryObject => this.fetchData(queryObject)}
+            initialFieldValues={this.props.initialFieldValues}
+            isLoading={this.state.isLoading}
+          />
+        </Card>
+
+        <Spin spinning={this.state.isLoading} size="large">
+          <Table
+            dataSource={Utils.filterWithSearchQueryAND(
+              this.state.tasks,
+              ["team", "projectName", "id", "dataSet", "created", "type", "neededExperience"],
+              this.state.searchQuery,
+            )}
+            rowKey="id"
+            pagination={{
+              defaultPageSize: 50,
+            }}
+            style={{ marginTop: 30, marginBotton: 30 }}
+            expandedRowRender={task => <TaskAnnotationView task={task} />}
+          >
+            <Column title="#" dataIndex="id" key="id" sorter={Utils.localeCompareBy("id")} />
+            <Column
+              title="Project"
+              dataIndex="projectName"
+              key="projectName"
+              sorter={Utils.localeCompareBy("projectName")}
+              render={(projectName: string) => (
+                <a href={`/projects#${projectName}`}>{projectName}</a>
+              )}
+            />
+            <Column
+              title="Type"
+              dataIndex="type"
+              key="type"
+              sorter={Utils.localeCompareBy((task: APITaskType) => task.type.summary)}
+              render={(taskType: APITaskTypeType) => (
+                <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
+              )}
+            />
+            <Column
+              title="Dataset"
+              dataIndex="dataSet"
+              key="dataSet"
+              sorter={Utils.localeCompareBy("dataSet")}
+            />
+            <Column
+              title="Edit Position / Bounding Box"
+              dataIndex="editPosition"
+              key="editPosition"
+              render={(__, task: APITaskType) => (
+                <div className="nowrap">
+                  {TemplateHelpers.formatTuple(task.editPosition)} <br />
+                  <span>{TemplateHelpers.formatTuple(task.boundingBoxVec6)}</span>
+                </div>
+              )}
+            />
+            <Column
+              title="Experience"
+              dataIndex="neededExperience"
+              key="neededExperience"
+              sorter={Utils.localeCompareBy(neededExperience => neededExperience.domain)}
+              render={neededExperience =>
+                neededExperience.domain !== "" || neededExperience.value > 0 ? (
+                  <Tag>
+                    {neededExperience.domain} : {neededExperience.value}
+                  </Tag>
+                ) : null
+              }
+            />
+            <Column
+              title="Creation Date"
+              dataIndex="created"
+              key="created"
+              sorter={Utils.localeCompareBy("created")}
+            />
+            <Column
+              title="Stats"
+              dataIndex="status"
+              key="status"
+              render={(status, task: APITaskType) => (
+                <div className="nowrap">
+                  <span>
+                    <Icon type="play-circle-o" />
+                    {status.open}
+                  </span>
+                  <br />
+                  <span>
+                    <Icon type="fork" />
+                    {status.inProgress}
+                  </span>
+                  <br />
+                  <span>
+                    <Icon type="check-circle-o" />
+                    {status.completed}
+                  </span>
+                  <br />
+                  <span>
+                    <Icon type="clock-circle-o" />
+                    {FormatUtils.formatSeconds(task.tracingTime / 1000)}
+                  </span>
+                </div>
+              )}
+            />
+            <Column
+              title="Action"
+              key="actions"
+              render={(__, task: APITaskType) => (
+                <span>
+                  {task.status.completed > 0 ? (
+                    <a
+                      href={`/annotations/CompoundTask/${task.id}`}
+                      title="View all Finished Tracings"
+                    >
+                      <Icon type="eye-o" />View
+                    </a>
+                  ) : null}
+                  <br />
+                  <a href={`/tasks/${task.id}/edit`} title="Edit Task">
+                    <Icon type="edit" />Edit
+                  </a>
+                  <br />
+                  {task.status.completed > 0 ? (
+                    <a
+                      href={`/annotations/CompoundTask/${task.id}/download`}
+                      title="Download all Finished Tracings"
+                    >
+                      <Icon type="download" />Download
+                    </a>
+                  ) : null}
+                  <br />
+                  <a href="#" onClick={_.partial(this.deleteTask, task)}>
+                    <Icon type="delete" />Delete
+                  </a>
+                </span>
+              )}
+            />
+          </Table>
+          {this.getAnonymousTaskLinkModal()}
+        </Spin>
       </div>
     );
   }

@@ -107,7 +107,7 @@ class StatisticView extends React.PureComponent<{}, State> {
     };
 
     return (
-      <div className="statistics container wide">
+      <div className="statistics container">
         <Row gutter={16}>
           <Col span={16}>
             <Card title="Overall Weekly Tracing Time">

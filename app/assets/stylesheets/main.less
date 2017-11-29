@@ -21,6 +21,11 @@ body {
   font-size: 16px;
   -webkit-font-smoothing: antialised;
   height: ~"calc(100vh - 41px)";
+  padding-top: @navbar-height + 10; //
+}
+
+#main-container > div > .ant-layout-header {
+  top: 0;
 }
 
 .save-error {
@@ -29,31 +34,13 @@ body {
     background-color: #c00 !important;
   }
 }
+
 .logo {
   background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
   padding-left: 43px;
   height: 40px;
   float: left;
   margin-top: 6px;
-}
-.logo:hover {
-  color: #999;
-}
-
-.navbar #main-menu {
-  a [class^="fa-"],
-  a [class*=" fa-"] {
-    color: #fff;
-  }
-  .dropdown-menu i {
-    color: #000;
-  }
-}
-
-.container.wide {
-  margin-left: 20px;
-  margin-right: 20px;
-  width: auto;
 }
 
 .bold {
@@ -137,11 +124,11 @@ td.nowrap * {
   }
 }
 
-@media screen and (max-width: 960px) {
-  .container {
-    width: auto;
-    margin: 0 10px;
-  }
+.pull-right {
+  float: right;
+}
+.pull-left {
+  float: left;
 }
 
 // Fixing font awesome
@@ -159,16 +146,6 @@ i {
 
 .ant-spin-dot i {
   margin-right: 0;
-}
-
-.v-center > .v-center-agent {
-  display: table-cell;
-  vertical-align: middle;
-}
-
-.v-center {
-  display: table;
-  height: 100%;
 }
 
 .flex-column {
@@ -223,9 +200,18 @@ img.img-50 {
   }
 }
 
+@media screen and (max-width: 960px) {
+  .container {
+    width: auto;
+    margin: 0 10px;
+  }
+}
+
 .container {
-  margin-right: auto;
-  margin-left: auto;
+  margin-left: 20px;
+  margin-right: 20px;
+  width: auto;
   padding-left: 15px;
   padding-right: 15px;
 }
+

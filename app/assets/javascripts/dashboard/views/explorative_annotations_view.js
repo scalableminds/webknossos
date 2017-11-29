@@ -36,9 +36,9 @@ type State = {
     isUnarchived: boolean,
   },
   searchQuery: string,
-  requestCount: number,
   isUploadingNML: boolean,
   tags: Array<string>,
+  isLoading: boolean,
 };
 
 class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
@@ -51,9 +51,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       isUnarchived: false,
     },
     searchQuery: "",
-    requestCount: 0,
     isUploadingNML: false,
     tags: [],
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -64,14 +64,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   isFetchNecessary(): boolean {
     const accessor = this.state.shouldShowArchivedTracings ? "isArchived" : "isUnarchived";
     return !this.state.didAlreadyFetchMetaInfo[accessor];
-  }
-
-  enterRequest() {
-    this.setState({ requestCount: this.state.requestCount + 1 });
-  }
-
-  leaveRequest() {
-    this.setState({ requestCount: this.state.requestCount - 1 });
   }
 
   restoreSearchTags() {
@@ -97,27 +89,24 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
 
-    this.enterRequest();
+    this.setState({ isLoading: true });
     const tracings = await Request.receiveJSON(url);
-    this.leaveRequest();
     if (this.state.shouldShowArchivedTracings) {
-      this.setState(
-        update(this.state, {
-          archivedTracings: { $set: tracings },
-          didAlreadyFetchMetaInfo: {
-            isArchived: { $set: true },
-          },
-        }),
-      );
+      this.setState({
+        isLoading: false,
+        archivedTracings: tracings,
+        didAlreadyFetchMetaInfo: {
+          isArchived: true,
+        },
+      });
     } else {
-      this.setState(
-        update(this.state, {
-          unarchivedTracings: { $set: tracings },
-          didAlreadyFetchMetaInfo: {
-            isUnarchived: { $set: true },
-          },
-        }),
-      );
+      this.setState({
+        isLoading: false,
+        unarchivedTracings: tracings,
+        didAlreadyFetchMetaInfo: {
+          isUnarchived: true,
+        },
+      });
     }
   }
 
@@ -468,14 +457,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <h3>Explorative Annotations</h3>
         {this.renderSearchTags()}
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-
-        {this.state.requestCount === 0 ? (
-          this.renderTable()
-        ) : (
-          <div className="text-center">
-            <Spin size="large" />
-          </div>
-        )}
+        <Spin spinning={this.state.isLoading} size="large">
+          {this.renderTable()}
+        </Spin>
       </div>
     );
   }

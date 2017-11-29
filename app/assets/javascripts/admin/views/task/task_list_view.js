@@ -98,7 +98,7 @@ class TaskListView extends React.PureComponent<Props, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="container task-administration">
+      <div className="container">
         <div className="pull-right">
           <Link to="/tasks/create">
             <Button icon="plus" style={marginRight} type="primary">

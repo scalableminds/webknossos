@@ -196,6 +196,7 @@ class TimeLineView extends React.PureComponent<*, State> {
               chartType="Timeline"
               columns={columns}
               rows={rows}
+              options={{ timeline: { singleColor: "#108ee9" } }}
               graph_id="TimeLineGraph"
               chartPackages={["timeline"]}
               width="100%"

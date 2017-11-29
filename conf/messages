@@ -35,7 +35,7 @@ format.json.invalid=Invalid Json format
 
 image.create.failed=Failed to create image
 
-auth.addedNewToken=Your old token was deleted
+auth.tokenDeleted=Token was deleted
 auth.noToken=You do not have a token
 auth.invalidToken=The token is invalid
 

@@ -20,20 +20,23 @@ GET           /help/keyboardshortcuts                                           
 # Authentication
 GET           /register                                                         controllers.Authentication.empty
 GET           /login                                                            controllers.Authentication.empty
-GET           /reset                                                            controllers.Authentication.empty
-GET           /changepassword                                                   controllers.Authentication.empty
-GET           /finishreset                                                      controllers.Authentication.empty
-POST          /api/register                                                     controllers.Authentication.handleRegistration
-POST          /api/login                                                        controllers.Authentication.authenticate
-GET           /autoLogin                                                        controllers.Authentication.autoLogin
-GET           /api/getToken                                                     controllers.Authentication.getToken
-GET           /api/deleteToken                                                  controllers.Authentication.deleteToken
-GET           /api/switch                                                       controllers.Authentication.switchTo(to: String)
-POST          /api/reset                                                        controllers.Authentication.handleStartResetPassword
-POST          /api/changepw                                                     controllers.Authentication.changePassword
-POST          /api/resetPassword                                                controllers.Authentication.handleResetPassword
-GET           /api/logout                                                       controllers.Authentication.logout
-GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
+GET           /auth/register                                                    controllers.Authentication.empty
+GET           /auth/login                                                       controllers.Authentication.empty
+GET           /auth/resetPassword                                               controllers.Authentication.empty
+GET           /auth/changePassword                                              controllers.Authentication.empty
+GET           /auth/finishResetPassword                                         controllers.Authentication.empty
+GET           /auth/token                                                       controllers.Authentication.empty
+GET           /auth/autoLogin                                                   controllers.Authentication.autoLogin
+POST          /api/auth/register                                                controllers.Authentication.handleRegistration
+POST          /api/auth/login                                                   controllers.Authentication.authenticate
+GET           /api/auth/token                                                   controllers.Authentication.getToken
+DELETE        /api/auth/token                                                   controllers.Authentication.deleteToken
+GET           /api/auth/switch                                                  controllers.Authentication.switchTo(to: String)
+POST          /api/auth/startResetPassword                                      controllers.Authentication.handleStartResetPassword
+POST          /api/auth/changePassword                                          controllers.Authentication.changePassword
+POST          /api/auth/resetPassword                                           controllers.Authentication.handleResetPassword
+GET           /api/auth/logout                                                  controllers.Authentication.logout
+GET           /api/auth/sso                                                     controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 # Configurations
 GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default

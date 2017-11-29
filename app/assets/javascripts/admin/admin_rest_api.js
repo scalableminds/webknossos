@@ -1,8 +1,10 @@
 // @flow
+import moment from "moment";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import messages from "messages";
 import Utils from "libs/utils";
+import { location } from "libs/window";
+import messages from "messages";
 import type {
   APIUserType,
   APIScriptType,
@@ -18,6 +20,7 @@ import type {
   APIDatasetType,
   APITimeIntervalType,
   APIUserLoggedTimeType,
+  APITimeTrackingType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
@@ -316,7 +319,9 @@ export async function getTasks(queryObject: QueryObjectType): Promise<Array<APIT
     data: queryObject,
   });
 
-  return responses.map(response => transformTask(response));
+  const tasks = responses.map(response => transformTask(response));
+  assertResponseLimit(tasks);
+  return tasks;
 }
 
 // TODO fix return types
@@ -372,6 +377,25 @@ export async function deleteAnnotation(annotationId: string): Promise<APIAnnotat
   });
 }
 
+export async function copyAnnotationToUserAccount(
+  annotationId: string,
+  tracingType: string,
+): Promise<APIAnnotationType> {
+  const url = `/annotations/${tracingType}/${annotationId}/duplicate`;
+  return Request.receiveJSON(url);
+}
+
+export async function getAnnotationInformation(
+  annotationId: string,
+  tracingType: string,
+): Promise<APIAnnotationType> {
+  // Include /readOnly part whenever it is in the pathname
+  const isReadOnly = location.pathname.endsWith("/readOnly");
+  const readOnlyPart = isReadOnly ? "readOnly/" : "";
+  const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+  return Request.receiveJSON(infoUrl);
+}
+
 // ### Datasets
 export async function getDatasets(): Promise<Array<APIDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets");
@@ -419,4 +443,25 @@ export async function getDatastores(): Promise<Array<APIDatastoreType>> {
 // ### Active User
 export async function getActiveUser(options: Object = {}) {
   return Request.receiveJSON("/api/user", options);
+}
+
+// ### TimeTracking
+export async function getTimeTrackingForUserByDay(
+  userEmail: string,
+  day: Date,
+): Promise<Array<APITimeTrackingType>> {
+  const momentDate = moment(day);
+  const month = momentDate.format("M");
+  const year = momentDate.format("YYYY");
+  const startDay = momentDate.format("D");
+  const endDay = parseInt(startDay) + 1;
+
+  const timeTrackingData = await Request.receiveJSON(
+    `/api/time/userlist/${year}/${month}?email=${userEmail}&startDay=${startDay}&endDay=${endDay}`,
+  );
+
+  const timelogs = timeTrackingData[0].timelogs;
+  assertResponseLimit(timelogs);
+
+  return timelogs;
 }

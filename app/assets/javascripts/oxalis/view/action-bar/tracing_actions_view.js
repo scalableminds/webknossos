@@ -1,10 +1,9 @@
 // @flow
 import React, { PureComponent } from "react";
-import { withRouter } from "react-router-dom";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { connect } from "react-redux";
-import { Button, Dropdown, Menu, Icon } from "antd";
+import { Button, Dropdown, Menu, Icon, Modal } from "antd";
 import Constants from "oxalis/constants";
 import MergeModalView from "oxalis/view/action-bar/merge_modal_view";
 import ShareModalView from "oxalis/view/action-bar/share_modal_view";
@@ -14,9 +13,10 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
+import { copyAnnotationToUserAccount } from "admin/admin_rest_api";
+import { location } from "libs/window";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
-import type { ReactRouterHistoryType } from "react_router";
 
 type StateProps = {
   tracingType: string,
@@ -26,17 +26,13 @@ type StateProps = {
   activeUser: ?APIUserType,
 };
 
-type Props = {
-  history: ReactRouterHistoryType,
-} & StateProps;
-
 type State = {
   isShareModalOpen: boolean,
   isMergeModalOpen: boolean,
   isUserScriptsModalOpen: boolean,
 };
 
-class TracingActionsView extends PureComponent<Props, State> {
+class TracingActionsView extends PureComponent<StateProps, State> {
   state = {
     isShareModalOpen: false,
     isMergeModalOpen: false,
@@ -62,8 +58,11 @@ class TracingActionsView extends PureComponent<Props, State> {
 
   handleCopyToAccount = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${this.props.annotationId}/duplicate`;
-    this.props.history.push(url);
+    const newAnnotation = await copyAnnotationToUserAccount(
+      this.props.annotationId,
+      this.props.tracingType,
+    );
+    location.href = `/annotations/Explorational/${newAnnotation.id}`;
   };
 
   handleFinish = async (event: SyntheticInputEvent<>) => {
@@ -72,9 +71,13 @@ class TracingActionsView extends PureComponent<Props, State> {
       this.props.annotationId
     }/finishAndRedirect`;
     await this.handleSave();
-    if (confirm(messages["finish.confirm"])) {
-      this.props.history.push(url);
-    }
+
+    Modal.confirm({
+      title: messages["annotation.finish"],
+      onOk: () => {
+        location.href = url;
+      },
+    });
   };
 
   handleShareOpen = () => {
@@ -262,4 +265,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default withRouter(connect(mapStateToProps)(TracingActionsView));
+export default connect(mapStateToProps)(TracingActionsView);

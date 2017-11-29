@@ -9,6 +9,8 @@ import enUS from "antd/lib/locale-provider/en_US";
 
 import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeEnum } from "admin/api_flow_types";
+import { getAnnotationInformation } from "admin/admin_rest_api";
+import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
@@ -36,13 +38,14 @@ import TaskCreateView from "admin/views/task/task_create_view";
 import TaskCreateFormView from "admin/views/task/task_create_form_view";
 import TaskTypeCreateView from "admin/views/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/views/scripts/script_create_view";
+import TimeLineView from "admin/views/time/time_line_view";
 
 import type { OxalisState } from "oxalis/store";
 import type { APITracingType, APIUserType } from "admin/api_flow_types";
 
 const { Content } = Layout;
 
-type ReactRouterLocationType = {
+export type ReactRouterLocationType = {
   key: string,
   pathname: string,
   search: string,
@@ -66,14 +69,16 @@ export type ReactRouterHistoryType = {
   block: Function => ?string | null,
 };
 
+export type ReactRouterMatchType = {
+  params: { [string]: string },
+  isExact: boolean,
+  path: string,
+  url: string,
+};
+
 type ReactRouterArgumentsType = {
   location: ReactRouterLocationType,
-  match: {
-    params: { [string]: string },
-    isExact: boolean,
-    path: string,
-    url: string,
-  },
+  match: ReactRouterMatchType,
   history: ReactRouterHistoryType,
 };
 
@@ -90,23 +95,12 @@ browserHistory.listen(location => {
   }
 });
 
-const SecuredRoute = ({ component: Component, render, isAuthenticated, ...rest }: Object) => (
-  <Route
-    {...rest}
-    render={props => {
-      if (isAuthenticated) {
-        return Component ? <Component {...props} /> : render(props);
-      } else {
-        return <LoginView />;
-      }
-    }}
-  />
-);
-
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ReactRouterArgumentsType) => {
     const tracingType = match.params.type;
-    if (Object.keys(APITracingTypeEnum).includes(tracingType)) {
+    const isValidTracingType = Object.keys(APITracingTypeEnum).includes(tracingType);
+
+    if (isValidTracingType) {
       const saveTracingType = ((tracingType: any): APITracingType);
       return (
         <TracingLayoutView
@@ -115,12 +109,12 @@ class ReactRouter extends React.Component<Props> {
           initialControlmode={ControlModeEnum.TRACE}
         />
       );
-    } else {
-      return null;
     }
+
+    return <h3>Invalid tracing URL.</h3>;
   };
 
-  tracingViewPublic = ({ match }: ReactRouterArgumentsType) => (
+  tracingViewMode = ({ match }: ReactRouterArgumentsType) => (
     <TracingLayoutView
       initialTracingType={APITracingTypeEnum.View}
       initialAnnotationId={match.params.id}
@@ -217,15 +211,22 @@ class ReactRouter extends React.Component<Props> {
                     <ProjectCreateView projectName={match.params.projectName} />
                   )}
                 />
+
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
                   path="/annotations/:type/:id"
                   render={this.tracingView}
-                />
-                <SecuredRoute
-                  isAuthenticated={isAuthenticated}
-                  path="/annotations/:type/:id/readOnly)"
-                  render={this.tracingView}
+                  serverAuthenticationCallback={async ({ match }: ReactRouterArgumentsType) => {
+                    const isReadOnly = location.pathname.endsWith("readOnly");
+                    if (isReadOnly) {
+                      const annotationInformation = await getAnnotationInformation(
+                        match.params.id,
+                        match.params.type,
+                      );
+                      return annotationInformation.isPublic;
+                    }
+                    return false;
+                  }}
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
@@ -235,7 +236,6 @@ class ReactRouter extends React.Component<Props> {
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
                   path="/datasets/:datasetName/import"
-                  component={DatasetImportView}
                   render={({ match }: ReactRouterArgumentsType) => (
                     <DatasetImportView
                       isEditingMode={false}
@@ -284,7 +284,7 @@ class ReactRouter extends React.Component<Props> {
                   isAuthenticated={isAuthenticated}
                   path="/scripts/:scriptId/edit"
                   render={({ match }: ReactRouterArgumentsType) => (
-                    <ScriptCreateView id={match.params.scriptId} />
+                    <ScriptCreateView scriptId={match.params.scriptId} />
                   )}
                 />
                 <SecuredRoute
@@ -298,13 +298,18 @@ class ReactRouter extends React.Component<Props> {
                   path="/help/keyboardshortcuts"
                   component={KeyboardShortcutView}
                 />
+                <SecuredRoute
+                  isAuthenticated={isAuthenticated}
+                  path="/timetracking"
+                  component={TimeLineView}
+                />
                 <Route path="/login" render={() => <LoginView layout="horizontal" />} />
                 <Route path="/register" component={RegistrationView} />
                 <Route path="/reset" component={StartResetPasswordView} />
                 <Route path="/finishreset" component={FinishResetPasswordView} />
                 <Route path="/changepassword" component={ChangePasswordView} />
                 <Route path="/spotlight" component={SpotlightView} />
-                <Route path="/datasets/:id/view" render={this.tracingViewPublic} />
+                <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               </Switch>
             </Content>
           </Layout>

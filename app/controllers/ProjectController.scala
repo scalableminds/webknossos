@@ -12,7 +12,7 @@ import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
 import models.project.{Project, ProjectDAO, ProjectService, WebknossosAssignmentConfig}
 import models.task._
 import net.liftweb.common.{Empty, Full}
-import oxalis.security.silhouetteOxalis.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import models.user.UserDAO
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._

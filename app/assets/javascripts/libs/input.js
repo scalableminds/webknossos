@@ -41,6 +41,7 @@ type MouseHandlerType =
   | ((delta: Point2, position: Point2, id: ?string, event: MouseEvent) => void);
 type HammerJsEvent = {
   center: Point2,
+  pointers: Array<Object>,
   scale: number,
   srcEvent: MouseEvent,
 };
@@ -247,7 +248,7 @@ class InputMouseButton {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
     const eventWhich = event.which !== 0 ? event.which : 1;
     if (eventWhich === this.which) {
-      document.activeElement.blur(); // see OX-159
+      document.activeElement.blur();
 
       this.down = true;
       this.moveDelta = 0;
@@ -255,13 +256,19 @@ class InputMouseButton {
     }
   }
 
-  handleMouseUp(event: MouseEvent): void {
+  handleMouseUp(event: MouseEvent, triggeredByTouch: boolean): void {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
     const eventWhich = event.which !== 0 ? event.which : 1;
     if (eventWhich === this.which && this.down) {
       this.mouse.trigger(`${this.name}MouseUp`, event);
       if (this.moveDelta <= MOUSE_MOVE_DELTA_THRESHOLD) {
-        this.mouse.trigger(`${this.name}Click`, this.mouse.lastPosition, this.id, event);
+        this.mouse.trigger(
+          `${this.name}Click`,
+          this.mouse.lastPosition,
+          this.id,
+          event,
+          triggeredByTouch,
+        );
       }
       this.down = false;
     }
@@ -284,8 +291,9 @@ export class InputMouse {
   rightMouseButton: InputMouseButton;
   isMouseOver: boolean = false;
   lastPosition: ?Point2 = null;
-  lastScale: number = 1;
+  lastScale: ?number;
   position: ?Point2 = null;
+  triggeredByTouch: boolean = false;
 
   // Copied from backbone events (TODO: handle this better)
   on: (bindings: BindingMap<MouseHandlerType>) => void;
@@ -309,6 +317,7 @@ export class InputMouse {
 
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
+    document.addEventListener("touchend", this.touchEnd);
 
     Utils.addEventListenerWithDelegation(
       document,
@@ -340,6 +349,7 @@ export class InputMouse {
     this.hammerManager.on("panend", (evt: HammerJsEvent) => this.mouseUp(evt.srcEvent));
     this.hammerManager.on("pinchstart", (evt: HammerJsEvent) => this.pinchStart(evt));
     this.hammerManager.on("pinch", (evt: HammerJsEvent) => this.pinch(evt));
+    this.hammerManager.on("pinchend", () => this.pinchEnd());
 
     this.on(initialBindings);
   }
@@ -373,15 +383,17 @@ export class InputMouse {
 
   mouseDown = (event: MouseEvent): void => {
     event.preventDefault();
-    this.lastPosition = this.position;
+    this.lastPosition = this.getRelativeMousePosition(event);
 
     this.leftMouseButton.handleMouseDown(event);
     this.rightMouseButton.handleMouseDown(event);
   };
 
   mouseUp = (event: MouseEvent): void => {
-    this.leftMouseButton.handleMouseUp(event);
-    this.rightMouseButton.handleMouseUp(event);
+    this.leftMouseButton.handleMouseUp(event, this.triggeredByTouch);
+    this.rightMouseButton.handleMouseUp(event, this.triggeredByTouch);
+
+    this.triggeredByTouch = false;
 
     if (this.isMouseOver) {
       if (!this.isHit(event)) {
@@ -391,6 +403,14 @@ export class InputMouse {
     if (this.isHit(event)) {
       this.mouseOver();
     }
+  };
+
+  touchEnd = (): void => {
+    // The order of events during a click on a touch enabled device is:
+    // touch events -> mouse events -> click
+    // so on touchend we set the triggeredByTouch flag, so we can read
+    // and forward it during the mouseup event handling
+    this.triggeredByTouch = true;
   };
 
   mouseMove = (event: MouseEvent): void => {
@@ -431,20 +451,38 @@ export class InputMouse {
   };
 
   isButtonPressed(evt: MouseEvent): boolean {
-    return evt.button !== 0;
+    if (evt.buttons != null) {
+      return evt.buttons !== 0;
+    } else if (evt.which) {
+      // Safari doesn't support evt.buttons
+      return evt.which !== 0;
+    }
+
+    return false;
   }
 
   pinchStart = (evt: HammerJsEvent) => {
-    this.lastScale = 1;
-
+    this.lastScale = evt.scale;
     // Save position so we can zoom to the pinch start position
-    this.position = this.getRelativeMousePosition({ pageX: evt.center.x, pageY: evt.center.y });
+    // Calculate gesture center ourself as there is a bug in the HammerJS calculation
+    this.position = this.getRelativeMousePosition({
+      pageX: (evt.pointers[0].pageX + evt.pointers[1].pageX) / 2,
+      pageY: (evt.pointers[0].pageY + evt.pointers[1].pageY) / 2,
+    });
   };
 
   pinch = (evt: HammerJsEvent): void => {
-    const delta = evt.scale - this.lastScale;
-    this.lastScale = evt.scale;
-    this.trigger("pinch", 10 * delta);
+    // Abort pinch gesture if another finger is added to the gesture
+    if (evt.pointers.length > 2) this.pinchEnd();
+    if (this.lastScale != null) {
+      const delta = evt.scale - this.lastScale;
+      this.lastScale = evt.scale;
+      this.trigger("pinch", 10 * delta);
+    }
+  };
+
+  pinchEnd = () => {
+    this.lastScale = null;
   };
 
   mouseWheel = (event: WheelEvent): void => {
@@ -474,10 +512,6 @@ export class InputMouse {
   };
 
   getOffset() {
-    const boundingRect = this.domElement.getBoundingClientRect();
-    return Object.assign({}, boundingRect, {
-      top: boundingRect.top, // + document.body.scrollTop,
-      left: boundingRect.left, // + document.body.scrollLeft,
-    });
+    return this.domElement.getBoundingClientRect();
   }
 }

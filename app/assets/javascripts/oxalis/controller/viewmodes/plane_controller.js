@@ -411,10 +411,12 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   moveTDView(delta: Point2): void {
-    const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
-    const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
-    Store.dispatch(moveTDViewXAction(delta.x * mouseInversionX));
-    Store.dispatch(moveTDViewYAction(delta.y * mouseInversionY));
+    const state = Store.getState();
+    const mouseInversionX = state.userConfiguration.inverseX ? 1 : -1;
+    const mouseInversionY = state.userConfiguration.inverseY ? 1 : -1;
+    const scale = state.userConfiguration.scale;
+    Store.dispatch(moveTDViewXAction(delta.x / scale * mouseInversionX));
+    Store.dispatch(moveTDViewYAction(delta.y / scale * mouseInversionY));
   }
 
   finishZoom = (): void => {

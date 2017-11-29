@@ -26,11 +26,14 @@ GET           /finishreset                                                      
 POST          /api/register                                                     controllers.Authentication.handleRegistration
 POST          /api/login                                                        controllers.Authentication.authenticate
 GET           /autoLogin                                                        controllers.Authentication.autoLogin
+GET           /api/getToken                                                     controllers.Authentication.getToken
+GET           /api/deleteToken                                                  controllers.Authentication.deleteToken
 GET           /api/switch                                                       controllers.Authentication.switchTo(to: String)
 POST          /api/reset                                                        controllers.Authentication.handleStartResetPassword
 POST          /api/changepw                                                     controllers.Authentication.changePassword
 POST          /api/resetPassword                                                controllers.Authentication.handleResetPassword
 GET           /api/logout                                                       controllers.Authentication.logout
+GET           /auth/sso                                                         controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 # Configurations
 GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default
@@ -192,5 +195,6 @@ GET           /api/statistics/users                                             
 GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)
 
 #Timelogging
-GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int)
-GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int)
+GET           /timetracking                                                     controllers.Authentication.empty
+GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
+GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])

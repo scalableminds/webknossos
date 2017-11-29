@@ -103,14 +103,22 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    this.props.history.block(() => {
+    const beforeUnload = () => {
       const stateSaved = Model.stateSaved();
       if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
         Store.dispatch(saveNowAction());
+        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+        window.setTimeout(() => {
+          // restore the event handler in case a user chose to stay on the page
+          window.onbeforeunload = beforeUnload;
+        }, 500);
         return messages["save.leave_page_unfinished"];
       }
       return null;
-    });
+    };
+
+    this.props.history.block(beforeUnload);
+    window.onbeforeunload = beforeUnload;
 
     UrlManager.startUrlUpdater();
     SceneController.initialize();
@@ -250,24 +258,26 @@ class Controller extends React.PureComponent<Props, State> {
           Store.dispatch(redoAction());
         },
         "ctrl + y": () => Store.dispatch(redoAction()),
-
-        // In the long run this should probably live in a user script
-        "3": function toggleSegmentationOpacity() {
-          // Flow cannot infer the return type of getConfiguration :(
-          // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
-          const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
-          let newSegAlpha = 0;
-
-          if (curSegAlpha > 0) {
-            prevSegAlpha = curSegAlpha;
-          } else {
-            newSegAlpha = prevSegAlpha;
-          }
-
-          api.data.setConfiguration("segmentationOpacity", newSegAlpha);
-        },
       });
     }
+
+    _.extend(keyboardControls, {
+      // In the long run this should probably live in a user script
+      "3": function toggleSegmentationOpacity() {
+        // Flow cannot infer the return type of getConfiguration :(
+        // Should be fixed once this is fixed: https://github.com/facebook/flow/issues/4513
+        const curSegAlpha = Number(api.data.getConfiguration("segmentationOpacity"));
+        let newSegAlpha = 0;
+
+        if (curSegAlpha > 0) {
+          prevSegAlpha = curSegAlpha;
+        } else {
+          newSegAlpha = prevSegAlpha;
+        }
+
+        api.data.setConfiguration("segmentationOpacity", newSegAlpha);
+      },
+    });
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 
@@ -289,7 +299,23 @@ class Controller extends React.PureComponent<Props, State> {
 
   render() {
     if (!this.state.ready) {
-      return <Spin spinning />;
+      return (
+        <Spin
+          spinning
+          size="large"
+          style={{
+            position: "fixed",
+            top: "64px",
+            left: "0px",
+            right: "0px",
+            bottom: "0px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 1000,
+          }}
+        />
+      );
     }
     const state = Store.getState();
     const allowedModes = Store.getState().tracing.restrictions.allowedModes;

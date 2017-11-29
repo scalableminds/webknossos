@@ -29,9 +29,8 @@ class ErrorHandling {
     this.throwAssertions = options.throwAssertions;
     this.sendLocalErrors = options.sendLocalErrors;
 
-    this.commitHash = document
-      .querySelectorAll("meta[name='commit-hash']")[0]
-      .getAttribute("content");
+    const metaElement = document.querySelector("meta[name='commit-hash']");
+    this.commitHash = metaElement ? metaElement.getAttribute("content") : null;
 
     this.initializeAirbrake();
   }
@@ -39,10 +38,12 @@ class ErrorHandling {
   initializeAirbrake() {
     // read Airbrake config from DOM
     // config is inject from backend
-    const scriptTag = document.querySelectorAll("[data-airbrake-project-id]")[0];
-    const projectId = scriptTag.dataset["airbrake-project-id"];
-    const projectKey = scriptTag.dataset["airbrake-project-key"];
-    const envName = scriptTag.dataset["airbrake-environment-name"];
+    const scriptTag = document.querySelector("[data-airbrake-project-id]");
+    if (!scriptTag) throw new Error("failed to initialize airbrake");
+
+    const projectId = scriptTag.dataset.airbrakeProjectId;
+    const projectKey = scriptTag.dataset.airbrakeProjectKey;
+    const envName = scriptTag.dataset.airbrakeEnvironmentName;
 
     this.airbrake = new AirbrakeClient({
       projectId,

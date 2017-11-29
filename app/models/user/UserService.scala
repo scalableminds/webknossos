@@ -149,7 +149,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
     for{
       user <- findOneByEmail(loginInfo.providerKey)
       _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
-    }yield{
+    } yield {
       passwordInfo
     }
   }
@@ -205,11 +205,11 @@ object UserService extends FoxImplicits with IdentityService[User] {
 
   def find(id:BSONObjectID) = UserDAO.findByIdQ(id)
 
-  def createLoginInfo(email: String): LoginInfo ={
+  def createLoginInfo(email: String): LoginInfo = {
     LoginInfo(CredentialsProvider.ID, email)
   }
 
-  def createPasswordInfo(pw: String): PasswordInfo ={
+  def createPasswordInfo(pw: String): PasswordInfo = {
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))
   }
 }

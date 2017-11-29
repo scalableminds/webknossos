@@ -10,7 +10,6 @@ import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 type PushSaveQueueActionType = {
   type: "PUSH_SAVE_QUEUE",
   items: Array<UpdateAction>,
-  pushNow: boolean,
 };
 type SaveNowActionType = { type: "SAVE_NOW" };
 type ShiftSaveQueueActionType = { type: "SHIFT_SAVE_QUEUE", count: number };
@@ -31,13 +30,9 @@ export type SaveActionType =
   | UndoActionType
   | RedoActionType;
 
-export const pushSaveQueueAction = (
-  items: Array<UpdateAction>,
-  pushNow?: boolean = false,
-): PushSaveQueueActionType => ({
+export const pushSaveQueueAction = (items: Array<UpdateAction>): PushSaveQueueActionType => ({
   type: "PUSH_SAVE_QUEUE",
   items,
-  pushNow,
 });
 
 export const saveNowAction = (): SaveNowActionType => ({

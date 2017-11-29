@@ -23,7 +23,7 @@ class LoginView extends React.PureComponent<Props> {
 
     this.props.form.validateFields(async (err: ?Object, formValues: Object) => {
       if (!err) {
-        await Request.sendJSONReceiveJSON("/api/login", { data: formValues });
+        await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
         const user = await getActiveUser();
         Store.dispatch(setActiveUserAction(user));
         this.props.history.push("/dashboard");
@@ -40,6 +40,7 @@ class LoginView extends React.PureComponent<Props> {
     return (
       <Row type="flex" justify="center" style={rowStyle} align="middle">
         <Col span={this.props.layout === "inline" ? 24 : 8}>
+          {this.props.layout === "horizontal" ? <h3>Login</h3> : null}
           <Form onSubmit={this.handleSubmit} layout={this.props.layout}>
             <FormItem>
               {getFieldDecorator("email", {
@@ -74,10 +75,10 @@ class LoginView extends React.PureComponent<Props> {
               </Button>
             </FormItem>
             <FormItem>
-              <Link to="/register" style={linkStyle}>
+              <Link to="/auth/register" style={linkStyle}>
                 Register Now!
               </Link>
-              <Link to="/reset" style={Object.assign({}, linkStyle, resetStyle)}>
+              <Link to="/auth/resetPassword" style={Object.assign({}, linkStyle, resetStyle)}>
                 Forgot Password
               </Link>
             </FormItem>

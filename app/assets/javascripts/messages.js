@@ -82,4 +82,5 @@ In order to restore the current window, a reload is necessary.`,
   "auth.error_no_user": "No active user is logged in.",
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
+  "timetracking.date_range_too_long": "Please specify a date range of 31 days or less.",
 };

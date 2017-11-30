@@ -43,9 +43,9 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/register", { data: formValues }).then(() => {
+        Request.sendJSONReceiveJSON("/api/auth/register", { data: formValues }).then(() => {
           Toast.success(messages["auth.account_created"]);
-          this.props.history.push("/login");
+          this.props.history.push("/auth/login");
         });
       }
     });
@@ -123,8 +123,10 @@ class RegistrationView extends React.PureComponent<Props, State> {
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
+          <h3>Registration</h3>
           <Card style={{ marginBottom: 24 }}>
-            Not a member of the listed teams?<br /> Contact webknossos@scalableminds.com to get more
+            Not a member of the listed teams?<br /> Contact{" "}
+            <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get more
             information about how to get to use webKnossos.
           </Card>
           <Form onSubmit={this.handleSubmit}>
@@ -229,7 +231,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
               <Button type="primary" htmlType="submit" style={{ width: "100%" }}>
                 Register
               </Button>
-              <Link to="/login">Already have an account? Login instead.</Link>
+              <Link to="/auth/login">Already have an account? Login instead.</Link>
             </FormItem>
           </Form>
         </Col>

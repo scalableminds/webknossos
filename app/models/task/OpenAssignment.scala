@@ -13,7 +13,7 @@ import play.api.libs.json.{JsArray, JsObject, Json}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONDocument, BSONObjectID, BSONString}
+import reactivemongo.bson.{BSONObjectID, BSONString}
 import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.duration._
@@ -140,7 +140,9 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
   def updateRemainingInstances(task: Task, project: Project, remainingInstances: Int)(implicit ctx: DBAccessContext) = {
     update(
       Json.obj("_project" -> project.name, "_task" -> task._id),
-      Json.obj("$set" -> Json.obj("instances" -> remainingInstances))
+      Json.obj("$set" -> Json.obj(
+        "instances" -> remainingInstances,
+        "neededExperience" -> task.neededExperience))
     )
   }
 

@@ -30,6 +30,10 @@ type State = {
   endDate: moment$Moment,
 };
 
+type GoogleChartsType = {
+  chart: { getSelection: Function }, // https://developers.google.com/chart/interactive/docs/drawing_charts#chartwrapper
+};
+
 class StatisticView extends React.PureComponent<{}, State> {
   state = {
     isAchievementsLoading: true,
@@ -80,11 +84,13 @@ class StatisticView extends React.PureComponent<{}, State> {
     });
   }
 
-  selectDataPoint = (date: { x: string }) => {
+  selectDataPoint = (chart: GoogleChartsType) => {
+    const indicies = chart.chart.getSelection()[0];
+    const startDate = this.state.achievements.tracingTimes[indicies.row].start;
     this.setState(
       {
-        startDate: moment(date.x),
-        endDate: moment(date.x).endOf("week"),
+        startDate: moment(startDate),
+        endDate: moment(startDate).endOf("week"),
         isTimeEntriesLoading: true,
       },
       () => this.fetchTimeEntryData(),
@@ -92,20 +98,21 @@ class StatisticView extends React.PureComponent<{}, State> {
   };
 
   render() {
-    const previousWeeks = this.state.achievements.tracingTimes.map(item =>
-      parseInt(moment.duration(item.tracingTime).asHours()),
-    );
-    const currentWeek = previousWeeks.length - 1;
+    const columns = [
+      { id: "Date", type: "date" },
+      { id: "HoursPerWeek", type: "number" },
+      { id: "Tooltip", type: "string", role: "tooltip" },
+    ];
+    const rows = this.state.achievements.tracingTimes.map(item => {
+      const duration = Utils.roundTo(moment.duration(item.tracingTime).asHours(), 2);
 
-    const dates = this.state.achievements.tracingTimes.map(item =>
-      moment(item.start).format("YYYY-MM-DD"),
-    );
-
-    const columns = [{ label: "Date", type: "date" }, { label: "HoursPerWeek", type: "number" }];
-    const rows = this.state.achievements.tracingTimes.map(item => [
-      new Date(item.start),
-      parseInt(moment.duration(item.tracingTime).asHours()),
-    ]);
+      return [
+        new Date(item.start),
+        duration,
+        `${moment(item.start).format("DD.MM.YYYY")} - ${moment(item.end).format("DD.MM.YYYY")}
+        ${duration}h`,
+      ];
+    });
 
     return (
       <div className="statistics container wide">
@@ -119,10 +126,16 @@ class StatisticView extends React.PureComponent<{}, State> {
                     columns={columns}
                     rows={rows}
                     graph_id="TimeGraph"
-                    chartPackages={["line"]}
                     width="100%"
                     height="400px"
+                    chartEvents={[
+                      {
+                        eventName: "select",
+                        callback: this.selectDataPoint,
+                      },
+                    ]}
                     options={{
+                      pointSize: 5,
                       legend: { position: "none" },
                       hAxis: {
                         title: "",
@@ -219,30 +232,3 @@ class StatisticView extends React.PureComponent<{}, State> {
 }
 
 export default StatisticView;
-
-// <C3Chart
-//   data={{
-//     x: "date",
-//     columns: [["date"].concat(dates), ["WeeklyHours"].concat(previousWeeks)],
-//     color(color, d) {
-//       return d.index === currentWeek ? "#48C561" : color;
-//     },
-//     selection: {
-//       enabled: true,
-//       grouped: false,
-//       multiple: false,
-//     },
-//     onclick: this.selectDataPoint,
-//   }}
-//   axis={{
-//     x: {
-//       type: "timeseries",
-//     },
-//     y: {
-//       label: "hours / week",
-//     },
-//   }}
-//   legend={{
-//     show: false,
-//   }}
-// />

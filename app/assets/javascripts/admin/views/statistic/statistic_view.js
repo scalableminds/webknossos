@@ -5,7 +5,7 @@ import { Row, Col, Spin, Table, Card } from "antd";
 import moment from "moment";
 import Request from "libs/request";
 import Utils from "libs/utils";
-import C3Chart from "react-c3js";
+import { Chart } from "react-google-charts";
 
 const { Column } = Table;
 type TimeEntryType = {
@@ -101,38 +101,46 @@ class StatisticView extends React.PureComponent<{}, State> {
       moment(item.start).format("YYYY-MM-DD"),
     );
 
+    const columns = [{ label: "Date", type: "date" }, { label: "HoursPerWeek", type: "number" }];
+    const rows = this.state.achievements.tracingTimes.map(item => [
+      new Date(item.start),
+      parseInt(moment.duration(item.tracingTime).asHours()),
+    ]);
+
     return (
       <div className="statistics container wide">
         <Row gutter={16}>
           <Col span={16}>
             <Card title="Overall Weekly Tracing Time">
               <Spin spinning={this.state.isAchievementsLoading} size="large">
-                <C3Chart
-                  data={{
-                    x: "date",
-                    columns: [["date"].concat(dates), ["WeeklyHours"].concat(previousWeeks)],
-                    color(color, d) {
-                      return d.index === currentWeek ? "#48C561" : color;
-                    },
-                    selection: {
-                      enabled: true,
-                      grouped: false,
-                      multiple: false,
-                    },
-                    onclick: this.selectDataPoint,
-                  }}
-                  axis={{
-                    x: {
-                      type: "timeseries",
-                    },
-                    y: {
-                      label: "hours / week",
-                    },
-                  }}
-                  legend={{
-                    show: false,
-                  }}
-                />
+                {rows.length > 0 ? (
+                  <Chart
+                    chartType="LineChart"
+                    columns={columns}
+                    rows={rows}
+                    graph_id="TimeGraph"
+                    chartPackages={["line"]}
+                    width="100%"
+                    height="400px"
+                    options={{
+                      legend: { position: "none" },
+                      hAxis: {
+                        title: "",
+                        minorGridlines: {
+                          color: "none",
+                        },
+                      },
+                      vAxis: {
+                        title: "Hours / Week",
+                        minorGridlines: {
+                          color: "none",
+                        },
+                        viewWindowMode: "explicit",
+                        viewWindow: { min: 0 },
+                      },
+                    }}
+                  />
+                ) : null}
               </Spin>
             </Card>
           </Col>
@@ -211,3 +219,30 @@ class StatisticView extends React.PureComponent<{}, State> {
 }
 
 export default StatisticView;
+
+// <C3Chart
+//   data={{
+//     x: "date",
+//     columns: [["date"].concat(dates), ["WeeklyHours"].concat(previousWeeks)],
+//     color(color, d) {
+//       return d.index === currentWeek ? "#48C561" : color;
+//     },
+//     selection: {
+//       enabled: true,
+//       grouped: false,
+//       multiple: false,
+//     },
+//     onclick: this.selectDataPoint,
+//   }}
+//   axis={{
+//     x: {
+//       type: "timeseries",
+//     },
+//     y: {
+//       label: "hours / week",
+//     },
+//   }}
+//   legend={{
+//     show: false,
+//   }}
+// />

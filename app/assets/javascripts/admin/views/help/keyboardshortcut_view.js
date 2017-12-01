@@ -18,7 +18,7 @@ const KeyboardShortcutView = () => {
 
   const orthogonalShortcuts = [
     {
-      keybinding: "Left Mouse Drag Or Arrow Keys",
+      keybinding: "Left Mouse Drag or Arrow Keys",
       action: "Move",
     },
     {
@@ -26,7 +26,7 @@ const KeyboardShortcutView = () => {
       action: "Zoom In/out",
     },
     {
-      keybinding: "F, D Or Mousewheel",
+      keybinding: "F, D or Mousewheel",
       action: "Move Along Z-axis",
     },
     {
@@ -53,16 +53,13 @@ const KeyboardShortcutView = () => {
       keybinding: "S",
       action: "Center Active Node",
     },
-  ];
-
-  const ThreeDShortcuts = [
     {
-      keybinding: "Mousewheel",
+      keybinding: "Scroll Mousewheel (3D View)",
       action: "Zoom In And Out",
     },
     {
-      keybinding: "Right Click Drag",
-      action: "Rotate 3d Viewt",
+      keybinding: "Right Click Drag (3D View)",
+      action: "Rotate 3D View",
     },
   ];
 
@@ -119,7 +116,7 @@ const KeyboardShortcutView = () => {
       action: "Select Active Node",
     },
     {
-      keybinding: "Mouse Drag Or Arrow Keys",
+      keybinding: "Mouse Drag or Arrow Keys",
       action: "Rotation",
     },
     {
@@ -208,25 +205,17 @@ const KeyboardShortcutView = () => {
       <h3>Keyboard Shortcuts</h3>
       <p>Find all available keyboard shortcuts for webKnossos listed below.</p>
 
-      <h3>Orthogonal Mode</h3>
-      <Table
-        dataSource={orthogonalShortcuts}
-        columns={columns}
-        pagination={false}
-        rowKey={(_, index) => index}
-      />
-
-      <h3>3D View</h3>
-      <Table
-        dataSource={ThreeDShortcuts}
-        columns={columns}
-        pagination={false}
-        rowKey={(_, index) => index}
-      />
-
       <h3>General Navigation</h3>
       <Table
         dataSource={generalShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
+
+      <h3>Orthogonal Mode</h3>
+      <Table
+        dataSource={orthogonalShortcuts}
         columns={columns}
         pagination={false}
         rowKey={(_, index) => index}

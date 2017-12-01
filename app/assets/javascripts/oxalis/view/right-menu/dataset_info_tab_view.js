@@ -15,6 +15,7 @@ import {
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import { Table } from "antd";
 import type { OxalisState, TracingType, DatasetType, TaskType, FlycamType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
@@ -28,6 +29,47 @@ type DatasetInfoTabProps = DatasetInfoTabStateProps & {
   setAnnotationName: string => void,
   setAnnotationDescription: string => void,
 };
+
+const shortcutColumns = [
+  {
+    title: "Keyboard Shortcut",
+    dataIndex: "keybinding",
+    key: "keybinding",
+  },
+  {
+    title: "Action",
+    dataIndex: "action",
+    key: "action",
+  },
+];
+
+const shortcuts = [
+  {
+    key: "1",
+    keybinding: "I,O or Alt + Mousewheel",
+    action: "Zoom in/out",
+  },
+  {
+    key: "2",
+    keybinding: "Mousewheel or D and F",
+    action: "Move Along 3rd Axis",
+  },
+  {
+    key: "3",
+    keybinding: "Left Mouse Drag or Arrow Keys",
+    action: "Move",
+  },
+  {
+    key: "4",
+    keybinding: "Right Click Drag in 3D View",
+    action: "Rotate 3D View",
+  },
+  {
+    key: "5",
+    keybinding: "K,L",
+    action: "Scale Up/Down Viewports",
+  },
+];
 
 class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   calculateZoomLevel(): number {
@@ -125,34 +167,13 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         ) : null}
         {isPublicViewMode ? (
           <div>
-            <table style={{ marginTop: 20, marginBottom: 20 }}>
-              <tbody>
-                <tr>
-                  <th style={{ textAlign: "left" }}>Keyboard Shortcut</th>
-                  <th style={{ textAlign: "left" }}>Action</th>
-                </tr>
-                <tr>
-                  <td>I,O or Alt + Mousewheel</td>
-                  <td>Zoom in/out</td>
-                </tr>
-                <tr>
-                  <td>Mousewheel or D and F</td>
-                  <td>Move Along 3rd Axis</td>
-                </tr>
-                <tr>
-                  <td>Left Mouse Drag or Arrow Keys</td>
-                  <td>Move</td>
-                </tr>
-                <tr>
-                  <td>Right Click Drag in 3D View</td>
-                  <td>Rotate 3D View</td>
-                </tr>
-                <tr>
-                  <td>K,L</td>
-                  <td>Scale Up/Down Viewports</td>
-                </tr>
-              </tbody>
-            </table>
+            <Table
+              dataSource={shortcuts}
+              columns={shortcutColumns}
+              pagination={false}
+              style={{ marginRight: 20 }}
+              size="small"
+            />
             <div>
               <img
                 className="img-50"

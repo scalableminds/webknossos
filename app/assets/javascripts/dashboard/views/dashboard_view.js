@@ -101,7 +101,7 @@ class DashboardView extends React.PureComponent<Props, State> {
     const user = this.state.user;
     if (!user) {
       return (
-        <div className="text-center" style={{ marginTop: 50 }}>
+        <div className="text-center" style={{ marginTop: 50, width: "100vw" }}>
           <Spin size="large" />
         </div>
       );

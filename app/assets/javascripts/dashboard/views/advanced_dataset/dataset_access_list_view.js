@@ -59,12 +59,8 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
   }
 
   render() {
-    return this.state.isLoading ? (
-      <div className="text-center">
-        <Spin size="large" />
-      </div>
-    ) : (
-      this.renderTable()
-    );
+    <Spin size="large" spinning={this.state.isLoading}>
+      {this.renderTable()}
+    </Spin>;
   }
 }

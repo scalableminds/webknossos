@@ -168,7 +168,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "Left Mouse Drag",
-      action: "Move (move Mode) / Add To Current Cell (trace/brush Mode)",
+      action: "Move (move Mode) / Add To Current Cell (Trace / Brush Mode)",
     },
     {
       keybinding: "Arrow Keys",
@@ -188,7 +188,7 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "Shift + Mousewheel",
-      action: "Change Brush Size (brush Mode)",
+      action: "Change Brush Size (Brush Mode)",
     },
     {
       keybinding: "V",
@@ -221,7 +221,7 @@ const KeyboardShortcutView = () => {
         rowKey={(_, index) => index}
       />
 
-      <h3>Oblique/Flight Mode</h3>
+      <h3>Oblique / Flight Mode</h3>
       <Table
         dataSource={flightModeShortcuts}
         columns={columns}

@@ -18,216 +18,188 @@ const KeyboardShortcutView = () => {
 
   const orthogonalShortcuts = [
     {
-      key: "1",
-      keybinding: "Left Mouse drag or Arrow keys",
+      keybinding: "Left Mouse Drag Or Arrow Keys",
       action: "Move",
     },
     {
-      key: "2",
-      keybinding: "I, O or Alt + Mousewheel",
-      action: "Zoom in/out",
+      keybinding: "I, O, or Alt + Mousewheel",
+      action: "Zoom In/out",
     },
     {
-      key: "3",
-      keybinding: "F, D or Mousewheel",
-      action: "Move along Z-Axis",
+      keybinding: "F, D Or Mousewheel",
+      action: "Move Along Z-axis",
     },
     {
-      key: "4",
-      keybinding: "Right click",
-      action: "Set node",
+      keybinding: "Right Click",
+      action: "Set Node",
     },
     {
-      key: "5",
-      keybinding: "Shift + Alt + Left click",
-      action: "Merge two trees",
+      keybinding: "Shift + Alt + Left Click",
+      action: "Merge Two Trees",
     },
     {
-      key: "6",
+      keybinding: "Shift + Ctrl + Left Click",
+      action: "Delete Edge/split Trees",
+    },
+    {
       keybinding: "K, L",
-      action: "Scale up/down viewport size",
+      action: "Scale Up/down Viewport Size",
     },
     {
-      key: "7",
       keybinding: "B, J",
-      action: "Set/Jump to last branchpoint",
+      action: "Set/jump To Last Branchpoint",
     },
     {
-      key: "8",
       keybinding: "S",
-      action: "Center active node",
+      action: "Center Active Node",
     },
   ];
 
   const ThreeDShortcuts = [
     {
-      key: "1",
       keybinding: "Mousewheel",
-      action: "Zoom in and out",
+      action: "Zoom In And Out",
     },
     {
-      key: "2",
-      keybinding: "Right click drag",
-      action: "Rotate 3D Viewt",
+      keybinding: "Right Click Drag",
+      action: "Rotate 3d Viewt",
     },
   ];
 
   const generalShortcuts = [
     {
-      key: "1",
-      keybinding: "Ctrl/Cmd + Z",
+      keybinding: "Ctrl/cmd + Z",
       action: "Undo",
     },
     {
-      key: "2",
-      keybinding: "Ctrl/Cmd + Y",
+      keybinding: "Ctrl/cmd + Y",
       action: "Redo",
     },
     {
-      key: "3",
       keybinding: "P, N",
-      action: "Previous/Next comment",
+      action: "Previous/next Comment",
     },
     {
-      key: "4",
       keybinding: "Del",
-      action: "Delete node/Split trees",
+      action: "Delete Node/split Trees",
     },
     {
-      key: "5",
       keybinding: "C",
-      action: "Create new tree",
+      action: "Create New Tree",
     },
     {
-      key: "6",
-      keybinding: "Shift + Alt + Left click",
-      action: "Merge two trees",
+      keybinding: "Shift + Alt + Left Click",
+      action: "Merge Two Trees",
     },
     {
-      key: "7",
       keybinding: "M",
-      action: "Toggle mode (Orthogonal, Flight, Oblique)",
+      action: "Toggle Mode (orthogonal, Flight, Oblique)",
     },
     {
-      key: "8",
       keybinding: "1",
-      action: "Toggle skeleton visibility",
+      action: "Toggle Skeleton Visibility",
     },
     {
-      key: "9",
       keybinding: "2",
-      action: "Toggle inactive tree visibility",
+      action: "Toggle Inactive Tree Visibility",
     },
     {
-      key: "10",
       keybinding: "3",
-      action: "Toggle segmentation opacity",
+      action: "Toggle Segmentation Opacity",
     },
     {
-      key: "11",
       keybinding: "Shift + Mousewheel",
-      action: "Change node radius",
+      action: "Change Node Radius",
     },
   ];
 
   const flightModeShortcuts = [
     {
-      key: "1",
-      keybinding: "Shift + Left click",
-      action: "Select active node",
+      keybinding: "Shift + Left Click",
+      action: "Select Active Node",
     },
     {
-      key: "2",
-      keybinding: "Mouse drag or Arrow keys",
+      keybinding: "Mouse Drag Or Arrow Keys",
       action: "Rotation",
     },
     {
-      key: "3",
       keybinding: "Space",
       action: "Forward",
     },
     {
-      key: "4",
       keybinding: "Ctrl + Space",
       action: "Backward",
     },
     {
-      key: "5",
       keybinding: "I, O",
-      action: "Zoom in and out",
+      action: "Zoom In And Out",
     },
     {
-      key: "6",
       keybinding: "Shift + Arrow",
-      action: "Rotation around Axis",
+      action: "Rotation Around Axis",
     },
     {
-      key: "7",
       keybinding: "B, J",
-      action: "Set/Jump to last branchpoint",
+      action: "Set/jump To Last Branchpoint",
     },
     {
-      key: "8",
       keybinding: "R",
-      action: "Reset rotation",
+      action: "Reset Rotation",
     },
     {
-      key: "9",
       keybinding: "S",
-      action: "Center active node",
+      action: "Center Active Node",
     },
     {
-      key: "10",
       keybinding: "D",
-      action: "Forward without recording waypoints",
+      action: "Forward Without Recording Waypoints",
     },
     {
-      key: "11",
       keybinding: "F",
-      action: "Backward without recording waypoints",
+      action: "Backward Without Recording Waypoints",
     },
     {
-      key: "12",
       keybinding: "Shift + Space",
-      action: "Delete active node, Recenter previous node",
+      action: "Delete Active Node, Recenter Previous Node",
     },
   ];
 
   const volumeModeShortcuts = [
     {
-      key: "1",
-      keybinding: "Shift + Left click",
-      action: "Select active cell",
+      keybinding: "Shift + Left Click",
+      action: "Select Active Cell",
     },
     {
-      key: "2",
-      keybinding: "Left Mouse drag",
-      action: "Move (Move mode) / Add to current Cell (Trace/Brush mode)",
+      keybinding: "Left Mouse Drag",
+      action: "Move (move Mode) / Add To Current Cell (trace/brush Mode)",
     },
     {
-      key: "3",
-      keybinding: "Arrow keys",
+      keybinding: "Arrow Keys",
       action: "Move",
     },
     {
-      key: "4",
-      keybinding: "Right Mouse drag",
-      action: "Remove voxels from cell",
+      keybinding: "Right Mouse Drag",
+      action: "Remove Voxels From Cell",
     },
     {
-      key: "5",
       keybinding: "C",
-      action: "Create new cell",
+      action: "Create New Cell",
     },
     {
-      key: "6",
       keybinding: "W, 1",
-      action: "Toggle Move / Trace / Brush mode",
+      action: "Toggle Move / Trace / Brush Mode",
     },
     {
-      key: "7",
       keybinding: "Shift + Mousewheel",
-      action: "Change brush size (Brush mode)",
+      action: "Change Brush Size (brush Mode)",
+    },
+    {
+      keybinding: "V",
+      action: "Copy Segmentation of Current Cell From Previous Slice",
+    },
+    {
+      keybinding: "Shift + V",
+      action: "Copy Segmentation of Current Cell From Next Slice",
     },
   ];
 
@@ -237,19 +209,44 @@ const KeyboardShortcutView = () => {
       <p>Find all available keyboard shortcuts for webKnossos listed below.</p>
 
       <h3>Orthogonal Mode</h3>
-      <Table dataSource={orthogonalShortcuts} columns={columns} pagination={false} />
+      <Table
+        dataSource={orthogonalShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
 
       <h3>3D View</h3>
-      <Table dataSource={ThreeDShortcuts} columns={columns} pagination={false} />
+      <Table
+        dataSource={ThreeDShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
 
       <h3>General Navigation</h3>
-      <Table dataSource={generalShortcuts} columns={columns} pagination={false} />
+      <Table
+        dataSource={generalShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
 
       <h3>Oblique/Flight Mode</h3>
-      <Table dataSource={flightModeShortcuts} columns={columns} pagination={false} />
+      <Table
+        dataSource={flightModeShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
 
       <h3>Volume Mode</h3>
-      <Table dataSource={volumeModeShortcuts} columns={columns} pagination={false} />
+      <Table
+        dataSource={volumeModeShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
     </div>
   );
 };

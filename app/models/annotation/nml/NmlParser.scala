@@ -64,18 +64,18 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel), volumes.head.location), description)
         } else {
           (Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
-            editPosition, editRotation, zoomLevel, version=0, userBoundingBox)), description)
+            editPosition, editRotation, zoomLevel, version = 0, userBoundingBox)), description)
         }
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
         logger.debug(s"Tried  to parse empty NML file $name.")
         Empty
-      case e: org.xml.sax.SAXParseException                                                     =>
+      case e: org.xml.sax.SAXParseException =>
         logger.debug(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name'. Error in Line ${e.getLineNumber} " +
           s"(column ${e.getColumnNumber}): ${e.getMessage}")
-      case e: Exception                                                                         =>
+      case e: Exception =>
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
@@ -90,12 +90,75 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   }
 
   def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
+    for{
+      duplicateCheck <- checkForDuplicateIds(trees)
+      nodesInEdges <- allNodesInEdgesExist(duplicateCheck)
+      nodesBelongToEdges <- nodesAreInEdges(nodesInEdges)
+      treesAreConnected <- checkTreesAreConnected(nodesBelongToEdges)
+    } yield {
+      treesAreConnected
+    }
+  }
+
+  private def checkForDuplicateIds(trees: Seq[Tree]): Box[Seq[Tree]] = {
     val nodeIds = trees.flatMap(_.nodes).map(_.id)
     nodeIds.size == nodeIds.distinct.size match {
-      case true  => Full(trees)
+      case true => Full(trees)
       case false => Failure("NML contains nodes with duplicate ids.")
     }
   }
+
+  private def allNodesInEdgesExist(trees: Seq[Tree]) = {
+    def treeLoop(trees: Seq[Tree]): Boolean = {
+      edgeLoop(trees.head, trees.head.edges) match {
+        case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
+        case false => false
+      }
+    }
+
+    def edgeLoop(tree: Tree, edges: Seq[Edge]): Boolean = {
+      checkEdge(tree, edges.head) match {
+        case true => if (edges.tail.isEmpty) true else edgeLoop(tree, edges.tail)
+        case false => false
+      }
+    }
+
+    def checkEdge(tree: Tree, edge: Edge) = {
+      tree.nodes.map(node => node.id).contains(edge.source) && tree.nodes.map(node => node.id).contains(edge.source)
+    }
+
+    treeLoop(trees) match {
+      case true => Full(trees)
+      case false => Failure("Some Edges contain nodes that don't exist.")
+    }
+  }
+
+  private def nodesAreInEdges(trees: Seq[Tree]) = {
+    def treeLoop(trees: Seq[Tree]): Boolean = {
+      nodeLoop(trees.head, trees.head.nodes) match {
+        case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
+        case false => false
+      }
+    }
+
+    def nodeLoop(tree: Tree, nodes: Seq[Node]): Boolean = {
+      checkNode(tree, nodes.head) match {
+        case true => if (nodes.tail.isEmpty) true else nodeLoop(tree, nodes.tail)
+        case false => false
+      }
+    }
+
+    def checkNode(tree: Tree, node: Node) = {
+      tree.edges.map(edge => edge.source).contains(node.id) || tree.edges.map(edge => edge.target).contains(node.id)
+    }
+
+    treeLoop(trees) match {
+      case true => Full(trees)
+      case false => Failure("Some Nodes don't belong to any edges.")
+    }
+  }
+
+  private def checkTreesAreConnected(trees: Seq[Tree])
 
   private def transformTrees(trees: Seq[Tree]): Seq[Tree] = {
     createUniqueIds(trees.flatMap(splitIntoComponents))
@@ -140,7 +203,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         val r = TreeUtils.add(component, currentComponent)
         buildTreeFromNode(tail ::: connectedNodes.toList, TreeUtils.subtract(treeReminder, currentComponent), r)
       } else
-          treeReminder -> component
+        treeReminder -> component
     }
 
     var treeToProcess = tree

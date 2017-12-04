@@ -90,7 +90,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   }
 
   def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
-    for{
+    for {
       duplicateCheck <- checkForDuplicateIds(trees)
       nodesInEdges <- allNodesInEdgesExist(duplicateCheck)
       nodesBelongToEdges <- nodesAreInEdges(nodesInEdges)
@@ -158,7 +158,28 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     }
   }
 
-  private def checkTreesAreConnected(trees: Seq[Tree])
+  private def checkTreesAreConnected(trees: Seq[Tree]) = {
+    def treeLoop(trees: Seq[Tree]): Boolean = {
+      dfsFunctionalFold(trees.head.nodes.head.id, Set(), trees.head).size == trees.head.nodes.size match {
+        case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
+        case false => false
+      }
+    }
+
+    def dfsFunctionalFold(current: Int, acc: Set[Int], tree: Tree): Set[Int] = {
+      val edgesWithNode = tree.edges.filter(e => e.source == current)
+      edgesWithNode.foldLeft(acc) {
+        (results, next) =>
+          if (results.contains(next.target)) results
+          else dfsFunctionalFold(next.target, results + current, tree)
+      } + current
+    }
+
+    treeLoop(trees) match {
+      case true => Full(trees)
+      case false => Failure("Some Trees are not connected.")
+    }
+  }
 
   private def transformTrees(trees: Seq[Tree]): Seq[Tree] = {
     createUniqueIds(trees.flatMap(splitIntoComponents))

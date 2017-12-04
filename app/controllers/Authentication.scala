@@ -1,17 +1,17 @@
 package controllers
 
 import java.net.URLEncoder
-import java.util.UUID
 import javax.inject.Inject
 
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team.Role
 import models.user.UserService.{Mailer => _, _}
-import models.user.{UserService, UserToken2, UserTokenService}
+import models.user._
 import net.liftweb.common.{Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
@@ -98,7 +98,6 @@ object AuthForms {
 class Authentication @Inject()(
                                 val messagesApi: MessagesApi,
                                 credentialsProvider: CredentialsProvider,
-                                userTokenService: UserTokenService,
                                 passwordHasher: PasswordHasher,
                                 configuration: Configuration)
   extends Controller
@@ -237,11 +236,14 @@ class Authentication @Inject()(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
-        case Some(user) => for {
-          token <- userTokenService.save(UserToken2.create(user._id, email.toLowerCase, isLogin = false))
-        } yield {
-          Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token.id.toString))
-          Ok
+        case Some(user) => {
+          val token = UserToken(user._id)
+          for {
+            _ <- UserTokenDAO.insert(token)(GlobalAccessContext)
+          } yield {
+            Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token.token))
+            Ok
+          }
         }
       }
     )
@@ -252,16 +254,14 @@ class Authentication @Inject()(
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        val id = UUID.fromString(passwords.token.trim)
-        userTokenService.find(id).flatMap {
-          case None =>
-            Future.successful(BadRequest(Messages("auth.invalidToken")))
-          case Some(token) if !token.isLogin && !token.isExpired =>
-            val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
+        UserTokenService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
+          case Full(user) =>
             for {
-              _ <- userTokenService.remove(id)
-              _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
+              _ <- UserTokenDAO.removeByToken(passwords.token.trim)(GlobalAccessContext)
+              _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
             } yield Ok
+          case _ =>
+            Future.successful(BadRequest(Messages("auth.invalidToken")))
         }
       }
     )

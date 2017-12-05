@@ -350,13 +350,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
-        {this.state.isLoading ? (
-          <div className="text-center">
-            <Spin size="large" />
-          </div>
-        ) : (
-          this.renderTable()
-        )}
+        <Spin spinning={this.state.isLoading}>{this.renderTable()}</Spin>
 
         <TransferTaskModal
           visible={this.state.isTransferModalVisible}

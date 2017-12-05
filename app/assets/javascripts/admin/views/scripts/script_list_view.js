@@ -64,8 +64,8 @@ class ScriptListView extends React.PureComponent<{}, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="container wide">
-        <div style={{ marginTag: 20 }}>
+      <div className="container">
+        <div>
           <div className="pull-right">
             <Link to="/scripts/create">
               <Button icon="plus" style={marginRight} type="primary">

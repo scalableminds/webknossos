@@ -36,7 +36,6 @@ format.json.invalid=Invalid Json format
 image.create.failed=Failed to create image
 
 auth.tokenDeleted=Token was deleted
-auth.noToken=You do not have a token
 auth.invalidToken=The token is invalid
 
 team.created=Team got created
@@ -76,10 +75,7 @@ user.configuration.dataset.updated=Dataset configuration updated
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 user.email.invalid=At least one Email is invalid
-user.notAuthorised=You are not authorized to view this resource. Please log in. 
-user.maxLoginTokenLimit=You already have a login-token. If you want a new one you need to deactivate the old one first.
-user.loginTokenDeleted=Your login-token has been deleted.
-user.noLoginToken=You dont have a login-token.
+user.notAuthorised=You are not authorized to view this resource. Please log in.
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
@@ -132,8 +128,6 @@ dataLayer.forbidden=Access to this layer is not allowed.
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
-
-dataToken.creationFailed=Creation of the data token failed.
 
 cellId=Cell Id
 

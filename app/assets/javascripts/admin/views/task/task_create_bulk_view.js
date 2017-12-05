@@ -250,7 +250,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const { getFieldDecorator } = this.props.form;
 
     return (
-      <div className="container wide" style={{ paddingTop: 20 }}>
+      <div className="container" style={{ paddingTop: 20 }}>
         <Spin spinning={this.state.isUploading}>
           <Card title={<h3>Bulk Create Tasks</h3>}>
             <p>
@@ -286,6 +286,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                     className="input-monospace"
                     placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId]"
                     autosize={{ minRows: 6 }}
+                    style={{
+                      fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                    }}
                   />,
                 )}
               </FormItem>

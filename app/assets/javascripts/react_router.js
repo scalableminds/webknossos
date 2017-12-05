@@ -131,7 +131,7 @@ class ReactRouter extends React.Component<Props> {
         <LocaleProvider locale={enUS}>
           <Layout>
             <Navbar isAuthenticated={isAuthenticated} />
-            <Content style={{ marginTop: 48 }}>
+            <Content>
               <Switch>
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}

@@ -65,7 +65,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="container wide">
+      <div className="container">
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
             <Link to="/taskTypes/create">

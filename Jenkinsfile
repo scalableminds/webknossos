@@ -16,7 +16,6 @@ wrap(repo: "scalableminds/webknossos") {
     env.USER_NAME = env.USER
     env.USER_UID = sh(returnStdout: true, script: 'id -u').trim()
     env.USER_GID = sh(returnStdout: true, script: 'id -g').trim()
-    env.TZ = readFile('/etc/timezone').trim()
     sh "mkdir -p ${env.DOCKER_CACHE_PREFIX}"
     sh "docker-compose pull base"
     sh "docker-compose pull mongo"

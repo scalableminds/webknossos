@@ -381,20 +381,18 @@ const Utils = {
     delegateSelector: string,
     handlerFunc: Function,
   ) {
-    return element.addEventListener(
-      eventName,
-      function(event: Event) {
+    const wrapperFunc = function(event: Event) {
+      // $FlowFixMe Flow doesn't know native InputEvents
+      for (let target = event.target; target && target !== this; target = target.parentNode) {
         // $FlowFixMe Flow doesn't know native InputEvents
-        for (let target = event.target; target && target !== this; target = target.parentNode) {
-          // $FlowFixMe Flow doesn't know native InputEvents
-          if (target.matches(delegateSelector)) {
-            handlerFunc.call(target, event);
-            break;
-          }
+        if (target.matches(delegateSelector)) {
+          handlerFunc.call(target, event);
+          break;
         }
-      },
-      false,
-    );
+      }
+    };
+    element.addEventListener(eventName, wrapperFunc, false);
+    return { [eventName]: wrapperFunc };
   },
 
   async compress(data: Uint8Array | string): Promise<Uint8Array> {

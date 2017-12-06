@@ -7,6 +7,7 @@ jobs:
       USER_NAME: circleci
       USER_UID: 1001
       USER_GID: 1001
+      TZ: Europe/Berlin
     steps:
       - checkout
       - run:

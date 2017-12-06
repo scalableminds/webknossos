@@ -6,7 +6,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Button, Dropdown, Input, Menu } from "antd";
+import { Button, Dropdown, Input, Menu, Icon } from "antd";
 import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -22,8 +22,9 @@ import {
   toggleAllTreesAction,
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import type { Dispatch } from "redux";
 import Store from "oxalis/store";
+import { serializeToNml } from "oxalis/model/helpers/nml_helpers";
+import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
 const ButtonGroup = Button.Group;
@@ -69,6 +70,23 @@ class TreesTabView extends React.PureComponent<Props> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
+  exportAsNml = () => {
+    const state = Store.getState();
+    const nml = serializeToNml(state, this.props.skeletonTracing);
+    const anchor = document.createElement("a");
+    const objectUrl = URL.createObjectURL(new Blob([nml]));
+    anchor.setAttribute("href", objectUrl);
+    anchor.setAttribute("download", `${state.dataset.name}.nml`);
+
+    if (document.createEvent) {
+      const event = document.createEvent("MouseEvents");
+      event.initEvent("click", true, true);
+      anchor.dispatchEvent(event);
+    } else {
+      anchor.click();
+    }
+  };
+
   getTreesComponents() {
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
@@ -99,6 +117,28 @@ class TreesTabView extends React.PureComponent<Props> {
     );
   }
 
+  getActionsDropdown() {
+    return (
+      <Menu>
+        <Menu.Item key="shuffleTreeColor">
+          <div onClick={this.shuffleTreeColor} title="Change Tree Color">
+            <i className="fa fa-adjust" /> Change Color
+          </div>
+        </Menu.Item>
+        <Menu.Item key="shuffleAllTreeColors">
+          <div onClick={this.shuffleAllTreeColors} title="Shuffle All Tree Colors">
+            <i className="fa fa-random" /> Shuffle All Colors
+          </div>
+        </Menu.Item>
+        <Menu.Item key="exportAsNml">
+          <div onClick={this.exportAsNml} title="Export visible trees as nml">
+            <Icon type="export" /> Export as Nml
+          </div>
+        </Menu.Item>
+      </Menu>
+    );
+  }
+
   render() {
     const activeTreeName = getActiveTree(this.props.skeletonTracing)
       .map(activeTree => activeTree.name)
@@ -113,12 +153,6 @@ class TreesTabView extends React.PureComponent<Props> {
           <ButtonComponent onClick={this.deleteTree} title="Delete Tree">
             <i className="fa fa-trash-o" /> Delete
           </ButtonComponent>
-          <ButtonComponent onClick={this.shuffleTreeColor} title="Change Tree Color">
-            <i className="fa fa-adjust" /> Change Color
-          </ButtonComponent>
-          <ButtonComponent onClick={this.shuffleAllTreeColors} title="Shuffle All Tree Colors">
-            <i className="fa fa-random" /> Shuffle All Colors
-          </ButtonComponent>
           <ButtonComponent onClick={this.toggleAllTrees} title="Toggle Visibility of All Trees">
             <i className="fa fa-toggle-on" /> Toggle All
           </ButtonComponent>
@@ -128,6 +162,11 @@ class TreesTabView extends React.PureComponent<Props> {
           >
             <i className="fa fa-toggle-off" /> Toggle Inactive
           </ButtonComponent>
+          <Dropdown overlay={this.getActionsDropdown()}>
+            <ButtonComponent>
+              More<Icon type="down" />
+            </ButtonComponent>
+          </Dropdown>
         </ButtonGroup>
         <InputGroup compact>
           <ButtonComponent onClick={this.props.onSelectNextTreeBackward}>

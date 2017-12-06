@@ -1,6 +1,6 @@
 // @flow
 import React from "react";
-import { withRouter } from "react-router";
+import { withRouter } from "react_router";
 import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card, InputNumber } from "antd";
 import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";

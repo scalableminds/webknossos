@@ -163,10 +163,10 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <strong>Trace</strong>
           </Link>
           <br />
-          <Link to={`/annotations/${typ}/${id}/download`}>
+          <a href={`/annotations/${typ}/${id}/download`}>
             <i className="fa fa-download" />
             Download
-          </Link>
+          </a>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
             <i className="fa fa-archive" />

@@ -91,7 +91,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
     const fullWidth = { width: "100%" };
 
     return (
-      <div className="row container wide project-administration">
+      <div className="row container project-administration">
         <Card title={<h3>{title}</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Project Name" hasFeedback>

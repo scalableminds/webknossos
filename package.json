@@ -93,7 +93,6 @@
     "babel-plugin-transform-object-rest-spread": "^6.26.0",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
-    "bootstrap": "^3.3.6",
     "c3": "^0.4.10",
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",

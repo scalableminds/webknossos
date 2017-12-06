@@ -10,7 +10,6 @@ import play.api.mvc.Results._
 import play.api.mvc.{RequestHeader, Result}
 import play.api.routing.Router
 import play.api.{Configuration, OptionalSourceMapper, Play}
-import controllers.Authentication.getLoginRoute
 
 import scala.concurrent.Future
 import controllers.{Authentication, routes}
@@ -27,6 +26,6 @@ class ErrorHandler @Inject() (
     with SecuredErrorHandler with I18nSupport {
 
   override def onNotAuthenticated(request: RequestHeader, messages: Messages): Option[Future[Result]] = {
-    Some(Future.successful(Redirect(Authentication.getLoginRoute())))
+    Some(Future.successful(Unauthorized(Messages("user.notAuthorised"))))
   }
 }

@@ -205,7 +205,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     const fullWidth = { width: "100%" };
 
     return (
-      <div className="container wide" style={{ paddingTop: 20 }}>
+      <div className="container" style={{ paddingTop: 20 }}>
         <Spin spinning={this.state.isUploading}>
           <Card title={<h3>{titleLabel}</h3>}>
             <Form onSubmit={this.handleSubmit} layout="vertical">

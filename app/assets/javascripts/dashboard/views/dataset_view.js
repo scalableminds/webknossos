@@ -137,14 +137,6 @@ class DatasetView extends React.PureComponent<Props, State> {
     );
 
     const content = (() => {
-      if (this.state.isLoading) {
-        return (
-          <div className="text-center">
-            <Spin size="large" />
-          </div>
-        );
-      }
-
       if (isGallery) {
         return this.renderGallery();
       }
@@ -157,7 +149,9 @@ class DatasetView extends React.PureComponent<Props, State> {
         {adminHeader}
         <h3 className="TestDatasetHeadline">Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-        <div>{content}</div>
+        <Spin size="large" spinning={this.state.isLoading}>
+          {content}
+        </Spin>
       </div>
     );
   }

@@ -1,231 +1,243 @@
 // @flow
 import React from "react";
+import { Table } from "antd";
 
-const KeyboardShortcutView = () => (
-  <div className="container help">
-    <h3>Keyboard Shortcuts</h3>
-    <p>Find all available keyboard shortcuts for webKnossos listed below:</p>
+const KeyboardShortcutView = () => {
+  const columns = [
+    {
+      title: "Key Binding",
+      dataIndex: "keybinding",
+      key: "keybinding",
+    },
+    {
+      title: "Action",
+      dataIndex: "action",
+      key: "action",
+    },
+  ];
 
-    <h3>Orthogonal Mode</h3>
-    <table className="table table-hover table-striped">
-      <thead>
-        <tr>
-          <th>Key binding</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Left Mouse drag or Arrow keys</td>
-          <td>Move</td>
-        </tr>
-        <tr>
-          <td>I, O or Alt + Mousewheel</td>
-          <td>Zoom in/out</td>
-        </tr>
-        <tr>
-          <td>F, D or Mousewheel</td>
-          <td>Move along Z-Axis</td>
-        </tr>
-        <tr>
-          <td>Right click</td>
-          <td>Set node</td>
-        </tr>
-        <tr>
-          <td>Shift + Alt + Left click</td>
-          <td>Merge two trees</td>
-        </tr>
-        <tr>
-          <td>K, L</td>
-          <td>Scale up/down viewport size</td>
-        </tr>
-        <tr>
-          <td>B, J</td>
-          <td>Set/Jump to last branchpoint</td>
-        </tr>
-        <tr>
-          <td>S</td>
-          <td>Center active node</td>
-        </tr>
-      </tbody>
-    </table>
+  const orthogonalShortcuts = [
+    {
+      keybinding: "Left Mouse Drag or Arrow Keys",
+      action: "Move",
+    },
+    {
+      keybinding: "I, O, or Alt + Mousewheel",
+      action: "Zoom In/out",
+    },
+    {
+      keybinding: "F, D or Mousewheel",
+      action: "Move Along Z-axis",
+    },
+    {
+      keybinding: "Right Click",
+      action: "Set Node",
+    },
+    {
+      keybinding: "Shift + Alt + Left Click",
+      action: "Merge Two Trees",
+    },
+    {
+      keybinding: "Shift + Ctrl + Left Click",
+      action: "Delete Edge/split Trees",
+    },
+    {
+      keybinding: "K, L",
+      action: "Scale Up/down Viewport Size",
+    },
+    {
+      keybinding: "B, J",
+      action: "Set/jump To Last Branchpoint",
+    },
+    {
+      keybinding: "S",
+      action: "Center Active Node",
+    },
+    {
+      keybinding: "Scroll Mousewheel (3D View)",
+      action: "Zoom In And Out",
+    },
+    {
+      keybinding: "Right Click Drag (3D View)",
+      action: "Rotate 3D View",
+    },
+  ];
 
-    <h3>3D View</h3>
-    <table className="table table-hover table-striped">
-      <thead>
-        <tr>
-          <th>Key binding</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Mousewheel</td>
-          <td>Zoom in and out</td>
-        </tr>
-        <tr>
-          <td>Right click drag</td>
-          <td>Rotate 3D View</td>
-        </tr>
-      </tbody>
-    </table>
+  const generalShortcuts = [
+    {
+      keybinding: "Ctrl/cmd + Z",
+      action: "Undo",
+    },
+    {
+      keybinding: "Ctrl/cmd + Y",
+      action: "Redo",
+    },
+    {
+      keybinding: "P, N",
+      action: "Previous/next Comment",
+    },
+    {
+      keybinding: "Del",
+      action: "Delete Node/split Trees",
+    },
+    {
+      keybinding: "C",
+      action: "Create New Tree",
+    },
+    {
+      keybinding: "Shift + Alt + Left Click",
+      action: "Merge Two Trees",
+    },
+    {
+      keybinding: "M",
+      action: "Toggle Mode (orthogonal, Flight, Oblique)",
+    },
+    {
+      keybinding: "1",
+      action: "Toggle Skeleton Visibility",
+    },
+    {
+      keybinding: "2",
+      action: "Toggle Inactive Tree Visibility",
+    },
+    {
+      keybinding: "3",
+      action: "Toggle Segmentation Opacity",
+    },
+    {
+      keybinding: "Shift + Mousewheel",
+      action: "Change Node Radius",
+    },
+  ];
 
-    <h3>General Navigation</h3>
-    <table className="table table-hover table-striped">
-      <thead>
-        <tr>
-          <th>Key binding</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Ctrl/Cmd + Z</td>
-          <td>Undo</td>
-        </tr>
-        <tr>
-          <td>Ctrl/Cmd + Y</td>
-          <td>Redo</td>
-        </tr>
-        <tr>
-          <td>P, N</td>
-          <td>Previous/Next comment</td>
-        </tr>
-        <tr>
-          <td>Del</td>
-          <td>Delete node/Split trees</td>
-        </tr>
-        <tr>
-          <td>C</td>
-          <td>Create new tree</td>
-        </tr>
-        <tr>
-          <td>Shift + Alt + Left click</td>
-          <td>Merge two trees</td>
-        </tr>
-        <tr>
-          <td>M</td>
-          <td>Toggle mode (Orthogonal, Flight, Oblique)</td>
-        </tr>
-        <tr>
-          <td>1</td>
-          <td>Toggle skeleton visibility</td>
-        </tr>
-        <tr>
-          <td>2</td>
-          <td>Toggle inactive tree visibility</td>
-        </tr>
-        <tr>
-          <td>3</td>
-          <td>Toggle segmentation opacity</td>
-        </tr>
-        <tr>
-          <td>Shift + Mousewheel</td>
-          <td>Change node radius</td>
-        </tr>
-      </tbody>
-    </table>
+  const flightModeShortcuts = [
+    {
+      keybinding: "Shift + Left Click",
+      action: "Select Active Node",
+    },
+    {
+      keybinding: "Mouse Drag or Arrow Keys",
+      action: "Rotation",
+    },
+    {
+      keybinding: "Space",
+      action: "Forward",
+    },
+    {
+      keybinding: "Ctrl + Space",
+      action: "Backward",
+    },
+    {
+      keybinding: "I, O",
+      action: "Zoom In And Out",
+    },
+    {
+      keybinding: "Shift + Arrow",
+      action: "Rotation Around Axis",
+    },
+    {
+      keybinding: "B, J",
+      action: "Set/jump To Last Branchpoint",
+    },
+    {
+      keybinding: "R",
+      action: "Reset Rotation",
+    },
+    {
+      keybinding: "S",
+      action: "Center Active Node",
+    },
+    {
+      keybinding: "D",
+      action: "Forward Without Recording Waypoints",
+    },
+    {
+      keybinding: "F",
+      action: "Backward Without Recording Waypoints",
+    },
+    {
+      keybinding: "Shift + Space",
+      action: "Delete Active Node, Recenter Previous Node",
+    },
+  ];
 
-    <h3>Oblique/Flight Mode</h3>
-    <table className="table table-hover table-striped">
-      <thead>
-        <tr>
-          <th>Key binding</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Shift + Left click</td>
-          <td>Select active node</td>
-        </tr>
-        <tr>
-          <td>Mouse drag or Arrow keys</td>
-          <td>Rotation</td>
-        </tr>
-        <tr>
-          <td>Space</td>
-          <td>Forward</td>
-        </tr>
-        <tr>
-          <td>Ctrl + Space</td>
-          <td>Backward</td>
-        </tr>
-        <tr>
-          <td>I, O</td>
-          <td>Zoom in and out</td>
-        </tr>
-        <tr>
-          <td>Shift + Arrow</td>
-          <td>Rotation around Axis</td>
-        </tr>
-        <tr>
-          <td>B, J</td>
-          <td>Set/Jump to last branchpoint</td>
-        </tr>
-        <tr>
-          <td>R</td>
-          <td>Reset rotation</td>
-        </tr>
-        <tr>
-          <td>S</td>
-          <td>Center active node</td>
-        </tr>
-        <tr>
-          <td>D</td>
-          <td>Forward without recording waypoints</td>
-        </tr>
-        <tr>
-          <td>F</td>
-          <td>Backward without recording waypoints</td>
-        </tr>
-        <tr>
-          <td>Shift + Space</td>
-          <td>Delete active node, Recenter previous node</td>
-        </tr>
-      </tbody>
-    </table>
+  const volumeModeShortcuts = [
+    {
+      keybinding: "Shift + Left Click",
+      action: "Select Active Cell",
+    },
+    {
+      keybinding: "Left Mouse Drag",
+      action: "Move (move Mode) / Add To Current Cell (Trace / Brush Mode)",
+    },
+    {
+      keybinding: "Arrow Keys",
+      action: "Move",
+    },
+    {
+      keybinding: "Right Mouse Drag",
+      action: "Remove Voxels From Cell",
+    },
+    {
+      keybinding: "C",
+      action: "Create New Cell",
+    },
+    {
+      keybinding: "W, 1",
+      action: "Toggle Move / Trace / Brush Mode",
+    },
+    {
+      keybinding: "Shift + Mousewheel",
+      action: "Change Brush Size (Brush Mode)",
+    },
+    {
+      keybinding: "V",
+      action: "Copy Segmentation of Current Cell From Previous Slice",
+    },
+    {
+      keybinding: "Shift + V",
+      action: "Copy Segmentation of Current Cell From Next Slice",
+    },
+  ];
 
-    <h3>Volume Mode</h3>
-    <table className="table table-hover table-striped">
-      <thead>
-        <tr>
-          <th>Key binding</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Shift + Left click</td>
-          <td>Select active cell</td>
-        </tr>
-        <tr>
-          <td>Left Mouse drag</td>
-          <td>Move (Move mode) / Add to current Cell (Trace/Brush mode)</td>
-        </tr>
-        <tr>
-          <td>Arrow keys</td>
-          <td>Move</td>
-        </tr>
-        <tr>
-          <td>Right Mouse drag</td>
-          <td>Remove voxels from cell</td>
-        </tr>
-        <tr>
-          <td>C</td>
-          <td>Create new cell</td>
-        </tr>
-        <tr>
-          <td>W, 1</td>
-          <td>Toggle Move / Trace / Brush mode</td>
-        </tr>
-        <tr>
-          <td>Shift + Mousewheel</td>
-          <td>Change brush size (Brush mode)</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-);
+  return (
+    <div className="container help">
+      <h3>Keyboard Shortcuts</h3>
+      <p>Find all available keyboard shortcuts for webKnossos listed below.</p>
+
+      <h3>General Navigation</h3>
+      <Table
+        dataSource={generalShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
+
+      <h3>Orthogonal Mode</h3>
+      <Table
+        dataSource={orthogonalShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
+
+      <h3>Oblique / Flight Mode</h3>
+      <Table
+        dataSource={flightModeShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
+
+      <h3>Volume Mode</h3>
+      <Table
+        dataSource={volumeModeShortcuts}
+        columns={columns}
+        pagination={false}
+        rowKey={(_, index) => index}
+      />
+    </div>
+  );
+};
 
 export default KeyboardShortcutView;

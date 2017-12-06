@@ -125,6 +125,8 @@ class TaskSearchForm extends React.Component<Props, State> {
               )}
             </FormItem>
           </Col>
+        </Row>
+        <Row gutter={40}>
           <Col span={12}>
             <FormItem {...formItemLayout} label="Project">
               {getFieldDecorator("projectName")(

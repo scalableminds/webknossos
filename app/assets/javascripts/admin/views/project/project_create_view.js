@@ -1,5 +1,6 @@
 // @flow
 import React from "react";
+import { withRouter } from "react-router";
 import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card, InputNumber } from "antd";
 import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";
@@ -264,4 +265,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: getActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(Form.create()(ProjectCreateView));
+export default withRouter(connect(mapStateToProps)(Form.create()(ProjectCreateView)));

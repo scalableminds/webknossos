@@ -191,15 +191,15 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                 key="actions"
                 render={(__, project: APIProjectType) => (
                   <span>
+                    <Link to={`/projects/${project.name}/edit`} title="Edit Project">
+                      <Icon type="edit" />Edit
+                    </Link>
+                    <br />
                     <Link
                       to={`/annotations/CompoundProject/${project.id}`}
                       title="View all Finished Tracings"
                     >
                       <Icon type="eye-o" />View
-                    </Link>
-                    <br />
-                    <Link to={`/projects/${project.name}/edit`} title="Edit Project">
-                      <Icon type="edit" />Edit
                     </Link>
                     <br />
                     {project.paused ? (

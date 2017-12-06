@@ -1,5 +1,6 @@
 // @flow
 import React from "react";
+import { withRouter } from "react-router";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
 import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
@@ -179,4 +180,4 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(TaskTypeCreateView);
+export default withRouter(Form.create()(TaskTypeCreateView));

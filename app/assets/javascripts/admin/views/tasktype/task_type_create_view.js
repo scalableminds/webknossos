@@ -66,7 +66,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     const titlePrefix = this.props.taskTypeId ? "Update " : "Create";
 
     return (
-      <div className="container wide task-types-administration">
+      <div className="container">
         <Card title={<h3>{titlePrefix} Task Type</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Summary" hasFeedback>

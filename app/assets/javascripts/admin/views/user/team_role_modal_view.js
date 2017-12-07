@@ -175,7 +175,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
 
     return (
       <Modal
-        title="Assign teams"
+        title="Assign Teams"
         visible={this.props.visible}
         onCancel={this.props.onCancel}
         footer={

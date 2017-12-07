@@ -110,9 +110,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   private def allNodesInEdgesExist(trees: Seq[Tree]) = {
     def treeLoop(trees: Seq[Tree]): Boolean = {
-      edgeLoop(trees.head, trees.head.edges) match {
-        case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
-        case false => false
+      if (trees.head.edges.isEmpty)
+        if (trees.tail.isEmpty) true
+        else treeLoop(trees.tail)
+      else {
+        edgeLoop(trees.head, trees.head.edges) match {
+          case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
+          case false => false
+        }
       }
     }
 
@@ -135,9 +140,14 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   private def nodesAreInEdges(trees: Seq[Tree]) = {
     def treeLoop(trees: Seq[Tree]): Boolean = {
-      nodeLoop(trees.head, trees.head.nodes) match {
-        case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
-        case false => false
+      if (trees.head.nodes.size == 1)
+        if (trees.tail.isEmpty) true
+        else treeLoop(trees.tail)
+      else {
+        nodeLoop(trees.head, trees.head.nodes) match {
+          case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
+          case false => false
+        }
       }
     }
 

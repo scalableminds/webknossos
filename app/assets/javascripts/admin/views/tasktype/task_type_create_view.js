@@ -1,6 +1,6 @@
 // @flow
 import React from "react";
-import { withRouter } from "react_router";
+import { withRouter } from "react-router-dom";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
 import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";

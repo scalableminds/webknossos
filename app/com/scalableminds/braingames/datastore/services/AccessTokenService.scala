@@ -56,7 +56,7 @@ object UserAccessRequest {
 
 class AccessTokenService @Inject()(webKnossosServer: WebKnossosServer) {
 
-  val AccessExpiration: FiniteDuration = 30.minutes
+  val AccessExpiration: FiniteDuration = 2.minutes
 
   def hasUserAccess(token: String, accessRequest: UserAccessRequest): Fox[UserAccessAnswer] = {
     val key = accessRequest.toCacheKey(token)

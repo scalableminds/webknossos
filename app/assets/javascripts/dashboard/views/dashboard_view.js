@@ -101,7 +101,7 @@ class DashboardView extends React.PureComponent<Props, State> {
     const user = this.state.user;
     if (!user) {
       return (
-        <div className="text-center" style={{ marginTop: 50 }}>
+        <div className="text-center" style={{ marginTop: 50, width: "100vw" }}>
           <Spin size="large" />
         </div>
       );
@@ -121,7 +121,7 @@ class DashboardView extends React.PureComponent<Props, State> {
     ) : null;
 
     return (
-      <div id="dashboard" className="container wide">
+      <div className="container">
         {userHeader}
         <Tabs activeKey={this.state.activeTabKey} onChange={onTabChange} style={{ marginTop: 20 }}>
           {this.getTabs(user)}

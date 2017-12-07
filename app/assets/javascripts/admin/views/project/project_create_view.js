@@ -1,5 +1,6 @@
 // @flow
 import React from "react";
+import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card, InputNumber } from "antd";
 import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";
@@ -91,7 +92,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
     const fullWidth = { width: "100%" };
 
     return (
-      <div className="row container wide project-administration">
+      <div className="row container project-administration">
         <Card title={<h3>{title}</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Project Name" hasFeedback>
@@ -264,4 +265,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: getActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(Form.create()(ProjectCreateView));
+export default withRouter(connect(mapStateToProps)(Form.create()(ProjectCreateView)));

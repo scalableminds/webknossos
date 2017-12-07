@@ -77,8 +77,12 @@ class PlaneController extends React.PureComponent<Props> {
   listenTo: Function;
   stopListening: Function;
 
-  componentDidMount() {
+  constructor(...args: any) {
+    super(...args);
     _.extend(this, BackboneEvents);
+  }
+
+  componentDidMount() {
     this.input = {
       mouseControllers: {},
     };

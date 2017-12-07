@@ -124,7 +124,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     }
 
     def checkEdge(tree: Tree, edge: Edge) = {
-      tree.nodes.map(node => node.id).contains(edge.source) && tree.nodes.map(node => node.id).contains(edge.source)
+      tree.nodes.map(node => node.id).contains(edge.target) && tree.nodes.map(node => node.id).contains(edge.source)
     }
 
     treeLoop(trees) match {
@@ -160,19 +160,23 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   private def checkTreesAreConnected(trees: Seq[Tree]) = {
     def treeLoop(trees: Seq[Tree]): Boolean = {
-      dfsFunctionalFold(trees.head.nodes.head.id, Set(), trees.head).size == trees.head.nodes.size match {
+      treeTraversal(trees.head).size == trees.head.nodes.size match {
         case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
         case false => false
       }
     }
 
-    def dfsFunctionalFold(current: Int, acc: Set[Int], tree: Tree): Set[Int] = {
-      val edgesWithNode = tree.edges.filter(e => e.source == current)
-      edgesWithNode.foldLeft(acc) {
-        (results, next) =>
-          if (results.contains(next.target)) results
-          else dfsFunctionalFold(next.target, results + current, tree)
-      } + current
+    def treeTraversal(tree: Tree): Set[Int] = {
+      def traverse(visited: Set[Int], remaining: Set[Int]): Set[Int] = {
+        if (remaining.isEmpty) visited
+        else {
+          val foundNodesSource = tree.edges.filter(edge => edge.source == remaining.head).map(edge => edge.target)
+          val foundNodesTarget = tree.edges.filter(edge => edge.target == remaining.head).map(edge => edge.source)
+          traverse(visited + remaining.head, remaining.tail ++ ((foundNodesSource ++ foundNodesTarget).toSet[Int] -- visited))
+        }
+      }
+
+      traverse(Set[Int](), Set[Int](tree.nodes.head.id))
     }
 
     treeLoop(trees) match {

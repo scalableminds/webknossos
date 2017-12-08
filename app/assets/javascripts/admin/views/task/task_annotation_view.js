@@ -76,14 +76,15 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
   };
 
   getDropdownMenu(annotation: APIAnnotationType) {
+    // TODO use react fragments <> instead of spans
     const label = annotation.state.isFinished ? (
-      <>
+      <span>
         <Icon type="eye-o" />View
-      </>
+      </span>
     ) : (
-      <>
+      <span>
         <Icon type="play-circle-o" />Trace
-      </>
+      </span>
     );
 
     return (

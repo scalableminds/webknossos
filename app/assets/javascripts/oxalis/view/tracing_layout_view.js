@@ -4,7 +4,6 @@
  */
 
 import * as React from "react";
-import app from "app";
 import OxalisController from "oxalis/controller";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";

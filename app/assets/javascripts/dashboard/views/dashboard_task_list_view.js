@@ -133,14 +133,15 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       .map(team => team.team)
       .includes(task.team);
 
+    // TODO use React fragments <> instead of spans / divs
     const label = this.props.isAdminView ? (
-      <>
+      <span>
         <Icon type="eye-o" />View
-      </>
+      </span>
     ) : (
-      <>
+      <span>
         <Icon type="play-circle-o" />Trace
-      </>
+      </span>
     );
 
     return task.annotation.state.isFinished ? (
@@ -153,15 +154,15 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Link to={`/annotations/Task/${annotation.id}`}>{label}</Link>
         <br />
         {isAdmin || this.props.isAdminView ? (
-          <>
+          <div>
             <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
               <Icon type="team" />Transfer
             </a>
             <br />
-          </>
+          </div>
         ) : null}
         {isAdmin ? (
-          <>
+          <div>
             <a href={`/annotations/Task/${annotation.id}/download`}>
               <Icon type="download" />Download
             </a>
@@ -174,7 +175,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
               <Icon type="delete" />Cancel
             </a>
             <br />
-          </>
+          </div>
         ) : null}
         {this.props.isAdminView ? null : (
           <a href="#" onClick={() => this.confirmFinish(task)}>

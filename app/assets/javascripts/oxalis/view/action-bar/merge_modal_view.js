@@ -221,7 +221,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             <Form.Item label="NML">
               <Upload
                 name="nmlFile"
-                action={"/annotations/upload"}
+                action="/annotations/upload"
                 headers={{ authorization: "authorization-text" }}
                 beforeUpload={this.handleBeforeUploadNML}
                 onChange={this.handleChangeNML}

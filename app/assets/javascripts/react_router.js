@@ -6,6 +6,7 @@ import createBrowserHistory from "history/createBrowserHistory";
 import { connect } from "react-redux";
 import { Layout } from "antd";
 
+import { location } from "libs/window";
 import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation } from "admin/admin_rest_api";

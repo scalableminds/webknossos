@@ -294,9 +294,11 @@ export class InputMouse {
   lastScale: ?number;
   position: ?Point2 = null;
   triggeredByTouch: boolean = false;
+  delegatedEvents: { string?: Function };
 
   // Copied from backbone events (TODO: handle this better)
   on: (bindings: BindingMap<MouseHandlerType>) => void;
+  off: Function;
   trigger: Function;
 
   domElement: HTMLElement;
@@ -314,32 +316,61 @@ export class InputMouse {
     this.leftMouseButton = new InputMouseButton("left", 1, this, this.id);
     this.rightMouseButton = new InputMouseButton("right", 3, this, this.id);
     this.lastPosition = null;
+    this.delegatedEvents = {};
 
     document.addEventListener("mousemove", this.mouseMove);
     document.addEventListener("mouseup", this.mouseUp);
     document.addEventListener("touchend", this.touchEnd);
 
-    Utils.addEventListenerWithDelegation(
-      document,
-      "mousedown",
-      this.targetSelector,
-      this.mouseDown,
+    _.extend(
+      this.delegatedEvents,
+      Utils.addEventListenerWithDelegation(
+        document,
+        "mousedown",
+        this.targetSelector,
+        this.mouseDown,
+      ),
     );
-    Utils.addEventListenerWithDelegation(
-      document,
-      "mouseover",
-      this.targetSelector,
-      this.mouseOver,
+    _.extend(
+      this.delegatedEvents,
+      Utils.addEventListenerWithDelegation(
+        document,
+        "mouseover",
+        this.targetSelector,
+        this.mouseOver,
+      ),
     );
-    Utils.addEventListenerWithDelegation(document, "mouseout", this.targetSelector, this.mouseOut);
-    Utils.addEventListenerWithDelegation(
-      document,
-      "touchstart",
-      this.targetSelector,
-      this.mouseOver,
+    _.extend(
+      this.delegatedEvents,
+      Utils.addEventListenerWithDelegation(
+        document,
+        "mouseout",
+        this.targetSelector,
+        this.mouseOut,
+      ),
     );
-    Utils.addEventListenerWithDelegation(document, "touchend", this.targetSelector, this.mouseOut);
-    Utils.addEventListenerWithDelegation(document, "wheel", this.targetSelector, this.mouseWheel);
+    _.extend(
+      this.delegatedEvents,
+      Utils.addEventListenerWithDelegation(
+        document,
+        "touchstart",
+        this.targetSelector,
+        this.mouseOver,
+      ),
+    );
+    _.extend(
+      this.delegatedEvents,
+      Utils.addEventListenerWithDelegation(
+        document,
+        "touchend",
+        this.targetSelector,
+        this.mouseOut,
+      ),
+    );
+    _.extend(
+      this.delegatedEvents,
+      Utils.addEventListenerWithDelegation(document, "wheel", this.targetSelector, this.mouseWheel),
+    );
 
     this.hammerManager = new Hammer(this.domElement);
     this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
@@ -357,18 +388,13 @@ export class InputMouse {
   destroy() {
     document.removeEventListener("mousemove", this.mouseMove);
     document.removeEventListener("mouseup", this.mouseUp);
+    document.removeEventListener("touchend", this.touchEnd);
 
-    const events = {
-      mousedown: this.mouseDown,
-      mouseover: this.mouseOver,
-      mouseout: this.mouseOut,
-      touchstart: this.mouseOver,
-      touchend: this.mouseOut,
-      wheel: this.mouseWheel,
-    };
-    _.each(events, (eventHandler, eventName) => {
-      this.domElement.removeEventListener(eventName, eventHandler);
-    });
+    for (const [eventName, eventHandler] of Object.entries(this.delegatedEvents)) {
+      document.removeEventListener(eventName, eventHandler);
+    }
+
+    this.off();
 
     // Unbinds all events and input events
     this.hammerManager.destroy();
@@ -376,7 +402,7 @@ export class InputMouse {
 
   isHit(event: MouseEvent) {
     const { pageX, pageY } = event;
-    const { left, top, width, height } = this.getOffset();
+    const { left, top, width, height } = this.getElementOffset();
 
     return left <= pageX && pageX <= left + width && top <= pageY && pageY <= top + height;
   }
@@ -503,15 +529,20 @@ export class InputMouse {
   };
 
   getRelativeMousePosition = (pagePosition: { pageX: number, pageY: number }) => {
-    const offset = this.getOffset();
+    const offset = this.getElementOffset();
 
     return {
-      x: pagePosition.pageX - offset.left - window.pageXOffset,
-      y: pagePosition.pageY - offset.top - window.pageYOffset,
+      x: pagePosition.pageX - offset.left,
+      y: pagePosition.pageY - offset.top,
     };
   };
 
-  getOffset() {
-    return this.domElement.getBoundingClientRect();
+  getElementOffset() {
+    // Return the bounding rectangle relative to the top-left corner of the document
+    const boundingRect = this.domElement.getBoundingClientRect();
+    return _.extend({}, boundingRect, {
+      left: boundingRect.left + window.scrollX,
+      top: boundingRect.top + window.scrollY,
+    });
   }
 }

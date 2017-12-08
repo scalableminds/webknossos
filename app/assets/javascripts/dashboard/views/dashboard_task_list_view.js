@@ -160,10 +160,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin ? (
           <div>
             <li>
-              <Link to={`/annotations/Task/${annotation.id}/download`}>
+              <a href={`/annotations/Task/${annotation.id}/download`}>
                 <i className="fa fa-download" />
                 Download
-              </Link>
+              </a>
             </li>
             <li>
               <a href="#" onClick={() => this.resetTask(annotation.id)}>
@@ -350,13 +350,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
-        {this.state.isLoading ? (
-          <div className="text-center">
-            <Spin size="large" />
-          </div>
-        ) : (
-          this.renderTable()
-        )}
+        <Spin spinning={this.state.isLoading}>{this.renderTable()}</Spin>
 
         <TransferTaskModal
           visible={this.state.isTransferModalVisible}

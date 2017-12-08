@@ -87,8 +87,8 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="container wide TestProjectListView">
-        <div style={{ marginTop: 20 }}>
+      <div className="container TestProjectListView">
+        <div>
           <div className="pull-right">
             <Link to="/projects/create">
               <Button icon="plus" style={marginRight} type="primary">

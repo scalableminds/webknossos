@@ -1,17 +1,17 @@
 package controllers
 
 import java.net.URLEncoder
-import java.util.UUID
 import javax.inject.Inject
 
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team.Role
 import models.user.UserService.{Mailer => _, _}
-import models.user.{UserService, UserToken2, UserTokenService}
+import models.user._
 import net.liftweb.common.{Empty, Failure, Full}
 import org.apache.commons.codec.binary.Base64
 import org.apache.commons.codec.digest.HmacUtils
@@ -98,7 +98,6 @@ object AuthForms {
 class Authentication @Inject()(
                                 val messagesApi: MessagesApi,
                                 credentialsProvider: CredentialsProvider,
-                                userTokenService: UserTokenService,
                                 passwordHasher: PasswordHasher,
                                 configuration: Configuration)
   extends Controller
@@ -223,7 +222,7 @@ class Authentication @Inject()(
         _ <- env.authenticatorService.discard(request.authenticator, Ok) //to logout the admin
         authenticator <- env.authenticatorService.create(loginInfo)
         value <- env.authenticatorService.init(authenticator)
-        result <- env.authenticatorService.embed(value, Ok) //to login the new user
+        result <- env.authenticatorService.embed(value, Redirect("/dashboard")) //to login the new user
       } yield result
     } else {
       Logger.warn(s"User tried to switch (${request.identity.email} -> $email) but is no Superuser!")
@@ -237,11 +236,14 @@ class Authentication @Inject()(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
-        case Some(user) => for {
-          token <- userTokenService.save(UserToken2.create(user._id, email.toLowerCase, isLogin = false))
-        } yield {
-          Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token.id.toString))
-          Ok
+        case Some(user) => {
+          val token = UserToken(user._id)
+          for {
+            _ <- UserTokenDAO.insert(token)(GlobalAccessContext)
+          } yield {
+            Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token.token))
+            Ok
+          }
         }
       }
     )
@@ -252,16 +254,14 @@ class Authentication @Inject()(
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        val id = UUID.fromString(passwords.token.trim)
-        userTokenService.find(id).flatMap {
-          case None =>
-            Future.successful(BadRequest(Messages("auth.invalidToken")))
-          case Some(token) if !token.isLogin && !token.isExpired =>
-            val loginInfo = LoginInfo(CredentialsProvider.ID, token.email)
+        UserTokenService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
+          case Full(user) =>
             for {
-              _ <- userTokenService.remove(id)
-              _ <- UserService.changePasswordInfo(loginInfo, passwordHasher.hash(passwords.password1))
+              _ <- UserTokenDAO.removeByToken(passwords.token.trim)(GlobalAccessContext)
+              _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
             } yield Ok
+          case _ =>
+            Future.successful(BadRequest(Messages("auth.invalidToken")))
         }
       }
     )
@@ -294,28 +294,34 @@ class Authentication @Inject()(
   }
 
   def getToken = SecuredAction.async { implicit request =>
-    for{
-      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
-      newToken <- env.combinedAuthenticatorService.createToken(request.identity.loginInfo)
-    }yield{
-      var js = Json.obj()
-      if(maybeOldToken.isDefined){
-        js = Json.obj("token" -> newToken.id, "msg" -> Messages("auth.addedNewToken"))
-      } else {
-        js = Json.obj("token" -> newToken.id)
+    val futureOfFuture: Future[Future[Result]] = env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo).map {
+      oldTokenOpt => {
+        if (oldTokenOpt.isDefined) Future.successful(Ok(Json.obj("token" -> oldTokenOpt.get.id)))
+        else {
+          env.combinedAuthenticatorService.createToken(request.identity.loginInfo).map {
+            newToken => Ok(Json.obj("token" -> newToken.id))
+          }
+        }
       }
-      Ok(js)
     }
+    for {
+      resultFuture <- futureOfFuture
+      result <- resultFuture
+    } yield result
   }
 
   def deleteToken = SecuredAction.async { implicit request =>
-    for{
-      maybeOldToken <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
-      oldToken <- maybeOldToken ?~> Messages("auth.noToken")
-      result <- env.combinedAuthenticatorService.discard(oldToken, Redirect("/dashboard")) //maybe add a way to inform the user that the token was deleted
+    val futureOfFuture: Future[Future[Result]] = for {
+      oldTokenOpt <- env.combinedAuthenticatorService.findByLoginInfo(request.identity.loginInfo)
     } yield {
-      result
+      if (oldTokenOpt.isDefined) env.combinedAuthenticatorService.discard(oldTokenOpt.get, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
+      else Future.successful(Ok)
     }
+
+    for {
+      resultFuture <- futureOfFuture
+      result <- resultFuture
+    } yield result
   }
 
   def logout = SecuredAction.async { implicit request =>

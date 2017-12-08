@@ -7,7 +7,7 @@
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
     @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
     @if(play.api.Play.current.configuration.getBoolean("application.authentication.enableDevAutoLogin")){
-      <script src="/autoLogin"></script>
+      <script src="/auth/autoLogin"></script>
     }
     <script type="text/javascript"
       data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")

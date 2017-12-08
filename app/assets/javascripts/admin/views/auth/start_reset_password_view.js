@@ -20,10 +20,12 @@ class StartResetPasswordView extends React.PureComponent<Props> {
 
     this.props.form.validateFields((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/reset", { data: formValues }).then(() => {
-          Toast.success(messages["auth.reset_email_notification"]);
-          this.props.history.push("/finishreset");
-        });
+        Request.sendJSONReceiveJSON("/api/auth/startResetPassword", { data: formValues }).then(
+          () => {
+            Toast.success(messages["auth.reset_email_notification"]);
+            this.props.history.push("/api/auth/finishResetPassword");
+          },
+        );
       }
     });
   };
@@ -34,6 +36,7 @@ class StartResetPasswordView extends React.PureComponent<Props> {
     return (
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
+          <h3>Reset Password</h3>
           <Form onSubmit={this.handleSubmit}>
             <FormItem>
               {getFieldDecorator("email", {

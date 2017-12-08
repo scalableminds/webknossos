@@ -65,7 +65,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="container wide">
+      <div className="container">
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
             <Link to="/taskTypes/create">
@@ -166,12 +166,12 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 key="actions"
                 render={(__, taskType: APITaskTypeType) => (
                   <span>
-                    <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
-                      <Icon type="edit" />Edit
-                    </Link>
-                    <br />
                     <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">
                       <Icon type="eye-o" />View
+                    </Link>
+                    <br />
+                    <Link to={`/taskTypes/${taskType.id}/edit`} title="Edit taskType">
+                      <Icon type="edit" />Edit
                     </Link>
                     <br />
                     <Link to={`/taskTypes/${taskType.id}/tasks`} title="View Tasks">

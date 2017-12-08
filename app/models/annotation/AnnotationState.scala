@@ -3,25 +3,7 @@ package models.annotation
 import play.api.libs.json.{Json, Reads, Writes}
 import utils.EnumUtils
 
-case class AnnotationState(
-  isAssigned: Boolean = false,
-  isFinished: Boolean = false,
-  isInProgress: Boolean = false)
-
-object AnnotationState{
-
-  implicit val annotationStateFormat = Json.format[AnnotationState]
-
-  val Assigned = AnnotationState(isAssigned = true)
-
-  val Unassigned = AnnotationState()
-
-  val InProgress = Assigned.copy(isInProgress = true)
-
-  val Finished = Assigned.copy(isFinished = true)
-}
-
-object AnnotationState2 extends Enumeration {
+object AnnotationState extends Enumeration {
   type AnnotationStateValue = Value
 
   /*
@@ -35,7 +17,7 @@ object AnnotationState2 extends Enumeration {
   val assignedStates = List (Assigned, InProgress, Finished)
   val assignedButNotFinished = List(Assigned, InProgress)
 
-  implicit val enumReads: Reads[AnnotationStateValue] = EnumUtils.enumReads(AnnotationState2)
+  implicit val enumReads: Reads[AnnotationStateValue] = EnumUtils.enumReads(AnnotationState)
 
   implicit def enumWrites: Writes[AnnotationStateValue] = EnumUtils.enumWrites
 }

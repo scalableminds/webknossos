@@ -8,7 +8,7 @@ import models.team.Role
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import models.annotation.AnnotationState2._
+import models.annotation.AnnotationState._
 
 import scala.concurrent.Future
 

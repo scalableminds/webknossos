@@ -3,7 +3,7 @@ package models.annotation
 import models.team.Role
 import models.user.User
 import play.api.libs.json._
-import models.annotation.AnnotationState2._
+import models.annotation.AnnotationState._
 
 /**
  * Company: scalableminds

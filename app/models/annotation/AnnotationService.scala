@@ -27,7 +27,7 @@ import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
-import models.annotation.AnnotationState2._
+import models.annotation.AnnotationState._
 
 object AnnotationService
   extends BoxImplicits

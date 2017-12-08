@@ -19,7 +19,7 @@ import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
-import models.annotation.AnnotationState2._
+import models.annotation.AnnotationState._
 
 import scala.concurrent.Future
 

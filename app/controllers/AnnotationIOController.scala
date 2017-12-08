@@ -22,7 +22,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
-import models.annotation.AnnotationState2._
+import models.annotation.AnnotationState._
 
 
 class AnnotationIOController @Inject()(val messagesApi: MessagesApi)

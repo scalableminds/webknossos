@@ -7,7 +7,7 @@ import models.project.{Project, WebknossosAssignmentConfig}
 import models.task.{OpenAssignmentService, Task}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import models.annotation.AnnotationState2._
+import models.annotation.AnnotationState._
 
 /**
  * Company: scalableminds

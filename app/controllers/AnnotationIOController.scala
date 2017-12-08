@@ -22,6 +22,7 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
+import models.annotation.AnnotationState2._
 
 
 class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
@@ -166,7 +167,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def createProjectZip(project: Project) =
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
-        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
+        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state == Finished))
         zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
       } yield zip
 
@@ -181,7 +182,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
   def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
     def createTaskZip(task: Task): Fox[TemporaryFile] = task.annotations.flatMap { annotations =>
-      val finished = annotations.filter(_.state.isFinished)
+      val finished = annotations.filter(_.state == Finished)
       AnnotationService.zipAnnotations(finished, task.id + "_nmls.zip")
     }
 
@@ -196,7 +197,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
-        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
+        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state == Finished))
         zip <- AnnotationService.zipAnnotations(annotations, taskType.summary + "_nmls.zip")
       } yield zip
 

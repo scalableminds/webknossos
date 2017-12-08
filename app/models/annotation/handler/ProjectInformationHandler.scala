@@ -10,6 +10,7 @@ import models.user.User
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import models.annotation.AnnotationState2._
 
 object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
@@ -19,7 +20,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       project <- ProjectDAO.findOneById(projectId) ?~> "project.notFound"
       tasks <- TaskDAO.findAllByProject(project.name)
       annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten).toFox
-      finishedAnnotations = annotations.filter(_.state.isFinished)
+      finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "project.noAnnotations"
       dataSetName = finishedAnnotations.head.dataSetName

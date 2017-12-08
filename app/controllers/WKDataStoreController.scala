@@ -19,6 +19,7 @@ import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
+import models.annotation.AnnotationState2._
 
 import scala.concurrent.Future
 
@@ -91,7 +92,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   }
 
   private def ensureAnnotationNotFinished(annotation: Annotation) = {
-    if (annotation.state.isFinished) Fox.failure("annotation already finshed")
+    if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
   }
 }

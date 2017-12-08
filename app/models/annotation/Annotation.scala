@@ -16,6 +16,7 @@ import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import models.annotation.AnnotationState2._
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -25,7 +26,7 @@ case class Annotation(
                        settings: AnnotationSettings,
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
-                       state: AnnotationState = AnnotationState.InProgress,
+                       state: AnnotationState2.Value = InProgress,
                        _name: Option[String] = None,
                        description: String = "",
                        tracingTime: Option[Long] = None,
@@ -181,8 +182,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
 
   def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
     "_user" -> _user,
-    "state.isFinished" -> false,
-    "state.isAssigned" -> true,
+    "state" -> Json.obj("$in" -> AnnotationState2.assignedButNotFinished),
     "typ" -> annotationType)
 
   def hasAnOpenAnnotation(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
@@ -191,10 +191,10 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     var q = Json.obj(
       "_user" -> _user,
-      "state.isAssigned" -> true,
+      "state" -> Json.obj("$in" -> AnnotationState2.assignedStates),
       "typ" -> annotationType)
 
-    isFinished.foreach{ f => q += "state.isFinished" -> JsBoolean(f)}
+    if(isFinished.isDefined) q += "state" -> Json.toJson(AnnotationState2.Finished)
 
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
@@ -205,12 +205,13 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType], limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     var q = Json.obj(
       "_user" -> _user,
-      "state.isAssigned" -> true,
+      "state" -> Json.obj("$in" -> AnnotationState2.assignedStates),
       "typ" -> Json.obj("$nin" -> annotationTypes))
+    
+    if(isFinished.isDefined) q += "state" -> Json.toJson(AnnotationState2.Finished)
 
-    isFinished.foreach{ f => q += "state.isFinished" -> JsBoolean(f)}
-
-    find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
+    val test = find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
+    test
   }
 
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
@@ -234,14 +235,12 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     find(Json.obj(
       "_task" -> _task,
       "typ" -> annotationType,
-      "$or" -> Json.arr(
-        Json.obj("state.isAssigned" -> true),
-        Json.obj("state.isFinished" -> true))))
+      "$or" -> Json.obj("state" -> AnnotationState2.Finished)))
 
   def findAllUnfinishedByTaskIds(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     find(Json.obj(
       "_task" -> Json.obj("$in" -> Json.toJson(taskIds)),
-      "state.isFinished" -> false
+      "state" -> AnnotationState2.Finished
     )).cursor[Annotation]().collect[List]()
   }
 
@@ -256,8 +255,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     count(Json.obj(
       "_task" -> _task,
       "typ" -> annotationType,
-      "state.isAssigned" -> true,
-      "state.isFinished" -> false))
+      "state" -> Json.obj("$in" -> AnnotationState2.assignedButNotFinished)))
 
   def unassignAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(
@@ -266,9 +264,9 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         "typ" -> Json.obj("$in" -> AnnotationType.UserTracings)),
       Json.obj(
         "$set" -> Json.obj(
-          "state.isAssigned" -> false)))
+          "state" -> AnnotationState2.Unassigned)))
 
-  def updateState(annotation: Annotation, state: AnnotationState)(implicit ctx: DBAccessContext) =
+  def updateState(annotation: Annotation, state: AnnotationState2.Value)(implicit ctx: DBAccessContext) =
     update(
       Json.obj("_id" -> annotation._id),
       Json.obj("$set" -> Json.obj("state" -> state)))
@@ -286,7 +284,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def finish(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj("state" -> AnnotationState.Finished)),
+      Json.obj("$set" -> Json.obj("state" -> Finished)),
       returnNew = true)
 
   def rename(_annotation: BSONObjectID, name: String)(implicit ctx: DBAccessContext) =
@@ -321,9 +319,9 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       returnNew = true)
 
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    updateState(_annotation, AnnotationState.InProgress)
+    updateState(_annotation, InProgress)
 
-  def updateState(_annotation: BSONObjectID, state: AnnotationState)(implicit ctx: DBAccessContext) =
+  def updateState(_annotation: BSONObjectID, state: AnnotationState2.Value)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
       Json.obj("$set" -> Json.obj("state" -> state)),

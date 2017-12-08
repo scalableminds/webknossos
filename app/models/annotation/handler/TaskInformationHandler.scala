@@ -2,12 +2,13 @@ package models.annotation.handler
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{Annotation, AnnotationMerger, AnnotationRestrictions, AnnotationType}
+import models.annotation._
 import models.task.TaskDAO
 import models.team.Role
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
+import models.annotation.AnnotationState2._
 
 object TaskInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
@@ -15,7 +16,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
     for {
       task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
       annotations <- task.annotations
-      finishedAnnotations = annotations.filter(_.state.isFinished)
+      finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
       dataSetName = finishedAnnotations.head.dataSetName

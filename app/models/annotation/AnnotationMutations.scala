@@ -7,6 +7,7 @@ import models.project.{Project, WebknossosAssignmentConfig}
 import models.task.{OpenAssignmentService, Task}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
+import models.annotation.AnnotationState2._
 
 /**
  * Company: scalableminds
@@ -32,7 +33,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     }
 
     if (restrictions.allowFinish(user)) {
-      if (annotation.state.isInProgress)
+      if (annotation.state == InProgress)
         executeFinish(annotation)
       else
           Fox.failure("annotation.notInProgress")
@@ -72,7 +73,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
       task <- annotation.task
       project <- task.project
       _ <- insertReplacement(task, project)
-      _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
+      _ <- AnnotationDAO.updateState(annotation, Unassigned)
     } yield annotation
   }
 

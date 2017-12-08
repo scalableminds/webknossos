@@ -1,5 +1,6 @@
 // @flow
 import * as React from "react";
+// eslint-disable-next-line import/no-named-as-default
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import classNames from "classnames";
 import Store from "oxalis/store";

@@ -33,7 +33,6 @@ import type {
   APIProjectType,
   APIScriptType,
   APITeamType,
-  APITaskType,
 } from "admin/api_flow_types";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
@@ -56,10 +55,8 @@ type State = {
   projects: Array<APIProjectType>,
   scripts: Array<APIScriptType>,
   teams: Array<APITeamType>,
-  responseItems: Array<APITaskType>,
   isNMLSpecification: boolean,
   isUploading: boolean,
-  isResponseModalVisible: boolean,
 };
 
 export function handleTaskCreationResponse(responses: Array<TaskCreationResponseType>) {
@@ -111,10 +108,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     projects: [],
     scripts: [],
     teams: [],
-    responseItems: [],
     isNMLSpecification: false,
     isUploading: false,
-    isResponseModalVisible: false,
   };
   componentDidMount() {
     this.fetchData();

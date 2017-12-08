@@ -139,7 +139,7 @@ const Utils = {
     const result = [];
     for (const e of stringArray) {
       const newEl = parseFloat(e);
-      if (!isNaN(newEl)) {
+      if (!Number.isNaN(newEl)) {
         result.push(newEl);
       }
     }

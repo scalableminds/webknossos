@@ -91,6 +91,7 @@
     "data.maybe": "^1.2.2",
     "deep-freeze": "0.0.1",
     "es6-promise": "^3.0.2",
+    "eslint-plugin-jsx-a11y": "^6.0.2",
     "font-awesome": "^4.5.0",
     "form-syphon": "0.0.5",
     "hammerjs": "^2.0.8",

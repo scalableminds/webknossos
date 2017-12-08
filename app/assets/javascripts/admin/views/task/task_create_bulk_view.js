@@ -71,16 +71,16 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       !_.isString(task.taskTypeId) ||
       !_.isString(task.team) ||
       !_.isString(task.projectName) ||
-      task.editPosition.some(isNaN) ||
-      task.editRotation.some(isNaN) ||
-      isNaN(task.openInstances) ||
-      isNaN(task.neededExperience.value) ||
+      task.editPosition.some(Number.isNaN) ||
+      task.editRotation.some(Number.isNaN) ||
+      Number.isNaN(task.openInstances) ||
+      Number.isNaN(task.neededExperience.value) ||
       // Bounding Box is optional and can be null
       (boundingBox != null
-        ? boundingBox.topLeft.some(isNaN) ||
-          isNaN(boundingBox.width) ||
-          isNaN(boundingBox.height) ||
-          isNaN(boundingBox.depth) ||
+        ? boundingBox.topLeft.some(Number.isNaN) ||
+          Number.isNaN(boundingBox.width) ||
+          Number.isNaN(boundingBox.height) ||
+          Number.isNaN(boundingBox.depth) ||
           // is editPosition within the BoundingBox?
           task.editPosition[0] > boundingBox.topLeft[0] + boundingBox.width ||
           task.editPosition[0] < boundingBox.topLeft[0] ||

@@ -43,7 +43,6 @@ type MergeModalViewState = {
   selectedExplorativeAnnotation: string,
   selectedNML: ?AnnotationInfoType,
   isUploading: boolean,
-  readOnly: boolean,
 };
 
 type UploadInfoType<T> = {
@@ -66,7 +65,6 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     selectedExplorativeAnnotation: "",
     selectedNML: null,
     isUploading: false,
-    readOnly: false,
   };
 
   componentWillMount() {

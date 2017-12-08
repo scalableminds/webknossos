@@ -105,7 +105,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
 
     const { domain, level } = this.state;
     const isDomainValid = _.isString(domain) && domain !== "";
-    const isLevelValid = !isNaN(parseInt(level));
+    const isLevelValid = !Number.isNaN(parseInt(level));
 
     return (
       <Modal

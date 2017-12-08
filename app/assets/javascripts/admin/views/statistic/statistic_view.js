@@ -19,7 +19,6 @@ type State = {
     numberOfUsers: number,
     numberOfDatasets: number,
     numberOfAnnotations: number,
-    numberOfTrees: number,
     numberOfOpenAssignments: number,
     tracingTimes: Array<TimeEntryType>,
   },
@@ -45,7 +44,6 @@ class StatisticView extends React.PureComponent<{}, State> {
       numberOfUsers: 0,
       numberOfDatasets: 0,
       numberOfAnnotations: 0,
-      numberOfTrees: 0,
       numberOfOpenAssignments: 0,
       tracingTimes: [],
     },
@@ -65,6 +63,11 @@ class StatisticView extends React.PureComponent<{}, State> {
   async fetchAchievementData() {
     const achievementsURL = "/api/statistics/webknossos?interval=week";
     const achievements = await Request.receiveJSON(achievementsURL);
+
+    achievements.tracingTimes.sort(
+      ({ start: dateString1 }, { start: dateString2 }) =>
+        new Date(dateString2) - new Date(dateString1),
+    );
 
     this.setState({
       isAchievementsLoading: false,
@@ -177,10 +180,6 @@ class StatisticView extends React.PureComponent<{}, State> {
                   <li>
                     <div style={listStyle}>Number of Annotations</div>
                     {this.state.achievements.numberOfAnnotations}
-                  </li>
-                  <li>
-                    <div style={listStyle}>Number of Trees</div>
-                    {this.state.achievements.numberOfTrees}
                   </li>
                   <li>
                     <div style={listStyle}>Number of Open Assignments</div>

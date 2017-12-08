@@ -1,73 +1,74 @@
 {
-    "extends": [
-      "airbnb",
-      "plugin:flowtype/recommended",
-      "plugin:react/recommended",
-      "prettier",
-      "prettier/flowtype",
-      "prettier/react"
+  "extends": [
+    "airbnb",
+    "plugin:flowtype/recommended",
+    "plugin:react/recommended",
+    "prettier",
+    "prettier/flowtype",
+    "prettier/react"
+  ],
+  "plugins": ["react", "import", "jasmine", "flowtype"],
+  "parserOptions": {
+    "ecmaVersion": 8
+  },
+  "env": {
+    "browser": true,
+    "jasmine": true
+  },
+  "parser": "babel-eslint",
+  "settings": {
+    "import/resolver": "webpack",
+    "import/ignore": ["$three.*"],
+    "import/core-modules": ["three"]
+  },
+  "globals": {
+    "ga": false,
+    "browser": false,
+    "routes": false,
+    "jsRoutes": false,
+    "JQuery": false,
+    "SyntheticInputEvent": false,
+    "$Keys": false,
+    "$Subtype": false,
+    "Generator": false
+  },
+  "rules": {
+    "quotes": ["error", "double", { "avoidEscape": true }],
+    "max-len": ["off", 100],
+    "class-methods-use-this": "off",
+    "operator-assignment": "warn",
+    "react/jsx-filename-extension": "off",
+    "react/prop-types": "off",
+    "radix": "off",
+    "no-bitwise": "off",
+    "no-confusing-arrow": "off",
+    "no-continue": "warn",
+    "no-duplicate-imports": "off",
+    "no-else-return": "off",
+    "no-mixed-operators": "off",
+    "no-multi-str": "off",
+    "no-param-reassign": "warn",
+    "no-plusplus": "off",
+    "no-restricted-syntax": "warn",
+    "array-callback-return": "warn",
+    "no-restricted-properties": ["off", { "object": "Math", "property": "pow" }],
+    "no-restricted-syntax": ["error", "ForInStatement"],
+    "no-underscore-dangle": "off",
+    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-use-before-define": ["error", { "functions": false }],
+    "one-var": ["error", "never"],
+    "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
+    "import/no-unresolved": "off",
+    "quote-props": ["error", "as-needed", { "numbers": true }],
+    "react/sort-comp": [
+      "error",
+      { "order": ["type-annotations", "static-methods", "lifecycle", "everything-else", "render"] }
     ],
-    "plugins": [
-        "react",
-        "jsx-a11y",
-        "import",
-        "jasmine",
-        "flowtype"
-    ],
-    "parserOptions": {
-      "ecmaVersion": 8
-    },
-    "env": {
-      "browser": true,
-      "jasmine": true
-    },
-    "parser": "babel-eslint",
-    "settings": {
-      "import/resolver": "webpack",
-      "import/ignore": ["$three.*"],
-      "import/core-modules": ["three"]
-    },
-    "globals": {
-      "ga": false,
-      "browser": false,
-      "routes": false,
-      "jsRoutes": false,
-      "JQuery": false,
-      "SyntheticInputEvent": false,
-      "$Keys": false,
-      "$Subtype": false,
-      "Generator": false
-    },
-    "rules": {
-      "quotes": ["error", "double", { "avoidEscape": true }],
-      "max-len": ["off", 100],
-      "class-methods-use-this": "off",
-      "operator-assignment": "warn",
-      "react/jsx-filename-extension": "off",
-      "react/prop-types": "off",
-      "radix": "off",
-      "no-bitwise": "off",
-      "no-confusing-arrow":  "off",
-      "no-continue": "warn",
-      "no-duplicate-imports": "off",
-      "no-else-return": "off",
-      "no-mixed-operators": "off",
-      "no-multi-str": "off",
-      "no-param-reassign": "warn",
-      "no-plusplus": "off",
-      "no-restricted-syntax": "warn",
-      "array-callback-return": "warn",
-      "jsx-a11y/no-static-element-interactions": "warn",
-      "no-restricted-properties": ["off", {"object": "Math", "property": "pow"}],
-      "no-restricted-syntax": ["error", "ForInStatement"],
-      "no-underscore-dangle": "off",
-      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
-      "no-use-before-define": ["error", { "functions": false }],
-      "one-var": ["error", "never"],
-      "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
-      "import/no-unresolved": "off",
-      "quote-props": ["error", "as-needed", {"numbers": true}],
-      "react/sort-comp": ["error", {"order": ["type-annotations", "static-methods", "lifecycle", "everything-else", "render"]}],
-      "flowtype/no-types-missing-file-annotation": "off"
-    }
+    "flowtype/no-types-missing-file-annotation": "off",
+    "prefer-destructuring": "warn",
+    "jsx-a11y/anchor-is-valid": "off",
+    "jsx-a11y/click-events-have-key-events": "off",
+    "jsx-a11y/no-static-element-interactions": "off",
+    "import/no-named-as-default-member": "warn"
+  }
 }

@@ -34,7 +34,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   implicit val timeout = Timeout(5 seconds)
 
-
   def empty(typ: String, id: String) = SecuredAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }

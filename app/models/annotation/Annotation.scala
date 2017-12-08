@@ -122,6 +122,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
 
   val formatter = Annotation.annotationFormat
 
+  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("tracingReference.id" -> IndexType.Ascending)))

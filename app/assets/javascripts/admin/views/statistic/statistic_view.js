@@ -5,7 +5,7 @@ import { Row, Col, Spin, Table, Card } from "antd";
 import moment from "moment";
 import Request from "libs/request";
 import Utils from "libs/utils";
-import C3Chart from "react-c3js";
+import { Chart } from "react-google-charts";
 
 const { Column } = Table;
 type TimeEntryType = {
@@ -19,7 +19,6 @@ type State = {
     numberOfUsers: number,
     numberOfDatasets: number,
     numberOfAnnotations: number,
-    numberOfTrees: number,
     numberOfOpenAssignments: number,
     tracingTimes: Array<TimeEntryType>,
   },
@@ -28,6 +27,10 @@ type State = {
   isTimeEntriesLoading: boolean,
   startDate: moment$Moment,
   endDate: moment$Moment,
+};
+
+type GoogleChartsType = {
+  chart: { getSelection: Function }, // https://developers.google.com/chart/interactive/docs/drawing_charts#chartwrapper
 };
 
 class StatisticView extends React.PureComponent<{}, State> {
@@ -41,7 +44,6 @@ class StatisticView extends React.PureComponent<{}, State> {
       numberOfUsers: 0,
       numberOfDatasets: 0,
       numberOfAnnotations: 0,
-      numberOfTrees: 0,
       numberOfOpenAssignments: 0,
       tracingTimes: [],
     },
@@ -62,6 +64,11 @@ class StatisticView extends React.PureComponent<{}, State> {
     const achievementsURL = "/api/statistics/webknossos?interval=week";
     const achievements = await Request.receiveJSON(achievementsURL);
 
+    achievements.tracingTimes.sort(
+      ({ start: dateString1 }, { start: dateString2 }) =>
+        new Date(dateString2) - new Date(dateString1),
+    );
+
     this.setState({
       isAchievementsLoading: false,
       achievements,
@@ -80,11 +87,13 @@ class StatisticView extends React.PureComponent<{}, State> {
     });
   }
 
-  selectDataPoint = (date: { x: string }) => {
+  selectDataPoint = (chart: GoogleChartsType) => {
+    const indicies = chart.chart.getSelection()[0];
+    const startDate = this.state.achievements.tracingTimes[indicies.row].start;
     this.setState(
       {
-        startDate: moment(date.x),
-        endDate: moment(date.x).endOf("week"),
+        startDate: moment(startDate),
+        endDate: moment(startDate).endOf("week"),
         isTimeEntriesLoading: true,
       },
       () => this.fetchTimeEntryData(),
@@ -92,14 +101,21 @@ class StatisticView extends React.PureComponent<{}, State> {
   };
 
   render() {
-    const previousWeeks = this.state.achievements.tracingTimes.map(item =>
-      parseInt(moment.duration(item.tracingTime).asHours()),
-    );
-    const currentWeek = previousWeeks.length - 1;
+    const columns = [
+      { id: "Date", type: "date" },
+      { id: "HoursPerWeek", type: "number" },
+      { id: "Tooltip", type: "string", role: "tooltip" },
+    ];
+    const rows = this.state.achievements.tracingTimes.map(item => {
+      const duration = Utils.roundTo(moment.duration(item.tracingTime).asHours(), 2);
 
-    const dates = this.state.achievements.tracingTimes.map(item =>
-      moment(item.start).format("YYYY-MM-DD"),
-    );
+      return [
+        new Date(item.start),
+        duration,
+        `${moment(item.start).format("DD.MM.YYYY")} - ${moment(item.end).format("DD.MM.YYYY")}
+        ${duration}h`,
+      ];
+    });
 
     const listStyle = {
       width: 200,
@@ -112,32 +128,40 @@ class StatisticView extends React.PureComponent<{}, State> {
           <Col span={16}>
             <Card title="Overall Weekly Tracing Time">
               <Spin spinning={this.state.isAchievementsLoading} size="large">
-                <C3Chart
-                  data={{
-                    x: "date",
-                    columns: [["date"].concat(dates), ["WeeklyHours"].concat(previousWeeks)],
-                    color(color, d) {
-                      return d.index === currentWeek ? "#48C561" : color;
-                    },
-                    selection: {
-                      enabled: true,
-                      grouped: false,
-                      multiple: false,
-                    },
-                    onclick: this.selectDataPoint,
-                  }}
-                  axis={{
-                    x: {
-                      type: "timeseries",
-                    },
-                    y: {
-                      label: "hours / week",
-                    },
-                  }}
-                  legend={{
-                    show: false,
-                  }}
-                />
+                {rows.length > 0 ? (
+                  <Chart
+                    chartType="LineChart"
+                    columns={columns}
+                    rows={rows}
+                    graph_id="TimeGraph"
+                    width="100%"
+                    height="400px"
+                    chartEvents={[
+                      {
+                        eventName: "select",
+                        callback: this.selectDataPoint,
+                      },
+                    ]}
+                    options={{
+                      pointSize: 5,
+                      legend: { position: "none" },
+                      hAxis: {
+                        title: "",
+                        minorGridlines: {
+                          color: "none",
+                        },
+                      },
+                      vAxis: {
+                        title: "Hours / Week",
+                        minorGridlines: {
+                          color: "none",
+                        },
+                        viewWindowMode: "explicit",
+                        viewWindow: { min: 0 },
+                      },
+                    }}
+                  />
+                ) : null}
               </Spin>
             </Card>
           </Col>
@@ -156,10 +180,6 @@ class StatisticView extends React.PureComponent<{}, State> {
                   <li>
                     <div style={listStyle}>Number of Annotations</div>
                     {this.state.achievements.numberOfAnnotations}
-                  </li>
-                  <li>
-                    <div style={listStyle}>Number of Trees</div>
-                    {this.state.achievements.numberOfTrees}
                   </li>
                   <li>
                     <div style={listStyle}>Number of Open Assignments</div>

@@ -8,7 +8,7 @@ import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
-import type { APIScriptType } from "admin/api_flow_types";
+import type { APIScriptType, APIUserType } from "admin/api_flow_types";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -113,13 +113,18 @@ class ScriptListView extends React.PureComponent<{}, State> {
                 dataIndex="owner"
                 key="owner"
                 sorter={Utils.localeCompareBy((scripts: APIScriptType) => scripts.owner.lastName)}
-                render={owner => `${owner.firstName} ${owner.lastName}`}
+                render={(owner: APIUserType) => `${owner.firstName} ${owner.lastName}`}
               />
               <Column
                 title="Gist URL"
                 dataIndex="gist"
                 key="gist"
                 sorter={Utils.localeCompareBy("gist")}
+                render={(gist: string) => (
+                  <a href={gist} target="_blank" rel="noopener noreferrer">
+                    {gist}
+                  </a>
+                )}
               />
               <Column
                 title="Action"

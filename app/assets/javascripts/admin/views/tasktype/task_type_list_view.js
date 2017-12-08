@@ -133,7 +133,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 width={300}
               />
               <Column
-                title="Add-On Modes"
+                title="Modes"
                 dataIndex="settings"
                 key="allowedModes"
                 width={100}

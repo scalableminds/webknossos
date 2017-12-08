@@ -76,13 +76,20 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
   };
 
   getDropdownMenu(annotation: APIAnnotationType) {
+    const label = annotation.state.isFinished ? (
+      <>
+        <Icon type="eye-o" />View
+      </>
+    ) : (
+      <>
+        <Icon type="play-circle-o" />Trace
+      </>
+    );
+
     return (
       <Menu>
         <Item key={`${annotation.id}-view`}>
-          <a href={`/annotations/Task/${annotation.id}`}>
-            <i className="fa fa-random" />
-            {annotation.state.isFinished ? "View" : "Trace"}
-          </a>
+          <a href={`/annotations/Task/${annotation.id}`}>{label}</a>
         </Item>
 
         <Item key={`${annotation.id}-transfer`}>
@@ -91,40 +98,34 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
               this.setState({ currentAnnotation: annotation, isTransferModalVisible: true })
             }
           >
-            <i className="fa fa-share" />
-            Transfer
+            <Icon type="team" />Transfer
           </span>
         </Item>
         <Item key={`${annotation.id}-download`}>
           <a href={`/annotations/Task/${annotation.id}/download`}>
-            <i className="fa fa-download" />
-            Download
+            <Icon type="download" />Download
           </a>
         </Item>
         <Item key={`${annotation.id}-reset`}>
           <span onClick={() => resetAnnotation(annotation.id)}>
-            <i className="fa fa-undo" />
-            Reset
+            <Icon type="rollback" />Reset
           </span>
         </Item>
         <Item key={`${annotation.id}-delete`}>
           <span onClick={() => this.deleteAnnotation(annotation)}>
-            <i className="fa fa-trash-o" />
-            Cancel
+            <Icon type="delete" />Cancel
           </span>
         </Item>
         {annotation.state.isFinished ? (
           <Item key={`${annotation.id}-reopen`}>
             <span onClick={() => this.reOpenAnnotation(annotation)}>
-              <i className="fa fa-share" />
-              Reopen
+              <Icon type="folder-open" />Reopen
             </span>
           </Item>
         ) : (
           <Item key={`${annotation.id}-finish`}>
             <span onClick={() => this.finishAnnotation(annotation)}>
-              <i className="fa fa-check-circle-o" />
-              Finish
+              <Icon type="check-circle-o" />Finish
             </span>
           </Item>
         )}
@@ -149,12 +150,12 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   <td>{moment(annotation.modified).format("YYYY-MM-DD HH:SS")}</td>
                   <td>
                     <span>
-                      <i className="fa fa-check-circle-o" />
+                      <Icon type="check-circle-o" />
                       {`${annotation.state.isFinished ? "Finished" : "In Progress"}`}
                     </span>
                     <br />
                     <span>
-                      <i className="fa fa-clock-o" />
+                      <Icon type="clock-circle-o" />
                       {annotation.tracingTime
                         ? FormatUtils.formatSeconds(annotation.tracingTime / 1000)
                         : 0}

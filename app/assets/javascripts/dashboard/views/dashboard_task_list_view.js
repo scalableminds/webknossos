@@ -6,7 +6,7 @@ import { connect } from "react-redux";
 import { Link } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
-import { Spin, Table, Button, Modal, Tag } from "antd";
+import { Spin, Table, Button, Modal, Tag, Icon } from "antd";
 import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import moment from "moment";
@@ -133,61 +133,55 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       .map(team => team.team)
       .includes(task.team);
 
-    const label = this.props.isAdminView ? "View" : "Trace";
+    const label = this.props.isAdminView ? (
+      <>
+        <Icon type="eye-o" />View
+      </>
+    ) : (
+      <>
+        <Icon type="play-circle-o" />Trace
+      </>
+    );
 
     return task.annotation.state.isFinished ? (
       <div>
-        <i className="fa fa-check" />
-        <span> Finished</span>
+        <Icon type="check-circle-o" />Finished
         <br />
       </div>
     ) : (
-      <ul>
-        <li>
-          <Link to={`/annotations/Task/${annotation.id}`}>
-            <i className="fa fa-random" />
-            <strong>{label}</strong>
-          </Link>
-        </li>
+      <div>
+        <Link to={`/annotations/Task/${annotation.id}`}>{label}</Link>
+        <br />
         {isAdmin || this.props.isAdminView ? (
-          <li>
+          <>
             <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
-              <i className="fa fa-share" />
-              Transfer
+              <Icon type="team" />Transfer
             </a>
-          </li>
+            <br />
+          </>
         ) : null}
         {isAdmin ? (
-          <div>
-            <li>
-              <a href={`/annotations/Task/${annotation.id}/download`}>
-                <i className="fa fa-download" />
-                Download
-              </a>
-            </li>
-            <li>
-              <a href="#" onClick={() => this.resetTask(annotation.id)}>
-                <i className="fa fa-undo" />
-                Reset
-              </a>
-            </li>
-            <li>
-              <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
-                <i className="fa fa-trash-o" />
-                Cancel
-              </a>
-            </li>
-          </div>
+          <>
+            <a href={`/annotations/Task/${annotation.id}/download`}>
+              <Icon type="download" />Download
+            </a>
+            <br />
+            <a href="#" onClick={() => this.resetTask(annotation.id)}>
+              <Icon type="rollback" />Reset
+            </a>
+            <br />
+            <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
+              <Icon type="delete" />Cancel
+            </a>
+            <br />
+          </>
         ) : null}
         {this.props.isAdminView ? null : (
-          <li>
-            <a href="#" onClick={() => this.confirmFinish(task)}>
-              <i className="fa fa-check-circle-o" />
-              Finish
-            </a>
-          </li>
+          <a href="#" onClick={() => this.confirmFinish(task)}>
+            <Icon type="check-circle-o" />Finish
+          </a>
         )}
-      </ul>
+      </div>
     );
   };
 
@@ -292,6 +286,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Column
           title="Project"
           dataIndex="projectName"
+          width={110}
           sorter={Utils.localeCompareBy("projectName")}
         />
         <Column
@@ -317,12 +312,14 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Column
           title="Creation Date"
           dataIndex="created"
+          width={150}
           sorter={Utils.localeCompareBy("created")}
           render={created => moment(created).format("YYYY-MM-DD HH:SS")}
         />
         <Column
           title="Actions"
           className="nowrap"
+          width={150}
           render={(__, task) => this.renderActions(task)}
         />
       </Table>
@@ -342,8 +339,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
               Get a New Task
             </AsyncButton>
           )}
-          <div className="divider-vertical" />
-          <Button onClick={this.toggleShowFinished}>Show {this.getFinishVerb()} Tasks Only</Button>
+          <Button onClick={this.toggleShowFinished} style={{ marginLeft: 20 }}>
+            Show {this.getFinishVerb()} Tasks Only
+          </Button>
         </div>
         <h3 id="tasksHeadline" className="TestTasksHeadline">
           Tasks

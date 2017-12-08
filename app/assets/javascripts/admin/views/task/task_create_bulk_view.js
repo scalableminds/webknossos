@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 import React from "react";
-import { Form, Input, Button, Card, Upload, Icon, Spin, Progress } from "antd";
+import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from "antd";
 import { createTasks } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/views/task/task_create_form_view";
 import Messages from "messages";
@@ -292,8 +292,8 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                   />,
                 )}
               </FormItem>
-              <hr />
-              <FormItem label="Alternatively Upload a CSV File" hasFeedback>
+              <Divider>Alternatively Upload a CSV File</Divider>
+              <FormItem hasFeedback>
                 {getFieldDecorator("csvFile", {
                   valuePropName: "fileList",
                   getValueFromEvent: this.normFile,

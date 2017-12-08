@@ -136,11 +136,12 @@ class TaskListView extends React.PureComponent<Props, State> {
             style={{ marginTop: 30, marginBotton: 30 }}
             expandedRowRender={task => <TaskAnnotationView task={task} />}
           >
-            <Column title="#" dataIndex="id" key="id" sorter={Utils.localeCompareBy("id")} />
+            <Column title="ID" dataIndex="id" key="id" sorter={Utils.localeCompareBy("id")} />
             <Column
               title="Project"
               dataIndex="projectName"
               key="projectName"
+              width={130}
               sorter={Utils.localeCompareBy("projectName")}
               render={(projectName: string) => (
                 <a href={`/projects#${projectName}`}>{projectName}</a>
@@ -150,6 +151,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Type"
               dataIndex="type"
               key="type"
+              width={100}
               sorter={Utils.localeCompareBy((task: APITaskType) => task.type.summary)}
               render={(taskType: APITaskTypeType) => (
                 <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
@@ -159,12 +161,14 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Dataset"
               dataIndex="dataSet"
               key="dataSet"
+              width={130}
               sorter={Utils.localeCompareBy("dataSet")}
             />
             <Column
               title="Edit Position / Bounding Box"
               dataIndex="editPosition"
               key="editPosition"
+              width={130}
               render={(__, task: APITaskType) => (
                 <div className="nowrap">
                   {TemplateHelpers.formatTuple(task.editPosition)} <br />
@@ -189,12 +193,14 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Creation Date"
               dataIndex="created"
               key="created"
+              width={150}
               sorter={Utils.localeCompareBy("created")}
             />
             <Column
               title="Stats"
               dataIndex="status"
               key="status"
+              width={80}
               render={(status, task: APITaskType) => (
                 <div className="nowrap">
                   <span>
@@ -222,6 +228,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             <Column
               title="Action"
               key="actions"
+              width={130}
               render={(__, task: APITaskType) => (
                 <span>
                   {task.status.completed > 0 ? (

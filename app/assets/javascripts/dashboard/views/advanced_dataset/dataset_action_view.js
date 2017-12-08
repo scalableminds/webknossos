@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Dropdown, Menu } from "antd";
+import { Dropdown, Menu, Icon } from "antd";
 import type { APIDatasetType } from "admin/api_flow_types";
 
 type Props = {
@@ -50,7 +50,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         {dataset.dataSource.dataLayers == null ? (
           <div>
             <Link to={`/datasets/${dataset.name}/import`} className="import-dataset">
-              <i className="fa fa-plus-circle" />Import
+              <Icon type="plus-circle-o" />Import
             </Link>
 
             <div className="text-danger">{dataset.dataSource.status}</div>
@@ -60,11 +60,11 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
           <div className="dataset-actions nowrap">
             {dataset.isEditable ? (
               <Link to={`/datasets/${dataset.name}/edit`} title="Edit dataset">
-                <i className="fa fa-pencil" /> Edit
+                <Icon type="edit" />Edit
               </Link>
             ) : null}
             <a href={`/datasets/${dataset.name}/view`} title="View dataset">
-              <img src="/assets/images/eye.svg" alt="eye icon" /> View
+              <Icon type="eye-o" />View
             </a>
             <a
               href={`/datasets/${dataset.name}/trace?typ=skeleton`}

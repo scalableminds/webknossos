@@ -194,7 +194,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       "state" -> Json.obj("$in" -> AnnotationState.assignedStates),
       "typ" -> annotationType)
 
-    if(isFinished.isDefined) q += "state" -> Json.toJson(AnnotationState.Finished)
+    if(isFinished.isDefined) q += "state" -> Json.toJson(Finished)
 
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
@@ -208,10 +208,9 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       "state" -> Json.obj("$in" -> AnnotationState.assignedStates),
       "typ" -> Json.obj("$nin" -> annotationTypes))
 
-    if(isFinished.isDefined) q += "state" -> Json.toJson(AnnotationState.Finished)
+    if(isFinished.isDefined) q += "state" -> Json.toJson(Finished)
 
-    val test = find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
-    test
+    find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
 
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
@@ -235,12 +234,12 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     find(Json.obj(
       "_task" -> _task,
       "typ" -> annotationType,
-      "$or" -> Json.obj("state" -> AnnotationState.Finished)))
+      "$or" -> Json.obj("state" -> Finished)))
 
   def findAllUnfinishedByTaskIds(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     find(Json.obj(
       "_task" -> Json.obj("$in" -> Json.toJson(taskIds)),
-      "state" -> AnnotationState.Finished
+      "state" -> Finished
     )).cursor[Annotation]().collect[List]()
   }
 
@@ -264,7 +263,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         "typ" -> Json.obj("$in" -> AnnotationType.UserTracings)),
       Json.obj(
         "$set" -> Json.obj(
-          "state" -> AnnotationState.Unassigned)))
+          "state" -> Unassigned)))
 
   def updateState(annotation: Annotation, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =
     update(

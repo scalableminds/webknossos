@@ -52,14 +52,11 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
           initialTracingType={this.props.initialTracingType}
           initialAnnotationId={this.props.initialAnnotationId}
           initialControlmode={this.props.initialControlmode}
-          ref={ref => {
-            app.oxalis = ref;
-          }}
         />
 
         <Layout className="tracing-layout">
           <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
-            <ButtonComponent size="large" onClick={this.handleSettingsCollapse}>
+            <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               Settings
             </ButtonComponent>

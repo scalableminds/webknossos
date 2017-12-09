@@ -180,7 +180,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <div>
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
             <i className="fa fa-folder-open" />
-            reopen
+            Reopen
           </AsyncLink>
           <br />
         </div>

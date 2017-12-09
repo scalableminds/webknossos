@@ -160,10 +160,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         {isAdmin ? (
           <div>
             <li>
-              <Link to={`/annotations/Task/${annotation.id}/download`}>
+              <a href={`/annotations/Task/${annotation.id}/download`}>
                 <i className="fa fa-download" />
                 Download
-              </Link>
+              </a>
             </li>
             <li>
               <a href="#" onClick={() => this.resetTask(annotation.id)}>

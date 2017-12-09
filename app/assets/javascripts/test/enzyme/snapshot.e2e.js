@@ -26,8 +26,6 @@ mockRequire("libs/window", global.window);
 
 // The following components cannot be rendered by enzyme. Let's mock them
 mockRequire("antd/lib/upload", () => <div />);
-mockRequire("c3", () => {});
-mockRequire("react-c3js", () => <div />);
 
 // Antd makes use of fancy effects, which is why the rendering output is not reliable.
 // Mock these components to avoid this issue.

@@ -74,6 +74,8 @@ GET           /api/teams                                                        
 GET           /api/allTeams                                                     controllers.TeamController.listAllTeams
 POST          /api/teams                                                        controllers.TeamController.create
 DELETE        /api/teams/:id                                                    controllers.TeamController.delete(id: String)
+GET           /api/teams/:id/openTasksOverview                                  controllers.AnalysisController.openTasksOverview(id: String)
+GET           /api/projects/progressOverview                                    controllers.AnalysisController.projectProgressOverview
 
 # DataSets
 GET           /datasets                                                         controllers.Authentication.empty
@@ -141,7 +143,6 @@ GET           /api/tasks/:id                                                    
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
-
 
 # Task Types
 GET           /taskTypes                                                        controllers.Authentication.empty

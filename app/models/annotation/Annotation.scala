@@ -260,12 +260,26 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       "state.isAssigned" -> true,
       "state.isFinished" -> false))
 
-  def countFinishedByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+  def countUnfinishedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(Json.obj(
-      "_task" -> _task,
+      "_task" -> Json.obj("$in" -> _tasks),
+      "typ" -> annotationType,
+      "state.isAssigned" -> true,
+      "state.isFinished" -> false))
+
+  def countFinishedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    count(Json.obj(
+      "_task" -> Json.obj("$in" -> _tasks),
       "typ" -> annotationType,
       "state.isAssigned" -> true,
       "state.isFinished" -> true))
+
+  def countRecentlyModifiedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType, minimumTimestamp: Long)(implicit ctx: DBAccessContext) =
+    count(Json.obj(
+      "_task" -> Json.obj("$in" -> _tasks),
+      "typ" -> annotationType,
+      "modifiedTimestamp" -> Json.obj("$gt" -> minimumTimestamp)
+    ))
 
   def unassignAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(

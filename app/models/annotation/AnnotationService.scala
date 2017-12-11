@@ -115,7 +115,7 @@ object AnnotationService
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation]().collect[List]()
 
   def countUnfinishedAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countUnfinishedByTaskIdAndType(task._id, AnnotationType.Task)
+    AnnotationDAO.countUnfinishedByTaskIdsAndType(List(task._id), AnnotationType.Task)
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
     for {

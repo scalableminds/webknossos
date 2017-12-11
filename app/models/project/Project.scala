@@ -5,8 +5,8 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.basics._
-import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
-import models.task.{OpenAssignmentDAO, TaskDAO, TaskService}
+import models.mturk.MTurkAssignmentConfig
+import models.task.{TaskDAO, TaskService}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import oxalis.mturk.MTurkService
@@ -181,6 +181,10 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
     findOne("name", name)
+  }
+
+  def findAllByTeamName(teamName: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    find("team", teamName).collect[List]()
   }
 
   def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) = {

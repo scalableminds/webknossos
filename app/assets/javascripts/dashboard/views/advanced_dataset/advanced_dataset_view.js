@@ -49,7 +49,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="name"
             key="name"
             sorter={Utils.localeCompareBy("name")}
-            render={(name, dataset: DatasetType) => (
+            render={(name: string, dataset: DatasetType) => (
               <div>
                 {dataset.name}
                 <br />
@@ -60,6 +60,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             )}
           />
           <Column
+            width={110}
             title="Creation Date"
             dataIndex="created"
             key="created"
@@ -71,7 +72,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="scale"
             key="scale"
             render={(__, dataset: DatasetType) =>
-              TemplateHelpers.formatTuple(dataset.dataSource.scale)}
+              TemplateHelpers.formatTuple(dataset.dataSource.scale)
+            }
           />
 
           <Column
@@ -88,19 +90,21 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                     this.setState({
                       selectedDataset: dataset,
                       isTeamAssignmentModalVisible: true,
-                    })}
+                    })
+                  }
                 >
                   {team === dataset.owningTeam ? <i className="fa fa-lock" /> : null}
                   {team}
                 </Tag>
-              ))}
+              ))
+            }
           />
           <Column
             title="Active"
             dataIndex="isActive"
             key="isActive"
             sorter={(a, b) => a.isActive - b.isActive}
-            render={isActive => {
+            render={(isActive: boolean) => {
               const icon = isActive ? "check-circle-o" : "close-circle-o";
               return <Icon type={icon} style={{ fontSize: 20 }} />;
             }}
@@ -110,7 +114,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="isPublic"
             key="isPublic"
             sorter={(a, b) => a.isPublic - b.isPublic}
-            render={isPublic => {
+            render={(isPublic: boolean) => {
               const icon = isPublic ? "check-circle-o" : "close-circle-o";
               return <Icon type={icon} style={{ fontSize: 20 }} />;
             }}
@@ -118,12 +122,13 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
           <Column
             title="Data Layers"
             dataIndex="dataSource.dataLayers"
-            render={(__, dataset) =>
+            render={(__, dataset: DatasetType) =>
               (dataset.dataSource.dataLayers || []).map(layer => (
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
                 </Tag>
-              ))}
+              ))
+            }
           />
 
           <Column
@@ -140,7 +145,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             onCancel={() =>
               this.setState({
                 isTeamAssignmentModalVisible: false,
-              })}
+              })
+            }
             onOk={(updatedDataset: DatasetType) => {
               this.props.updateDataset(updatedDataset);
               this.setState({

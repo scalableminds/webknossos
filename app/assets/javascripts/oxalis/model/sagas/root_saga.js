@@ -17,6 +17,7 @@ import { alert } from "libs/window";
 import { select, fork, take, cancel } from "redux-saga/effects";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
+import messages from "messages";
 
 export default function* rootSaga(): Generator<*, *, *> {
   while (true) {
@@ -53,21 +54,13 @@ ${err} ${err.stack}`);
 // TODO: move this saga functionality as soon as annotation_saga.js was merged
 
 function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
-  let zoomStepWarningToast;
   const warnMaybe = function*() {
     const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
-    if (shouldWarn && zoomStepWarningToast == null) {
-      const toastType = yield select(
-        state => (state.tracing.type === "volume" ? "danger" : "info"),
-      );
-      zoomStepWarningToast = Toast.message(
-        toastType,
-        "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
-        true,
-      );
-    } else if (!shouldWarn && zoomStepWarningToast != null) {
-      zoomStepWarningToast.remove();
-      zoomStepWarningToast = null;
+    if (shouldWarn) {
+      const toastType = yield select(state => (state.tracing.type === "volume" ? "error" : "info"));
+      Toast.message(toastType, messages["tracing.segmentation_zoom_warning"], true);
+    } else if (!shouldWarn) {
+      Toast.close(messages["tracing.segmentation_zoom_warning"]);
     }
   };
 

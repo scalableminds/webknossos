@@ -8,6 +8,9 @@ import { mount } from "enzyme";
 import test from "ava";
 import mockRequire from "mock-require";
 import React from "react";
+import { Provider } from "react-redux";
+import { Router } from "react-router-dom";
+import createBrowserHistory from "history/createBrowserHistory";
 
 mockRequire("app", {
   currentUser: {
@@ -16,10 +19,13 @@ mockRequire("app", {
   },
 });
 
+// Those wrappers interfere with global.window and global.document otherwise
+mockRequire("libs/hammerjs_wrapper", {});
+mockRequire("libs/keyboardjs_wrapper", {});
+mockRequire("libs/window", global.window);
+
 // The following components cannot be rendered by enzyme. Let's mock them
 mockRequire("antd/lib/upload", () => <div />);
-mockRequire("c3", () => {});
-mockRequire("react-c3js", () => <div />);
 
 // Antd makes use of fancy effects, which is why the rendering output is not reliable.
 // Mock these components to avoid this issue.
@@ -30,17 +36,35 @@ mockRequire("antd/lib/button", props => (
   </div>
 ));
 
-const ProjectListView = mockRequire.reRequire("admin/admin").ProjectListView;
+const ProjectListView = mockRequire.reRequire("../../admin/views/project/project_list_view")
+  .default;
 const Dashboard = mockRequire.reRequire("../../dashboard/views/dashboard_view").default;
 const UserListView = mockRequire.reRequire("../../admin/views/user/user_list_view").default;
+const Store = mockRequire.reRequire("../../oxalis/throttled_store").default;
+const { setActiveUserAction } = mockRequire.reRequire("../../oxalis/model/actions/user_actions");
+const { getActiveUser } = mockRequire.reRequire("../../admin/admin_rest_api");
 // Cannot be rendered for some reason
 // const TracingLayoutView = mockRequire.reRequire("../../oxalis/view/tracing_layout_view").default;
 
-test("Dashboard", async t => {
-  const dashboard = mount(<Dashboard userID={null} isAdminView={false} />);
-  await waitForAllRequests();
-  t.is(dashboard.find(".TestDatasetHeadline").length, 1);
+const browserHistory = createBrowserHistory();
 
+test.beforeEach(async _ => {
+  // There needs to be an active user in the store for the pages to render correctly
+  const user = await getActiveUser();
+  Store.dispatch(setActiveUserAction(user));
+});
+
+test("Dashboard", async t => {
+  const dashboard = mount(
+    <Provider store={Store}>
+      <Router history={browserHistory}>
+        <Dashboard userId={null} isAdminView={false} />
+      </Router>
+    </Provider>,
+  );
+  await waitForAllRequests(dashboard);
+
+  t.is(dashboard.find(".TestDatasetHeadline").length, 1);
   debugWrapper(dashboard, "Dashboard-1");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Datasets" });
 
@@ -48,7 +72,7 @@ test("Dashboard", async t => {
     .find(".ant-tabs-tab")
     .at(1)
     .simulate("click");
-  await waitForAllRequests();
+  await waitForAllRequests(dashboard);
 
   t.is(dashboard.find(".TestAdvancedDatasetView").length, 1);
   debugWrapper(dashboard, "Dashboard-2");
@@ -59,7 +83,8 @@ test("Dashboard", async t => {
     .find(".ant-tabs-tab")
     .at(2)
     .simulate("click");
-  await waitForAllRequests();
+  await waitForAllRequests(dashboard);
+
   t.is(dashboard.find(".TestTasksHeadline").length, 1);
   debugWrapper(dashboard, "Dashboard-3");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Tasks" });
@@ -69,23 +94,34 @@ test("Dashboard", async t => {
     .find(".ant-tabs-tab")
     .at(3)
     .simulate("click");
-  await waitForAllRequests();
+  await waitForAllRequests(dashboard);
+
   t.is(dashboard.find(".TestExplorativeAnnotationsView").length, 1);
   debugWrapper(dashboard, "Dashboard-4");
   t.snapshot(createSnapshotable(dashboard), { id: "Dashboard-Explorative-Annotations" });
 });
 
 test("Users", async t => {
-  const userListView = mount(<UserListView />);
-  await waitForAllRequests();
+  const userListView = mount(
+    <Router history={browserHistory}>
+      <UserListView />
+    </Router>,
+  );
+  await waitForAllRequests(userListView);
 
   debugWrapper(userListView, "UserListView");
   t.snapshot(createSnapshotable(userListView), { id: "UserListView" });
 });
 
 test("Projects", async t => {
-  const projectListView = mount(<ProjectListView />);
-  await waitForAllRequests();
+  const projectListView = mount(
+    <Provider store={Store}>
+      <Router history={browserHistory}>
+        <ProjectListView />
+      </Router>
+    </Provider>,
+  );
+  await waitForAllRequests(projectListView);
   t.is(projectListView.find(".TestProjectListView").length, 1);
 
   debugWrapper(projectListView, "ProjectListView");

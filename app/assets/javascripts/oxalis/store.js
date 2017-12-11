@@ -15,6 +15,7 @@ import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
 import FlycamReducer from "oxalis/model/reducers/flycam_reducer";
 import ViewModeReducer from "oxalis/model/reducers/view_mode_reducer";
 import AnnotationReducer from "oxalis/model/reducers/annotation_reducer";
+import UserReducer from "oxalis/model/reducers/user_reducer";
 import rootSaga from "oxalis/model/sagas/root_saga";
 import overwriteActionMiddleware from "oxalis/model/helpers/overwrite_action_middleware";
 import googleAnalyticsMiddleware from "oxalis/model/helpers/google_analytics_middleware";
@@ -23,7 +24,6 @@ import type {
   OrthoViewType,
   Vector2,
   Vector3,
-  Vector6,
   ModeType,
   VolumeToolType,
   ControlModeType,
@@ -38,9 +38,10 @@ import type {
   APIAllowedModeType,
   APISettingsType,
   APIDataStoreType,
-  APITracingTypeTracingType,
+  APITracingType,
   APIScriptType,
   APITaskType,
+  APIUserType,
 } from "admin/api_flow_types";
 
 export type CommentType = {
@@ -144,7 +145,7 @@ export type DatasetType = {
 
 export type TreeMapType = { +[number]: TreeType };
 
-export type TracingTypeTracingType = APITracingTypeTracingType;
+export type TracingTypeTracingType = APITracingType;
 
 export type SkeletonTracingType = {
   +annotationId: string,
@@ -158,6 +159,7 @@ export type SkeletonTracingType = {
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,
   +boundingBox: ?BoundingBoxType,
+  +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
@@ -178,6 +180,7 @@ export type VolumeTracingType = {
   +tracingId: string,
   +tracingType: TracingTypeTracingType,
   +boundingBox: ?BoundingBoxType,
+  +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
@@ -192,6 +195,7 @@ export type ReadOnlyTracingType = {
   +tracingId: string,
   +tracingType: "View",
   +boundingBox: ?BoundingBoxType,
+  +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
   +isPublic: boolean,
   +tags: Array<string>,
@@ -247,7 +251,6 @@ export type UserConfigurationType = {
 };
 
 export type TemporaryConfigurationType = {
-  +userBoundingBox: Vector6,
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
@@ -325,6 +328,7 @@ export type OxalisState = {
   +save: SaveStateType,
   +flycam: FlycamType,
   +viewModeData: ViewModeData,
+  +activeUser: ?APIUserType,
 };
 
 export const defaultState: OxalisState = {
@@ -365,7 +369,6 @@ export const defaultState: OxalisState = {
     tdViewDisplayPlanes: true,
   },
   temporaryConfiguration: {
-    userBoundingBox: [0, 0, 0, 0, 0, 0],
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
@@ -387,6 +390,7 @@ export const defaultState: OxalisState = {
   tracing: {
     annotationId: "",
     boundingBox: null,
+    userBoundingBox: null,
     type: "readonly",
     name: "",
     version: 0,
@@ -434,6 +438,7 @@ export const defaultState: OxalisState = {
     arbitrary: null,
     flight: null,
   },
+  activeUser: null,
 };
 
 const sagaMiddleware = createSagaMiddleware();
@@ -449,6 +454,7 @@ const combinedReducers = reduceReducers(
   FlycamReducer,
   ViewModeReducer,
   AnnotationReducer,
+  UserReducer,
 );
 
 const store = createStore(

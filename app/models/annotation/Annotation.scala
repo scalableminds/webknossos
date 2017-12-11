@@ -121,8 +121,11 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
 
   val formatter = Annotation.annotationFormat
 
+  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("tracingReference.id" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending, "typ" -> IndexType.Ascending)))
 
   override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     super.find(query ++ Json.obj("isActive" -> true))
@@ -235,6 +238,13 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       "$or" -> Json.arr(
         Json.obj("state.isAssigned" -> true),
         Json.obj("state.isFinished" -> true))))
+
+  def findAllUnfinishedByTaskIds(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
+    find(Json.obj(
+      "_task" -> Json.obj("$in" -> Json.toJson(taskIds)),
+      "state.isFinished" -> false
+    )).cursor[Annotation]().collect[List]()
+  }
 
   def findByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     findOne(Json.obj(

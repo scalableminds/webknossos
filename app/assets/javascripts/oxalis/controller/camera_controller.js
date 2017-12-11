@@ -24,7 +24,7 @@ type Props = {
   onCameraPositionChanged: () => void,
 };
 
-class CameraController extends React.Component<Props> {
+class CameraController extends React.PureComponent<Props> {
   storePropertyUnsubscribers: Array<Function>;
 
   componentDidMount() {

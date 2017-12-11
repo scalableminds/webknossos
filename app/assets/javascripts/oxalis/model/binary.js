@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
 import type { CategoryType } from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
@@ -67,7 +67,7 @@ class Binary {
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
-    _.extend(this, Backbone.Events);
+    _.extend(this, BackboneEvents);
 
     this.category = this.layer.category;
     this.name = this.layer.name;

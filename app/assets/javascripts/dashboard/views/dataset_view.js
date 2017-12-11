@@ -3,6 +3,7 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link } from "react-router-dom";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
@@ -124,11 +125,11 @@ class DatasetView extends React.PureComponent<Props, State> {
 
     const adminHeader = Utils.isUserAdmin(this.props.user) ? (
       <div className="pull-right">
-        <a href="/datasets/upload" style={margin}>
+        <Link to="/datasets/upload" style={margin}>
           <Button type="primary" icon="plus">
-            Add Dataset
+            Upload Dataset
           </Button>
-        </a>
+        </Link>
         {search}
       </div>
     ) : (
@@ -136,14 +137,6 @@ class DatasetView extends React.PureComponent<Props, State> {
     );
 
     const content = (() => {
-      if (this.state.isLoading) {
-        return (
-          <div className="text-center">
-            <Spin size="large" />
-          </div>
-        );
-      }
-
       if (isGallery) {
         return this.renderGallery();
       }
@@ -156,7 +149,9 @@ class DatasetView extends React.PureComponent<Props, State> {
         {adminHeader}
         <h3 className="TestDatasetHeadline">Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-        <div>{content}</div>
+        <Spin size="large" spinning={this.state.isLoading}>
+          {content}
+        </Spin>
       </div>
     );
   }

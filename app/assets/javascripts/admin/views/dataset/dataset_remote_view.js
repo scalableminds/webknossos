@@ -1,19 +1,27 @@
 // @flow
 import React from "react";
+import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card } from "antd";
 import { getTeams, addNDStoreDataset } from "admin/admin_rest_api";
-import app from "app";
 import Toast from "libs/toast";
 import messages from "messages";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
-import type { APITeamType, NDStoreConfigType } from "admin/api_flow_types";
+import type { APITeamType, NDStoreConfigType, APIUserType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react_router";
+import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   form: Object,
-};
+  history: ReactRouterHistoryType,
+} & StateProps;
 
 type State = {
   teams: Array<APITeamType>,
@@ -30,7 +38,7 @@ class DatasetRemoteView extends React.PureComponent<Props, State> {
 
   async fetchData() {
     const teams = await getTeams();
-    const currentUserAdminTeams = app.currentUser.teams
+    const currentUserAdminTeams = this.props.activeUser.teams
       .filter(team => team.role.name === "admin")
       .map(team => team.team);
 
@@ -47,7 +55,7 @@ class DatasetRemoteView extends React.PureComponent<Props, State> {
         await addNDStoreDataset(formValues);
 
         Toast.success(messages["dataset.ndstore_success"]);
-        app.router.navigate("/dashboard", { trigger: true });
+        this.props.history.push("/dashboard");
       }
     });
   };
@@ -106,4 +114,9 @@ class DatasetRemoteView extends React.PureComponent<Props, State> {
     );
   }
 }
-export default Form.create()(DatasetRemoteView);
+
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(Form.create()(DatasetRemoteView));

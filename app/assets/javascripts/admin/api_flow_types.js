@@ -59,6 +59,17 @@ export type APIUserType = {
   +teams: Array<APITeamRoleType>,
 };
 
+export type APITimeIntervalType = {
+  paymentInterval: {
+    month: number,
+    year: number,
+  },
+  durationInSeconds: number,
+};
+export type APIUserLoggedTimeType = {
+  loggedTime: Array<APITimeIntervalType>,
+};
+
 export type APITeamType = {
   +id: string,
   +name: string,
@@ -79,12 +90,12 @@ export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type APISettingsType = {
   +advancedOptionsAllowed: boolean,
   +allowedModes: Array<APIAllowedModeType>,
-  +preferredMode: APIAllowedModeType,
+  +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,
   +somaClickingAllowed: boolean,
 };
 
-export const APITracingTypeTracingEnum = {
+export const APITracingTypeEnum = {
   Explorational: "Explorational",
   Task: "Task",
   View: "View",
@@ -93,7 +104,7 @@ export const APITracingTypeTracingEnum = {
   CompoundTaskType: "CompoundTaskType",
 };
 
-export type APITracingTypeTracingType = $Keys<typeof APITracingTypeTracingEnum>;
+export type APITracingType = $Keys<typeof APITracingTypeEnum>;
 
 export type APITaskTypeType = {
   +id: string,
@@ -103,7 +114,7 @@ export type APITaskTypeType = {
   +settings: SettingsType,
 };
 
-type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
+export type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
 
 export type APIScriptType = {
   +id: string,
@@ -171,7 +182,7 @@ export type APIAnnotationType = {
   +tags: Array<string>,
   +task: APITaskType,
   +tracingTime: number,
-  +typ: APITracingTypeTracingType,
+  +typ: APITracingType,
   +user?: APIUserType,
 };
 
@@ -212,6 +223,17 @@ export type DatasetConfigType = {
   +team: string,
   +datastore: string,
   +zipFile: File,
+};
+
+export type APITimeTrackingType = {
+  time: string,
+  timestamp: number,
+  annotation: string,
+  _id: string,
+  task_id: string,
+  project_name: string,
+  tasktype_id: string,
+  tasktype_summary: string,
 };
 
 export default {};

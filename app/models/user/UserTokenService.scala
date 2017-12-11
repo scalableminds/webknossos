@@ -5,7 +5,10 @@ package models.user
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 
 object UserTokenService {
 
@@ -16,8 +19,8 @@ object UserTokenService {
 
   def userForToken(token: String)(implicit ctx: DBAccessContext): Fox[User] = {
     for {
-      userToken <- UserTokenDAO.findByToken(token) ?~> "Could not match user access token"
-      user <- userToken.user ?~> "Could not find user for user access token"
+      userToken <- UserTokenDAO.findByToken(token) ?~> Messages("error.invalidToken")
+      user <- userToken.user ?~> Messages("error.invalidToken")
     } yield {
       user
     }

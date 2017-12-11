@@ -116,7 +116,7 @@ class InputCatchers extends React.PureComponent<Props, State> {
   }
 }
 
-const mapStateToProps = (state: OxalisState) => ({
+const mapStateToProps = (state: OxalisState): Props => ({
   scale: state.userConfiguration.scale,
   activeViewport: state.viewModeData.plane.activeViewport,
   brushPosition: state.temporaryConfiguration.brushPosition,

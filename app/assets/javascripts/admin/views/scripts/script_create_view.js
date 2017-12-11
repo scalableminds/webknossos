@@ -1,17 +1,26 @@
 // @flow
 import React from "react";
+import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card } from "antd";
-import app from "app";
 import { getAdminUsers, updateScript, createScript, getScript } from "admin/admin_rest_api";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+
 import type { APIUserType } from "admin/api_flow_types";
+import type { ReactRouterHistoryType } from "react_router";
+import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   scriptId: ?string,
   form: Object,
-};
+  history: ReactRouterHistoryType,
+} & StateProps;
 
 type State = {
   users: Array<APIUserType>,
@@ -34,7 +43,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
   async applyDefaults() {
     const script = this.props.scriptId ? await getScript(this.props.scriptId) : null;
     const defaultValues = {
-      owner: script ? script.owner.id : app.currentUser.id,
+      owner: script ? script.owner.id : this.props.activeUser.id,
     };
 
     const defaultFormValues = Object.assign({}, script, defaultValues);
@@ -51,7 +60,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
           await createScript(formValues);
         }
 
-        app.router.navigate("/scripts", { trigger: true });
+        this.props.history.push("/scripts");
       }
     });
   };
@@ -61,7 +70,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
     const titlePrefix = this.props.scriptId ? "Update" : "Create";
 
     return (
-      <div className="container wide" style={{ paddingTop: 20 }}>
+      <div className="container">
         <Card title={<h3>{titlePrefix} Script</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Script Name" hasFeedback>
@@ -121,4 +130,8 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(ScriptCreateView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(Form.create()(ScriptCreateView));

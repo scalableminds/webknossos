@@ -80,7 +80,8 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
           <Input
             value={this.state.newTeamName}
             onChange={(event: SyntheticInputEvent<*>) =>
-              this.setState({ newTeamName: event.target.value })}
+              this.setState({ newTeamName: event.target.value })
+            }
             icon="tag-o"
             placeholder="Team Name"
             autoFocus
@@ -93,7 +94,8 @@ class CreateTeamModalView extends React.PureComponent<Props, State> {
             onChange={(value: string) => this.setState({ parentTeam: value })}
             value={this.state.parentTeam}
             filterOption={(input, option) =>
-              option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+              option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+            }
           >
             {this.state.teams.map(team => (
               <Option key={team.name} value={team.name}>

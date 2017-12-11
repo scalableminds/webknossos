@@ -383,14 +383,16 @@ class Skeleton {
     return this.rootNode;
   }
 
-  startPicking(): THREE.Object3D {
+  startPicking(isTouch: boolean): THREE.Object3D {
     this.pickingNode.matrixAutoUpdate = false;
     this.pickingNode.matrix.copy(this.rootNode.matrixWorld);
+    this.nodes.material.uniforms.isTouch.value = isTouch ? 1 : 0;
     this.nodes.material.uniforms.isPicking.value = 1;
     return this.pickingNode;
   }
 
   stopPicking(): void {
+    this.nodes.material.uniforms.isTouch.value = 0;
     this.nodes.material.uniforms.isPicking.value = 0;
   }
 
@@ -536,7 +538,7 @@ class Skeleton {
    * Calculates a resizing factor for the active node's radius every time the
    * active node id changes. In essence this animates the node's radius to grow/shrink a little.
    */
-  animateNodeScale(from: number, to: number) {
+  animateNodeScale(from: number, to: number): Promise<void> {
     return new Promise((resolve, reject) => {
       const setScaleFactor = scale => {
         this.nodes.material.uniforms.activeNodeScaleFactor.value = scale;

@@ -15,8 +15,7 @@ const DateMock = {
   now: () => TIMESTAMP,
 };
 mockRequire("libs/date", DateMock);
-mockRequire("libs/window", { alert: console.log.bind(console) });
-mockRequire("app", { router: { off: _.noop, reload: _.noop } });
+mockRequire("libs/window", { alert: console.log.bind(console), location: { reload: _.noop } });
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
@@ -93,14 +92,17 @@ test("SaveSaga should send update actions", t => {
   const saga = pushAnnotationAsync();
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next(); // setLastSaveTimestampAction
-  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
-  saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
+  saga.next(); // select state
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  saga.next(); // race
+  saga.next(SaveActions.pushSaveQueueAction(updateActions));
   saga.next();
   expectValueDeepEqual(t, saga.next(saveQueue), call(sendRequestToServer));
   saga.next(); // SET_SAVE_BUSY
 
   // Test that loop repeats
-  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
+  saga.next(); // select state
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
 });
 
 test("SaveSaga should send request to server", t => {
@@ -190,8 +192,10 @@ test("SaveSaga should send update actions right away", t => {
   const saga = pushAnnotationAsync();
   expectValueDeepEqual(t, saga.next(), take(INIT_ACTIONS));
   saga.next();
-  expectValueDeepEqual(t, saga.next(), take("PUSH_SAVE_QUEUE"));
-  saga.next(SaveActions.pushSaveQueueAction(updateActions, true));
+  saga.next(); // select state
+  expectValueDeepEqual(t, saga.next([]), take("PUSH_SAVE_QUEUE"));
+  saga.next(); // race
+  saga.next(SaveActions.pushSaveQueueAction(updateActions));
   saga.next(SaveActions.saveNowAction());
   saga.next(saveQueue);
   saga.next();

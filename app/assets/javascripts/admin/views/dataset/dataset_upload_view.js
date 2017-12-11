@@ -1,19 +1,27 @@
 // @flow
 import React from "react";
+import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card, Spin, Upload, Icon } from "antd";
-import app from "app";
 import Toast from "libs/toast";
 import messages from "messages";
 import Utils from "libs/utils";
 import { getTeams, getDatastores, addDataset } from "admin/admin_rest_api";
-import type { APITeamType, APIDatastoreType } from "admin/api_flow_types";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import type { APITeamType, APIDatastoreType, APIUserType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
+import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   form: Object,
-};
+  history: ReactRouterHistoryType,
+} & StateProps;
 
 type State = {
   teams: Array<APITeamType>,
@@ -35,7 +43,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
   async fetchData() {
     const datastores = await getDatastores();
     const teams = await getTeams();
-    const currentUserAdminTeams = app.currentUser.teams
+    const currentUserAdminTeams = this.props.activeUser.teams
       .filter(team => team.role.name === "admin")
       .map(team => team.team);
 
@@ -57,7 +65,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFields(async (err, formValues) => {
       if (!err) {
-        Toast.info("Uploading datasets", false);
+        Toast.info("Uploading datasets");
         this.setState({
           isUploading: true,
         });
@@ -67,7 +75,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
             Toast.success(messages["dataset.upload_success"]);
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
             const url = `/datasets/${formValues.name}/import`;
-            app.router.navigate(url, { trigger: true });
+            this.props.history.push(url);
           },
           () => {
             this.setState({ isUploading: false });
@@ -163,4 +171,8 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(DatasetUploadView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(Form.create()(DatasetUploadView));

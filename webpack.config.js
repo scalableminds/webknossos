@@ -7,9 +7,6 @@ module.exports = function(env = {}) {
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
-  var scriptPaths = {
-    "jasny-bootstrap": `${nodePath}jasny-bootstrap/dist/js/jasny-bootstrap`,
-  };
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");
 
@@ -72,7 +69,6 @@ module.exports = function(env = {}) {
     },
     resolve: {
       modules: [srcPath, nodePath],
-      alias: scriptPaths,
     },
     externals: [{ routes: "var jsRoutes" }],
     devtool: "cheap-module-source-map",

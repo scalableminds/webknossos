@@ -34,7 +34,6 @@ object UserToken {
 }
 
 
-
 object UserTokenDAO extends SecuredBaseDAO[UserToken] {
 
   val collectionName = "userTokens"
@@ -45,6 +44,10 @@ object UserTokenDAO extends SecuredBaseDAO[UserToken] {
 
   def findByToken(token: String)(implicit ctx: DBAccessContext) = {
     findOne("token", token)
+  }
+
+  def removeByToken(token: String)(implicit ctx: DBAccessContext) = {
+    remove("token", token)
   }
 
   def removeExpiredTokens()(implicit ctx: DBAccessContext) = {

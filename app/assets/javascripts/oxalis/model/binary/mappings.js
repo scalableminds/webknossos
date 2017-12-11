@@ -36,7 +36,9 @@ class Mappings {
             {},
           )
         : {};
-    this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
+    this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${
+      layer.name
+    }/mappings/`;
   }
 
   getMappingNames(): Array<string> {
@@ -79,7 +81,7 @@ class Mappings {
 
     for (const currentMappingName of this.getMappingChain(mappingName)) {
       const mappingObject = this.mappings[currentMappingName];
-      ErrorHandling.assert(
+      ErrorHandling.assertExists(
         mappingObject.classes,
         "mappingObject classes must have been fetched at this point",
       );

@@ -3,11 +3,12 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { Link } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
-import type { APIScriptType } from "admin/api_flow_types";
+import type { APIScriptType, APIUserType } from "admin/api_flow_types";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -63,14 +64,14 @@ class ScriptListView extends React.PureComponent<{}, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="container wide">
-        <div style={{ marginTag: 20 }}>
+      <div className="container">
+        <div>
           <div className="pull-right">
-            <a href="/scripts/create">
+            <Link to="/scripts/create">
               <Button icon="plus" style={marginRight} type="primary">
                 Add Script
               </Button>
-            </a>
+            </Link>
             <Search
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
@@ -112,22 +113,27 @@ class ScriptListView extends React.PureComponent<{}, State> {
                 dataIndex="owner"
                 key="owner"
                 sorter={Utils.localeCompareBy((scripts: APIScriptType) => scripts.owner.lastName)}
-                render={owner => `${owner.firstName} ${owner.lastName}`}
+                render={(owner: APIUserType) => `${owner.firstName} ${owner.lastName}`}
               />
               <Column
                 title="Gist URL"
                 dataIndex="gist"
                 key="gist"
                 sorter={Utils.localeCompareBy("gist")}
+                render={(gist: string) => (
+                  <a href={gist} target="_blank" rel="noopener noreferrer">
+                    {gist}
+                  </a>
+                )}
               />
               <Column
                 title="Action"
                 key="actions"
                 render={(__, script: APIScriptType) => (
                   <span>
-                    <a href={`/scripts/${script.id}/edit`}>
+                    <Link to={`/scripts/${script.id}/edit`}>
                       <Icon type="edit" />Edit
-                    </a>
+                    </Link>
                     <br />
                     <a href="#" onClick={_.partial(this.deleteScript, script)}>
                       <Icon type="delete" />Delete

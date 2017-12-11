@@ -2,9 +2,7 @@
  * skeletontracing_plane_controller.js
  * @flow
  */
-/* globals JQueryInputEventObject:false */
 
-import $ from "jquery";
 import * as THREE from "three";
 import _ from "lodash";
 import Store from "oxalis/store";
@@ -16,7 +14,8 @@ import SceneController from "oxalis/controller/scene_controller";
 import { OrthoViews } from "oxalis/constants";
 import {
   setActiveNodeAction,
-  deleteNodeAction,
+  deleteNodeWithConfirmAction,
+  deleteEdgeAction,
   createTreeAction,
   createNodeAction,
   createBranchPointAction,
@@ -63,29 +62,19 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
 
-  start(): void {
-    super.start();
-    $(".skeleton-plane-controls").show();
-  }
-
-  stop(): void {
-    super.stop();
-    $(".skeleton-plane-controls").hide();
-  }
-
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
-      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
-        this.onClick(pos, event.shiftKey, event.altKey, plane),
-      rightClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
+      leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
+        this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, plane, isTouch),
+      rightClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) =>
         this.setWaypoint(this.calculateGlobalPos(pos), event.ctrlKey),
     });
   }
 
   getTDViewMouseControls(): Object {
     return _.extend(super.getTDViewMouseControls(), {
-      leftClick: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) =>
-        this.onClick(pos, event.shiftKey, event.altKey, OrthoViews.TDView),
+      leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent, isTouch: boolean) =>
+        this.onClick(pos, event.shiftKey, event.altKey, event.ctrlKey, OrthoViews.TDView, isTouch),
     });
   }
 
@@ -95,7 +84,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
       // Delete active node
-      delete: () => Store.dispatch(deleteNodeAction()),
+      delete: () => Store.dispatch(deleteNodeWithConfirmAction()),
       c: () => Store.dispatch(createTreeAction()),
 
       // Branches
@@ -122,16 +111,18 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     position: Point2,
     shiftPressed: boolean,
     altPressed: boolean,
+    ctrlPressed: boolean,
     plane: OrthoViewType,
+    isTouch: boolean,
   ): void => {
-    if (!shiftPressed) {
+    if (!shiftPressed && !isTouch) {
       // do nothing
       return;
     }
 
     // render the clicked viewport with picking enabled
     // we need a dedicated pickingScene, since we only want to render all nodes and no planes / bounding box / edges etc.
-    const pickingNode = SceneController.skeleton.startPicking();
+    const pickingNode = SceneController.skeleton.startPicking(isTouch);
     const pickingScene = new THREE.Scene();
     pickingScene.add(pickingNode);
 
@@ -146,13 +137,17 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     SceneController.skeleton.stopPicking();
 
     // prevent flickering sometimes caused by picking
-    this.planeView.renderFunction();
+    this.planeView.renderFunction(true);
 
     // otherwise we have hit the background and do nothing
     if (nodeId > 0) {
       if (altPressed) {
         getActiveNode(Store.getState().tracing).map(activeNode =>
           Store.dispatch(mergeTreesAction(activeNode.id, nodeId)),
+        );
+      } else if (ctrlPressed) {
+        getActiveNode(Store.getState().tracing).map(activeNode =>
+          Store.dispatch(deleteEdgeAction(activeNode.id, nodeId)),
         );
       } else {
         Store.dispatch(setActiveNodeAction(nodeId));

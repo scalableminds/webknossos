@@ -9,7 +9,7 @@ import com.scalableminds.braingames.binary.models.datasource.ElementClass
 import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings.ProtoGeometryImplicits
-import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeUtils}
+import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.braingames.datastore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
@@ -17,7 +17,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
-import scala.annotation.tailrec
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
 object NmlParser extends LazyLogging with ProtoGeometryImplicits {
@@ -56,6 +55,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         val editPosition = parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracingDefaults.editPosition)
         val editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
+        val userBoundingBox = parseUserBoundingBox(parameters \ "userBoundingBox")
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
@@ -63,25 +63,25 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel), volumes.head.location), description)
         } else {
           (Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
-            editPosition, editRotation, zoomLevel, version=0)), description)
+            editPosition, editRotation, zoomLevel, version = 0, userBoundingBox)), description)
         }
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
         logger.debug(s"Tried  to parse empty NML file $name.")
         Empty
-      case e: org.xml.sax.SAXParseException                                                     =>
+      case e: org.xml.sax.SAXParseException =>
         logger.debug(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name'. Error in Line ${e.getLineNumber} " +
           s"(column ${e.getColumnNumber}): ${e.getMessage}")
-      case e: Exception                                                                         =>
+      case e: Exception =>
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
   }
 
   def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
-    validateTrees(parseTrees(treeNodes, branchPoints, comments)).map(transformTrees)
+    validateTrees(parseTrees(treeNodes, branchPoints, comments))
   }
 
   def extractVolumes(volumeNodes: NodeSeq) = {
@@ -89,77 +89,126 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   }
 
   def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
+    for {
+      duplicateCheck <- checkForDuplicateIds(trees)
+      nodesInEdges <- allNodesInEdgesExist(duplicateCheck)
+      nodesBelongToEdges <- nodesAreInEdges(nodesInEdges)
+      treesAreConnected <- checkTreesAreConnected(nodesBelongToEdges)
+    } yield {
+      treesAreConnected
+    }
+  }
+
+  private def checkForDuplicateIds(trees: Seq[Tree]): Box[Seq[Tree]] = {
     val nodeIds = trees.flatMap(_.nodes).map(_.id)
     nodeIds.size == nodeIds.distinct.size match {
-      case true  => Full(trees)
+      case true => Full(trees)
       case false => Failure("NML contains nodes with duplicate ids.")
     }
   }
 
-  private def transformTrees(trees: Seq[Tree]): Seq[Tree] = {
-    createUniqueIds(trees.flatMap(splitIntoComponents))
+  private def allNodesInEdgesExist(trees: Seq[Tree]) = {
+    def treeLoop(trees: Seq[Tree]): Boolean = {
+      if (trees.head.edges.isEmpty)
+        if (trees.tail.isEmpty) true
+        else treeLoop(trees.tail)
+      else {
+        edgeLoop(trees.head, trees.head.edges) match {
+          case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
+          case false => false
+        }
+      }
+    }
+
+    def edgeLoop(tree: Tree, edges: Seq[Edge]): Boolean = {
+      checkEdge(tree, edges.head) match {
+        case true => if (edges.tail.isEmpty) true else edgeLoop(tree, edges.tail)
+        case false => false
+      }
+    }
+
+    def checkEdge(tree: Tree, edge: Edge) = {
+      tree.nodes.map(node => node.id).contains(edge.target) && tree.nodes.map(node => node.id).contains(edge.source)
+    }
+
+    treeLoop(trees) match {
+      case true => Full(trees)
+      case false => Failure("Some Edges contain nodes that don't exist.")
+    }
   }
 
-  private def createUniqueIds(trees: Seq[Tree]) = {
-    trees.foldLeft(List[Tree]()) {
-      case (l, t) =>
-        if (!l.exists(_.treeId == t.treeId))
-          t :: l
+  private def nodesAreInEdges(trees: Seq[Tree]) = {
+    def treeLoop(trees: Seq[Tree]): Boolean = {
+      if (trees.head.nodes.size == 1)
+        if (trees.tail.isEmpty) true
+        else treeLoop(trees.tail)
+      else {
+        nodeLoop(trees.head, trees.head.nodes) match {
+          case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
+          case false => false
+        }
+      }
+    }
+
+    def nodeLoop(tree: Tree, nodes: Seq[Node]): Boolean = {
+      checkNode(tree, nodes.head) match {
+        case true => if (nodes.tail.isEmpty) true else nodeLoop(tree, nodes.tail)
+        case false => false
+      }
+    }
+
+    def checkNode(tree: Tree, node: Node) = {
+      tree.edges.map(edge => edge.source).contains(node.id) || tree.edges.map(edge => edge.target).contains(node.id)
+    }
+
+    treeLoop(trees) match {
+      case true => Full(trees)
+      case false => Failure("Some Nodes don't belong to any edges.")
+    }
+  }
+
+  private def checkTreesAreConnected(trees: Seq[Tree]) = {
+    def treeLoop(trees: Seq[Tree]): Boolean = {
+      treeTraversal(trees.head).size == trees.head.nodes.size match {
+        case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
+        case false => false
+      }
+    }
+
+    def treeTraversal(tree: Tree): Set[Int] = {
+      def traverse(visited: Set[Int], remaining: Set[Int]): Set[Int] = {
+        if (remaining.isEmpty) visited
         else {
-          val alteredId = l.maxBy(_.treeId).treeId + 1
-          t.copy(treeId = alteredId) :: l
+          val foundNodesSource = tree.edges.filter(edge => edge.source == remaining.head).map(edge => edge.target)
+          val foundNodesTarget = tree.edges.filter(edge => edge.target == remaining.head).map(edge => edge.source)
+          traverse(visited + remaining.head, remaining.tail ++ ((foundNodesSource ++ foundNodesTarget).toSet[Int] -- visited))
         }
-    }
-  }
+      }
 
-  private def splitIntoComponents(tree: Tree): List[Tree] = {
-    def emptyTree = tree.withNodes(Seq()).withEdges(Seq())
-
-    val start = System.currentTimeMillis()
-
-    val nodeMap = tree.nodes.map(n => n.id -> n).toMap
-
-    @tailrec
-    def buildTreeFromNode(
-                           nodesToProcess: List[Node],
-                           treeReminder: Tree,
-                           component: Tree = emptyTree): (Tree, Tree) = {
-
-      if (nodesToProcess.nonEmpty) {
-        val node = nodesToProcess.head
-        val tail = nodesToProcess.tail
-        val connectedEdges = treeReminder.edges.filter(e => e.source == node.id || e.target == node.id)
-
-        val connectedNodes = connectedEdges.flatMap {
-          case Edge(s, t) if s == node.id => nodeMap.get(t)
-          case Edge(s, t) if t == node.id => nodeMap.get(s)
-        }
-
-        val currentComponent = tree.withNodes(connectedNodes :+ node).withEdges(connectedEdges)
-        val r = TreeUtils.add(component, currentComponent)
-        buildTreeFromNode(tail ::: connectedNodes.toList, TreeUtils.subtract(treeReminder, currentComponent), r)
-      } else
-          treeReminder -> component
+      traverse(Set[Int](), Set[Int](tree.nodes.head.id))
     }
 
-    var treeToProcess = tree
-
-    var components = List[Tree]()
-
-    while (treeToProcess.nodes.nonEmpty) {
-      val (treeReminder, component) = buildTreeFromNode(treeToProcess.nodes.head :: Nil, treeToProcess)
-      treeToProcess = treeReminder
-      components ::= component
+    treeLoop(trees) match {
+      case true => Full(trees)
+      case false => Failure("Some Trees are not connected.")
     }
-    logger.trace("Connected components calculation: " + (System.currentTimeMillis() - start))
-    components.map(
-      _.copy(
-        color = tree.color,
-        treeId = tree.treeId))
   }
 
   private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
     treeNodes.flatMap(treeNode => parseTree(treeNode, branchPoints, comments))
+  }
+
+  private def parseUserBoundingBox(node: NodeSeq) = {
+    node.headOption.flatMap(bb =>
+      for {
+        topLeftX <- (node \ "@topLeftX").text.toIntOpt
+        topLeftY <- (node \ "@topLeftY").text.toIntOpt
+        topLeftZ <- (node \ "@topLeftZ").text.toIntOpt
+        width <- (node \ "@width").text.toIntOpt
+        height <- (node \ "@height").text.toIntOpt
+        depth <- (node \ "@depth").text.toIntOpt
+      } yield BoundingBox(Point3D(topLeftX, topLeftY, topLeftZ), width, height, depth)
+    )
   }
 
   private def parseDataSetName(node: NodeSeq) = {

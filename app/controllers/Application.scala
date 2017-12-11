@@ -2,20 +2,16 @@ package controllers
 
 import javax.inject.Inject
 
-import models.analytics.{AnalyticsDAO, AnalyticsEntry, UserAgentTrackingDAO}
-import oxalis.security.Secured
-import play.api._
+import oxalis.security.WebknossosSilhouette.{UserAwareAction, SecuredAction}
+import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
-import play.api.mvc.Action
-import play.api.routing.JavaScriptReverseRouter
 import play.twirl.api.Html
 
-class Application @Inject()(val messagesApi: MessagesApi) extends Controller with Secured {
+class Application @Inject()(val messagesApi: MessagesApi) extends Controller{
 
   def index() = UserAwareAction { implicit request =>
-    UserAgentTrackingDAO.trackUserAgent(request.userOpt.map(_._id), request.headers.get("user-agent").getOrElse("<none>"))
-    request.userOpt match {
+    request.identity match {
       case Some(user) if user.isAnonymous =>
         Redirect("/info")
       case Some(user) =>
@@ -33,7 +29,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
     Ok(views.html.thankyou())
   }
 
-  def emptyMain = Authenticated { implicit request =>
+  def emptyMain = SecuredAction { implicit request =>
     Ok(views.html.main()(Html("")))
   }
 
@@ -52,7 +48,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller wit
   def analytics(namespace: String) = UserAwareAction(parse.json(1024 * 1024)) { implicit request =>
     AnalyticsDAO.insert(
       AnalyticsEntry(
-        request.userOpt.map(_._id),
+        request.identity.map(_._id),
         namespace,
         request.body))
     Ok

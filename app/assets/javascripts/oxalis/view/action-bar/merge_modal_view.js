@@ -1,13 +1,14 @@
 // @flow
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
+import { withRouter } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
 import Request from "libs/request";
-import app from "app";
 import { Modal, Button, Upload, Select, Form, Spin } from "antd";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
+import type { ReactRouterHistoryType } from "react_router";
 
 type AnnotationInfoType = {
   typ: string,
@@ -24,12 +25,15 @@ type ProjectInfoType = {
   label: string,
 };
 
-type Props = {
-  isVisible: boolean,
-  onOk: () => void,
+type StateProps = {
   annotationId: string,
   tracingType: string,
 };
+type Props = {
+  isVisible: boolean,
+  onOk: () => void,
+  history: ReactRouterHistoryType,
+} & StateProps;
 
 type MergeModalViewState = {
   taskTypes: Array<TaskTypeInfoType>,
@@ -81,7 +85,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const annotation = await Request.receiveJSON(url);
     Toast.messages(annotation.messages);
     const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
-    app.router.loadURL(redirectUrl);
+    this.props.history.push(redirectUrl);
   }
 
   handleChangeMergeTaskType = (taskType: string) => {
@@ -259,11 +263,11 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   }
 }
 
-function mapStateToProps(state: OxalisState) {
+function mapStateToProps(state: OxalisState): StateProps {
   return {
     annotationId: state.tracing.annotationId,
     tracingType: state.tracing.tracingType,
   };
 }
 
-export default connect(mapStateToProps)(MergeModalView);
+export default withRouter(connect(mapStateToProps)(MergeModalView));

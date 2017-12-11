@@ -171,7 +171,6 @@ test.serial("sendToStore: Request Handling should send the correct request param
         },
       },
     ],
-    pushNow: false,
   };
 
   return layer.sendToStore(batch).then(() => {

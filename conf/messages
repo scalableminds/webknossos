@@ -2,6 +2,9 @@ error.email=Please supply a valid email address
 error.required=Please supply all needed values
 error.minLength=Please use at least 3 characters.
 error.unknown=Unknown error
+error.invalidCredentials=Email or Password is wrong
+error.noUser=There is no user to this email
+error.notInDev=This feature is only available in dev mode
 
 notAllowed=You are not allowed to view this resource
 
@@ -32,8 +35,11 @@ format.json.invalid=Invalid Json format
 
 image.create.failed=Failed to create image
 
+auth.tokenDeleted=Token was deleted
+auth.invalidToken=The token is invalid
+
 team.created=Team got created
-team.name.alreadyTaken=The teams name is already in use.
+team.name.alreadyTaken=There already exists a team with this name. Choose a different name, please.
 team.notAllowed=You are not part of this team. Project can''t be created.
 team.nonExistentRole=Team {0} doesn''t contain role {1}.
 team.admin.notPossibleBy=User {1} can''t be assigned administrative rights in team {0} because he doesn't belong to the teams parent team.
@@ -41,6 +47,8 @@ team.noOwner=This action is restricted to the creator of the team.
 team.admin.notAllowed=You are not allowed to administrate team {0}.
 team.notFound=Team could not be found.
 
+user.automaticUserActivation=User was activated automatically
+user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
 user.activated={0} has been activated
 user.notFound=User not found
 user.deactivated=Your account hasn''t been activated yet
@@ -53,6 +61,8 @@ user.resetPassword.success=Your password was successfully changed
 user.email.alreadyInUse=This email address is already in use
 user.firstName.empty=Please enter your first name
 user.lastName.empty=Please enter your last name
+user.firstName.invalid=Please check your first name for any special characters
+user.lastName.invalid=Please check your last name for any special characters
 user.register.prompt=Not a member of the listed teams? Contact webknossos@scalableminds.com to get more information about how to get to use webKnossos.
 user.login.prompt=Welcome to webKnossos!
 user.login.failed=Invalid email or password
@@ -65,7 +75,7 @@ user.configuration.dataset.updated=Dataset configuration updated
 user.experience.set=Set experience of {0}
 user.experience.removed=Removed experience from {0}
 user.email.invalid=At least one Email is invalid
-user.notAuthorised=Missing Authorisation
+user.notAuthorised=You are not authorized to view this resource. Please log in.
 
 braintracing.new=An account on braintracing.org was created for you. You can use the same credentials as on webKnossos to login.
 braintracing.error=We couldn''t atomatically create an account for you on braintracing.org. Please do it on your own.
@@ -118,8 +128,6 @@ dataLayer.forbidden=Access to this layer is not allowed.
 
 scale.scale=Scale
 scale.invalid=Specify dataset scale like "XX, YY, ZZ"
-
-dataToken.creationFailed=Creation of the data token failed.
 
 cellId=Cell Id
 
@@ -227,3 +235,6 @@ time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mturk.qualification.invalid=The entered qualification is unknown
+
+mail.welcome.subject = Welcome to ScalableMinds
+script.notFound=Script couldn''t be found

@@ -1,5 +1,3 @@
-@(body: Html)
-
 <!doctype html>
 <html>
   <head>
@@ -8,6 +6,9 @@
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
     @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
+    @if(play.api.Play.current.configuration.getBoolean("application.authentication.enableDevAutoLogin")){
+      <script src="/auth/autoLogin"></script>
+    }
     <script type="text/javascript"
       data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
       data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
@@ -22,7 +23,8 @@
     }
   </head>
   <body>
-    @body
+    <div id="alert-container"></div>
+    <main id="main-container"></main>
       <!-- Prompt IE 6 users to install Chrome Frame. Remove this if you want to support IE 6.
        chromium.org/developers/how-tos/chrome-frame-getting-started -->
       <!--[if lt IE 9 ]>

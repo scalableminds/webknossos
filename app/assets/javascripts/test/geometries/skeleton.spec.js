@@ -6,14 +6,6 @@ import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
 import { getSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import {
-  createNodeAction,
-  createTreeAction,
-  deleteNodeAction,
-  createBranchPointAction,
-  setNodeRadiusAction,
-  initializeSkeletonTracingAction,
-} from "oxalis/model/actions/skeletontracing_actions";
 import { tracing, annotation } from "../fixtures/skeletontracing_server_objects";
 
 mockRequire.stopAll();
@@ -27,6 +19,14 @@ const Utils = mockRequire.reRequire("libs/utils").default;
 const NodeShader = mockRequire.reRequire("oxalis/geometries/materials/node_shader");
 const Store = mockRequire.reRequire("oxalis/store").default;
 const Skeleton = mockRequire.reRequire("oxalis/geometries/skeleton").default;
+const {
+  createNodeAction,
+  createTreeAction,
+  deleteNodeAction,
+  createBranchPointAction,
+  setNodeRadiusAction,
+  initializeSkeletonTracingAction,
+} = mockRequire.reRequire("oxalis/model/actions/skeletontracing_actions");
 
 test.before(t => {
   const rotation = [0.5, 0.5, 0.5];

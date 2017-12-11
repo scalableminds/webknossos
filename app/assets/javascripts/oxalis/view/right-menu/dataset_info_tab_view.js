@@ -7,6 +7,7 @@ import { connect } from "react-redux";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import constants, { ControlModeEnum } from "oxalis/constants";
 import { getStats } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import TemplateHelpers from "libs/template_helpers";
 import {
@@ -14,12 +15,13 @@ import {
   setAnnotationDescriptionAction,
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
-import type { OxalisState, TracingType, DatasetType, TaskType } from "oxalis/store";
+import { Table } from "antd";
+import type { OxalisState, TracingType, DatasetType, TaskType, FlycamType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
   tracing: TracingType,
   dataset: DatasetType,
-  zoomStep: number,
+  flycam: FlycamType,
   task: ?TaskType,
 };
 
@@ -28,15 +30,56 @@ type DatasetInfoTabProps = DatasetInfoTabStateProps & {
   setAnnotationDescription: string => void,
 };
 
+const shortcutColumns = [
+  {
+    title: "Keyboard Shortcut",
+    dataIndex: "keybinding",
+    key: "keybinding",
+  },
+  {
+    title: "Action",
+    dataIndex: "action",
+    key: "action",
+  },
+];
+
+const shortcuts = [
+  {
+    key: "1",
+    keybinding: "I,O or Alt + Mousewheel",
+    action: "Zoom in/out",
+  },
+  {
+    key: "2",
+    keybinding: "Mousewheel or D and F",
+    action: "Move Along 3rd Axis",
+  },
+  {
+    key: "3",
+    keybinding: "Left Mouse Drag or Arrow Keys",
+    action: "Move",
+  },
+  {
+    key: "4",
+    keybinding: "Right Click Drag in 3D View",
+    action: "Rotate 3D View",
+  },
+  {
+    key: "5",
+    keybinding: "K,L",
+    action: "Scale Up/Down Viewports",
+  },
+];
+
 class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   calculateZoomLevel(): number {
+    const zoom = getPlaneScalingFactor(this.props.flycam);
     let width;
-    const zoom = this.props.zoomStep;
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     if (constants.MODES_PLANE.includes(viewMode)) {
       width = constants.PLANE_WIDTH;
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
-      width = constants.ARBITRARY_WIDTH;
+      width = constants.VIEWPORT_WIDTH;
     } else {
       throw Error(`Model mode not recognized: ${viewMode}`);
     }
@@ -124,33 +167,13 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         ) : null}
         {isPublicViewMode ? (
           <div>
-            <table className="table table-condensed table-nohead table-bordered">
-              <tbody>
-                <tr>
-                  <th colSpan="2">Controls</th>
-                </tr>
-                <tr>
-                  <td>I,O or Alt + Mousewheel</td>
-                  <td>Zoom in/out</td>
-                </tr>
-                <tr>
-                  <td>Mousewheel or D and F</td>
-                  <td>Move Along 3rd Axis</td>
-                </tr>
-                <tr>
-                  <td>Left Mouse Drag or Arrow Keys</td>
-                  <td>Move</td>
-                </tr>
-                <tr>
-                  <td>Right Click Drag in 3D View</td>
-                  <td>Rotate 3D View</td>
-                </tr>
-                <tr>
-                  <td>K,L</td>
-                  <td>Scale Up/Down Viewports</td>
-                </tr>
-              </tbody>
-            </table>
+            <Table
+              dataSource={shortcuts}
+              columns={shortcutColumns}
+              pagination={false}
+              style={{ marginRight: 20 }}
+              size="small"
+            />
             <div>
               <img
                 className="img-50"
@@ -173,7 +196,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
 const mapStateToProps = (state: OxalisState): DatasetInfoTabStateProps => ({
   tracing: state.tracing,
   dataset: state.dataset,
-  zoomStep: state.flycam.zoomStep,
+  flycam: state.flycam,
   task: state.task,
 });
 

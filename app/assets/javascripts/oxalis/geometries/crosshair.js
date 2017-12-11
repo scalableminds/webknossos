@@ -20,7 +20,7 @@ class Crosshair {
   isDirty: boolean;
 
   constructor(scale: number) {
-    this.WIDTH = 200;
+    this.WIDTH = 256;
     this.COLOR = "#2895FF";
     this.SCALE_MIN = 0.01;
     this.SCALE_MAX = 1;
@@ -34,20 +34,6 @@ class Crosshair {
 
     this.mesh = this.createMesh(canvas);
 
-    this.mesh.setVisibility = function(v) {
-      this.arbitraryVisible = v;
-      this.updateVisibility();
-    };
-
-    this.mesh.setVisibilityEnabled = function(v) {
-      this.visibilityEnabled = v;
-      this.updateVisibility();
-    };
-
-    this.mesh.updateVisibility = function() {
-      this.visible = this.arbitraryVisible && this.visibilityEnabled;
-    };
-
     this.setScale(scale);
   }
 
@@ -60,7 +46,7 @@ class Crosshair {
   }
 
   setVisibility(v: boolean) {
-    this.mesh.setVisibilityEnabled(v);
+    this.mesh.visible = v;
   }
 
   update() {
@@ -117,14 +103,12 @@ class Crosshair {
   }
 
   setScale(value: number) {
-    // eslint-disable-next-line no-unused-vars
-    const { SCALE_MIN, SCALE_MAX, mesh } = this;
+    const { SCALE_MIN, SCALE_MAX } = this;
 
     if (value > SCALE_MIN && value < SCALE_MAX) {
       this.scale = value;
+      this.isDirty = true;
     }
-
-    this.isDirty = true;
   }
 
   addToScene(scene: THREE.Scene) {

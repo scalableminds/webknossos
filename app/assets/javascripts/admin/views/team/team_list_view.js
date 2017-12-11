@@ -73,7 +73,7 @@ class TeamListView extends React.PureComponent<{}, State> {
     const marginRight = { marginRight: 20 };
 
     return (
-      <div className="container wide">
+      <div className="container">
         <div style={{ marginTag: 20 }}>
           <div className="pull-right">
             <Button
@@ -124,7 +124,8 @@ class TeamListView extends React.PureComponent<{}, State> {
                 key="owner"
                 sorter={Utils.localeCompareBy((team: APITeamType) => team.owner.lastName)}
                 render={owner =>
-                  owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"}
+                  owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"
+                }
               />
               <Column
                 title="Action"

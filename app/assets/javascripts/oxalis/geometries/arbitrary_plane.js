@@ -4,7 +4,7 @@
  */
 
 import _ from "lodash";
-import Backbone from "backbone";
+import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants from "oxalis/constants";
@@ -41,11 +41,11 @@ class ArbitraryPlane {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(width: number = 128) {
+  constructor() {
     this.isDirty = true;
     this.height = 0;
-    this.width = width;
-    _.extend(this, Backbone.Events);
+    this.width = constants.VIEWPORT_WIDTH;
+    _.extend(this, BackboneEvents);
 
     this.mesh = this.createMesh();
 
@@ -93,7 +93,6 @@ class ArbitraryPlane {
 
       const matrix = getZoomedMatrix(Store.getState().flycam);
 
-      // const queryMatrix = M4x4.scale1(constants.VIEWPORT_WIDTH / this.width, matrix);
       const queryMatrix = M4x4.scale1(1, matrix);
       const newVertices = M4x4.transformPointsAffine(queryMatrix, this.queryVertices);
       const newColors = Model.getColorBinaries()[0].getByVerticesSync(newVertices);
@@ -175,13 +174,10 @@ class ArbitraryPlane {
     return queryVertices;
   });
 
-  applyScale(delta: number) {
-    this.x = Number(this.mesh.scale.x) + Number(delta);
-
-    if (this.x > 0.5 && this.x < 10) {
-      this.mesh.scale.x = this.x;
-      this.mesh.scale.y = this.x;
-      this.mesh.scale.z = this.x;
+  setSphericalCapRadius(sphericalCapRadius: number) {
+    if (Store.getState().temporaryConfiguration.viewMode === constants.MODE_ARBITRARY) {
+      this.queryVertices = this.calculateSphereVertices(sphericalCapRadius);
+      this.isDirty = true;
     }
   }
 

@@ -257,10 +257,10 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               Specify each new task on a separate line as comma seperated values (CSV) in the
               following format:
               <br />
-              <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,
+              <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
               experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
-              <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,
-              <a href="/projects">project</a>[, <a href="/scripts">scriptId</a>]
+              <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,{" "}
+              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>]
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>

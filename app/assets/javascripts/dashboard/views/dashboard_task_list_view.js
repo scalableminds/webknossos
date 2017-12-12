@@ -295,7 +295,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           dataIndex="type.description"
           sorter={Utils.localeCompareBy(t => t.type.description)}
           render={description => (
-            <div style={{ wordBreak: "break-word" }} className="task-type-description">
+            <div className="task-type-description">
               <Markdown
                 source={description}
                 options={{ html: false, breaks: true, linkify: true }}

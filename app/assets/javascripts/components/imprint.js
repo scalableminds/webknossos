@@ -14,7 +14,6 @@ const Imprint = () => (
     <p>14482 Potsdam</p>
 
     <h5>Contact</h5>
-    <p>phone: +49 173 4807330</p>
     <p>e-mail: hello@scm.io</p>
     <p>
       web: <a href="http://scm.io">scm.io</a>

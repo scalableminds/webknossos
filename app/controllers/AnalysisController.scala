@@ -5,7 +5,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.project.{Project, ProjectDAO}
@@ -16,6 +16,7 @@ import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+
 import scala.concurrent.duration._
 
 
@@ -31,9 +32,9 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
 
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
-      team <- TeamDAO.findOneById(teamId)
-      projects <- ProjectDAO.findAllByTeamName(team.name)
-      i <- Fox.sequence(projects.map(p => progressOfProject(p, team)))
+      team <- TeamDAO.findOneById(teamId)(GlobalAccessContext)
+      projects <- ProjectDAO.findAllByTeamName(team.name)(GlobalAccessContext)
+      i <- Fox.sequence(projects.map(p => progressOfProject(p, team)(GlobalAccessContext)))
       x: List[ProjectProgressEntry] = i.flatten
     } yield {
       val k = x
@@ -96,11 +97,13 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
     }
   }
 
+
+
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
-      team <- TeamDAO.findOneById(id)
-      users <- UserDAO.findByTeams(List(team.name), true)
-      stuff: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(users)
+      team <- TeamDAO.findOneById(id)(GlobalAccessContext)
+      users <- UserDAO.findByTeams(List(team.name), true)(GlobalAccessContext)
+      stuff: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(users)(GlobalAccessContext)
     } yield {
       Ok(Json.toJson(stuff))
     }

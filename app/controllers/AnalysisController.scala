@@ -10,7 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.project.{Project, ProjectDAO}
 import models.task.{OpenAssignment, Task, TaskDAO, TaskService}
-import models.team.{Team, TeamDAO}
+import models.team.TeamDAO
 import models.user.{Experience, User, UserDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.MessagesApi
@@ -33,8 +33,9 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(teamId)(GlobalAccessContext)
+      users <- UserDAO.findByTeams(List(team.name), false)
       projects <- ProjectDAO.findAllByTeamName(team.name)(GlobalAccessContext)
-      i <- Fox.sequence(projects.map(p => progressOfProject(p, team)(GlobalAccessContext)))
+      i <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))
       x: List[ProjectProgressEntry] = i.flatten
     } yield {
       val k = x
@@ -42,7 +43,7 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
     }
   }
 
-  def progressOfProject(project: Project, team: Team)(implicit ctx: DBAccessContext): Fox[ProjectProgressEntry] = {
+  def progressOfProject(project: Project, users: List[User])(implicit ctx: DBAccessContext): Fox[ProjectProgressEntry] = {
     for {
       tasks <- TaskDAO.findAllByProject(project.name)
       totalTasks = tasks.length
@@ -51,10 +52,13 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
       inProgressInstances <- AnnotationDAO.countUnfinishedByTaskIdsAndType(tasks.map(_._id), AnnotationType.Task)
       openInstances = totalInstances - finishedInstances - inProgressInstances
       _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
-      _ <- assertExpDomain(tasks.headOption, inProgressInstances, team)
+      _ <- assertExpDomain(tasks.headOption, inProgressInstances, users)
       _ <- assertAge(tasks, inProgressInstances, openInstances)
     } yield {
-      ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
+      val e = ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
+      println("got a project progress entry for project " + project.name)
+      println(Json.toJson(e))
+      e
     }
   }
 
@@ -64,17 +68,16 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
     } else Fox.successful(())
   }
 
-  def assertExpDomain(firstTask: Option[Task], inProgressInstances: Int, team: Team)(implicit ctx: DBAccessContext) = {
+  def assertExpDomain(firstTask: Option[Task], inProgressInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
     if (inProgressInstances > 0) Fox.successful(())
     else firstTask match {
-      case Some(task) => assertMatchesAnyUserOfTeam(task.neededExperience, team)
+      case Some(task) => assertMatchesAnyUserOfTeam(task.neededExperience, users)
       case _ => Fox.failure("assertC")
     }
   }
 
-  def assertMatchesAnyUserOfTeam(experience: Experience, team: Team)(implicit ctx: DBAccessContext) = {
+  def assertMatchesAnyUserOfTeam(experience: Experience, users: List[User])(implicit ctx: DBAccessContext) = {
     for {
-      users <- UserDAO.findByTeams(List(team.name), false)
       _ <- users.exists(user => user.experiences.contains(experience.domain) && user.experiences(experience.domain) >= experience.value)
     } yield {
       ()

@@ -15,7 +15,7 @@ const Imprint = () => (
 
     <h5>Contact</h5>
     <p>phone: +49 173 4807330</p>
-    <p>e-mail: hello@@scm.io</p>
+    <p>e-mail: hello@scm.io</p>
     <p>
       web: <a href="http://scm.io">scm.io</a>
     </p>
@@ -30,7 +30,7 @@ const Imprint = () => (
 
     <h5>Contact</h5>
     <p>phone: +49 69 850033-3001</p>
-    <p>e-mail: mhoffice@@brain.mpg.de</p>
+    <p>e-mail: mhoffice@brain.mpg.de</p>
     <p>
       web: <a href="http://www.brain.mpg.de/connectomics">www.brain.mpg.de/connectomics</a>
     </p>

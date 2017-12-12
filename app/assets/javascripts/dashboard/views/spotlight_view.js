@@ -41,7 +41,11 @@ class SpotlightView extends React.PureComponent<{}, State> {
       <Layout>
         <Header id="oxalis-header">
           <div>
-            <img src="/assets/images/oxalis.svg" alt="webKnossos Logo" />webKnossos
+            <img
+              src="/assets/images/oxalis.svg"
+              alt="webKnossos Logo"
+              style={{ verticalAlign: "middle" }}
+            />webKnossos
           </div>
         </Header>
         <Content style={{ padding: 50 }}>

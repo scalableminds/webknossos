@@ -181,6 +181,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="neededExperience"
               key="neededExperience"
               sorter={Utils.localeCompareBy(neededExperience => neededExperience.domain)}
+              width={200}
               render={neededExperience =>
                 neededExperience.domain !== "" || neededExperience.value > 0 ? (
                   <Tag>

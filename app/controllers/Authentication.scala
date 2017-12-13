@@ -359,7 +359,7 @@ class Authentication @Inject()(
       }
     } else {
       //not logged in
-      Fox.successful(Redirect("/login"))
+      Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org"))
     }
   }
 

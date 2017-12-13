@@ -56,7 +56,7 @@ function getMaximumNodeId(trees: TreeMapType): number {
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
 
-function getMaximumTreeId(trees: TreeMapType): number {
+export function getMaximumTreeId(trees: TreeMapType): number {
   return _.max(_.map(trees, "treeId"));
 }
 

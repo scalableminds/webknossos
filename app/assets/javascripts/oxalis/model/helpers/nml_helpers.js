@@ -2,19 +2,38 @@
 
 import _ from "lodash";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
+import messages from "messages";
+import Saxophone from "@scalableminds/saxophone";
+import Store from "oxalis/store";
+import Date from "libs/date";
 import type {
   OxalisState,
   SkeletonTracingType,
   NodeMapType,
   EdgeType,
   TreeType,
+  TreeMapType,
+  TemporaryMutableTreeType,
+  TemporaryMutableTreeMapType,
 } from "oxalis/store";
+
+// SERIALIZE NML
 
 function indent(array: Array<string>): Array<string> {
   array.forEach((line, index) => {
     array[index] = `  ${line}`;
   });
   return array;
+}
+
+function serializeTag(
+  name: string,
+  properties: { [string]: ?(string | number | boolean) },
+  closed: boolean = true,
+): string {
+  return `<${name} ${Object.keys(properties)
+    .map(key => `${key}="${properties[key] != null ? properties[key].toString() : ""}"`)
+    .join(" ")}${closed ? " /" : ""}>`;
 }
 
 export function getNmlName(state: OxalisState): string {
@@ -181,14 +200,131 @@ function serializeComments(trees: Array<TreeType>): Array<string> {
   ];
 }
 
-function serializeTag(
-  name: string,
-  properties: { [string]: ?(string | number | boolean) },
-  closed: boolean = true,
-): string {
-  return `<${name} ${Object.keys(properties)
-    .map(key => `${key}="${properties[key] != null ? properties[key].toString() : ""}"`)
-    .join(" ")}${closed ? " /" : ""}>`;
+// PARSE NML
+
+function _parseInt(obj: Object, key: string): number {
+  if (obj[key] == null) {
+    throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+  }
+  return Number.parseInt(obj[key], 10);
 }
 
-export function parseNml() {}
+function _parseFloat(obj: Object, key: string): number {
+  if (obj[key] == null) {
+    throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+  }
+  return Number.parseFloat(obj[key]);
+}
+
+function _parseBool(obj: Object, key: string): boolean {
+  if (obj[key] == null) {
+    throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+  }
+  return obj[key] === "true";
+}
+
+export function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
+  return _.values(trees).find(tree => tree.nodes[nodeId] != null);
+}
+
+export function parseNml(nmlString: string): Promise<TreeMapType> {
+  return new Promise((resolve, reject) => {
+    const parser = new Saxophone();
+
+    const trees: TemporaryMutableTreeMapType = {};
+    let currentTree: ?TemporaryMutableTreeType = null;
+    parser
+      .on("tagopen", node => {
+        const attr = Saxophone.parseAttrs(node.attrs);
+        switch (node.name) {
+          case "experiment": {
+            if (attr.name !== Store.getState().dataset.name) {
+              console.warn("Imported NML was originally for a different dataset!");
+            }
+            break;
+          }
+          case "thing": {
+            currentTree = {
+              treeId: _parseInt(attr, "id"),
+              color: [
+                _parseFloat(attr, "color.r"),
+                _parseFloat(attr, "color.g"),
+                _parseFloat(attr, "color.b"),
+              ],
+              name: attr.name,
+              comments: [],
+              nodes: {},
+              branchPoints: [],
+              timestamp: Date.now(),
+              edges: [],
+              isVisible: true,
+            };
+            trees[currentTree.treeId] = currentTree;
+            break;
+          }
+          case "node": {
+            if (currentTree == null) throw Error(messages["nml.node_outside_tree"]);
+            const currentNode = {
+              id: _parseInt(attr, "id"),
+              position: [_parseFloat(attr, "x"), _parseFloat(attr, "y"), _parseFloat(attr, "z")],
+              rotation: [
+                _parseFloat(attr, "rotX"),
+                _parseFloat(attr, "rotY"),
+                _parseFloat(attr, "rotZ"),
+              ],
+              interpolation: _parseBool(attr, "interpolation"),
+              bitDepth: _parseInt(attr, "bitDepth"),
+              viewport: _parseInt(attr, "inVp"),
+              resolution: _parseInt(attr, "inMag"),
+              radius: _parseFloat(attr, "radius"),
+              timestamp: _parseInt(attr, "time"),
+            };
+            currentTree.nodes[currentNode.id] = currentNode;
+            break;
+          }
+          case "edge": {
+            if (currentTree == null) throw Error(messages["nml.edge_outside_tree"]);
+            const currentEdge = {
+              source: _parseInt(attr, "source"),
+              target: _parseInt(attr, "target"),
+            };
+            currentTree.edges.push(currentEdge);
+            break;
+          }
+          case "comment": {
+            const currentComment = {
+              nodeId: _parseInt(attr, "node"),
+              content: attr.content,
+            };
+            const tree = findTreeByNodeId(trees, currentComment.nodeId);
+            if (tree == null) throw Error(messages["nml.comment_without_tree"]);
+            tree.comments.push(currentComment);
+            break;
+          }
+          case "branchpoint": {
+            const currentBranchpoint = {
+              nodeId: _parseInt(attr, "id"),
+              timestamp: _parseInt(attr, "time"),
+            };
+            const tree = findTreeByNodeId(trees, currentBranchpoint.nodeId);
+            if (tree == null) throw Error(messages["nml.branchpoint_without_tree"]);
+            tree.branchPoints.push(currentBranchpoint);
+            break;
+          }
+          default:
+            break;
+        }
+      })
+      .on("tagclose", node => {
+        if (node.name === "thing") {
+          currentTree = null;
+        }
+      })
+      .on("end", () => {
+        resolve(trees);
+      })
+      .on("error", reject);
+
+    parser.parse(nmlString);
+  });
+}

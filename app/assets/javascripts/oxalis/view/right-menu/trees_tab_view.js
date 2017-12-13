@@ -15,6 +15,7 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
+  addTreeAction,
   deleteTreeWithConfirmAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
@@ -23,8 +24,9 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
-import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_helpers";
+import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
 import Utils from "libs/utils";
+import FileUpload from "components/file_upload";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
@@ -46,11 +48,13 @@ type Props = {
 
 type State = {
   isExporting: boolean,
+  isUploadingNML: boolean,
 };
 
 class TreesTabView extends React.PureComponent<Props, State> {
   state = {
     isExporting: false,
+    isUploadingNML: false,
   };
 
   handleChangeTreeName = evt => {
@@ -98,6 +102,14 @@ class TreesTabView extends React.PureComponent<Props, State> {
     } else {
       anchor.click();
     }
+  };
+
+  handleNMLUpload = async (nmlString: string) => {
+    const trees = await parseNml(nmlString);
+    for (const treeId of Object.keys(trees)) {
+      Store.dispatch(addTreeAction(trees[+treeId]));
+    }
+    this.setState({ isUploadingNML: false });
   };
 
   getTreesComponents() {
@@ -148,6 +160,20 @@ class TreesTabView extends React.PureComponent<Props, State> {
             <Icon type="export" /> Export as Nml
             <Spin size="small" spinning={this.state.isExporting} />
           </div>
+        </Menu.Item>
+        <Menu.Item key="importNml">
+          <FileUpload
+            accept=".nml"
+            multiple={false}
+            name="nmlFile"
+            showUploadList={false}
+            onSuccess={this.handleNMLUpload}
+            onUploading={() => this.setState({ isUploadingNML: true })}
+            onError={() => this.setState({ isUploadingNML: false })}
+          >
+            <Icon type="upload" /> Import Nml
+            <Spin size="small" spinning={this.state.isUploadingNML} />
+          </FileUpload>
         </Menu.Item>
       </Menu>
     );

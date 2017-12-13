@@ -83,4 +83,11 @@ In order to restore the current window, a reload is necessary.`,
   "request.max_item_count_alert":
     "Your request returned more than 1000 results. More results might be available on the server but were omitted for technical reasons.",
   "timetracking.date_range_too_long": "Please specify a date range of 31 days or less.",
+  "nml.node_outside_tree": "Encountered <node ...> tag that is not enclosed by a <thing ...> tag.",
+  "nml.edge_outside_tree": "Encountered <edge ...> tag that is not enclosed by a <thing ...> tag.",
+  "nml.expected_attribute_missing":
+    "Attribute with the following name was expected, but is missing:",
+  "nml.branchpoint_without_tree":
+    "Encountered <branchpoint ...> with a node id that is not in any tree.",
+  "nml.comment_without_tree": "Encountered <comment ...> with a node id that is not in any tree.",
 };

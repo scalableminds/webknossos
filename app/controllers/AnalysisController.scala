@@ -32,9 +32,9 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
 
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
-      team <- TeamDAO.findOneById(teamId)(GlobalAccessContext)
-      users <- UserDAO.findByTeams(List(team.name), false)
-      projects <- ProjectDAO.findAllByTeamName(team.name)(GlobalAccessContext)
+      team <- TeamDAO.findOneById(teamId)(GlobalAccessContext) ?~> "team.notFound"
+      users <- UserDAO.findByTeams(List(Some(team.name), team.parent).flatten, false)
+      projects <- ProjectDAO.findAllByTeamNames(List(Some(team.name), team.parent).flatten)(GlobalAccessContext)
       i <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))
       x: List[ProjectProgressEntry] = i.flatten
     } yield {
@@ -45,18 +45,25 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
 
   def progressOfProject(project: Project, users: List[User])(implicit ctx: DBAccessContext): Fox[ProjectProgressEntry] = {
     for {
+      _ <- Fox.successful(println(project.name + " ## 1 attempting..."))
       tasks <- TaskDAO.findAllByProject(project.name)
+      _ <- Fox.successful(println(project.name + " ## 2 got through find tasks"))
       totalTasks = tasks.length
       totalInstances = tasks.map(_.instances).sum
       finishedInstances <- AnnotationDAO.countFinishedByTaskIdsAndType(tasks.map(_._id), AnnotationType.Task)
+      _ <- Fox.successful(println(project.name + " ## 3 got count finished for " + project.name))
       inProgressInstances <- AnnotationDAO.countUnfinishedByTaskIdsAndType(tasks.map(_._id), AnnotationType.Task)
+      _ <- Fox.successful(println(project.name + " ## 4 got through count unfinished"))
       openInstances = totalInstances - finishedInstances - inProgressInstances
       _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
+      _ <- Fox.successful(println(project.name + " ## 5 passed NotPaused"))
       _ <- assertExpDomain(tasks.headOption, inProgressInstances, users)
+      _ <- Fox.successful(println(project.name + " ## 6 passed ExpDomain"))
       _ <- assertAge(tasks, inProgressInstances, openInstances)
+      _ <- Fox.successful(println(project.name + " ## 7 passed Age"))
     } yield {
       val e = ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
-      println("got a project progress entry for project " + project.name)
+      println(project.name + " ## 8 got a project progress entry")
       println(Json.toJson(e))
       e
     }

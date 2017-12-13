@@ -187,6 +187,10 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
     find("team", teamName).collect[List]()
   }
 
+  def findAllByTeamNames(teamNames: List[String])(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    find(Json.obj("team" -> Json.obj("$in" -> teamNames))).cursor[Project]().collect[List]()
+  }
+
   def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
     findAndModify(Json.obj("_id" -> _id), Json.obj("$set" -> Json.obj("paused" -> isPaused)), returnNew = true)
   }

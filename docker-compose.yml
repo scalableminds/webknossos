@@ -44,7 +44,7 @@ services:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
       - USER_GID
-      - TZ=${TZ:-"Europe/Berlin"}
+      - TZ=${TZ:-Europe/Berlin}
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"

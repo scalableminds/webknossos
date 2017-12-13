@@ -3,10 +3,12 @@
 import fs from "fs";
 import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
+import { configure } from "enzyme";
+import Adapter from "enzyme-adapter-react-15";
 
 const requests = [];
-const minimumWait = 10; // ms
-async function waitForAllRequests() {
+const minimumWait = 100; // ms
+async function waitForAllRequests(el: Object) {
   let length = requests.length;
   async function tolerantWait() {
     // Add a small timeout so that other promise handlers get some execution time
@@ -14,7 +16,7 @@ async function waitForAllRequests() {
     if (length < requests.length) {
       // Retry if new requests were added
       length = requests.length;
-      await waitForAllRequests().then(tolerantWait);
+      await waitForAllRequests(el).then(tolerantWait);
     }
   }
   // Even if all promises are already resolved, we should wait
@@ -23,6 +25,8 @@ async function waitForAllRequests() {
   // await wait(minimumWait);
   await Promise.all(requests);
   await tolerantWait();
+  // enzyme caches the DOM tree, we need to call update after the async requests finished
+  el.update();
 }
 
 function wait(milliseconds: number): Promise<number> {
@@ -34,9 +38,9 @@ global.fetch = function fetchWrapper(url, options) {
   if (url.indexOf("http:") === -1) {
     newUrl = `http://localhost:9000${url}`;
   }
-  options.headers.append(
+  options.headers.set(
     "X-Auth-Token",
-    "10a262ba07c59611e1a344ca4f52c9f2aedcb5f7867eaa1bc1fa282e2729dfb053296d63c63db7248ad5acc877744b26da0731a2e47e4254fb3ec40c71195ace4e2986b20a6ee7b9c6ffe5b74bb2ed73fbd2fffd52018a09c89fd7ab54fdc10098cb273ccb6e6ca8ddec5e4e239b7095072458fd66cc8f513d9ecfbea9c1385c",
+    "1b88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21761e",
   );
   const promise = fetch(newUrl, options);
   requests.push(promise);
@@ -50,7 +54,8 @@ global.FetchError = FetchError;
 
 const { JSDOM } = require("jsdom");
 
-const jsdom = new JSDOM("<!doctype html><html><body></body></html>");
+// set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
+const jsdom = new JSDOM("<!doctype html><html><body></body></html>", { pretendToBeVisual: true });
 const { window } = jsdom;
 
 function copyProps(src, target) {
@@ -84,5 +89,7 @@ function debugWrapper(wrapper: any, name: string) {
     () => {},
   );
 }
+
+configure({ adapter: new Adapter() });
 
 export { waitForAllRequests, createSnapshotable, wait, debugWrapper };

@@ -37,7 +37,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
     } yield {
-      Ok(views.html.main()(Html("")))
+      Ok(views.html.main())
     }
   }
 

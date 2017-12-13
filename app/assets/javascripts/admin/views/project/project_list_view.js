@@ -223,7 +223,7 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                         <br />
                       </div>
                     )}
-                    <Link to={`/projects/${project.id}/tasks`} title="View Tasks">
+                    <Link to={`/projects/${project.name}/tasks`} title="View Tasks">
                       <Icon type="schedule" />Tasks
                     </Link>
                     <br />

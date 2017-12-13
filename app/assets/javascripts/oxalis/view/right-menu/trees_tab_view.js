@@ -6,7 +6,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Button, Dropdown, Input, Menu, Icon } from "antd";
+import { Button, Dropdown, Input, Menu, Icon, Spin } from "antd";
 import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -23,7 +23,8 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
-import { serializeToNml } from "oxalis/model/helpers/nml_helpers";
+import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_helpers";
+import Utils from "libs/utils";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
@@ -43,7 +44,15 @@ type Props = {
   userConfiguration: UserConfigurationType,
 };
 
-class TreesTabView extends React.PureComponent<Props> {
+type State = {
+  isExporting: boolean,
+};
+
+class TreesTabView extends React.PureComponent<Props, State> {
+  state = {
+    isExporting: false,
+  };
+
   handleChangeTreeName = evt => {
     this.props.onChangeTreeName(evt.target.value);
   };
@@ -70,13 +79,17 @@ class TreesTabView extends React.PureComponent<Props> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
-  exportAsNml = () => {
+  exportAsNml = async () => {
+    this.setState({ isExporting: true });
+    // Allow the spinner to render
+    await Utils.sleep(1);
     const state = Store.getState();
     const nml = serializeToNml(state, this.props.skeletonTracing);
     const anchor = document.createElement("a");
     const objectUrl = URL.createObjectURL(new Blob([nml]));
     anchor.setAttribute("href", objectUrl);
-    anchor.setAttribute("download", `${state.dataset.name}.nml`);
+    anchor.setAttribute("download", getNmlName(state));
+    this.setState({ isExporting: false });
 
     if (document.createEvent) {
       const event = document.createEvent("MouseEvents");
@@ -133,6 +146,7 @@ class TreesTabView extends React.PureComponent<Props> {
         <Menu.Item key="exportAsNml">
           <div onClick={this.exportAsNml} title="Export visible trees as nml">
             <Icon type="export" /> Export as Nml
+            <Spin size="small" spinning={this.state.isExporting} />
           </div>
         </Menu.Item>
       </Menu>

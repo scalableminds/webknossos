@@ -17,6 +17,23 @@ function indent(array: Array<string>): Array<string> {
   return array;
 }
 
+export function getNmlName(state: OxalisState): string {
+  // Use the same naming convention as the backend
+  const { activeUser, dataset, task, tracing } = state;
+  if (tracing.name !== "") return `${tracing.name}.nml`;
+
+  const datasetName = dataset.name;
+  const tracingType = task ? task.id : "explorational";
+  let userName = activeUser
+    ? `${activeUser.firstName.slice(0, 1)}${activeUser.lastName}`.toLowerCase()
+    : "";
+  // Replace spaces in user names
+  userName = userName.replace(/ /g, "_");
+  const shortAnnotationId = tracing.annotationId.slice(-6);
+
+  return `${datasetName}__${tracingType}__${userName}__${shortAnnotationId}.nml`;
+}
+
 export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType): string {
   // Only visible trees will be serialized!
   // _.filter throws flow errors here, because the type definitions are wrong and I'm not able to fix them

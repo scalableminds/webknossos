@@ -65,12 +65,14 @@ trait SecuredCollection[T]
     }
   }
 
-  def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
+  def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = findWithProjection(query, Json.obj())
+
+  def findWithProjection(query: JsObject = Json.obj(), projection: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     AccessDefinitions.findQueryFilter match {
       case _ if ctx.globalAccess =>
-        underlying.find(query)
+        underlying.find(query, projection)
       case AllowIf(condition) =>
-        underlying.find(combine(query, condition))
+        underlying.find(combine(query, condition), projection)
       case DenyEveryone() =>
         // TODO: find a different way to abort the query
         underlying.find(Json.obj("$and" -> Json.arr(

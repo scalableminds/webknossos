@@ -19,6 +19,8 @@ trait AbstractCollection[T]{
 
   def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext): GenericQueryBuilder[JSONSerializationPack.type]
 
+  def findWithProjection(query: JsObject = Json.obj(), projection: JsObject = Json.obj())(implicit ctx: DBAccessContext): GenericQueryBuilder[JSONSerializationPack.type]
+
   def update(query: JsObject, update: JsObject, upsert: Boolean = false, multi: Boolean = false)(implicit ctx: DBAccessContext): Fox[WriteResult]
 
   def remove(js: JsObject)(implicit ctx: DBAccessContext): Fox[WriteResult]

@@ -1,15 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-JAR="fossildb.jar"
-VERSION="0.1.1"
-FOSSILDB="$(dirname $(readlink -f $0))/$JAR"
-URL="https://github.com/scalableminds/fossildb/releases/download/$VERSION/$JAR"
-CURRENT_VERSION="$(java -jar "$FOSSILDB" --version || echo "unknown")"
+FOSSILDB_HOME="$(dirname $(readlink -f $0))"
 
-if [ ! -f "$FOSSILDB" ] || [ ! "$CURRENT_VERSION" == "$VERSION" ]; then
+JAR="$FOSSILDB_HOME/fossildb.jar"
+VERSION="$(cat "$FOSSILDB_HOME/version")"
+CURRENT_VERSION="$(java -jar "$JAR" --version || true)"
+CURRENT_VERSION="${CURRENT_VERSION:-unknown}"
+URL="https://github.com/scalableminds/fossildb/releases/download/$VERSION/fossildb.jar"
+
+if [ ! -f "$JAR" ] || [ ! "$CURRENT_VERSION" == "$VERSION" ]; then
   echo "Updating FossilDB version from $CURRENT_VERSION to $VERSION"
-  wget -q --show-progress -O "$FOSSILDB" "$URL"
+  wget -q --show-progress -O "$JAR" "$URL"
 fi
 
-exec java -jar "$FOSSILDB" -c skeletons,skeletonUpdates,volumes,volumeData
+exec java -jar "$JAR" -c skeletons,skeletonUpdates,volumes,volumeData

@@ -1,9 +1,10 @@
 // @flow
 import * as React from "react";
+import { Link } from "react-router-dom";
+import { Spin, Layout, Row, Col } from "antd";
 import { transformDatasets } from "dashboard/views/dataset_view";
 import GalleryDatasetView from "dashboard/views/gallery_dataset_view";
 import Request from "libs/request";
-import { Spin, Layout, Row, Col } from "antd";
 import type { DatasetType } from "dashboard/views/dataset_view";
 
 const { Header, Content, Footer } = Layout;
@@ -40,7 +41,11 @@ class SpotlightView extends React.PureComponent<{}, State> {
       <Layout>
         <Header id="oxalis-header">
           <div>
-            <img src="/assets/images/oxalis.svg" alt="webKnossos Logo" />webKnossos
+            <img
+              src="/assets/images/oxalis.svg"
+              alt="webKnossos Logo"
+              style={{ verticalAlign: "middle" }}
+            />webKnossos
           </div>
         </Header>
         <Content style={{ padding: 50 }}>
@@ -146,7 +151,7 @@ class SpotlightView extends React.PureComponent<{}, State> {
                 <p>&copy; Max Planck Institut for Brain Research</p>
               </section>
               <p>
-                <a href="/impressum">Legal notice</a>
+                <Link to="/impressum">Legal Notice</Link>
               </p>
             </div>
           </div>

@@ -281,6 +281,17 @@ object ApplicationBuild extends Build {
             case t: Throwable => "get git hash failed"
           }
         }
+      }.toString(),
+      "commitDate" -> new java.lang.Object() {
+        override def toString(): String = {
+          try {
+            val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git log -1 --format=%cd ").getInputStream())
+            (new java.io.BufferedReader(extracted)).readLine()
+
+          } catch {
+            case t: Throwable => "get git date failed"
+          }
+        }
       }.toString()
     ),
     buildInfoPackage := "webknossos",

@@ -6,7 +6,7 @@
 GET           /                                                                 controllers.Application.index
 
 GET           /dashboard                                                        controllers.Authentication.empty
-GET           /impressum                                                        controllers.Application.impressum
+GET           /impressum                                                        controllers.Authentication.empty
 GET           /info                                                             controllers.Application.info
 GET           /thankyou                                                         controllers.Application.thankyou
 GET           /spotlight                                                        controllers.Authentication.empty

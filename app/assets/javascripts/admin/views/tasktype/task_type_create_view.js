@@ -1,5 +1,6 @@
 // @flow
 import React from "react";
+import { withRouter } from "react-router-dom";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
 import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
@@ -66,7 +67,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
     const titlePrefix = this.props.taskTypeId ? "Update " : "Create";
 
     return (
-      <div className="container wide task-types-administration">
+      <div className="container">
         <Card title={<h3>{titlePrefix} Task Type</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Summary" hasFeedback>
@@ -179,4 +180,4 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(TaskTypeCreateView);
+export default withRouter(Form.create()(TaskTypeCreateView));

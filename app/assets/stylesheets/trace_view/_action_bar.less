@@ -1,15 +1,21 @@
-.action-bar {
-  line-height: 32px;
-  display: inline-flex;
-  font-size: 0;
-
-  div {
-    display: inline-block;
-    vertical-align: bottom;
+.tracing-layout > .ant-layout-header {
+  & > button {
+    vertical-align: middle;
   }
+  & > .action-bar {
+    vertical-align: middle;
+    line-height: 0px;
+    display: inline-flex;
+    font-size: 0;
 
-  & > div {
-    margin-left: 10px;
+    div {
+      display: inline-block;
+      vertical-align: top;
+    }
+
+    & > div {
+      margin-left: 10px;
+    }
   }
 }
 

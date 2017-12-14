@@ -30,11 +30,7 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller{
   }
 
   def emptyMain = SecuredAction { implicit request =>
-    Ok(views.html.main()(Html("")))
-  }
-
-  def impressum = UserAwareAction { implicit request =>
-    Ok(views.html.impressum())
+    Ok(views.html.main(Html("")))
   }
 
   def buildInfo = UserAwareAction { implicit request =>

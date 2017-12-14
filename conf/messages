@@ -39,7 +39,7 @@ auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
 
 team.created=Team got created
-team.name.alreadyTaken=The teams name is already in use.
+team.name.alreadyTaken=There already exists a team with this name. Choose a different name, please.
 team.notAllowed=You are not part of this team. Project can''t be created.
 team.nonExistentRole=Team {0} doesn''t contain role {1}.
 team.admin.notPossibleBy=User {1} can''t be assigned administrative rights in team {0} because he doesn't belong to the teams parent team.

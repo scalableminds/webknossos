@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-FOSSILDB_HOME="$(dirname $(readlink $0))"
+FOSSILDB_HOME="$(dirname "$0")"
 
 JAR="$FOSSILDB_HOME/fossildb.jar"
 VERSION="$(cat "$FOSSILDB_HOME/version")"

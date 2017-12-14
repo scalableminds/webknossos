@@ -274,7 +274,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         }}
       >
         <Column
-          title="#"
+          title="ID"
           dataIndex="id"
           sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
@@ -282,6 +282,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Column
           title="Type"
           dataIndex="type.summary"
+          width={200}
           sorter={Utils.localeCompareBy(t => t.type.summary)}
         />
         <Column

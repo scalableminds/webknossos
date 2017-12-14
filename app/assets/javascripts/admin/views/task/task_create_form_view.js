@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import React from "react";
 import { withRouter } from "react-router-dom";
 import {
@@ -137,7 +138,8 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
         scriptId: task.script ? task.script.id : null,
         openInstances: task.status.open,
       });
-      this.props.form.setFieldsValue(defaultValues);
+      const validFormValues = _.omitBy(defaultValues, _.isNull);
+      this.props.form.setFieldsValue(validFormValues);
     }
   }
 

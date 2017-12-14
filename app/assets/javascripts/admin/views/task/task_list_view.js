@@ -136,7 +136,13 @@ class TaskListView extends React.PureComponent<Props, State> {
             style={{ marginTop: 30, marginBotton: 30 }}
             expandedRowRender={task => <TaskAnnotationView task={task} />}
           >
-            <Column title="ID" dataIndex="id" key="id" sorter={Utils.localeCompareBy("id")} />
+            <Column
+              title="ID"
+              dataIndex="id"
+              key="id"
+              sorter={Utils.localeCompareBy("id")}
+              className="monospace-id"
+            />
             <Column
               title="Project"
               dataIndex="projectName"

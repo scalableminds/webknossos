@@ -112,6 +112,7 @@ class ExperienceModalView extends React.PureComponent<Props, State> {
         title="Change Experiences"
         visible={this.props.visible}
         onCancel={this.props.onCancel}
+        width={600}
         footer={
           <div>
             <Button

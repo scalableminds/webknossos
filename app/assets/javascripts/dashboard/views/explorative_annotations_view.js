@@ -314,7 +314,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         }}
       >
         <Column
-          title="#"
+          title="ID"
           dataIndex="id"
           render={(__, tracing: APIAnnotationType) => FormatUtils.formatHash(tracing.id)}
           sorter={Utils.localeCompareBy("id")}

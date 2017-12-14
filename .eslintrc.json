@@ -7,13 +7,12 @@
     "prettier/flowtype",
     "prettier/react"
   ],
-  "plugins": ["react", "import", "jasmine", "flowtype"],
+  "plugins": ["react", "import", "flowtype"],
   "parserOptions": {
     "ecmaVersion": 8
   },
   "env": {
-    "browser": true,
-    "jasmine": true
+    "browser": true
   },
   "parser": "babel-eslint",
   "settings": {

@@ -1,5 +1,5 @@
-@(showNavButtons: Boolean = true)(body: Html)(implicit session: oxalis.view.SessionData)
+@(content: Html = Html(""))(implicit session: oxalis.view.SessionData)
 
 @import com.scalableminds.util.tools.Reflect
 
-@pageSkeleton()
+@pageSkeleton(content)

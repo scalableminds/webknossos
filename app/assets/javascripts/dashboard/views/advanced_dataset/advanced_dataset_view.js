@@ -60,6 +60,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             )}
           />
           <Column
+            width={110}
             title="Creation Date"
             dataIndex="created"
             key="created"

@@ -250,17 +250,17 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const { getFieldDecorator } = this.props.form;
 
     return (
-      <div className="container wide" style={{ paddingTop: 20 }}>
+      <div className="container" style={{ paddingTop: 20 }}>
         <Spin spinning={this.state.isUploading}>
           <Card title={<h3>Bulk Create Tasks</h3>}>
             <p>
               Specify each new task on a separate line as comma seperated values (CSV) in the
               following format:
               <br />
-              <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,
+              <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
               experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
-              <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,
-              <a href="/projects">project</a>[, <a href="/scripts">scriptId</a>]
+              <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,{" "}
+              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>]
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>
@@ -286,6 +286,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                     className="input-monospace"
                     placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId]"
                     autosize={{ minRows: 6 }}
+                    style={{
+                      fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',
+                    }}
                   />,
                 )}
               </FormItem>

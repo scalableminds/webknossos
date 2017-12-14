@@ -16,6 +16,7 @@ import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
 
@@ -28,7 +29,6 @@ case class ProjectProgressEntry(projectName: String, totalTasks: Int, totalInsta
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
 class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
-
 
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
@@ -113,9 +113,9 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
       users <- UserDAO.findByTeams(List(team.name), true)(GlobalAccessContext)
-      stuff: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(users)(GlobalAccessContext)
+      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(users)(GlobalAccessContext)
     } yield {
-      Ok(Json.toJson(stuff))
+      Ok(Json.toJson(entries))
     }
   }
 
@@ -125,7 +125,8 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
       for {
         assignments <- TaskService.findAllAssignableFor(user, user.teamNames)
       } yield {
-        OpenTasksEntry(user.name, assignments.length, getAssignmentsByProjectsProjectsFor(assignments))
+        val tasks = assignments.map(_._task).distinct
+        OpenTasksEntry(user.name, tasks.length, getAssignmentsByProjectsProjectsFor(assignments))
       }
     }
     Fox.combined(foxes.toList)

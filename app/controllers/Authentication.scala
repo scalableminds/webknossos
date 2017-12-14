@@ -122,15 +122,15 @@ class Authentication @Inject()(
     else Role.User
 
   def empty = UserAwareAction { implicit request =>
-    Ok(views.html.main()(Html("")))
+    Ok(views.html.main())
   }
 
   def emptyWithWildcard(param: String) = UserAwareAction { implicit request =>
-    Ok(views.html.main()(Html("")))
+    Ok(views.html.main())
   }
 
   def emptyWithWildcards(param1: String, param2: String) = UserAwareAction { implicit request =>
-    Ok(views.html.main()(Html("")))
+    Ok(views.html.main())
   }
 
   def normalizeName(name: String): Option[String] = {

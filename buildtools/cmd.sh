@@ -10,6 +10,7 @@ MONGO_DB=${MONGO_DB:-oxalis}
 ARGS=(\
   -Dconfig.file=${APPLICATION_CONFIG} -Dhttp.address="0.0.0.0" -Dhttp.port=${PORT} \
   -Djava.io.tmpdir=disk \
+  -Ddatastore.fossildb.address=fossildb \
   -Dmongodb.db=${MONGO_DB} -Dmongodb.url=mongo -Dmongodb.port=27017 \
   -Dmongodb.uri="mongodb://mongo:27017/${MONGO_DB}")
 

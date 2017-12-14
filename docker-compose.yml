@@ -46,6 +46,7 @@ services:
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
           -Dhttp.port=$${PORT}
+          -Ddatastore.fossildb.address=fossildb
           -Dmongodb.db=$${MONGO_DB}
           -Dmongodb.url=$${MONGO_HOST}
           -Dmongodb.port=$${MONGO_PORT}
@@ -102,6 +103,7 @@ services:
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
           -Dhttp.port=$${PORT}
+          -Ddatastore.fossildb.address=fossildb
           -Dmongodb.db=$${MONGO_DB}
           -Dmongodb.url=$${MONGO_HOST}
           -Dmongodb.port=$${MONGO_PORT}

@@ -333,7 +333,7 @@ class Authentication @Inject()(
       logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
 
     if(request.identity.isDefined) {
-      //logged in
+      // logged in
       val user = request.identity.get
       // Check if the request we recieved was signed using our private sso-key
       if (HmacUtils.hmacSha256Hex(ssoKey, sso) == sig) {
@@ -358,7 +358,7 @@ class Authentication @Inject()(
         Fox.successful(BadRequest("Invalid signature"))
       }
     } else {
-      //not logged in
+      // not logged in
       Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org"))
     }
   }

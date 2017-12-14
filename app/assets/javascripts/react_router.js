@@ -12,6 +12,7 @@ import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
+import Imprint from "components/imprint";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
@@ -216,7 +217,6 @@ class ReactRouter extends React.Component<Props> {
                   <ProjectCreateView projectName={match.params.projectName} />
                 )}
               />
-
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/annotations/:type/:id"
@@ -323,6 +323,7 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
+              <Route path="/impressum" component={Imprint} />
             </Switch>
           </Content>
         </Layout>

@@ -236,4 +236,19 @@ export type APITimeTrackingType = {
   tasktype_summary: string,
 };
 
+export type APIProjectProgressReportType = Array<{
+  +projectName: string,
+  +totalTasks: number,
+  +totalInstances: number,
+  +openInstances: number,
+  +finishedInstances: number,
+  +inProgressInstances: number,
+}>;
+
+export type APIOpenTasksReportType = Array<{
+  +user: string,
+  +totalAssignments: number,
+  +assignmentsByProjects: { [projectName: string]: number },
+}>;
+
 export default {};

@@ -88,11 +88,24 @@ class Navbar extends React.PureComponent<Props> {
             <Link to="/scripts">Scripts</Link>
           </Menu.Item>
         </SubMenu>,
-        <Menu.Item key="/statistics">
-          <Link to="/statistics">
-            <Icon type="line-chart" />Statistics
-          </Link>
-        </Menu.Item>,
+        <SubMenu
+          key="sub2"
+          title={
+            <span>
+              <Icon type="line-chart" />Statistics
+            </span>
+          }
+        >
+          <Menu.Item key="/statistics">
+            <Link to="/statistics">Statistics</Link>
+          </Menu.Item>
+          <Menu.Item key="/reports/projectProgress">
+            <Link to="/reports/projectProgress">Project Progress</Link>
+          </Menu.Item>
+          <Menu.Item key="/reports/openTasks">
+            <Link to="/reports/openTasks">Open Tasks</Link>
+          </Menu.Item>
+        </SubMenu>,
       );
     }
 

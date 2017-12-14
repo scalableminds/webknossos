@@ -191,6 +191,8 @@ GET           /api/projects/:name/usersWithOpenTasks                            
 # GET           /api/statistics/assignments                                       controllers.StatisticsController.assignmentStatistics(start: Option[Long], end: Option[Long])
 # Statistics
 GET           /statistics                                                       controllers.Authentication.empty
+GET           /reports/projectProgress                                          controllers.Authentication.empty
+GET           /reports/openTasks                                                controllers.Authentication.empty
 
 GET           /api/statistics/webknossos                                        controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)

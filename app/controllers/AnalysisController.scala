@@ -9,14 +9,13 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.project.{Project, ProjectDAO}
-import models.task.{OpenAssignment, Task, TaskDAO, TaskService}
+import models.task._
 import models.team.TeamDAO
 import models.user.{Experience, User, UserDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
 
@@ -108,7 +107,10 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
   }
 
 
-
+  /**
+    * assumes that (a) there is only one OpenAssignment per Task
+    * and (b) that all tasks of a project have the same required experience
+    */
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
@@ -123,18 +125,32 @@ class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Control
   def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
-        assignments <- TaskService.findAllAssignableFor(user, user.teamNames)
+        projects <- OpenAssignmentDAO.findByUserReturnOnlyProject(user).toFox
+        assignmentCountsByProject <- getAssignmentsByProjectsFor(projects, user)
       } yield {
-        val tasks = assignments.map(_._task).distinct
-        OpenTasksEntry(user.name, tasks.length, getAssignmentsByProjectsProjectsFor(assignments))
+        OpenTasksEntry(user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
       }
     }
     Fox.combined(foxes.toList)
   }
 
-  def getAssignmentsByProjectsProjectsFor(assignments: List[OpenAssignment])(implicit ctx: DBAccessContext) = {
-    val projects = assignments.map(a => a._project + "/" + a.neededExperience.toString)
-    projects.groupBy(identity).mapValues(_.size)
+  def getAssignmentsByProjectsFor(projects: Seq[String], user: User)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+    val projectsGrouped = projects.groupBy(identity).mapValues(_.size)
+    val foxes: Iterable[Fox[(String, Int)]] = projectsGrouped.keys.map {
+      project =>
+        Fox(for {
+          tasksIds <- TaskDAO.findAllByProjectReturnOnlyIds(project)
+          doneTasks <- AnnotationDAO.countFinishedByTaskIdsAndUserIdAndType(tasksIds, user._id, AnnotationType.Task)
+          firstTask <- TaskDAO.findOneByProject(project)
+        } yield {
+          (project + "/" + firstTask.neededExperience.toString, projectsGrouped(project) - doneTasks)
+        })
+    }
+    for {
+      list <- Fox.combined(foxes.toList)
+    } yield {
+      list.toMap
+    }
   }
 
 }

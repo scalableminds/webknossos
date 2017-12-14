@@ -100,6 +100,17 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
       .enumerate(stopOnError = true)
   }
 
+  def findByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
+    for {
+      jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
+            "instances" -> Json.obj("$gt" -> 0),
+            "team" -> Json.obj("$in" -> user.teamNames),
+            "$or" -> (experiencesToQuery(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
+    } yield {
+      jsObjects.map(p => (p \ "_project").asOpt[String]).flatten
+    }
+  }
+
   def findOrderedByPriority(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
     find(validPriorityQ).sort(byPriority).cursor[OpenAssignment]().enumerate()
   }

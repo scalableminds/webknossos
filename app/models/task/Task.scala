@@ -14,7 +14,7 @@ import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsNull, JsObject, Json}
+import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
@@ -199,6 +199,16 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   def findAllByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find("_project", project).collect[List]()
   }
+
+  def findAllByProjectReturnOnlyIds(project: String)(implicit ctx: DBAccessContext) = {
+    for {
+      jsObjects <- findWithProjection(Json.obj("_project" -> project), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
+    } yield {
+      jsObjects.map(p => (p \ "_project").asOpt[BSONObjectID]).flatten
+    }
+  }
+
+  def findOneByProject(projectName: String)(implicit ctx: DBAccessContext) = findOne(Json.obj("_project" -> projectName))
 
   def findAllByProjectTaskTypeIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext) = withExceptionCatcher {
     val projectFilter = projectOpt match {

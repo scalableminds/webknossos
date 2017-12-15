@@ -404,6 +404,55 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
   });
 }
 
+export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapType> {
+  return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
+    const { allowUpdate } = skeletonTracing.restrictions;
+
+    if (allowUpdate) {
+      const newTrees = {};
+      let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
+      for (const treeId of Object.keys(trees)) {
+        const tree = trees[Number(treeId)];
+
+        // Assign new ids for all nodes to avoid duplicates
+        let newNodeId = getMaximumNodeId(skeletonTracing.trees) + 1;
+        const idMap = {};
+        const newNodes = {};
+        for (const nodeId of Object.keys(tree.nodes)) {
+          const node = tree.nodes[Number(nodeId)];
+          idMap[nodeId] = newNodeId;
+          newNodes[newNodeId] = update(node, { id: { $set: newNodeId } });
+          newNodeId++;
+        }
+
+        const newEdges = tree.edges.map(edge => ({
+          source: idMap[edge.source],
+          target: idMap[edge.target],
+        }));
+
+        const newComments = tree.comments.map(comment =>
+          update(comment, { nodeId: { $set: idMap[comment.nodeId] } }),
+        );
+
+        const newBranchPoints = tree.branchPoints.map(bp =>
+          update(bp, { nodeId: { $set: idMap[bp.nodeId] } }),
+        );
+
+        newTrees[newTreeId] = update(tree, {
+          treeId: { $set: newTreeId },
+          nodes: { $set: newNodes },
+          edges: { $set: newEdges },
+          comments: { $set: newComments },
+          branchPoints: { $set: newBranchPoints },
+        });
+        newTreeId++;
+      }
+      return Maybe.Just(newTrees);
+    }
+    return Maybe.Nothing();
+  });
+}
+
 export function deleteTree(
   state: OxalisState,
   tree: TreeType,

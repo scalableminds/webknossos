@@ -6,6 +6,7 @@ import messages from "messages";
 import Saxophone from "@scalableminds/saxophone";
 import Store from "oxalis/store";
 import Date from "libs/date";
+import { getNodeToEdgesMap } from "oxalis/model/accessors/skeletontracing_accessor";
 import type {
   OxalisState,
   SkeletonTracingType,
@@ -16,6 +17,16 @@ import type {
   TemporaryMutableTreeType,
   TemporaryMutableTreeMapType,
 } from "oxalis/store";
+
+// NML Defaults
+const DEFAULT_TIME = 0;
+const DEFAULT_COLOR = [1, 0, 0];
+const DEFAULT_VIEWPORT = 0;
+const DEFAULT_RESOLUTION = 0;
+const DEFAULT_BITDEPTH = 0;
+const DEFAULT_INTERPOLATION = false;
+const DEFAULT_TIMESTAMP = 0;
+const DEFAULT_ROTATION = [0, 0, 0];
 
 // SERIALIZE NML
 
@@ -204,29 +215,70 @@ function serializeComments(trees: Array<TreeType>): Array<string> {
 
 // PARSE NML
 
-function _parseInt(obj: Object, key: string): number {
+function _parseInt(obj: Object, key: string, defaultValue?: number): number {
   if (obj[key] == null) {
-    throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    if (defaultValue == null) {
+      throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
   }
   return Number.parseInt(obj[key], 10);
 }
 
-function _parseFloat(obj: Object, key: string): number {
+function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
   if (obj[key] == null) {
-    throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    if (defaultValue == null) {
+      throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
   }
   return Number.parseFloat(obj[key]);
 }
 
-function _parseBool(obj: Object, key: string): boolean {
+function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
   if (obj[key] == null) {
-    throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    if (defaultValue == null) {
+      throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+    } else {
+      return defaultValue;
+    }
   }
   return obj[key] === "true";
 }
 
-export function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
+function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
   return _.values(trees).find(tree => tree.nodes[nodeId] != null);
+}
+
+function isTreeConnected(tree: TreeType): boolean {
+  const nodeToEdgesMap = getNodeToEdgesMap(tree);
+  const visitedNodes = {};
+
+  const nodeIds = Object.keys(tree.nodes);
+  if (nodeIds.length > 0) {
+    const nodeQueue = [Number(nodeIds[0])];
+    // Breadth-First search that marks all reachable nodes as visited
+    while (nodeQueue.length !== 0) {
+      const nodeId = nodeQueue.shift();
+      visitedNodes[nodeId] = true;
+      const edges = nodeToEdgesMap[nodeId];
+      // If there are no edges for a node, the tree is not connected
+      if (edges == null) break;
+
+      for (const edge of edges) {
+        if (nodeId === edge.target && !visitedNodes[edge.source]) {
+          nodeQueue.push(edge.source);
+        } else if (!visitedNodes[edge.target]) {
+          nodeQueue.push(edge.target);
+        }
+      }
+    }
+  }
+
+  // If the size of the visitedNodes map is the same as the number of nodes, the tree is connected
+  return _.size(visitedNodes) === _.size(tree.nodes);
 }
 
 export function parseNml(nmlString: string): Promise<TreeMapType> {
@@ -249,9 +301,9 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
             currentTree = {
               treeId: _parseInt(attr, "id"),
               color: [
-                _parseFloat(attr, "color.r"),
-                _parseFloat(attr, "color.g"),
-                _parseFloat(attr, "color.b"),
+                _parseFloat(attr, "color.r", DEFAULT_COLOR[0]),
+                _parseFloat(attr, "color.g", DEFAULT_COLOR[1]),
+                _parseFloat(attr, "color.b", DEFAULT_COLOR[2]),
               ],
               name: attr.name,
               comments: [],
@@ -259,8 +311,9 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               branchPoints: [],
               timestamp: Date.now(),
               edges: [],
-              isVisible: true,
+              isVisible: _parseFloat(attr, "color.a") !== 0,
             };
+            if (trees[currentTree.treeId] != null) throw Error(messages["nml.duplicate_tree_id"]);
             trees[currentTree.treeId] = currentTree;
             break;
           }
@@ -270,17 +323,19 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               id: _parseInt(attr, "id"),
               position: [_parseFloat(attr, "x"), _parseFloat(attr, "y"), _parseFloat(attr, "z")],
               rotation: [
-                _parseFloat(attr, "rotX"),
-                _parseFloat(attr, "rotY"),
-                _parseFloat(attr, "rotZ"),
+                _parseFloat(attr, "rotX", DEFAULT_ROTATION[0]),
+                _parseFloat(attr, "rotY", DEFAULT_ROTATION[1]),
+                _parseFloat(attr, "rotZ", DEFAULT_ROTATION[2]),
               ],
-              interpolation: _parseBool(attr, "interpolation"),
-              bitDepth: _parseInt(attr, "bitDepth"),
-              viewport: _parseInt(attr, "inVp"),
-              resolution: _parseInt(attr, "inMag"),
+              interpolation: _parseBool(attr, "interpolation", DEFAULT_INTERPOLATION),
+              bitDepth: _parseInt(attr, "bitDepth", DEFAULT_BITDEPTH),
+              viewport: _parseInt(attr, "inVp", DEFAULT_VIEWPORT),
+              resolution: _parseInt(attr, "inMag", DEFAULT_RESOLUTION),
               radius: _parseFloat(attr, "radius"),
-              timestamp: _parseInt(attr, "time"),
+              timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
             };
+            const possibleTree = findTreeByNodeId(trees, currentNode.id);
+            if (possibleTree != null) throw Error(messages["nml.duplicate_node_id"]);
             currentTree.nodes[currentNode.id] = currentNode;
             break;
           }
@@ -290,6 +345,13 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               source: _parseInt(attr, "source"),
               target: _parseInt(attr, "target"),
             };
+            if (
+              currentTree.nodes[currentEdge.source] == null ||
+              currentTree.nodes[currentEdge.target] == null
+            )
+              throw Error(messages["nml.edge_with_invalid_node"]);
+            if (currentEdge.source === currentEdge.target)
+              throw Error(messages["nml.edge_with_same_source_target"]);
             currentTree.edges.push(currentEdge);
             break;
           }
@@ -306,7 +368,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
           case "branchpoint": {
             const currentBranchpoint = {
               nodeId: _parseInt(attr, "id"),
-              timestamp: _parseInt(attr, "time"),
+              timestamp: _parseInt(attr, "time", DEFAULT_TIME),
             };
             const tree = findTreeByNodeId(trees, currentBranchpoint.nodeId);
             if (tree == null) throw Error(messages["nml.branchpoint_without_tree"]);
@@ -318,7 +380,8 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
         }
       })
       .on("tagclose", node => {
-        if (node.name === "thing") {
+        if (node.name === "thing" && currentTree != null) {
+          if (!isTreeConnected(currentTree)) throw Error(messages["nml.tree_not_connected"]);
           currentTree = null;
         }
       })

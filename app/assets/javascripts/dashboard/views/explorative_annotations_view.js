@@ -441,6 +441,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               onSuccess={this.handleNMLUpload}
               onUploading={() => this.setState({ isUploadingNML: true })}
               onError={() => this.setState({ isUploadingNML: false })}
+              value=""
             >
               <Button icon="upload" loading={this.state.isUploadingNML}>
                 Upload Annotation

@@ -60,6 +60,7 @@ class FileUpload extends React.PureComponent<Props> {
           }}
           style={{ display: "none" }}
           onChange={this.upload}
+          value=""
         />
         {this.props.children}
       </span>

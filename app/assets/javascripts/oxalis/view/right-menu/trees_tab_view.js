@@ -15,7 +15,7 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
-  addTreeAction,
+  addTreesAction,
   deleteTreeWithConfirmAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
@@ -28,6 +28,7 @@ import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_h
 import Utils from "libs/utils";
 import FileUpload from "components/file_upload";
 import { saveAs } from "file-saver";
+import Toast from "libs/toast";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
@@ -97,10 +98,15 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   handleNMLUpload = async (nmlString: string) => {
-    const trees = await parseNml(nmlString);
-    for (const treeId of Object.keys(trees)) {
-      Store.dispatch(addTreeAction(trees[+treeId]));
+    let trees;
+    try {
+      trees = await parseNml(nmlString);
+    } catch (e) {
+      Toast.error(e.message);
+      this.setState({ isUploading: false });
+      return;
     }
+    Store.dispatch(addTreesAction(trees));
     this.setState({ isUploading: false });
   };
 

@@ -20,7 +20,7 @@ import {
   deleteComment,
   mergeTrees,
   toggleAllTreesReducer,
-  getMaximumTreeId,
+  addTrees,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
@@ -301,25 +301,17 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .getOrElse(state);
         }
 
-        case "ADD_TREE": {
-          const { tree } = action;
-          if (skeletonTracing.trees[tree.treeId] != null) {
-            // Set new tree id to avoid overwriting the existing tree
-            const maxTreeId = getMaximumTreeId(skeletonTracing.trees);
-            const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
-            const updatedTree = update(tree, { treeId: { $set: newTreeId } });
-            return update(state, {
-              tracing: {
-                trees: { [newTreeId]: { $set: updatedTree } },
-              },
-            });
-          } else {
-            return update(state, {
-              tracing: {
-                trees: { [tree.treeId]: { $set: tree } },
-              },
-            });
-          }
+        case "ADD_TREES": {
+          const { trees } = action;
+          return addTrees(state, trees)
+            .map(updatedTrees =>
+              update(state, {
+                tracing: {
+                  trees: { $merge: updatedTrees },
+                },
+              }),
+            )
+            .getOrElse(state);
         }
 
         case "DELETE_TREE": {

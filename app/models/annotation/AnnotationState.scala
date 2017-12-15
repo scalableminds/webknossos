@@ -11,7 +11,7 @@ object AnnotationState extends Enumeration {
    */
   val Unassigned = Value("Unassigned")
   val Assigned = Value("Aassigned")
-  val InProgress = Value("Progress")
+  val InProgress = Value("InProgress")
   val Finished = Value("Finished")
 
   val assignedStates = List (Assigned, InProgress, Finished)

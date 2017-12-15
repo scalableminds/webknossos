@@ -270,9 +270,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   renderTable() {
     return (
       <Table
-        dataSource={this.getCurrentTasks().filter(
-          task => task.annotation.state === getFinishVerb,
-        )}
+        dataSource={this.getCurrentTasks().filter(task => task.annotation.state === getFinishVerb)}
         rowKey="id"
         pagination={{
           defaultPageSize: 50,

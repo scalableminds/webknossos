@@ -6,7 +6,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Button, Dropdown, Input, Menu, Icon, Spin } from "antd";
+import { Button, Dropdown, Input, Menu, Icon, Spin, Modal } from "antd";
 import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -25,6 +25,7 @@ import {
 import Store from "oxalis/store";
 import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_helpers";
 import Utils from "libs/utils";
+import { saveAs } from "file-saver";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
@@ -45,12 +46,12 @@ type Props = {
 };
 
 type State = {
-  isExporting: boolean,
+  isDownloading: boolean,
 };
 
 class TreesTabView extends React.PureComponent<Props, State> {
   state = {
-    isExporting: false,
+    isDownloading: false,
   };
 
   handleChangeTreeName = evt => {
@@ -79,25 +80,16 @@ class TreesTabView extends React.PureComponent<Props, State> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
-  exportAsNml = async () => {
-    this.setState({ isExporting: true });
-    // Allow the spinner to render
-    await Utils.sleep(1);
+  downloadAsNml = async () => {
+    await this.setState({ isDownloading: true });
+    // Wait for the Modal to render
+    await Utils.sleep(1000);
     const state = Store.getState();
     const nml = serializeToNml(state, this.props.skeletonTracing);
-    const anchor = document.createElement("a");
-    const objectUrl = URL.createObjectURL(new Blob([nml]));
-    anchor.setAttribute("href", objectUrl);
-    anchor.setAttribute("download", getNmlName(state));
-    this.setState({ isExporting: false });
+    this.setState({ isDownloading: false });
 
-    if (document.createEvent) {
-      const event = document.createEvent("MouseEvents");
-      event.initEvent("click", true, true);
-      anchor.dispatchEvent(event);
-    } else {
-      anchor.click();
-    }
+    const blob = new Blob([nml], { type: "text/plain;charset=utf-8" });
+    saveAs(blob, getNmlName(state));
   };
 
   getTreesComponents() {
@@ -143,10 +135,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
             <i className="fa fa-random" /> Shuffle All Colors
           </div>
         </Menu.Item>
-        <Menu.Item key="exportAsNml">
-          <div onClick={this.exportAsNml} title="Export visible trees as nml">
-            <Icon type="export" /> Export as Nml
-            <Spin size="small" spinning={this.state.isExporting} />
+        <Menu.Item key="downloadAsNml">
+          <div onClick={this.downloadAsNml} title="Download visible trees as nml">
+            <Icon type="export" /> Download as Nml
           </div>
         </Menu.Item>
       </Menu>
@@ -160,6 +151,16 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
     return (
       <div id="tree-list" className="flex-column">
+        <Modal
+          visible={this.state.isDownloading}
+          title="Preparing NML"
+          closable={false}
+          footer={null}
+          width={200}
+          style={{ textAlign: "center" }}
+        >
+          <Spin />
+        </Modal>
         <ButtonGroup>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create

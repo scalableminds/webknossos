@@ -11,6 +11,7 @@ import type {
 } from "oxalis/store";
 
 function indent(array: Array<string>): Array<string> {
+  // Use forEach instead of map for performance reasons
   array.forEach((line, index) => {
     array[index] = `  ${line}`;
   });
@@ -38,8 +39,8 @@ export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType)
   // Only visible trees will be serialized!
   // _.filter throws flow errors here, because the type definitions are wrong and I'm not able to fix them
   const visibleTrees = Object.keys(tracing.trees)
-    .filter(treeId => tracing.trees[+treeId].isVisible)
-    .map(treeId => tracing.trees[+treeId]);
+    .filter(treeId => tracing.trees[Number(treeId)].isVisible)
+    .map(treeId => tracing.trees[Number(treeId)]);
   return [
     "<things>",
     ...indent(
@@ -55,7 +56,7 @@ export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType)
 }
 
 function serializeParameters(state: OxalisState): Array<string> {
-  const editPosition = getPosition(state.flycam);
+  const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
   const userBB = state.tracing.userBoundingBox;
   return [
@@ -132,13 +133,14 @@ function serializeTrees(trees: Array<TreeType>): Array<string> {
 
 function serializeNodes(nodes: NodeMapType): Array<string> {
   return Object.keys(nodes).map(nodeId => {
-    const node = nodes[+nodeId];
+    const node = nodes[Number(nodeId)];
+    const position = node.position.map(Math.round);
     return serializeTag("node", {
       id: node.id,
       radius: node.radius,
-      x: node.position[0],
-      y: node.position[1],
-      z: node.position[2],
+      x: position[0],
+      y: position[1],
+      z: position[2],
       rotX: node.rotation[0],
       rotY: node.rotation[1],
       rotZ: node.rotation[2],

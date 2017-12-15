@@ -74,8 +74,8 @@ GET           /api/teams                                                        
 GET           /api/allTeams                                                     controllers.TeamController.listAllTeams
 POST          /api/teams                                                        controllers.TeamController.create
 DELETE        /api/teams/:id                                                    controllers.TeamController.delete(id: String)
-GET           /api/teams/:id/openTasksOverview                                  controllers.AnalysisController.openTasksOverview(id: String)
-GET           /api/teams/:id/progressOverview                                   controllers.AnalysisController.projectProgressOverview(id: String)
+GET           /api/teams/:id/openTasksOverview                                  controllers.ReportController.openTasksOverview(id: String)
+GET           /api/teams/:id/progressOverview                                   controllers.ReportController.projectProgressOverview(id: String)
 
 # DataSets
 GET           /datasets                                                         controllers.Authentication.empty

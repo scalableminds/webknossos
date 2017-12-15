@@ -27,7 +27,7 @@ case class ProjectProgressEntry(projectName: String, totalTasks: Int, totalInsta
                                 finishedInstances: Int, inProgressInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
-class AnalysisController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
+class ReportController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {

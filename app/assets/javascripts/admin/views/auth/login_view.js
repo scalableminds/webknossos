@@ -30,8 +30,6 @@ class LoginView extends React.PureComponent<Props> {
           Store.dispatch(setActiveUserAction(user));
           this.props.history.push("/dashboard");
         } else {
-          const user = await getActiveUser();
-          Store.dispatch(setActiveUserAction(user));
           window.location.replace(Utils.getUrlParamValue("redirectPage"));
         }
       }

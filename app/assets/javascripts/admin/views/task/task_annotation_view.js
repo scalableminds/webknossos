@@ -81,7 +81,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
         <Item key={`${annotation.id}-view`}>
           <a href={`/annotations/Task/${annotation.id}`}>
             <i className="fa fa-random" />
-            {annotation.state.isFinished ? "View" : "Trace"}
+            {annotation.state === "Finished" ? "View" : "Trace"}
           </a>
         </Item>
 
@@ -113,7 +113,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             Cancel
           </span>
         </Item>
-        {annotation.state.isFinished ? (
+        {annotation.state === "Finished" ? (
           <Item key={`${annotation.id}-reopen`}>
             <span onClick={() => this.reOpenAnnotation(annotation)}>
               <i className="fa fa-share" />
@@ -150,7 +150,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   <td>
                     <span>
                       <i className="fa fa-check-circle-o" />
-                      {`${annotation.state.isFinished ? "Finished" : "In Progress"}`}
+                      {`${annotation.state === "Finished" ? "Finished" : "In Progress"}`}
                     </span>
                     <br />
                     <span>

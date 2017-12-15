@@ -76,7 +76,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     this.fetchData();
   }
 
-  getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
+  getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished"); // shouldn't it be the other way around?
 
   confirmFinish(task: APITaskWithAnnotationType) {
     Modal.confirm({
@@ -135,7 +135,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     const label = this.props.isAdminView ? "View" : "Trace";
 
-    return task.annotation.state.isFinished ? (
+    return task.annotation.state === "Finished" ? (
       <div>
         <i className="fa fa-check" />
         <span> Finished</span>
@@ -271,7 +271,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return (
       <Table
         dataSource={this.getCurrentTasks().filter(
-          task => task.annotation.state.isFinished === this.state.showFinishedTasks,
+          task => task.annotation.state === getFinishVerb,
         )}
         rowKey="id"
         pagination={{

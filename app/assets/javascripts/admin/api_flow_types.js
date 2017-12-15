@@ -173,11 +173,7 @@ export type APIAnnotationType = {
   +name: string,
   +restrictions: APIRestrictionsType,
   +settings: APISettingsType,
-  +state: {
-    +isAssigned: boolean,
-    +isFinished: boolean,
-    +isInProgress: boolean,
-  },
+  +state: string,
   +stats: SkeletonTracingStatsType,
   +tags: Array<string>,
   +task: APITaskType,

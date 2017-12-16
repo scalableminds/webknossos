@@ -290,14 +290,13 @@ function* csvWriter(name, cols) {
       }),
     );
 
-    // Need to delete {"annotation":"KMB_st07x2_smooth_2015-09"}
     await migrateTable(
       "timeSpans",
       ["_id", "_user", "_annotation", "time", "timestamp", "lastUpdate", "numberOfUpdates"],
       async doc => ({
         _id: doc._id.toHexString(),
         _user: doc._user.toHexString(),
-        _annotation: doc.annotation,
+        _annotation: mongodb.ObjectID.isValid(doc.annotation) ? doc.annotation : null,
         time: doc.time,
         timestamp: new Date(doc.timestamp),
         lastUpdate: new Date(doc.lastUpdate),
@@ -331,6 +330,7 @@ function* csvWriter(name, cols) {
         const project = await lookupProject(doc._project);
         if (project == null) {
           console.log(doc);
+          return null;
         }
         return {
           _id: doc._id.toHexString(),
@@ -384,8 +384,8 @@ function* csvWriter(name, cols) {
               loginInfo_providerKey: doc.loginInfo.providerKey,
               passwordInfo_hasher: "scrypt",
               passwordInfo_password: doc.passwordInfo.password,
-              isActive: doc.isActive,
-              isSuperUser: doc._isSuperUser,
+              isActive: !!doc.isActive,
+              isSuperUser: !!doc._isSuperUser,
               created: doc._id.getTimestamp(),
             }
           : null,
@@ -424,9 +424,9 @@ function* csvWriter(name, cols) {
       user_team_roles.next();
       user_experiences.next();
     }
-
-    mongoClient.close();
   } catch (err) {
     console.error(err);
+  } finally {
+    mongoClient.close();
   }
 })();

@@ -80,118 +80,13 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     }
   }
 
-  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
-    validateTrees(parseTrees(treeNodes, branchPoints, comments))
+  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Box[Seq[Tree]] = {
+    val trees = parseTrees(treeNodes, branchPoints, comments)
+    NmlValidator.validateTrees(trees).map(_ => trees)
   }
 
   def extractVolumes(volumeNodes: NodeSeq) = {
     volumeNodes.map(node => Volume((node \ "@location").text))
-  }
-
-  def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
-    for {
-      duplicateCheck <- checkForDuplicateIds(trees)
-      nodesInEdges <- allNodesInEdgesExist(duplicateCheck)
-      nodesBelongToEdges <- nodesAreInEdges(nodesInEdges)
-      treesAreConnected <- checkTreesAreConnected(nodesBelongToEdges)
-    } yield {
-      treesAreConnected
-    }
-  }
-
-  private def checkForDuplicateIds(trees: Seq[Tree]): Box[Seq[Tree]] = {
-    val nodeIds = trees.flatMap(_.nodes).map(_.id)
-    nodeIds.size == nodeIds.distinct.size match {
-      case true => Full(trees)
-      case false => Failure("NML contains nodes with duplicate ids.")
-    }
-  }
-
-  private def allNodesInEdgesExist(trees: Seq[Tree]) = {
-    def treeLoop(trees: Seq[Tree]): Boolean = {
-      if (trees.head.edges.isEmpty)
-        if (trees.tail.isEmpty) true
-        else treeLoop(trees.tail)
-      else {
-        edgeLoop(trees.head, trees.head.edges) match {
-          case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
-          case false => false
-        }
-      }
-    }
-
-    def edgeLoop(tree: Tree, edges: Seq[Edge]): Boolean = {
-      checkEdge(tree, edges.head) match {
-        case true => if (edges.tail.isEmpty) true else edgeLoop(tree, edges.tail)
-        case false => false
-      }
-    }
-
-    def checkEdge(tree: Tree, edge: Edge) = {
-      tree.nodes.map(node => node.id).contains(edge.target) && tree.nodes.map(node => node.id).contains(edge.source)
-    }
-
-    treeLoop(trees) match {
-      case true => Full(trees)
-      case false => Failure("Some Edges contain nodes that don't exist.")
-    }
-  }
-
-  private def nodesAreInEdges(trees: Seq[Tree]) = {
-    def treeLoop(trees: Seq[Tree]): Boolean = {
-      if (trees.head.nodes.size == 1)
-        if (trees.tail.isEmpty) true
-        else treeLoop(trees.tail)
-      else {
-        nodeLoop(trees.head, trees.head.nodes) match {
-          case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
-          case false => false
-        }
-      }
-    }
-
-    def nodeLoop(tree: Tree, nodes: Seq[Node]): Boolean = {
-      checkNode(tree, nodes.head) match {
-        case true => if (nodes.tail.isEmpty) true else nodeLoop(tree, nodes.tail)
-        case false => false
-      }
-    }
-
-    def checkNode(tree: Tree, node: Node) = {
-      tree.edges.map(edge => edge.source).contains(node.id) || tree.edges.map(edge => edge.target).contains(node.id)
-    }
-
-    treeLoop(trees) match {
-      case true => Full(trees)
-      case false => Failure("Some Nodes don't belong to any edges.")
-    }
-  }
-
-  private def checkTreesAreConnected(trees: Seq[Tree]) = {
-    def treeLoop(trees: Seq[Tree]): Boolean = {
-      treeTraversal(trees.head).size == trees.head.nodes.size match {
-        case true => if (trees.tail.isEmpty) true else treeLoop(trees.tail)
-        case false => false
-      }
-    }
-
-    def treeTraversal(tree: Tree): Set[Int] = {
-      def traverse(visited: Set[Int], remaining: Set[Int]): Set[Int] = {
-        if (remaining.isEmpty) visited
-        else {
-          val foundNodesSource = tree.edges.filter(edge => edge.source == remaining.head).map(edge => edge.target)
-          val foundNodesTarget = tree.edges.filter(edge => edge.target == remaining.head).map(edge => edge.source)
-          traverse(visited + remaining.head, remaining.tail ++ ((foundNodesSource ++ foundNodesTarget).toSet[Int] -- visited))
-        }
-      }
-
-      traverse(Set[Int](), Set[Int](tree.nodes.head.id))
-    }
-
-    treeLoop(trees) match {
-      case true => Full(trees)
-      case false => Failure("Some Trees are not connected.")
-    }
   }
 
   private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {

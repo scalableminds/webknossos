@@ -138,18 +138,13 @@ export function deleteNode(
 
       if (neighborIds.length === 0) {
         return deleteTree(state, activeTree, timestamp);
-      } else {
-        // Use split-algorithmus. If we delete a node which is only connected via one edge,
-        // this algorithm will only produce one tree (which reuses the old one)
-
-        const nodeToEdgesMap = getNodeToEdgesMap(activeTree);
-
-        // Traverse from active node in all directions (i.e., use each edge) and
-        // remember which edges were already visited
-        const deletedEdges = nodeToEdgesMap[node.id];
-        const visitedEdges = {};
-        const getEdgeHash = edge => `${edge.source}-${edge.target}`;
       }
+
+      // Use split-algorithm. If we delete a node which is only connected via one edge,
+      // this algorithm will only produce one tree (which reuses the old one)
+
+      // Traverse from active node in all directions (i.e., use each edge) and
+      // remember which edges were already visited
 
       const newTrees = splitTreeByNodes(
         state,

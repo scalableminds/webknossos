@@ -59,7 +59,7 @@ class ListTreeItemView extends React.PureComponent<ListTreeItemViewProps> {
           onChange={this.handleToggleTree}
           style={{ fontSize: 16 }}
         >
-          {_.size(this.props.tree.nodes)}
+          {this.props.tree.nodes.size()}
         </Checkbox>
 
         <a onClick={this.handleSetActive} className={aClassName}>

@@ -170,7 +170,7 @@ test("diffDiffableMaps should diff large DiffableMaps which are not based on eac
     objects
       .slice(0, 100)
       .map((obj, index) => [index, obj])
-      .filter(([idx, _]) => idx % 2 === 1),
+      .filter(([idx]) => idx % 2 === 1),
     10,
   ).set(110, {});
 

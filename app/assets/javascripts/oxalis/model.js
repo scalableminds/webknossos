@@ -213,7 +213,7 @@ export class OxalisModel {
 
         // To generate a huge amount of dummy trees, use:
         // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
-        // tracing.trees = generateDummyTrees(1, 1000000);
+        // tracing.trees = generateDummyTrees(1, 200000);
         Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }
     }

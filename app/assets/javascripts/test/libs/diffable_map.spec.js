@@ -4,6 +4,10 @@ import test from "ava";
 import _ from "lodash";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 
+function sort(arr) {
+  return arr.sort((a, b) => a - b);
+}
+
 test("DiffableMap should be empty", t => {
   const emptyMap = new DiffableMap();
 
@@ -151,9 +155,38 @@ test("diffDiffableMaps should diff large DiffableMaps which are based on each ot
     onlyB: _.range(100, 105),
   };
 
-  function sort(arr) {
-    return arr.sort((a, b) => a - b);
+  t.deepEqual(sort(diff.changed), expectedDiff.changed);
+  t.deepEqual(sort(diff.onlyA), expectedDiff.onlyA);
+  t.deepEqual(sort(diff.onlyB), expectedDiff.onlyB);
+});
+
+test("diffDiffableMaps should diff large DiffableMaps which are not based on each other (independent)", t => {
+  const objects = [];
+  for (let i = 0; i < 105; i++) {
+    objects.push({});
   }
+  // Load the first, uneven 100 objects into map1 and add a 111th key
+  const map1 = new DiffableMap(
+    objects
+      .slice(0, 100)
+      .map((obj, index) => [index, obj])
+      .filter(([idx, _]) => idx % 2 === 1),
+    10,
+  ).set(110, {});
+
+  // Load the first 105 objects into map2 and overwrite the 52th key
+  const map2 = new DiffableMap(objects.slice(0, 105).map((obj, index) => [index, obj]), 10).set(
+    51,
+    null,
+  );
+
+  const diff = diffDiffableMaps(map1, map2);
+
+  const expectedDiff = {
+    changed: [51],
+    onlyA: [110],
+    onlyB: _.range(0, 105).filter(idx => idx % 2 === 0 || idx > 100),
+  };
 
   t.deepEqual(sort(diff.changed), expectedDiff.changed);
   t.deepEqual(sort(diff.onlyA), expectedDiff.onlyA);

@@ -224,7 +224,7 @@ function shallowCopy<K: number, V>(template: DiffableMap<K, V>): DiffableMap<K, 
   return newMap;
 }
 
-// Given two Diffablechunks, this function returns an object holding:
+// Given two DiffableMaps, this function returns an object holding:
 // changed: An array of keys, which both Maps hold, but **which do not have the same value**
 // onlyA: An array of keys, which only exists in mapA
 // onlyB: An array of keys, which only exists in mapB
@@ -237,17 +237,11 @@ export function diffDiffableMaps<K: number, V>(
 ): { changed: Array<K>, onlyA: Array<K>, onlyB: Array<K> } {
   // For the edge case that one of the maps is empty, we will consider them dependent, anyway
   const areDiffsDependent = mapA.id === mapB.id || mapA.size() === 0 || mapB.size() === 0;
-  if (!areDiffsDependent) {
-    console.warn("Two independent DiffableMaps are diffed. This should normally not happen");
-  }
   let idx = 0;
 
   const changed = [];
   const onlyA = [];
   const onlyB = [];
-
-  // TODO: this approach will break if the maps entries of the two DiffableMaps are not
-  // in "sync". E.g., if one map array is shifted, it will break.
 
   while (mapA.chunks[idx] != null || mapB.chunks[idx] != null) {
     if (mapB.chunks[idx] == null) {

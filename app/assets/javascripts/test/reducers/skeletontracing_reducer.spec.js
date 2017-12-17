@@ -341,12 +341,12 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
           [0]: {
             treeId: 0,
             name: "TestTree-0",
-            nodes: {
-              [0]: createDummyNode(0),
-              [1]: createDummyNode(1),
-              [2]: createDummyNode(2),
-              [7]: createDummyNode(7),
-            },
+            nodes: new DiffableMap([
+              [0, createDummyNode(0)],
+              [1, createDummyNode(1)],
+              [2, createDummyNode(2)],
+              [7, createDummyNode(7)],
+            ]),
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
             edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 2, target: 7 }],
@@ -356,11 +356,11 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
           [1]: {
             treeId: 1,
             name: "TestTree-1",
-            nodes: {
-              [4]: createDummyNode(4),
-              [5]: createDummyNode(5),
-              [6]: createDummyNode(6),
-            },
+            nodes: new DiffableMap([
+              [4, createDummyNode(4)],
+              [5, createDummyNode(5)],
+              [6, createDummyNode(6)],
+            ]),
             timestamp: Date.now(),
             branchPoints: [],
             edges: [{ source: 4, target: 5 }, { source: 5, target: 6 }],
@@ -381,17 +381,17 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
   const newTrees = state1.tracing.trees;
 
   t.is(Object.keys(newTrees).length, 3);
-  t.is(newTrees[0].nodes[0].id, 0);
-  t.is(_.size(newTrees[0].nodes), 2);
+  t.is(newTrees[0].nodes.get(0).id, 0);
+  t.is(newTrees[0].nodes.size(), 2);
   t.is(newTrees[0].branchPoints[0].nodeId, 1);
-  t.is(newTrees[1].nodes[4].id, 4);
-  t.is(_.size(newTrees[1].nodes), 3);
+  t.is(newTrees[1].nodes.get(4).id, 4);
+  t.is(newTrees[1].nodes.size(), 3);
 
   t.is(newTrees[2].comments.length, 1);
   t.is(newTrees[2].comments[0].nodeId, 7);
-  t.is(newTrees[2].nodes[2].id, 2);
-  t.is(newTrees[2].nodes[7].id, 7);
-  t.is(_.size(newTrees[2].nodes), 2);
+  t.is(newTrees[2].nodes.get(2).id, 2);
+  t.is(newTrees[2].nodes.get(7).id, 7);
+  t.is(newTrees[2].nodes.size(), 2);
   t.is(newTrees[2].branchPoints[0].nodeId, 7);
 });
 

@@ -140,12 +140,6 @@ export function deleteNode(
         return deleteTree(state, activeTree, timestamp);
       }
 
-      // Use split-algorithm. If we delete a node which is only connected via one edge,
-      // this algorithm will only produce one tree (which reuses the old one)
-
-      // Traverse from active node in all directions (i.e., use each edge) and
-      // remember which edges were already visited
-
       const newTrees = splitTreeByNodes(
         state,
         skeletonTracing,

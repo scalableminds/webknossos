@@ -69,19 +69,6 @@ class DiffableMap<K: number, V> {
       const nonFullMapIdx =
         isTooFull || this.chunks.length === 0 ? -1 : Math.floor(Math.random() * this.chunks.length);
 
-      // todo:
-      // we could save which map chunks were least recently changed and favour
-      // such chunks for adding new keys.
-
-      // let idx = 0;
-      // while (this.chunks[idx] != null) {
-      //  if (this.chunks[idx].size < this.itemsPerBatch) {
-      //    nonFullMapIdx = idx;
-      //    break;
-      //  }
-      //  idx++;
-      // }
-
       // Key didn't exist. Add it.
       const newDiffableMap = shallowCopy(this);
       newDiffableMap.existsCache.set(key, true);
@@ -114,16 +101,7 @@ class DiffableMap<K: number, V> {
       const isTooFull = this.entryCount / this.chunks.length > this.itemsPerBatch;
       const nonFullMapIdx =
         isTooFull || this.chunks.length === 0 ? -1 : Math.floor(Math.random() * this.chunks.length);
-      // let nonFullMapIdx = this.chunks.length === 0 ? -1 : 0;
-      // while (this.chunks[idx] != null) {
-      //  if (
-      //    this.chunks[idx].size < this.itemsPerBatch
-      //  ) {
-      //    nonFullMapIdx = idx;
-      //    break;
-      //  }
-      //  idx++;
-      // }
+
       // Key didn't exist. Add it.
       this.existsCache.set(key, true);
       this.entryCount++;

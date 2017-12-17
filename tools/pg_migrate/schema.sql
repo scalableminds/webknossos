@@ -215,6 +215,16 @@ CREATE TABLE user_experiences(
   PRIMARY KEY (_user, domain)
 );
 
+
+CREATE INDEX ON annotations(_user);
+CREATE INDEX ON annotations(_task);
+CREATE INDEX ON datasets(name);
+CREATE INDEX ON tasks(_project);
+CREATE INDEX ON timespans(_user);
+CREATE INDEX ON timespans(_annotation);
+CREATE INDEX ON users(email);
+
+
 -- ALTER TABLE analytics
 --   ADD FOREIGN KEY(_user) REFERENCES users(_id);
 -- ALTER TABLE annotations
@@ -226,7 +236,7 @@ CREATE TABLE user_experiences(
 --   ADD FOREIGN KEY(_datastore) REFERENCES datastores(name);
 -- ALTER TABLE dataset_layers
 --   ADD FOREIGN KEY(_dataset) REFERENCES datasets(_id) ON DELETE CASCADE;
--- ALTER TABLE datasets_allowedTeams
+-- ALTER TABLE dataset_allowedTeams
 --   ADD FOREIGN KEY(_dataset) REFERENCES datasets(_id) ON DELETE CASCADE,
 --   ADD FOREIGN KEY(_team) REFERENCES teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE projects
@@ -246,9 +256,6 @@ CREATE TABLE user_experiences(
 -- ALTER TABLE timespans
 --   ADD FOREIGN KEY(_user) REFERENCES users(_id) ON DELETE CASCADE,
 --   ADD FOREIGN KEY(_annotation) REFERENCES annotations(_id) ON DELETE SET NULL;
--- ALTER TABLE usedannotations
---   ADD FOREIGN KEY(_user) REFERENCES users(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_annotation) REFERENCES annotations(_id) ON DELETE CASCADE;
 -- ALTER TABLE user_team_roles
 --   ADD FOREIGN KEY(_user) REFERENCES users(_id) ON DELETE CASCADE,
 --   ADD FOREIGN KEY(_team) REFERENCES teams(_id) ON DELETE CASCADE;

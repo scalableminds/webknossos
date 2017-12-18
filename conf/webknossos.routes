@@ -65,9 +65,6 @@ POST          /api/users/loggedTime                                             
 GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int])
 GET           /api/users/:id/annotations/download                               controllers.AnnotationIOController.userDownload(id: String)
 
-# MTurk
-GET           /hits/:id                                                         controllers.MTurkController.startAssignment(id: String, workerId: String, assignmentId: String)
-
 # Team
 GET           /teams                                                            controllers.Authentication.empty
 GET           /api/teams                                                        controllers.TeamController.list

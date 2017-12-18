@@ -12,7 +12,6 @@ import models.user._
 import net.liftweb.common.Full
 import oxalis.cleanup.CleanUpService
 import oxalis.jobs.AvailableTasksJob
-import oxalis.mturk.MTurkNotificationReceiver
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
@@ -49,9 +48,6 @@ object Global extends GlobalSettings with LazyLogging{
     Akka.system(app).actorOf(
       Props(new Mailer(conf)),
       name = "mailActor")
-
-    // We need to delay the start of the notification handle, since the database needs to be available first
-    MTurkNotificationReceiver.startDelayed(app, 2.seconds)
 
     if (conf.getBoolean("workload.active")) {
       Akka.system(app).actorOf(

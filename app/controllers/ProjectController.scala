@@ -8,7 +8,6 @@ import scala.concurrent.Future
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
-import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
 import models.project.{Project, ProjectDAO, ProjectService, WebknossosAssignmentConfig}
 import models.task._
 import net.liftweb.common.{Empty, Full}
@@ -38,12 +37,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         allCounts <- OpenAssignmentDAO.countForProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
-            openAssignments <- project.assignmentConfiguration match {
-              case WebknossosAssignmentConfig =>
-                Fox.successful(allCounts.get(project.name).getOrElse(0))
-              case _: MTurkAssignmentConfig =>
-                MTurkProjectDAO.findByProject(project.name).map(_.numberOfOpenAssignments)
-            }
+            openAssignments <- Fox.successful(allCounts.get(project.name).getOrElse(0))
             r <- Project.projectPublicWritesWithStatus(project, openAssignments, request.identity)
           } yield r
         }

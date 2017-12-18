@@ -9,11 +9,11 @@ import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 
 /**
- * Company: scalableminds
- * User: tmbo
- * Date: 21.01.14
- * Time: 14:06
- */
+  * Company: scalableminds
+  * User: tmbo
+  * Date: 21.01.14
+  * Time: 14:06
+  */
 
 class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
 
@@ -35,7 +35,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
       if (annotation.state.isInProgress)
         executeFinish(annotation)
       else
-          Fox.failure("annotation.notInProgress")
+        Fox.failure("annotation.notInProgress")
     } else {
       Fox.failure("annotation.notPossible")
     }
@@ -58,15 +58,8 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     AnnotationDAO.setTags(annotation._id, tags)
 
   def cancelTask()(implicit ctx: DBAccessContext) = {
-    def insertReplacement(task: Task, project: Project) = {
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          OpenAssignmentService.insertOneFor(task, project)
-        case _ =>
-          // If this is a project with its assignments on MTurk, they will handle the replacement generation
-          Fox.successful(true)
-      }
-    }
+    def insertReplacement(task: Task, project: Project) =
+      OpenAssignmentService.insertOneFor(task, project)
 
     for {
       task <- annotation.task

@@ -1,6 +1,5 @@
 package models.project
 
-import models.mturk.MTurkAssignmentConfig
 import play.api.libs.json.{JsError, JsResult, _}
 
 trait AssignmentConfig {
@@ -34,23 +33,14 @@ object AssignmentConfig{
   implicit object AssignmentConfigurationFormat extends Format[AssignmentConfig] {
 
     override def reads(json: JsValue): JsResult[AssignmentConfig] = (json \ "location").asOpt[String] match {
-      case Some(MTurkAssignmentConfig.id)      =>
-        MTurkAssignmentConfig.mturkAssignmentConfigFormat.reads(json)
       case Some(WebknossosAssignmentConfig.id) =>
         WebknossosAssignmentConfig.webknossosAssignmentConfigFormat.reads(json)
       case _                                   =>
         JsError("project.assignmentConfiguration.invalid")
     }
 
-    override def writes(o: AssignmentConfig): JsValue = {
-      o match {
-        case WebknossosAssignmentConfig =>
-          WebknossosAssignmentConfig.webknossosAssignmentConfigFormat.writes(WebknossosAssignmentConfig) ++
-            Json.obj("location" -> WebknossosAssignmentConfig.id)
-        case mturkConfig: MTurkAssignmentConfig =>
-          MTurkAssignmentConfig.mturkAssignmentConfigFormat.writes(mturkConfig) ++
-            Json.obj("location" -> MTurkAssignmentConfig.id)
-      }
-    }
+    override def writes(o: AssignmentConfig): JsValue =
+      WebknossosAssignmentConfig.webknossosAssignmentConfigFormat.writes(WebknossosAssignmentConfig) ++
+      Json.obj("location" -> WebknossosAssignmentConfig.id)
   }
 }

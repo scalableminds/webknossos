@@ -8,8 +8,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.basics._
-import models.mturk.{MTurkAssignmentConfig, MTurkAssignmentDAO}
-import models.project.{Project, ProjectDAO, WebknossosAssignmentConfig}
+import models.project.{Project, ProjectDAO}
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -22,21 +21,21 @@ import reactivemongo.play.json.BSONFormats._
 class info(message: String) extends scala.annotation.StaticAnnotation
 
 case class Task(
-  @info("Reference to task type") _taskType: BSONObjectID,
-  @info("Assigned name") team: String,
-  @info("Required experience") neededExperience: Experience = Experience.empty,
-  @info("Number of required instances") instances: Int = 1,
-  @info("Bounding Box (redundant to base tracing)") boundingBox: Option[BoundingBox] = None,
-  @info("Start point edit position (redundant to base tracing)") editPosition: Point3D,
-  @info("Start point edit rotation (redundant to base tracing)") editRotation: Vector3D,
-  @info("Current tracing time") tracingTime: Option[Long] = None,
-  @info("Date of creation") created: DateTime = DateTime.now(),
-  @info("Flag indicating deletion") isActive: Boolean = true,
-  @info("Reference to project") _project: String,
-  @info("Script to be executed on task start") _script: Option[String],
-  @info("Optional information on the tasks creation") creationInfo: Option[String] = None,
-  @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
-) extends FoxImplicits {
+                 @info("Reference to task type") _taskType: BSONObjectID,
+                 @info("Assigned name") team: String,
+                 @info("Required experience") neededExperience: Experience = Experience.empty,
+                 @info("Number of required instances") instances: Int = 1,
+                 @info("Bounding Box (redundant to base tracing)") boundingBox: Option[BoundingBox] = None,
+                 @info("Start point edit position (redundant to base tracing)") editPosition: Point3D,
+                 @info("Start point edit rotation (redundant to base tracing)") editRotation: Vector3D,
+                 @info("Current tracing time") tracingTime: Option[Long] = None,
+                 @info("Date of creation") created: DateTime = DateTime.now(),
+                 @info("Flag indicating deletion") isActive: Boolean = true,
+                 @info("Reference to project") _project: String,
+                 @info("Script to be executed on task start") _script: Option[String],
+                 @info("Optional information on the tasks creation") creationInfo: Option[String] = None,
+                 @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
+               ) extends FoxImplicits {
 
   lazy val id = _id.stringify
 
@@ -54,46 +53,20 @@ case class Task(
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
 
-  def remainingInstances(implicit ctx: DBAccessContext) = {
-    def calculateRemaining(project: Project) = {
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          OpenAssignmentDAO.countForTask(_id)
-        case _: MTurkAssignmentConfig   =>
-          MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfOpenAssignments)
-      }
-    }
+  def remainingInstances(implicit ctx: DBAccessContext) =
+    OpenAssignmentDAO.countForTask(_id)
 
-    for {
-      p <- project
-      result <- calculateRemaining(p)
-    } yield result
-  }
-
-  def inProgress(implicit ctx: DBAccessContext) = {
-    def calculateInProgress(project: Project) = {
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          AnnotationService.countUnfinishedAnnotationsFor(this)
-        case _: MTurkAssignmentConfig   =>
-          MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfInProgressAssignments)
-      }
-    }
-
-    for {
-      p <- project
-      result <- calculateInProgress(p)
-    } yield result
-  }
+  def inProgress(implicit ctx: DBAccessContext) =
+    AnnotationService.countUnfinishedAnnotationsFor(this)
 
   def status(implicit ctx: DBAccessContext) = {
     for {
       inProgress <- inProgress.getOrElse(0)
       remaining <- remainingInstances.getOrElse(0)
     } yield CompletionStatus(
-        open = remaining,
-        inProgress = inProgress,
-        completed = instances - (inProgress + remaining))
+      open = remaining,
+      inProgress = inProgress,
+      completed = instances - (inProgress + remaining))
   }
 
   def hasEnoughExperience(user: User) = {
@@ -158,7 +131,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _                =>
+        case _ =>
           DenyEveryone()
       }
     }
@@ -167,7 +140,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
-        case _                =>
+        case _ =>
           DenyEveryone()
       }
     }
@@ -227,17 +200,17 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
   def update(
-    _task: BSONObjectID,
-    _taskType: BSONObjectID,
-    neededExperience: Experience,
-    instances: Int,
-    team: String,
-    _script: Option[String],
-    _project: Option[String],
-    boundingBox: Option[BoundingBox],
-    editPosition: Point3D,
-    editRotation: Vector3D
-  )(implicit ctx: DBAccessContext): Fox[Task] =
+              _task: BSONObjectID,
+              _taskType: BSONObjectID,
+              neededExperience: Experience,
+              instances: Int,
+              team: String,
+              _script: Option[String],
+              _project: Option[String],
+              boundingBox: Option[BoundingBox],
+              editPosition: Point3D,
+              editRotation: Vector3D
+            )(implicit ctx: DBAccessContext): Fox[Task] =
     findAndModify(
       Json.obj("_id" -> _task),
       Json.obj("$set" ->

@@ -4,12 +4,10 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
-import models.mturk.MTurkAssignmentConfig
 import models.project.{Project, WebknossosAssignmentConfig}
 import models.task.TaskDAO._
 import models.user.{User, UserDAO}
 import net.liftweb.common.Full
-import oxalis.mturk.MTurkService
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
@@ -45,7 +43,6 @@ object TaskService
         for {
           _ <- AnnotationDAO.removeAllWithTaskId(_task)
           _ <- OpenAssignmentService.removeByTask(_task)
-          _ <- MTurkService.removeByTask(result)
         } yield true
       case _ =>
         logger.warn("Tried to remove task without permission.")
@@ -89,8 +86,6 @@ object TaskService
       project.assignmentConfiguration match {
         case WebknossosAssignmentConfig =>
           OpenAssignmentService.insertInstancesFor(task, project, task.instances).toFox
-        case _: MTurkAssignmentConfig =>
-          MTurkService.createHITs(project, task)
         case _ =>
           Fox.successful(true)
       }

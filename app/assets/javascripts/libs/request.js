@@ -233,9 +233,6 @@ class Request {
 
   handleError = (error: Response | Error): Promise<void> => {
     if (error instanceof Response) {
-      if (error.status === 401) {
-        throw error;
-      }
       return error.text().then(
         text => {
           try {

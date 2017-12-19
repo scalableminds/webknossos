@@ -124,11 +124,6 @@ class ReactRouter extends React.Component<Props> {
     />
   );
 
-  componentDidCatch(error, info) {
-    // Log error and do something about it
-    console.log("Error in router:", error, info);
-  }
-
   render() {
     const isAuthenticated = this.props.activeUser !== null;
 

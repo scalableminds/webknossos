@@ -51,6 +51,7 @@ function serverNodeToNode(n: ServerNodeType): NodeType {
     resolution: n.resolution,
     radius: n.radius,
     timestamp: n.createdTimestamp,
+    interpolation: n.interpolation,
   };
 }
 
@@ -124,6 +125,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
       const skeletonTracing: SkeletonTracingType = {
         annotationId: action.annotation.id,
+        createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
         activeNodeId,
         cachedMaxNodeId,

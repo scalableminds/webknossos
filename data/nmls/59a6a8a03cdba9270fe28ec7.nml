@@ -1,0 +1,26 @@
+<things>
+  <parameters>
+    <experiment name="e2006_knossos" />
+    <scale x="16.5" y="16.5" z="25.0" />
+    <offset x="0" y="0" z="0" />
+    <time ms="1504094367982" />
+    <editPosition x="4756" y="4861" z="2161" />
+    <editRotation xRot="0.0" yRot="0.0" zRot="0.0" />
+    <zoomLevel zoom="0.43525827158029645" />
+  </parameters>
+  <thing id="1" color.r="0.6784313917160034" color.g="0.1411764770746231" color.b="0.05098039284348488" color.a="1.0" name="explorative_2017-08-21_SCM_Boy_001">
+    <nodes>
+      <node id="1" radius="165.0" x="4736" y="4958" z="2169" rotX="0.0" rotY="270.0" rotZ="0.0" inVp="1" inMag="1" bitDepth="4" interpolation="true" time="1503317061466" />
+      <node id="2" radius="165.0" x="4736" y="4935" z="2165" rotX="0.0" rotY="270.0" rotZ="0.0" inVp="1" inMag="1" bitDepth="4" interpolation="true" time="1503317061700" />
+      <node id="3" radius="165.0" x="4736" y="4934" z="2165" rotX="0.0" rotY="270.0" rotZ="0.0" inVp="1" inMag="1" bitDepth="4" interpolation="true" time="1503317061809" />
+      <node id="4" radius="165.0" x="4736" y="4914" z="2161" rotX="0.0" rotY="270.0" rotZ="0.0" inVp="1" inMag="1" bitDepth="4" interpolation="true" time="1503317061996" />
+    </nodes>
+    <edges>
+      <edge source="1" target="2" />
+      <edge source="2" target="3" />
+      <edge source="3" target="4" />
+    </edges>
+  </thing>
+  <branchpoints />
+  <comments />
+</things>

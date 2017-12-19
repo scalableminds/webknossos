@@ -4,7 +4,7 @@ import React from "react";
 import { Router, Route, Switch, Redirect } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
 import { connect } from "react-redux";
-import { Layout } from "antd";
+import { Layout, Alert } from "antd";
 
 import window from "libs/window";
 import { ControlModeEnum } from "oxalis/constants";
@@ -96,6 +96,20 @@ browserHistory.listen(location => {
     window.ga("send", "pageview", location.pathname);
   }
 });
+
+function PageNotFoundView() {
+  return (
+    <div className="container">
+      <Alert
+        style={{ maxWidth: "500px", margin: "0 auto" }}
+        message="Error 404"
+        description="Page not found."
+        type="error"
+        showIcon
+      />
+    </div>
+  );
+}
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ReactRouterArgumentsType) => {
@@ -319,6 +333,7 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               <Route path="/impressum" component={Imprint} />
+              <Route component={PageNotFoundView} />
             </Switch>
           </Content>
         </Layout>

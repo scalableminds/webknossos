@@ -27,8 +27,8 @@ GET           /api/dataSetConfigurations/:dataSetName                           
 POST          /api/dataSetConfigurations/:dataSetName                           controllers.ConfigurationController.updateDataSet(dataSetName: String)
 
 # Users
-GET           /user/tasks/request                                               controllers.TaskController.request
-GET           /user/tasks/peek                                                  controllers.TaskController.peekNext(limit: Int ?= 10)
+GET           /api/user/tasks/request                                           controllers.TaskController.request
+GET           /api/user/tasks/peek                                              controllers.TaskController.peekNext(limit: Int ?= 10)
 
 GET           /api/users                                                        controllers.UserController.list
 GET           /api/user                                                         controllers.UserController.current

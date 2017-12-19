@@ -6,7 +6,7 @@ package com.scalableminds.util.reactivemongo
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.Failure
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import reactivemongo.api.commands.{GetLastError, WriteResult}
 import reactivemongo.bson.BSONDocument
 import reactivemongo.play.json._
@@ -78,6 +78,21 @@ trait SecuredCollection[T]
         underlying.find(Json.obj("$and" -> Json.arr(
           Json.obj("failAttribute" -> 1),
           Json.obj("failAttribute" -> Json.obj("$ne" -> 1)))))
+    }
+  }
+
+  //Note: does not check access restrictions
+  def sumValues(query: JsObject = Json.obj(), fieldName: String)(implicit ctx: DBAccessContext) = {
+    import underlying.BatchCommands.AggregationFramework.{Group, Match, SumField}
+
+    for {
+      jsObjects <-
+      underlying.aggregate(
+        Match(query),
+        List(Group(Json.obj("_id" -> JsNull))("sum" -> SumField(fieldName)))
+      ).map(_.head[JsObject])
+    } yield {
+      jsObjects.headOption.map(o => (o \ "sum").asOpt[Int]).flatten
     }
   }
 

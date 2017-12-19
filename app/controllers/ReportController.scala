@@ -16,6 +16,7 @@ import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.duration._
 
@@ -32,9 +33,14 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(teamId)(GlobalAccessContext) ?~> "team.notFound"
+      t0 = System.nanoTime()
       users <- UserDAO.findByTeams(List(Some(team.name), team.parent).flatten, false)
       projects <- ProjectDAO.findAllByTeamNames(List(Some(team.name), team.parent).flatten)(GlobalAccessContext)
+      t1 = System.nanoTime()
+      _ = println("collecting team, users, projects: " + (t1 - t0)/1000000 )
       i <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))
+      t2 = System.nanoTime()
+      _ = println("processing them: " + (t2 - t1)/1000000 )
       x: List[ProjectProgressEntry] = i.flatten
     } yield {
       val k = x
@@ -45,20 +51,21 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def progressOfProject(project: Project, users: List[User])(implicit ctx: DBAccessContext): Fox[ProjectProgressEntry] = {
     for {
       _ <- Fox.successful(println(project.name + " ## 1 attempting..."))
-      tasks <- TaskDAO.findAllByProject(project.name)
+      taskIds <- TaskDAO.findAllByProjectReturnOnlyIds(project.name)
       _ <- Fox.successful(println(project.name + " ## 2 got through find tasks"))
-      totalTasks = tasks.length
-      totalInstances = tasks.map(_.instances).sum
-      finishedInstances <- AnnotationDAO.countFinishedByTaskIdsAndType(tasks.map(_._id), AnnotationType.Task)
+      totalTasks = taskIds.length
+      firstTask <- TaskDAO.findOneByProject(project.name)
+      totalInstances <- TaskDAO.sumInstancesByProject(project.name)
+      finishedInstances <- AnnotationDAO.countFinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
       _ <- Fox.successful(println(project.name + " ## 3 got count finished for " + project.name))
-      inProgressInstances <- AnnotationDAO.countUnfinishedByTaskIdsAndType(tasks.map(_._id), AnnotationType.Task)
+      inProgressInstances <- AnnotationDAO.countUnfinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
       _ <- Fox.successful(println(project.name + " ## 4 got through count unfinished"))
       openInstances = totalInstances - finishedInstances - inProgressInstances
       _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
       _ <- Fox.successful(println(project.name + " ## 5 passed NotPaused"))
-      _ <- assertExpDomain(tasks.headOption, inProgressInstances, users)
+      _ <- assertExpDomain(firstTask, inProgressInstances, users)
       _ <- Fox.successful(println(project.name + " ## 6 passed ExpDomain"))
-      _ <- assertAge(tasks, inProgressInstances, openInstances)
+      _ <- assertAge(taskIds, inProgressInstances, openInstances)
       _ <- Fox.successful(println(project.name + " ## 7 passed Age"))
     } yield {
       val e = ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
@@ -74,12 +81,9 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     } else Fox.successful(())
   }
 
-  def assertExpDomain(firstTask: Option[Task], inProgressInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
+  def assertExpDomain(firstTask: Task, inProgressInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
     if (inProgressInstances > 0) Fox.successful(())
-    else firstTask match {
-      case Some(task) => assertMatchesAnyUserOfTeam(task.neededExperience, users)
-      case _ => Fox.failure("assertC")
-    }
+    else assertMatchesAnyUserOfTeam(firstTask.neededExperience, users)
   }
 
   def assertMatchesAnyUserOfTeam(experience: Experience, users: List[User])(implicit ctx: DBAccessContext) = {
@@ -90,16 +94,16 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     }
   }
 
-  def assertAge(tasks: List[Task], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
+  def assertAge(taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
     if (inProgressInstances > 0 || openInstances > 0) Fox.successful(())
     else {
-      assertRecentlyModified(tasks)
+      assertRecentlyModified(taskIds)
     }
   }
 
-  def assertRecentlyModified(tasks: List[Task])(implicit ctx: DBAccessContext) = {
+  def assertRecentlyModified(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     for {
-      count <- AnnotationDAO.countRecentlyModifiedByTaskIdsAndType(tasks.map(_._id), AnnotationType.Task, System.currentTimeMillis - (30 days).toMillis)
+      count <- AnnotationDAO.countRecentlyModifiedByTaskIdsAndType(taskIds, AnnotationType.Task, System.currentTimeMillis - (30 days).toMillis)
       _ <- count > 0
     } yield {
       ()

@@ -200,11 +200,15 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     find("_project", project).collect[List]()
   }
 
+  def sumInstancesByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    sumValues(Json.obj("_project" -> project), "instances")
+  }
+
   def findAllByProjectReturnOnlyIds(project: String)(implicit ctx: DBAccessContext) = {
     for {
       jsObjects <- findWithProjection(Json.obj("_project" -> project), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
     } yield {
-      jsObjects.map(p => (p \ "_project").asOpt[BSONObjectID]).flatten
+      jsObjects.map(p => (p \ "_id").asOpt[BSONObjectID]).flatten
     }
   }
 

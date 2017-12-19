@@ -316,7 +316,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               >
                 {getFieldDecorator("boundingBox")(
                   // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
-                  <Vector6Input disabled={true}/>,
+                  <Vector6Input disabled={true} />,
                 )}
               </FormItem>
 
@@ -388,7 +388,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       rules: [{ required: true }],
                       initialValue: [0, 0, 0],
                       // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
-                    })(<Vector3Input style={fullWidth} disabled={true}/>)}
+                    })(<Vector3Input style={fullWidth} disabled={true} />)}
                   </FormItem>
 
                   <FormItem label="Starting Rotation" hasFeedback>
@@ -396,7 +396,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       rules: [{ required: true }],
                       initialValue: [0, 0, 0],
                       // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
-                    })(<Vector3Input style={fullWidth} disabled={true}/>)}
+                    })(<Vector3Input style={fullWidth} disabled={true} />)}
                   </FormItem>
                 </div>
               )}

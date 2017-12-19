@@ -121,18 +121,6 @@ class Authentication @Inject()(
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
 
-  def empty = UserAwareAction { implicit request =>
-    Ok(views.html.main())
-  }
-
-  def emptyWithWildcard(param: String) = UserAwareAction { implicit request =>
-    Ok(views.html.main())
-  }
-
-  def emptyWithWildcards(param1: String, param2: String) = UserAwareAction { implicit request =>
-    Ok(views.html.main())
-  }
-
   def normalizeName(name: String): Option[String] = {
     val replacementMap = Map("ü" -> "ue", "Ü" -> "Ue", "ö" -> "oe", "Ö" -> "Oe", "ä" -> "ae", "Ä" -> "Ae", "ß" -> "ss",
       "é" -> "e", "è" -> "e", "ê" -> "e", "È" -> "E", "É" -> "E", "Ê" -> "E",
@@ -328,31 +316,38 @@ class Authentication @Inject()(
     env.authenticatorService.discard(request.authenticator, Ok)
   }
 
-  def singleSignOn(sso: String, sig: String) = SecuredAction.async { implicit request =>
+  def singleSignOn(sso: String, sig: String) = UserAwareAction.async { implicit request =>
     if(ssoKey == "")
       logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
 
-    // Check if the request we recieved was signed using our private sso-key
-    if (HmacUtils.hmacSha256Hex(ssoKey, sso) == sig) {
-      val payload = new String(Base64.decodeBase64(sso))
-      val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
-      for {
-        nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
-        returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
-      } yield {
-        val returnPayload =
-          s"nonce=$nonce&" +
-            s"email=${URLEncoder.encode(request.identity.email, "UTF-8")}&" +
-            s"external_id=${URLEncoder.encode(request.identity.id, "UTF-8")}&" +
-            s"username=${URLEncoder.encode(request.identity.abreviatedName, "UTF-8")}&" +
-            s"name=${URLEncoder.encode(request.identity.name, "UTF-8")}"
-        val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
-        val returnSignature = HmacUtils.hmacSha256Hex(ssoKey, encodedReturnPayload)
-        val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
-        Redirect(returnUrl + "?" + query)
+    if(request.identity.isDefined) {
+      // logged in
+      val user = request.identity.get
+      // Check if the request we recieved was signed using our private sso-key
+      if (HmacUtils.hmacSha256Hex(ssoKey, sso) == sig) {
+        val payload = new String(Base64.decodeBase64(sso))
+        val values = play.core.parsers.FormUrlEncodedParser.parse(payload)
+        for {
+          nonce <- values.get("nonce").flatMap(_.headOption) ?~> "Nonce is missing"
+          returnUrl <- values.get("return_sso_url").flatMap(_.headOption) ?~> "Return url is missing"
+        } yield {
+          val returnPayload =
+            s"nonce=$nonce&" +
+              s"email=${URLEncoder.encode(user.email, "UTF-8")}&" +
+              s"external_id=${URLEncoder.encode(user.id, "UTF-8")}&" +
+              s"username=${URLEncoder.encode(user.abreviatedName, "UTF-8")}&" +
+              s"name=${URLEncoder.encode(user.name, "UTF-8")}"
+          val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
+          val returnSignature = HmacUtils.hmacSha256Hex(ssoKey, encodedReturnPayload)
+          val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
+          Redirect(returnUrl + "?" + query)
+        }
+      } else {
+        Fox.successful(BadRequest("Invalid signature"))
       }
     } else {
-      Fox.successful(BadRequest("Invalid signature"))
+      // not logged in
+      Fox.successful(Redirect("/auth/login?redirectPage=http://discuss.webknossos.org"))
     }
   }
 

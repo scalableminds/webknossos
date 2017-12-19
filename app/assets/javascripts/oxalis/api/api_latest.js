@@ -276,7 +276,7 @@ class TracingApi {
     const { tracingType, annotationId } = state.tracing;
     const task = state.task;
     const finishUrl = `/annotations/${tracingType}/${annotationId}/finish`;
-    const requestTaskUrl = "/user/tasks/request";
+    const requestTaskUrl = "/api/user/tasks/request";
 
     await Model.save();
     await Request.triggerRequest(finishUrl);

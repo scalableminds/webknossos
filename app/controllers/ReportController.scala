@@ -36,48 +36,32 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
       t0 = System.nanoTime()
       users <- UserDAO.findByTeams(List(Some(team.name), team.parent).flatten, false)
       projects <- ProjectDAO.findAllByTeamNames(List(Some(team.name), team.parent).flatten)(GlobalAccessContext)
-      t1 = System.nanoTime()
-      _ = println("collecting team, users, projects: " + (t1 - t0)/1000000 )
-      i <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))
-      t2 = System.nanoTime()
-      _ = println("processing them: " + (t2 - t1)/1000000 )
-      x: List[ProjectProgressEntry] = i.flatten
+      entryBoxes <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))
     } yield {
-      val k = x
-      Ok(Json.toJson(x))
+      Ok(Json.toJson(entryBoxes.flatten))
     }
   }
 
   def progressOfProject(project: Project, users: List[User])(implicit ctx: DBAccessContext): Fox[ProjectProgressEntry] = {
     for {
-      _ <- Fox.successful(println(project.name + " ## 1 attempting..."))
       taskIds <- TaskDAO.findAllByProjectReturnOnlyIds(project.name)
-      _ <- Fox.successful(println(project.name + " ## 2 got through find tasks"))
       totalTasks = taskIds.length
       firstTask <- TaskDAO.findOneByProject(project.name)
       totalInstances <- TaskDAO.sumInstancesByProject(project.name)
       finishedInstances <- AnnotationDAO.countFinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
-      _ <- Fox.successful(println(project.name + " ## 3 got count finished for " + project.name))
       inProgressInstances <- AnnotationDAO.countUnfinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
-      _ <- Fox.successful(println(project.name + " ## 4 got through count unfinished"))
       openInstances = totalInstances - finishedInstances - inProgressInstances
       _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
-      _ <- Fox.successful(println(project.name + " ## 5 passed NotPaused"))
       _ <- assertExpDomain(firstTask, inProgressInstances, users)
-      _ <- Fox.successful(println(project.name + " ## 6 passed ExpDomain"))
       _ <- assertAge(taskIds, inProgressInstances, openInstances)
-      _ <- Fox.successful(println(project.name + " ## 7 passed Age"))
     } yield {
-      val e = ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
-      println(project.name + " ## 8 got a project progress entry")
-      println(Json.toJson(e))
-      e
+      ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
     }
   }
 
   def assertNotPaused(project: Project, finishedInstances: Int, inProgressInstances: Int) = {
     if (project.paused && finishedInstances == 0 && inProgressInstances == 0) {
-      Fox.failure("assertB")
+      Fox.failure("")
     } else Fox.successful(())
   }
 

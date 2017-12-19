@@ -232,7 +232,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   async getNewTask() {
     this.setState({ isLoading: true });
     try {
-      const newTaskAnnotation = await Request.receiveJSON("/user/tasks/request");
+      const newTaskAnnotation = await Request.receiveJSON("/api/user/tasks/request");
 
       this.setState({
         unfinishedTasks: this.state.unfinishedTasks.concat([

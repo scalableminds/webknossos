@@ -79,6 +79,11 @@ object NmlWriter {
     Xml.withinElementSync("zoomLevel") {
       writer.writeAttribute("zoom", tracing.zoomLevel.toString)
     }
+    tracing.activeNodeId.map { nodeId =>
+      Xml.withinElementSync("activeNode") {
+        writer.writeAttribute("id", nodeId.toString)
+      }
+    }
     tracing.userBoundingBox.map { b =>
       Xml.withinElementSync("userBoundingBox") {
         writer.writeAttribute("topLeftX", b.topLeft.x.toString)

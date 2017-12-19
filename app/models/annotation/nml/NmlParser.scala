@@ -9,7 +9,7 @@ import com.scalableminds.braingames.binary.models.datasource.ElementClass
 import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings.ProtoGeometryImplicits
-import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
 import com.scalableminds.braingames.datastore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
@@ -82,7 +82,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Box[Seq[Tree]] = {
     val trees = parseTrees(treeNodes, branchPoints, comments)
-    NmlValidator.validateTrees(trees).map(_ => trees)
+    TreeValidator.validateTrees(trees).map(_ => trees)
   }
 
   def extractVolumes(volumeNodes: NodeSeq) = {

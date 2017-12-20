@@ -167,8 +167,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
             onSuccess={this.handleNMLUpload}
             onUploading={() => this.setState({ isUploading: true })}
             onError={() => this.setState({ isUploading: false })}
+            value=""
           >
-            <Icon type="upload" /> Import Nml
+            <Icon type="upload" /> Import NML
           </FileUpload>
         </Menu.Item>
       </Menu>

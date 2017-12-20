@@ -21,7 +21,7 @@ object AnnotationType {
 
   // System types
   val TracingBase = "Tracing Base"
-  val Orphan = "Orphan"  // Annotations, where the task got deleted
+  val Orphan = "Orphan"  // Annotations, where the task was deleted
 
   val SystemTracings = List(
     TracingBase,

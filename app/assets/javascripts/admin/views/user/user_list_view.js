@@ -230,13 +230,6 @@ class UserListView extends React.PureComponent<{}, State> {
                     <Icon type="user" />Show Tracings
                   </Link>
                   <br />
-                  <a
-                    href={`/api/users/${user.id}/annotations/download`}
-                    title="download all finished tracings"
-                  >
-                    <Icon type="download" />Download
-                  </a>
-                  <br />
                   {user.isActive ? (
                     <a href="#" onClick={() => this.deactivateUser(user)}>
                       <Icon type="user-delete" />Deactivate User

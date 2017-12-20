@@ -72,6 +72,8 @@
     "test-e2e": "node prepareTestDB.js && buildtools/test.sh test-e2e --timeout=60s --verbose",
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-snapshots": "rm -r app/assets/javascripts/test/snapshots/public",
+    "create-snapshots":
+      "rm -r app/assets/javascripts/test/snapshots/public && docker-compose up e2e-tests",
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",

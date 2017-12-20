@@ -295,14 +295,14 @@ class TracingApi {
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
-        location.pathname = newTaskUrl;
+        location.href = newTaskUrl;
       } else {
         await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
       await Utils.sleep(2000);
-      location.pathname = "/dashboard";
+      location.href = "/dashboard";
     }
   }
 

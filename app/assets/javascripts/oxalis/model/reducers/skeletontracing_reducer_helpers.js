@@ -410,12 +410,13 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapT
 
     if (allowUpdate) {
       const newTrees = {};
+      // Assign new ids for all nodes and trees to avoid duplicates
       let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
+      let newNodeId = getMaximumNodeId(skeletonTracing.trees) + 1;
       for (const treeId of Object.keys(trees)) {
         const tree = trees[Number(treeId)];
 
-        // Assign new ids for all nodes to avoid duplicates
-        let newNodeId = getMaximumNodeId(skeletonTracing.trees) + 1;
+        // Create a map from old node ids to new node ids
         const idMap = {};
         const newNodes = {};
         for (const nodeId of Object.keys(tree.nodes)) {

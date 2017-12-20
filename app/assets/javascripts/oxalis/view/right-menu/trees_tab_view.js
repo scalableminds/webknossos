@@ -85,7 +85,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
-  downloadAsNml = async () => {
+  handleNMLDownload = async () => {
     await this.setState({ isDownloading: true });
     // Wait for the Modal to render
     await Utils.sleep(1000);
@@ -153,8 +153,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
             <i className="fa fa-random" /> Shuffle All Colors
           </div>
         </Menu.Item>
-        <Menu.Item key="downloadAsNml">
-          <div onClick={this.downloadAsNml} title="Download visible trees as NML">
+        <Menu.Item key="handleNMLDownload">
+          <div onClick={this.handleNMLDownload} title="Download visible trees as NML">
             <Icon type="export" /> Download as NML
           </div>
         </Menu.Item>

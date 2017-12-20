@@ -99,6 +99,9 @@ class Navbar extends React.PureComponent<Props> {
           <Menu.Item key="/statistics">
             <Link to="/statistics">Statistics</Link>
           </Menu.Item>
+          <Menu.Item key="/reports/timetracking">
+            <Link to="/reports/timetracking">Time Tracking</Link>
+          </Menu.Item>
           <Menu.Item key="/reports/projectProgress">
             <Link to="/reports/projectProgress">Project Progress</Link>
           </Menu.Item>

@@ -82,7 +82,7 @@ trait SecuredCollection[T]
   }
 
   //Note: does not check access restrictions
-  def sumValues(query: JsObject = Json.obj(), fieldName: String)(implicit ctx: DBAccessContext) = {
+  def sumValues(query: JsObject = Json.obj(), fieldName: String)(implicit ctx: DBAccessContext): Future[Option[Int]] = {
     import underlying.BatchCommands.AggregationFramework.{Group, Match, SumField}
 
     for {

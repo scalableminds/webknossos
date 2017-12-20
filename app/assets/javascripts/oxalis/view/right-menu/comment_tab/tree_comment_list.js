@@ -8,8 +8,9 @@ import { connect } from "react-redux";
 import classNames from "classnames";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
 import Utils from "libs/utils";
-import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
+import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
 
 type OwnProps = {
   tree: TreeType,
@@ -25,9 +26,25 @@ type State = {
 };
 
 class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
+  treeDomElement: ?HTMLLIElement;
+  activeNodeHasComment: boolean;
   state = {
     collapsed: false,
   };
+
+  componentDidUpdate() {
+    this.ensureVisible();
+  }
+
+  ensureVisible() {
+    // Only scroll to this tree if this is the active tree and there is no active comment to scroll to
+    if (
+      this.props.tree.treeId === this.props.skeletonTracing.activeTreeId &&
+      !this.activeNodeHasComment
+    ) {
+      scrollIntoViewIfNeeded(this.treeDomElement, { centerIfNeeded: true });
+    }
+  }
 
   handleToggleComment = () => {
     this.setState({ collapsed: !this.state.collapsed });
@@ -35,20 +52,25 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
 
   render() {
     const containsActiveNode = this.props.tree.treeId === this.props.skeletonTracing.activeTreeId;
+    this.activeNodeHasComment = false;
 
     // don't render the comment nodes if the tree is collapsed
     const commentNodes = !this.state.collapsed
       ? this.props.tree.comments
           .slice(0)
           .sort(Utils.localeCompareBy("content", this.props.isSortedAscending))
-          .map(comment => (
-            <Comment
-              key={comment.nodeId}
-              data={comment}
-              treeId={this.props.tree.treeId}
-              isActive={comment.nodeId === this.props.skeletonTracing.activeNodeId}
-            />
-          ))
+          .map(comment => {
+            const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
+            this.activeNodeHasComment = this.activeNodeHasComment || isActive;
+            return (
+              <Comment
+                key={comment.nodeId}
+                data={comment}
+                treeId={this.props.tree.treeId}
+                isActive={isActive}
+              />
+            );
+          })
       : null;
 
     const liClassName = classNames({ bold: containsActiveNode });
@@ -60,7 +82,12 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
     // one tree and its comments
     return (
       <div>
-        <li className={liClassName}>
+        <li
+          className={liClassName}
+          ref={ref => {
+            this.treeDomElement = ref;
+          }}
+        >
           <a onClick={this.handleToggleComment}>
             <i className={iClassName} />
           </a>

@@ -25,7 +25,7 @@ class Comment extends React.PureComponent<Props> {
   ensureVisible() {
     if (this.props.isActive) {
       // use polyfill as so far only chrome supports this functionality
-      scrollIntoViewIfNeeded(this.comment);
+      scrollIntoViewIfNeeded(this.comment, { centerIfNeeded: true });
     }
   }
 

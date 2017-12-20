@@ -165,6 +165,17 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
     //Note: a cleanup job periodically removes OpenAssignments whose instance count has gone down to zero
   }
 
+  def incrementInstanceCount(id: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[WriteResult] {
+    update(
+      Json.obj("_id" -> id),
+      Json.obj("$inc" -> Json.obj("instances" -> 1))
+    )
+  }
+
+  def findOneByTask(taskId: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[OpenAssignment] {
+    findOne(Json.obj("_task" -> taskId))
+  }
+
   def removeZeroInstanceAssignments()(implicit ctx: DBAccessContext) = Fox[WriteResult] {
     remove(Json.obj("instances" -> 0))
   }

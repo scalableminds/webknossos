@@ -103,7 +103,8 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
       users <- UserDAO.findByTeams(List(team.name), true)(GlobalAccessContext)
-      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(users)(GlobalAccessContext)
+      nonAdminUsers = users.filter(!_.isAdminOf(team.name))
+      entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield {
       Ok(Json.toJson(entries))
     }
@@ -137,7 +138,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     for {
       list <- Fox.combined(foxes.toList)
     } yield {
-      list.toMap
+      list.toMap.filter(_ match { case (title: String, openTaskCount: Int) => openTaskCount > 0 })
     }
   }
 

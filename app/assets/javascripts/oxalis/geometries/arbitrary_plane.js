@@ -33,9 +33,6 @@ class ArbitraryPlane {
   isDirty: boolean;
   queryVertices: ?Float32Array;
   width: number;
-  // TODO: Probably unused? Recheck when flow coverage is higher
-  height: number;
-  x: number;
   textureMaterial: THREE.RawShaderMaterial;
 
   // Copied from backbone events (TODO: handle this better)
@@ -43,7 +40,6 @@ class ArbitraryPlane {
 
   constructor() {
     this.isDirty = true;
-    this.height = 0;
     this.width = constants.VIEWPORT_WIDTH;
     _.extend(this, BackboneEvents);
 
@@ -190,7 +186,6 @@ class ArbitraryPlane {
       this.textureMaterial,
     );
     plane.rotation.x = Math.PI;
-    this.x = 1;
 
     plane.matrixAutoUpdate = false;
     plane.doubleSided = true;

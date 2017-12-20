@@ -67,6 +67,10 @@ class AbstractPlaneMaterialFactory {
         uniforms: this.uniforms,
         vertexShader: this.getVertexShader(),
         fragmentShader: this.getFragmentShader(),
+        // Avoid z-Fighting issues, see https://www.opengl.org/archives/resources/faq/technical/polygonoffset.htm
+        polygonOffset: true,
+        polygonOffsetUnits: 10.0,
+        polygonOffsetFactor: 4.0,
       }),
     );
 

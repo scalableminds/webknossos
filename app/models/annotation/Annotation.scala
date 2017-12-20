@@ -240,7 +240,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def findAllUnfinishedByTaskIds(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     find(Json.obj(
       "_task" -> Json.obj("$in" -> Json.toJson(taskIds)),
-      "state" -> Finished
+      "state" -> Json.obj("$in" -> AnnotationState.notFinished)
     )).cursor[Annotation]().collect[List]()
   }
 

@@ -17,6 +17,7 @@ object AnnotationState extends Enumeration {
   val assignedStates = List (Assigned, InProgress, Finished)
   val assignedButNotFinished = List(Assigned, InProgress)
   val assignedButNotInProgress = List(Assigned, Finished)
+  val notFinished = List(Unassigned, Assigned, InProgress)
 
   implicit val enumReads: Reads[AnnotationStateValue] = EnumUtils.enumReads(AnnotationState)
 

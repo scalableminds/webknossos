@@ -328,7 +328,7 @@ class ReactRouter extends React.Component<Props> {
                 />
                 <SecuredRoute
                   isAuthenticated={isAuthenticated}
-                  path="/timetracking"
+                  path="/reports/timetracking"
                   component={TimeLineView}
                 />
                 <SecuredRoute

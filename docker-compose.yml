@@ -2,12 +2,24 @@ version: '2.1'
 
 services:
   webknossos:
+    build: .
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
     links:
       - mongo
       - fossildb
+    entrypoint: bin/oxalis
+    command:
+      - -Djava.io.tmpdir=disk
+      - -Dlogger.file=conf/application-logger.xml
+      - -Dconfig.file=conf/application_dev.conf
+      - -Dhttp.address=0.0.0.0
+      - -Dhttp.port=9000
+      - -Dmongodb.db=webknossos
+      - -Dmongodb.url=mongo
+      - -Dmongodb.port=27017
+      - -Dmongodb.uri=mongodb://mongo:27017/webknossos
     environment:
       - PORT=9000
       - MODE=dev
@@ -56,31 +68,6 @@ services:
       - MONGO_PORT=27017
       - MONGO_DB=webknossos-dev
     stdin_open: true
-
-  frontend-dependencies:
-    extends:
-      service: base
-    command: yarn install
-
-  frontend-linting:
-    extends:
-      service: base
-    command: yarn run lint && yarn run am-i-pretty
-
-  frontend-flow:
-    extends:
-      service: base
-    command: yarn run flow
-
-  frontend-tests:
-    extends:
-      service: base
-    command: yarn test-verbose
-
-  frontend-docs:
-    extends:
-      service: base
-    command: yarn run docs
 
   e2e-tests:
     extends:

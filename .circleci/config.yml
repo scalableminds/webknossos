@@ -3,7 +3,6 @@ jobs:
   build_test_deploy:
     machine: true
     environment:
-      SBT_VERSION_TAG: sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
       USER_NAME: circleci
       USER_UID: 1001
       USER_GID: 1001
@@ -12,7 +11,7 @@ jobs:
       - checkout
       - run:
           name: Pull sbt docker image
-          command: docker pull scalableminds/sbt:$SBT_VERSION_TAG
+          command: docker-compose pull base
       - run:
           name: Prepare dependency folders
           command: mkdir -p ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
@@ -41,7 +40,7 @@ jobs:
 
       - run:
           name: Build docker image
-          command: docker build --no-cache --pull -t scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} .
+          command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose build --pull webknossos
 
       - run:
           name: Lint frontend code

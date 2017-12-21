@@ -4,6 +4,12 @@ yarn-error.log
 velocity.log
 .worksheet/
 .DS_STORE
+.scala_dependencies
+dist/*
+lib_managed/
+src_managed/
+project/boot/
+project/plugins/project/
 RUNNING_PID
 .cache
 .classpath

@@ -20,7 +20,7 @@ services:
 
 
   base:
-    image: scalableminds/sbt:sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
+    image: scalableminds/sbt:sbt-0.13.15_mongo-3.4.10_node-9.x_jdk-8
     environment:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
@@ -81,7 +81,7 @@ services:
           -Dhttp.port=$${PORT}
           -Dmongodb.uri=$${MONGO_URI}"
     environment:
-      - MONGO_URI=mongodb://mongo-dev:27017/webknossos-testing
+      - MONGO_URI=mongodb://mongo:27017/webknossos-testing
       - PORT=9000
       - MODE=dev
 

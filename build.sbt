@@ -1,10 +1,12 @@
+import play.routes.compiler.InjectedRoutesGenerator
+import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
 name := "webknossos"
 
 version := scala.io.Source.fromFile("version").mkString.trim
 
-scalaVersion := "2.11.7"
+scalaVersion in ThisBuild := "2.11.8"
 
 
 lazy val webknossosSettings = Seq(
@@ -53,17 +55,41 @@ lazy val buildInfoSettings = Seq(
 )
 
 
-lazy val utilSettings = Seq(
-  resolvers ++= DependencyResolvers.dependencyResolvers,
-  libraryDependencies ++= Dependencies.utilDependencies
-)
+val protocolBufferSettings = Seq(
+  ProtocPlugin.autoImport.PB.targets in Compile := Seq(
+    scalapb.gen() -> new java.io.File((sourceManaged in Compile).value + "/proto")
+  ),
+  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("braingames-datastore/proto")))
+
 
 lazy val util = (project in file("util"))
-  .settings(utilSettings)
+  .settings(Seq(
+    resolvers ++= DependencyResolvers.dependencyResolvers,
+    libraryDependencies ++= Dependencies.utilDependencies
+  ))
 
+lazy val braingamesBinary = (project in file("braingames-binary"))
+  .dependsOn(util)
+  .settings(Seq(
+    resolvers ++= DependencyResolvers.dependencyResolvers,
+    libraryDependencies ++= Dependencies.braingamesBinaryDependencies
+  ))
+
+lazy val braingamesDatastore = (project in file("braingames-datastore"))
+  .dependsOn(util, braingamesBinary)
+  .enablePlugins(play.sbt.PlayScala)
+  .enablePlugins(BuildInfoPlugin)
+  .enablePlugins(ProtocPlugin)
+  .settings(buildInfoSettings)
+  .settings(protocolBufferSettings)
+  .settings(Seq(
+    resolvers ++= DependencyResolvers.dependencyResolvers,
+    libraryDependencies ++= Dependencies.braingamesDatastoreDependencies,
+    routesGenerator := InjectedRoutesGenerator
+  ))
 
 lazy val webknossos = (project in file("."))
-  .dependsOn(util)
+  .dependsOn(util, braingamesBinary, braingamesDatastore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings((webknossosSettings ++ AssetCompilation.settings ++ buildInfoSettings):_*)

@@ -11,6 +11,7 @@ object Dependencies {
   val twelvemonkeysVersion = "3.1.2"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
+  val webknossosWrapVersion = "1.1.4"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -27,8 +28,6 @@ object Dependencies {
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
   val reactiveBson = "org.reactivemongo" %% "reactivemongo-bson-macros" % reactiveVersion
   val scalaReflect = "org.scala-lang" % "scala-reflect" % "2.11.2"
-  val braingamesBinary = "com.scalableminds" %% "braingames-binary" % braingamesVersion
-  val braingamesDatastore = "com.scalableminds" %% "braingames-datastore" % braingamesVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val airbrake = "com.scalableminds" %% "play-airbrake" % "0.5.0"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
@@ -39,12 +38,17 @@ object Dependencies {
   val ceedubs = "net.ceedubs" %% "ficus" % "1.1.2"
   val scalaGuice = "net.codingwell" %% "scala-guice" % "4.0.0"
   val webjars = "org.webjars" %% "webjars-play" % "2.4.0"
+  val rocksDB = "org.rocksdb" % "rocksdbjni" % "5.1.2"
   val bootstrap = "com.adrianhurt" %% "play-bootstrap3" % "0.4.4-P24"
   val log4jCore =  "org.apache.logging.log4j" % "log4j-api" % log4jVersion
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
   val liftBox = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
   val liftUtil = "net.liftweb" % "lift-util_2.10" % "3.0-M1"
+  val alphanumericComparator = "se.sawano.java" % "alphanumeric-comparator" % "1.4.1"
   val scalapbJson = "com.scalableminds" %% "scalapb-json4s" % "0.3.2.0-scm"
+  val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
+  val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
+  val websockets = "org.java-websocket" % "Java-WebSocket" % "1.3.0"
 
   // Unfortunately, we need to list all mturk dependencies seperately since mturk is not published on maven but rather
   // added to the project as a JAR. To keep the number of JARs added to this repo as small as possible, everthing that
@@ -119,6 +123,39 @@ object Dependencies {
     scalapbJson
   )
 
+  val braingamesBinaryDependencies = Seq(
+    webknossosWrap,
+    playFramework,
+    log4jCore,
+    log4jApi,
+    commonsIo,
+    commonsEmail,
+    commonsLang,
+    alphanumericComparator,
+    reactiveBson,
+    reactivePlay,
+    akkaAgent,
+    akkaRemote,
+    scalaLogging,
+    liftBox,
+    liftUtil,
+    newrelic,
+    newrelicApi,
+    xmlWriter,
+    rocksDB,
+    scalapbJson) ++ tiff
+
+  val braingamesDatastoreDependencies = Seq(
+    akkaAgent,
+    websockets,
+    ws,
+    cache,
+    liftBox,
+    scalaLogging,
+    scalapbJson,
+    component("play-test")
+  )
+
   val webknossosDependencies = Seq(
     restFb,
     commonsIo,
@@ -134,8 +171,6 @@ object Dependencies {
     reactiveBson,
     reactivePlay,
     scalaReflect,
-    braingamesBinary,
-    braingamesDatastore,
     scalaAsync,
     cache,
     ws,

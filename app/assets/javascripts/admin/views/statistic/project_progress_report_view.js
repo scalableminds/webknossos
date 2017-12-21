@@ -9,7 +9,7 @@ import TeamSelectionForm from "./team_selection_form";
 const { Column } = Table;
 
 type State = {
-  data: APIProjectProgressReportType,
+  data: Array<APIProjectProgressReportType>,
   isLoading: boolean,
 };
 

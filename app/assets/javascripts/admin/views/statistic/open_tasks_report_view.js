@@ -9,7 +9,7 @@ import TeamSelectionForm from "./team_selection_form";
 const { Column } = Table;
 
 type State = {
-  data: APIOpenTasksReportType,
+  data: Array<APIOpenTasksReportType>,
   isLoading: boolean,
 };
 

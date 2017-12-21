@@ -491,13 +491,13 @@ export async function getTimeTrackingForUser(
 
 export async function getProjectProgressReport(
   teamId: string,
-): Promise<APIProjectProgressReportType> {
+): Promise<Array<APIProjectProgressReportType>> {
   const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`);
   assertResponseLimit(progressData);
   return progressData;
 }
 
-export async function getOpenTasksReport(teamId: string): Promise<APIOpenTasksReportType> {
+export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenTasksReportType>> {
   const openTasksData = await Request.receiveJSON(`/api/teams/${teamId}/openTasksOverview`);
   assertResponseLimit(openTasksData);
   return openTasksData;

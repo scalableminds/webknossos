@@ -287,8 +287,10 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
 
     const trees: TemporaryMutableTreeMapType = {};
     let currentTree: ?TemporaryMutableTreeType = null;
+    const tagStack = [];
     parser
       .on("tagopen", node => {
+        tagStack.push(node.name);
         const attr = Saxophone.parseAttrs(node.attrs);
         switch (node.name) {
           case "experiment": {
@@ -380,12 +382,14 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
         }
       })
       .on("tagclose", node => {
+        if (tagStack.pop() !== node.name) throw Error(messages["nml.malformed_unclosed_tags"]);
         if (node.name === "thing" && currentTree != null) {
           if (!isTreeConnected(currentTree)) throw Error(messages["nml.tree_not_connected"]);
           currentTree = null;
         }
       })
       .on("end", () => {
+        if (tagStack.length !== 0) throw Error(messages["nml.malformed_unclosed_tags"]);
         resolve(trees);
       })
       .on("error", reject);

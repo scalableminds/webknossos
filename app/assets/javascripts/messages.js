@@ -96,4 +96,5 @@ In order to restore the current window, a reload is necessary.`,
   "nml.duplicate_node_id": "NML contains <node ...> with duplicate node id.",
   "nml.edge_with_same_source_target": "NML contains <edge ...> with same source and target id.",
   "nml.tree_not_connected": "NML contains tree that is not fully connected.",
+  "nml.malformed_unclosed_tags": "The NML is malformed because it contains unclosed tags.",
 };

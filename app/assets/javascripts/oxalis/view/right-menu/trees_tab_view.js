@@ -155,7 +155,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
         </Menu.Item>
         <Menu.Item key="handleNMLDownload">
           <div onClick={this.handleNMLDownload} title="Download visible trees as NML">
-            <Icon type="export" /> Download as NML
+            <Icon type="download" /> Download as NML
           </div>
         </Menu.Item>
         <Menu.Item key="importNml">

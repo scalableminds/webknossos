@@ -52,7 +52,18 @@ lazy val buildInfoSettings = Seq(
   buildInfoOptions := Seq(BuildInfoOption.ToJson)
 )
 
+
+lazy val utilSettings = Seq(
+  resolvers ++= DependencyResolvers.dependencyResolvers,
+  libraryDependencies ++= Dependencies.utilDependencies
+)
+
+lazy val util = (project in file("util"))
+  .settings(utilSettings)
+
+
 lazy val webknossos = (project in file("."))
+  .dependsOn(util)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings((webknossosSettings ++ AssetCompilation.settings ++ buildInfoSettings):_*)

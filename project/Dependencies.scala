@@ -1,18 +1,16 @@
-import com.typesafe.sbt.web.Import._
 import play.sbt.Play.autoImport._
-import play.sbt.routes.RoutesKeys._
-import play.twirl.sbt.Import._
-import sbt.Keys._
 import sbt._
 
 
 object Dependencies {
+  val playVersion = "2.4.6"
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
   val braingamesVersion = "11.3.9"
-
   val twelvemonkeysVersion = "3.1.2"
+  val log4jVersion = "2.0-beta9"
+  val newrelicVersion = "3.44.1"
 
   val restFb = "com.restfb" % "restfb" % "1.6.11"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
@@ -36,11 +34,17 @@ object Dependencies {
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val resourceManager = "com.jsuereth" %% "scala-arm" % "2.0"
   val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
+  val playFramework = "com.typesafe.play" %% "play" % playVersion
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
   val ceedubs = "net.ceedubs" %% "ficus" % "1.1.2"
   val scalaGuice = "net.codingwell" %% "scala-guice" % "4.0.0"
   val webjars = "org.webjars" %% "webjars-play" % "2.4.0"
   val bootstrap = "com.adrianhurt" %% "play-bootstrap3" % "0.4.4-P24"
+  val log4jCore =  "org.apache.logging.log4j" % "log4j-api" % log4jVersion
+  val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
+  val liftBox = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
+  val liftUtil = "net.liftweb" % "lift-util_2.10" % "3.0-M1"
+  val scalapbJson = "com.scalableminds" %% "scalapb-json4s" % "0.3.2.0-scm"
 
   // Unfortunately, we need to list all mturk dependencies seperately since mturk is not published on maven but rather
   // added to the project as a JAR. To keep the number of JARs added to this repo as small as possible, everthing that
@@ -94,8 +98,26 @@ object Dependencies {
       "com.twelvemonkeys.imageio" % "imageio-jpeg" % twelvemonkeysVersion,
       "com.twelvemonkeys.imageio" % "imageio-tiff" % twelvemonkeysVersion
     )
-  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % "3.44.1"
-  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % "3.44.1"
+  val newrelic = "com.newrelic.agent.java" % "newrelic-agent" % newrelicVersion
+  val newrelicApi = "com.newrelic.agent.java" % "newrelic-api" % newrelicVersion
+
+  val utilDependencies = Seq(
+    playFramework,
+    log4jCore,
+    log4jApi,
+    commonsIo,
+    commonsEmail,
+    commonsLang,
+    reactiveBson,
+    reactivePlay,
+    ws,
+    akkaAgent,
+    akkaRemote,
+    scalaLogging,
+    liftBox,
+    liftUtil,
+    scalapbJson
+  )
 
   val webknossosDependencies = Seq(
     restFb,

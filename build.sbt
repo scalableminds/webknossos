@@ -2,7 +2,7 @@ import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
-name := "webknossos"
+name := "oxalis"
 
 version := scala.io.Source.fromFile("version").mkString.trim
 

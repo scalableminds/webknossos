@@ -145,7 +145,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   handleNMLUpload = (response: Object) => {
-    response.messages.map(m => Toast.success(m.success));
     this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
   };
 

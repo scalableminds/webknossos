@@ -2,6 +2,7 @@
 
 // --- !Ups
 db.annotations.find().forEach(function(elem) {
+  elem.oldState = elem.state;
   let newState = ""
   if(elem.state.isFinished) newState = "Finished"
     else if(elem.state.isInProgress) newState = "InProgress"
@@ -14,6 +15,7 @@ db.annotations.find().forEach(function(elem) {
 
 // --- !Downs
 db.annotations.find().forEach(function(elem) {
+
   let isAssigned = false
   let isFinished = false
   let isInProgress = false
@@ -28,7 +30,14 @@ db.annotations.find().forEach(function(elem) {
   if(elem.state == "Assigned"){
     isAssigned = true
   }
+
   elem.state = {"isAssigned": isAssigned, "isInProgress": isInProgress, "isFinished": isFinished}
+
+  //in case there is an "oldState"
+  if(elem.oldState){
+    elem.state = elem.oldState
+    delete elem.oldState
+  }
 
   db.annotations.save(elem);
 });

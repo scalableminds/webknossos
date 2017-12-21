@@ -76,7 +76,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     this.fetchData();
   }
 
-  getFinishVerb = () => (this.state.showFinishedTasks ? "Finished" : "Unfinished");
+  getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
 
   confirmFinish(task: APITaskWithAnnotationType) {
     Modal.confirm({
@@ -270,8 +270,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   renderTable() {
     return (
       <Table
-        dataSource={this.getCurrentTasks().filter(
-          task => task.annotation.state === this.getFinishVerb(),
+        dataSource={this.getCurrentTasks().filter(task =>{
+        if(this.state.showFinishedTasks)
+          return task.annotation.state === "Finished"
+        else
+          return task.annotation.state !== "Finished"}
         )}
         rowKey="id"
         pagination={{

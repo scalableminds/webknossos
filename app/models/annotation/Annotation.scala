@@ -195,7 +195,9 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       "state" -> Json.obj("$in" -> AnnotationState.assignedStates),
       "typ" -> annotationType)
 
-    if(isFinished.isDefined) q += "state" -> Json.toJson(Finished)
+    if(isFinished.isDefined){
+      if(isFinished.get) q += "state" -> Json.toJson(Finished)
+    }
 
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }

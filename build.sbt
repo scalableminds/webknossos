@@ -1,6 +1,6 @@
 import sbt._
 
-name := "webknossos"
+name := "oxalis"
 
 version := scala.io.Source.fromFile("version").mkString.trim
 

@@ -76,7 +76,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     this.fetchData();
   }
 
-  getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished"); // shouldn't it be the other way around?
+  getFinishVerb = () => (this.state.showFinishedTasks ? "Finished" : "Unfinished");
 
   confirmFinish(task: APITaskWithAnnotationType) {
     Modal.confirm({

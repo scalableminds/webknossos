@@ -138,7 +138,8 @@ object InitialData extends GlobalDBAccess with LazyLogging {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
         val url = conf.getString("http.uri").getOrElse("http://localhost:9000")
-        DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, "something-secure"))
+        val key = conf.getString("datastore.key").getOrElse("something-secure")
+        DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, key))
       }
     }
   }

@@ -290,7 +290,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
     const tagStack = [];
     parser
       .on("tagopen", node => {
-        tagStack.push(node.name);
+        if (!node.isSelfClosing) tagStack.push(node.name);
         const attr = Saxophone.parseAttrs(node.attrs);
         switch (node.name) {
           case "experiment": {

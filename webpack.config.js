@@ -39,9 +39,7 @@ module.exports = function(env = {}) {
   if (env.production) {
     plugins.push(
       new UglifyJsPlugin({
-        uglifyOptions: {
-          mangle: false,
-        },
+        parallel: true,
         sourceMap: true,
       }),
     );

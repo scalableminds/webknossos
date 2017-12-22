@@ -27,7 +27,6 @@ type State = {
 
 class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
   treeDomElement: ?HTMLLIElement;
-  activeNodeHasComment: boolean;
   state = {
     collapsed: false,
   };
@@ -36,11 +35,19 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
     this.ensureVisible();
   }
 
+  activeNodeHasComment(): boolean {
+    return this.props.tree.comments.reduce(
+      (hasComment, comment) =>
+        hasComment || comment.nodeId === this.props.skeletonTracing.activeNodeId,
+      false,
+    );
+  }
+
   ensureVisible() {
     // Only scroll to this tree if this is the active tree and there is no active comment to scroll to
     if (
       this.props.tree.treeId === this.props.skeletonTracing.activeTreeId &&
-      !this.activeNodeHasComment
+      !this.activeNodeHasComment()
     ) {
       scrollIntoViewIfNeeded(this.treeDomElement, { centerIfNeeded: true });
     }
@@ -52,25 +59,20 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
 
   render() {
     const containsActiveNode = this.props.tree.treeId === this.props.skeletonTracing.activeTreeId;
-    this.activeNodeHasComment = false;
 
     // don't render the comment nodes if the tree is collapsed
     const commentNodes = !this.state.collapsed
       ? this.props.tree.comments
           .slice(0)
           .sort(Utils.localeCompareBy("content", this.props.isSortedAscending))
-          .map(comment => {
-            const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
-            this.activeNodeHasComment = this.activeNodeHasComment || isActive;
-            return (
-              <Comment
-                key={comment.nodeId}
-                data={comment}
-                treeId={this.props.tree.treeId}
-                isActive={isActive}
-              />
-            );
-          })
+          .map(comment => (
+            <Comment
+              key={comment.nodeId}
+              data={comment}
+              treeId={this.props.tree.treeId}
+              isActive={comment.nodeId === this.props.skeletonTracing.activeNodeId}
+            />
+          ))
       : null;
 
     const liClassName = classNames({ bold: containsActiveNode });

@@ -8,6 +8,7 @@ import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { getActiveUser } from "admin/admin_rest_api";
 import type { ReactRouterHistoryType } from "react_router";
+import Utils from "libs/utils";
 
 const FormItem = Form.Item;
 
@@ -24,9 +25,13 @@ class LoginView extends React.PureComponent<Props> {
     this.props.form.validateFields(async (err: ?Object, formValues: Object) => {
       if (!err) {
         await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
-        const user = await getActiveUser();
-        Store.dispatch(setActiveUserAction(user));
-        this.props.history.push("/dashboard");
+        if (!Utils.hasUrlParam("redirectPage")) {
+          const user = await getActiveUser();
+          Store.dispatch(setActiveUserAction(user));
+          this.props.history.push("/dashboard");
+        } else {
+          window.location.replace(Utils.getUrlParamValue("redirectPage"));
+        }
       }
     });
   };

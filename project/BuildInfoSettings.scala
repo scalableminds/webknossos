@@ -36,12 +36,12 @@ object BuildInfoSettings {
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
   )
 
-  lazy val standaloneDatastoreBuildInfoSettings = Seq(
+  lazy val webknossosDatastoreBuildInfoSettings = Seq(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
       "commitHash" -> commitHash,
       "commitDate" -> commitDate
     ),
-    buildInfoPackage := "standaloneDatastore",
+    buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
   )
 

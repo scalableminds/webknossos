@@ -156,7 +156,7 @@ object Dependencies {
     component("play-test")
   )
 
-  val standaloneDatastoreDependencies = Seq(
+  val webknossosDatastoreDependencies = Seq(
     akkaLogging
   )
 

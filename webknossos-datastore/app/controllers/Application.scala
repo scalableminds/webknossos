@@ -11,7 +11,7 @@ class Application {
 
   def buildInfo = Action { implicit request =>
     Ok(Json.obj(
-      "standaloneDatastore" -> standaloneDatastore.BuildInfo.toMap.mapValues(_.toString),
+      "webknossosDatastore" -> webknossosDatastore.BuildInfo.toMap.mapValues(_.toString),
       "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
     ))
   }

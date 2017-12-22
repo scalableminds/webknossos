@@ -30,8 +30,8 @@ lazy val webknossosSettings = Seq(
 )
 
 
-lazy val standaloneDatastoreSettings = Seq(
-  libraryDependencies ++= Dependencies.standaloneDatastoreDependencies,
+lazy val webknossosDatastoreSettings = Seq(
+  libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
   resolvers ++= DependencyResolvers.dependencyResolvers,
   routesGenerator := InjectedRoutesGenerator,
   version := "wk-" + wkVersion,
@@ -96,11 +96,11 @@ lazy val braingamesDatastore = (project in file("braingames-datastore"))
   ))
 
 
-lazy val standaloneDatastore = (project in file("standalone-datastore"))
+lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(braingamesDatastore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
-  .settings((standaloneDatastoreSettings ++ BuildInfoSettings.standaloneDatastoreBuildInfoSettings):_*)
+  .settings((webknossosDatastoreSettings ++ BuildInfoSettings.webknossosDatastoreBuildInfoSettings):_*)
 
 lazy val webknossos = (project in file("."))
   .dependsOn(util, braingamesBinary, braingamesDatastore)
@@ -110,5 +110,5 @@ lazy val webknossos = (project in file("."))
 
 
 
-lazy val assemblyStandaloneDatastore = inputKey[Unit]("assembly standaloneDatastore")
-assemblyStandaloneDatastore := assembly.all(ScopeFilter(inProjects(standaloneDatastore))).value.head
+lazy val assemblywebknossosDatastore = inputKey[Unit]("assembly webknossosDatastore")
+assemblywebknossosDatastore := assembly.all(ScopeFilter(inProjects(webknossosDatastore))).value.head

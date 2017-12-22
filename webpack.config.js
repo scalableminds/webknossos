@@ -39,8 +39,12 @@ module.exports = function(env = {}) {
   if (env.production) {
     plugins.push(
       new UglifyJsPlugin({
+        cache: true,
         parallel: true,
         sourceMap: true,
+        uglifyOptions: {
+          compress: false,
+        },
       }),
     );
   }

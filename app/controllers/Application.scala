@@ -10,29 +10,6 @@ import play.twirl.api.Html
 
 class Application @Inject()(val messagesApi: MessagesApi) extends Controller{
 
-  def index() = UserAwareAction { implicit request =>
-    request.identity match {
-      case Some(user) if user.isAnonymous =>
-        Redirect("/info")
-      case Some(user) =>
-        Redirect("/dashboard")
-      case _ =>
-        Redirect("/spotlight")
-    }
-  }
-
-  def info() = UserAwareAction { implicit request =>
-    Ok(views.html.info())
-  }
-
-  def thankyou() = UserAwareAction { implicit request =>
-    Ok(views.html.thankyou())
-  }
-
-  def emptyMain = SecuredAction { implicit request =>
-    Ok(views.html.main(Html("")))
-  }
-
   def buildInfo = UserAwareAction { implicit request =>
     Ok(Json.obj(
       "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),

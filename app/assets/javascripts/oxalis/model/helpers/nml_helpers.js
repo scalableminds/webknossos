@@ -19,7 +19,6 @@ import type {
 } from "oxalis/store";
 
 // NML Defaults
-const DEFAULT_TIME = 0;
 const DEFAULT_COLOR = [1, 0, 0];
 const DEFAULT_VIEWPORT = 0;
 const DEFAULT_RESOLUTION = 0;
@@ -215,10 +214,17 @@ function serializeComments(trees: Array<TreeType>): Array<string> {
 
 // PARSE NML
 
+class NmlParseError extends Error {
+  constructor(...args) {
+    super(...args);
+    this.name = "NmlParseError";
+  }
+}
+
 function _parseInt(obj: Object, key: string, defaultValue?: number): number {
   if (obj[key] == null) {
     if (defaultValue == null) {
-      throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
       return defaultValue;
     }
@@ -229,7 +235,7 @@ function _parseInt(obj: Object, key: string, defaultValue?: number): number {
 function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
   if (obj[key] == null) {
     if (defaultValue == null) {
-      throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
       return defaultValue;
     }
@@ -240,7 +246,7 @@ function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
 function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
   if (obj[key] == null) {
     if (defaultValue == null) {
-      throw Error(`${messages["nml.expected_attribute_missing"]} ${key}`);
+      throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
       return defaultValue;
     }
@@ -254,7 +260,7 @@ function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
 
 function isTreeConnected(tree: TreeType): boolean {
   const nodeToEdgesMap = getNodeToEdgesMap(tree);
-  const visitedNodes = {};
+  const visitedNodes = new Map();
 
   const nodeIds = Object.keys(tree.nodes);
   if (nodeIds.length > 0) {
@@ -262,15 +268,15 @@ function isTreeConnected(tree: TreeType): boolean {
     // Breadth-First search that marks all reachable nodes as visited
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
-      visitedNodes[nodeId] = true;
+      visitedNodes.set(nodeId, true);
       const edges = nodeToEdgesMap[nodeId];
       // If there are no edges for a node, the tree is not connected
       if (edges == null) break;
 
       for (const edge of edges) {
-        if (nodeId === edge.target && !visitedNodes[edge.source]) {
+        if (nodeId === edge.target && !visitedNodes.get(edge.source)) {
           nodeQueue.push(edge.source);
-        } else if (!visitedNodes[edge.target]) {
+        } else if (!visitedNodes.get(edge.target)) {
           nodeQueue.push(edge.target);
         }
       }
@@ -287,15 +293,13 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
 
     const trees: TemporaryMutableTreeMapType = {};
     let currentTree: ?TemporaryMutableTreeType = null;
-    const tagStack = [];
     parser
       .on("tagopen", node => {
-        if (!node.isSelfClosing) tagStack.push(node.name);
         const attr = Saxophone.parseAttrs(node.attrs);
         switch (node.name) {
           case "experiment": {
             if (attr.name !== Store.getState().dataset.name) {
-              console.warn("Imported NML was originally for a different dataset!");
+              throw new NmlParseError(messages["nml.different_dataset"]);
             }
             break;
           }
@@ -315,12 +319,12 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               edges: [],
               isVisible: _parseFloat(attr, "color.a") !== 0,
             };
-            if (trees[currentTree.treeId] != null) throw Error(messages["nml.duplicate_tree_id"]);
+            if (trees[currentTree.treeId] != null)
+              throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
             trees[currentTree.treeId] = currentTree;
             break;
           }
           case "node": {
-            if (currentTree == null) throw Error(messages["nml.node_outside_tree"]);
             const currentNode = {
               id: _parseInt(attr, "id"),
               position: [_parseFloat(attr, "x"), _parseFloat(attr, "y"), _parseFloat(attr, "z")],
@@ -336,24 +340,34 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               radius: _parseFloat(attr, "radius"),
               timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
             };
+            if (currentTree == null)
+              throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
             const possibleTree = findTreeByNodeId(trees, currentNode.id);
-            if (possibleTree != null) throw Error(messages["nml.duplicate_node_id"]);
+            if (possibleTree != null)
+              throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
             currentTree.nodes[currentNode.id] = currentNode;
             break;
           }
           case "edge": {
-            if (currentTree == null) throw Error(messages["nml.edge_outside_tree"]);
             const currentEdge = {
               source: _parseInt(attr, "source"),
               target: _parseInt(attr, "target"),
             };
+            if (currentTree == null)
+              throw new NmlParseError(
+                `${messages["nml.edge_outside_tree"]} ${JSON.stringify(currentEdge)}`,
+              );
             if (
               currentTree.nodes[currentEdge.source] == null ||
               currentTree.nodes[currentEdge.target] == null
             )
-              throw Error(messages["nml.edge_with_invalid_node"]);
+              throw new NmlParseError(
+                `${messages["nml.edge_with_invalid_node"]} ${JSON.stringify(currentEdge)}`,
+              );
             if (currentEdge.source === currentEdge.target)
-              throw Error(messages["nml.edge_with_same_source_target"]);
+              throw new NmlParseError(
+                `${messages["nml.edge_with_same_source_target"]} ${JSON.stringify(currentEdge)}`,
+              );
             currentTree.edges.push(currentEdge);
             break;
           }
@@ -363,17 +377,23 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               content: attr.content,
             };
             const tree = findTreeByNodeId(trees, currentComment.nodeId);
-            if (tree == null) throw Error(messages["nml.comment_without_tree"]);
+            if (tree == null)
+              throw new NmlParseError(
+                `${messages["nml.comment_without_tree"]} ${currentComment.nodeId}`,
+              );
             tree.comments.push(currentComment);
             break;
           }
           case "branchpoint": {
             const currentBranchpoint = {
               nodeId: _parseInt(attr, "id"),
-              timestamp: _parseInt(attr, "time", DEFAULT_TIME),
+              timestamp: _parseInt(attr, "time", DEFAULT_TIMESTAMP),
             };
             const tree = findTreeByNodeId(trees, currentBranchpoint.nodeId);
-            if (tree == null) throw Error(messages["nml.branchpoint_without_tree"]);
+            if (tree == null)
+              throw new NmlParseError(
+                `${messages["nml.branchpoint_without_tree"]} ${currentBranchpoint.nodeId}`,
+              );
             tree.branchPoints.push(currentBranchpoint);
             break;
           }
@@ -382,14 +402,13 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
         }
       })
       .on("tagclose", node => {
-        if (tagStack.pop() !== node.name) throw Error(messages["nml.malformed_unclosed_tags"]);
         if (node.name === "thing" && currentTree != null) {
-          if (!isTreeConnected(currentTree)) throw Error(messages["nml.tree_not_connected"]);
+          if (!isTreeConnected(currentTree))
+            throw new NmlParseError(`${messages["nml.tree_not_connected"]} ${currentTree.treeId}`);
           currentTree = null;
         }
       })
       .on("end", () => {
-        if (tagStack.length !== 0) throw Error(messages["nml.malformed_unclosed_tags"]);
         resolve(trees);
       })
       .on("error", reject);

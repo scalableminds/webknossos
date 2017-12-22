@@ -27,7 +27,7 @@ class FileUpload extends React.PureComponent<Props> {
     const successCallback = this.props.onSuccess ? this.props.onSuccess : _.noop;
     const errorCallback = this.props.onError ? this.props.onError : _.noop;
 
-    if (this.props.url) {
+    if (this.props.url != null) {
       Request.sendMultipartFormReceiveJSON(this.props.url, {
         data: { [this.props.name]: files },
       }).then(successCallback, errorCallback);

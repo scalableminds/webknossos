@@ -20,13 +20,13 @@ const SkeletonTracingActions = mock.reRequire("oxalis/model/actions/skeletontrac
 const createDummyNode = (id: number): NodeType => ({
   bitDepth: 8,
   id,
-  position: [0, 0, 0],
-  radius: 10,
+  position: [id, id, id],
+  radius: id,
   resolution: 10,
-  rotation: [0, 0, 0],
+  rotation: [id, id, id],
   timestamp: id,
   viewport: 1,
-  interpolation: true,
+  interpolation: id % 2 === 0,
 });
 
 const tracing = {
@@ -84,18 +84,22 @@ const initialState = _.extend({}, defaultState, {
   activeUser: { firstName: "SCM", lastName: "Boy" },
 });
 
-async function throwsAsync(t, fn) {
+async function throwsAsyncParseError(t, fn) {
   try {
     await fn.call();
     t.fail(`Test did not throw, calling the following function: ${fn.toString()}`);
   } catch (e) {
-    t.true(true);
+    if (e.name === "NmlParseError") {
+      t.true(true);
+    } else {
+      throw e;
+    }
   }
 }
 
 test("NML serializing and parsing should yield the same state", async t => {
-  const serializedNML = serializeToNml(initialState, initialState.tracing);
-  const importedTrees = await parseNml(serializedNML);
+  const serializedNml = serializeToNml(initialState, initialState.tracing);
+  const importedTrees = await parseNml(serializedNml);
 
   t.deepEqual(initialState.tracing.trees, importedTrees);
 });
@@ -104,12 +108,18 @@ test("NML Serializer should only serialize visible trees", async t => {
   const state = update(initialState, {
     tracing: { trees: { "1": { isVisible: { $set: false } } } },
   });
-  const serializedNML = serializeToNml(state, state.tracing);
-  const importedTrees = await parseNml(serializedNML);
+  const serializedNml = serializeToNml(state, state.tracing);
+  const importedTrees = await parseNml(serializedNml);
 
   // Tree 1 should not be exported as it is not visible
   delete state.tracing.trees["1"];
   t.deepEqual(state.tracing.trees, importedTrees);
+});
+
+test("NML serializer should produce correct NMLs", t => {
+  const serializedNml = serializeToNml(initialState, initialState.tracing);
+
+  t.snapshot(serializedNml, { id: "nml" });
 });
 
 test("Serialized nml should be correctly named", async t => {
@@ -141,10 +151,10 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   );
 
   // TODO AVAs t.throws doesn't properly work with async functions yet, see https://github.com/avajs/ava/issues/1371
-  await throwsAsync(t, () => parseNml(nmlWithInvalidComment));
-  await throwsAsync(t, () => parseNml(nmlWithInvalidBranchPoint));
-  await throwsAsync(t, () => parseNml(nmlWithInvalidEdge));
-  await throwsAsync(t, () => parseNml(nmlWithDisconnectedTree));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidComment));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidBranchPoint));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidEdge));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithDisconnectedTree));
 });
 
 test("addTrees reducer should assign new node and tree ids", t => {

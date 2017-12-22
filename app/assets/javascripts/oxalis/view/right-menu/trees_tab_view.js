@@ -85,7 +85,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
-  handleNMLDownload = async () => {
+  handleNmlDownload = async () => {
     await this.setState({ isDownloading: true });
     // Wait for the Modal to render
     await Utils.sleep(1000);
@@ -97,17 +97,16 @@ class TreesTabView extends React.PureComponent<Props, State> {
     saveAs(blob, getNmlName(state));
   };
 
-  handleNMLUpload = async (nmlString: string) => {
+  handleNmlUpload = async (nmlString: string) => {
     let trees;
     try {
       trees = await parseNml(nmlString);
+      Store.dispatch(addTreesAction(trees));
     } catch (e) {
       Toast.error(e.message);
+    } finally {
       this.setState({ isUploading: false });
-      return;
     }
-    Store.dispatch(addTreesAction(trees));
-    this.setState({ isUploading: false });
   };
 
   getTreesComponents() {
@@ -153,8 +152,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
             <i className="fa fa-random" /> Shuffle All Colors
           </div>
         </Menu.Item>
-        <Menu.Item key="handleNMLDownload">
-          <div onClick={this.handleNMLDownload} title="Download visible trees as NML">
+        <Menu.Item key="handleNmlDownload">
+          <div onClick={this.handleNmlDownload} title="Download visible trees as NML">
             <Icon type="download" /> Download as NML
           </div>
         </Menu.Item>
@@ -164,7 +163,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
             multiple={false}
             name="nmlFile"
             showUploadList={false}
-            onSuccess={this.handleNMLUpload}
+            onSuccess={this.handleNmlUpload}
             onUploading={() => this.setState({ isUploading: true })}
             onError={() => this.setState({ isUploading: false })}
           >

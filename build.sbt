@@ -34,6 +34,7 @@ lazy val webknossosDatastoreSettings = Seq(
   libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
   resolvers ++= DependencyResolvers.dependencyResolvers,
   routesGenerator := InjectedRoutesGenerator,
+  name := "webknossos-datastore",
   version := "wk-" + wkVersion,
   assemblyMergeStrategy in assembly := {
     case "application.conf"                                                  => MergeStrategy.concat

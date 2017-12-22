@@ -15,5 +15,5 @@ COPY target/universal/stage .
 
 USER webknossos
 
-ENTRYPOINT ["bin/standalone-datastore"]
+ENTRYPOINT ["bin/webknossos-datastore"]
 CMD ["-J-Xmx20G", "-J-Xms1G", "-Dconfig.file=conf/application.conf", "-Dlogger.file=conf/logback-docker.xml", "-Dlogback.configurationFile=conf/logback-docker.xml", "-Dhttp.port=9090", "-Dhttp.address=0.0.0.0"]

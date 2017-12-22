@@ -86,7 +86,7 @@
     "drop-db": "./tools/dropDB.sh webknossos-testing"
   },
   "dependencies": {
-    "@scalableminds/saxophone": "^0.4.0",
+    "@scalableminds/saxophone": "^0.5.0",
     "airbrake-js": "^0.5.8",
     "antd": "^2.13.4",
     "backbone-events-standalone": "^0.2.7",

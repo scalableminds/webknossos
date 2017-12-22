@@ -9,7 +9,7 @@ import com.scalableminds.braingames.binary.models.datasource.ElementClass
 import com.scalableminds.braingames.datastore.SkeletonTracing._
 import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.braingames.datastore.tracings.ProtoGeometryImplicits
-import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeUtils}
+import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
 import com.scalableminds.braingames.datastore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
@@ -17,7 +17,6 @@ import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box._
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
-import scala.annotation.tailrec
 import scala.xml.{NodeSeq, XML, Node => XMLNode}
 
 object NmlParser extends LazyLogging with ProtoGeometryImplicits {
@@ -64,99 +63,30 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel), volumes.head.location), description)
         } else {
           (Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
-            editPosition, editRotation, zoomLevel, version=0, userBoundingBox)), description)
+            editPosition, editRotation, zoomLevel, version = 0, userBoundingBox)), description)
         }
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
         logger.debug(s"Tried  to parse empty NML file $name.")
         Empty
-      case e: org.xml.sax.SAXParseException                                                     =>
+      case e: org.xml.sax.SAXParseException =>
         logger.debug(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name'. Error in Line ${e.getLineNumber} " +
           s"(column ${e.getColumnNumber}): ${e.getMessage}")
-      case e: Exception                                                                         =>
+      case e: Exception =>
         logger.error(s"Failed to parse NML $name due to " + e)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
   }
 
-  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {
-    validateTrees(parseTrees(treeNodes, branchPoints, comments)).map(transformTrees)
+  def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Box[Seq[Tree]] = {
+    val trees = parseTrees(treeNodes, branchPoints, comments)
+    TreeValidator.validateTrees(trees).map(_ => trees)
   }
 
   def extractVolumes(volumeNodes: NodeSeq) = {
     volumeNodes.map(node => Volume((node \ "@location").text))
-  }
-
-  def validateTrees(trees: Seq[Tree]): Box[Seq[Tree]] = {
-    val nodeIds = trees.flatMap(_.nodes).map(_.id)
-    nodeIds.size == nodeIds.distinct.size match {
-      case true  => Full(trees)
-      case false => Failure("NML contains nodes with duplicate ids.")
-    }
-  }
-
-  private def transformTrees(trees: Seq[Tree]): Seq[Tree] = {
-    createUniqueIds(trees.flatMap(splitIntoComponents))
-  }
-
-  private def createUniqueIds(trees: Seq[Tree]) = {
-    trees.foldLeft(List[Tree]()) {
-      case (l, t) =>
-        if (!l.exists(_.treeId == t.treeId))
-          t :: l
-        else {
-          val alteredId = l.maxBy(_.treeId).treeId + 1
-          t.copy(treeId = alteredId) :: l
-        }
-    }
-  }
-
-  private def splitIntoComponents(tree: Tree): List[Tree] = {
-    def emptyTree = tree.withNodes(Seq()).withEdges(Seq())
-
-    val start = System.currentTimeMillis()
-
-    val nodeMap = tree.nodes.map(n => n.id -> n).toMap
-
-    @tailrec
-    def buildTreeFromNode(
-                           nodesToProcess: List[Node],
-                           treeReminder: Tree,
-                           component: Tree = emptyTree): (Tree, Tree) = {
-
-      if (nodesToProcess.nonEmpty) {
-        val node = nodesToProcess.head
-        val tail = nodesToProcess.tail
-        val connectedEdges = treeReminder.edges.filter(e => e.source == node.id || e.target == node.id)
-
-        val connectedNodes = connectedEdges.flatMap {
-          case Edge(s, t) if s == node.id => nodeMap.get(t)
-          case Edge(s, t) if t == node.id => nodeMap.get(s)
-        }
-
-        val currentComponent = tree.withNodes(connectedNodes :+ node).withEdges(connectedEdges)
-        val r = TreeUtils.add(component, currentComponent)
-        buildTreeFromNode(tail ::: connectedNodes.toList, TreeUtils.subtract(treeReminder, currentComponent), r)
-      } else
-          treeReminder -> component
-    }
-
-    var treeToProcess = tree
-
-    var components = List[Tree]()
-
-    while (treeToProcess.nodes.nonEmpty) {
-      val (treeReminder, component) = buildTreeFromNode(treeToProcess.nodes.head :: Nil, treeToProcess)
-      treeToProcess = treeReminder
-      components ::= component
-    }
-    logger.trace("Connected components calculation: " + (System.currentTimeMillis() - start))
-    components.map(
-      _.copy(
-        color = tree.color,
-        treeId = tree.treeId))
   }
 
   private def parseTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]) = {

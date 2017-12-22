@@ -70,7 +70,7 @@ class ScriptCreateView extends React.PureComponent<Props, State> {
     const titlePrefix = this.props.scriptId ? "Update" : "Create";
 
     return (
-      <div className="container wide" style={{ paddingTop: 20 }}>
+      <div className="container">
         <Card title={<h3>{titlePrefix} Script</h3>}>
           <Form onSubmit={this.handleSubmit} layout="vertical">
             <FormItem label="Script Name" hasFeedback>

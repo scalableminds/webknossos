@@ -93,13 +93,13 @@ object MTurkService extends MTurkNotificationHandlers with LazyLogging with FoxI
   private def ensureEnoughFunds(neededFunds: Double): Future[Boolean] = Future {
     blocking {
       val balance = service.getAccountBalance
-      logger.info("Got account balance: " + RequesterService.formatCurrency(balance))
+      logger.info("was account balance: " + RequesterService.formatCurrency(balance))
       balance > neededFunds
     }
   }
 
   /**
-    * Project on wk got created --> create HitType on mturk
+    * Project on wk was created --> create HitType on mturk
     *
     * @param project wk project
     * @param config  hit config
@@ -283,7 +283,7 @@ object MTurkService extends MTurkNotificationHandlers with LazyLogging with FoxI
   */
 trait MTurkNotificationHandlers extends LazyLogging {
   /**
-    * HIT on mturk got submitted. Time to finish annotation and update counters.
+    * HIT on mturk was submitted. Time to finish annotation and update counters.
     *
     * @param assignmentId mturk assignment
     * @param hitId        mturk hit
@@ -312,7 +312,7 @@ trait MTurkNotificationHandlers extends LazyLogging {
   }
 
   /**
-    * HIT on mturk got accepted by mturker. Update counts
+    * HIT on mturk was accepted by mturker. Update counts
     *
     * @param assignmentId mturk assignment
     * @param hitId        mturk hit

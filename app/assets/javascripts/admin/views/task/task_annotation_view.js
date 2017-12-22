@@ -150,7 +150,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   <td>
                     <span>
                       <i className="fa fa-check-circle-o" />
-                      {`${annotation.state.isFinished ? "Finished" : "In Progress"}?`}
+                      {`${annotation.state.isFinished ? "Finished" : "In Progress"}`}
                     </span>
                     <br />
                     <span>

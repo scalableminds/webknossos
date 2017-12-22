@@ -5,7 +5,7 @@
 
 import _ from "lodash";
 import * as React from "react";
-import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
 import {
   toggleTreeAction,

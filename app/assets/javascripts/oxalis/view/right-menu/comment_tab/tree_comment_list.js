@@ -9,7 +9,7 @@ import classNames from "classnames";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
 import Utils from "libs/utils";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
 import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
 
 type OwnProps = {
@@ -36,10 +36,8 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
   }
 
   activeNodeHasComment(): boolean {
-    return this.props.tree.comments.reduce(
-      (hasComment, comment) =>
-        hasComment || comment.nodeId === this.props.skeletonTracing.activeNodeId,
-      false,
+    return this.props.tree.comments.some(
+      comment => comment.nodeId === this.props.skeletonTracing.activeNodeId,
     );
   }
 

@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
 import classNames from "classnames";
 import Store from "oxalis/store";
 import { setActiveNodeAction } from "oxalis/model/actions/skeletontracing_actions";

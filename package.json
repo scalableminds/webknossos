@@ -72,7 +72,7 @@
     "test-debug": "tools/test.sh test --debug",
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w",
-    "test-e2e": "node tools/prepareTestDB.js && tools/test.sh test-e2e --timeout=60s --verbose",
+    "test-e2e": "tools/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
     "test-help":
       "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-snapshots": "rm -r app/assets/javascripts/test/snapshots/public",

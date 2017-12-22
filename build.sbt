@@ -88,6 +88,10 @@ lazy val braingamesDatastore = (project in file("braingames-datastore"))
     routesGenerator := InjectedRoutesGenerator
   ))
 
+
+lazy val webknossosDatastore = (project in file("webknkossos-datastore"))
+  
+
 lazy val webknossos = (project in file("."))
   .dependsOn(util, braingamesBinary, braingamesDatastore)
   .enablePlugins(play.sbt.PlayScala)

@@ -156,6 +156,10 @@ object Dependencies {
     component("play-test")
   )
 
+  val standaloneDatastoreDependencies = Seq(
+    akkaLogging
+  )
+
   val webknossosDependencies = Seq(
     restFb,
     commonsIo,

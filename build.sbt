@@ -1,6 +1,7 @@
 import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
+import sbtassembly.PathList
 
 name := "oxalis"
 
@@ -26,32 +27,35 @@ lazy val webknossosSettings = Seq(
   }
 )
 
-lazy val buildInfoSettings = Seq(
-  buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
-    "commitHash" -> new java.lang.Object() {
-      override def toString(): String = {
-        try {
-          val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git rev-parse HEAD").getInputStream())
-          (new java.io.BufferedReader(extracted)).readLine()
-        } catch {
-          case t: Throwable => "get git hash failed"
-        }
-      }
-    }.toString(),
-    "commitDate" -> new java.lang.Object() {
-      override def toString(): String = {
-        try {
-          val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git log -1 --format=%cd ").getInputStream())
-          (new java.io.BufferedReader(extracted)).readLine()
 
-        } catch {
-          case t: Throwable => "get git date failed"
-        }
-      }
-    }.toString()
-  ),
-  buildInfoPackage := "webknossos",
-  buildInfoOptions := Seq(BuildInfoOption.ToJson)
+lazy val standaloneDatastoreSettings = Seq(
+  libraryDependencies ++= Dependencies.standaloneDatastoreDependencies,
+  resolvers ++= DependencyResolvers.dependencyResolvers,
+  routesGenerator := InjectedRoutesGenerator,
+  assemblyMergeStrategy in assembly := {
+    case "application.conf"                                                  => MergeStrategy.concat
+    case "package-info.class"                                                => MergeStrategy.concat
+    case PathList(ps @ _*) if ps.last endsWith "package-info.class"          => MergeStrategy.discard
+    case PathList(ps @ _*) if ps.last endsWith "pom.properties"              => MergeStrategy.concat
+    case PathList(ps @ _*) if ps.last endsWith "pom.xml"                     => MergeStrategy.discard
+    case PathList(ps @ _*) if ps.last endsWith "log4j-provider.properties"   => MergeStrategy.last
+    case x if x.startsWith("META-INF/ECLIPSEF.RSA")                          => MergeStrategy.last
+    case x if x.startsWith("META-INF/mailcap")                               => MergeStrategy.last
+    case x if x.startsWith("META-INF/mimetypes.default")                     => MergeStrategy.last
+    case x if x.startsWith("plugin.properties")                              => MergeStrategy.last
+    case PathList("javax", "servlet", xs @ _*)                               => MergeStrategy.first
+    case PathList("javax", "transaction", xs @ _*)                           => MergeStrategy.first
+    case PathList("javax", "mail", xs @ _*)                                  => MergeStrategy.first
+    case PathList("javax", "activation", xs @ _*)                            => MergeStrategy.first
+    case PathList(ps @ _*) if ps.last endsWith ".html"                       => MergeStrategy.first
+    case PathList("org", "apache", "commons", "logging", xs @ _*)            => MergeStrategy.first
+    case PathList("play", "core", "server", xs @ _*)                         => MergeStrategy.first
+    case "log4j.properties"                                                  => MergeStrategy.concat
+    case "unwanted.txt"                                                      => MergeStrategy.discard
+    case x =>
+      val oldStrategy = (assemblyMergeStrategy in assembly).value
+      oldStrategy(x)
+  }
 )
 
 
@@ -80,7 +84,6 @@ lazy val braingamesDatastore = (project in file("braingames-datastore"))
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
-  .settings(buildInfoSettings)
   .settings(protocolBufferSettings)
   .settings(Seq(
     resolvers ++= DependencyResolvers.dependencyResolvers,
@@ -89,11 +92,14 @@ lazy val braingamesDatastore = (project in file("braingames-datastore"))
   ))
 
 
-lazy val webknossosDatastore = (project in file("webknkossos-datastore"))
-  
+lazy val standaloneDatastore = (project in file("standalone-datastore"))
+  .dependsOn(braingamesDatastore)
+  .enablePlugins(play.sbt.PlayScala)
+  .enablePlugins(BuildInfoPlugin)
+  .settings((standaloneDatastoreSettings ++ BuildInfoSettings.standaloneDatastoreBuildInfoSettings):_*)
 
 lazy val webknossos = (project in file("."))
   .dependsOn(util, braingamesBinary, braingamesDatastore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
-  .settings((webknossosSettings ++ AssetCompilation.settings ++ buildInfoSettings):_*)
+  .settings((webknossosSettings ++ AssetCompilation.settings ++ BuildInfoSettings.webknossosBuildInfoSettings):_*)

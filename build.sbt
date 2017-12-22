@@ -1,7 +1,6 @@
 import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
-import sbtassembly.PathList
 
 val wkVersion = scala.io.Source.fromFile("version").mkString.trim
 
@@ -34,32 +33,7 @@ lazy val standaloneDatastoreSettings = Seq(
   libraryDependencies ++= Dependencies.standaloneDatastoreDependencies,
   resolvers ++= DependencyResolvers.dependencyResolvers,
   routesGenerator := InjectedRoutesGenerator,
-  version := "wk-" + wkVersion,
-  assemblyMergeStrategy in assembly := {
-    case "application.conf"                                                  => MergeStrategy.concat
-    case "package-info.class"                                                => MergeStrategy.concat
-    case PathList(ps @ _*) if ps.last endsWith "package-info.class"          => MergeStrategy.discard
-    case PathList(ps @ _*) if ps.last endsWith "pom.properties"              => MergeStrategy.concat
-    case PathList(ps @ _*) if ps.last endsWith "pom.xml"                     => MergeStrategy.discard
-    case PathList(ps @ _*) if ps.last endsWith "log4j-provider.properties"   => MergeStrategy.last
-    case PathList(ps @ _*) if ps.last endsWith "newrelic.yml"                => MergeStrategy.last
-    case x if x.startsWith("META-INF/ECLIPSEF.RSA")                          => MergeStrategy.last
-    case x if x.startsWith("META-INF/mailcap")                               => MergeStrategy.last
-    case x if x.startsWith("META-INF/mimetypes.default")                     => MergeStrategy.last
-    case x if x.startsWith("plugin.properties")                              => MergeStrategy.last
-    case PathList("javax", "servlet", xs @ _*)                               => MergeStrategy.first
-    case PathList("javax", "transaction", xs @ _*)                           => MergeStrategy.first
-    case PathList("javax", "mail", xs @ _*)                                  => MergeStrategy.first
-    case PathList("javax", "activation", xs @ _*)                            => MergeStrategy.first
-    case PathList(ps @ _*) if ps.last endsWith ".html"                       => MergeStrategy.first
-    case PathList("org", "apache", "commons", "logging", xs @ _*)            => MergeStrategy.first
-    case PathList("play", "core", "server", xs @ _*)                         => MergeStrategy.first
-    case "log4j.properties"                                                  => MergeStrategy.concat
-    case "unwanted.txt"                                                      => MergeStrategy.discard
-    case x =>
-      val oldStrategy = (assemblyMergeStrategy in assembly).value
-      oldStrategy(x)
-  }
+  version := "wk-" + wkVersion
 )
 
 
@@ -107,8 +81,3 @@ lazy val webknossos = (project in file("."))
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings((webknossosSettings ++ AssetCompilation.settings ++ BuildInfoSettings.webknossosBuildInfoSettings):_*)
-
-
-
-lazy val assemblyStandaloneDatastore = inputKey[Unit]("assembly standaloneDatastore")
-assemblyStandaloneDatastore := assembly.all(ScopeFilter(inProjects(standaloneDatastore))).value.head

@@ -33,16 +33,16 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(teamId)(GlobalAccessContext) ?~> "team.notFound"
-      t0 = System.nanoTime()
-      users <- UserDAO.findByTeams(List(Some(team.name), team.parent).flatten, false)
-      projects <- ProjectDAO.findAllByTeamNames(List(Some(team.name), team.parent).flatten)(GlobalAccessContext)
+      teamWithParent = List(Some(team.name), team.parent).flatten
+      users <- UserDAO.findByTeams(teamWithParent, false)
+      projects <- ProjectDAO.findAllByTeamNames(teamWithParent)(GlobalAccessContext)
       entryBoxes <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))
     } yield {
       Ok(Json.toJson(entryBoxes.flatten))
     }
   }
 
-  def progressOfProject(project: Project, users: List[User])(implicit ctx: DBAccessContext): Fox[ProjectProgressEntry] = {
+  private def progressOfProject(project: Project, users: List[User])(implicit ctx: DBAccessContext): Fox[ProjectProgressEntry] = {
     for {
       taskIds <- TaskDAO.findAllByProjectReturnOnlyIds(project.name)
       totalTasks = taskIds.length
@@ -59,18 +59,18 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     }
   }
 
-  def assertNotPaused(project: Project, finishedInstances: Int, inProgressInstances: Int) = {
+  private def assertNotPaused(project: Project, finishedInstances: Int, inProgressInstances: Int) = {
     if (project.paused && finishedInstances == 0 && inProgressInstances == 0) {
       Fox.failure("")
     } else Fox.successful(())
   }
 
-  def assertExpDomain(firstTask: Task, inProgressInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
+  private def assertExpDomain(firstTask: Task, inProgressInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
     if (inProgressInstances > 0) Fox.successful(())
     else assertMatchesAnyUserOfTeam(firstTask.neededExperience, users)
   }
 
-  def assertMatchesAnyUserOfTeam(experience: Experience, users: List[User])(implicit ctx: DBAccessContext) = {
+  private def assertMatchesAnyUserOfTeam(experience: Experience, users: List[User])(implicit ctx: DBAccessContext) = {
     for {
       _ <- users.exists(user => user.experiences.contains(experience.domain) && user.experiences(experience.domain) >= experience.value)
     } yield {
@@ -78,14 +78,14 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     }
   }
 
-  def assertAge(taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
+  private def assertAge(taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
     if (inProgressInstances > 0 || openInstances > 0) Fox.successful(())
     else {
       assertRecentlyModified(taskIds)
     }
   }
 
-  def assertRecentlyModified(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
+  private def assertRecentlyModified(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     for {
       count <- AnnotationDAO.countRecentlyModifiedByTaskIdsAndType(taskIds, AnnotationType.Task, System.currentTimeMillis - (30 days).toMillis)
       _ <- count > 0
@@ -103,7 +103,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
       users <- UserDAO.findByTeams(List(team.name), true)(GlobalAccessContext)
-      nonAdminUsers = users.filter(!_.isAdminOf(team.name))
+      nonAdminUsers = users.filterNot(_.isAdminOf(team.name))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield {
       Ok(Json.toJson(entries))
@@ -111,7 +111,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   }
 
 
-  def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
+  private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
         projects <- OpenAssignmentDAO.findByUserReturnOnlyProject(user).toFox
@@ -123,7 +123,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     Fox.combined(foxes.toList)
   }
 
-  def getAssignmentsByProjectsFor(projects: Seq[String], user: User)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+  private def getAssignmentsByProjectsFor(projects: Seq[String], user: User)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
     val projectsGrouped = projects.groupBy(identity).mapValues(_.size)
     val foxes: Iterable[Fox[(String, Int)]] = projectsGrouped.keys.map {
       project =>

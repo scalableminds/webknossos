@@ -74,6 +74,8 @@
     "test-help":
       "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-snapshots": "rm -r app/assets/javascripts/test/snapshots/public",
+    "create-snapshots":
+      "rm -r app/assets/javascripts/test/snapshots/public && docker-compose up e2e-tests",
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
@@ -99,6 +101,7 @@
     "data.maybe": "^1.2.2",
     "deep-freeze": "0.0.1",
     "es6-promise": "^3.0.2",
+    "file-saver": "^1.3.3",
     "font-awesome": "^4.5.0",
     "form-syphon": "0.0.5",
     "hammerjs": "^2.0.8",

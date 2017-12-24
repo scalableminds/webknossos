@@ -99,6 +99,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 title="ID"
                 dataIndex="id"
                 key="id"
+                width={80}
                 sorter={Utils.localeCompareBy("id")}
                 className="monospace-id"
               />
@@ -106,12 +107,14 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 title="Team"
                 dataIndex="team"
                 key="team"
+                width={130}
                 sorter={Utils.localeCompareBy("team")}
               />
               <Column
                 title="Summary"
                 dataIndex="summary"
                 key="summary"
+                width={130}
                 sorter={Utils.localeCompareBy("summary")}
               />
               <Column
@@ -120,10 +123,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 key="description"
                 sorter={Utils.localeCompareBy("description")}
                 render={description => (
-                  <div
-                    style={{ wordBreak: "break-word", maxHeight: 100, overflowY: "auto" }}
-                    className="task-type-description"
-                  >
+                  <div className="task-type-description">
                     <Markdown
                       source={description}
                       options={{ html: false, breaks: true, linkify: true }}
@@ -133,7 +133,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 width={300}
               />
               <Column
-                title="Add-On Modes"
+                title="Modes"
                 dataIndex="settings"
                 key="allowedModes"
                 width={100}
@@ -164,6 +164,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
               <Column
                 title="Action"
                 key="actions"
+                width={140}
                 render={(__, taskType: APITaskTypeType) => (
                   <span>
                     <Link to={`/annotations/CompoundTaskType/${taskType.id}`} title="View">

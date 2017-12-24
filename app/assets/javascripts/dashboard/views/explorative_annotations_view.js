@@ -145,7 +145,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   handleNMLUpload = (response: Object) => {
-    response.messages.map(m => Toast.success(m.success));
     this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
   };
 
@@ -371,7 +370,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   onClick={_.partial(this.addTagToSearch, tag)}
                   onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
                   closable={
-                    !(tag === tracing.dataSetName || tag === tracing.contentType) &&
+                    !(tag === tracing.dataSetName || tag === tracing.content.typ) &&
                     !this.state.shouldShowArchivedTracings
                   }
                 >
@@ -448,7 +447,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             </FileUpload>
             <div className="divider-vertical" />
             <Button onClick={this.toggleShowArchived} style={marginRight}>
-              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings
+              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
             </Button>
             {!this.state.shouldShowArchivedTracings ? (
               <Button onClick={this.archiveAll} style={marginRight}>

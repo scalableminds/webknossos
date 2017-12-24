@@ -7,39 +7,13 @@ services:
       - "9000:9000"
     links:
       - mongo
+      - fossildb
     environment:
       - PORT=9000
       - MODE=dev
 
-  dev:
-    extends:
-      service: base
-    ports:
-      - "9000:9000"
-    links:
-      - mongo-dev
-    command: >
-      bash -c
-      "sbt -v -d -jvm-debug 5005 \"run
-      -Djava.net.preferIPv4Stack=true
-      -Dhttp.address=0.0.0.0
-      -Dhttp.port=$${PORT}
-      -Dmongodb.db=$${MONGO_DB}
-      -Dmongodb.url=$${MONGO_HOST}
-      -Dmongodb.port=$${MONGO_PORT}
-      -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
-      \""
-    environment:
-      - PORT=9000
-      - MONGO_HOST=mongo-dev
-      - MONGO_PORT=27017
-      - MONGO_DB=webknossos-dev
-    stdin_open: true
-
   base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
-    ports:
-      - "5005:5005"
     environment:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
@@ -52,6 +26,36 @@ services:
       - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/${USER_NAME:-sbt-user}/.ivy2"
       - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/${USER_NAME:-sbt-user}/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
+
+  dev:
+    extends:
+      service: base
+    ports:
+      - "5005:5005"
+      - "9000:9000"
+    links:
+      - mongo-dev
+      - fossildb-dev
+    command:
+      - bash
+      - -c
+      - >
+        ./sbt
+        -v -d -jvm-debug 5005
+        "run
+          -Djava.net.preferIPv4Stack=true
+          -Dhttp.address=0.0.0.0
+          -Dhttp.port=$${PORT}
+          -Dmongodb.db=$${MONGO_DB}
+          -Dmongodb.url=$${MONGO_HOST}
+          -Dmongodb.port=$${MONGO_PORT}
+          -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}"
+    environment:
+      - PORT=9000
+      - MONGO_HOST=mongo-dev
+      - MONGO_PORT=27017
+      - MONGO_DB=webknossos-dev
+    stdin_open: true
 
   frontend-dependencies:
     extends:
@@ -81,22 +85,27 @@ services:
   e2e-tests:
     extends:
       service: base
-    command: >
-      bash -c
-      "sbt -v -d \"test-only * --
-      -Dconfig.file=./conf/application_$${MODE}.conf
-      -Djava.net.preferIPv4Stack=true
-      -Dhttp.address=0.0.0.0
-      -Dhttp.port=$${PORT}
-      -Dmongodb.db=$${MONGO_DB}
-      -Dmongodb.url=$${MONGO_HOST}
-      -Dmongodb.port=$${MONGO_PORT}
-      -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
-      \""
     ports:
+      - "5005:5005"
       - "9000:9000"
     links:
       - mongo
+      - fossildb
+    command:
+      - bash
+      - -c
+      - >
+        ./sbt
+        -v -d
+        "test-only * --
+          -Dconfig.file=./conf/application_$${MODE}.conf
+          -Djava.net.preferIPv4Stack=true
+          -Dhttp.address=0.0.0.0
+          -Dhttp.port=$${PORT}
+          -Dmongodb.db=$${MONGO_DB}
+          -Dmongodb.url=$${MONGO_HOST}
+          -Dmongodb.port=$${MONGO_PORT}
+          -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}"
     environment:
       - MONGO_HOST=mongo
       - MONGO_PORT=27017
@@ -105,12 +114,30 @@ services:
       - MODE=dev
 
   mongo:
-    image: mongo
+    image: mongo:3.4
 
   mongo-dev:
-    image: mongo
+    extends:
+      service: mongo
     ports:
       - "27017:27017"
     volumes:
       - "./dev-db/configdb:/data/configdb"
       - "./dev-db/db:/data/db"
+
+  fossildb:
+    image: scalableminds/fossildb:master__222
+    command:
+      - fossildb
+      - -c
+      - skeletons,skeletonUpdates,volumes,volumeData
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
+
+  fossildb-dev:
+    extends:
+      service: fossildb
+    ports:
+      - "7155:7155"
+    volumes:
+      - "./fossildb/data:/fossildb/data"
+      - "./fossildb/backup:/fossildb/backup"

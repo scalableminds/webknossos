@@ -4,7 +4,7 @@ import React from "react";
 import { Router, Route, Switch, Redirect } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
 import { connect } from "react-redux";
-import { Layout, LocaleProvider } from "antd";
+import { Layout, LocaleProvider, Alert } from "antd";
 import enUS from "antd/lib/locale-provider/en_US";
 
 import { ControlModeEnum } from "oxalis/constants";
@@ -12,6 +12,7 @@ import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
+import Imprint from "components/imprint";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/views/dashboard_view";
@@ -95,6 +96,20 @@ browserHistory.listen(location => {
     window.ga("send", "pageview", location.pathname);
   }
 });
+
+function PageNotFoundView() {
+  return (
+    <div className="container">
+      <Alert
+        style={{ maxWidth: "500px", margin: "0 auto" }}
+        message="Error 404"
+        description="Page not found."
+        type="error"
+        showIcon
+      />
+    </div>
+  );
+}
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ReactRouterArgumentsType) => {
@@ -322,6 +337,8 @@ class ReactRouter extends React.Component<Props> {
                 <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
                 <Route path="/spotlight" component={SpotlightView} />
                 <Route path="/datasets/:id/view" render={this.tracingViewMode} />
+                <Route path="/impressum" component={Imprint} />
+                <Route component={PageNotFoundView} />
               </Switch>
             </Content>
           </Layout>

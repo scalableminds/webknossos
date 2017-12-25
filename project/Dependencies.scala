@@ -123,38 +123,32 @@ object Dependencies {
     scalapbJson
   )
 
-  val braingamesBinaryDependencies = Seq(
-    webknossosWrap,
-    playFramework,
-    log4jCore,
-    log4jApi,
-    commonsIo,
-    commonsEmail,
-    commonsLang,
-    alphanumericComparator,
-    reactiveBson,
-    reactivePlay,
-    akkaAgent,
-    akkaRemote,
-    scalaLogging,
-    liftBox,
-    liftUtil,
-    newrelic,
-    newrelicApi,
-    xmlWriter,
-    rocksDB,
-    scalapbJson) ++ tiff
-
   val braingamesDatastoreDependencies = Seq(
     akkaAgent,
-    websockets,
-    ws,
+    akkaRemote,
+    alphanumericComparator,
     cache,
+    commonsEmail,
+    commonsIo,
+    commonsLang,
     liftBox,
+    liftUtil,
+    log4jApi,
+    log4jCore,
+    newrelic,
+    newrelicApi,
+    playFramework,
+    reactiveBson,
+    reactivePlay,
+    rocksDB,
     scalaLogging,
     scalapbJson,
+    webknossosWrap,
+    websockets,
+    ws,
+    xmlWriter,
     component("play-test")
-  )
+  ) ++ tiff
 
   val webknossosDatastoreDependencies = Seq(
     akkaLogging

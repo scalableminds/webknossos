@@ -51,15 +51,8 @@ lazy val util = (project in file("util"))
     libraryDependencies ++= Dependencies.utilDependencies
   ))
 
-lazy val braingamesBinary = (project in file("braingames-binary"))
-  .dependsOn(util)
-  .settings(Seq(
-    resolvers ++= DependencyResolvers.dependencyResolvers,
-    libraryDependencies ++= Dependencies.braingamesBinaryDependencies
-  ))
-
 lazy val braingamesDatastore = (project in file("braingames-datastore"))
-  .dependsOn(util, braingamesBinary)
+  .dependsOn(util)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
@@ -77,7 +70,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .settings((webknossosDatastoreSettings ++ BuildInfoSettings.webknossosDatastoreBuildInfoSettings):_*)
 
 lazy val webknossos = (project in file("."))
-  .dependsOn(util, braingamesBinary, braingamesDatastore)
+  .dependsOn(util, braingamesDatastore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings((webknossosSettings ++ AssetCompilation.settings ++ BuildInfoSettings.webknossosBuildInfoSettings):_*)

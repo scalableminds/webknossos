@@ -1,6 +1,6 @@
 package models.task
 
-import com.scalableminds.braingames.datastore.tracings.TracingType
+import com.scalableminds.webknossos.datastore.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
 import models.annotation.AnnotationSettings

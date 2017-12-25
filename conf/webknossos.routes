@@ -2,8 +2,8 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-GET           /api/buildinfo                                                    controllers.Application.buildInfo
-POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
+GET           /api/buildinfo                                                    controllers.StandaloneDatastore.buildInfo
+POST          /api/analytics/:namespace                                         controllers.StandaloneDatastore.analytics(namespace)
 
 # Authentication
 GET           /api/auth/autoLogin                                               controllers.Authentication.autoLogin

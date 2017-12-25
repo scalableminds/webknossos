@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-package com.scalableminds.braingames.datastore;
+package com.scalableminds.webknossos.datastore.datastore;
 
 
 message Point3D {

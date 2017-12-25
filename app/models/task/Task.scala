@@ -1,6 +1,6 @@
 package models.task
 
-import com.scalableminds.braingames.datastore.tracings.TracingType
+import com.scalableminds.webknossos.datastore.datastore.tracings.TracingType
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}

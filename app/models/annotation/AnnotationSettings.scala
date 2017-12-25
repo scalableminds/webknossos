@@ -1,6 +1,6 @@
 package models.annotation
 
-import com.scalableminds.braingames.datastore.tracings.TracingType
+import com.scalableminds.webknossos.datastore.datastore.tracings.TracingType
 import models.annotation.AnnotationSettings._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._

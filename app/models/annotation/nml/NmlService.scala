@@ -3,8 +3,8 @@ package models.annotation.nml
 import java.io.{File, FileInputStream, InputStream}
 import java.nio.file.{Files, StandardCopyOption}
 
-import com.scalableminds.braingames.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.io.ZipIO
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Empty, Failure, Full}

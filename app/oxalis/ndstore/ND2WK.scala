@@ -3,7 +3,7 @@
  */
 package oxalis.ndstore
 
-import com.scalableminds.braingames.binary.models.datasource.{Category, DataSourceId, DataLayerLike => DataLayer, AbstractDataLayer => NDDataLayer, DataSourceLike => DataSource, GenericDataSource => NDDataSource}
+import com.scalableminds.webknossos.datastore.binary.models.datasource.{Category, DataSourceId, DataLayerLike => DataLayer, AbstractDataLayer => NDDataLayer, DataSourceLike => DataSource, GenericDataSource => NDDataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}

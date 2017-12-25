@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.braingames.datastore.controllers.ValidationHelpers
+import com.scalableminds.webknossos.datastore.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging

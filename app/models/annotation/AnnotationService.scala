@@ -3,11 +3,11 @@ package models.annotation
 import java.io.{BufferedOutputStream, FileOutputStream}
 
 import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.webknossos.datastore.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
-import com.scalableminds.webknossos.datastore.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.datastore.tracings._
-import com.scalableminds.webknossos.datastore.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.datastore.tracings.volume.VolumeTracingDefaults
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.tracings._
+import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext

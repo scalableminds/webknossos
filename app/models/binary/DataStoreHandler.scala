@@ -6,10 +6,10 @@ package models.binary
 import java.io.File
 
 import com.scalableminds.webknossos.datastore.binary.helpers.ThumbnailHelpers
-import com.scalableminds.webknossos.datastore.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.datastore.models.ImageThumbnail
-import com.scalableminds.webknossos.datastore.datastore.tracings.{TracingReference, TracingSelector}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.models.ImageThumbnail
+import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingSelector}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

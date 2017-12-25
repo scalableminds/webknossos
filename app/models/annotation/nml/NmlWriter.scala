@@ -6,8 +6,8 @@ package models.annotation.nml
 import java.io.OutputStream
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 
-import com.scalableminds.webknossos.datastore.datastore.SkeletonTracing._
-import com.scalableminds.webknossos.datastore.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter

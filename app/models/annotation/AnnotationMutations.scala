@@ -1,6 +1,6 @@
 package models.annotation
 
-import com.scalableminds.webknossos.datastore.datastore.tracings.TracingType
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import models.project.{Project, WebknossosAssignmentConfig}

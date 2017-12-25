@@ -4,8 +4,8 @@ import java.util.UUID
 import javax.inject.Inject
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.webknossos.datastore.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}

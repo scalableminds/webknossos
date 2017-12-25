@@ -34,7 +34,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
                   "mongodb.port" -> mongoPort,
                   "http.port"    -> testPort,
                   "mongodb.evolution.mongoCmd" -> s"mongo $mongoHost:$mongoPort/$mongoDb",
-                  "play.modules.disabled" -> List("com.scalableminds.webknossos.datastore.datastore.DataStoreModule"),
+                  "play.modules.disabled" -> List("com.scalableminds.webknossos.datastore.DataStoreModule"),
                   "play.http.router" -> "webknossos.Routes",
                   "datastore.enabled" -> false)
 

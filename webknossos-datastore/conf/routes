@@ -2,6 +2,6 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-GET   /api/buildinfo com.scalableminds.webknossos.datastore.datastore.controllers.StandaloneDatastore.buildInfo
+GET   /api/buildinfo com.scalableminds.webknossos.datastore.controllers.StandaloneDatastore.buildInfo
 
 ->    /data/         com.scalableminds.webknossos.datastore.Routes

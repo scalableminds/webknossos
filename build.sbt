@@ -42,7 +42,7 @@ val protocolBufferSettings = Seq(
   ProtocPlugin.autoImport.PB.targets in Compile := Seq(
     scalapb.gen() -> new java.io.File((sourceManaged in Compile).value + "/proto")
   ),
-  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("braingames-datastore/proto")))
+  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto")))
 
 
 lazy val util = (project in file("util"))
@@ -51,26 +51,18 @@ lazy val util = (project in file("util"))
     libraryDependencies ++= Dependencies.utilDependencies
   ))
 
-lazy val braingamesDatastore = (project in file("braingames-datastore"))
+lazy val webknossosDatastore = (project in file("webknossos-datastore"))
   .dependsOn(util)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .enablePlugins(ProtocPlugin)
-  .settings(protocolBufferSettings)
-  .settings(Seq(
-    resolvers ++= DependencyResolvers.dependencyResolvers,
-    libraryDependencies ++= Dependencies.braingamesDatastoreDependencies,
-    routesGenerator := InjectedRoutesGenerator
-  ))
-
-lazy val webknossosDatastore = (project in file("webknossos-datastore"))
-  .dependsOn(braingamesDatastore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
+  .settings(protocolBufferSettings)
   .settings((webknossosDatastoreSettings ++ BuildInfoSettings.webknossosDatastoreBuildInfoSettings):_*)
 
 lazy val webknossos = (project in file("."))
-  .dependsOn(util, braingamesDatastore)
+  .dependsOn(util, webknossosDatastore)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
   .settings((webknossosSettings ++ AssetCompilation.settings ++ BuildInfoSettings.webknossosBuildInfoSettings):_*)

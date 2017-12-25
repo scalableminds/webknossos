@@ -7,7 +7,6 @@ object Dependencies {
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "11.3.9"
   val twelvemonkeysVersion = "3.1.2"
   val log4jVersion = "2.0-beta9"
   val newrelicVersion = "3.44.1"
@@ -123,8 +122,9 @@ object Dependencies {
     scalapbJson
   )
 
-  val braingamesDatastoreDependencies = Seq(
+  val webknossosDatastoreDependencies = Seq(
     akkaAgent,
+    akkaLogging,
     akkaRemote,
     alphanumericComparator,
     cache,
@@ -149,10 +149,6 @@ object Dependencies {
     xmlWriter,
     component("play-test")
   ) ++ tiff
-
-  val webknossosDatastoreDependencies = Seq(
-    akkaLogging
-  )
 
   val webknossosDependencies = Seq(
     restFb,

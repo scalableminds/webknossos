@@ -190,14 +190,10 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     countOpenAnnotations(_user, annotationType).map(_ > 0)
 
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    var q = Json.obj(
+    val q = Json.obj(
       "_user" -> _user,
-      "state" -> Json.obj("$in" -> AnnotationState.assignedStates),
+      "state" -> Json.obj("$in" -> finishedOptToStates(isFinished)),
       "typ" -> annotationType)
-
-    if(isFinished.isDefined){
-      if(isFinished.get) q += "state" -> Json.toJson(Finished)
-    }
 
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
@@ -206,14 +202,18 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     update(Json.obj("_id" -> _annotation), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
   def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType], limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    var q = Json.obj(
+    val q = Json.obj(
       "_user" -> _user,
-      "state" -> Json.obj("$in" -> AnnotationState.assignedStates),
+      "state" -> Json.obj("$in" -> finishedOptToStates(isFinished)),
       "typ" -> Json.obj("$nin" -> annotationTypes))
 
-    if(isFinished.isDefined) q += "state" -> Json.toJson(Finished)
-
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
+  }
+
+  private def finishedOptToStates(isFinished: Option[Boolean]) = isFinished match {
+    case Some(true) => List(AnnotationState.Finished)
+    case Some(false) => AnnotationState.assignedButNotFinished
+    case None => AnnotationState.assignedStates
   }
 
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{

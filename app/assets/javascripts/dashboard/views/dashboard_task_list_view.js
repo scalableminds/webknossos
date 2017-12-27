@@ -232,7 +232,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   async getNewTask() {
     this.setState({ isLoading: true });
     try {
-      const newTaskAnnotation = await Request.receiveJSON("/user/tasks/request");
+      const newTaskAnnotation = await Request.receiveJSON("/api/user/tasks/request");
 
       this.setState({
         unfinishedTasks: this.state.unfinishedTasks.concat([
@@ -333,15 +333,14 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return (
       <div>
         <div className="pull-right">
-          {this.props.isAdminView && this.props.userId ? (
-            <Link to={`/api/users/${this.props.userId}/annotations/download`}>
-              <Button icon="download">Download All Finished Tracings</Button>
-            </Link>
-          ) : (
-            <AsyncButton type="primary" icon="file-add" onClick={() => this.confirmGetNewTask()}>
-              Get a New Task
-            </AsyncButton>
-          )}
+          <AsyncButton
+            type="primary"
+            icon="file-add"
+            onClick={() => this.confirmGetNewTask()}
+            disabled={this.props.isAdminView && this.props.userId}
+          >
+            Get a New Task
+          </AsyncButton>
           <div className="divider-vertical" />
           <Button onClick={this.toggleShowFinished}>Show {this.getFinishVerb()} Tasks Only</Button>
         </div>

@@ -17,6 +17,7 @@ import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import play.api.libs.json.Json
+import play.api.mvc.Results.Ok
 import play.api.mvc._
 
 import scala.concurrent.duration._
@@ -58,6 +59,14 @@ object Global extends GlobalSettings with LazyLogging{
         Props(new AvailableTasksJob()),
         name = "availableTasksMailActor"
       )
+    }
+  }
+
+  override def onRouteRequest(request: RequestHeader): Option[Handler] = {
+    if (request.uri.matches("^(/annotations/|/datasets/|/api/|/data/|/assets/).*$")) {
+      super.onRouteRequest(request)
+    } else {
+      Some(Action {Ok(views.html.main())})
     }
   }
 
@@ -129,7 +138,8 @@ object InitialData extends GlobalDBAccess with LazyLogging {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
         val url = conf.getString("http.uri").getOrElse("http://localhost:9000")
-        DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, "something-secure"))
+        val key = conf.getString("datastore.key").getOrElse("something-secure")
+        DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, key))
       }
     }
   }

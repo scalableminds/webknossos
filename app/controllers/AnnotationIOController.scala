@@ -206,15 +206,4 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }
-
-  def userDownload(userId: String) = SecuredAction.async { implicit request =>
-    for {
-      user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      annotations <- AnnotationService.findTasksOf(user, isFinished = Some(true), limit = Int.MaxValue)
-      zipped <- AnnotationService.zipAnnotations(annotations, user.abreviatedName + "_nmls.zip")
-    } yield {
-      Ok.sendFile(zipped.file)
-    }
-  }
 }

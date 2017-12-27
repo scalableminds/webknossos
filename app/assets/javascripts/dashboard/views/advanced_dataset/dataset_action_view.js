@@ -15,6 +15,9 @@ type State = {};
 export default class DatasetActionView extends React.PureComponent<Props, State> {
   render() {
     const dataset = this.props.dataset;
+    const centerBackgroundImageStyle = {
+      verticalAlign: "middle",
+    };
 
     const menu = (
       <Menu>
@@ -40,7 +43,12 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
     const createVolumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
         <a href="#" title="Create volume tracing">
-          <img src="/assets/images/volume.svg" alt="volume icon" /> Start Volume Tracing
+          <img
+            src="/assets/images/volume.svg"
+            alt="volume icon"
+            style={centerBackgroundImageStyle}
+          />{" "}
+          Start Volume Tracing
         </a>
       </Dropdown>
     );
@@ -64,13 +72,19 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
               </Link>
             ) : null}
             <a href={`/datasets/${dataset.name}/view`} title="View dataset">
-              <img src="/assets/images/eye.svg" alt="eye icon" /> View
+              <img src="/assets/images/eye.svg" alt="eye icon" style={centerBackgroundImageStyle} />{" "}
+              View
             </a>
             <a
               href={`/datasets/${dataset.name}/trace?typ=skeleton`}
               title="Create skeleton tracing"
             >
-              <img src="/assets/images/skeleton.svg" alt="skeleton icon" /> Start Skeleton Tracing
+              <img
+                src="/assets/images/skeleton.svg"
+                alt="skeleton icon"
+                style={centerBackgroundImageStyle}
+              />{" "}
+              Start Skeleton Tracing
             </a>
             {dataset.dataStore.typ !== "ndstore" ? createVolumeTracingMenu : null}
           </div>

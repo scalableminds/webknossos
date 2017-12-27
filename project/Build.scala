@@ -14,7 +14,7 @@ object Dependencies{
   val akkaVersion = "2.4.1"
   val reactiveVersion = "0.11.13"
   val reactivePlayVersion = "0.11.13-play24"
-  val braingamesVersion = "11.3.7"
+  val braingamesVersion = "11.3.9"
 
   val twelvemonkeysVersion = "3.1.2"
 
@@ -279,6 +279,17 @@ object ApplicationBuild extends Build {
             (new java.io.BufferedReader(extracted)).readLine()
           } catch {
             case t: Throwable => "get git hash failed"
+          }
+        }
+      }.toString(),
+      "commitDate" -> new java.lang.Object() {
+        override def toString(): String = {
+          try {
+            val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git log -1 --format=%cd ").getInputStream())
+            (new java.io.BufferedReader(extracted)).readLine()
+
+          } catch {
+            case t: Throwable => "get git date failed"
           }
         }
       }.toString()

@@ -12,7 +12,6 @@ import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
-const TextArea = Input.TextArea;
 
 type StateProps = {
   activeUser: APIUserType,

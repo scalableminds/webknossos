@@ -59,13 +59,13 @@ object Project {
 
   def projectPublicWritesWithStatus(
                                      project: Project,
-                                     openAssignments: Int,
+                                     openTaskInstances: Int,
                                      requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
 
     for {
       projectJson <- projectPublicWrites(project, requestingUser)
     } yield {
-      projectJson + ("numberOfOpenAssignments" -> JsNumber(openAssignments))
+      projectJson + ("numberOfOpenAssignments" -> JsNumber(openTaskInstances))
     }
   }
 
@@ -109,7 +109,7 @@ object ProjectService extends FoxImplicits with LazyLogging {
       if (oldProject.priority == updated.priority)
         Fox.successful(true)
       else
-        TaskService.handleProjectUpdate(oldProject.name, updated)
+        TaskService.handleProjectUpdate(updated)
     }
 
     for {
@@ -124,7 +124,7 @@ object ProjectService extends FoxImplicits with LazyLogging {
       if (updated.paused == project.paused)
         Fox.successful(true)
       else
-        TaskService.handleProjectUpdate(updated.name, updated)
+        TaskService.handleProjectUpdate(updated)
     }
 
     val updated = project.copy(paused = isPaused)

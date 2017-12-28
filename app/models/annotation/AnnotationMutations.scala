@@ -6,8 +6,7 @@ package models.annotation
 import com.scalableminds.braingames.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import models.project.Project
-import models.task.{OpenAssignmentService, Task}
+import models.task.TaskAssignmentService
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -53,17 +52,12 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   def setTags(tags: List[String])(implicit ctx: DBAccessContext) =
     AnnotationDAO.setTags(annotation._id, tags)
 
-  def cancelTask()(implicit ctx: DBAccessContext) = {
-    def insertReplacement(task: Task, project: Project) =
-      OpenAssignmentService.insertOneFor(task, project)
-
+  def cancelTask()(implicit ctx: DBAccessContext) =
     for {
       task <- annotation.task
-      project <- task.project
-      _ <- insertReplacement(task, project)
+      _ <- TaskAssignmentService.putBackInstance(task)
       _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
     } yield annotation
-  }
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {
     case AnnotationType.Explorational =>

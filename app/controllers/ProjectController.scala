@@ -34,11 +34,11 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        allCounts <- OpenAssignmentDAO.countForProjects
+        allCounts <- TaskDAO.countOpenInstancesByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
-            openAssignments <- Fox.successful(allCounts.get(project.name).getOrElse(0))
-            r <- Project.projectPublicWritesWithStatus(project, openAssignments, request.identity)
+            openTaskInstances <- Fox.successful(allCounts.get(project.name).getOrElse(0))
+            r <- Project.projectPublicWritesWithStatus(project, openTaskInstances, request.identity)
           } yield r
         }
       } yield {

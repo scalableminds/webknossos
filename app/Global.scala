@@ -19,8 +19,6 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 
-import scala.concurrent.duration._
-
 object Global extends GlobalSettings with LazyLogging{
 
   override def onStart(app: Application) {
@@ -35,10 +33,6 @@ object Global extends GlobalSettings with LazyLogging{
 
     CleanUpService.register("deletion of expired dataTokens", UserToken.expirationTime) {
       UserTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
-    }
-
-    CleanUpService.register("deletion of openAssignments with zero instances", OpenAssignment.pruningInterval) {
-      OpenAssignmentDAO.removeZeroInstanceAssignments()(GlobalAccessContext).map(r => s"deleted ${r.n}")
     }
 
     super.onStart(app)

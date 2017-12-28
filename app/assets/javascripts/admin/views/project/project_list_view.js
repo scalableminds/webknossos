@@ -108,13 +108,7 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
                 this.state.projects,
-                [
-                  "name",
-                  "team",
-                  "priority",
-                  "owner",
-                  "numberOfOpenAssignments",
-                ],
+                ["name", "team", "priority", "owner", "numberOfOpenAssignments"],
                 this.state.searchQuery,
               )}
               rowKey="id"

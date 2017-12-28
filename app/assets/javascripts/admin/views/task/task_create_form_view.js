@@ -245,7 +245,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               <FormItem label={instancesLabel} hasFeedback>
                 {getFieldDecorator("openInstances", {
                   rules: [{ required: true }, { type: "number" }],
-                })(<InputNumber style={fullWidth} />)}
+                })(<InputNumber style={fullWidth} min={0} />)}
               </FormItem>
 
               <FormItem label="Team" hasFeedback>

@@ -112,7 +112,6 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                   "name",
                   "team",
                   "priority",
-                  "assignmentConfiguration",
                   "owner",
                   "numberOfOpenAssignments",
                 ],
@@ -146,19 +145,6 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                 render={(priority, project: APIProjectType) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
-              />
-              <Column
-                title="Location"
-                dataIndex="assignmentConfiguration"
-                key="assignmentConfiguration"
-                sorter={Utils.localeCompareBy(
-                  (project: APIProjectType) => project.assignmentConfiguration.location,
-                )}
-                render={assignmentConfiguration => (
-                  <Tag color={TemplateHelpers.stringToColor(assignmentConfiguration.location)}>
-                    {assignmentConfiguration.location}
-                  </Tag>
-                )}
               />
               <Column
                 title="Owner"

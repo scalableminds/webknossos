@@ -53,7 +53,6 @@ object Project {
         "priority" -> project.priority,
         "paused" -> project.paused,
         "expectedTime" -> project.expectedTime,
-        "assignmentConfiguration" -> Json.obj("location" -> "webknossos"),
         "id" -> project.id
       )
     }

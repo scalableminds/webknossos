@@ -4,7 +4,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
-import models.project.{Project, WebknossosAssignmentConfig}
+import models.project.{Project}
 import models.task.TaskDAO._
 import models.user.{User, UserDAO}
 import net.liftweb.common.Full
@@ -82,17 +82,9 @@ object TaskService
   }
 
   def insert(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
-    def insertAssignmentsIfNeeded() =
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          OpenAssignmentService.insertInstancesFor(task, project, task.instances).toFox
-        case _ =>
-          Fox.successful(true)
-      }
-
     for {
       _ <- TaskDAO.insert(task)
-      _ <- insertAssignmentsIfNeeded()
+      _ <- OpenAssignmentService.insertInstancesFor(task, project, task.instances)
     } yield task
   }
 

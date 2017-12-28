@@ -25,7 +25,6 @@ case class Project(
                     priority: Int,
                     paused: Boolean,
                     expectedTime: Option[Int],
-                    assignmentConfiguration: AssignmentConfig,
                     _id: BSONObjectID = BSONObjectID.generate) {
 
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
@@ -54,7 +53,7 @@ object Project {
         "priority" -> project.priority,
         "paused" -> project.paused,
         "expectedTime" -> project.expectedTime,
-        "assignmentConfiguration" -> project.assignmentConfiguration,
+        "assignmentConfiguration" -> Json.obj("location" -> "webknossos"),
         "id" -> project.id
       )
     }
@@ -79,10 +78,9 @@ object Project {
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Int] and
-      (__ \ 'assignmentConfiguration).read[AssignmentConfig] and
       (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
-      (name, team, priority, paused, expectedTime, assignmentLocation, owner) =>
-        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime, assignmentLocation))
+      (name, team, priority, paused, expectedTime, owner) =>
+        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
 }
 
 object ProjectService extends FoxImplicits with LazyLogging {
@@ -97,8 +95,6 @@ object ProjectService extends FoxImplicits with LazyLogging {
         Fox.successful(false)
     }
   }
-
-  def reportToExternalService(project: Project, json: JsValue): Fox[Boolean] = Fox.successful(true)
 
   def findIfNotEmpty(name: Option[String])(implicit ctx: DBAccessContext): Fox[Option[Project]] = {
     name match {

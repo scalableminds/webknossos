@@ -16,14 +16,13 @@ import models.project.{Project, ProjectDAO}
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee._
 import play.api.libs.json._
 import play.api.mvc.Result
-import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
@@ -190,8 +189,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     } yield task
   }
 
-
-  // TODO: properly handle task update with amazon turk
   def update(taskId: String) = SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
     val params = request.body
     for {
@@ -200,7 +197,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       openInstanceCount <- task.remainingInstances
-      _ <- (params.openInstances == openInstanceCount || project.assignmentConfiguration.supportsChangeOfNumInstances) ?~> Messages("task.instances.changeImpossible")
       updatedTask <- TaskDAO.update(
         _task = task._id,
         _taskType = taskType._id,

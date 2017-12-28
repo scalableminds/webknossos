@@ -4,19 +4,19 @@
 package controllers
 import javax.inject.Inject
 
-import scala.concurrent.Future
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
-import models.project.{Project, ProjectDAO, ProjectService, WebknossosAssignmentConfig}
+import models.project.{Project, ProjectDAO, ProjectService}
 import models.task._
-import net.liftweb.common.{Empty, Full}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import models.user.UserDAO
+import net.liftweb.common.Empty
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsValue, Json}
-import play.twirl.api.Html
+import play.api.libs.json.Json
+
+import scala.concurrent.Future
 
 class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
@@ -72,13 +72,12 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
         case Empty if request.identity.isAdminOf(project.team) =>
           for {
-            _ <- ProjectService.reportToExternalService(project, request.body)
             _ <- ProjectDAO.insert(project)
             js <- Project.projectPublicWrites(project, request.identity)
           } yield Ok(js)
-        case Empty                                                       =>
+        case Empty =>
           Future.successful(JsonBadRequest(Messages("team.notAllowed")))
-        case _                                                           =>
+        case _ =>
           Future.successful(JsonBadRequest(Messages("project.name.alreadyTaken")))
       }
     }

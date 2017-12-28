@@ -1,19 +1,15 @@
+/*
+ * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package models.annotation
 
 import com.scalableminds.braingames.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import models.project.{Project, WebknossosAssignmentConfig}
+import models.project.Project
 import models.task.{OpenAssignmentService, Task}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-
-/**
-  * Company: scalableminds
-  * User: tmbo
-  * Date: 21.01.14
-  * Time: 14:06
-  */
 
 class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
 

@@ -160,10 +160,10 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           ? this.transformBoundingBox(formValues.boundingBox)
           : null;
 
-        if (this.props.taskId) {
+        if (this.props.taskId != null) {
           // either update an existing task
-          await updateTask(this.props.taskId, formValues);
-          this.props.history.push("/tasks");
+          const confirmedTask = await updateTask(this.props.taskId, formValues);
+          this.props.history.push(`/tasks/${confirmedTask.id}`);
         } else {
           this.setState({ isUploading: true });
 

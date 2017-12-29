@@ -1,5 +1,6 @@
 // @flow
 import React from "react";
+import _ from "lodash";
 import { withRouter } from "react-router-dom";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
 import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
@@ -36,11 +37,12 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
         advancedOptionsAllowed: true,
+        preferredMode: null,
       },
     };
     const taskType = this.props.taskTypeId ? await getTaskType(this.props.taskTypeId) : null;
-
-    const formValues = Object.assign({}, defaultValues, taskType);
+    // Use merge which is deep _.extend
+    const formValues = _.merge({}, defaultValues, taskType);
     this.props.form.setFieldsValue(formValues);
   }
 

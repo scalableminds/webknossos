@@ -203,6 +203,13 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
+                path="/tasks/:taskId"
+                render={({ match }: ReactRouterArgumentsType) => (
+                  <TaskListView initialFieldValues={{ taskId: match.params.taskId }} />
+                )}
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
                 path="/projects"
                 component={ProjectListView}
                 exact

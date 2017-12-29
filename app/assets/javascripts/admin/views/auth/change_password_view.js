@@ -5,6 +5,8 @@ import { Form, Icon, Input, Button, Col, Row, Alert } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
+import { logoutUserAction } from "oxalis/model/actions/user_actions";
+import Store from "oxalis/store";
 import type { ReactRouterHistoryType } from "react_router";
 
 const FormItem = Form.Item;
@@ -28,10 +30,14 @@ class ChangePasswordView extends React.PureComponent<Props, State> {
 
     this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
       if (!err) {
-        Request.sendJSONReceiveJSON("/api/auth/changePassword", { data: formValues }).then(() => {
-          Toast.success(messages["auth.reset_pw_confirmation"]);
-          this.props.history.push("/auth/login");
-        });
+        Request.sendJSONReceiveJSON("/api/auth/changePassword", { data: formValues }).then(
+          async () => {
+            Toast.success(messages["auth.reset_pw_confirmation"]);
+            await Request.receiveJSON("/api/auth/logout");
+            this.props.history.push("/auth/login");
+            Store.dispatch(logoutUserAction());
+          },
+        );
       }
     });
   };

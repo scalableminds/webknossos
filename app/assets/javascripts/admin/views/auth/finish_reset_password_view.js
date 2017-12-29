@@ -1,7 +1,7 @@
 // @flow
 import React from "react";
 import { withRouter } from "react-router-dom";
-import { Form, Icon, Input, Button, Col, Row, Alert } from "antd";
+import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";

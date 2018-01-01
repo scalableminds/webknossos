@@ -120,7 +120,7 @@
     "redux": "^3.6.0",
     "redux-logger": "^3.0.0",
     "redux-saga": "^0.14.3",
-    "scroll-into-view-if-needed": "^1.0.2",
+    "scroll-into-view-if-needed": "^1.4.1",
     "stats.js": "^1.0.0",
     "three": "^0.84.0",
     "tween.js": "^16.3.1",

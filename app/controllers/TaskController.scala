@@ -185,7 +185,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         editPosition = params.editPosition,
         editRotation = params.editRotation,
         boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) },
-        priority = if(project.paused) -1 else project.priority)
+        priority = if (project.paused) -1 else project.priority)
       _ <- TaskService.insert(task, project)
     } yield task
   }

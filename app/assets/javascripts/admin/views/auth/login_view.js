@@ -94,4 +94,4 @@ class LoginView extends React.PureComponent<Props> {
   }
 }
 
-export default withRouter(Form.create()(LoginView));
+export default withRouter(Form.create({ fieldNameProp: "name" })(LoginView));

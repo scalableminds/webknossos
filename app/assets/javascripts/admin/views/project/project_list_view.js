@@ -140,9 +140,7 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                 title="Priority"
                 dataIndex="priority"
                 key="priority"
-                sorter={Utils.localeCompareBy((project: APIProjectType) =>
-                  project.priority.toString(),
-                )}
+                sorter={Utils.compareBy((project: APIProjectType) => project.priority)}
                 render={(priority, project: APIProjectType) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
@@ -173,17 +171,15 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                 title="Open Assignments"
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
-                sorter={Utils.localeCompareBy((project: APIProjectType) =>
-                  project.numberOfOpenAssignments.toString(),
+                sorter={Utils.compareBy(
+                  (project: APIProjectType) => project.numberOfOpenAssignments,
                 )}
               />
               <Column
                 title="Expected Time"
                 dataIndex="expectedTime"
                 key="expectedTime"
-                sorter={Utils.localeCompareBy((project: APIProjectType) =>
-                  project.expectedTime.toString(),
-                )}
+                sorter={Utils.compareBy((project: APIProjectType) => project.expectedTime)}
                 render={expectedTime => `${expectedTime}m`}
               />
               <Column

@@ -62,7 +62,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     def insertReplacement(task: Task, project: Project) = {
       project.assignmentConfiguration match {
         case WebknossosAssignmentConfig =>
-          OpenAssignmentService.insertOneFor(task, project)
+          OpenAssignmentService.incrementOrInsertFor(task, project)
         case _ =>
           // If this is a project with its assignments on MTurk, they will handle the replacement generation
           Fox.successful(true)

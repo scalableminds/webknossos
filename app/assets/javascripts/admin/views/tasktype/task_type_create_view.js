@@ -121,7 +121,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
             >
               {getFieldDecorator("description", {
                 rules: [{ required: true }],
-              })(<TextArea rows={3} />)}
+              })(<TextArea rows={10} />)}
             </FormItem>
 
             <FormItem label="Allowed Modes" hasFeedback>

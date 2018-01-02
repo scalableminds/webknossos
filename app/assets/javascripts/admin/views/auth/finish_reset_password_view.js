@@ -1,7 +1,7 @@
 // @flow
 import React from "react";
 import { withRouter } from "react-router-dom";
-import { Form, Icon, Input, Button, Col, Row, Alert } from "antd";
+import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
@@ -65,12 +65,6 @@ class FinishResetPasswordView extends React.PureComponent<Props, State> {
       <Row type="flex" justify="center" style={{ padding: 50 }} align="middle">
         <Col span={8}>
           <h3>Reset Password</h3>
-          <Alert
-            type="info"
-            message={messages["auth.reset_logout"]}
-            showIcon
-            style={{ marginBottom: 24 }}
-          />
           <Form onSubmit={this.handleSubmit}>
             <FormItem>
               {getFieldDecorator("token", {

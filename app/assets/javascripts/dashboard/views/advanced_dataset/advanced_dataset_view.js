@@ -60,7 +60,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             )}
           />
           <Column
-            width={110}
+            width={150}
             title="Creation Date"
             dataIndex="created"
             key="created"
@@ -71,6 +71,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Scale"
             dataIndex="scale"
             key="scale"
+            width={120}
             render={(__, dataset: DatasetType) =>
               TemplateHelpers.formatTuple(dataset.dataSource.scale)
             }
@@ -93,7 +94,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                     })
                   }
                 >
-                  {team === dataset.owningTeam ? <i className="fa fa-lock" /> : null}
+                  {team === dataset.owningTeam ? <Icon type="lock" /> : null}
                   {team}
                 </Tag>
               ))
@@ -103,6 +104,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Active"
             dataIndex="isActive"
             key="isActive"
+            width={100}
             sorter={(a, b) => a.isActive - b.isActive}
             render={(isActive: boolean) => {
               const icon = isActive ? "check-circle-o" : "close-circle-o";
@@ -113,6 +115,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Public"
             dataIndex="isPublic"
             key="isPublic"
+            width={100}
             sorter={(a, b) => a.isPublic - b.isPublic}
             render={(isPublic: boolean) => {
               const icon = isPublic ? "check-circle-o" : "close-circle-o";

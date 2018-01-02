@@ -8,6 +8,8 @@ import { connect } from "react-redux";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import LoginView from "admin/views/auth/login_view";
+import { logoutUserAction } from "oxalis/model/actions/user_actions";
+import Store from "oxalis/store";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -28,8 +30,7 @@ type Props = {
 class Navbar extends React.PureComponent<Props> {
   handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
-    await Utils.sleep(500);
-    window.location.reload();
+    Store.dispatch(logoutUserAction());
   };
 
   render() {

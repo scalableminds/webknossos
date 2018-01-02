@@ -1,0 +1,13 @@
+<things>
+  <parameters>
+    <experiment name="e2006_knossos" />
+    <scale x="16.5" y="16.5" z="25.0" />
+    <offset x="0" y="0" z="0" />
+    <time ms="1502119735883" />
+    <editPosition x="4736" y="4992" z="2176" />
+    <editRotation xRot="0.0" yRot="0.0" zRot="0.0" />
+    <zoomLevel zoom="2.0" />
+  </parameters>
+  <branchpoints />
+  <comments />
+</things>

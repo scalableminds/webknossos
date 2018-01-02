@@ -27,6 +27,7 @@ import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
+import models.annotation.AnnotationState._
 
 object AnnotationService
   extends BoxImplicits
@@ -115,7 +116,7 @@ object AnnotationService
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation]().collect[List]()
 
   def countUnfinishedAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countUnfinishedByTaskIdAndType(task._id, AnnotationType.Task)
+    AnnotationDAO.countUnfinishedByTaskIdsAndType(List(task._id), AnnotationType.Task)
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
     for {
@@ -163,7 +164,7 @@ object AnnotationService
         newAnnotation = annotation.copy(
           _user = Some(user._id),
           tracingReference = newTracing,
-          state = AnnotationState.InProgress,
+          state = InProgress,
           typ = AnnotationType.Task,
           _id = BSONObjectID.generate,
           createdTimestamp = System.currentTimeMillis,

@@ -20,6 +20,8 @@ import type {
   APITimeIntervalType,
   APIUserLoggedTimeType,
   APITimeTrackingType,
+  APIProjectProgressReportType,
+  APIOpenTasksReportType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
@@ -485,4 +487,18 @@ export async function getTimeTrackingForUser(
   assertResponseLimit(timelogs);
 
   return timelogs;
+}
+
+export async function getProjectProgressReport(
+  teamId: string,
+): Promise<Array<APIProjectProgressReportType>> {
+  const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`);
+  assertResponseLimit(progressData);
+  return progressData;
+}
+
+export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenTasksReportType>> {
+  const openTasksData = await Request.receiveJSON(`/api/teams/${teamId}/openTasksOverview`);
+  assertResponseLimit(openTasksData);
+  return openTasksData;
 }

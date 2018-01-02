@@ -95,16 +95,21 @@ const Utils = {
       : null;
   },
 
-  compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
+  compareBy<T: Object>(
+    selector: string | (T => number),
+    isSortedAscending: boolean = true,
+  ): Comparator<T> {
     // generic key comparator for array.prototype.sort
     return function(a: T, b: T) {
       if (!isSortedAscending) {
         [a, b] = [b, a];
       }
-      if (a[key] < b[key]) {
+      const valueA = typeof selector === "function" ? selector(a) : a[selector];
+      const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      if (valueA < valueB) {
         return -1;
       }
-      if (a[key] > b[key]) {
+      if (valueA > valueB) {
         return 1;
       }
       return 0;

@@ -12,7 +12,7 @@ db.openAssignments_multiplePerTask.aggregate([
     neededExperience: {$first: "$neededExperience"},
     priority: {$first: "$priority"},
     created: {$first: "$created"},
-    instances: {$sum: 1},
+    instances: {$sum: "$instances"},
   }}
 ], {allowDiskUse:true}).forEach(function(assignment) {
   delete assignment._id;

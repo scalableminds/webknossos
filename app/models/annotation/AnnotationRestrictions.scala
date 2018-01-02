@@ -3,6 +3,7 @@ package models.annotation
 import models.team.Role
 import models.user.User
 import play.api.libs.json._
+import models.annotation.AnnotationState._
 
 /**
  * Company: scalableminds
@@ -52,14 +53,14 @@ object AnnotationRestrictions {
       override def allowUpdate(user: Option[User]) = {
         user.exists {
           user =>
-            annotation._user.contains(user._id) && !annotation.state.isFinished
+            annotation._user.contains(user._id) && !(annotation.state == Finished)
         }
       }
 
       override def allowFinish(user: Option[User]) = {
         user.exists {
           user =>
-            (annotation._user.contains(user._id) || user.roleInTeam(annotation.team).contains(Role.Admin)) && !annotation.state.isFinished
+            (annotation._user.contains(user._id) || user.roleInTeam(annotation.team).contains(Role.Admin)) && !(annotation.state == Finished)
         }
       }
     }

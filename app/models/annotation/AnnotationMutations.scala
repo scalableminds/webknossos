@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import models.task.TaskAssignmentService
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
+import models.annotation.AnnotationState._
 
 class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
 
@@ -27,7 +28,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     }
 
     if (restrictions.allowFinish(user)) {
-      if (annotation.state.isInProgress)
+      if (annotation.state == InProgress)
         executeFinish(annotation)
       else
         Fox.failure("annotation.notInProgress")
@@ -56,7 +57,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     for {
       task <- annotation.task
       _ <- TaskAssignmentService.putBackInstance(task)
-      _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
+      _ <- AnnotationDAO.updateState(annotation, Unassigned)
     } yield annotation
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {

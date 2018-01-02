@@ -77,15 +77,16 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
 
   getDropdownMenu(annotation: APIAnnotationType) {
     // TODO use react fragments <> instead of spans
-    const label = annotation.state.isFinished ? (
-      <span>
-        <Icon type="eye-o" />View
-      </span>
-    ) : (
-      <span>
-        <Icon type="play-circle-o" />Trace
-      </span>
-    );
+    const label =
+      annotation.state === "Finished" ? (
+        <span>
+          <Icon type="eye-o" />View
+        </span>
+      ) : (
+        <span>
+          <Icon type="play-circle-o" />Trace
+        </span>
+      );
 
     return (
       <Menu>
@@ -117,7 +118,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
             <Icon type="delete" />Cancel
           </span>
         </Item>
-        {annotation.state.isFinished ? (
+        {annotation.state === "Finished" ? (
           <Item key={`${annotation.id}-reopen`}>
             <span onClick={() => this.reOpenAnnotation(annotation)}>
               <Icon type="folder-open" />Reopen
@@ -152,7 +153,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
                   <td>
                     <span>
                       <Icon type="check-circle-o" />
-                      {`${annotation.state.isFinished ? "Finished" : "In Progress"}`}
+                      {`${annotation.state === "Finished" ? "Finished" : "In Progress"}`}
                     </span>
                     <br />
                     <span>

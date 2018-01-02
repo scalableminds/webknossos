@@ -48,9 +48,10 @@ wrap(repo: "scalableminds/webknossos") {
       docker-compose down --volumes --remove-orphans
     """
     sh """
+      cd webknossos-datastore
       DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up -d webknossos-datastore
       sleep 10
-      ./test/infrastructure/deployment.bash
+      curl --retry 3 --max-time 15 -v http://localhost:9090/data/health
       docker-compose down --volumes --remove-orphans
     """
   }

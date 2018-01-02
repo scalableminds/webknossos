@@ -27,6 +27,7 @@ import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
+import models.annotation.AnnotationState._
 
 object AnnotationService
   extends BoxImplicits
@@ -163,7 +164,7 @@ object AnnotationService
         newAnnotation = annotation.copy(
           _user = Some(user._id),
           tracingReference = newTracing,
-          state = AnnotationState.InProgress,
+          state = InProgress,
           typ = AnnotationType.Task,
           _id = BSONObjectID.generate,
           createdTimestamp = System.currentTimeMillis,

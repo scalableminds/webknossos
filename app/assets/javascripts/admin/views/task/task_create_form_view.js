@@ -216,6 +216,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     optionFilterProp="children"
                     style={fullWidth}
                     autoFocus
+                    disabled={isEditingMode}
                   >
                     {this.state.taskTypes.map((taskType: APITaskTypeType) => (
                       <Option key={taskType.id} value={taskType.id}>
@@ -229,19 +230,19 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               <FormItem label="Experience Domain" hasFeedback>
                 {getFieldDecorator("neededExperience.domain", {
                   rules: [{ required: true }, { min: 3 }],
-                })(<Input />)}
+                })(<Input disabled={isEditingMode} />)}
               </FormItem>
 
               <FormItem label="Experience Value" hasFeedback>
                 {getFieldDecorator("neededExperience.value", {
                   rules: [{ required: true }, { type: "number" }],
-                })(<InputNumber style={fullWidth} />)}
+                })(<InputNumber style={fullWidth} disabled={isEditingMode} />)}
               </FormItem>
 
               <FormItem label={instancesLabel} hasFeedback>
                 {getFieldDecorator("openInstances", {
                   rules: [{ required: true }, { type: "number" }],
-                })(<InputNumber style={fullWidth} />)}
+                })(<InputNumber style={fullWidth} min={0} />)}
               </FormItem>
 
               <FormItem label="Team" hasFeedback>
@@ -254,6 +255,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     optionFilterProp="children"
                     style={fullWidth}
                     autoFocus
+                    disabled={isEditingMode}
                   >
                     {this.state.teams.map((team: APITeamType) => (
                       <Option key={team.id} value={team.name}>
@@ -274,6 +276,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     optionFilterProp="children"
                     style={fullWidth}
                     autoFocus
+                    disabled={isEditingMode}
                   >
                     {this.state.projects.map((project: APIProjectType) => (
                       <Option key={project.id} value={project.name}>
@@ -292,6 +295,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     optionFilterProp="children"
                     style={fullWidth}
                     autoFocus
+                    disabled={isEditingMode}
                   >
                     {this.state.scripts.map((script: APIScriptType) => (
                       <Option key={script.id} value={script.id}>
@@ -309,7 +313,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               >
                 {getFieldDecorator("boundingBox")(
                   // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
-                  <Vector6Input />,
+                  <Vector6Input disabled={isEditingMode} />,
                 )}
               </FormItem>
 
@@ -320,7 +324,9 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     this.setState({ isNMLSpecification: evt.target.value === "nml" })
                   }
                 >
-                  <Radio value="manual">Manually Specify Starting Postion</Radio>
+                  <Radio value="manual" disabled={isEditingMode}>
+                    Manually Specify Starting Postion
+                  </Radio>
                   <Radio value="nml" disabled={isEditingMode}>
                     Upload NML File
                   </Radio>
@@ -365,6 +371,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                         optionFilterProp="children"
                         style={fullWidth}
                         autoFocus
+                        disabled={isEditingMode}
                       >
                         {this.state.datasets.map((dataset: APIDatasetType) => (
                           <Option key={dataset.name} value={dataset.name}>
@@ -380,7 +387,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       rules: [{ required: true }],
                       initialValue: [0, 0, 0],
                       // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
-                    })(<Vector3Input style={fullWidth} />)}
+                    })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
                   </FormItem>
 
                   <FormItem label="Starting Rotation" hasFeedback>
@@ -388,7 +395,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                       rules: [{ required: true }],
                       initialValue: [0, 0, 0],
                       // $FlowFixMe VectorComponent expects value + onChange props which will be set automatically by the form
-                    })(<Vector3Input style={fullWidth} />)}
+                    })(<Vector3Input style={fullWidth} disabled={isEditingMode} />)}
                   </FormItem>
                 </div>
               )}

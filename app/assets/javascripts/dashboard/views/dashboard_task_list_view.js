@@ -144,7 +144,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       </span>
     );
 
-    return task.annotation.state.isFinished ? (
+    return task.annotation.state === "Finished" ? (
       <div>
         <Icon type="check-circle-o" />Finished
         <br />
@@ -265,9 +265,10 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   renderTable() {
     return (
       <Table
-        dataSource={this.getCurrentTasks().filter(
-          task => task.annotation.state.isFinished === this.state.showFinishedTasks,
-        )}
+        dataSource={this.getCurrentTasks().filter(task => {
+          if (this.state.showFinishedTasks) return task.annotation.state === "Finished";
+          else return task.annotation.state !== "Finished";
+        })}
         rowKey="id"
         pagination={{
           defaultPageSize: 50,
@@ -276,6 +277,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Column
           title="ID"
           dataIndex="id"
+          width={100}
           sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />

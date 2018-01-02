@@ -1,0 +1,28 @@
+<things>
+  <parameters>
+    <experiment name="confocal-multi_knossos" />
+    <scale x="22.0" y="22.0" z="44.6" />
+    <offset x="0" y="0" z="0" />
+    <time ms="1502885847949" />
+    <editPosition x="10" y="477" z="240" />
+    <editRotation xRot="186.00000011257555" yRot="14.523945957874673" zRot="263.27795931578356" />
+    <zoomLevel zoom="2.0" />
+  </parameters>
+  <thing id="1" color.r="1.0" color.g="0.0" color.b="0.0" color.a="1.0" name="">
+    <nodes>
+      <node id="1" radius="120.0" x="0" y="0" z="0" rotX="0.0" rotY="0.0" rotZ="0.0" inVp="1" inMag="1" bitDepth="0" interpolation="false" time="1502884854179" />
+      <node id="2" radius="120.0" x="4" y="217" z="109" rotX="0.0" rotY="270.0" rotZ="0.0" inVp="1" inMag="1" bitDepth="4" interpolation="true" time="1502885846020" />
+      <node id="3" radius="120.0" x="6" y="311" z="156" rotX="0.0" rotY="270.0" rotZ="0.0" inVp="1" inMag="1" bitDepth="4" interpolation="true" time="1502885846181" />
+      <node id="4" radius="120.0" x="12" y="477" z="240" rotX="0.0" rotY="270.0" rotZ="0.0" inVp="1" inMag="1" bitDepth="4" interpolation="true" time="1502885846441" />
+    </nodes>
+    <edges>
+      <edge source="1" target="2" />
+      <edge source="2" target="3" />
+      <edge source="3" target="4" />
+    </edges>
+  </thing>
+  <branchpoints>
+    <branchpoint id="1" time="1502884854179" />
+  </branchpoints>
+  <comments />
+</things>

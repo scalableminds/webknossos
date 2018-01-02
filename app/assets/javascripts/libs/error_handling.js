@@ -5,6 +5,7 @@
 import _ from "lodash";
 import AirbrakeClient from "airbrake-js";
 import Toast from "libs/toast";
+import { location } from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";
 
 type ErrorHandlingOptionsType = {

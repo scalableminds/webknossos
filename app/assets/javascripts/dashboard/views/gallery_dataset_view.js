@@ -2,7 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 import * as React from "react";
 import { connect } from "react-redux";
-import { Row, Col, Modal, Card, Dropdown, Menu } from "antd";
+import { Row, Col, Modal, Card, Dropdown, Menu, Icon } from "antd";
 import Utils from "libs/utils";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
@@ -92,7 +92,18 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       >
         <div className="dataset-thumbnail-buttons">
           <a href={`/datasets/${dataset.name}/view`} title="View dataset">
-            <img src="/assets/images/eye.svg" alt="Eye" />
+            <Icon
+              type="eye-o"
+              style={{
+                width: 25,
+                height: 25,
+                margin: 7.5,
+                fontSize: 26,
+                textAlign: "center",
+                verticalAlign: "middle",
+                color: "rgb(199, 199, 199)",
+              }}
+            />
           </a>
           <a
             href={`/datasets/${dataset.name}/trace?typ=skeleton`}

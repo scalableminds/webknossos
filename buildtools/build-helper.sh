@@ -106,7 +106,7 @@ project=\"$PROJECT\", branch=\"$BRANCH\", log_file=\"$LOG_FILE\", mode=\"$MODE\"
 
 NEWRELIC_CONFIG_PATH="${ROOT_ENV}/${APP_INSTALL_DIR}/conf/newrelic.yml"
 NEWRELIC_TEMPLATE=$(< ${TEMPLATE_DIR}/newrelic_template)
-NEWRELIC_AGENT_VERSION=$(cat project/Build.scala | python2.7 -c \
+NEWRELIC_AGENT_VERSION=$(cat project/Dependencies.scala | python2.7 -c \
   "import re, sys; print re.search('com\.newrelic\.agent\.java.+(\d+\.\d+\.\d+)', sys.stdin.read()).group(1)")
 mkdir -p ${ROOT_ENV}/${APP_INSTALL_DIR}/conf
 python2.7 -c "import jinja2; print jinja2.Template(\"\"\"$NEWRELIC_TEMPLATE\"\"\").render(\

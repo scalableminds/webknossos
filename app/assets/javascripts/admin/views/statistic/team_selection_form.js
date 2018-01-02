@@ -13,13 +13,11 @@ type Props = {
 };
 type State = {
   teams: Array<APITeamType>,
-  isLoading: boolean,
 };
 
 class TeamSelectionView extends React.PureComponent<Props, State> {
   state = {
     teams: [],
-    isLoading: true,
   };
 
   componentDidMount() {
@@ -28,7 +26,7 @@ class TeamSelectionView extends React.PureComponent<Props, State> {
 
   async fetchData() {
     const teams = await getTeams();
-    this.setState({ teams, isLoading: false });
+    this.setState({ teams });
   }
 
   handleFormSubmit = (event: ?SyntheticInputEvent<*>) => {

@@ -276,6 +276,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Column
           title="ID"
           dataIndex="id"
+          width={100}
           sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />

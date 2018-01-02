@@ -34,6 +34,8 @@ import TaskListView from "admin/views/task/task_list_view";
 import TaskTypeListView from "admin/views/tasktype/task_type_list_view";
 import ProjectListView from "admin/views/project/project_list_view";
 import StatisticView from "admin/views/statistic/statistic_view";
+import ProjectProgressReportView from "admin/views/statistic/project_progress_report_view";
+import OpenTasksReportView from "admin/views/statistic/open_tasks_report_view";
 import ScriptListView from "admin/views/scripts/script_list_view";
 import ProjectCreateView from "admin/views/project/project_create_view";
 import TaskCreateView from "admin/views/task/task_create_view";
@@ -185,6 +187,18 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
+                path="/reports/projectProgress"
+                component={ProjectProgressReportView}
+                exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
+                path="/reports/openTasks"
+                component={OpenTasksReportView}
+                exact
+              />
+              <SecuredRoute
+                isAuthenticated={isAuthenticated}
                 path="/tasks"
                 component={TaskListView}
                 exact
@@ -318,7 +332,7 @@ class ReactRouter extends React.Component<Props> {
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
-                path="/timetracking"
+                path="/reports/timetracking"
                 component={TimeLineView}
               />
               <SecuredRoute

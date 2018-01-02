@@ -177,6 +177,20 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     find("_project", project).collect[List]()
   }
 
+  def sumInstancesByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+    sumValues(Json.obj("_project" -> project), "instances")
+  }
+
+  def findAllByProjectReturnOnlyIds(project: String)(implicit ctx: DBAccessContext) = {
+    for {
+      jsObjects <- findWithProjection(Json.obj("_project" -> project), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
+    } yield {
+      jsObjects.map(p => (p \ "_id").asOpt[BSONObjectID]).flatten
+    }
+  }
+
+  def findOneByProject(projectName: String)(implicit ctx: DBAccessContext) = findOne(Json.obj("_project" -> projectName))
+
   def findAllByProjectTaskTypeIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext) = withExceptionCatcher {
     val projectFilter = projectOpt match {
       case Some(project) => Json.obj(("_project") -> Json.toJson(project))
@@ -237,20 +251,20 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     )
   }
 
+  private def validPriorityQ =
+    Json.obj("priority" -> Json.obj("$gte" -> 0))
+
+  private def experienceQueryFor(user: User) =
+    JsArray(user.experiences.map {
+      case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> Json.obj("$lte" -> value))
+    }.toSeq)
+
+  private def noRequiredExperience =
+    Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
+
   def findOrderedByPriorityFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[Task] = {
     def byPriority =
       Json.obj("priority" -> -1)
-
-    def validPriorityQ =
-      Json.obj("priority" -> Json.obj("$gte" -> 0))
-
-    def experienceQueryFor(user: User) =
-      JsArray(user.experiences.map {
-        case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> Json.obj("$lte" -> value))
-      }.toSeq)
-
-    def noRequiredExperience =
-      Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
 
     find(validPriorityQ ++ Json.obj(
       "instances" -> Json.obj("$gt" -> 0),
@@ -276,6 +290,17 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     dao.aggregate(
       Group(BSONString(groupingField))( "openInstances" -> SumField("instances"))
     ).map{result => Json.toJson(result.firstBatch).as[List[OpenInstancesResult]].map( x => x._id -> x.openInstances).toMap }
+  }
+
+  def findByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
+    for {
+      jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
+        "instances" -> Json.obj("$gt" -> 0),
+        "team" -> Json.obj("$in" -> user.teamNames),
+        "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
+    } yield {
+      jsObjects.map(p => (p \ "_project").asOpt[String]).flatten
+    }
   }
 
   def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {

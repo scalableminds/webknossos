@@ -275,7 +275,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def request = SecuredAction.async { implicit request =>
     val user = request.identity
-    val id = UUID.randomUUID().toString
     for {
       teams <- getAllowedTeamsForNextTask(user)
       _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
@@ -332,6 +331,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         Fox.failure(Messages("task.unavailable")).futureBox
     }
   }
+
 
   def peekNext(limit: Int) = SecuredAction.async { implicit request =>
     val user = request.identity

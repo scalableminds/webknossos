@@ -50,6 +50,7 @@ export class NumberSliderSetting extends React.PureComponent<NumberSliderSetting
             style={{ marginLeft: 16 }}
             value={value}
             onChange={this._onChange}
+            size="small"
           />
         </Col>
       </Row>
@@ -135,6 +136,7 @@ export class LogSliderSetting extends React.PureComponent<LogSliderSettingProps>
             value={roundTo != null ? Utils.roundTo(value, roundTo) : value}
             onChange={this.onChangeInput}
             disabled={disabled}
+            size="small"
           />
         </Col>
       </Row>
@@ -189,7 +191,14 @@ export class NumberInputSetting extends React.PureComponent<NumberInputSettingPr
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={16}>
-          <InputNumber min={min} max={max} onChange={onChange} value={value} step={step} />
+          <InputNumber
+            min={min}
+            max={max}
+            onChange={onChange}
+            value={value}
+            step={step}
+            size="small"
+          />
         </Col>
       </Row>
     );
@@ -305,6 +314,7 @@ export class Vector6InputSetting extends React.PureComponent<
               onBlur={this.handleBlur}
               value={this.state.text}
               placeholder="0, 0, 0, 512, 512, 512"
+              size="small"
             />
           </Tooltip>
         </Col>
@@ -358,7 +368,12 @@ export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {
           <label className="setting-label">{label}</label>
         </Col>
         <Col span={16}>
-          <Select onChange={onChange} value={value.toString()} defaultValue={value.toString()}>
+          <Select
+            onChange={onChange}
+            value={value.toString()}
+            defaultValue={value.toString()}
+            size="small"
+          >
             {children}
           </Select>
         </Col>

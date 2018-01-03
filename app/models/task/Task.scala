@@ -128,6 +128,9 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("priority" -> IndexType.Descending)))
+  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending, "neededExperience" -> IndexType.Ascending, "priority" -> IndexType.Descending)))
+
 
   override val AccessDefinitions = new DefaultAccessDefinitions {
 

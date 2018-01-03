@@ -292,6 +292,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
     const parser = new Saxophone();
 
     const trees: TemporaryMutableTreeMapType = {};
+    const existingNodeIds = new Set();
     let currentTree: ?TemporaryMutableTreeType = null;
     parser
       .on("tagopen", node => {
@@ -342,10 +343,10 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
             };
             if (currentTree == null)
               throw new NmlParseError(`${messages["nml.node_outside_tree"]} ${currentNode.id}`);
-            const possibleTree = findTreeByNodeId(trees, currentNode.id);
-            if (possibleTree != null)
+            if (existingNodeIds.has(currentNode.id))
               throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
             currentTree.nodes.mutableSet(currentNode.id, currentNode);
+            existingNodeIds.add(currentNode.id);
             break;
           }
           case "edge": {

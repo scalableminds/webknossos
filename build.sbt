@@ -1,10 +1,14 @@
+import play.routes.compiler.InjectedRoutesGenerator
+import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
+
+val wkVersion = scala.io.Source.fromFile("version").mkString.trim
 
 name := "oxalis"
 
-version := scala.io.Source.fromFile("version").mkString.trim
+version := wkVersion
 
-scalaVersion := "2.11.7"
+scalaVersion in ThisBuild := "2.11.8"
 
 
 lazy val webknossosSettings = Seq(
@@ -24,35 +28,41 @@ lazy val webknossosSettings = Seq(
   }
 )
 
-lazy val buildInfoSettings = Seq(
-  buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
-    "commitHash" -> new java.lang.Object() {
-      override def toString(): String = {
-        try {
-          val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git rev-parse HEAD").getInputStream())
-          (new java.io.BufferedReader(extracted)).readLine()
-        } catch {
-          case t: Throwable => "get git hash failed"
-        }
-      }
-    }.toString(),
-    "commitDate" -> new java.lang.Object() {
-      override def toString(): String = {
-        try {
-          val extracted = new java.io.InputStreamReader(java.lang.Runtime.getRuntime().exec("git log -1 --format=%cd ").getInputStream())
-          (new java.io.BufferedReader(extracted)).readLine()
 
-        } catch {
-          case t: Throwable => "get git date failed"
-        }
-      }
-    }.toString()
-  ),
-  buildInfoPackage := "webknossos",
-  buildInfoOptions := Seq(BuildInfoOption.ToJson)
+lazy val webknossosDatastoreSettings = Seq(
+  libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
+  resolvers ++= DependencyResolvers.dependencyResolvers,
+  routesGenerator := InjectedRoutesGenerator,
+  name := "webknossos-datastore",
+  version := "wk-" + wkVersion
 )
 
-lazy val webknossos = (project in file("."))
+
+val protocolBufferSettings = Seq(
+  ProtocPlugin.autoImport.PB.targets in Compile := Seq(
+    scalapb.gen() -> new java.io.File((sourceManaged in Compile).value + "/proto")
+  ),
+  ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto")))
+
+
+lazy val util = (project in file("util"))
+  .settings(Seq(
+    resolvers ++= DependencyResolvers.dependencyResolvers,
+    libraryDependencies ++= Dependencies.utilDependencies
+  ))
+
+lazy val webknossosDatastore = (project in file("webknossos-datastore"))
+  .dependsOn(util)
   .enablePlugins(play.sbt.PlayScala)
   .enablePlugins(BuildInfoPlugin)
-  .settings((webknossosSettings ++ AssetCompilation.settings ++ buildInfoSettings):_*)
+  .enablePlugins(ProtocPlugin)
+  .enablePlugins(play.sbt.PlayScala)
+  .enablePlugins(BuildInfoPlugin)
+  .settings(protocolBufferSettings)
+  .settings((webknossosDatastoreSettings ++ BuildInfoSettings.webknossosDatastoreBuildInfoSettings):_*)
+
+lazy val webknossos = (project in file("."))
+  .dependsOn(util, webknossosDatastore)
+  .enablePlugins(play.sbt.PlayScala)
+  .enablePlugins(BuildInfoPlugin)
+  .settings((webknossosSettings ++ AssetCompilation.settings ++ BuildInfoSettings.webknossosBuildInfoSettings):_*)

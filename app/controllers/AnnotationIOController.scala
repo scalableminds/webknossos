@@ -3,8 +3,8 @@ package controllers
 import javax.inject.Inject
 
 import oxalis.security.WebknossosSilhouette.{UserAwareRequest, UserAwareAction, SecuredRequest, SecuredAction}
-import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

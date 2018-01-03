@@ -1,6 +1,6 @@
 package models.annotation
 
-import com.scalableminds.braingames.datastore.tracings.TracingReference
+import com.scalableminds.webknossos.datastore.tracings.TracingReference
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}

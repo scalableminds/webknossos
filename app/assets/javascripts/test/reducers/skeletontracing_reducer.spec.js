@@ -235,7 +235,7 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
             edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 1, target: 7 }],
-            comments: [{ comment: "comment", nodeId: 0 }],
+            comments: [{ content: "comment", nodeId: 0 }],
             color: [23, 23, 23],
           },
           [1]: {
@@ -350,7 +350,7 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
             edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 2, target: 7 }],
-            comments: [{ comment: "comment", nodeId: 7 }],
+            comments: [{ content: "comment", nodeId: 7 }],
             color: [23, 23, 23],
           },
           [1]: {

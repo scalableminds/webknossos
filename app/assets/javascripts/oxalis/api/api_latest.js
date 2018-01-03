@@ -60,19 +60,19 @@ import type { ToastStyleType } from "libs/toast";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
-    throw Error(message);
+    throw new Error(message);
   }
 }
 
 function assertSkeleton(tracing: TracingType) {
   if (tracing.type !== "skeleton") {
-    throw Error("This api function should only be called in a skeleton tracing.");
+    throw new Error("This api function should only be called in a skeleton tracing.");
   }
 }
 
 function assertVolume(tracing: TracingType) {
   if (tracing.type !== "volume") {
-    throw Error("This api function should only be called in a volume tracing.");
+    throw new Error("This api function should only be called in a volume tracing.");
   }
 }
 /**
@@ -176,7 +176,7 @@ class TracingApi {
         assertExists(tree, `Couldn't find node ${nodeId}.`);
         Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
       } else {
-        throw Error("Node id is missing.");
+        throw new Error("Node id is missing.");
       }
     });
   }
@@ -500,7 +500,9 @@ class TracingApi {
     assertVolume(Store.getState().tracing);
     assertExists(tool, "Volume tool is missing.");
     if (VolumeToolEnum[tool] == null) {
-      throw Error(`Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`);
+      throw new Error(
+        `Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`,
+      );
     }
     Store.dispatch(setToolAction(tool));
   }
@@ -518,7 +520,7 @@ class DataApi {
 
   __getLayer(layerName: string): Binary {
     const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
+    if (layer === undefined) throw new Error(`Layer with name ${layerName} was not found.`);
     return layer;
   }
 

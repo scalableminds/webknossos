@@ -145,6 +145,7 @@ export type DatasetType = {
 };
 
 export type TreeMapType = { +[number]: TreeType };
+export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 

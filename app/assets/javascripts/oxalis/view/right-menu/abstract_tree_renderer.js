@@ -104,7 +104,7 @@ class AbstractTreeRenderer {
       const { id: curNodeId, children: curChildren } = queue.shift();
 
       if (visitedNodes[curNodeId]) {
-        throw Error(CYCLIC_TREE_ERROR);
+        throw new Error(CYCLIC_TREE_ERROR);
       } else {
         visitedNodes[curNodeId] = true;
       }

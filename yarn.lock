@@ -112,6 +112,12 @@
   dependencies:
     arrify "^1.0.1"
 
+"@scalableminds/saxophone@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@scalableminds/saxophone/-/saxophone-0.5.0.tgz#147a453108823dd8d55100ca1c0cba8bc4415877"
+  dependencies:
+    stream "^0.0.2"
+
 "@types/node@*":
   version "8.5.2"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-8.5.2.tgz#83b8103fa9a2c2e83d78f701a9aa7c9539739aa5"
@@ -2797,6 +2803,10 @@ elliptic@^6.0.0:
     inherits "^2.0.1"
     minimalistic-assert "^1.0.0"
     minimalistic-crypto-utils "^1.0.0"
+
+emitter-component@^1.1.1:
+  version "1.1.1"
+  resolved "https://registry.yarnpkg.com/emitter-component/-/emitter-component-1.1.1.tgz#065e2dbed6959bf470679edabeaf7981d1003ab6"
 
 "emoji-regex@>=6.0.0 <=6.1.1":
   version "6.1.1"
@@ -7915,6 +7925,12 @@ stream-http@^2.3.1, stream-http@^2.7.2:
 stream-shift@^1.0.0:
   version "1.0.0"
   resolved "https://registry.yarnpkg.com/stream-shift/-/stream-shift-1.0.0.tgz#d5c752825e5367e786f78e18e445ea223a155952"
+
+stream@^0.0.2:
+  version "0.0.2"
+  resolved "https://registry.yarnpkg.com/stream/-/stream-0.0.2.tgz#7f5363f057f6592c5595f00bc80a27f5cec1f0ef"
+  dependencies:
+    emitter-component "^1.1.1"
 
 strict-uri-encode@^1.0.0:
   version "1.1.0"

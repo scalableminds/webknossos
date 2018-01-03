@@ -131,7 +131,6 @@ export type APIProjectType = {
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
-  +assignmentConfiguration: { location: "webknossos" | "mturk" },
   +numberOfOpenAssignments: number,
 };
 

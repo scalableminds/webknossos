@@ -65,7 +65,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def insert(teamName: String, email: String, firstName: String,
-    lastName: String, password: String, isActive: Boolean, teamRole: Role = Role.User, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
+             lastName: String, password: String, isActive: Boolean, teamRole: Role = Role.User, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
     for {
       teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
       teamMemberships = teamOpt.map(t => TeamMembership(t.name, teamRole)).toList
@@ -73,52 +73,13 @@ object UserService extends FoxImplicits with IdentityService[User] {
       _ <- UserDAO.insert(user)(GlobalAccessContext)
     } yield user
 
-  def prepareMTurkUser(workerId: String, teamName: String, experience: Experience)(implicit ctx: DBAccessContext): Fox[User] = {
-    def necessaryTeamMemberships = {
-      TeamDAO.findOneByName(teamName).futureBox.map { teamOpt =>
-        teamOpt.map(t => TeamMembership(t.name, Role.User)).toList
-      }
-    }
-
-    def insertUser(email: String): Fox[User] = {
-      for {
-        teamMemberships <- necessaryTeamMemberships
-        user = User(
-          email,
-          "mturk", workerId,
-          isActive = true,
-          md5hash = "",
-          teams = teamMemberships,
-          _isAnonymous = Some(true),
-          experiences = experience.toMap,
-          loginInfo = LoginInfo(CredentialsProvider.ID, email),
-          passwordInfo = PasswordInfo("SCrypt", ""))
-        _ <- UserDAO.insert(user)
-      } yield user
-    }
-
-    def updateUser(u: User): Fox[User] = {
-      for{
-        teamMemberships <- necessaryTeamMemberships
-        updated <- UserDAO.findAndModify(Json.obj("_id" -> u._id), Json.obj("$set" -> Json.obj(
-          "teams" -> teamMemberships,
-          "experiences" -> experience.toMap
-        )), returnNew = true)
-      } yield updated
-    }
-
-    val email = workerId + "@MTURK"
-
-    UserService.findOneByEmail(email).flatMap(u => updateUser(u)) orElse insertUser(email)
-  }
-
   def update(
-    user: User,
-    firstName: String,
-    lastName: String,
-    activated: Boolean,
-    teams: List[TeamMembership],
-    experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
+              user: User,
+              firstName: String,
+              lastName: String,
+              activated: Boolean,
+              teams: List[TeamMembership],
+              experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (!user.isActive && activated) {
       Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
@@ -130,8 +91,8 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
   }
 
-  def changePasswordInfo(loginInfo:LoginInfo, passwordInfo:PasswordInfo) = {
-    for{
+  def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo) = {
+    for {
       user <- findOneByEmail(loginInfo.providerKey)
       _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
     } yield {
@@ -173,9 +134,9 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
   }
 
-  def retrieve(loginInfo:LoginInfo):Future[Option[User]] = UserDAO.find(loginInfo)(GlobalAccessContext)
+  def retrieve(loginInfo: LoginInfo): Future[Option[User]] = UserDAO.find(loginInfo)(GlobalAccessContext)
 
-  def find(id:BSONObjectID) = UserDAO.findByIdQ(id)
+  def find(id: BSONObjectID) = UserDAO.findByIdQ(id)
 
   def createLoginInfo(email: String): LoginInfo = {
     LoginInfo(CredentialsProvider.ID, email)

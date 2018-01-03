@@ -1,12 +1,13 @@
 package models.annotation
 
-import com.scalableminds.braingames.datastore.tracings.TracingType
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import models.project.{Project, WebknossosAssignmentConfig}
 import models.task.{OpenAssignmentService, Task}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
+import models.annotation.AnnotationState._
 
 /**
  * Company: scalableminds
@@ -32,7 +33,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     }
 
     if (restrictions.allowFinish(user)) {
-      if (annotation.state.isInProgress)
+      if (annotation.state == InProgress)
         executeFinish(annotation)
       else
           Fox.failure("annotation.notInProgress")
@@ -61,7 +62,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     def insertReplacement(task: Task, project: Project) = {
       project.assignmentConfiguration match {
         case WebknossosAssignmentConfig =>
-          OpenAssignmentService.insertOneFor(task, project)
+          OpenAssignmentService.incrementOrInsertFor(task, project)
         case _ =>
           // If this is a project with its assignments on MTurk, they will handle the replacement generation
           Fox.successful(true)
@@ -72,7 +73,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
       task <- annotation.task
       project <- task.project
       _ <- insertReplacement(task, project)
-      _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
+      _ <- AnnotationDAO.updateState(annotation, Unassigned)
     } yield annotation
   }
 

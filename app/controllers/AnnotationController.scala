@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.braingames.datastore.tracings.TracingType
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import akka.util.Timeout
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}

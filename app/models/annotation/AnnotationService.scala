@@ -2,12 +2,12 @@ package models.annotation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
 
-import com.scalableminds.braingames.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.braingames.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
-import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.braingames.datastore.tracings._
-import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.braingames.datastore.tracings.volume.VolumeTracingDefaults
+import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.tracings._
+import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
@@ -27,6 +27,7 @@ import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
+import models.annotation.AnnotationState._
 
 object AnnotationService
   extends BoxImplicits
@@ -115,7 +116,7 @@ object AnnotationService
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation]().collect[List]()
 
   def countUnfinishedAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countUnfinishedByTaskIdAndType(task._id, AnnotationType.Task)
+    AnnotationDAO.countUnfinishedByTaskIdsAndType(List(task._id), AnnotationType.Task)
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
     for {
@@ -163,7 +164,7 @@ object AnnotationService
         newAnnotation = annotation.copy(
           _user = Some(user._id),
           tracingReference = newTracing,
-          state = AnnotationState.InProgress,
+          state = InProgress,
           typ = AnnotationType.Task,
           _id = BSONObjectID.generate,
           createdTimestamp = System.currentTimeMillis,

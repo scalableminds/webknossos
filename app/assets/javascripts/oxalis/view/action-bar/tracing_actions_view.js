@@ -242,7 +242,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
     return (
       <div>
-        <Button.Group size="large">
+        <Button.Group>
           {saveButton}
           {finishAndNextTaskButton}
           {modals}

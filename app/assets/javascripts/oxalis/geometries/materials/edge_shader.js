@@ -36,7 +36,7 @@ class EdgeShader {
   }
 
   getVertexShader(): string {
-    return `\
+    return `
 precision highp float;
 precision highp int;
 
@@ -65,12 +65,11 @@ void main() {
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
     color = texture2D(treeColors, treeIdToTextureCoordinate).rgb;
-}\
-`;
+}`;
   }
 
   getFragmentShader(): string {
-    return `\
+    return `
 precision highp float;
 
 varying vec3 color;
@@ -78,8 +77,7 @@ varying vec3 color;
 void main()
 {
     gl_FragColor = vec4(color, 1.0);
-}\
-`;
+}`;
   }
 }
 export default EdgeShader;

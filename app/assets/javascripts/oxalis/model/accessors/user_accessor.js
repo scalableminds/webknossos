@@ -7,7 +7,7 @@ export function getActiveUser(activeUser: ?APIUserType): APIUserType {
   if (activeUser) {
     return activeUser;
   } else {
-    throw Error(messages["auth.error_no_user"]);
+    throw new Error(messages["auth.error_no_user"]);
   }
 }
 

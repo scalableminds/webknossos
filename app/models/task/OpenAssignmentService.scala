@@ -7,11 +7,15 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project.Project
 import models.user.User
+import net.liftweb.common.{Box, Full}
 import play.api.libs.iteratee.Enumerator
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
+import scala.concurrent.ExecutionContext.Implicits._
 
-object OpenAssignmentService extends FoxImplicits{
+import scala.concurrent.Future
+
+object OpenAssignmentService extends FoxImplicits {
   def findNextOpenAssignments(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
     OpenAssignmentDAO.findOrderedByPriority(user, teams)
   }
@@ -29,8 +33,16 @@ object OpenAssignmentService extends FoxImplicits{
   def take(assignment: OpenAssignment)(implicit ctx: DBAccessContext): Fox[WriteResult] =
     OpenAssignmentDAO.decrementInstanceCount(assignment._id)
 
-  def insertOneFor(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
-    OpenAssignmentDAO.insert(OpenAssignment.from(task, project, 1))
+  def incrementOrInsertFor(task: Task, project: Project)(implicit ctx: DBAccessContext): Fox[WriteResult] = {
+    val futureFutureBox: Future[Future[Box[WriteResult]]] = for {
+      oldOpenAssignment <- OpenAssignmentDAO.findOneByTask(task._id).futureBox
+    } yield {
+      oldOpenAssignment match {
+        case Full(a) => OpenAssignmentDAO.incrementInstanceCount(a._id).futureBox
+        case _ => OpenAssignmentDAO.insert(OpenAssignment.from(task, project, 1)).futureBox
+      }
+    }
+    Fox(futureFutureBox.flatMap(identity))
   }
 
   def countOpenAssignments(implicit ctx: DBAccessContext) = {

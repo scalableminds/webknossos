@@ -100,6 +100,17 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
       .enumerate(stopOnError = true)
   }
 
+  def findByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
+    for {
+      jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
+            "instances" -> Json.obj("$gt" -> 0),
+            "team" -> Json.obj("$in" -> user.teamNames),
+            "$or" -> (experiencesToQuery(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
+    } yield {
+      jsObjects.map(p => (p \ "_project").asOpt[String]).flatten
+    }
+  }
+
   def findOrderedByPriority(implicit ctx: DBAccessContext): Enumerator[OpenAssignment] = {
     find(validPriorityQ).sort(byPriority).cursor[OpenAssignment]().enumerate()
   }
@@ -152,6 +163,17 @@ object OpenAssignmentDAO extends SecuredBaseDAO[OpenAssignment] with FoxImplicit
       Json.obj("$inc" -> Json.obj("instances" -> -1))
     )
     //Note: a cleanup job periodically removes OpenAssignments whose instance count has gone down to zero
+  }
+
+  def incrementInstanceCount(id: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[WriteResult] {
+    update(
+      Json.obj("_id" -> id),
+      Json.obj("$inc" -> Json.obj("instances" -> 1))
+    )
+  }
+
+  def findOneByTask(taskId: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[OpenAssignment] {
+    findOne(Json.obj("_task" -> taskId))
   }
 
   def removeZeroInstanceAssignments()(implicit ctx: DBAccessContext) = Fox[WriteResult] {

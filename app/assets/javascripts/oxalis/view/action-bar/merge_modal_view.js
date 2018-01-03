@@ -43,7 +43,6 @@ type MergeModalViewState = {
   selectedExplorativeAnnotation: string,
   selectedNML: ?AnnotationInfoType,
   isUploading: boolean,
-  readOnly: boolean,
 };
 
 type UploadInfoType<T> = {
@@ -66,7 +65,6 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     selectedExplorativeAnnotation: "",
     selectedNML: null,
     isUploading: false,
-    readOnly: false,
   };
 
   componentWillMount() {
@@ -221,7 +219,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             <Form.Item label="NML">
               <Upload
                 name="nmlFile"
-                action={"/annotations/upload"}
+                action="/annotations/upload"
                 headers={{ authorization: "authorization-text" }}
                 beforeUpload={this.handleBeforeUploadNML}
                 onChange={this.handleChangeNML}

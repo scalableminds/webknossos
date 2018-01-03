@@ -28,8 +28,11 @@ jobs:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
       - run:
-          name: Build code (sbt and webpack)
+          name: Build webknossos (sbt and webpack)
           command: docker-compose run base sbt clean compile stage
+      - run:
+          name: Build webknossos-datastore (sbt)
+          command: docker-compose run base sbt "project webknossosDatastore" clean compile stage
 
       - save_cache:
           key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
@@ -40,8 +43,15 @@ jobs:
             - "~/.yarn-cache"
 
       - run:
-          name: Build docker image
-          command: docker build --no-cache --pull -t scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} .
+          name: Build webknossos docker image
+          command: |
+            docker build --pull -t scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} .
+
+      - run:
+          name: Build webknossos-datastore docker image
+          command: |
+            cd webknossos-datastore
+            docker build --pull -t scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} .
 
       - run:
           name: Lint frontend code
@@ -60,12 +70,22 @@ jobs:
             done
             (exit $s)
       - run:
-          name: Run smoke test
+          name: Run webknossos smoke test
           command: |
             set -x
             DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos
             sleep 10
             ./test/infrastructure/deployment.bash
+            docker-compose down --volumes --remove-orphans
+
+      - run:
+          name: Run webknossos-datastore smoke test
+          command: |
+            set -x
+            cd webknossos-datastore
+            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos-datastore
+            sleep 10
+            curl --retry 3 --max-time 15 -v http://localhost:9090/data/health
             docker-compose down --volumes --remove-orphans
 
       # - run:
@@ -76,7 +96,11 @@ jobs:
       #       docker tag scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
       #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
       #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}
+      #       docker tag scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+      #       docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+      #       docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
       #       docker logout
+
 workflows:
   version: 2
   default:

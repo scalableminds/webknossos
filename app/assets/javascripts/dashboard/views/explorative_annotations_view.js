@@ -6,7 +6,7 @@ import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
-import { Spin, Input, Table, Button, Modal, Tag } from "antd";
+import { Spin, Input, Table, Button, Modal, Tag, Icon } from "antd";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
@@ -145,7 +145,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   handleNMLUpload = (response: Object) => {
-    response.messages.map(m => Toast.success(m.success));
     this.props.history.push(`/annotations/${response.annotation.typ}/${response.annotation.id}`);
   };
 
@@ -159,18 +158,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <Link to={`/annotations/${typ}/${id}`}>
-            <i className="fa fa-random" />
-            <strong>Trace</strong>
+            <Icon type="play-circle-o" />Trace
           </Link>
           <br />
           <a href={`/annotations/${typ}/${id}/download`}>
-            <i className="fa fa-download" />
-            Download
+            <Icon type="download" />Download
           </a>
           <br />
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("finish", tracing)}>
-            <i className="fa fa-archive" />
-            Archive
+            <Icon type="inbox" />Archive
           </AsyncLink>
           <br />
         </div>
@@ -179,8 +175,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       return (
         <div>
           <AsyncLink href="#" onClick={() => this.finishOrReopenTracing("reopen", tracing)}>
-            <i className="fa fa-folder-open" />
-            Reopen
+            <Icon type="folder-open" />Reopen
           </AsyncLink>
           <br />
         </div>
@@ -318,7 +313,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         }}
       >
         <Column
-          title="#"
+          title="ID"
           dataIndex="id"
           render={(__, tracing: APIAnnotationType) => FormatUtils.formatHash(tracing.id)}
           sorter={Utils.localeCompareBy("id")}
@@ -371,7 +366,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
                   onClick={_.partial(this.addTagToSearch, tag)}
                   onClose={_.partial(this.editTagFromAnnotation, tracing, false, tag)}
                   closable={
-                    !(tag === tracing.dataSetName || tag === tracing.contentType) &&
+                    !(tag === tracing.dataSetName || tag === tracing.content.typ) &&
                     !this.state.shouldShowArchivedTracings
                   }
                 >
@@ -442,13 +437,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
               onUploading={() => this.setState({ isUploadingNML: true })}
               onError={() => this.setState({ isUploadingNML: false })}
             >
-              <Button icon="upload" loading={this.state.isUploadingNML}>
+              <Button icon="upload" loading={this.state.isUploadingNML} style={marginRight}>
                 Upload Annotation
               </Button>
             </FileUpload>
-            <div className="divider-vertical" />
             <Button onClick={this.toggleShowArchived} style={marginRight}>
-              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Tracings
+              Show {this.state.shouldShowArchivedTracings ? "Open" : "Archived"} Annotations
             </Button>
             {!this.state.shouldShowArchivedTracings ? (
               <Button onClick={this.archiveAll} style={marginRight}>

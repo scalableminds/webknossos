@@ -6,7 +6,7 @@ import { connect } from "react-redux";
 import { Link } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
-import { Spin, Table, Button, Modal, Tag } from "antd";
+import { Spin, Table, Button, Modal, Tag, Icon } from "antd";
 import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import moment from "moment";
@@ -133,61 +133,56 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       .map(team => team.team)
       .includes(task.team);
 
-    const label = this.props.isAdminView ? "View" : "Trace";
+    // TODO use React fragments <> instead of spans / divs
+    const label = this.props.isAdminView ? (
+      <span>
+        <Icon type="eye-o" />View
+      </span>
+    ) : (
+      <span>
+        <Icon type="play-circle-o" />Trace
+      </span>
+    );
 
-    return task.annotation.state.isFinished ? (
+    return task.annotation.state === "Finished" ? (
       <div>
-        <i className="fa fa-check" />
-        <span> Finished</span>
+        <Icon type="check-circle-o" />Finished
         <br />
       </div>
     ) : (
-      <ul>
-        <li>
-          <Link to={`/annotations/Task/${annotation.id}`}>
-            <i className="fa fa-random" />
-            <strong>{label}</strong>
-          </Link>
-        </li>
+      <div>
+        <Link to={`/annotations/Task/${annotation.id}`}>{label}</Link>
+        <br />
         {isAdmin || this.props.isAdminView ? (
-          <li>
+          <div>
             <a href="#" onClick={() => this.openTransferModal(annotation.id)}>
-              <i className="fa fa-share" />
-              Transfer
+              <Icon type="team" />Transfer
             </a>
-          </li>
+            <br />
+          </div>
         ) : null}
         {isAdmin ? (
           <div>
-            <li>
-              <a href={`/annotations/Task/${annotation.id}/download`}>
-                <i className="fa fa-download" />
-                Download
-              </a>
-            </li>
-            <li>
-              <a href="#" onClick={() => this.resetTask(annotation.id)}>
-                <i className="fa fa-undo" />
-                Reset
-              </a>
-            </li>
-            <li>
-              <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
-                <i className="fa fa-trash-o" />
-                Cancel
-              </a>
-            </li>
+            <a href={`/annotations/Task/${annotation.id}/download`}>
+              <Icon type="download" />Download
+            </a>
+            <br />
+            <a href="#" onClick={() => this.resetTask(annotation.id)}>
+              <Icon type="rollback" />Reset
+            </a>
+            <br />
+            <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
+              <Icon type="delete" />Cancel
+            </a>
+            <br />
           </div>
         ) : null}
         {this.props.isAdminView ? null : (
-          <li>
-            <a href="#" onClick={() => this.confirmFinish(task)}>
-              <i className="fa fa-check-circle-o" />
-              Finish
-            </a>
-          </li>
+          <a href="#" onClick={() => this.confirmFinish(task)}>
+            <Icon type="check-circle-o" />Finish
+          </a>
         )}
-      </ul>
+      </div>
     );
   };
 
@@ -232,7 +227,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   async getNewTask() {
     this.setState({ isLoading: true });
     try {
-      const newTaskAnnotation = await Request.receiveJSON("/user/tasks/request");
+      const newTaskAnnotation = await Request.receiveJSON("/api/user/tasks/request");
 
       this.setState({
         unfinishedTasks: this.state.unfinishedTasks.concat([
@@ -270,28 +265,32 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   renderTable() {
     return (
       <Table
-        dataSource={this.getCurrentTasks().filter(
-          task => task.annotation.state.isFinished === this.state.showFinishedTasks,
-        )}
+        dataSource={this.getCurrentTasks().filter(task => {
+          if (this.state.showFinishedTasks) return task.annotation.state === "Finished";
+          else return task.annotation.state !== "Finished";
+        })}
         rowKey="id"
         pagination={{
           defaultPageSize: 50,
         }}
       >
         <Column
-          title="#"
+          title="ID"
           dataIndex="id"
+          width={100}
           sorter={Utils.localeCompareBy("id")}
           className="monospace-id"
         />
         <Column
           title="Type"
           dataIndex="type.summary"
+          width={200}
           sorter={Utils.localeCompareBy(t => t.type.summary)}
         />
         <Column
           title="Project"
           dataIndex="projectName"
+          width={110}
           sorter={Utils.localeCompareBy("projectName")}
         />
         <Column
@@ -317,12 +316,14 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Column
           title="Creation Date"
           dataIndex="created"
+          width={150}
           sorter={Utils.localeCompareBy("created")}
           render={created => moment(created).format("YYYY-MM-DD HH:SS")}
         />
         <Column
           title="Actions"
           className="nowrap"
+          width={150}
           render={(__, task) => this.renderActions(task)}
         />
       </Table>
@@ -333,17 +334,17 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return (
       <div>
         <div className="pull-right">
-          {this.props.isAdminView && this.props.userId ? (
-            <Link to={`/api/users/${this.props.userId}/annotations/download`}>
-              <Button icon="download">Download All Finished Tracings</Button>
-            </Link>
-          ) : (
-            <AsyncButton type="primary" icon="file-add" onClick={() => this.confirmGetNewTask()}>
-              Get a New Task
-            </AsyncButton>
-          )}
-          <div className="divider-vertical" />
-          <Button onClick={this.toggleShowFinished}>Show {this.getFinishVerb()} Tasks Only</Button>
+          <AsyncButton
+            type="primary"
+            icon="file-add"
+            onClick={() => this.confirmGetNewTask()}
+            disabled={this.props.isAdminView && this.props.userId}
+          >
+            Get a New Task
+          </AsyncButton>
+          <Button onClick={this.toggleShowFinished} style={{ marginLeft: 20 }}>
+            Show {this.getFinishVerb()} Tasks Only
+          </Button>
         </div>
         <h3 id="tasksHeadline" className="TestTasksHeadline">
           Tasks

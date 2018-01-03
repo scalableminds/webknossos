@@ -1,5 +1,43 @@
-@(content: Html = Html(""))(implicit session: oxalis.view.SessionData)
+<!doctype html>
+<html>
+  <head>
+    <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)">
+    <title>webKnossos</title>
+    <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
+    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
+    @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
+    @if(play.api.Play.current.configuration.getBoolean("application.authentication.enableDevAutoLogin")){
+      <script src="/api/auth/autoLogin"></script>
+    }
+    <script type="text/javascript"
+      data-airbrake-project-id=@play.api.Play.current.configuration.getString("airbrake.projectID")
+      data-airbrake-project-key=@play.api.Play.current.configuration.getString("airbrake.projectKey")
+      data-airbrake-environment-name=@play.api.Play.current.configuration.getString("airbrake.environment")></script>
+    <script type="text/javascript" src="@routes.Assets.at("bundle/manifest.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script type="text/javascript" src="@routes.Assets.at("bundle/vendor.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    <script type="text/javascript" src="@routes.Assets.at("bundle/main.js")?nocache=@(webknossos.BuildInfo.commitHash)"></script>
+    @if(play.api.Play.current.mode == play.api.Mode.Dev) {
+      <link href='@routes.Assets.at("fonts/fonts-local.css")' rel='stylesheet' type='text/css' media="screen">
+    } else {
+      <link href='https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700' rel='stylesheet' type='text/css'>
+      }
+  </head>
+  <body>
+    <main id="main-container"></main>
 
-@import com.scalableminds.util.tools.Reflect
+    @play.api.Play.current.configuration.getString("google.analytics.trackingID").map { trackingID =>
+      <script>
+        (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+        })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
 
-@pageSkeleton(content)
+        ga('create', '@trackingID', 'auto');
+        ga('set', 'anonymizeIp', true);
+        ga('send', 'pageview');
+
+      </script>
+    }
+    @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingFooter)
+  </body>
+</html>

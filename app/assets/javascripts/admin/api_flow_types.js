@@ -173,11 +173,7 @@ export type APIAnnotationType = {
   +name: string,
   +restrictions: APIRestrictionsType,
   +settings: APISettingsType,
-  +state: {
-    +isAssigned: boolean,
-    +isFinished: boolean,
-    +isInProgress: boolean,
-  },
+  +state: string,
   +stats: SkeletonTracingStatsType,
   +tags: Array<string>,
   +task: APITaskType,
@@ -234,6 +230,21 @@ export type APITimeTrackingType = {
   project_name: string,
   tasktype_id: string,
   tasktype_summary: string,
+};
+
+export type APIProjectProgressReportType = {
+  +projectName: string,
+  +totalTasks: number,
+  +totalInstances: number,
+  +openInstances: number,
+  +finishedInstances: number,
+  +inProgressInstances: number,
+};
+
+export type APIOpenTasksReportType = {
+  +user: string,
+  +totalAssignments: number,
+  +assignmentsByProjects: { [projectName: string]: number },
 };
 
 export default {};

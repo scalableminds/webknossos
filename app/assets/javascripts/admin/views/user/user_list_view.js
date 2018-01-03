@@ -159,15 +159,17 @@ class UserListView extends React.PureComponent<{}, State> {
             }
           >
             <Column
-              title="Last name"
+              title="Last Name"
               dataIndex="lastName"
               key="lastName"
+              width={130}
               sorter={Utils.localeCompareBy("lastName")}
             />
             <Column
-              title="First name"
+              title="First Name"
               dataIndex="firstName"
               key="firstName"
+              width={130}
               sorter={Utils.localeCompareBy("firstName")}
             />
             <Column
@@ -209,6 +211,7 @@ class UserListView extends React.PureComponent<{}, State> {
               title="Status"
               dataIndex="isActive"
               key="isActive"
+              width={110}
               filters={[
                 { text: "Activated", value: "true" },
                 { text: "Deactivated", value: "false" },
@@ -224,18 +227,12 @@ class UserListView extends React.PureComponent<{}, State> {
             <Column
               title="Actions"
               key="actions"
+              width={160}
               render={(__, user: APIUserType) => (
                 <span>
                   <Link to={`/users/${user.id}/details`}>
                     <Icon type="user" />Show Tracings
                   </Link>
-                  <br />
-                  <a
-                    href={`/api/users/${user.id}/annotations/download`}
-                    title="download all finished tracings"
-                  >
-                    <Icon type="download" />Download
-                  </a>
                   <br />
                   {user.isActive ? (
                     <a href="#" onClick={() => this.deactivateUser(user)}>

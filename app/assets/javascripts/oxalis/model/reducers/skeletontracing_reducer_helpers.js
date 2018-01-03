@@ -426,11 +426,10 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapT
 
         // Create a map from old node ids to new node ids
         const idMap = {};
-        const newNodes = {};
-        for (const nodeId of Object.keys(tree.nodes)) {
-          const node = tree.nodes[Number(nodeId)];
-          idMap[nodeId] = newNodeId;
-          newNodes[newNodeId] = update(node, { id: { $set: newNodeId } });
+        const newNodes = new DiffableMap();
+        for (const node of tree.nodes.values()) {
+          idMap[node.id] = newNodeId;
+          newNodes.mutableSet(newNodeId, update(node, { id: { $set: newNodeId } }));
           newNodeId++;
         }
 

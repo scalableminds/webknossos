@@ -7,6 +7,7 @@ import Saxophone from "@scalableminds/saxophone";
 import Store from "oxalis/store";
 import Date from "libs/date";
 import { getNodeToEdgesMap } from "oxalis/model/accessors/skeletontracing_accessor";
+import DiffableMap from "libs/diffable_map";
 import type {
   OxalisState,
   SkeletonTracingType,
@@ -161,8 +162,7 @@ function serializeTrees(trees: Array<TreeType>): Array<string> {
 }
 
 function serializeNodes(nodes: NodeMapType): Array<string> {
-  return Object.keys(nodes).map(nodeId => {
-    const node = nodes.get(Number(nodeId));
+  return nodes.map(node => {
     const position = node.position.map(Math.round);
     return serializeTag("node", {
       id: node.id,
@@ -255,16 +255,16 @@ function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
 }
 
 function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
-  return _.values(trees).find(tree => tree.nodes[nodeId] != null);
+  return _.values(trees).find(tree => tree.nodes.has(nodeId));
 }
 
 function isTreeConnected(tree: TreeType): boolean {
   const nodeToEdgesMap = getNodeToEdgesMap(tree);
   const visitedNodes = new Map();
 
-  const nodeIds = Object.keys(tree.nodes);
-  if (nodeIds.length > 0) {
-    const nodeQueue = [Number(nodeIds[0])];
+  if (tree.nodes.size() > 0) {
+    // Get the first element from the nodes map
+    const nodeQueue = [Number(tree.nodes.keys().next().value)];
     // Breadth-First search that marks all reachable nodes as visited
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
@@ -284,7 +284,7 @@ function isTreeConnected(tree: TreeType): boolean {
   }
 
   // If the size of the visitedNodes map is the same as the number of nodes, the tree is connected
-  return _.size(visitedNodes) === _.size(tree.nodes);
+  return _.size(visitedNodes) === tree.nodes.size();
 }
 
 export function parseNml(nmlString: string): Promise<TreeMapType> {
@@ -313,7 +313,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               ],
               name: attr.name,
               comments: [],
-              nodes: {},
+              nodes: new DiffableMap(),
               branchPoints: [],
               timestamp: Date.now(),
               edges: [],
@@ -345,7 +345,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
             const possibleTree = findTreeByNodeId(trees, currentNode.id);
             if (possibleTree != null)
               throw new NmlParseError(`${messages["nml.duplicate_node_id"]} ${currentNode.id}`);
-            currentTree.nodes[currentNode.id] = currentNode;
+            currentTree.nodes.mutableSet(currentNode.id, currentNode);
             break;
           }
           case "edge": {
@@ -358,8 +358,10 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
                 `${messages["nml.edge_outside_tree"]} ${JSON.stringify(currentEdge)}`,
               );
             if (
-              currentTree.nodes[currentEdge.source] == null ||
-              currentTree.nodes[currentEdge.target] == null
+              !(
+                currentTree.nodes.has(currentEdge.source) &&
+                currentTree.nodes.has(currentEdge.target)
+              )
             )
               throw new NmlParseError(
                 `${messages["nml.edge_with_invalid_node"]} ${JSON.stringify(currentEdge)}`,

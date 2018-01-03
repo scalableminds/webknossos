@@ -5,6 +5,7 @@ import _ from "lodash";
 import mock from "mock-require";
 import { defaultState } from "oxalis/store";
 import update from "immutability-helper";
+import DiffableMap from "libs/diffable_map";
 import type { NodeType } from "oxalis/store";
 
 const TIMESTAMP = 123456789;
@@ -35,12 +36,12 @@ const tracing = {
     "1": {
       treeId: 1,
       name: "TestTree-0",
-      nodes: {
-        "0": createDummyNode(0),
-        "1": createDummyNode(1),
-        "2": createDummyNode(2),
-        "7": createDummyNode(7),
-      },
+      nodes: new DiffableMap([
+        [0, createDummyNode(0)],
+        [1, createDummyNode(1)],
+        [2, createDummyNode(2)],
+        [7, createDummyNode(7)],
+      ]),
       timestamp: TIMESTAMP,
       branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
       edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 1, target: 7 }],
@@ -51,11 +52,11 @@ const tracing = {
     "2": {
       treeId: 2,
       name: "TestTree-1",
-      nodes: {
-        "4": createDummyNode(4),
-        "5": createDummyNode(5),
-        "6": createDummyNode(6),
-      },
+      nodes: new DiffableMap([
+        [4, createDummyNode(4)],
+        [5, createDummyNode(5)],
+        [6, createDummyNode(6)],
+      ]),
       timestamp: TIMESTAMP,
       branchPoints: [],
       edges: [{ source: 4, target: 5 }, { source: 5, target: 6 }],
@@ -171,11 +172,11 @@ test("addTrees reducer should assign new node and tree ids", t => {
   t.is(_.size(newState.tracing.trees), 4);
   t.is(newState.tracing.trees[3].treeId, 3);
   t.is(newState.tracing.trees[4].treeId, 4);
-  t.is(_.size(newState.tracing.trees[3].nodes), 4);
-  t.is(newState.tracing.trees[3].nodes[8].id, 8);
-  t.is(newState.tracing.trees[3].nodes[9].id, 9);
-  t.is(_.size(newState.tracing.trees[4].nodes), 3);
-  t.is(newState.tracing.trees[4].nodes[12].id, 12);
+  t.is(newState.tracing.trees[3].nodes.size(), 4);
+  t.is(newState.tracing.trees[3].nodes.get(8).id, 8);
+  t.is(newState.tracing.trees[3].nodes.get(9).id, 9);
+  t.is(newState.tracing.trees[4].nodes.size(), 3);
+  t.is(newState.tracing.trees[4].nodes.get(12).id, 12);
 
   // And node ids in edges, branchpoints and comments should have been replaced
   t.deepEqual(newState.tracing.trees[3].edges, [

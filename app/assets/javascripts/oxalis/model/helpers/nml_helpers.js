@@ -133,7 +133,7 @@ function serializeTrees(trees: Array<TreeType>): Array<string> {
 
 function serializeNodes(nodes: NodeMapType): Array<string> {
   return Object.keys(nodes).map(nodeId => {
-    const node = nodes[Number(nodeId)];
+    const node = nodes.get(Number(nodeId));
     const position = node.position.map(Math.round);
     return serializeTag("node", {
       id: node.id,

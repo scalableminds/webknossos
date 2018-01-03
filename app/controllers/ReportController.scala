@@ -96,8 +96,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
 
 
   /**
-    * assumes that (a) there is only one OpenAssignment per Task
-    * and (b) that all tasks of a project have the same required experience
+    * assumes that all tasks of a project have the same required experience
     */
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
@@ -114,7 +113,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
-        projects <- OpenAssignmentDAO.findByUserReturnOnlyProject(user).toFox
+        projects <- TaskDAO.findByUserReturnOnlyProject(user).toFox
         assignmentCountsByProject <- getAssignmentsByProjectsFor(projects, user)
       } yield {
         OpenTasksEntry(user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)

@@ -196,8 +196,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     Modal.confirm({
       content: messages["annotation.delete"],
-      cancelText: messages["no"],
-      okText: messages["yes"],
+      cancelText: messages.no,
+      okText: messages.yes,
       onOk: async () => {
         await deleteAnnotation(annotationId);
         if (wasFinished) {

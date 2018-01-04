@@ -1,5 +1,7 @@
 // @flow
 export default {
+  yes: "Yes",
+  no: "No",
   "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
 Editing should be done in a single window only.
 

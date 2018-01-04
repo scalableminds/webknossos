@@ -39,6 +39,8 @@ object Dependencies {
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
   val webknossosWrap = "com.scalableminds" %% "webknossos-wrap" % webknossosWrapVersion
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
+  val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
+
 
   val utilDependencies = Seq(
     akkaAgent,
@@ -78,6 +80,7 @@ object Dependencies {
     silhouetteTestkit,
     specs2 % Test,
     urlHelper,
-    xmlWriter)
+    xmlWriter,
+    woodstoxXml)
 
 }

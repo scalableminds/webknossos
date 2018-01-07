@@ -2,6 +2,9 @@ const esc = require("pg-escape");
 const mongodb = require("mongodb");
 const fs = require("fs");
 
+const DEFAULT_TEAM_OWNER = "5447d5902d00001c35e1c965";
+const DEFAULT_PROJECT = "orphaned-tasks";
+
 function formatVector3(vec) {
   return `(${vec[0]},${vec[1]},${vec[2]})`;
 }
@@ -221,7 +224,6 @@ function* csvWriter(name, cols) {
         "priority",
         "paused",
         "expectedTime",
-        "assignmentConfiguration_location",
         "created",
       ],
       async doc => ({
@@ -232,7 +234,6 @@ function* csvWriter(name, cols) {
         priority: doc.priority,
         paused: doc.paused,
         expectedTime: doc.expectedTime != null ? `${doc.expectedTime} milliseconds}` : null,
-        assignmentConfiguration_location: doc.assignmentConfiguration.location,
         created: doc._id.getTimestamp(),
       }),
     );
@@ -276,13 +277,12 @@ function* csvWriter(name, cols) {
       }),
     );
 
-    const defaultOwner = "506d6b7ce4b07cd7318af859";
     await migrateTable(
       "teams",
       ["_id", "_owner", "_parent", "name", "behavesLikeRootTeam", "created"],
       async doc => ({
         _id: doc._id.toHexString(),
-        _owner: doc.owner != null ? doc.owner.toHexString() : defaultOwner,
+        _owner: doc.owner != null ? doc.owner.toHexString() : DEFAULT_TEAM_OWNER,
         _parent: doc.parent != null ? (await lookupTeam(doc.parent))._id.toHexString() : null,
         name: doc.name,
         behavesLikeRootTeam: !!doc.behavesLikeRootTeam,
@@ -326,20 +326,19 @@ function* csvWriter(name, cols) {
         "created",
       ],
       async doc => {
-        const openAssignments = await m.collection("openAssignments").findOne({ _task: doc._id });
-        const project = await lookupProject(doc._project);
+        let project = await lookupProject(doc._project);
         if (project == null) {
-          console.log(doc);
+          let project = await lookupProject(DEFAULT_PROJECT);
           return null;
         }
         return {
           _id: doc._id.toHexString(),
           _team: (await lookupTeam(doc.team))._id.toHexString(),
-          _project: project != null ? project._id.toHexString() : null,
+          _project: project._id.toHexString(),
           _script: doc._script != "" ? doc._script : null,
           neededExperience_domain: doc.neededExperience.domain,
           neededExperience_value: doc.neededExperience.value,
-          openInstances: openAssignments != null ? openAssignments.instances : 0,
+          openInstances: doc.openInstances,
           totalInstances: doc.instances,
           tracingTime: doc.tracingTime != null ? `${doc.tracingTime} milliseconds` : null,
           boundingBox: formatBB(doc.boundingBox),

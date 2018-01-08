@@ -34,7 +34,7 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.flatMap(_.roleInTeam(taskType.team)).contains(Role.Admin)
+          user.exists(_.isSuperVisorOf(taskType.team))
       }
     }
 }

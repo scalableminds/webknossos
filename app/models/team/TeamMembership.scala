@@ -8,10 +8,13 @@ import play.api.libs.json.Json
  * Date: 14.07.13
  * Time: 16:49
  */
-case class TeamMembership(team: String, role: Role){
+case class TeamMembership(team: String, isSuperVisor: Boolean){
 
   override def toString =
-    s"${role.name} - $team"
+    if(isSuperVisor)
+      s"supervisor - $team"
+   else
+      s"user - $team"
 }
 
 object TeamMembership{

@@ -25,18 +25,18 @@ case class User(
                  lastName: String,
                  isActive: Boolean = false,
                  md5hash: String = "",
+                 organization: BSONObjectID,
                  teams: List[TeamMembership],
                  userConfiguration: UserConfiguration = UserConfiguration.default,
                  dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
+                 isAdmin: Boolean,
                  _isAnonymous: Option[Boolean] = None,
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate,
                  loginInfo: LoginInfo,
                  passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity {
-
-  def teamsWithRole(role: Role) = teams.filter(_.role == role)
 
   def teamNames = teams.map(_.team)
 
@@ -51,17 +51,13 @@ case class User(
 
   lazy val id = _id.stringify
 
-  lazy val adminTeams = teamsWithRole(Role.Admin)
+  lazy val supervisorTeams = teams.filter(_.isSuperVisor)
 
-  lazy val adminTeamNames = adminTeams.map(_.team)
+  lazy val supervisorTeamNames = supervisorTeams.map(_.team)
 
   lazy val hasAdminAccess = adminTeams.nonEmpty
 
-  def roleInTeam(team: String) = teams.find(_.team == team).map(_.role)
-
-  def isAdminOf(team: String) = adminTeamNames.contains(team)
-
-  def isAdmin = adminTeams.nonEmpty
+  def isSuperVisorOf(team: String) = supervisorTeamNames.contains(team)
 
   override def toString = email
 

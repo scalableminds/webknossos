@@ -35,7 +35,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.flatMap(_.roleInTeam(project.team)).contains(Role.Admin)
+          user.exists(_.isSuperVisorOf(project.team))
       }
     }
 }

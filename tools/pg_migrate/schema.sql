@@ -48,7 +48,7 @@ CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'Tracing Base', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Unassigned', 'Assigned', 'InProgress', 'Finished');
 CREATE TABLE webknossos.annotations(
-  _id webknossos.OBJECT_ID PRIMARY KEY NOT NULL DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY NOT NULL DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _task webknossos.OBJECT_ID,
   _team webknossos.OBJECT_ID NOT NULL,
   _user webknossos.OBJECT_ID NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE webknossos.annotations(
 );
 
 CREATE TABLE webknossos.datasets(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _team webknossos.OBJECT_ID NOT NULL,
   _datastore VARCHAR(256) NOT NULL ,
   name VARCHAR(256) NOT NULL UNIQUE,
@@ -107,7 +107,7 @@ CREATE TABLE webknossos.datastores(
 );
 
 CREATE TABLE webknossos.projects(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _team webknossos.OBJECT_ID NOT NULL,
   _owner webknossos.OBJECT_ID NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'),
@@ -118,7 +118,7 @@ CREATE TABLE webknossos.projects(
 );
 
 CREATE TABLE webknossos.scripts(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _owner webknossos.OBJECT_ID NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   gist VARCHAR(1024) NOT NULL,
@@ -128,7 +128,7 @@ CREATE TABLE webknossos.scripts(
 
 CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
 CREATE TABLE webknossos.tasktypes(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _team webknossos.OBJECT_ID NOT NULL,
   summary VARCHAR(256) NOT NULL UNIQUE,
   description TEXT,
@@ -142,7 +142,7 @@ CREATE TABLE webknossos.tasktypes(
 );
 
 CREATE TABLE webknossos.tasks(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _team webknossos.OBJECT_ID NOT NULL,
   _project webknossos.OBJECT_ID NOT NULL,
   _script webknossos.OBJECT_ID,
@@ -161,7 +161,7 @@ CREATE TABLE webknossos.tasks(
 );
 
 CREATE TABLE webknossos.teams(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _owner webknossos.OBJECT_ID NOT NULL,
   _parent webknossos.OBJECT_ID,
   name VARCHAR(256) NOT NULL UNIQUE CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
@@ -170,7 +170,7 @@ CREATE TABLE webknossos.teams(
 );
 
 CREATE TABLE webknossos.timespans(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _user webknossos.OBJECT_ID NOT NULL,
   _annotation webknossos.OBJECT_ID,
   time INTERVAL NOT NULL,
@@ -182,7 +182,7 @@ CREATE TABLE webknossos.timespans(
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('scrypt');
 CREATE TABLE webknossos.users(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),

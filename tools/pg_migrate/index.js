@@ -162,13 +162,6 @@ function* csvWriter(name, cols) {
       }),
     );
 
-    function getState(state) {
-      if (state.isFinished) return "Finished";
-      else if (state.isInProgress) return "InProgress";
-      else if (state.isAssigned) return "Assigned";
-      else return "Unassigned";
-    }
-
     await migrateTable(
       "annotations",
       [
@@ -197,7 +190,7 @@ function* csvWriter(name, cols) {
         tracing_typ: doc.tracingReference.typ,
         typ: doc.typ,
         version: doc.version != null ? doc.version : 0,
-        state: getState(doc.state),
+        state: doc.state,
         tags: doc.tags,
         statistics: doc.statistics != null ? JSON.stringify(doc.statistics) : "{}",
         isActive: !!doc.isActive,

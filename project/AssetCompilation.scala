@@ -1,13 +1,8 @@
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
-
-import com.typesafe.sbt.web.Import._
-import play.sbt.Play.autoImport._
-import play.sbt.routes.RoutesKeys._
-import play.twirl.sbt.Import._
 import sbt.Keys._
 import sbt.{Task, _}
-import sbt._
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 object AssetCompilation {
   object SettingsKeys {
@@ -78,10 +73,31 @@ object AssetCompilation {
     }
   } dependsOn npmInstall
 
+  private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] =
+    (runner in Compile, dependencyClasspath in Compile, sourceManaged, baseDirectory, streams, target) map { (runner, dc, sourceManaged, base, s, t) =>
+
+      println("Running slick sql access class generation task")
+
+      val conf = com.typesafe.config.ConfigFactory.parseFile(new File("conf/application.conf")).resolve()
+
+      val pgUrl = conf.getString("postgres.url")
+      val pgUser = conf.getString("postgres.user")
+      val pgPass = conf.getString("postgres.password")
+      val pgDriver = conf.getString("postgres.driver")
+
+      runner.run("slick.codegen.SourceCodeGenerator", dc.files,
+        Array("slick.jdbc.PostgresProfile", pgDriver, pgUrl, (sourceManaged / "schema").toString, "com.scalableminds.webknossos.schema", pgUser, pgPass),
+        s.log
+      )
+
+      Seq((sourceManaged / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"))
+    }
+
   val settings = Seq(
     AssetCompilation.SettingsKeys.webpackPath := (Path("node_modules") / ".bin" / "webpack").getPath,
     AssetCompilation.SettingsKeys.npmPath := "yarn",
     run in Compile <<= (run in Compile) map(killWebpack) dependsOn webpackGenerateTask,
+    sourceGenerators in Compile <+= slickClassesFromDBSchemaTask,
     stage <<= stage dependsOn assetsGenerationTask,
     dist <<= dist dependsOn assetsGenerationTask
   )

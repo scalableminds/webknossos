@@ -21,7 +21,7 @@ object Dependencies {
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
-  val liftBox = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
+  val liftCommon = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
   val liftUtil = "net.liftweb" % "lift-util_2.10" % "3.0-M1"
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
   val log4jCore =  "org.apache.logging.log4j" % "log4j-api" % log4jVersion
@@ -41,6 +41,11 @@ object Dependencies {
   val xmlWriter = "org.glassfish.jaxb" % "txw2" % "2.2.11"
   val woodstoxXml = "org.codehaus.woodstox" % "wstx-asl" % "3.2.3"
 
+  val sql = Seq(
+    "com.typesafe.slick" %% "slick" % "3.2.1",
+    "com.typesafe.slick" %% "slick-hikaricp" % "3.2.1",
+    "com.typesafe.slick" %% "slick-codegen" % "3.2.1",
+    "org.postgresql" % "postgresql" % "9.4-1200-jdbc41")
 
   val utilDependencies = Seq(
     akkaAgent,
@@ -48,7 +53,7 @@ object Dependencies {
     commonsEmail,
     commonsIo,
     commonsLang,
-    liftBox,
+    liftCommon,
     liftUtil,
     log4jApi,
     log4jCore,
@@ -81,6 +86,6 @@ object Dependencies {
     specs2 % Test,
     urlHelper,
     xmlWriter,
-    woodstoxXml)
+    woodstoxXml) ++ sql
 
 }

@@ -5,6 +5,8 @@
 GET           /api/buildinfo                                                    controllers.Application.buildInfo
 POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
 
+GET           /api/sqltest                                                      controllers.AnnotationController.sqlTest
+
 # Authentication
 GET           /api/auth/autoLogin                                               controllers.Authentication.autoLogin
 POST          /api/auth/register                                                controllers.Authentication.handleRegistration

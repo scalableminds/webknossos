@@ -54,8 +54,8 @@ function* csvWriter(name, cols) {
 }
 
 (async function() {
-  const mongoClient = await mongodb.connect("mongodb://localhost:27017");
-  const m = mongoClient.db("webknossos-master");
+  const mongoClient = await mongodb.connect(process.env.MONGOURL || "mongodb://localhost:27017");
+  const m = mongoClient.db(process.env.MONGODB || "webknossos-master");
 
   try {
     const buffer = { teams: new Map(), projects: new Map() };

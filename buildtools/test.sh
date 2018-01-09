@@ -40,7 +40,7 @@ then
   export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $(find $testBundlePath -name "*.e2e.js") "$@"
 elif [ $cmd == "prepare" ]
 then
-  prepare
+  prepare "$@"
 else
   echo "Unknown command"
 fi

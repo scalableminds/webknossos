@@ -291,7 +291,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     import dao.BatchCommands.AggregationFramework._
 
     dao.aggregate(
-      Group(BSONString(groupingField))( "openInstances" -> SumField("instances"))
+      Group(BSONString(groupingField))( "openInstances" -> SumField("openInstances"))
     ).map{result => Json.toJson(result.firstBatch).as[List[OpenInstancesResult]].map( x => x._id -> x.openInstances).toMap }
   }
 

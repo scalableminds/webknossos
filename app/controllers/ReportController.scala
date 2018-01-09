@@ -113,7 +113,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
-        projects <- TaskDAO.findByUserReturnOnlyProject(user).toFox
+        projects <- TaskDAO.findWithOpenByUserReturnOnlyProject(user).toFox
         assignmentCountsByProject <- getAssignmentsByProjectsFor(projects, user)
       } yield {
         OpenTasksEntry(user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)

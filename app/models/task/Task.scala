@@ -270,7 +270,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       Json.obj("priority" -> -1)
 
     find(validPriorityQ ++ Json.obj(
-      "instances" -> Json.obj("$gt" -> 0),
+      "openInstances" -> Json.obj("$gt" -> 0),
       "team" -> Json.obj("$in" -> teams),
       "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)))
       .sort(byPriority)

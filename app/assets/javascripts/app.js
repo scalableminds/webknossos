@@ -2,12 +2,12 @@
  * app.js
  * @flow
  */
-import type OxalisController from "oxalis/controller";
+import OxalisController from "oxalis/controller";
 import window from "libs/window";
 import BackboneEvents from "backbone-events-standalone";
 
 class OxalisApplication {
-  oxalis: ?OxalisController;
+  oxalis: ?typeof OxalisController;
   vent = Object.assign({}, BackboneEvents);
 }
 

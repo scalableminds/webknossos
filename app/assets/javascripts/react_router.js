@@ -46,45 +46,9 @@ import TimeLineView from "admin/views/time/time_line_view";
 
 import type { OxalisState } from "oxalis/store";
 import type { APITracingType, APIUserType } from "admin/api_flow_types";
+import type { ContextRouter } from "react-router-dom";
 
 const { Content } = Layout;
-
-export type ReactRouterLocationType = {
-  key: string,
-  pathname: string,
-  search: string,
-  hash: string,
-  state: Object,
-};
-
-export type ReactRouterHistoryType = {
-  length: number,
-  action: string,
-  location: ReactRouterLocationType,
-  pathname: string,
-  search: string,
-  hash: string,
-  state: string,
-  push: (string, ?Object) => void,
-  replace: (string, ?Object) => void,
-  go: number => void,
-  goBack: () => void,
-  goForward: () => void,
-  block: Function => ?string | null,
-};
-
-export type ReactRouterMatchType = {
-  params: { [string]: string },
-  isExact: boolean,
-  path: string,
-  url: string,
-};
-
-type ReactRouterArgumentsType = {
-  location: ReactRouterLocationType,
-  match: ReactRouterMatchType,
-  history: ReactRouterHistoryType,
-};
 
 type StateProps = {
   activeUser: ?APIUserType,
@@ -114,7 +78,7 @@ function PageNotFoundView() {
 }
 
 class ReactRouter extends React.Component<Props> {
-  tracingView = ({ match }: ReactRouterArgumentsType) => {
+  tracingView = ({ match }: ContextRouter) => {
     const tracingType = match.params.type;
     const isValidTracingType = Object.keys(APITracingTypeEnum).includes(tracingType);
 
@@ -123,7 +87,7 @@ class ReactRouter extends React.Component<Props> {
       return (
         <TracingLayoutView
           initialTracingType={saveTracingType}
-          initialAnnotationId={match.params.id}
+          initialAnnotationId={match.params.id || ""}
           initialControlmode={ControlModeEnum.TRACE}
         />
       );
@@ -132,10 +96,10 @@ class ReactRouter extends React.Component<Props> {
     return <h3>Invalid tracing URL.</h3>;
   };
 
-  tracingViewMode = ({ match }: ReactRouterArgumentsType) => (
+  tracingViewMode = ({ match }: ContextRouter) => (
     <TracingLayoutView
       initialTracingType={APITracingTypeEnum.View}
-      initialAnnotationId={match.params.id}
+      initialAnnotationId={match.params.id || ""}
       initialControlmode={ControlModeEnum.VIEW}
     />
   );
@@ -163,7 +127,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/users/:userId/details"
-                render={({ match }: ReactRouterArgumentsType) => (
+                render={({ match }: ContextRouter) => (
                   <DashboardView
                     userId={match.params.userId}
                     isAdminView={match.params.userId !== null}
@@ -211,15 +175,15 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId/edit"
-                render={({ match }: ReactRouterArgumentsType) => (
+                render={({ match }: ContextRouter) => (
                   <TaskCreateFormView taskId={match.params.taskId} />
                 )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/tasks/:taskId"
-                render={({ match }: ReactRouterArgumentsType) => (
-                  <TaskListView initialFieldValues={{ taskId: match.params.taskId }} />
+                render={({ match }: ContextRouter) => (
+                  <TaskListView initialFieldValues={{ taskId: match.params.taskId || "" }} />
                 )}
               />
               <SecuredRoute
@@ -236,14 +200,14 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectName/tasks"
-                render={({ match }: ReactRouterArgumentsType) => (
-                  <TaskListView initialFieldValues={{ projectName: match.params.projectName }} />
+                render={({ match }: ContextRouter) => (
+                  <TaskListView initialFieldValues={{ projectName: match.params.projectName || "" }} />
                 )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/projects/:projectName/edit"
-                render={({ match }: ReactRouterArgumentsType) => (
+                render={({ match }: ContextRouter) => (
                   <ProjectCreateView projectName={match.params.projectName} />
                 )}
               />
@@ -251,12 +215,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/annotations/:type/:id"
                 render={this.tracingView}
-                serverAuthenticationCallback={async ({ match }: ReactRouterArgumentsType) => {
+                serverAuthenticationCallback={async ({ match }: ContextRouter) => {
                   const isReadOnly = window.location.pathname.endsWith("readOnly");
                   if (isReadOnly) {
                     const annotationInformation = await getAnnotationInformation(
-                      match.params.id,
-                      match.params.type,
+                      match.params.id || "",
+                      match.params.type || "",
                     );
                     return annotationInformation.isPublic;
                   }
@@ -271,15 +235,18 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:datasetName/import"
-                render={({ match }: ReactRouterArgumentsType) => (
-                  <DatasetImportView isEditingMode={false} datasetName={match.params.datasetName} />
+                render={({ match }: ContextRouter) => (
+                  <DatasetImportView
+                    isEditingMode={false}
+                    datasetName={match.params.datasetName || ""}
+                  />
                 )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:datasetName/edit"
-                render={({ match }: ReactRouterArgumentsType) => (
-                  <DatasetImportView isEditingMode datasetName={match.params.datasetName} />
+                render={({ match }: ContextRouter) => (
+                  <DatasetImportView isEditingMode datasetName={match.params.datasetName || ""} />
                 )}
               />
               <SecuredRoute
@@ -296,15 +263,15 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/edit"
-                render={({ match }: ReactRouterArgumentsType) => (
+                render={({ match }: ContextRouter) => (
                   <TaskTypeCreateView taskTypeId={match.params.taskTypeId} />
                 )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes/:taskTypeId/tasks"
-                render={({ match }: ReactRouterArgumentsType) => (
-                  <TaskListView initialFieldValues={{ taskTypeId: match.params.taskTypeId }} />
+                render={({ match }: ContextRouter) => (
+                  <TaskListView initialFieldValues={{ taskTypeId: match.params.taskTypeId || "" }} />
                 )}
               />
               <SecuredRoute
@@ -315,7 +282,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/scripts/:scriptId/edit"
-                render={({ match }: ReactRouterArgumentsType) => (
+                render={({ match }: ContextRouter) => (
                   <ScriptCreateView scriptId={match.params.scriptId} />
                 )}
               />

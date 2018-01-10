@@ -10,6 +10,7 @@ import moment from "moment";
 import { Spin, Input, Button } from "antd";
 import AdvancedDatasetView from "dashboard/views/advanced_dataset/advanced_dataset_view";
 import GalleryDatasetView from "dashboard/views/gallery_dataset_view";
+import StatePersistenceComponent from "components/state_persistence_component";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { DataLayerType } from "oxalis/store";
 
@@ -112,6 +113,8 @@ class DatasetView extends React.PureComponent<Props, State> {
     );
   }
 
+  _setState = (...args: [State]) => this.setState(...args);
+
   render() {
     const isGallery = this.props.dataViewType === "gallery";
     const margin = { marginRight: 5 };
@@ -120,6 +123,7 @@ class DatasetView extends React.PureComponent<Props, State> {
         style={{ width: 200, float: "right" }}
         onPressEnter={this.handleSearch}
         onChange={this.handleSearch}
+        value={this.state.searchQuery}
       />
     );
 
@@ -146,6 +150,12 @@ class DatasetView extends React.PureComponent<Props, State> {
 
     return (
       <div>
+        <StatePersistenceComponent
+          name="datasetList"
+          stateProperties={["searchQuery"]}
+          state={this.state}
+          updateState={this._setState}
+        />
         {adminHeader}
         <h3 className="TestDatasetHeadline">Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />

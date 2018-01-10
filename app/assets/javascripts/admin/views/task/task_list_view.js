@@ -14,13 +14,14 @@ import { deleteTask, getTasks } from "admin/admin_rest_api";
 import TemplateHelpers from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
 import TaskAnnotationView from "admin/views/task/task_annotation_view";
+import StatePersistenceComponent from "components/state_persistence_component";
 import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
-import type { QueryObjectType } from "admin/views/task/task_search_form";
+import type { QueryObjectType, TaskFormFieldValuesType } from "admin/views/task/task_search_form";
 
 const { Column } = Table;
 const { Search, TextArea } = Input;
 
-type Props = { initialFieldValues?: Object };
+type Props = { initialFieldValues?: TaskFormFieldValuesType };
 
 type State = {
   isLoading: boolean,
@@ -94,11 +95,19 @@ class TaskListView extends React.PureComponent<Props, State> {
     );
   }
 
+  _setState = (...args: [State]) => this.setState(...args);
+
   render() {
     const marginRight = { marginRight: 20 };
 
     return (
       <div className="container">
+        <StatePersistenceComponent
+          name="taskList"
+          stateProperties={["searchQuery"]}
+          state={this.state}
+          updateState={this._setState}
+        />
         <div className="pull-right">
           <Link to="/tasks/create">
             <Button icon="plus" style={marginRight} type="primary">
@@ -109,6 +118,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             style={{ width: 200 }}
             onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
+            value={this.state.searchQuery}
           />
         </div>
         <h3>Tasks</h3>

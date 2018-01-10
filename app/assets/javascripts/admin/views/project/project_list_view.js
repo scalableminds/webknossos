@@ -15,6 +15,7 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/admin_rest_api";
+import StatePersistenceComponent from "components/state_persistence_component";
 import type { APIProjectType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 
@@ -82,11 +83,19 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
     });
   };
 
+  _setState = (...args) => this.setState(...args);
+
   render() {
     const marginRight = { marginRight: 20 };
 
     return (
       <div className="container TestProjectListView">
+        <StatePersistenceComponent
+          name="projectList"
+          stateProperties={["searchQuery"]}
+          state={this.state}
+          updateState={this._setState}
+        />
         <div>
           <div className="pull-right">
             <Link to="/projects/create">
@@ -98,6 +107,7 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
               onChange={this.handleSearch}
+              value={this.state.searchQuery}
             />
           </div>
           <h3>Projects</h3>

@@ -7,7 +7,6 @@ import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncLink } from "components/async_clickables";
 import { Spin, Input, Table, Button, Modal, Tag, Icon } from "antd";
-import type { APIAnnotationType } from "admin/api_flow_types";
 import FormatUtils from "libs/format_utils";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
@@ -16,7 +15,9 @@ import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FileUpload from "components/file_upload";
-import type { ReactRouterHistoryType } from "react_router";
+import StatePersistenceComponent from "components/state_persistence_component";
+import type { APIAnnotationType } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -24,7 +25,7 @@ const { Search } = Input;
 type Props = {
   userId: ?string,
   isAdminView: boolean,
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
 };
 
 type State = {
@@ -61,6 +62,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     this.fetchDataMaybe();
   }
 
+  componentDidUpdate(prevProps, prevState) {
+    if (this.state.shouldShowArchivedTracings !== prevState.shouldShowArchivedTracings) {
+      this.fetchDataMaybe();
+    }
+  }
+
   isFetchNecessary(): boolean {
     const accessor = this.state.shouldShowArchivedTracings ? "isArchived" : "isUnarchived";
     return !this.state.didAlreadyFetchMetaInfo[accessor];
@@ -83,15 +90,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     if (!this.isFetchNecessary()) {
       return;
     }
-
-    const isFinishedString = this.state.shouldShowArchivedTracings.toString();
+    // Cache shouldShowArchivedTracings, otherwise it could have another value later
+    const showArchivedTracings = this.state.shouldShowArchivedTracings;
+    const isFinishedString = showArchivedTracings.toString();
     const url = this.props.userId
       ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
 
     this.setState({ isLoading: true });
     const tracings = await Request.receiveJSON(url);
-    if (this.state.shouldShowArchivedTracings) {
+    if (showArchivedTracings) {
       this.setState(
         update(this.state, {
           isLoading: { $set: false },
@@ -115,9 +123,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   toggleShowArchived = () => {
-    this.setState({ shouldShowArchivedTracings: !this.state.shouldShowArchivedTracings }, () => {
-      this.fetchDataMaybe();
-    });
+    this.setState({ shouldShowArchivedTracings: !this.state.shouldShowArchivedTracings });
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
@@ -410,6 +416,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     ));
   }
 
+  _setState = (...args) => this.setState(...args);
+
   render() {
     const marginRight = { marginRight: 8 };
     const search = (
@@ -423,6 +431,12 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
     return (
       <div className="TestExplorativeAnnotationsView">
+        <StatePersistenceComponent
+          name="explorativeList"
+          stateProperties={["searchQuery", "shouldShowArchivedTracings"]}
+          state={this.state}
+          updateState={this._setState}
+        />
         {this.props.isAdminView ? (
           search
         ) : (

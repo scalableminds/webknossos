@@ -1,24 +1,13 @@
 // @flow
+import _ from "lodash";
 import React from "react";
 import { Form, Row, Col, Button, Input, Select } from "antd";
 import { getUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
+import StatePersistenceComponent from "components/state_persistence_component";
 import type { APIUserType, APIProjectType, APITaskTypeType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
-
-type Props = {
-  form: Object,
-  onChange: Function,
-  initialFieldValues?: Object,
-  isLoading: boolean,
-};
-
-type State = {
-  users: Array<APIUserType>,
-  projects: Array<APIProjectType>,
-  taskTypes: Array<APITaskTypeType>,
-};
 
 export type QueryObjectType = {
   taskType?: string,
@@ -27,11 +16,33 @@ export type QueryObjectType = {
   user?: string,
 };
 
+export type TaskFormFieldValuesType = {
+  taskId?: string,
+  taskTypeId?: string,
+  projectName?: string,
+  userId?: string,
+};
+
+type Props = {
+  form: Object,
+  onChange: Function,
+  initialFieldValues?: TaskFormFieldValuesType,
+  isLoading: boolean,
+};
+
+type State = {
+  users: Array<APIUserType>,
+  projects: Array<APIProjectType>,
+  taskTypes: Array<APITaskTypeType>,
+  fieldValues: TaskFormFieldValuesType,
+};
+
 class TaskSearchForm extends React.Component<Props, State> {
   state = {
     users: [],
     projects: [],
     taskTypes: [],
+    fieldValues: {},
   };
 
   componentDidMount() {
@@ -41,6 +52,13 @@ class TaskSearchForm extends React.Component<Props, State> {
     // project / taskType list views
     if (this.props.initialFieldValues) {
       this.props.form.setFieldsValue(this.props.initialFieldValues);
+      this.handleFormSubmit();
+    }
+  }
+
+  componentDidUpdate(prevProps, prevState) {
+    if (!_.isEqual(this.state.fieldValues, prevState.fieldValues)) {
+      this.props.form.setFieldsValue(this.state.fieldValues);
       this.handleFormSubmit();
     }
   }
@@ -58,7 +76,7 @@ class TaskSearchForm extends React.Component<Props, State> {
       event.preventDefault();
     }
 
-    this.props.form.validateFields((err, formValues) => {
+    this.props.form.validateFields((err, formValues: TaskFormFieldValuesType) => {
       const queryObject: QueryObjectType = {};
 
       if (formValues.taskId) {
@@ -83,6 +101,8 @@ class TaskSearchForm extends React.Component<Props, State> {
         queryObject.project = formValues.projectName;
       }
 
+      this.setState({ fieldValues: formValues });
+
       this.props.onChange(queryObject);
     });
   };
@@ -90,6 +110,8 @@ class TaskSearchForm extends React.Component<Props, State> {
   handleReset = () => {
     this.props.form.resetFields();
   };
+
+  _setState = (...args) => this.setState(...args);
 
   render() {
     const { getFieldDecorator } = this.props.form;
@@ -100,6 +122,12 @@ class TaskSearchForm extends React.Component<Props, State> {
 
     return (
       <Form onSubmit={this.handleFormSubmit}>
+        <StatePersistenceComponent
+          name="taskSearch"
+          stateProperties={["fieldValues"]}
+          state={this.state}
+          updateState={this._setState}
+        />
         <Row gutter={40}>
           <Col span={12}>
             <FormItem {...formItemLayout} label="Task Id">

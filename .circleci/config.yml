@@ -71,7 +71,7 @@ jobs:
       - run:
           name: Run webknossos smoke test
           command: |
-            set -x
+            set -xeEuo pipefail
             DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos
             sleep 10
             ./test/infrastructure/deployment.bash
@@ -80,25 +80,23 @@ jobs:
       - run:
           name: Run webknossos-datastore smoke test
           command: |
-            set -x
+            set -xeEuo pipefail
             cd webknossos-datastore
             DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos-datastore
             sleep 10
             curl --retry 3 --max-time 15 -v http://localhost:9090/data/health
             docker-compose down --volumes --remove-orphans
 
-      # - run:
-      #     name: Deploy docker images
-      #     command: |
-      #       set -x
-      #       docker login -u $DOCKER_USER -p $DOCKER_PASS
-      #       docker tag scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
-      #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-      #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}
-      #       docker tag scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
-      #       docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-      #       docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
-      #       docker logout
+      - run:
+          name: Deploy docker images
+          command: |
+            set -xeEuo pipefail
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            docker tag scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
+            docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
+            docker tag scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+            docker logout
 
 workflows:
   version: 2

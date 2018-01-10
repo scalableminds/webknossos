@@ -21,23 +21,22 @@ wrap(repo: "scalableminds/webknossos") {
     sh "docker-compose pull mongo"
   }
 
-
   stage("Build") {
 
-    sh "docker-compose run frontend-dependencies"
-    sh "docker-compose run frontend-docs"
+    sh "docker-compose run base yarn install"
+    sh "docker-compose run base yarn run docs"
     sh "docker-compose run base sbt clean compile stage"
     sh """docker-compose run base sbt "project webknossosDatastore" clean compile stage"""
+    sh "DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose build --pull webknossos"
     sh "docker build --pull -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
-    sh "cd webknossos-datastore && docker build --pull -t scalableminds/webknossos-datastore:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
+    sh "cd webknossos-datastore && DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose build --pull webknossos-datastore"
   }
-
 
   stage("Test") {
 
-    sh "docker-compose run frontend-linting"
-    sh "docker-compose run frontend-flow"
-    sh "docker-compose run frontend-tests"
+    sh "docker-compose run base bash -c \"yarn run lint && yarn run am-i-pretty\""
+    sh "docker-compose run base yarn flow"
+    sh "docker-compose run base yarn test-verbose"
     retry (3) {
       sh "docker-compose run e2e-tests"
     }
@@ -56,40 +55,6 @@ wrap(repo: "scalableminds/webknossos") {
     """
   }
 
-
   dockerPublish(repo: "scalableminds/webknossos")
   dockerPublish(repo: "scalableminds/webknossos-datastore")
-
-
-  stage("Build system packages") {
-
-    env.VERSION = readFile('version').trim()
-    sh "./buildtools/make_dist.sh oxalis ${env.BRANCH_NAME} ${env.BUILD_NUMBER}"
-
-    def base_port = 11000
-    def port = base_port + sh(returnStdout: true, script: """
-      grep -nx "${BRANCH_NAME}" /var/lib/jenkins/jobs/webknossos/branches.txt > /dev/null || \
-        echo "${BRANCH_NAME}" >> /var/lib/jenkins/jobs/webknossos/branches.txt
-      grep -nx "${BRANCH_NAME}" /var/lib/jenkins/jobs/webknossos/branches.txt | grep -Eo '^[^:]+' | head -n1
-      """).trim().toInteger()
-
-    def modes = ["dev", "prod"]
-    def pkg_types = ["deb", "rpm"]
-    for (int i = 0; i < modes.size(); i++) {
-      for (int j = 0; j < pkg_types.size(); j++) {
-        sh "./buildtools/build-helper.sh oxalis ${env.BRANCH_NAME} ${env.BUILD_NUMBER} ${port} ${modes[i]} ${pkg_types[j]}"
-      }
-    }
-
-    sh "mkdir packages && mv *.deb packages && mv *.rpm packages"
-  }
-
-
-  stage("Publish system packages") {
-
-    sh "echo ${env.BRANCH_NAME} > .git/REAL_BRANCH"
-    withEnv(["JOB_NAME=oxalis"]) {
-      sh "./buildtools/publish_deb.py"
-    }
-  }
 }

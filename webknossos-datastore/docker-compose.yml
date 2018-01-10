@@ -2,6 +2,7 @@ version: '2.1'
 
 services:
   webknossos-datastore:
+    build: .
     image: scalableminds/webknossos-datastore:${DOCKER_TAG:-master}
     ports:
       - "9090:9090"

@@ -94,11 +94,6 @@ export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
-type TemporaryMutableNodeMapType = DiffableMap<number, NodeType>;
-export type TemporaryMutableTreeType = TreeTypeBase & {
-  +nodes: TemporaryMutableNodeMapType,
-};
-
 export type MappingType = {
   +parent?: string,
   +name: string,

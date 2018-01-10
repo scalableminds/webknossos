@@ -26,7 +26,6 @@ import type {
   EdgeType,
   NodeType,
   TreeType,
-  TemporaryMutableTreeType,
   BranchPointType,
   TreeMapType,
   CommentType,
@@ -240,7 +239,7 @@ function splitTreeByNodes(
     visitedEdges[getEdgeHash(deletedEdge)] = true;
   });
 
-  const traverseTree = (inputNodeId: number, newTree: TemporaryMutableTreeType) => {
+  const traverseTree = (inputNodeId: number, newTree: TreeType) => {
     const nodeQueue = [inputNodeId];
 
     while (nodeQueue.length !== 0) {
@@ -297,7 +296,7 @@ function splitTreeByNodes(
         const immutableNewTree = createTree(intermediateState, timestamp).get();
         // Cast to mutable tree type since we want to mutably do the split
         // in this reducer for performance reasons.
-        newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
+        newTree = ((immutableNewTree: any): TreeType);
         intermediateState = update(intermediateState, {
           tracing: { trees: { [newTree.treeId]: { $set: newTree } } },
         });

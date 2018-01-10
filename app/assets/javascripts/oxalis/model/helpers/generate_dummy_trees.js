@@ -1,5 +1,6 @@
 // @flow
 import _ from "lodash";
+import type { ServerSkeletonTracingTreeType } from "oxalis/model";
 
 // This is a quick'n'dirty code to generate a huge amount of mocked trees.
 // Since the server cannot handle such big tracings at the moment, we'll
@@ -8,10 +9,13 @@ import _ from "lodash";
 // tracing.trees = generateDummyTrees(1, 1000000);
 // in model.js
 
-export default function generateDummyTrees(treeCount: number, nodeCount: number) {
+export default function generateDummyTrees(
+  treeCount: number,
+  nodeCount: number,
+): Array<ServerSkeletonTracingTreeType> {
   let currentNewNodeId = 1;
   let currentTreeId = 1;
-  function generateDummyTree() {
+  function generateDummyTree(): ServerSkeletonTracingTreeType {
     const nodes = [];
     const edges = [];
     let counter = -1;

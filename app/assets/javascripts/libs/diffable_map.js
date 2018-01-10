@@ -1,11 +1,14 @@
 // @flow
-// import Utils from "libs/utils";
 
 const defaultItemsPerBatch = 10000;
 let idCounter = 0;
 
-// Some properties:
-// Insertion order is not guaranteed
+// DiffableMap is an immutable key-value data structure which supports fast diffing.
+// Updating a DiffableMap returns a new DiffableMap, in which case the Maps are
+// derived from each other ("dependent").
+// Diffing is very fast when the given Maps are dependent, since the separate chunks
+// can be compared shallowly.
+// The insertion order of the DiffableMap is not guaranteed.
 
 class DiffableMap<K: number, V> {
   id: number;
@@ -17,7 +20,6 @@ class DiffableMap<K: number, V> {
   constructor(optKeyValueArray?: ?Array<[K, V]>, itemsPerBatch: number = defaultItemsPerBatch) {
     // Make the id property not enumerable so that it does not interfere with tests
     Object.defineProperty(this, "id", { value: idCounter++, writable: true });
-    // this.id = idCounter++;
     this.chunks = [];
     this.existsCache = new Map();
     this.entryCount = 0;
@@ -63,7 +65,8 @@ class DiffableMap<K: number, V> {
         }
         idx++;
       }
-      throw new Error("should not happen");
+      // Satisfy flow.
+      throw new Error("This code path should never be reached due to the above logic.");
     } else {
       const isTooFull = this.entryCount / this.chunks.length > this.itemsPerBatch;
       const nonFullMapIdx =
@@ -117,9 +120,17 @@ class DiffableMap<K: number, V> {
 
   clone(): DiffableMap<K, V> {
     const newDiffableMap = new DiffableMap();
+    // Clone all chunks
     this.chunks.forEach(map => {
       newDiffableMap.chunks.push(new Map(map));
     });
+
+    // Clone other attributes
+    newDiffableMap.id = this.id;
+    newDiffableMap.existsCache = new Map(this.existsCache);
+    newDiffableMap.entryCount = this.entryCount;
+    newDiffableMap.itemsPerBatch = this.itemsPerBatch;
+
     return newDiffableMap;
   }
 
@@ -139,7 +150,8 @@ class DiffableMap<K: number, V> {
       }
       idx++;
     }
-    throw new Error("Should not happen");
+    // Satisfy flow.
+    throw new Error("This code path should never be reached due to the above logic.");
   }
 
   map<T>(fn: (value: V) => T): Array<T> {
@@ -190,7 +202,7 @@ class DiffableMap<K: number, V> {
 // This function should only be used internally by this module.
 // It creates a new DiffableMap on the basis of another one, while
 // shallowly copying the internal chunks.
-// When modifying the chunks, each chunk should be manually cloned.
+// When modifying a chunk, that chunk should be manually cloned.
 // The existsCache is safely cloned.
 function shallowCopy<K: number, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
   const newMap = new DiffableMap();

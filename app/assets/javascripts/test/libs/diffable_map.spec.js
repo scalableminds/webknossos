@@ -34,8 +34,6 @@ test("DiffableMap should behave immutable on set/delete operations", t => {
   const map3 = map2.delete(1);
   t.is(map2.get(1), 2);
   t.false(map3.has(1));
-
-  t.true(true);
 });
 
 test("DiffableMap should be clonable and mutable on clone/mutableSet", t => {
@@ -50,6 +48,15 @@ test("DiffableMap should be clonable and mutable on clone/mutableSet", t => {
 
   t.is(map1.get(1), 1);
   t.false(map1.has(2));
+
+  // existsCache should not be shared
+  t.false(map1.existsCache === map2.existsCache);
+
+  // Id should be the same since the internal structures look the same
+  t.is(map1.id, map2.id);
+
+  t.is(map1.entryCount + 1, map2.entryCount);
+  t.is(map1.itemsPerBatch, map2.itemsPerBatch);
 });
 
 test("DiffableMap should be instantiable with Array<[key, value]>", t => {
@@ -134,7 +141,7 @@ test("diffDiffableMaps should diff large DiffableMaps which are based on each ot
   const map1 = new DiffableMap(objects.slice(0, 100).map((obj, index) => [index, obj]), 10);
 
   let map2 = map1;
-  // Delete uneven keys from map2
+  // Delete even keys from map2
   for (const key of map1.keys()) {
     if (key % 2 === 0) {
       map2 = map2.delete(key);

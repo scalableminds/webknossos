@@ -63,7 +63,7 @@ export type ServerBranchPointType = {
   nodeId: number,
 };
 
-type ServerSkeletonTracingTreeType = {
+export type ServerSkeletonTracingTreeType = {
   branchPoints: Array<ServerBranchPointType>,
   color: ?Vector3,
   comments: Array<CommentType>,

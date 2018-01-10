@@ -77,7 +77,6 @@ export type ServerSkeletonTracingTreeType = {
 
 type ServerTracingBaseType = {
   id: string,
-  boundingBox?: BoundingBoxObjectType,
   userBoundingBox?: BoundingBoxObjectType,
   createdTimestamp: number,
   editPosition: Vector3,
@@ -89,6 +88,7 @@ type ServerTracingBaseType = {
 
 export type ServerSkeletonTracingType = ServerTracingBaseType & {
   activeNodeId?: number,
+  boundingBox?: BoundingBoxObjectType,
   trees: Array<ServerSkeletonTracingTreeType>,
 };
 

@@ -56,6 +56,7 @@ export type ServerNodeType = {
   resolution: number,
   radius: number,
   createdTimestamp: number,
+  interpolation: boolean,
 };
 
 export type ServerBranchPointType = {

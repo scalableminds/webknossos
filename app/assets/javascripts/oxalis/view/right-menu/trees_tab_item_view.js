@@ -4,7 +4,7 @@
  */
 
 import * as React from "react";
-import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
+import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
 import {
   toggleTreeAction,
@@ -37,7 +37,7 @@ class ListTreeItemView extends React.PureComponent<ListTreeItemViewProps> {
   ensureVisible() {
     // scroll to active tree
     if (this.props.tree.treeId === this.props.activeTreeId) {
-      scrollIntoViewIfNeeded(this.domElement);
+      scrollIntoViewIfNeeded(this.domElement, { centerIfNeeded: true });
     }
   }
 

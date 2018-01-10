@@ -6,8 +6,8 @@ package models.annotation.nml
 import java.io.OutputStream
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 
-import com.scalableminds.braingames.datastore.SkeletonTracing._
-import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
@@ -78,6 +78,11 @@ object NmlWriter {
     }
     Xml.withinElementSync("zoomLevel") {
       writer.writeAttribute("zoom", tracing.zoomLevel.toString)
+    }
+    tracing.activeNodeId.map { nodeId =>
+      Xml.withinElementSync("activeNode") {
+        writer.writeAttribute("id", nodeId.toString)
+      }
     }
     tracing.userBoundingBox.map { b =>
       Xml.withinElementSync("userBoundingBox") {

@@ -3,7 +3,7 @@
  */
 package oxalis.ndstore
 
-import com.scalableminds.braingames.binary.models.datasource.{Category, ElementClass}
+import com.scalableminds.webknossos.datastore.binary.models.datasource.{Category, ElementClass}
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsResult, JsValue, _}

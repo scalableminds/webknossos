@@ -1,8 +1,8 @@
-// Store instance count with a single OpenAnnotations
+// Store instance count with a single OpenAssignments
+// Note that the Down splits them into OpenAssignments with just 1 instance.
 
 // --- !Ups
-db.openAssignments.renameCollection("openAssignments_singeInstance");
-db.openAssignments_singeInstance.aggregate([
+db.openAssignments.aggregate([
   {$group: {
     _id: "$_task",
     _task: {$first: "$_task"},
@@ -11,12 +11,13 @@ db.openAssignments_singeInstance.aggregate([
     neededExperience: {$first: "$neededExperience"},
     priority: {$first: "$priority"},
     created: {$first: "$created"},
-    instances: {$sum: 1},
+    instances: {$sum: "$instances"},
   }}
-]).forEach(function(assignment) {
-  delete assignment._id;
-  db.openAssignments.insert(assignment);
+], {allowDiskUse:true}).forEach(function(assignment) {
+  db.openAssignments_aggregated.insert(assignment);
 });
+db.openAssignments.renameCollection("openAssignments_multiplePerTask");
+db.openAssignments_aggregated.renameCollection("openAssignments");
 
 // --- !Downs
 db.openAssignments.renameCollection("openAssignments_aggregated");

@@ -4,7 +4,7 @@ import fs from "fs";
 import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import { configure } from "enzyme";
-import Adapter from "enzyme-adapter-react-15";
+import Adapter from "enzyme-adapter-react-16";
 
 const requests = [];
 const minimumWait = 100; // ms

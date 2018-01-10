@@ -3,7 +3,7 @@ import * as React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import update from "immutability-helper";
 import { updateUser, getAdminTeams } from "admin/admin_rest_api";
-import type { APITeamType, APIUserType, APIRoleType, APITeamRoleType } from "admin/api_flow_types";
+import type { APIUserType, APIRoleType, APITeamRoleType } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -27,7 +27,6 @@ type TeamRoleModalPropType = {
 };
 
 type State = {
-  teams: Array<APITeamType>,
   selectedTeams: Array<TeamOptionalRoleType>,
 };
 
@@ -40,7 +39,6 @@ type State = {
 
 class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State> {
   state = {
-    teams: [],
     selectedTeams: [],
   };
 
@@ -73,14 +71,12 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
 
   async fetchData() {
     const teams = await getAdminTeams();
-
     const selectedTeams = teams.map(team => ({
       team: team.name,
       role: null,
     }));
 
     this.setState({
-      teams,
       selectedTeams,
     });
   }

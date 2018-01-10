@@ -20,6 +20,7 @@ import {
   deleteComment,
   mergeTrees,
   toggleAllTreesReducer,
+  addTrees,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
@@ -52,6 +53,7 @@ function serverNodeToNode(n: ServerNodeType): NodeType {
     resolution: n.resolution,
     radius: n.radius,
     timestamp: n.createdTimestamp,
+    interpolation: n.interpolation,
   };
 }
 
@@ -125,6 +127,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
       const skeletonTracing: SkeletonTracingType = {
         annotationId: action.annotation.id,
+        createdTimestamp: action.tracing.createdTimestamp,
         type: "skeleton",
         activeNodeId,
         cachedMaxNodeId,
@@ -300,6 +303,19 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
                   trees: { [tree.treeId]: { $set: tree } },
                   activeNodeId: { $set: null },
                   activeTreeId: { $set: tree.treeId },
+                },
+              }),
+            )
+            .getOrElse(state);
+        }
+
+        case "ADD_TREES": {
+          const { trees } = action;
+          return addTrees(state, trees)
+            .map(updatedTrees =>
+              update(state, {
+                tracing: {
+                  trees: { $merge: updatedTrees },
                 },
               }),
             )

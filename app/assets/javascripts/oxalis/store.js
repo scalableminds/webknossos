@@ -63,6 +63,7 @@ export type NodeType = {
   +resolution: number,
   +radius: number,
   +timestamp: number,
+  +interpolation: boolean,
 };
 
 export type BranchPointType = {
@@ -139,11 +140,13 @@ export type DatasetType = {
 };
 
 export type TreeMapType = { +[number]: TreeType };
+export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 
 export type SkeletonTracingType = {
   +annotationId: string,
+  +createdTimestamp: number,
   +type: "skeleton",
   +trees: TreeMapType,
   +name: string,
@@ -163,6 +166,7 @@ export type SkeletonTracingType = {
 
 export type VolumeTracingType = {
   +annotationId: string,
+  +createdTimestamp: number,
   +type: "volume",
   +name: string,
   +version: number,
@@ -184,6 +188,7 @@ export type VolumeTracingType = {
 
 export type ReadOnlyTracingType = {
   +annotationId: string,
+  +createdTimestamp: number,
   +type: "readonly",
   +name: string,
   +version: number,
@@ -385,6 +390,7 @@ export const defaultState: OxalisState = {
   tracing: {
     annotationId: "",
     boundingBox: null,
+    createdTimestamp: 0,
     userBoundingBox: null,
     type: "readonly",
     name: "",

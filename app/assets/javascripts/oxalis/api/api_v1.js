@@ -32,7 +32,7 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 
 function assertExists(value: any, message: string) {
   if (value == null) {
-    throw Error(message);
+    throw new Error(message);
   }
 }
 
@@ -114,7 +114,7 @@ class TracingApi_DEPRECATED {
         assertExists(tree, `Couldn't find node ${nodeId}.`);
         Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
       } else {
-        throw Error("Node id is missing.");
+        throw new Error("Node id is missing.");
       }
     });
   }
@@ -163,7 +163,7 @@ class DataApi_DEPRECATED {
 
   __getLayer(layerName: string): Binary {
     const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
+    if (layer === undefined) throw new Error(`Layer with name ${layerName} was not found.`);
     return layer;
   }
 

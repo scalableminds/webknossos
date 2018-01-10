@@ -278,7 +278,13 @@ class Skeleton {
     for (const update of diff) {
       switch (update.name) {
         case "createNode": {
-          this.createNode(update.value.treeId, update.value);
+          const { treeId, id: nodeId } = update.value;
+          this.createNode(treeId, update.value);
+          const tree = skeletonTracing.trees[treeId];
+          const isBranchpoint = tree.branchPoints.find(bp => bp.nodeId === nodeId) != null;
+          if (isBranchpoint) {
+            this.updateNodeType(treeId, nodeId, NodeTypes.BRANCH_POINT);
+          }
           break;
         }
         case "deleteNode":

@@ -55,9 +55,9 @@ class AuthTokenView extends React.PureComponent<{}, State> {
             <h3>Auth Token</h3>
             <Form>
               <FormItem>
-                <Input.Group compact size="large">
+                <Input.Group compact>
                   <Input value={this.state.currentToken} style={{ width: "90%" }} readOnly />
-                  <Button onClick={this.copyTokenToClipboard} size="large" icon="copy" />
+                  <Button onClick={this.copyTokenToClipboard} icon="copy" />
                 </Input.Group>
               </FormItem>
               <FormItem>

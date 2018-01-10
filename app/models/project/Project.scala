@@ -5,11 +5,9 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.basics._
-import models.mturk.MTurkAssignmentConfig
 import models.task.{TaskDAO, TaskService}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import oxalis.mturk.MTurkService
 import play.api.data.validation.ValidationError
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -21,14 +19,13 @@ import reactivemongo.play.json.BSONFormats._
 import scala.concurrent.Future
 
 case class Project(
-  name: String,
-  team: String,
-  _owner: BSONObjectID,
-  priority: Int,
-  paused: Boolean,
-  expectedTime: Option[Int],
-  assignmentConfiguration: AssignmentConfig,
-  _id: BSONObjectID = BSONObjectID.generate) {
+                    name: String,
+                    team: String,
+                    _owner: BSONObjectID,
+                    priority: Int,
+                    paused: Boolean,
+                    expectedTime: Option[Int],
+                    _id: BSONObjectID = BSONObjectID.generate) {
 
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
@@ -56,20 +53,19 @@ object Project {
         "priority" -> project.priority,
         "paused" -> project.paused,
         "expectedTime" -> project.expectedTime,
-        "assignmentConfiguration" -> project.assignmentConfiguration,
         "id" -> project.id
       )
     }
 
   def projectPublicWritesWithStatus(
-    project: Project,
-    openAssignments: Int,
-    requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
+                                     project: Project,
+                                     openTaskInstances: Int,
+                                     requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
 
     for {
       projectJson <- projectPublicWrites(project, requestingUser)
     } yield {
-      projectJson + ("numberOfOpenAssignments" -> JsNumber(openAssignments))
+      projectJson + ("numberOfOpenAssignments" -> JsNumber(openTaskInstances))
     }
   }
 
@@ -81,31 +77,21 @@ object Project {
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Int] and
-      (__ \ 'assignmentConfiguration).read[AssignmentConfig] and
       (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
-      (name, team, priority, paused, expectedTime, assignmentLocation, owner) =>
-        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime, assignmentLocation))
+      (name, team, priority, paused, expectedTime, owner) =>
+        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
 }
 
 object ProjectService extends FoxImplicits with LazyLogging {
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     ProjectDAO.remove("name", project.name).flatMap {
       case result if result.n > 0 =>
-        for{
+        for {
           _ <- TaskService.removeAllWithProject(project)
         } yield true
-      case _                      =>
+      case _ =>
         logger.warn("Tried to remove project without permission.")
         Fox.successful(false)
-    }
-  }
-
-  def reportToExternalService(project: Project, json: JsValue): Fox[Boolean] = {
-    project.assignmentConfiguration match {
-      case mturk: MTurkAssignmentConfig =>
-        MTurkService.handleProjectCreation(project, mturk)
-      case _ =>
-        Fox.successful(true)
     }
   }
 
@@ -113,7 +99,7 @@ object ProjectService extends FoxImplicits with LazyLogging {
     name match {
       case Some("") | None =>
         new Fox(Future.successful(Full(None)))
-      case Some(x)         =>
+      case Some(x) =>
         ProjectDAO.findOneByName(x).toFox.map(p => Some(p))
     }
   }
@@ -123,7 +109,7 @@ object ProjectService extends FoxImplicits with LazyLogging {
       if (oldProject.priority == updated.priority)
         Fox.successful(true)
       else
-        TaskService.handleProjectUpdate(oldProject.name, updated)
+        TaskService.handleProjectUpdate(updated)
     }
 
     for {
@@ -135,10 +121,10 @@ object ProjectService extends FoxImplicits with LazyLogging {
 
   def updatePauseStatus(project: Project, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
     def updateTasksIfNecessary(updated: Project) = {
-      if(updated.paused == project.paused)
+      if (updated.paused == project.paused)
         Fox.successful(true)
       else
-        TaskService.handleProjectUpdate(updated.name, updated)
+        TaskService.handleProjectUpdate(updated)
     }
 
     val updated = project.copy(paused = isPaused)
@@ -157,7 +143,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
       ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _                =>
+        case _ =>
           DenyEveryone()
       }
     }
@@ -166,7 +152,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
       ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("_owner" -> user._id))
-        case _                =>
+        case _ =>
           DenyEveryone()
       }
     }

@@ -12,15 +12,12 @@ import models.user._
 import net.liftweb.common.Full
 import oxalis.cleanup.CleanUpService
 import oxalis.jobs.AvailableTasksJob
-import oxalis.mturk.MTurkNotificationReceiver
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import play.api.libs.json.Json
 import play.api.mvc.Results.Ok
 import play.api.mvc._
-
-import scala.concurrent.duration._
 
 object Global extends GlobalSettings with LazyLogging{
 
@@ -38,10 +35,6 @@ object Global extends GlobalSettings with LazyLogging{
       UserTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
     }
 
-    CleanUpService.register("deletion of openAssignments with zero instances", OpenAssignment.pruningInterval) {
-      OpenAssignmentDAO.removeZeroInstanceAssignments()(GlobalAccessContext).map(r => s"deleted ${r.n}")
-    }
-
     super.onStart(app)
   }
 
@@ -50,9 +43,6 @@ object Global extends GlobalSettings with LazyLogging{
     Akka.system(app).actorOf(
       Props(new Mailer(conf)),
       name = "mailActor")
-
-    // We need to delay the start of the notification handle, since the database needs to be available first
-    MTurkNotificationReceiver.startDelayed(app, 2.seconds)
 
     if (conf.getBoolean("workload.active")) {
       Akka.system(app).actorOf(

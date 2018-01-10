@@ -43,7 +43,7 @@ const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnot
 
   if (!task) {
     // This should never be the case unless tasks were deleted in the DB.
-    throw Error(
+    throw new Error(
       `[Dashboard Tasks] Annotation ${
         annotation.id
       } has no task assigned. Please inform your admin.`,
@@ -196,6 +196,8 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     Modal.confirm({
       content: messages["annotation.delete"],
+      cancelText: messages.no,
+      okText: messages.yes,
       onOk: async () => {
         await deleteAnnotation(annotationId);
         if (wasFinished) {

@@ -24,16 +24,11 @@ import com.typesafe.scalalogging.LazyLogging
 class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
-  val mongoDb   = argumentMapRead.getOrElse("mongodb.db", "webknossos-testing")
-  val mongoHost = argumentMapRead.getOrElse("mongodb.url", "localhost")
-  val mongoPort = argumentMapRead.getOrElse("mongodb.port", "27017")
+  val mongoUri  = argumentMapRead.getOrElse("mongodb.uri", "mongodb://localhost:27017/webknossos-testing")
   val testPort = 9000
   val argumentMap = argumentMapRead +
-                 ("mongodb.db"   -> mongoDb,
-                  "mongodb.url"  -> mongoHost,
-                  "mongodb.port" -> mongoPort,
+                 ("mongodb.uri"  -> mongoUri,
                   "http.port"    -> testPort,
-                  "mongodb.evolution.mongoCmd" -> s"mongo $mongoHost:$mongoPort/$mongoDb",
                   "play.modules.disabled" -> List("com.scalableminds.webknossos.datastore.DataStoreModule"),
                   "play.http.router" -> "webknossos.Routes",
                   "datastore.enabled" -> false)
@@ -42,7 +37,6 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
 
     "pass the e2e tests" in new WithServer(
       app = FakeApplication(
-        withoutPlugins = List("com.scalableminds.mongev.MongevPlugin"),
         additionalConfiguration = argumentMap
       ),
       port = testPort) {

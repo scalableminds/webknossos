@@ -99,7 +99,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                 title="ID"
                 dataIndex="id"
                 key="id"
-                width={80}
+                width={100}
                 sorter={Utils.localeCompareBy("id")}
                 className="monospace-id"
               />

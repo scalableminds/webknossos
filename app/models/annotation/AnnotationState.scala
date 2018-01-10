@@ -1,21 +1,25 @@
 package models.annotation
 
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, Reads, Writes}
+import utils.EnumUtils
 
-case class AnnotationState(
-  isAssigned: Boolean = false,
-  isFinished: Boolean = false,
-  isInProgress: Boolean = false)
+object AnnotationState extends Enumeration {
+  type AnnotationStateValue = Value
 
-object AnnotationState{
+  /*
+    InProgress and Finished imply Assigned
+   */
+  val Unassigned = Value("Unassigned")
+  val Assigned = Value("Assigned")
+  val InProgress = Value("InProgress")
+  val Finished = Value("Finished")
 
-  implicit val annotationStateFormat = Json.format[AnnotationState]
+  val assignedStates = List (Assigned, InProgress, Finished)
+  val assignedButNotFinished = List(Assigned, InProgress)
+  val assignedButNotInProgress = List(Assigned, Finished)
+  val notFinished = List(Unassigned, Assigned, InProgress)
 
-  val Assigned = AnnotationState(isAssigned = true)
+  implicit val enumReads: Reads[AnnotationStateValue] = EnumUtils.enumReads(AnnotationState)
 
-  val Unassigned = AnnotationState()
-
-  val InProgress = Assigned.copy(isInProgress = true)
-
-  val Finished = Assigned.copy(isFinished = true)
+  implicit def enumWrites: Writes[AnnotationStateValue] = EnumUtils.enumWrites
 }

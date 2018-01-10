@@ -4,12 +4,10 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationDAO
-import models.mturk.MTurkAssignmentConfig
-import models.project.{Project, WebknossosAssignmentConfig}
+import models.project.{Project}
 import models.task.TaskDAO._
 import models.user.{User, UserDAO}
 import net.liftweb.common.Full
-import oxalis.mturk.MTurkService
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
@@ -18,19 +16,11 @@ import reactivemongo.play.json.BSONFormats._
 import scala.concurrent.Future
 
 object TaskService
-  extends TaskAssignmentSimulation
-    with TaskAssignment
-    with FoxImplicits
-    with LazyLogging{
+  extends FoxImplicits
+    with LazyLogging {
 
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     TaskDAO.findOneById(id)
-
-  def findNextAssignment(user: User, teams: List[String])(implicit ctx: DBAccessContext) =
-    OpenAssignmentService.findNextOpenAssignments(user, teams)
-
-  def findAllAssignments(implicit ctx: DBAccessContext) =
-    OpenAssignmentService.findAllOpenAssignments
 
   def findAll(implicit ctx: DBAccessContext) =
     TaskDAO.findAll
@@ -44,8 +34,6 @@ object TaskService
       case Full(result) =>
         for {
           _ <- AnnotationDAO.removeAllWithTaskId(_task)
-          _ <- OpenAssignmentService.removeByTask(_task)
-          _ <- MTurkService.removeByTask(result)
         } yield true
       case _ =>
         logger.warn("Tried to remove task without permission.")
@@ -53,9 +41,8 @@ object TaskService
     }
   }
 
-  def handleProjectUpdate(name: String, updated: Project)(implicit ctx: DBAccessContext) = {
-    OpenAssignmentService.updateAllOfProject(name, updated)
-  }
+  def handleProjectUpdate(updatedProject: Project)(implicit ctx: DBAccessContext) =
+    TaskDAO.updateAllOfProject(updatedProject).toFox
 
   def findAllByTaskType(_taskType: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     withValidId(_taskType)(TaskDAO.findAllByTaskType)
@@ -85,19 +72,8 @@ object TaskService
   }
 
   def insert(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
-    def insertAssignmentsIfNeeded() =
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          OpenAssignmentService.insertInstancesFor(task, project, task.instances).toFox
-        case _: MTurkAssignmentConfig =>
-          MTurkService.createHITs(project, task)
-        case _ =>
-          Fox.successful(true)
-      }
-
     for {
       _ <- TaskDAO.insert(task)
-      _ <- insertAssignmentsIfNeeded()
     } yield task
   }
 
@@ -109,7 +85,7 @@ object TaskService
     .flatMap { users =>
       Fox.serialSequence(users){ user =>
         for{
-          tasks <- TaskService.allNextTasksForUser(user, user.teamNames).getOrElse(Nil)
+          tasks <- TaskAssignmentService.findAllAssignableFor(user, user.teamNames).getOrElse(Nil)
           taskCount = tasks.size
           projects <- TaskService.getProjectsFor(tasks)
         } yield (user, (taskCount, projects))

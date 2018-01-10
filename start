@@ -1,4 +1,0 @@
-mongod > /dev/null &
-PID="$!"
-sbt run -mem 2048 -XX:MaxPermSize=512M
-kill -9 $PID

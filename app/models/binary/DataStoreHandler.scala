@@ -7,11 +7,11 @@ import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 
-import com.scalableminds.braingames.binary.helpers.ThumbnailHelpers
-import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.braingames.datastore.models.ImageThumbnail
-import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingSelector}
+import com.scalableminds.webknossos.datastore.binary.helpers.ThumbnailHelpers
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.models.ImageThumbnail
+import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingSelector}
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.JsonHelper.boxFormat
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

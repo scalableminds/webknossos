@@ -15,6 +15,7 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
+  addTreesAction,
   deleteTreeWithConfirmAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
@@ -23,9 +24,11 @@ import {
   toggleInactiveTreesAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
-import { serializeToNml, getNmlName } from "oxalis/model/helpers/nml_helpers";
+import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
 import Utils from "libs/utils";
+import FileUpload from "components/file_upload";
 import { saveAs } from "file-saver";
+import Toast from "libs/toast";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
@@ -46,11 +49,13 @@ type Props = {
 };
 
 type State = {
+  isUploading: boolean,
   isDownloading: boolean,
 };
 
 class TreesTabView extends React.PureComponent<Props, State> {
   state = {
+    isUploading: false,
     isDownloading: false,
   };
 
@@ -80,7 +85,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     Store.dispatch(toggleInactiveTreesAction());
   }
 
-  downloadAsNml = async () => {
+  handleNmlDownload = async () => {
     await this.setState({ isDownloading: true });
     // Wait for the Modal to render
     await Utils.sleep(1000);
@@ -90,6 +95,18 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
     const blob = new Blob([nml], { type: "text/plain;charset=utf-8" });
     saveAs(blob, getNmlName(state));
+  };
+
+  handleNmlUpload = async (nmlString: string) => {
+    let trees;
+    try {
+      trees = await parseNml(nmlString);
+      Store.dispatch(addTreesAction(trees));
+    } catch (e) {
+      Toast.error(e.message);
+    } finally {
+      this.setState({ isUploading: false });
+    }
   };
 
   getTreesComponents() {
@@ -135,10 +152,23 @@ class TreesTabView extends React.PureComponent<Props, State> {
             <i className="fa fa-random" /> Shuffle All Colors
           </div>
         </Menu.Item>
-        <Menu.Item key="downloadAsNml">
-          <div onClick={this.downloadAsNml} title="Download visible trees as NML">
-            <Icon type="export" /> Download as NML
+        <Menu.Item key="handleNmlDownload">
+          <div onClick={this.handleNmlDownload} title="Download visible trees as NML">
+            <Icon type="download" /> Download as NML
           </div>
+        </Menu.Item>
+        <Menu.Item key="importNml">
+          <FileUpload
+            accept=".nml"
+            multiple={false}
+            name="nmlFile"
+            showUploadList={false}
+            onSuccess={this.handleNmlUpload}
+            onUploading={() => this.setState({ isUploading: true })}
+            onError={() => this.setState({ isUploading: false })}
+          >
+            <Icon type="upload" /> Import NML
+          </FileUpload>
         </Menu.Item>
       </Menu>
     );
@@ -152,8 +182,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
     return (
       <div id="tree-list" className="flex-column">
         <Modal
-          visible={this.state.isDownloading}
-          title="Preparing NML"
+          visible={this.state.isDownloading || this.state.isUploading}
+          title={this.state.isDownloading ? "Preparing NML" : "Importing NML"}
           closable={false}
           footer={null}
           width={200}

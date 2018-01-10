@@ -4,26 +4,24 @@ import java.util.UUID
 import javax.inject.Inject
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.braingames.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
 import models.annotation.nml.NmlService
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.binary.DataSetDAO
-import models.project.{Project, ProjectDAO}
+import models.project.ProjectDAO
 import models.task._
 import models.user._
 import net.liftweb.common.{Box, Empty, Failure, Full}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee._
 import play.api.libs.json._
 import play.api.mvc.Result
-import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
@@ -181,45 +179,24 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         params.team,
         params.neededExperience,
         params.openInstances,
+        params.openInstances,
         _project = project.name,
         _script = params.scriptId,
         editPosition = params.editPosition,
         editRotation = params.editRotation,
-        boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) })
+        boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) },
+        priority = if (project.paused) -1 else project.priority)
       _ <- TaskService.insert(task, project)
     } yield task
   }
 
-
-  // TODO: properly handle task update with amazon turk
   def update(taskId: String) = SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
     val params = request.body
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
-      taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
-      project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      openInstanceCount <- task.remainingInstances
-      _ <- (params.openInstances == openInstanceCount || project.assignmentConfiguration.supportsChangeOfNumInstances) ?~> Messages("task.instances.changeImpossible")
-      updatedTask <- TaskDAO.update(
-        _task = task._id,
-        _taskType = taskType._id,
-        neededExperience = params.neededExperience,
-        instances = task.instances + params.openInstances - openInstanceCount,
-        team = params.team,
-        _script = params.scriptId,
-        _project = Some(project.name),
-        boundingBox = params.boundingBox,
-        editPosition = params.editPosition,
-        editRotation = params.editRotation)
-      _ <- AnnotationService.updateAllOfTask(updatedTask, taskType.settings)
-
-      newTracingBase = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
-      dataSet <- DataSetDAO.findOneBySourceName(params.dataSet).toFox ?~> Messages("dataSet.notFound", params.dataSet)
-      newTracingBaseReference <- dataSet.dataStore.saveSkeletonTracing(newTracingBase) ?~> "Failed to save skeleton tracing."
-      _ <- AnnotationService.updateAnnotationBase(updatedTask, newTracingBaseReference)
+      updatedTask <- TaskDAO.updateInstances(task._id, task.instances + params.openInstances - task.openInstances, params.openInstances)
       json <- Task.transformToJson(updatedTask)
-      _ <- OpenAssignmentService.updateRemainingInstances(updatedTask, project, params.openInstances)
     } yield {
       JsonOk(json, Messages("task.editSuccess"))
     }
@@ -254,7 +231,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def parseBsonToFox(s: String): Fox[BSONObjectID] =
+  private def parseBsonToFox(s: String): Fox[BSONObjectID] =
     BSONObjectID.parse(s) match {
       case Success(id) => Fox.successful(id)
       case _ => Fox(Future.successful(Empty))
@@ -296,7 +273,21 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   }
 
-  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = {
+  def request = SecuredAction.async { implicit request =>
+    val user = request.identity
+    for {
+      teams <- getAllowedTeamsForNextTask(user)
+      _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
+      task <- tryToGetNextAssignmentFor(user, teams)
+      annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
+      annotationJSON <- annotation.toJson(Some(user))
+    } yield {
+      JsonOk(annotationJSON, Messages("task.assigned"))
+    }
+  }
+
+
+  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
       if (numberOfOpen < MAX_OPEN_TASKS) {
         Fox.successful(user.teamNames)
@@ -308,18 +299,15 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
-    Fox.serialSequence(tasks)(_.project).map(_.flatten).map(_.distinct)
-
-  def tryToGetNextAssignmentFor(user: User, teams: List[String], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[OpenAssignment] = {
+  private def tryToGetNextAssignmentFor(user: User, teams: List[String], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[Task] = {
     val s = System.currentTimeMillis()
-    TaskService.findAssignableFor(user, teams).futureBox.flatMap {
-      case Full(assignment) =>
+    TaskAssignmentService.findOneAssignableFor(user, teams).futureBox.flatMap {
+      case Full(task) =>
         NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
-        TimeLogger.logTimeF("task request", logger.trace(_))(OpenAssignmentService.take(assignment)).flatMap {
+        TimeLogger.logTimeF("task request", logger.trace(_))(TaskAssignmentService.takeInstance(task)).flatMap {
           updateResult =>
             if (updateResult.n >= 1)
-              Fox.successful(assignment)
+              Fox.successful(task)
             else if (retryCount > 0)
               tryToGetNextAssignmentFor(user, teams, retryCount - 1)
             else {
@@ -344,53 +332,15 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def request = SecuredAction.async { implicit request =>
-    val user = request.identity
-    val id = UUID.randomUUID().toString
-    for {
-      teams <- getAllowedTeamsForNextTask(user)
-      _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      assignment <- tryToGetNextAssignmentFor(user, teams)
-      task <- assignment.task
-      annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
-      annotationJSON <- annotation.toJson(Some(user))
-    } yield {
-      JsonOk(annotationJSON, Messages("task.assigned"))
-    }
-  }
 
   def peekNext(limit: Int) = SecuredAction.async { implicit request =>
     val user = request.identity
 
-    def takeUpTo[E](n: Int, filter: (Seq[E], E) => Boolean): Iteratee[E, Seq[E]] = {
-      def stepWith(accum: Seq[E]): Iteratee[E, Seq[E]] = {
-        if (accum.length >= n) Done(accum) else Cont {
-          case Input.EOF =>
-            Done(accum, Input.EOF)
-          case Input.Empty =>
-            stepWith(accum)
-          case Input.El(el) =>
-            if (filter(accum, el))
-              stepWith(accum :+ el)
-            else
-              stepWith(accum)
-        }
-      }
-
-      stepWith(Seq.empty)
-    }
-
-    def uniqueIdFilter(l: Seq[OpenAssignment], next: OpenAssignment) =
-      !l.map(_._task).contains(next._task)
-
-    def findNextAssignments = {
-      TaskService.findAssignable(user, user.teamNames) |>>> takeUpTo[OpenAssignment](limit, uniqueIdFilter)
-    }
-
     for {
-      assignments <- findNextAssignments
+      assignments <- TaskAssignmentService.findNAssignableFor(user, user.teamNames, limit)
     } yield {
       Ok(Json.toJson(assignments))
     }
   }
+
 }

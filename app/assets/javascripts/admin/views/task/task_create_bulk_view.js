@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 import React from "react";
-import { Form, Input, Button, Card, Upload, Icon, Spin, Progress } from "antd";
+import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from "antd";
 import { createTasks } from "admin/admin_rest_api";
 import { handleTaskCreationResponse } from "admin/views/task/task_create_form_view";
 import Messages from "messages";
@@ -71,16 +71,16 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       !_.isString(task.taskTypeId) ||
       !_.isString(task.team) ||
       !_.isString(task.projectName) ||
-      task.editPosition.some(isNaN) ||
-      task.editRotation.some(isNaN) ||
-      isNaN(task.openInstances) ||
-      isNaN(task.neededExperience.value) ||
+      task.editPosition.some(Number.isNaN) ||
+      task.editRotation.some(Number.isNaN) ||
+      Number.isNaN(task.openInstances) ||
+      Number.isNaN(task.neededExperience.value) ||
       // Bounding Box is optional and can be null
       (boundingBox != null
-        ? boundingBox.topLeft.some(isNaN) ||
-          isNaN(boundingBox.width) ||
-          isNaN(boundingBox.height) ||
-          isNaN(boundingBox.depth) ||
+        ? boundingBox.topLeft.some(Number.isNaN) ||
+          Number.isNaN(boundingBox.width) ||
+          Number.isNaN(boundingBox.height) ||
+          Number.isNaN(boundingBox.depth) ||
           // is editPosition within the BoundingBox?
           task.editPosition[0] > boundingBox.topLeft[0] + boundingBox.width ||
           task.editPosition[0] < boundingBox.topLeft[0] ||
@@ -292,8 +292,8 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                   />,
                 )}
               </FormItem>
-              <hr />
-              <FormItem label="Alternatively Upload a CSV File" hasFeedback>
+              <Divider>Alternatively Upload a CSV File</Divider>
+              <FormItem hasFeedback>
                 {getFieldDecorator("csvFile", {
                   valuePropName: "fileList",
                   getValueFromEvent: this.normFile,

@@ -83,6 +83,7 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
   RequestMock.sendJSONReceiveArraybuffer = sinon.stub();
   RequestMock.sendJSONReceiveArraybuffer
     .onFirstCall()
+    // eslint-disable-next-line prefer-promise-reject-errors
     .returns(Promise.reject({ status: 403 }))
     .onSecondCall()
     .returns(Promise.resolve(responseBuffer));

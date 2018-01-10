@@ -66,7 +66,7 @@ export const tracing = {
 
 export const annotation = {
   created: "2017-08-09 20:19",
-  state: { isAssigned: true, isFinished: false, isInProgress: true },
+  state: "InProgress",
   id: "598b52293c00009906f043e7",
   name: "",
   typ: "Explorational",

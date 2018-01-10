@@ -5,8 +5,7 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Link } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
-import TemplateHelpers from "libs/template_helpers";
+import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -108,14 +107,7 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
                 this.state.projects,
-                [
-                  "name",
-                  "team",
-                  "priority",
-                  "assignmentConfiguration",
-                  "owner",
-                  "numberOfOpenAssignments",
-                ],
+                ["name", "team", "priority", "owner", "numberOfOpenAssignments"],
                 this.state.searchQuery,
               )}
               rowKey="id"
@@ -140,25 +132,10 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                 title="Priority"
                 dataIndex="priority"
                 key="priority"
-                sorter={Utils.localeCompareBy((project: APIProjectType) =>
-                  project.priority.toString(),
-                )}
+                sorter={Utils.compareBy((project: APIProjectType) => project.priority)}
                 render={(priority, project: APIProjectType) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
-              />
-              <Column
-                title="Location"
-                dataIndex="assignmentConfiguration"
-                key="assignmentConfiguration"
-                sorter={Utils.localeCompareBy(
-                  (project: APIProjectType) => project.assignmentConfiguration.location,
-                )}
-                render={assignmentConfiguration => (
-                  <Tag color={TemplateHelpers.stringToColor(assignmentConfiguration.location)}>
-                    {assignmentConfiguration.location}
-                  </Tag>
-                )}
               />
               <Column
                 title="Owner"
@@ -173,17 +150,15 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
                 title="Open Assignments"
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
-                sorter={Utils.localeCompareBy((project: APIProjectType) =>
-                  project.numberOfOpenAssignments.toString(),
+                sorter={Utils.compareBy(
+                  (project: APIProjectType) => project.numberOfOpenAssignments,
                 )}
               />
               <Column
                 title="Expected Time"
                 dataIndex="expectedTime"
                 key="expectedTime"
-                sorter={Utils.localeCompareBy((project: APIProjectType) =>
-                  project.expectedTime.toString(),
-                )}
+                sorter={Utils.compareBy((project: APIProjectType) => project.expectedTime)}
                 render={expectedTime => `${expectedTime}m`}
               />
               <Column

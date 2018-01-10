@@ -29,7 +29,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
   val argumentMap = argumentMapRead +
                  ("mongodb.uri"  -> mongoUri,
                   "http.port"    -> testPort,
-                  "play.modules.disabled" -> List("com.scalableminds.braingames.datastore.DataStoreModule"),
+                  "play.modules.disabled" -> List("com.scalableminds.webknossos.datastore.DataStoreModule"),
                   "play.http.router" -> "webknossos.Routes",
                   "datastore.enabled" -> false)
 

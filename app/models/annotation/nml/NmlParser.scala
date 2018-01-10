@@ -5,12 +5,12 @@ package models.annotation.nml
 
 import java.io.InputStream
 
-import com.scalableminds.braingames.binary.models.datasource.ElementClass
-import com.scalableminds.braingames.datastore.SkeletonTracing._
-import com.scalableminds.braingames.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.braingames.datastore.tracings.ProtoGeometryImplicits
-import com.scalableminds.braingames.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
-import com.scalableminds.braingames.datastore.tracings.volume.Volume
+import com.scalableminds.webknossos.datastore.binary.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.tracings.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults, TreeValidator}
+import com.scalableminds.webknossos.datastore.tracings.volume.Volume
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.tools.ExtendedTypes.ExtendedString
 import com.typesafe.scalalogging.LazyLogging

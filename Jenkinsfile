@@ -26,7 +26,10 @@ wrap(repo: "scalableminds/webknossos") {
     sh "docker-compose run base yarn install"
     sh "docker-compose run base yarn run docs"
     sh "docker-compose run base sbt clean compile stage"
+    sh """docker-compose run base sbt "project webknossosDatastore" clean compile stage"""
     sh "DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose build --pull webknossos"
+    sh "docker build --pull -t scalableminds/webknossos:${env.BRANCH_NAME}__${env.BUILD_NUMBER} ."
+    sh "cd webknossos-datastore && DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose build --pull webknossos-datastore"
   }
 
   stage("Test") {
@@ -38,12 +41,20 @@ wrap(repo: "scalableminds/webknossos") {
       sh "docker-compose run e2e-tests"
     }
     sh """
-      DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up webknossos &
+      DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up -d webknossos
       sleep 10
       ./test/infrastructure/deployment.bash
+      docker-compose down --volumes --remove-orphans
+    """
+    sh """
+      cd webknossos-datastore
+      DOCKER_TAG=${env.BRANCH_NAME}__${env.BUILD_NUMBER} docker-compose up -d webknossos-datastore
+      sleep 10
+      curl --retry 3 --max-time 15 -v http://localhost:9090/data/health
       docker-compose down --volumes --remove-orphans
     """
   }
 
   dockerPublish(repo: "scalableminds/webknossos")
+  dockerPublish(repo: "scalableminds/webknossos-datastore")
 }

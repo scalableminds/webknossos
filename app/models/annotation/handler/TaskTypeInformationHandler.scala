@@ -8,6 +8,7 @@ import models.team.Role
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
+import models.annotation.AnnotationState._
 
 import scala.concurrent.Future
 
@@ -18,7 +19,7 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> "taskType.notFound"
       tasks <- TaskDAO.findAllByTaskType(taskType._id)
       annotations <- Future.traverse(tasks)(_.annotations).map(_.flatten).toFox
-      finishedAnnotations = annotations.filter(_.state.isFinished)
+      finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"
       dataSetName = finishedAnnotations.head.dataSetName

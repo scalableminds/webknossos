@@ -6,7 +6,7 @@ package controllers
 import javax.inject.Inject
 
 import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
-import com.scalableminds.braingames.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import models.annotation._

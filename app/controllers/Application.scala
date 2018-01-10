@@ -13,7 +13,6 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller{
   def buildInfo = UserAwareAction { implicit request =>
     Ok(Json.obj(
       "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
-      "braingames-libs" -> braingameslibs.BuildInfo.toMap.mapValues(_.toString),
       "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
     ))
   }

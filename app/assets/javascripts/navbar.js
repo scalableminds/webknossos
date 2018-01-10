@@ -8,6 +8,8 @@ import { connect } from "react-redux";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import LoginView from "admin/views/auth/login_view";
+import { logoutUserAction } from "oxalis/model/actions/user_actions";
+import Store from "oxalis/store";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -28,8 +30,7 @@ type Props = {
 class Navbar extends React.PureComponent<Props> {
   handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
-    await Utils.sleep(500);
-    window.location.reload();
+    Store.dispatch(logoutUserAction());
   };
 
   render() {
@@ -88,11 +89,27 @@ class Navbar extends React.PureComponent<Props> {
             <Link to="/scripts">Scripts</Link>
           </Menu.Item>
         </SubMenu>,
-        <Menu.Item key="/statistics">
-          <Link to="/statistics">
-            <Icon type="line-chart" />Statistics
-          </Link>
-        </Menu.Item>,
+        <SubMenu
+          key="sub2"
+          title={
+            <span>
+              <Icon type="line-chart" />Statistics
+            </span>
+          }
+        >
+          <Menu.Item key="/statistics">
+            <Link to="/statistics">Statistics</Link>
+          </Menu.Item>
+          <Menu.Item key="/reports/timetracking">
+            <Link to="/reports/timetracking">Time Tracking</Link>
+          </Menu.Item>
+          <Menu.Item key="/reports/projectProgress">
+            <Link to="/reports/projectProgress">Project Progress</Link>
+          </Menu.Item>
+          <Menu.Item key="/reports/openTasks">
+            <Link to="/reports/openTasks">Open Tasks</Link>
+          </Menu.Item>
+        </SubMenu>,
       );
     }
 

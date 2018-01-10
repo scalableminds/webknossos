@@ -15,7 +15,6 @@ import type {
   EdgeType,
   TreeType,
   TreeMapType,
-  TemporaryMutableTreeType,
   TemporaryMutableTreeMapType,
 } from "oxalis/store";
 
@@ -293,7 +292,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
 
     const trees: TemporaryMutableTreeMapType = {};
     const existingNodeIds = new Set();
-    let currentTree: ?TemporaryMutableTreeType = null;
+    let currentTree: ?TreeType = null;
     parser
       .on("tagopen", node => {
         const attr = Saxophone.parseAttrs(node.attrs);

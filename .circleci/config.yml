@@ -71,7 +71,7 @@ jobs:
       - run:
           name: Run webknossos smoke test
           command: |
-            set -xeEuo pipefail
+            set -x
             DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos
             sleep 10
             ./test/infrastructure/deployment.bash
@@ -80,7 +80,7 @@ jobs:
       - run:
           name: Run webknossos-datastore smoke test
           command: |
-            set -xeEuo pipefail
+            set -x
             cd webknossos-datastore
             DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos-datastore
             sleep 10
@@ -90,12 +90,18 @@ jobs:
       - run:
           name: Deploy docker images
           command: |
-            set -xeEuo pipefail
+            set -x
             docker login -u $DOCKER_USER -p $DOCKER_PASS
-            docker tag scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
-            docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
-            docker tag scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
-            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+            docker tag \
+              scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+              scalableminds/webknossos:${CIRCLE_BRANCH}
+            docker tag \
+              scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+              scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+            docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+            docker push scalableminds/webknossos:${CIRCLE_BRANCH}
+            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
             docker logout
 
 workflows:

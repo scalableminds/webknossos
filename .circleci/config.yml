@@ -14,7 +14,7 @@ jobs:
           command: docker-compose pull base
       - run:
           name: Prepare dependency folders
-          command: mkdir -p project/target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
+          command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
       - restore_cache:
           keys:
             - cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
@@ -37,6 +37,7 @@ jobs:
           key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
           paths:
             - "project/target"
+            - "target"
             - "~/.m2"
             - "~/.ivy2"
             - "~/.sbt"

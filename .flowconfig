@@ -30,3 +30,5 @@ app/assets/javascripts/flow/custom-libdefs
 [lints]
 all=error
 sketchy-null=warn
+untyped-import=off
+unclear-type=warn

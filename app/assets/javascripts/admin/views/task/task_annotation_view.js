@@ -47,6 +47,8 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
   deleteAnnotation = (annotation: APIAnnotationType) => {
     confirm({
       title: messages["annotation.delete"],
+      cancelText: messages.no,
+      okText: messages.yes,
       onOk: () =>
         deleteAnnotation(annotation.id).then(() =>
           this.setState({

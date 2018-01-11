@@ -1,20 +1,15 @@
+/*
+ * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package models.annotation
 
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import models.project.{Project, WebknossosAssignmentConfig}
-import models.task.{OpenAssignmentService, Task}
+import models.task.TaskAssignmentService
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import models.annotation.AnnotationState._
-
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 21.01.14
- * Time: 14:06
- */
 
 class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
 
@@ -36,7 +31,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
       if (annotation.state == InProgress)
         executeFinish(annotation)
       else
-          Fox.failure("annotation.notInProgress")
+        Fox.failure("annotation.notInProgress")
     } else {
       Fox.failure("annotation.notPossible")
     }
@@ -58,24 +53,12 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   def setTags(tags: List[String])(implicit ctx: DBAccessContext) =
     AnnotationDAO.setTags(annotation._id, tags)
 
-  def cancelTask()(implicit ctx: DBAccessContext) = {
-    def insertReplacement(task: Task, project: Project) = {
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          OpenAssignmentService.incrementOrInsertFor(task, project)
-        case _ =>
-          // If this is a project with its assignments on MTurk, they will handle the replacement generation
-          Fox.successful(true)
-      }
-    }
-
+  def cancelTask()(implicit ctx: DBAccessContext) =
     for {
       task <- annotation.task
-      project <- task.project
-      _ <- insertReplacement(task, project)
+      _ <- TaskAssignmentService.putBackInstance(task)
       _ <- AnnotationDAO.updateState(annotation, Unassigned)
     } yield annotation
-  }
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {
     case AnnotationType.Explorational =>

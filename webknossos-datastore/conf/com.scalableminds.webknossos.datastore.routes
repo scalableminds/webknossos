@@ -50,7 +50,6 @@ GET         /tracings/skeleton/:tracingId/duplicate                             
 
 # Actions
 GET         /triggers/checkInbox                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheck()
-GET         /triggers/backup                                                                   @com.scalableminds.webknossos.datastore.controllers.Application.backup
 
 # Debugging
 

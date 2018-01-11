@@ -8,35 +8,42 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefin
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.basics._
-import models.mturk.{MTurkAssignmentConfig, MTurkAssignmentDAO}
-import models.project.{Project, ProjectDAO, WebknossosAssignmentConfig}
+import models.project.{Project, ProjectDAO}
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json._
+import play.api.libs.iteratee.Enumerator
+import play.api.libs.json.{JsArray, JsNull, JsObject, Json}
+import reactivemongo.api.collections.bson.BSONCollection
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson.{BSONObjectID, BSONString}
 import reactivemongo.play.json.BSONFormats._
+
+case class OpenInstancesResult(_id: String, openInstances: Int)
+object OpenInstancesResult { implicit val format = Json.format[OpenInstancesResult] }
 
 class info(message: String) extends scala.annotation.StaticAnnotation
 
 case class Task(
-  @info("Reference to task type") _taskType: BSONObjectID,
-  @info("Assigned name") team: String,
-  @info("Required experience") neededExperience: Experience = Experience.empty,
-  @info("Number of required instances") instances: Int = 1,
-  @info("Bounding Box (redundant to base tracing)") boundingBox: Option[BoundingBox] = None,
-  @info("Start point edit position (redundant to base tracing)") editPosition: Point3D,
-  @info("Start point edit rotation (redundant to base tracing)") editRotation: Vector3D,
-  @info("Current tracing time") tracingTime: Option[Long] = None,
-  @info("Date of creation") created: DateTime = DateTime.now(),
-  @info("Flag indicating deletion") isActive: Boolean = true,
-  @info("Reference to project") _project: String,
-  @info("Script to be executed on task start") _script: Option[String],
-  @info("Optional information on the tasks creation") creationInfo: Option[String] = None,
-  @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
-) extends FoxImplicits {
+                 @info("Reference to task type") _taskType: BSONObjectID,
+                 @info("Assigned name") team: String,
+                 @info("Required experience") neededExperience: Experience = Experience.empty,
+                 @info("Number of total instances") instances: Int = 1,
+                 @info("Number of open (=remaining =unassigned) instances") openInstances: Int = 1,
+                 @info("Bounding Box (redundant to base tracing)") boundingBox: Option[BoundingBox] = None,
+                 @info("Start point edit position (redundant to base tracing)") editPosition: Point3D,
+                 @info("Start point edit rotation (redundant to base tracing)") editRotation: Vector3D,
+                 @info("Current tracing time") tracingTime: Option[Long] = None,
+                 @info("Date of creation") created: DateTime = DateTime.now(),
+                 @info("Flag indicating deletion") isActive: Boolean = true,
+                 @info("Reference to project") _project: String,
+                 @info("Script to be executed on task start") _script: Option[String],
+                 @info("Optional information on the tasks creation") creationInfo: Option[String] = None,
+                 @info("Priority for users fetching new tasks") priority: Int = 100,
+                 @info("Unique ID") _id: BSONObjectID = BSONObjectID.generate
+               ) extends FoxImplicits {
 
   lazy val id = _id.stringify
 
@@ -54,46 +61,16 @@ case class Task(
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
 
-  def remainingInstances(implicit ctx: DBAccessContext) = {
-    def calculateRemaining(project: Project) = {
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          OpenAssignmentDAO.countForTask(_id)
-        case _: MTurkAssignmentConfig   =>
-          MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfOpenAssignments)
-      }
-    }
-
-    for {
-      p <- project
-      result <- calculateRemaining(p)
-    } yield result
-  }
-
-  def inProgress(implicit ctx: DBAccessContext) = {
-    def calculateInProgress(project: Project) = {
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          AnnotationService.countUnfinishedAnnotationsFor(this)
-        case _: MTurkAssignmentConfig   =>
-          MTurkAssignmentDAO.findOneByTask(_id).map(_.numberOfInProgressAssignments)
-      }
-    }
-
-    for {
-      p <- project
-      result <- calculateInProgress(p)
-    } yield result
-  }
+  def inProgress(implicit ctx: DBAccessContext) =
+    AnnotationService.countUnfinishedAnnotationsFor(this)
 
   def status(implicit ctx: DBAccessContext) = {
     for {
       inProgress <- inProgress.getOrElse(0)
-      remaining <- remainingInstances.getOrElse(0)
     } yield CompletionStatus(
-        open = remaining,
-        inProgress = inProgress,
-        completed = instances - (inProgress + remaining))
+      open = openInstances,
+      inProgress = inProgress,
+      completed = instances - (inProgress + openInstances))
   }
 
   def hasEnoughExperience(user: User) = {
@@ -151,6 +128,9 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("priority" -> IndexType.Descending)))
+  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending, "neededExperience" -> IndexType.Ascending, "priority" -> IndexType.Descending)))
+
 
   override val AccessDefinitions = new DefaultAccessDefinitions {
 
@@ -158,7 +138,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _                =>
+        case _ =>
           DenyEveryone()
       }
     }
@@ -167,7 +147,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
-        case _                =>
+        case _ =>
           DenyEveryone()
       }
     }
@@ -240,34 +220,94 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
-  def update(
-    _task: BSONObjectID,
-    _taskType: BSONObjectID,
-    neededExperience: Experience,
-    instances: Int,
-    team: String,
-    _script: Option[String],
-    _project: Option[String],
-    boundingBox: Option[BoundingBox],
-    editPosition: Point3D,
-    editRotation: Vector3D
-  )(implicit ctx: DBAccessContext): Fox[Task] =
+  def updateInstances(
+                     _task: BSONObjectID,
+                     instances: Int,
+                     openInstances: Int
+                     )(implicit ctx: DBAccessContext): Fox[Task] =
     findAndModify(
       Json.obj("_id" -> _task),
       Json.obj("$set" ->
         Json.obj(
-          "neededExperience" -> neededExperience,
           "instances" -> instances,
-          "team" -> team,
-          "_taskType" -> _taskType,
-          "_script" -> _script,
-          "_project" -> _project,
-          "boundingBox" -> boundingBox)),
-      returnNew = true)
+          "openInstances" -> openInstances)),
+    returnNew = true)
+
+
+  def updateAllOfProject(updatedProject: Project)(implicit ctx: DBAccessContext) = {
+    update(Json.obj("_project" -> updatedProject.name), Json.obj("$set" -> Json.obj(
+      "priority" -> (if(updatedProject.paused) -1 else updatedProject.priority)
+    )), multi = true)
+  }
+
+  def decrementOpenInstanceCount(id: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[WriteResult] {
+    update(
+      Json.obj("_id" -> id, "openInstances" -> Json.obj("$gt" -> 0)),
+      Json.obj("$inc" -> Json.obj("openInstances" -> -1))
+    )
+  }
+
+  def incrementOpenInstanceCount(id: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[WriteResult] {
+    update(
+      Json.obj("_id" -> id),
+      Json.obj("$inc" -> Json.obj("openInstances" -> 1))
+    )
+  }
+
+  private def validPriorityQ =
+    Json.obj("priority" -> Json.obj("$gte" -> 0))
+
+  private def experienceQueryFor(user: User) =
+    JsArray(user.experiences.map {
+      case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> Json.obj("$lte" -> value))
+    }.toSeq)
+
+  private def noRequiredExperience =
+    Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
+
+  def findOrderedByPriorityFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[Task] = {
+    def byPriority =
+      Json.obj("priority" -> -1)
+
+    find(validPriorityQ ++ Json.obj(
+      "openInstances" -> Json.obj("$gt" -> 0),
+      "team" -> Json.obj("$in" -> teams),
+      "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)))
+      .sort(byPriority)
+      .cursor[Task]()
+      .enumerate(stopOnError = true)
+  }
+
+  def countOpenInstancesByProjects(implicit ctx: DBAccessContext) = {
+    countOpenInstances("$_project")
+  }
+
+  def countAllOpenInstances(implicit ctx: DBAccessContext) = {
+    countOpenInstances("all").map(_.get("all"))
+  }
+
+  def countOpenInstances(groupingField: String = "1")(implicit ctx: DBAccessContext) = {
+    val dao =  underlying.db.collection[BSONCollection]("tasks")
+    import dao.BatchCommands.AggregationFramework._
+
+    dao.aggregate(
+      Group(BSONString(groupingField))( "openInstances" -> SumField("openInstances"))
+    ).map{result => Json.toJson(result.firstBatch).as[List[OpenInstancesResult]].map( x => x._id -> x.openInstances).toMap }
+  }
+
+  def findWithOpenByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
+    for {
+      jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
+        "openInstances" -> Json.obj("$gt" -> 0),
+        "team" -> Json.obj("$in" -> user.teamNames),
+        "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
+    } yield {
+      jsObjects.map(p => (p \ "_project").asOpt[String]).flatten
+    }
+  }
 
   def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {
     // Can't use local find, since it appends `isActive = true` to the query!
     super.find(q).cursor[Task]().collect[List](maxDocs = limit)
   }
 }
-

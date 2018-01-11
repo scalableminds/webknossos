@@ -5,18 +5,22 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import com.mohiva.play.silhouette.api.LoginInfo
+import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticatorService
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.annotation._
 import models.binary.DataSetDAO
 import models.user.{User, UserToken, UserTokenDAO, UserTokenService}
 import net.liftweb.common.{Box, Full}
+import oxalis.security.{TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 class UserTokenController @Inject()(val messagesApi: MessagesApi)
   extends Controller
@@ -24,14 +28,33 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     with AnnotationInformationProvider {
 
   val webKnossosToken = play.api.Play.current.configuration.getString("application.authentication.dataStoreToken").getOrElse("somethingSecure")
+  val tokenDAO = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenDao
+  val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
+
+  def test_robert = SecuredAction.async { implicit request =>
+    for {
+      auth1 <- tokenDAO.findByLoginInfo(request.identity.loginInfo, TokenType.DataStore).toFox
+      test2 <- tokenDAO.add(auth1, TokenType.Authentication)
+      auth <- tokenDAO.findByLoginInfo(request.identity.loginInfo, TokenType.Authentication).toFox
+      //test <- auth
+    } yield {
+      //Ok(Json.toJson(auth))
+      val test = Json.toJson(auth.id)
+      Ok(test)
+    }
+  }
 
   def generateUserToken = UserAwareAction.async { implicit request =>
     val context = userAwareRequestToDBAccess(request)
 
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
+        /*
         val token = UserToken(user._id)
         UserTokenDAO.insert(token).map(_ => token.token)
+        */
+        bearerTokenService.addNewAuthenticatorIfNoOneIsValid(user.loginInfo).map(_.id).toFox
+
       case None => Fox.successful("")
     }
     for {

@@ -30,7 +30,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   extends AuthenticatorService[CombinedAuthenticator] with Logger {
 
   val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings, None, fingerprintGenerator, idGenerator, clock)
-  val tokenAuthenticatorService = new BearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock)
+  val tokenAuthenticatorService = new OxalisBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock)
 
   //is actually createCookie, called as "create" because it is the default
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {

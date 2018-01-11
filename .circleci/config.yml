@@ -28,7 +28,12 @@ jobs:
           command: docker-compose run base yarn run docs
       - run:
           name: Build webknossos (sbt and webpack)
-          command: docker-compose run base sbt compile stage
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              docker-compose run base sbt clean compile stage
+            else
+              docker-compose run base sbt compile stage
+            fi
       - run:
           name: Build webknossos-datastore (sbt)
           command: docker-compose run base sbt "project webknossosDatastore" compile stage

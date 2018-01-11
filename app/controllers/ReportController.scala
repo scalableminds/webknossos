@@ -24,7 +24,7 @@ import scala.concurrent.duration._
 case class OpenTasksEntry(user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
 object OpenTasksEntry { implicit val jsonFormat = Json.format[OpenTasksEntry] }
 
-case class ProjectProgressEntry(projectName: String, totalTasks: Int, totalInstances: Int, openInstances: Int,
+case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks: Int, totalInstances: Int, openInstances: Int,
                                 finishedInstances: Int, inProgressInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
@@ -55,7 +55,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
       _ <- assertExpDomain(firstTask, inProgressInstances, users)
       _ <- assertAge(project, taskIds, inProgressInstances, openInstances)
     } yield {
-      ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
+      ProjectProgressEntry(project.name, project.paused, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
     }
   }
 

@@ -45,13 +45,15 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def sqlTest = UserAwareAction.async { implicit request =>
     val db = Database.forConfig("postgres")
 
-    db.run(Testtable.result).map(_.foreach{case TesttableRow(a,b,c) => {val x: Int = a; println(x) } case _ => println("did not match query result")})
+
+
+    //db.run(Testtable.result).map(_.foreach{case TesttableRow(a,b,c) => {val x: Int = a; println(x) } case _ => println("did not match query result")})
 
     for {
-      r <- db.run(Testtable.filter(_.anint>2).map(_.anotherint).result)
+      r <- db.run(Annotations.filter(_.state === AnnotationState.InProgress.toString).map(_.state).result)
     } yield {
       db.close()
-      r.head match { case Some(anInt) => Ok(anInt.toString) case _ => Ok("did not match query result")}
+      r.headOption match { case Some(aString) => Ok(aString) case _ => Ok("did not match query result")}
     }
   }
 

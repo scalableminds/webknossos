@@ -53,7 +53,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
       openInstances = totalInstances - finishedInstances - inProgressInstances
       _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
       _ <- assertExpDomain(firstTask, inProgressInstances, users)
-      _ <- assertAge(taskIds, inProgressInstances, openInstances)
+      _ <- assertAge(project, taskIds, inProgressInstances, openInstances)
     } yield {
       ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
     }
@@ -78,8 +78,8 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     }
   }
 
-  private def assertAge(taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
-    if (inProgressInstances > 0 || openInstances > 0) Fox.successful(())
+  private def assertAge(project: Project, taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
+    if (inProgressInstances > 0 || (!project.paused && openInstances > 0)) Fox.successful(())
     else {
       assertRecentlyModified(taskIds)
     }

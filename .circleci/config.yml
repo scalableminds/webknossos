@@ -14,7 +14,7 @@ jobs:
           command: docker-compose pull base
       - run:
           name: Prepare dependency folders
-          command: mkdir -p ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
+          command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
       - restore_cache:
           keys:
             - cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
@@ -28,14 +28,21 @@ jobs:
           command: docker-compose run base yarn run docs
       - run:
           name: Build webknossos (sbt and webpack)
-          command: docker-compose run base sbt clean compile stage
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              docker-compose run base sbt clean compile stage
+            else
+              docker-compose run base sbt compile stage
+            fi
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt "project webknossosDatastore" clean compile stage
+          command: docker-compose run base sbt "project webknossosDatastore" compile stage
 
       - save_cache:
-          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
+            - "project/target"
+            - "target"
             - "~/.m2"
             - "~/.ivy2"
             - "~/.sbt"

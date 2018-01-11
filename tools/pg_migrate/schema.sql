@@ -148,7 +148,6 @@ CREATE TABLE webknossos.tasks(
   _script webknossos.OBJECT_ID,
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
-  openInstances BIGINT NOT NULL,
   totalInstances BIGINT NOT NULL,
   tracingTime INTERVAL,
   boundingBox webknossos.BOUNDING_BOX,
@@ -156,9 +155,14 @@ CREATE TABLE webknossos.tasks(
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo VARCHAR(512),
   isActive BOOLEAN NOT NULL DEFAULT true,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
-  CHECK (openInstances <= totalInstances)
+  created TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+CREATE VIEW webknossos.task_instances AS
+  SELECT t._id, COUNT(*) assignedInstances, t.totalinstances - COUNT(*) openInstances
+  FROM webknossos.tasks t JOIN webknossos.annotations a ON t._id = a._task
+  WHERE a.typ = 'Task' AND a.state != 'Unassigned'
+  GROUP BY t._id, t.totalinstances;
 
 CREATE TABLE webknossos.teams(
   _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),

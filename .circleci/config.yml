@@ -34,7 +34,7 @@ jobs:
           command: docker-compose run base sbt "project webknossosDatastore" compile stage
 
       - save_cache:
-          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
             - "project/target"
             - "target"

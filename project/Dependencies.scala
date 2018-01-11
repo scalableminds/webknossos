@@ -46,6 +46,8 @@ object Dependencies {
     "com.typesafe.slick" %% "slick" % "3.2.1",
     "com.typesafe.slick" %% "slick-hikaricp" % "3.2.1",
     "com.typesafe.slick" %% "slick-codegen" % "3.2.1",
+    "com.github.tminglei" %% "slick-pg" % "0.15.5",
+    "com.github.tminglei" %% "slick-pg_play-json" % "0.15.5",
     "org.postgresql" % "postgresql" % "9.4-1200-jdbc41")
 
   val utilDependencies = Seq(

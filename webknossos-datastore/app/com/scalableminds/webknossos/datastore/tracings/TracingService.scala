@@ -5,7 +5,6 @@ package com.scalableminds.webknossos.datastore.tracings
 
 import java.util.UUID
 
-import com.scalableminds.webknossos.datastore.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValueStore}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
@@ -18,7 +17,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
 
   def tracingType: TracingType.Value
 
-  def tracingStore: VersionedKeyValueStore
+  def tracingStore: FossilDBClient
 
   def temporaryTracingStore: TemporaryTracingStore[T]
 
@@ -37,7 +36,8 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
   def applyPendingUpdates(tracing: T, tracingId: String, targetVersion: Option[Long]): Fox[T] = Fox.successful(tracing)
 
   def find(tracingId: String, version: Option[Long] = None, useCache: Boolean = true, applyUpdates: Boolean = false): Fox[T] = {
-    tracingStore.get(tracingId, version)(fromProto[T]).map(_.value).flatMap { tracing =>
+    val tracingFox = tracingStore.get(tracingId, version)(fromProto[T]).map(_.value)
+    tracingFox.flatMap { tracing =>
       if (applyUpdates) {
         applyPendingUpdates(tracing, tracingId, version)
       } else {
@@ -47,7 +47,7 @@ trait TracingService[T <: GeneratedMessage with Message[T]] extends KeyValueStor
       if (useCache)
         temporaryTracingStore.find(tracingId)
       else
-        Fox.empty
+        tracingFox
     }
   }
 

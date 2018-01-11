@@ -53,6 +53,7 @@ services:
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
           -Dhttp.port=$${PORT}
+          -Ddatastore.fossildb.address=fossildb-dev
           -Dmongodb.uri=$${MONGO_URI}"
     environment:
       - PORT=9000
@@ -79,6 +80,7 @@ services:
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
           -Dhttp.port=$${PORT}
+          -Ddatastore.fossildb.address=fossildb
           -Dmongodb.uri=$${MONGO_URI}"
     environment:
       - MONGO_URI=mongodb://mongo:27017/webknossos-testing

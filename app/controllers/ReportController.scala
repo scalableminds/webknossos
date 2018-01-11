@@ -21,7 +21,7 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.duration._
 
 
-case class OpenTasksEntry(user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
+case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
 object OpenTasksEntry { implicit val jsonFormat = Json.format[OpenTasksEntry] }
 
 case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks: Int, totalInstances: Int, openInstances: Int,
@@ -116,7 +116,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
         projects <- TaskDAO.findWithOpenByUserReturnOnlyProject(user).toFox
         assignmentCountsByProject <- getAssignmentsByProjectsFor(projects, user)
       } yield {
-        OpenTasksEntry(user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
+        OpenTasksEntry(user.id, user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
       }
     }
     Fox.combined(foxes.toList)

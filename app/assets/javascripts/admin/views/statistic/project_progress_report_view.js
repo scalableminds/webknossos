@@ -1,42 +1,100 @@
 // @flow
 import * as React from "react";
-import { Spin, Table, Card } from "antd";
+import { Icon, Spin, Table, Card } from "antd";
 import Utils from "libs/utils";
+import FormatUtils from "libs/format_utils";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType } from "admin/api_flow_types";
 import TeamSelectionForm from "./team_selection_form";
 
-const { Column } = Table;
+const { Column, ColumnGroup } = Table;
+
+const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
 type State = {
+  settingsVisible: boolean,
+  teamId: ?string,
   data: Array<APIProjectProgressReportType>,
   isLoading: boolean,
+  updatedAt: ?number,
 };
 
 class ProjectProgressReportView extends React.PureComponent<{}, State> {
   state = {
+    settingsVisible: true,
     data: [],
+    teamId: undefined,
     isLoading: false,
+    updatedAt: null,
   };
 
-  async fetchData(teamId: ?string) {
+  componentDidMount() {
+    this.componentIsMounted = true;
+    this.autoRefresh();
+  }
+
+  componentWillUnmount() {
+    this.componentIsMounted = false;
+  }
+
+  componentIsMounted: boolean = false;
+
+  async fetchData(suppressLoadingState?: boolean = false) {
+    const { teamId } = this.state;
     if (teamId == null) {
       this.setState({ data: [] });
     } else {
-      this.setState({ isLoading: true });
+      if (!suppressLoadingState) {
+        this.setState({ isLoading: true });
+      }
       const progessData = await getProjectProgressReport(teamId);
-      this.setState({ data: progessData, isLoading: false });
+      this.setState({ data: progessData, updatedAt: Date.now() });
+      if (!suppressLoadingState) {
+        this.setState({ isLoading: false });
+      }
     }
   }
+
+  /* eslint-disable no-await-in-loop */
+  async autoRefresh() {
+    await Utils.sleep(RELOAD_INTERVAL);
+    while (this.componentIsMounted) {
+      try {
+        await this.fetchData(true);
+      } catch (err) {
+        console.error(err);
+      }
+      await Utils.sleep(RELOAD_INTERVAL);
+    }
+  }
+  /* eslint-enable no-await-in-loop */
+
+  handleTeamChange = (teamId: string) => {
+    this.setState({ teamId, settingsVisible: false }, () => {
+      this.fetchData();
+    });
+  };
+  handleOpenSettings = () => {
+    this.setState({ settingsVisible: true });
+  };
+  handleReload = () => {
+    this.fetchData();
+  };
 
   render() {
     return (
       <div className="container">
+        <div className="pull-right">
+          {this.state.updatedAt != null ? FormatUtils.formatDate(this.state.updatedAt) : null}{" "}
+          <Icon type="setting" onClick={this.handleOpenSettings} />
+          <Icon type="reload" onClick={this.handleReload} />
+        </div>
         <h3>Project Progress</h3>
-
-        <Card>
-          <TeamSelectionForm onChange={teamId => this.fetchData(teamId)} />
-        </Card>
+        {this.state.settingsVisible ? (
+          <Card>
+            <TeamSelectionForm value={this.state.teamId} onChange={this.handleTeamChange} />
+          </Card>
+        ) : null}
 
         <Spin spinning={this.state.isLoading}>
           <Table
@@ -46,49 +104,57 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
             }}
             rowKey="projectName"
             style={{ marginTop: 30, marginBotton: 30 }}
+            size="small"
           >
             <Column
               title="Project"
               dataIndex="projectName"
               defaultSortOrder="ascend"
               sorter={Utils.localeCompareBy("projectName")}
+              render={(text, item) => (
+                <span>
+                  {item.paused ? <Icon type="pause" /> : null} {text}
+                </span>
+              )}
             />
-            <Column title="# Tasks" dataIndex="totalTasks" sorter={Utils.compareBy("totalTasks")} />
-            <Column
-              title="# Instances"
-              dataIndex="totalInstances"
-              sorter={Utils.compareBy("totalInstances")}
-            />
-            <Column
-              title="# Open Instances"
-              dataIndex="openInstances"
-              sorter={Utils.compareBy("openInstances")}
-              render={(text, item) =>
-                `${item.openInstances} (${Math.round(
-                  item.openInstances / item.totalInstances * 100,
-                )} %)`
-              }
-            />
-            <Column
-              title="# Finished Instances"
-              dataIndex="finishedInstances"
-              sorter={Utils.compareBy("finishedInstances")}
-              render={(text, item) =>
-                `${item.finishedInstances} (${Math.round(
-                  item.finishedInstances / item.totalInstances * 100,
-                )} %)`
-              }
-            />
-            <Column
-              title="# In-Progess Instances"
-              dataIndex="inProgressInstances"
-              sorter={Utils.compareBy("inProgressInstances")}
-              render={(text, item) =>
-                `${item.inProgressInstances} (${Math.round(
-                  item.inProgressInstances / item.totalInstances * 100,
-                )} %)`
-              }
-            />
+            <Column title="Tasks" dataIndex="totalTasks" sorter={Utils.compareBy("totalTasks")} />
+            <ColumnGroup title="Instances">
+              <Column
+                title="Total"
+                dataIndex="totalInstances"
+                sorter={Utils.compareBy("totalInstances")}
+              />
+              <Column
+                title="Open"
+                dataIndex="openInstances"
+                sorter={Utils.compareBy("openInstances")}
+                render={(text, item) =>
+                  `${item.openInstances} (${Math.round(
+                    item.openInstances / item.totalInstances * 100,
+                  )} %)`
+                }
+              />
+              <Column
+                title="Active"
+                dataIndex="inProgressInstances"
+                sorter={Utils.compareBy("inProgressInstances")}
+                render={(text, item) =>
+                  `${item.inProgressInstances} (${Math.round(
+                    item.inProgressInstances / item.totalInstances * 100,
+                  )} %)`
+                }
+              />
+              <Column
+                title="Finished"
+                dataIndex="finishedInstances"
+                sorter={Utils.compareBy("finishedInstances")}
+                render={(text, item) =>
+                  `${item.finishedInstances} (${Math.round(
+                    item.finishedInstances / item.totalInstances * 100,
+                  )} %)`
+                }
+              />
+            </ColumnGroup>
           </Table>
         </Spin>
       </div>

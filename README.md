@@ -2,6 +2,7 @@
 Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos** (former oxalis).
 
 ![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
+[![CircleCI](https://circleci.com/gh/scalableminds/webknossos.svg?style=svg)](https://circleci.com/gh/scalableminds/webknossos)
 
 ## Development setup
 If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5 GB.

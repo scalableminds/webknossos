@@ -28,10 +28,10 @@ jobs:
           command: docker-compose run base yarn run docs
       - run:
           name: Build webknossos (sbt and webpack)
-          command: docker-compose run base sbt clean compile stage
+          command: docker-compose run base sbt compile stage
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run base sbt "project webknossosDatastore" clean compile stage
+          command: docker-compose run base sbt "project webknossosDatastore" compile stage
 
       - save_cache:
           key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}

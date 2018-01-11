@@ -3,47 +3,19 @@
  */
 package com.scalableminds.webknossos.datastore.tracings
 
-import java.nio.file.Paths
-import java.util.concurrent.atomic.AtomicBoolean
-
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.binary.storage.kvstore.{BackupInfo, RocksDBManager, RocksDBStore, VersionedKeyValueStore}
-import net.liftweb.common.{Box, Failure}
 import play.api.Configuration
-import play.api.inject.ApplicationLifecycle
 
-class TracingDataStore @Inject()(
-                                  config: Configuration,
-                                  lifecycle:  ApplicationLifecycle
-                                ) {
+class TracingDataStore @Inject()(config: Configuration) {
 
-  val backupInProgress = new AtomicBoolean(false)
+  new FossilDBClient("healthCheckOnly", config).checkHealth
 
-  private val tracingDataDir = Paths.get(config.getString("braingames.binary.tracingDataFolder").getOrElse("tracingData"))
+  lazy val skeletons = new FossilDBClient("skeletons", config)
 
-  private val backupDir = Paths.get(config.getString("braingames.binary.backupFolder").getOrElse("backup"))
+  lazy val skeletonUpdates = new FossilDBClient("skeletonUpdates", config)
 
-  private val rocksDB = new RocksDBManager(tracingDataDir, List("skeletons", "skeletonUpdates", "volumes", "volumeData"))
+  lazy val volumes = new FossilDBClient("volumes", config)
 
-  lazy val skeletons = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("skeletons").get)
+  lazy val volumeData = new FossilDBClient("volumeData", config)
 
-  lazy val skeletonUpdates = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("skeletonUpdates").get)
-
-  lazy val volumes = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("volumes").get)
-
-  lazy val volumeData = new VersionedKeyValueStore(rocksDB.getStoreForColumnFamily("volumeData").get)
-
-  def backup: Box[BackupInfo] = {
-    if (backupInProgress.compareAndSet(false, true)) {
-      try {
-        rocksDB.backup(backupDir)
-      } finally {
-        backupInProgress.set(false)
-      }
-    } else {
-      Failure("Backup already in progress.")
-    }
-  }
-
-  lifecycle.addStopHook(rocksDB.close _)
 }

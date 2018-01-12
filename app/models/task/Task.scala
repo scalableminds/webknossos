@@ -31,7 +31,7 @@ case class Task(
                  @info("Assigned name") team: String,
                  @info("Required experience") neededExperience: Experience = Experience.empty,
                  @info("Number of total instances") instances: Int = 1,
-                 @info("Number of open (=remaining =unassigned) instances") openInstances: Int = 1,
+                 @info("Number of open (=remaining) instances") openInstances: Int = 1,
                  @info("Bounding Box (redundant to base tracing)") boundingBox: Option[BoundingBox] = None,
                  @info("Start point edit position (redundant to base tracing)") editPosition: Point3D,
                  @info("Start point edit rotation (redundant to base tracing)") editRotation: Vector3D,
@@ -67,10 +67,7 @@ case class Task(
   def status(implicit ctx: DBAccessContext) = {
     for {
       active <- countActive
-    } yield CompletionStatus(
-      open = openInstances,
-      inProgress = active,
-      completed = instances - (active + openInstances))
+    } yield CompletionStatus(openInstances, active, instances - (active + openInstances))
   }
 
   def hasEnoughExperience(user: User) = {

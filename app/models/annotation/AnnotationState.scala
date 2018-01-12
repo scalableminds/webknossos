@@ -10,8 +10,6 @@ object AnnotationState extends Enumeration {
   val Active = Value("Active")
   val Finished = Value("Finished")
 
-  val assignedStates = List (Active, Finished)
-
   implicit val enumReads: Reads[AnnotationStateValue] = EnumUtils.enumReads(AnnotationState)
 
   implicit def enumWrites: Writes[AnnotationStateValue] = EnumUtils.enumWrites

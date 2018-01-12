@@ -1,10 +1,11 @@
 package models.annotation
 
-import com.scalableminds.webknossos.datastore.tracings.TracingReference
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.TracingReference
+import models.annotation.AnnotationState._
 import models.annotation.AnnotationType._
 import models.basics._
 import models.binary.DataSetDAO
@@ -16,7 +17,6 @@ import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import models.annotation.AnnotationState._
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -192,7 +192,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     val q = Json.obj(
       "_user" -> _user,
-      "state" -> Json.obj("$in" -> finishedOptToStateQuery(isFinished)),
+      "state" -> finishedOptToStateQuery(isFinished),
       "typ" -> annotationType)
 
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
@@ -210,9 +210,9 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
 
-  private def finishedOptToStateQuery(isFinished: Option[Boolean]) = isFinished match {
-    case Some(true) => AnnotationState.Finished
-    case Some(false) => AnnotationState.Active
+  private def finishedOptToStateQuery(isFinished: Option[Boolean]): JsValue = isFinished match {
+    case Some(true) => Json.toJson(AnnotationState.Finished)
+    case Some(false) => Json.toJson(AnnotationState.Active)
     case None => Json.obj("$ne" -> AnnotationState.Cancelled)
   }
 

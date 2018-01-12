@@ -6,6 +6,7 @@ import akka.util.Timeout
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
@@ -16,7 +17,6 @@ import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
 import slick.jdbc.PostgresProfile.api._
-import com.scalableminds.webknossos.schema.Tables._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -45,15 +45,21 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def sqlTest = UserAwareAction.async { implicit request =>
     val db = Database.forConfig("postgres")
 
-
-
     //db.run(Testtable.result).map(_.foreach{case TesttableRow(a,b,c) => {val x: Int = a; println(x) } case _ => println("did not match query result")})
 
     for {
-      r <- db.run(Annotations.filter(_.state === AnnotationState.InProgress.toString).map(_.state).result)
+      r <- db.run(Annotations.map(_.tags).result)
     } yield {
       db.close()
       r.headOption match { case Some(aString) => Ok(aString) case _ => Ok("did not match query result")}
+    }
+  }
+
+  def sqlTest2(id: String) = UserAwareAction.async { implicit request =>
+    for {
+      annotation <- AnnotationSQLDAO.findOne(ObjectId(id))
+    } yield {
+      Ok(Json.toJson(annotation))
     }
   }
 

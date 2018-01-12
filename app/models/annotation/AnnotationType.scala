@@ -1,5 +1,17 @@
 package models.annotation
 
+import play.api.libs.json.{Reads, Writes}
+import utils.EnumUtils
+
+object AnnotationTypeSQL extends Enumeration {
+  val Task, View, Explorational, TracingBase, Orphan, CompoundTask, CompoundProject, CompoundTaskType = Value
+
+  implicit val enumReads: Reads[AnnotationTypeSQL.Value] = EnumUtils.enumReads(AnnotationTypeSQL)
+
+  implicit def enumWrites: Writes[AnnotationTypeSQL.Value] = EnumUtils.enumWrites
+}
+
+
 object AnnotationType {
   type AnnotationType = String
 

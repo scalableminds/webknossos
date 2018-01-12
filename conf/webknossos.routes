@@ -6,6 +6,7 @@ GET           /api/buildinfo                                                    
 POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
 
 GET           /api/sqltest                                                      controllers.AnnotationController.sqlTest
+GET           /api/sqltest2/:id                                                 controllers.AnnotationController.sqlTest2(id: String)
 
 # Authentication
 GET           /api/auth/autoLogin                                               controllers.Authentication.autoLogin

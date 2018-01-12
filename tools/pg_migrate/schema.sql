@@ -45,35 +45,37 @@ CREATE TABLE webknossos.analytics(
 );
 
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
-CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'Tracing Base', 'Orphan');
+CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Unassigned', 'Assigned', 'InProgress', 'Finished');
 CREATE TABLE webknossos.annotations(
-  _id webknossos.OBJECT_ID PRIMARY KEY NOT NULL DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY NOT NULL DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _task webknossos.OBJECT_ID,
   _team webknossos.OBJECT_ID NOT NULL,
   _user webknossos.OBJECT_ID NOT NULL,
   tracing_id UUID NOT NULL, -- UNIQUE,
   tracing_typ webknossos.ANNOTATION_TRACING_TYPE NOT NULL,
-  typ webknossos.ANNOTATION_TYPE NOT NULL,
-  version BIGINT NOT NULL DEFAULT 0,
-  state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Unassigned',
-  tags VARCHAR(512)[] NOT NULL DEFAULT '{}',
-  statistics JSONB NOT NULL,
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  description TEXT NOT NULL DEFAULT '',
   isPublic BOOLEAN NOT NULL DEFAULT false,
+  name VARCHAR(256) NOT NULL DEFAULT '',
+  state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Unassigned',
+  statistics JSONB NOT NULL,
+  tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
+  tracingTime BIGINT,
+  typ webknossos.ANNOTATION_TYPE NOT NULL,
   created TIMESTAMP NOT NULL DEFAULT NOW(),
   modified TIMESTAMP NOT NULL DEFAULT NOW(),
-  CHECK ((typ IN ('Tracing Base', 'Task')) = (_task IS NOT NULL))
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
 );
 
 CREATE TABLE webknossos.datasets(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _team webknossos.OBJECT_ID NOT NULL,
   _datastore VARCHAR(256) NOT NULL ,
   name VARCHAR(256) NOT NULL UNIQUE,
   description TEXT,
   defaultConfiguration JSONB,
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   isPublic BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW(),
   UNIQUE (name, _team)
@@ -107,7 +109,7 @@ CREATE TABLE webknossos.datastores(
 );
 
 CREATE TABLE webknossos.projects(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _team webknossos.OBJECT_ID NOT NULL,
   _owner webknossos.OBJECT_ID NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'),
@@ -118,7 +120,7 @@ CREATE TABLE webknossos.projects(
 );
 
 CREATE TABLE webknossos.scripts(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _owner webknossos.OBJECT_ID NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   gist VARCHAR(1024) NOT NULL,
@@ -128,7 +130,7 @@ CREATE TABLE webknossos.scripts(
 
 CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
 CREATE TABLE webknossos.tasktypes(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _team webknossos.OBJECT_ID NOT NULL,
   summary VARCHAR(256) NOT NULL UNIQUE,
   description TEXT,
@@ -137,31 +139,35 @@ CREATE TABLE webknossos.tasktypes(
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
   settings_advancedOptionsAllowed BOOLEAN NOT NULL,
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE webknossos.tasks(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _team webknossos.OBJECT_ID NOT NULL,
   _project webknossos.OBJECT_ID NOT NULL,
   _script webknossos.OBJECT_ID,
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
-  openInstances BIGINT NOT NULL,
   totalInstances BIGINT NOT NULL,
   tracingTime INTERVAL,
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo VARCHAR(512),
-  isActive BOOLEAN NOT NULL DEFAULT true,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
-  CHECK (openInstances <= totalInstances)
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  created TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
+CREATE VIEW webknossos.task_instances AS
+  SELECT t._id, COUNT(*) assignedInstances, t.totalinstances - COUNT(*) openInstances
+  FROM webknossos.tasks t JOIN webknossos.annotations a ON t._id = a._task
+  WHERE a.typ = 'Task' AND a.state != 'Unassigned'
+  GROUP BY t._id, t.totalinstances;
+
 CREATE TABLE webknossos.teams(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _owner webknossos.OBJECT_ID NOT NULL,
   _parent webknossos.OBJECT_ID,
   name VARCHAR(256) NOT NULL UNIQUE CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
@@ -170,7 +176,7 @@ CREATE TABLE webknossos.teams(
 );
 
 CREATE TABLE webknossos.timespans(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   _user webknossos.OBJECT_ID NOT NULL,
   _annotation webknossos.OBJECT_ID,
   time INTERVAL NOT NULL,
@@ -182,7 +188,7 @@ CREATE TABLE webknossos.timespans(
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('scrypt');
 CREATE TABLE webknossos.users(
-  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT GENERATE_OBJECT_ID(),
+  _id webknossos.OBJECT_ID PRIMARY KEY DEFAULT webknossos.GENERATE_OBJECT_ID(),
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
@@ -193,7 +199,7 @@ CREATE TABLE webknossos.users(
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'scrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW()
 );

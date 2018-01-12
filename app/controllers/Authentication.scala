@@ -107,6 +107,7 @@ class Authentication @Inject()(
   import AuthForms._
 
   val env = WebknossosSilhouette.environment
+  val bearerTokenAuthenticatorService = env.combinedAuthenticatorService.tokenAuthenticatorService
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -120,6 +121,8 @@ class Authentication @Inject()(
   val roleOnRegistration: Role =
     if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
     else Role.User
+
+
 
   def normalizeName(name: String): Option[String] = {
     val replacementMap = Map("ü" -> "ue", "Ü" -> "Ue", "ö" -> "oe", "Ö" -> "Oe", "ä" -> "ae", "Ä" -> "Ae", "ß" -> "ss",
@@ -225,11 +228,12 @@ class Authentication @Inject()(
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => {
-          val token = UserToken(user._id)
           for {
-            _ <- UserTokenDAO.insert(token)(GlobalAccessContext)
+            tokenAuthenticator <- bearerTokenAuthenticatorService.create(user.loginInfo)
+            token = tokenAuthenticator.id
+            _ <- bearerTokenAuthenticatorService.init(tokenAuthenticator, TokenType.ResetPassword)
           } yield {
-            Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token.token))
+            Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
             Ok
           }
         }
@@ -237,15 +241,15 @@ class Authentication @Inject()(
     )
   }
 
+  //TODO: test reset password
   // if a user has forgotten his password
   def handleResetPassword = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        UserTokenService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
+        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- UserTokenDAO.removeByToken(passwords.token.trim)(GlobalAccessContext)
               _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
             } yield Ok
           case _ =>

@@ -53,7 +53,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
         val token = UserToken(user._id)
         UserTokenDAO.insert(token).map(_ => token.token)
         */
-        bearerTokenService.addNewAuthenticatorIfNoOneIsValid(user.loginInfo).map(_.id).toFox
+        bearerTokenService.addNewTokenForAuthentication(user.loginInfo).map(_.id).toFox
 
       case None => Fox.successful("")
     }

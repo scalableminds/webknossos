@@ -21,10 +21,10 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.duration._
 
 
-case class OpenTasksEntry(user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
+case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
 object OpenTasksEntry { implicit val jsonFormat = Json.format[OpenTasksEntry] }
 
-case class ProjectProgressEntry(projectName: String, totalTasks: Int, totalInstances: Int, openInstances: Int,
+case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks: Int, totalInstances: Int, openInstances: Int,
                                 finishedInstances: Int, inProgressInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
@@ -53,9 +53,9 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
       openInstances = totalInstances - finishedInstances - inProgressInstances
       _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
       _ <- assertExpDomain(firstTask, inProgressInstances, users)
-      _ <- assertAge(taskIds, inProgressInstances, openInstances)
+      _ <- assertAge(project, taskIds, inProgressInstances, openInstances)
     } yield {
-      ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
+      ProjectProgressEntry(project.name, project.paused, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
     }
   }
 
@@ -78,8 +78,8 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     }
   }
 
-  private def assertAge(taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
-    if (inProgressInstances > 0 || openInstances > 0) Fox.successful(())
+  private def assertAge(project: Project, taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
+    if (inProgressInstances > 0 || (!project.paused && openInstances > 0)) Fox.successful(())
     else {
       assertRecentlyModified(taskIds)
     }
@@ -116,7 +116,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
         projects <- TaskDAO.findWithOpenByUserReturnOnlyProject(user).toFox
         assignmentCountsByProject <- getAssignmentsByProjectsFor(projects, user)
       } yield {
-        OpenTasksEntry(user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
+        OpenTasksEntry(user.id, user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
       }
     }
     Fox.combined(foxes.toList)

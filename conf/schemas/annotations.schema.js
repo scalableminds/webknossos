@@ -21,7 +21,14 @@ db.runCommand({
         team: { $type: "string", $exists: true },
       },
       {
-        state: { $type: "string", $exists: true },
+        state: {
+          $exists: true,
+          $in: [
+            "Active",
+            "Cancelled",
+            "Finished",
+          ]
+        },
       },
       {
         typ: {

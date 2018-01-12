@@ -61,16 +61,16 @@ case class Task(
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
 
-  def inProgress(implicit ctx: DBAccessContext) =
-    AnnotationService.countUnfinishedAnnotationsFor(this)
+  def countActive(implicit ctx: DBAccessContext) =
+    AnnotationService.countActiveAnnotationsFor(this).getOrElse(0)
 
   def status(implicit ctx: DBAccessContext) = {
     for {
-      inProgress <- inProgress.getOrElse(0)
+      active <- countActive
     } yield CompletionStatus(
       open = openInstances,
-      inProgress = inProgress,
-      completed = instances - (inProgress + openInstances))
+      inProgress = active,
+      completed = instances - (active + openInstances))
   }
 
   def hasEnoughExperience(user: User) = {

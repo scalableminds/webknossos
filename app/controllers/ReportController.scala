@@ -49,7 +49,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
       firstTask <- TaskDAO.findOneByProject(project.name)
       totalInstances <- TaskDAO.sumInstancesByProject(project.name)
       finishedInstances <- AnnotationDAO.countFinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
-      inProgressInstances <- AnnotationDAO.countUnfinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
+      inProgressInstances <- AnnotationDAO.countActiveByTaskIdsAndType(taskIds, AnnotationType.Task)
       openInstances = totalInstances - finishedInstances - inProgressInstances
       _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
       _ <- assertExpDomain(firstTask, inProgressInstances, users)

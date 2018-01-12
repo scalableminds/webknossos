@@ -3,6 +3,7 @@ import * as React from "react";
 import { Icon, Spin, Table, Card } from "antd";
 import Utils from "libs/utils";
 import FormatUtils from "libs/format_utils";
+import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType } from "admin/api_flow_types";
 import TeamSelectionForm from "./team_selection_form";
@@ -12,7 +13,7 @@ const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
 type State = {
-  settingsVisible: boolean,
+  areSettingsVisible: boolean,
   teamId: ?string,
   data: Array<APIProjectProgressReportType>,
   isLoading: boolean,
@@ -21,23 +22,12 @@ type State = {
 
 class ProjectProgressReportView extends React.PureComponent<{}, State> {
   state = {
-    settingsVisible: true,
+    areSettingsVisible: true,
     data: [],
     teamId: undefined,
     isLoading: false,
     updatedAt: null,
   };
-
-  componentDidMount() {
-    this.componentIsMounted = true;
-    this.autoRefresh();
-  }
-
-  componentWillUnmount() {
-    this.componentIsMounted = false;
-  }
-
-  componentIsMounted: boolean = false;
 
   async fetchData(suppressLoadingState?: boolean = false) {
     const { teamId } = this.state;
@@ -55,42 +45,32 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
     }
   }
 
-  /* eslint-disable no-await-in-loop */
-  async autoRefresh() {
-    await Utils.sleep(RELOAD_INTERVAL);
-    while (this.componentIsMounted) {
-      try {
-        await this.fetchData(true);
-      } catch (err) {
-        console.error(err);
-      }
-      await Utils.sleep(RELOAD_INTERVAL);
-    }
-  }
-  /* eslint-enable no-await-in-loop */
-
   handleTeamChange = (teamId: string) => {
-    this.setState({ teamId, settingsVisible: false }, () => {
+    this.setState({ teamId, areSettingsVisible: false }, () => {
       this.fetchData();
     });
   };
   handleOpenSettings = () => {
-    this.setState({ settingsVisible: true });
+    this.setState({ areSettingsVisible: true });
   };
   handleReload = () => {
     this.fetchData();
+  };
+  handleAutoReload = () => {
+    this.fetchData(true);
   };
 
   render() {
     return (
       <div className="container">
+        <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
           {this.state.updatedAt != null ? FormatUtils.formatDate(this.state.updatedAt) : null}{" "}
           <Icon type="setting" onClick={this.handleOpenSettings} />
           <Icon type="reload" onClick={this.handleReload} />
         </div>
         <h3>Project Progress</h3>
-        {this.state.settingsVisible ? (
+        {this.state.areSettingsVisible ? (
           <Card>
             <TeamSelectionForm value={this.state.teamId} onChange={this.handleTeamChange} />
           </Card>

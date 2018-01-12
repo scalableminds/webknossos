@@ -10,9 +10,8 @@ function formatVector3(vec) {
 }
 function formatBB(bb) {
   if (bb != null) {
-    return `(${bb.topLeft[0]},${bb.topLeft[1]},${bb.topLeft[2]},${bb.width},${bb.height},${
-      bb.depth
-    })`;
+    return `(${bb.topLeft[0]},${bb.topLeft[1]},${bb
+      .topLeft[2]},${bb.width},${bb.height},${bb.depth})`;
   }
   return null;
 }
@@ -145,7 +144,7 @@ function* csvWriter(name, cols) {
         "name",
         "description",
         "defaultConfiguration",
-        "isActive",
+        "isDeleted",
         "isPublic",
         "created",
       ],
@@ -156,8 +155,8 @@ function* csvWriter(name, cols) {
         name: doc.dataSource.id.name,
         description: doc.description,
         defaultConfiguration: JSON.stringify(doc.defaultConfiguration),
-        isActive: doc.isActive,
-        isPublic: doc.isPublic,
+        isDeleted: !doc.isActive,
+        isPublic: !!doc.isPublic,
         created: new Date(doc.created),
       }),
     );
@@ -171,15 +170,17 @@ function* csvWriter(name, cols) {
         "_user",
         "tracing_id",
         "tracing_typ",
-        "typ",
-        "version",
-        "state",
-        "tags",
-        "statistics",
-        "isActive",
+        "description",
         "isPublic",
+        "name",
+        "state",
+        "statistics",
+        "tags",
+        "tracingTime",
+        "typ",
         "created",
         "modified",
+        "isDeleted",
       ],
       async doc => ({
         _id: doc._id.toHexString(),
@@ -188,15 +189,17 @@ function* csvWriter(name, cols) {
         _user: doc._user.toHexString(),
         tracing_id: doc.tracingReference.id,
         tracing_typ: doc.tracingReference.typ,
-        typ: doc.typ,
-        version: doc.version != null ? doc.version : 0,
-        state: doc.state,
-        tags: doc.tags,
-        statistics: doc.statistics != null ? JSON.stringify(doc.statistics) : "{}",
-        isActive: !!doc.isActive,
+        description: doc.description,
         isPublic: !!doc.isPublic,
+        name: doc._name != null ? doc._name : "",
+        state: doc.state,
+        statistics: doc.statistics != null ? JSON.stringify(doc.statistics) : "{}",
+        tags: doc.tags,
+        tracingTime: doc.tracingTime,
+        typ: doc.typ == "Tracing Base" ? "TracingBase" : doc.typ,
         created: new Date(doc.createdTimestamp),
         modified: new Date(doc.modifiedTimestamp),
+        isDeleted: !doc.isActive,
       }),
     );
 
@@ -209,16 +212,7 @@ function* csvWriter(name, cols) {
 
     await migrateTable(
       "projects",
-      [
-        "_id",
-        "_team",
-        "_owner",
-        "name",
-        "priority",
-        "paused",
-        "expectedTime",
-        "created",
-      ],
+      ["_id", "_team", "_owner", "name", "priority", "paused", "expectedTime", "created"],
       async doc => ({
         _id: doc._id.toHexString(),
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
@@ -252,7 +246,7 @@ function* csvWriter(name, cols) {
         "settings_branchPointsAllowed",
         "settings_somaClickingAllowed",
         "settings_advancedOptionsAllowed",
-        "isActive",
+        "isDeleted",
         "created",
       ],
       async doc => ({
@@ -265,7 +259,7 @@ function* csvWriter(name, cols) {
         settings_branchPointsAllowed: doc.settings.branchPointsAllowed,
         settings_somaClickingAllowed: doc.settings.somaClickingAllowed,
         settings_advancedOptionsAllowed: doc.settings.advancedOptionsAllowed,
-        isActive: doc.isActive,
+        isDeleted: !doc.isActive,
         created: doc._id.getTimestamp(),
       }),
     );
@@ -314,7 +308,7 @@ function* csvWriter(name, cols) {
         "editPosition",
         "editRotation",
         "creationInfo",
-        "isActive",
+        "isDeleted",
         "created",
       ],
       async doc => {
@@ -336,7 +330,7 @@ function* csvWriter(name, cols) {
           editPosition: formatVector3(doc.editPosition),
           editRotation: formatVector3(doc.editRotation),
           creationInfo: doc.creationInfo,
-          isActive: doc.isActive,
+          isDeleted: !doc.isActive,
           created: doc._id.getTimestamp(),
         };
       },
@@ -356,7 +350,7 @@ function* csvWriter(name, cols) {
         "loginInfo_providerKey",
         "passwordInfo_hasher",
         "passwordInfo_password",
-        "isActive",
+        "isDeleted",
         "isSuperUser",
         "created",
       ],
@@ -374,7 +368,7 @@ function* csvWriter(name, cols) {
               loginInfo_providerKey: doc.loginInfo.providerKey,
               passwordInfo_hasher: "scrypt",
               passwordInfo_password: doc.passwordInfo.password,
-              isActive: !!doc.isActive,
+              isDeleted: !doc.isActive,
               isSuperUser: !!doc._isSuperUser,
               created: doc._id.getTimestamp(),
             }

@@ -45,7 +45,7 @@ CREATE TABLE webknossos.analytics(
 );
 
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
-CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'Tracing Base', 'Orphan');
+CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Unassigned', 'Assigned', 'InProgress', 'Finished');
 CREATE TABLE webknossos.annotations(
   _id webknossos.OBJECT_ID PRIMARY KEY NOT NULL DEFAULT webknossos.GENERATE_OBJECT_ID(),
@@ -54,16 +54,18 @@ CREATE TABLE webknossos.annotations(
   _user webknossos.OBJECT_ID NOT NULL,
   tracing_id UUID NOT NULL, -- UNIQUE,
   tracing_typ webknossos.ANNOTATION_TRACING_TYPE NOT NULL,
-  typ webknossos.ANNOTATION_TYPE NOT NULL,
-  version BIGINT NOT NULL DEFAULT 0,
-  state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Unassigned',
-  tags VARCHAR(512)[] NOT NULL DEFAULT '{}',
-  statistics JSONB NOT NULL,
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  description TEXT NOT NULL DEFAULT '',
   isPublic BOOLEAN NOT NULL DEFAULT false,
+  name VARCHAR(256) NOT NULL DEFAULT '',
+  state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Unassigned',
+  statistics JSONB NOT NULL,
+  tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
+  tracingTime BIGINT,
+  typ webknossos.ANNOTATION_TYPE NOT NULL,
   created TIMESTAMP NOT NULL DEFAULT NOW(),
   modified TIMESTAMP NOT NULL DEFAULT NOW(),
-  CHECK ((typ IN ('Tracing Base', 'Task')) = (_task IS NOT NULL))
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
 );
 
 CREATE TABLE webknossos.datasets(
@@ -73,7 +75,7 @@ CREATE TABLE webknossos.datasets(
   name VARCHAR(256) NOT NULL UNIQUE,
   description TEXT,
   defaultConfiguration JSONB,
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   isPublic BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW(),
   UNIQUE (name, _team)
@@ -137,7 +139,7 @@ CREATE TABLE webknossos.tasktypes(
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
   settings_advancedOptionsAllowed BOOLEAN NOT NULL,
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -154,7 +156,7 @@ CREATE TABLE webknossos.tasks(
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo VARCHAR(512),
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
@@ -197,7 +199,7 @@ CREATE TABLE webknossos.users(
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'scrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
-  isActive BOOLEAN NOT NULL DEFAULT true,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW()
 );

@@ -3,7 +3,7 @@
 
 import _ from "lodash";
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
 import Utils from "libs/utils";
 import Clipboard from "clipboard-js";
@@ -14,20 +14,29 @@ import { deleteTask, getTasks } from "admin/admin_rest_api";
 import TemplateHelpers from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
 import TaskAnnotationView from "admin/views/task/task_annotation_view";
-import StatePersistenceComponent from "components/state_persistence_component";
+import { loadPersisted, persist } from "components/state_persistence_component";
+import { PropTypes } from "prop-types";
 import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
 import type { QueryObjectType, TaskFormFieldValuesType } from "admin/views/task/task_search_form";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 const { Search, TextArea } = Input;
 
-type Props = { initialFieldValues?: TaskFormFieldValuesType };
+type Props = {
+  initialFieldValues?: TaskFormFieldValuesType,
+  history: RouterHistory,
+};
 
 type State = {
   isLoading: boolean,
   tasks: Array<APITaskType>,
   searchQuery: string,
   isAnonymousTaskLinkModalVisible: boolean,
+};
+
+const STATE_TO_BE_PERSISTED: { [$Keys<State>]: Function } = {
+  searchQuery: PropTypes.string,
 };
 
 class TaskListView extends React.PureComponent<Props, State> {
@@ -38,6 +47,14 @@ class TaskListView extends React.PureComponent<Props, State> {
     isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
   };
 
+  componentWillMount() {
+    this.setState(loadPersisted(this.props.history, "taskList", STATE_TO_BE_PERSISTED));
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persist(this.props.history, "taskList", STATE_TO_BE_PERSISTED, nextState);
+  }
+
   async fetchData(queryObject: QueryObjectType) {
     if (!_.isEmpty(queryObject)) {
       this.setState({ isLoading: true });
@@ -47,6 +64,8 @@ class TaskListView extends React.PureComponent<Props, State> {
         tasks,
         isLoading: false,
       });
+    } else {
+      this.setState({ tasks: [] });
     }
   }
 
@@ -95,19 +114,11 @@ class TaskListView extends React.PureComponent<Props, State> {
     );
   }
 
-  _setState = (...args: [State]) => this.setState(...args);
-
   render() {
     const marginRight = { marginRight: 20 };
 
     return (
       <div className="container">
-        <StatePersistenceComponent
-          name="taskList"
-          stateProperties={["searchQuery"]}
-          state={this.state}
-          updateState={this._setState}
-        />
         <div className="pull-right">
           <Link to="/tasks/create">
             <Button icon="plus" style={marginRight} type="primary">
@@ -284,4 +295,4 @@ class TaskListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default TaskListView;
+export default withRouter(TaskListView);

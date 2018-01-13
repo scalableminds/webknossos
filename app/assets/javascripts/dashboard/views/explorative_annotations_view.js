@@ -15,7 +15,8 @@ import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FileUpload from "components/file_upload";
-import StatePersistenceComponent from "components/state_persistence_component";
+import { loadPersisted, persist } from "components/state_persistence_component";
+import { PropTypes } from "prop-types";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
@@ -42,6 +43,11 @@ type State = {
   isLoading: boolean,
 };
 
+const STATE_TO_BE_PERSISTED: { [$Keys<State>]: Function } = {
+  searchQuery: PropTypes.string,
+  shouldShowArchivedTracings: PropTypes.bool,
+};
+
 class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state = {
     shouldShowArchivedTracings: false,
@@ -57,9 +63,17 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     isLoading: false,
   };
 
+  componentWillMount() {
+    this.setState(loadPersisted(this.props.history, "explorativeList", STATE_TO_BE_PERSISTED));
+  }
+
   componentDidMount() {
     this.restoreSearchTags();
     this.fetchDataMaybe();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persist(this.props.history, "explorativeList", STATE_TO_BE_PERSISTED, nextState);
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -416,8 +430,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     ));
   }
 
-  _setState = (...args) => this.setState(...args);
-
   render() {
     const marginRight = { marginRight: 8 };
     const search = (
@@ -431,12 +443,6 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
 
     return (
       <div className="TestExplorativeAnnotationsView">
-        <StatePersistenceComponent
-          name="explorativeList"
-          stateProperties={["searchQuery", "shouldShowArchivedTracings"]}
-          state={this.state}
-          updateState={this._setState}
-        />
         {this.props.isAdminView ? (
           search
         ) : (

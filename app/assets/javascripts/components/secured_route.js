@@ -61,7 +61,7 @@ class SecuredRoute extends React.PureComponent<Props, State> {
             } else if (render != null) {
               return render(props);
             } else {
-              throw Error("Did specify neither component nor render function.");
+              throw Error("Specified neither component nor render function.");
             }
           }
 

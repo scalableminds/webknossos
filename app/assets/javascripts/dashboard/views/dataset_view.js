@@ -1,24 +1,26 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
 import { Spin, Input, Button } from "antd";
 import AdvancedDatasetView from "dashboard/views/advanced_dataset/advanced_dataset_view";
 import GalleryDatasetView from "dashboard/views/gallery_dataset_view";
-import StatePersistenceComponent from "components/state_persistence_component";
+import { loadPersisted, persist } from "components/state_persistence_component";
+import { PropTypes } from "prop-types";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { DataLayerType } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 const { Search } = Input;
 
 type Props = {
   dataViewType: "gallery" | "advanced",
   user: APIUserType,
+  history: RouterHistory,
 };
 
 export type DatasetType = APIDatasetType & {
@@ -31,6 +33,10 @@ type State = {
   datasets: Array<DatasetType>,
   searchQuery: string,
   isLoading: boolean,
+};
+
+const STATE_TO_BE_PERSISTED: { [$Keys<State>]: Function } = {
+  searchQuery: PropTypes.string,
 };
 
 function createThumbnailURL(datasetName: string, layers: Array<DataLayerType>): string {
@@ -64,8 +70,16 @@ class DatasetView extends React.PureComponent<Props, State> {
     isLoading: false,
   };
 
+  componentWillMount() {
+    this.setState(loadPersisted(this.props.history, "datasetList", STATE_TO_BE_PERSISTED));
+  }
+
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persist(this.props.history, "datasetList", STATE_TO_BE_PERSISTED, nextState);
   }
 
   async fetchData(): Promise<void> {
@@ -113,8 +127,6 @@ class DatasetView extends React.PureComponent<Props, State> {
     );
   }
 
-  _setState = (...args: [State]) => this.setState(...args);
-
   render() {
     const isGallery = this.props.dataViewType === "gallery";
     const margin = { marginRight: 5 };
@@ -150,12 +162,6 @@ class DatasetView extends React.PureComponent<Props, State> {
 
     return (
       <div>
-        <StatePersistenceComponent
-          name="datasetList"
-          stateProperties={["searchQuery"]}
-          state={this.state}
-          updateState={this._setState}
-        />
         {adminHeader}
         <h3 className="TestDatasetHeadline">Datasets</h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
@@ -167,4 +173,4 @@ class DatasetView extends React.PureComponent<Props, State> {
   }
 }
 
-export default DatasetView;
+export default withRouter(DatasetView);

@@ -1,55 +1,55 @@
 // @flow
 import _ from "lodash";
-import * as React from "react";
-import { withRouter } from "react-router-dom";
+import { PropTypes } from "prop-types";
+import ErrorHandling from "libs/error_handling";
 import type { RouterHistory } from "react-router-dom";
 
-type Props = {
-  name: string,
-  stateProperties: Array<string>,
-  state: Object,
-  updateState: Object => void,
+export function loadPersisted<T: Object>(
   history: RouterHistory,
-};
-
-class StatePersistenceComponent extends React.PureComponent<Props> {
-  componentWillMount() {
-    if (
-      this.props.history.location.state != null &&
-      this.props.history.location.state[this.props.name] != null
-    ) {
-      const locationState = this.props.history.location.state[this.props.name];
-      console.log(
-        "Restore history state of component with name:",
-        this.props.name,
-        "- state:",
-        locationState,
-      );
-      const newState = _.pick(locationState, this.props.stateProperties);
-      this.props.updateState(newState);
+  name: string,
+  stateProperties: { [$Keys<T>]: Function },
+): $Shape<T> {
+  const locationState = history.location.state;
+  if (locationState != null && locationState[name] != null) {
+    console.log(
+      "Try to restore persisted history state of component with name:",
+      name,
+      "- state:",
+      locationState[name],
+    );
+    const persistedState = _.pick(locationState[name], Object.keys(stateProperties));
+    try {
+      // Check whether the type of the persisted state conforms to that of the component to avoid messing up
+      // the components state - this could happen if the type of a state property changed
+      PropTypes.checkPropTypes(stateProperties, persistedState, "persisted state property", name);
+    } catch (e) {
+      // Reset the persisted state and log the error to airbrake so we learn whether and how often this happens
+      persist(history, name, {}, {});
+      ErrorHandling.notify(e);
+      return {};
     }
+    return persistedState;
   }
-
-  componentDidUpdate(prevProps: Props) {
-    for (const key of this.props.stateProperties) {
-      if (!_.isEqual(this.props.state[key], prevProps.state[key])) {
-        // If one of the state properties changed, replace the whole state
-        this.props.history.replace(
-          this.props.history.location.pathname,
-          // There could be multiple StatePersistenceComponents on one page, so only extend the current location state,
-          // but do not replace it
-          _.extend(this.props.history.location.state, {
-            [this.props.name]: _.pick(this.props.state, this.props.stateProperties),
-          }),
-        );
-        break;
-      }
-    }
-  }
-
-  render() {
-    return null;
-  }
+  return {};
 }
 
-export default withRouter(StatePersistenceComponent);
+export function persist<T: Object>(
+  history: RouterHistory,
+  name: string,
+  stateProperties: { [$Keys<T>]: Function },
+  state: T,
+) {
+  const locationState = history.location.state || {};
+  const stateToBePersisted = _.pick(state, Object.keys(stateProperties));
+  if (locationState[name] == null || !_.isEqual(stateToBePersisted, locationState[name])) {
+    // If one of the state properties changed, replace the whole state
+    history.replace(
+      history.location.pathname,
+      // There could be multiple state namespaces on one page, so only extend the current location state,
+      // but do not replace it
+      _.extend(locationState, {
+        [name]: stateToBePersisted,
+      }),
+    );
+  }
+}

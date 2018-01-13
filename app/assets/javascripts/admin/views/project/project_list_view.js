@@ -1,10 +1,9 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
@@ -15,9 +14,11 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/admin_rest_api";
-import StatePersistenceComponent from "components/state_persistence_component";
+import { loadPersisted, persist } from "components/state_persistence_component";
+import { PropTypes } from "prop-types";
 import type { APIProjectType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -26,21 +27,37 @@ type StateProps = {
   activeUser: APIUserType,
 };
 
+type Props = {
+  history: RouterHistory,
+} & StateProps;
+
 type State = {
   isLoading: boolean,
   projects: Array<APIProjectType>,
   searchQuery: string,
 };
 
-class ProjectListView extends React.PureComponent<StateProps, State> {
+const STATE_TO_BE_PERSISTED: { [$Keys<State>]: Function } = {
+  searchQuery: PropTypes.string,
+};
+
+class ProjectListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: true,
     projects: [],
     searchQuery: "",
   };
 
+  componentWillMount() {
+    this.setState(loadPersisted(this.props.history, "projectList", STATE_TO_BE_PERSISTED));
+  }
+
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persist(this.props.history, "projectList", STATE_TO_BE_PERSISTED, nextState);
   }
 
   async fetchData(): Promise<void> {
@@ -83,19 +100,11 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
     });
   };
 
-  _setState = (...args) => this.setState(...args);
-
   render() {
     const marginRight = { marginRight: 20 };
 
     return (
       <div className="container TestProjectListView">
-        <StatePersistenceComponent
-          name="projectList"
-          stateProperties={["searchQuery"]}
-          state={this.state}
-          updateState={this._setState}
-        />
         <div>
           <div className="pull-right">
             <Link to="/projects/create">
@@ -240,4 +249,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: getActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(ProjectListView);
+export default connect(mapStateToProps)(withRouter(ProjectListView));

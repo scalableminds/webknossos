@@ -3,10 +3,10 @@
  */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
-import com.scalableminds.webknossos.datastore.binary.dataformats.{BucketProvider, MappingProvider}
-import com.scalableminds.webknossos.datastore.binary.models.datasource._
-import com.scalableminds.webknossos.datastore.binary.models.requests.DataReadInstruction
-import com.scalableminds.webknossos.datastore.binary.storage.DataCubeCache
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
+import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
+import com.scalableminds.webknossos.datastore.storage.DataCubeCache
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Empty, Failure, Full}

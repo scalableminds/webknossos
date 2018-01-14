@@ -6,18 +6,16 @@ package com.scalableminds.webknossos.datastore.services
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.InboxDataSource
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSource, DataSourceId}
-import com.scalableminds.webknossos.datastore.binary.helpers.{DataSourceRepository => AbstractDataSourceRepository}
-import com.scalableminds.webknossos.datastore.binary.storage.TemporaryStore
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.storage.TemporaryStore
 import com.scalableminds.util.tools.FoxImplicits
 
 class DataSourceRepository @Inject()(
                                       webKnossosServer: WebKnossosServer,
                                       @Named("braingames-binary") val system: ActorSystem
                                     )
-  extends AbstractDataSourceRepository
-    with TemporaryStore[String, InboxDataSource]
+    extends TemporaryStore[String, InboxDataSource]
     with FoxImplicits {
 
   def findByName(name: String): Option[InboxDataSource] =

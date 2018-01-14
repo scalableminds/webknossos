@@ -6,9 +6,7 @@ package com.scalableminds.webknossos.datastore
 import akka.actor.ActorSystem
 import com.google.inject.AbstractModule
 import com.google.inject.name.Names
-import com.scalableminds.webknossos.datastore.binary.api.{BinaryDataService, DataSourceService}
-import com.scalableminds.webknossos.datastore.binary.helpers.{DataSourceRepository => AbstractDataSourceRepository}
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, WebKnossosServer}
+import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.tracings.TracingDataStore
 import com.scalableminds.webknossos.datastore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
@@ -19,7 +17,6 @@ class DataStoreModule(environment: Environment, configuration: Configuration) ex
   val system = ActorSystem("braingames-binary")
 
   def configure() = {
-    bind(classOf[AbstractDataSourceRepository]).to(classOf[DataSourceRepository])
     bind(classOf[AccessTokenService]).asEagerSingleton()
     bind(classOf[ActorSystem]).annotatedWith(Names.named("braingames-binary")).toInstance(system)
     bind(classOf[BinaryDataService]).asEagerSingleton()

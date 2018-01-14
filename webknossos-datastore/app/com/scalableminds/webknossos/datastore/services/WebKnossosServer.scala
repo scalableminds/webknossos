@@ -6,9 +6,9 @@ package com.scalableminds.webknossos.datastore.services
 import akka.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
-import com.scalableminds.webknossos.datastore.binary.helpers.IntervalScheduler
-import com.scalableminds.webknossos.datastore.binary.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.InboxDataSourceLike
+import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSourceLike
 import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging

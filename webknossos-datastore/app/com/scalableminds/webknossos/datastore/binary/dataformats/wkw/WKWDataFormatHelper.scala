@@ -18,7 +18,7 @@ trait WKWDataFormatHelper {
                    baseDir: Path = Paths.get("")
                  ): Path = {
     baseDir
-      .resolve(dataSourceId.map(_.team).getOrElse(""))
+      .resolve(dataSourceId.map(_.organization).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
       .resolve(cube.resolution.toString)
@@ -34,7 +34,7 @@ trait WKWDataFormatHelper {
                          baseDir: Path = Paths.get("")
                        ): Path = {
     baseDir
-      .resolve(dataSourceId.map(_.team).getOrElse(""))
+      .resolve(dataSourceId.map(_.organization).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
       .resolve(resolution.toString)

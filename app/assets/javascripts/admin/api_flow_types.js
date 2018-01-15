@@ -41,7 +41,7 @@ export type APIRoleType = { +name: string };
 
 export type APITeamRoleType = {
   +team: string,
-  +role: APIRoleType,
+  +isSuperVisor: boolean,
 };
 
 export type ExperienceMapType = { +[string]: number };

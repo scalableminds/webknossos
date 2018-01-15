@@ -36,9 +36,8 @@ object AnnotationService
   with ProtoGeometryImplicits
   with LazyLogging {
 
-  private def selectSuitableTeam(user: User, dataSet: DataSet): String = {
-    val dataSetTeams = dataSet.owningTeam +: dataSet.allowedTeams //TODO
-    dataSetTeams.intersect(user.teamNames).head
+  private def selectSuitableTeam(user: User, dataSet: DataSet): BSONObjectID = {
+      dataSet.allowedTeams.intersect(user.teamNames).head
   }
 
   private def createVolumeTracing(dataSource: DataSource, withFallback: Boolean): VolumeTracing = {
@@ -84,7 +83,7 @@ object AnnotationService
         Some(user._id),
         tracing,
         dataSet.name,
-        selectSuitableTeam(user, dataSet), //TODO
+        selectSuitableTeam(user, dataSet),
         AnnotationSettings.defaultFor(tracingType),
         _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
       _ <- annotation.saveToDB
@@ -231,7 +230,7 @@ object AnnotationService
       Some(user._id),
       tracingReference,
       dataSet.name,
-      team = selectSuitableTeam(user, dataSet), //TODO
+      team = selectSuitableTeam(user, dataSet),
       settings = settings,
       _name = name,
       description = description,

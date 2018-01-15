@@ -9,6 +9,7 @@ import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
@@ -45,16 +46,17 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def createDataSet(
-    name: String,
-    dataStore: DataStoreInfo,
-    owningTeam: String,
-    dataSource: InboxDataSource,
-    isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
+                     name: String,
+                     dataStore: DataStoreInfo,
+                     owningOrganization: String,
+                     dataSource: InboxDataSource,
+                     isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
 
     DataSetDAO.insert(DataSet(
       dataStore,
       dataSource,
-      List(owningTeam),
+      owningOrganization,
+      List(),
       isActive = isActive,
       isPublic = false))(GlobalAccessContext)
   }
@@ -65,24 +67,24 @@ object DataSetService extends FoxImplicits with LazyLogging {
                       )(implicit ctx: DBAccessContext): Fox[WriteResult] = {
 
     DataSetDAO.findOneBySourceName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
-      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name && dataSet.owningTeam == dataSource.id.team =>
+      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name => //TODO: && dataSet.owningTeam == dataSource.id.team =>
         DataSetDAO.updateDataSource(
           dataSource.id.name,
           dataStoreInfo,
           dataSource,
           isActive = dataSource.isUsable)(GlobalAccessContext).futureBox
-      case Full(_)                                                           =>
+      case Full(_) =>
         // TODO: There is a problem: The dataset name is already in use by some (potentially different) team.
         // We are not going to update that datasource.
         // this should be somehow populated to the user to inform him that he needs to rename the datasource
         Fox.failure("dataset.name.alreadyInUse").futureBox
-      case _                                                                 =>
-        createDataSet(
-          dataSource.id.name,
-          dataStoreInfo,
-          dataSource.id.team,
-          dataSource,
-          isActive = dataSource.isUsable).futureBox
+      case _ =>
+          createDataSet(
+            dataSource.id.name,
+            dataStoreInfo,
+            dataSource.id.organization, //TODO
+            dataSource,
+            isActive = dataSource.isUsable).futureBox
     }
   }
 
@@ -119,7 +121,8 @@ object DataSetService extends FoxImplicits with LazyLogging {
     val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
     Fox.serialSequence(dataSources) { dataSource =>
       DataSetService.updateDataSource(dataStoreInfo, dataSource)
-    }.map{ _.filter(_.isEmpty).foreach{ r =>
+    }.map {
+      _.filter(_.isEmpty).foreach { r =>
         logger.warn("Updating DS failed. Result: " + r)
       }
     }

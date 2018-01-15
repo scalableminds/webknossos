@@ -132,7 +132,7 @@ class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with Fox
 
   private def knossosFilePath(readInstruction: DataReadInstruction, section: KnossosSection): Path = {
     readInstruction.baseDir
-      .resolve(readInstruction.dataSource.id.team)
+      .resolve(readInstruction.dataSource.id.organization)
       .resolve(readInstruction.dataSource.id.name)
       .resolve(readInstruction.dataLayer.name)
       .resolve(section.name)

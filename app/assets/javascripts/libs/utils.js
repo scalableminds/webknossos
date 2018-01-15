@@ -193,7 +193,7 @@ const Utils = {
   },
 
   isUserAdmin(user: APIUserType): boolean {
-    return _.findIndex(user.teams, team => team.role.name === "admin") >= 0;
+    return _.findIndex(user.teams, team => team.isSuperVisor) >= 0;
   },
 
   getUrlParamsObject(): { [key: string]: string | boolean } {

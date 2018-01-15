@@ -14,7 +14,7 @@ class MappingProvider(layer: SegmentationLayer) {
 
   def load(readInstruction: MappingReadInstruction): Box[Array[Byte]] = {
     val mappingFile = readInstruction.baseDir
-      .resolve(readInstruction.dataSource.id.team)
+      .resolve(readInstruction.dataSource.id.organization)
       .resolve(readInstruction.dataSource.id.name)
       .resolve(layer.name)
       .resolve(MappingProvider.mappingsDir)

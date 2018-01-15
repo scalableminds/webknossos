@@ -5,20 +5,22 @@ import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationSettings}
 import models.task._
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.twirl.api.Html
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONObjectIDFormat
 
 class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits{
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'team).read[String] and
+      (__ \ 'team).read[BSONObjectID] and
       (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>

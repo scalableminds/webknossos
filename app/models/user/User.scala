@@ -25,7 +25,7 @@ case class User(
                  lastName: String,
                  isActive: Boolean = false,
                  md5hash: String = "",
-                 organization: BSONObjectID,
+                 organization: String,
                  teams: List[TeamMembership],
                  userConfiguration: UserConfiguration = UserConfiguration.default,
                  dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
@@ -58,6 +58,8 @@ case class User(
   lazy val hasAdminAccess = supervisorTeams.nonEmpty //adminTeams.nonEmpty
 
   def isSuperVisorOf(team: BSONObjectID) = supervisorTeamIds.contains(team)
+
+  def isAdminOf(organization: String): Boolean = isAdmin && organization == this.organization
 
   override def toString = email
 
@@ -103,7 +105,7 @@ case class User(
 
 object User {
 
-  implicit val passwordInfoJsonFormat = Json.format[PasswordInfo]
+  implicit val passwordInfoJsonFormat: Format[PasswordInfo] = Json.format[PasswordInfo]
   implicit val userFormat = Json.format[User]
 
   def userPublicWrites(requestingUser: User): Writes[User] =
@@ -129,7 +131,7 @@ object User {
       (__ \ "teams").write[List[TeamMembership]]) (u =>
       (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams))
 
-  val defaultDeactivatedUser = User("", "", "", organization = null, teams = Nil, loginInfo = LoginInfo(CredentialsProvider.ID, ""), passwordInfo = PasswordInfo("SCrypt", ""))
+  val defaultDeactivatedUser = User("", "", "", organization = "", teams = Nil, loginInfo = LoginInfo(CredentialsProvider.ID, ""), passwordInfo = PasswordInfo("SCrypt", ""))
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -169,7 +171,7 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
 
-  def findByTeams(teams: List[String], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+  def findByTeams(teams: List[BSONObjectID], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     val anonymousFilter = if (includeAnonymous) Json.obj() else Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))
     find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team))) ++ anonymousFilter).cursor[User]().collect[List]()
   }

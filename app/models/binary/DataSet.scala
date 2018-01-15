@@ -14,10 +14,13 @@ import play.api.libs.json._
 import play.utils.UriEncoding
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONObjectIDFormat
+
 
 case class DataSet(
                     dataStoreInfo: DataStoreInfo,
                     dataSource: InboxDataSource,
+                    owningOrganization: String,
                     allowedTeams: List[BSONObjectID],
                     isActive: Boolean = false,
                     isPublic: Boolean = false,
@@ -27,13 +30,11 @@ case class DataSet(
 
   def name = dataSource.id.name
 
-  def owningTeam = dataSource.id.team
-
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
 
   def isEditableBy(user: Option[User]) =
-    user.exists(_.isSuperVisorOf(BSONObjectID(owningTeam))) //TODO
+    user.exists(_.isAdminOf(owningOrganization))
 
   lazy val dataStore: DataStoreHandlingStrategy =
     DataStoreHandlingStrategy(this)
@@ -46,14 +47,14 @@ object DataSet {
     ((__ \ 'name).write[String] and
       (__ \ 'dataSource).write[InboxDataSource] and
       (__ \ 'dataStore).write[DataStoreInfo] and
-      (__ \ 'owningTeam).write[BSONObjectID] and
+      (__ \ 'owningOrganization).write[String] and
       (__ \ 'allowedTeams).write[List[BSONObjectID]] and
       (__ \ 'isActive).write[Boolean] and
       (__ \ 'isPublic).write[Boolean] and
       (__ \ 'description).write[Option[String]] and
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean]) (d =>
-      (d.name, d.dataSource, d.dataStoreInfo, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+      (d.name, d.dataSource, d.dataStoreInfo, d.owningOrganization, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {
@@ -75,7 +76,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
               Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)), //TODO
               Json.obj("owningTeam" -> Json.obj("$in" -> user.supervisorTeams))
             )))
-        case _                =>
+        case _ =>
           AllowIf(
             Json.obj("isPublic" -> true)
           )
@@ -90,10 +91,10 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     findOne(byNameQ(name))
 
   def updateDataSource(
-    name: String,
-    dataStoreInfo: DataStoreInfo,
-    source: InboxDataSource,
-    isActive: Boolean)(implicit ctx: DBAccessContext) = {
+                        name: String,
+                        dataStoreInfo: DataStoreInfo,
+                        source: InboxDataSource,
+                        isActive: Boolean)(implicit ctx: DBAccessContext) = {
     update(
       byNameQ(name),
       Json.obj("$set" -> Json.obj(

@@ -6,6 +6,7 @@ package com.scalableminds.webknossos.datastore.controllers
 import java.io.File
 
 import com.google.inject.Inject
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.binary.api.DataSourceService
 import com.scalableminds.webknossos.datastore.binary.helpers.DataSourceRepository
 import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSource, DataSourceId}
@@ -15,6 +16,7 @@ import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
 import play.api.mvc._
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -50,7 +52,7 @@ class DataSourceController @Inject()(
     val uploadForm = Form(
       tuple(
         "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "team" -> nonEmptyText
+        "organization" -> nonEmptyText
       )).fill(("", ""))
 
     AllowRemoteOrigin {
@@ -58,8 +60,8 @@ class DataSourceController @Inject()(
         hasErrors =
           formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
         success = {
-          case (name, team) =>
-            val id = DataSourceId(name, team) //TODO NOTNOW
+          case (name, organization) =>
+            val id = DataSourceId(name, organization)
             for {
               _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
               zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
@@ -96,5 +98,13 @@ class DataSourceController @Inject()(
           Ok
         }
       }
+  }
+
+  def getTeamIdFromString(str: String) = {
+    val teamId = BSONObjectID.parse(str)
+    if(teamId.isSuccess)
+      Fox.successful(teamId.get)
+    else
+      Fox.failure("Not a TeamId")
   }
 }

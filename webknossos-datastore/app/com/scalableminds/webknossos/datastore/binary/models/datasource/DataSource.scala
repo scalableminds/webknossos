@@ -7,13 +7,14 @@ import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.Gen
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONObjectIDFormat
 
 package object datasource {
 
-  case class DataSourceId(name: String, team: String)
+  case class DataSourceId(name: String, organization: String)
 
   object DataSourceId {
-    implicit val dataSourceIdForamt = Json.format[DataSourceId]
+    implicit val dataSourceIdFormat: Format[DataSourceId] = Json.format[DataSourceId]
   }
 
   case class GenericDataSource[+T <: DataLayerLike](id: DataSourceId, dataLayers: List[T], scale: Scale) extends GenericInboxDataSource[T] {
@@ -44,7 +45,7 @@ package object datasource {
       }
 
       def writes(ds: GenericDataSource[T]) = Json.obj(
-        "id" -> DataSourceId.dataSourceIdForamt.writes(ds.id),
+        "id" -> DataSourceId.dataSourceIdFormat.writes(ds.id),
         "dataLayers" -> ds.dataLayers.map(Json.toJson(_)),
         "scale" -> Scale.scaleWrites. writes(ds.scale)
       )

@@ -9,7 +9,7 @@ import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.team.Role
+import models.team.{Role, TeamDAO, TeamService}
 import models.user.UserService.{Mailer => _, _}
 import models.user._
 import net.liftweb.common.{Empty, Failure, Full}
@@ -156,7 +156,8 @@ class Authentication @Inject()(
               Fox.successful(BadRequest(Json.obj("messages" -> Json.toJson(errors.map(t => Json.obj("error" -> t))))))
             } else {
               for {
-                user <- UserService.insert(signUpData.team, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+                team <- TeamDAO.findOneByName(signUpData.team)(GlobalAccessContext) //TODO
+                user <- UserService.insert(team.organization, team._id, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password)) //TODO Frontend Change NOTNOW
                 brainDBResult <- BrainTracing.register(user).toFox
               } yield {

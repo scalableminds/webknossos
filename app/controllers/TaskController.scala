@@ -23,6 +23,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONObjectIDFormat
 
 import scala.concurrent.Future
 import scala.util.Success
@@ -40,7 +41,7 @@ case class TaskParameters(
                            editRotation: Vector3D)
 
 object TaskParameters {
-  implicit val taskParametersFormat = Json.format[TaskParameters]
+  implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]
 }
 
 case class NmlTaskParameters(
@@ -53,10 +54,10 @@ case class NmlTaskParameters(
                               boundingBox: Option[BoundingBox])
 
 object NmlTaskParameters {
-  implicit val nmlTaskParametersFormat = Json.format[NmlTaskParameters]
+  implicit val nmlTaskParametersFormat: Format[NmlTaskParameters] = Json.format[NmlTaskParameters]
 }
 
-class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with FoxImplicits {
+class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -77,7 +78,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     })
   }
 
-  def createFromFile = SecuredAction.async {implicit request =>
+  def createFromFile = SecuredAction.async { implicit request =>
 
     for {
       body <- request.body.asMultipartFormData ?~> Messages("invalid")

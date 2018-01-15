@@ -16,8 +16,10 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.twirl.api.Html
 import play.api.Play.current
-import scala.concurrent.ExecutionContext.Implicits._
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONObjectIDFormat
 
+import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
@@ -126,7 +128,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   }
 
   def updateTeams(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyAs[List[String]] { teams =>
+    withJsonBodyAs[List[BSONObjectID]] { teams => //TODO
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- allowedToAdministrate(request.identity, dataSet)
@@ -143,14 +145,14 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     ((__ \ 'server).read[String] and
       (__ \ 'name).read[String] and
       (__ \ 'token).read[String] and
-      (__ \ 'team).read[String]).tupled
+      (__ \ 'team).read[BSONObjectID]).tupled
 
   private def createNDStoreDataSet(implicit request: SecuredRequest[JsValue]) =
     withJsonBodyUsing(externalDataSetFormReads){
       case (server, name, token, team) =>
         for {
           _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
-          _ <- ensureTeamAdministration(request.identity, team) //TODO
+          _ <- ensureTeamAdministration(request.identity, team)
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
           dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
           _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)

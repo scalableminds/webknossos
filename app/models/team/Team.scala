@@ -15,7 +15,7 @@ import scala.concurrent.Future
 
 case class Team(
                  name: String,
-                 organization: BSONObjectID,
+                 organization: String,
                  _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
@@ -36,7 +36,7 @@ object Team extends FoxImplicits {
 
   def teamPublicWrites(team: Team, requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] =
     for {
-      org <- OrganizationDAO.findOneById(team.organization).map(_.name).futureBox
+      org <- OrganizationDAO.findOneByName(team.organization).map(_.name).futureBox
     } yield {
       Json.obj(
         "id" -> team.id,
@@ -46,19 +46,17 @@ object Team extends FoxImplicits {
     }
 
   def teamPublicWritesBasic(team: Team)(implicit ctx: DBAccessContext): Future[JsObject] =
-    for {
-      org <- OrganizationDAO.findOneById(team.organization).map(_.name).futureBox
-    } yield {
+    Future(
       Json.obj(
         "id" -> team.id,
         "name" -> team.name,
-        "organization" -> org.toOption
+        "organization" -> team.organization
       )
-    }
+    )
 
   def teamPublicReads(requestingUser: User): Reads[Team] =
     ((__ \ "name").read[String](Reads.minLength[String](3)) and
-      (__ \ "organization").read[BSONObjectID]
+      (__ \ "organization").read[String](Reads.minLength[String](3))
       ) ((name, organization) => Team(name, organization))
 }
 

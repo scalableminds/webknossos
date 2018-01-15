@@ -33,9 +33,8 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(teamId)(GlobalAccessContext) ?~> "team.notFound"
-      teamWithParent = List(Some(team.name), team.parent).flatten //TODO meaning
-      users <- UserDAO.findByTeams(teamWithParent, false)
-      projects <- ProjectDAO.findAllByTeamNames(teamWithParent)(GlobalAccessContext)
+      users <- UserDAO.findByTeams(List(team._id), false)
+      projects <- ProjectDAO.findAllByTeamName(team._id)(GlobalAccessContext)
       entryBoxes <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))
     } yield {
       Ok(Json.toJson(entryBoxes.flatten))
@@ -101,8 +100,8 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
-      users <- UserDAO.findByTeams(List(team.name), true)(GlobalAccessContext)
-      nonAdminUsers = users.filterNot(_.isAdminOf(team.name))
+      users <- UserDAO.findByTeams(List(team._id), true)(GlobalAccessContext)
+      nonAdminUsers = users.filterNot(_.isSuperVisorOf(team._id))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield {
       Ok(Json.toJson(entries))

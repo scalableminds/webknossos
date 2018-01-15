@@ -75,7 +75,7 @@ object Global extends GlobalSettings with LazyLogging {
 object InitialData extends GlobalDBAccess with LazyLogging {
 
   val stdOrg = Organization("Connectomics department", Nil)
-  val mpi = Team("Connectomics department", stdOrg._id)
+  val mpi = Team("Connectomics department Team", stdOrg.name)
 
   def insert(conf: Configuration) = {
     insertDefaultUser(conf)
@@ -100,7 +100,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           "Boy",
           true,
           SCrypt.md5(password),
-          stdOrg._id,
+          stdOrg.name,
           List(TeamMembership(mpi._id, true)),
           isAdmin = true,
           loginInfo = UserService.createLoginInfo(email),
@@ -122,7 +122,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
       case Full(_) =>
       case _ =>
         TeamDAO.insert(mpi)
-        OrganizationDAO.addTeam(mpi.organization, mpi)
+        OrganizationDAO.addTeam(stdOrg._id, mpi)
     }
   }
 

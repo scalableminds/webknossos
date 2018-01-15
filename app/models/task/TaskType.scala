@@ -30,7 +30,7 @@ object TaskType {
   def fromForm(
     summary: String,
     description: String,
-    team: String,
+    team: BSONObjectID,
     settings: AnnotationSettings) = {
 
     TaskType(

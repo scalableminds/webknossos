@@ -20,7 +20,7 @@ import scala.concurrent.Future
 
 case class Project(
                     name: String,
-                    team: BSONObjectID, //TODO
+                    team: BSONObjectID,
                     _owner: BSONObjectID,
                     priority: Int,
                     paused: Boolean,
@@ -169,11 +169,11 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
     findOne("name", name)
   }
 
-  def findAllByTeamName(teamName: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+  def findAllByTeamName(teamName: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find("team", teamName).collect[List]()
   }
 
-  def findAllByTeamNames(teamNames: List[String])(implicit ctx: DBAccessContext) = withExceptionCatcher {
+  def findAllByTeamNames(teamNames: List[BSONObjectID])(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find(Json.obj("team" -> Json.obj("$in" -> teamNames))).cursor[Project]().collect[List]()
   }
 

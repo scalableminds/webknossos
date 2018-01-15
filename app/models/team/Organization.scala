@@ -19,6 +19,7 @@ case class Organization(
                          _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
+  lazy val teamAll = BSONObjectID.generate
 }
 
 object Organization extends FoxImplicits {
@@ -61,7 +62,7 @@ object OrganizationDAO extends SecuredBaseDAO[Organization] with FoxImplicits {
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
-          AllowIf(Json.obj("_id" -> user.organization))
+          AllowIf(Json.obj("name" -> user.organization))
         case _ =>
           DenyEveryone()
       }

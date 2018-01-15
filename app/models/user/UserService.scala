@@ -45,7 +45,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   def findAllNonAnonymous()(implicit ctx: DBAccessContext) =
     UserDAO.findAllNonAnonymous
 
-  def findByTeams(teams: List[String], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = {
+  def findByTeams(teams: List[BSONObjectID], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = {
     UserDAO.findByTeams(teams, includeAnonymous)
   }
 
@@ -64,7 +64,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
     UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(organization: BSONObjectID, teamId: BSONObjectID, email: String, firstName: String,
+  def insert(organization: String, teamId: BSONObjectID, email: String, firstName: String,
              lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
     for {
       teamOpt <- TeamDAO.findOneById(teamId)(GlobalAccessContext).futureBox //TODO

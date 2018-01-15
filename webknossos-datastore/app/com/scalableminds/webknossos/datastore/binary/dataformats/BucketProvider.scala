@@ -43,7 +43,7 @@ trait BucketProvider extends FoxImplicits with LazyLogging {
       }.recover {
         case _: TimeoutException | _: InterruptedException =>
           logger.warn(s"Loading cube timed out. " +
-            s"(${readInstruction.dataSource.id.team}/${readInstruction.dataSource.id.name}/${readInstruction.dataLayer.name}, " +
+            s"(${readInstruction.dataSource.id.organization}/${readInstruction.dataSource.id.name}/${readInstruction.dataLayer.name}, " +
             s"Cube: (${readInstruction.cube.x}, ${readInstruction.cube.y}, ${readInstruction.cube.z})")
           Failure("dataStore.load.timeout")
       }

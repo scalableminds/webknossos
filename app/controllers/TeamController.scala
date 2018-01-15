@@ -61,8 +61,6 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
     withJsonBodyUsing(Team.teamPublicReads(request.identity)) { team =>
       for {
         _ <- TeamDAO.findOneByName(team.name)(GlobalAccessContext).reverse ?~> Messages("team.name.alreadyTaken")
-        parent <- team.parent.toFox.flatMap(TeamDAO.findOneByName(_)(GlobalAccessContext)) ?~> Messages("team.parent.notFound") //TODO
-        _ <- ensureRootTeam(parent) ?~> Messages("team.parent.mustBeRoot") // current limitation
         _ <- TeamService.create(team, request.identity)
         js <- Team.teamPublicWrites(team, request.identity)
       } yield {

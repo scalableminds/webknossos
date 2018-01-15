@@ -13,7 +13,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class CachedCube(
-                       team: String,
+                       organization: String,
                        dataSourceName: String,
                        dataLayerName: String,
                        resolution: Int,
@@ -26,7 +26,7 @@ object CachedCube {
 
   def from(loadInstruction: DataReadInstruction): CachedCube =
     CachedCube(
-      loadInstruction.dataSource.id.team,
+      loadInstruction.dataSource.id.organization,
       loadInstruction.dataSource.id.name,
       loadInstruction.dataLayer.name,
       loadInstruction.cube.resolution,

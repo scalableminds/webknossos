@@ -115,8 +115,8 @@ object AnnotationService
   def annotationsFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation]().collect[List]()
 
-  def countUnfinishedAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countUnfinishedByTaskIdsAndType(List(task._id), AnnotationType.Task)
+  def countActiveAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.countActiveByTaskIdsAndType(List(task._id), AnnotationType.Task)
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
     for {
@@ -164,7 +164,7 @@ object AnnotationService
         newAnnotation = annotation.copy(
           _user = Some(user._id),
           tracingReference = newTracing,
-          state = InProgress,
+          state = Active,
           typ = AnnotationType.Task,
           _id = BSONObjectID.generate,
           createdTimestamp = System.currentTimeMillis,

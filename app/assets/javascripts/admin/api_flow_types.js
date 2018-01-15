@@ -114,7 +114,7 @@ export type APITaskTypeType = {
   +settings: SettingsType,
 };
 
-export type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
+export type TaskStatusType = { +open: number, +active: number, +finished: number };
 
 export type APIScriptType = {
   +id: string,

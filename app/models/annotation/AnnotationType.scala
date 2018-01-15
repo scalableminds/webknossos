@@ -9,6 +9,8 @@ object AnnotationTypeSQL extends Enumeration {
   implicit val enumReads: Reads[AnnotationTypeSQL.Value] = EnumUtils.enumReads(AnnotationTypeSQL)
 
   implicit def enumWrites: Writes[AnnotationTypeSQL.Value] = EnumUtils.enumWrites
+
+  def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
 

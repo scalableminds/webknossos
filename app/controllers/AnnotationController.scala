@@ -17,6 +17,7 @@ import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
 import slick.jdbc.PostgresProfile.api._
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._

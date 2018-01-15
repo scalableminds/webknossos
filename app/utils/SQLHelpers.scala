@@ -1,0 +1,48 @@
+/*
+ * Copyright (C) 2011-2018 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
+package utils
+
+
+import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.AnnotationSQL
+import play.api.libs.json.Json
+import slick.lifted.{AbstractTable, Rep, TableQuery}
+import slick.jdbc.PostgresProfile.api._
+import play.api.libs.concurrent.Execution.Implicits._
+
+
+case class ObjectId(id: String)
+object ObjectId { implicit val jsonFormat = Json.format[ObjectId] }
+
+
+
+trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
+  val db = Database.forConfig("postgres")
+
+  def collection: TableQuery[X]
+
+  def idColumn(x: X): Rep[String]
+  def isDeletedColumn(x: X): Rep[Boolean]
+
+  def parse(row: X#TableElementType): Option[C]
+
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] = {
+    db.run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {
+      case Some(r) =>
+        parse(r)
+      case _ =>
+        None
+    }
+  }
+
+  def parseTuple(literal: String) = parseTupleWith(literal, identity)
+
+  def parseTupleWith[T](literal: String, parseEach: String => T): List[T] = {
+    //TODO: error handling, escape handling. copy from js parser?
+    val trimmed = literal.drop(1).dropRight(1)
+    if (trimmed.isEmpty) List()
+    else trimmed.split(",", -1).toList.map(parseEach)
+  }
+}

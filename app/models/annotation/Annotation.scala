@@ -19,7 +19,67 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.AbstractTable
+import utils.{ObjectId, SQLDAO}
+
+
+case class AnnotationSQL(
+                          _id: ObjectId,
+                          _task: Option[ObjectId] = None,
+                          _team: ObjectId,
+                          _user: ObjectId,
+                          tracing: TracingReference,
+
+                          description: String = "",
+                          isPublic: Boolean = false,
+                          name: String = "",
+                          state: AnnotationState.Value = InProgress,
+                          statistics: JsObject = Json.obj(),
+                          tags: Set[String] = Set.empty,
+                          tracingTime: Option[Long] = None,
+                          typ: AnnotationTypeSQL.Value = AnnotationTypeSQL.Explorational,
+
+                          created: Long = System.currentTimeMillis,
+                          modified: Long = System.currentTimeMillis,
+                          isDeleted: Boolean = false
+                        )
+object AnnotationSQL { implicit val jsonFormat = Json.format[AnnotationSQL] }
+
+object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotations] {
+  val collection = Annotations
+
+  def idColumn(x: Annotations): Rep[String] = x._Id
+  def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
+
+  def parse(r: AnnotationsRow): Option[AnnotationSQL] =
+    for {
+      state <- AnnotationState.fromString(r.state)
+      tracingTyp <- TracingType.fromString(r.tracingTyp)
+    } yield {
+      AnnotationSQL(
+        ObjectId(r._Id),
+        r._Task.map(ObjectId(_)),
+        ObjectId(r._Team),
+        ObjectId(r._User),
+        TracingReference(r.tracingId.toString, tracingTyp),
+        r.description,
+        r.ispublic,
+        r.name,
+        state,
+        Json.parse(r.statistics).as[JsObject],
+        parseTuple(r.tags).toSet,
+        r.tracingtime,
+        AnnotationTypeSQL.fromString(r.typ).get, //todo: how do we feel about this .get? should we rely on the db following the schema?
+        r.created.getTime,
+        r.modified.getTime,
+        r.isdeleted
+      )
+    }
+}
+
+
+
+
+
 
 case class Annotation(
                        _user: Option[BSONObjectID],
@@ -114,76 +174,6 @@ case class Annotation(
 
 object Annotation  {
   implicit val annotationFormat = Json.format[Annotation]
-}
-
-case class AnnotationSQL(
-                          _id: ObjectId,
-                          _task: Option[ObjectId] = None,
-                          _team: ObjectId,
-                          _user: ObjectId,
-                          tracing: TracingReference,
-
-                          description: String = "",
-                          isPublic: Boolean = false,
-                          name: String = "",
-                          state: AnnotationState.Value = InProgress,
-                          statistics: JsObject = Json.obj(),
-                          tags: Set[String] = Set.empty,
-                          tracingTime: Option[Long] = None,
-                          typ: AnnotationTypeSQL.Value = AnnotationTypeSQL.Explorational,
-
-                          created: Long = System.currentTimeMillis,
-                          modified: Long = System.currentTimeMillis,
-                          isDeleted: Boolean = false
-                        )
-
-case class ObjectId(id: String)
-object ObjectId { implicit val jsonFormat = Json.format[ObjectId] }
-
-object AnnotationSQL {
-  implicit val jsonFormat = Json.format[AnnotationSQL]
-}
-
-trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
-  val db = Database.forConfig("postgres")
-
-  def collection: TableQuery[X]
-
-  def idColumn(x: X): Rep[String]
-
-  def parse(row: X#TableElementType): Option[C]
-
-  def findOne(id: ObjectId): Fox[C] = {
-    db.run(collection.filter(idColumn(_) === id.id).result.headOption).map {
-      case Some(r) =>
-        parse(r)
-      case _ =>
-        None
-    }
-  }
-}
-
-object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotations] {
-  val collection = Annotations
-
-  def idColumn(x: Annotations): Rep[String] = x._Id
-
-  def parse(r: AnnotationsRow): Option[AnnotationSQL] =
-    for {
-      state <- AnnotationState.fromString(r.state)
-      tracingTyp <- TracingType.fromString(r.tracingTyp)
-    } yield {
-      AnnotationSQL(
-        ObjectId(r._Id),
-        r._Task.map(ObjectId(_)),
-        ObjectId(r._Team),
-        ObjectId(r._User),
-        TracingReference(r.tracingId.toString, tracingTyp),
-        r.description,
-        r.ispublic,
-        r.name,
-        state)
-    }
 }
 
 

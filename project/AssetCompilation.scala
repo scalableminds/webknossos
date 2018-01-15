@@ -98,6 +98,7 @@ object AssetCompilation {
     AssetCompilation.SettingsKeys.npmPath := "yarn",
     run in Compile <<= (run in Compile) map(killWebpack) dependsOn webpackGenerateTask,
     sourceGenerators in Compile <+= slickClassesFromDBSchemaTask,
+    managedSourceDirectories in Compile += sourceManaged.value,
     stage <<= stage dependsOn assetsGenerationTask,
     dist <<= dist dependsOn assetsGenerationTask
   )

@@ -3,8 +3,8 @@
  */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
-import com.scalableminds.webknossos.datastore.binary.models.BucketPosition
-import com.scalableminds.webknossos.datastore.binary.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.{FossilDBClient, KeyValueStoreImplicits}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper

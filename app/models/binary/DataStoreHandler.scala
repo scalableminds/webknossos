@@ -7,7 +7,6 @@ import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 
-import com.scalableminds.webknossos.datastore.binary.helpers.ThumbnailHelpers
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.ImageThumbnail
@@ -197,7 +196,7 @@ class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     for {
       dataLayer <- dataSet.dataSource.toUsable.flatMap(ds => ds.getDataLayer(dataLayerName)).toFox
       accessToken <- dataStoreInfo.accessToken ?~> "ndstore.accesstoken.missing"
-      thumbnail = ThumbnailHelpers.goodThumbnailParameters(dataLayer, width, height)
+      thumbnail = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height)
       resolution = (math.log(thumbnail.resolution) / math.log(2)).toInt
       imageParams = s"${resolution}/${thumbnail.x},${thumbnail.x + width}/${thumbnail.y},${thumbnail.y + height}/${thumbnail.z},${thumbnail.z + 1}"
       baseUrl = s"${dataStoreInfo.url}/nd/ca"

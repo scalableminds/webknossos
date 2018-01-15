@@ -23,9 +23,6 @@ import play.api.i18n.Messages
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 
-/**
-  * Created by youri on 08.01.18.
-  */
 class OxalisBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSettings,
                                             dao: BearerTokenAuthenticatorDAO,
                                             idGenerator: IDGenerator,
@@ -73,14 +70,21 @@ class OxalisBearerTokenAuthenticatorService(settings: BearerTokenAuthenticatorSe
       tokenId
     }
 
-  def userForToken(token: String)(implicit ctx: DBAccessContext): Fox[User] =
+  def remove(tokenId: String): Fox[Unit] =
+    dao.remove(tokenId)
+
+  def userForToken(token: String, tokenType: TokenType.TokenTypeValue)(implicit ctx: DBAccessContext): Fox[User] =
     (for {
-      tokenAuthenticator <- dao.findOne("id", token, TokenType.ResetPassword) ?~> Messages("auth.invalidToken")
+      tokenAuthenticator <- dao.findOne("id", token, tokenType) ?~> Messages("auth.invalidToken")
       _ <- (tokenAuthenticator.isValid) ?~> Messages("auth.invalidToken")
-      _ <- dao.remove(tokenAuthenticator.id).toFox
     } yield {
       UserService.findOneByEmail(tokenAuthenticator.loginInfo.providerKey)
     }).flatten
+
+  def userForTokenOpt(tokenOpt: Option[String], tokenType: TokenType.TokenTypeValue)(implicit ctx: DBAccessContext): Fox[User] = tokenOpt match {
+    case Some(token) => userForToken(token, tokenType)
+    case _ => Fox.empty
+  }
 
   // convenient methods
   // TODO: which methods should be visible from outside? (to avoid mishandling of init create and add)

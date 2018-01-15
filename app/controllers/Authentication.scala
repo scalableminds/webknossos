@@ -247,10 +247,11 @@ class Authentication @Inject()(
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
+        bearerTokenAuthenticatorService.userForToken(passwords.token.trim, TokenType.ResetPassword)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
               _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
             Future.successful(BadRequest(Messages("auth.invalidToken")))

@@ -52,7 +52,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     request.body.validate[List[InboxDataSource]] match {
       case JsSuccess(dataSources, _) =>
         for {
-          _ <- DataSetService.deactivateDataSources(request.dataStore.name)(GlobalAccessContext)
+          _ <- DataSetService.deactivateUnreportedDataSources(request.dataStore.name, dataSources)(GlobalAccessContext)
           _ <- DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
         } yield {
           JsonOk

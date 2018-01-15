@@ -153,9 +153,8 @@ export class OxalisModel {
       const nonNullAnnotation = annotation;
       tracing = await doWithToken(token =>
         Request.receiveJSON(
-          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content.typ}/${
-            nonNullAnnotation.content.id
-          }?token=${token}`,
+          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content
+            .typ}/${nonNullAnnotation.content.id}?token=${token}`,
         ),
       );
       tracing.id = annotation.content.id;
@@ -276,7 +275,8 @@ export class OxalisModel {
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
     for (const layer of layers) {
-      const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
+      const maxLayerZoomStep =
+        Math.log(Math.max(...layer.resolutions.map(r => r.resolution))) / Math.LN2;
       this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
     }
 
@@ -356,7 +356,7 @@ export class OxalisModel {
         height: tracing.boundingBox.height,
         depth: tracing.boundingBox.depth,
       },
-      resolutions: [1],
+      resolutions: [{ resolution: 1, scale: [1, 1, 1] }],
       elementClass: tracing.elementClass,
       mappings:
         existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],

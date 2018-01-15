@@ -14,11 +14,11 @@ import play.api.{Configuration, Environment}
 
 class DataStoreModule(environment: Environment, configuration: Configuration) extends AbstractModule {
 
-  val system = ActorSystem("braingames-binary")
+  val system = ActorSystem("webknossos-datastore")
 
   def configure() = {
     bind(classOf[AccessTokenService]).asEagerSingleton()
-    bind(classOf[ActorSystem]).annotatedWith(Names.named("braingames-binary")).toInstance(system)
+    bind(classOf[ActorSystem]).annotatedWith(Names.named("webknossos-datastore")).toInstance(system)
     bind(classOf[BinaryDataService]).asEagerSingleton()
     bind(classOf[DataSourceRepository]).asEagerSingleton()
     bind(classOf[DataSourceService]).asEagerSingleton()

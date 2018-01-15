@@ -13,7 +13,7 @@ import com.scalableminds.util.tools.FoxImplicits
 
 class DataSourceRepository @Inject()(
                                       webKnossosServer: WebKnossosServer,
-                                      @Named("braingames-binary") val system: ActorSystem
+                                      @Named("webknossos-datastore") val system: ActorSystem
                                     )
     extends TemporaryStore[String, InboxDataSource]
     with FoxImplicits {

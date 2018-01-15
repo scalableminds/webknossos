@@ -31,7 +31,7 @@ class DataSourceService @Inject()(
                                    config: Configuration,
                                    dataSourceRepository: DataSourceRepository,
                                    val lifecycle: ApplicationLifecycle,
-                                   @Named("braingames-binary") val system: ActorSystem
+                                   @Named("webknossos-datastore") val system: ActorSystem
                                  ) extends IntervalScheduler with LazyLogging with FoxImplicits {
 
   override protected lazy val enabled: Boolean = config.getBoolean("braingames.binary.changeHandler.enabled").getOrElse(true)

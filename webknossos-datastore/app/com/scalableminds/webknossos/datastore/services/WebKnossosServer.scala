@@ -28,7 +28,7 @@ object DataStoreStatus {
 class WebKnossosServer @Inject()(
                                   config: Configuration,
                                   val lifecycle: ApplicationLifecycle,
-                                  @Named("braingames-binary") val system: ActorSystem,
+                                  @Named("webknossos-datastore") val system: ActorSystem,
                                   val messagesApi: MessagesApi
                                 ) extends IntervalScheduler with LazyLogging {
 

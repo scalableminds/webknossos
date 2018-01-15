@@ -1,6 +1,7 @@
 package models.team
 
 import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
 
 /**
  * Company: scalableminds
@@ -8,7 +9,7 @@ import play.api.libs.json.Json
  * Date: 14.07.13
  * Time: 16:49
  */
-case class TeamMembership(team: String, isSuperVisor: Boolean){
+case class TeamMembership(team: BSONObjectID, isSuperVisor: Boolean){
 
   override def toString =
     if(isSuperVisor)

@@ -31,7 +31,7 @@ case class User(
                  dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
                  experiences: Map[String, Int] = Map.empty,
                  lastActivity: Long = System.currentTimeMillis,
-                 isAdmin: Boolean,
+                 isAdmin: Boolean = false,
                  _isAnonymous: Option[Boolean] = None,
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate,
@@ -53,11 +53,11 @@ case class User(
 
   lazy val supervisorTeams = teams.filter(_.isSuperVisor)
 
-  lazy val supervisorTeamNames = supervisorTeams.map(_.team)
+  lazy val supervisorTeamIds = supervisorTeams.map(_.team)
 
-  lazy val hasAdminAccess = adminTeams.nonEmpty
+  lazy val hasAdminAccess = supervisorTeams.nonEmpty //adminTeams.nonEmpty
 
-  def isSuperVisorOf(team: String) = supervisorTeamNames.contains(team)
+  def isSuperVisorOf(team: BSONObjectID) = supervisorTeamIds.contains(team)
 
   override def toString = email
 
@@ -95,11 +95,10 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.hasAdminAccess && ( teams.isEmpty || teamNames.exists(other.isAdminOf))
+    other.hasAdminAccess && (teams.isEmpty || teamNames.exists(other.isSuperVisorOf)) //TODO
 
-  def isAdminOf(user: User): Boolean ={
-    user.teamNames.intersect(this.adminTeamNames).nonEmpty
-  }
+  def isSuperVisorOf(user: User): Boolean =
+    user.teamNames.intersect(this.supervisorTeams).nonEmpty
 }
 
 object User {
@@ -117,7 +116,7 @@ object User {
       (__ \ "experiences").write[Map[String, Int]] and
       (__ \ "lastActivity").write[Long] and
       (__ \ "isAnonymous").write[Boolean] and
-      (__ \ "isEditable").write[Boolean])(u =>
+      (__ \ "isEditable").write[Boolean]) (u =>
       (u.id, u.email, u.firstName, u.lastName, u.isActive, u.teams, u.experiences,
         u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
 
@@ -127,10 +126,10 @@ object User {
       (__ \ "firstName").write[String] and
       (__ \ "lastName").write[String] and
       (__ \ "isAnonymous").write[Boolean] and
-      (__ \ "teams").write[List[TeamMembership]])( u =>
+      (__ \ "teams").write[List[TeamMembership]]) (u =>
       (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams))
 
-  val defaultDeactivatedUser = User("","","", teams = Nil, loginInfo = LoginInfo(CredentialsProvider.ID, ""), passwordInfo = PasswordInfo("SCrypt", ""))
+  val defaultDeactivatedUser = User("", "", "", organization = null, teams = Nil, loginInfo = LoginInfo(CredentialsProvider.ID, ""), passwordInfo = PasswordInfo("SCrypt", ""))
 }
 
 object UserDAO extends SecuredBaseDAO[User] {
@@ -142,7 +141,7 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   underlying.indexesManager.ensure(Index(Seq("email" -> IndexType.Ascending)))
 
-  override val AccessDefinitions = new DefaultAccessDefinitions{
+  override val AccessDefinitions = new DefaultAccessDefinitions {
 
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
@@ -159,9 +158,9 @@ object UserDAO extends SecuredBaseDAO[User] {
       ctx.data match {
         case Some(user: User) if user.hasAdminAccess =>
           AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams.team" -> Json.obj("$in" -> user.adminTeamNames)),
+            Json.obj("teams.team" -> Json.obj("$in" -> user.supervisorTeams)),
             Json.obj("teams" -> Json.arr())
-            )))
+          )))
         case _ =>
           DenyEveryone()
       }
@@ -171,7 +170,7 @@ object UserDAO extends SecuredBaseDAO[User] {
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
 
   def findByTeams(teams: List[String], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    val anonymousFilter = if(includeAnonymous) Json.obj() else Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))
+    val anonymousFilter = if (includeAnonymous) Json.obj() else Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))
     find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team))) ++ anonymousFilter).cursor[User]().collect[List]()
   }
 
@@ -229,10 +228,10 @@ object UserDAO extends SecuredBaseDAO[User] {
     )
   }
 
-  def find(loginInfo:LoginInfo)(implicit ctx: DBAccessContext):Future[Option[User]] =
+  def find(loginInfo: LoginInfo)(implicit ctx: DBAccessContext): Future[Option[User]] =
     findOneByEmail(loginInfo.providerKey).futureBox.map(_.toOption)
 
-  def save(user:User)(implicit ctx: DBAccessContext) =
+  def save(user: User)(implicit ctx: DBAccessContext) =
     insert(user)
 
 }

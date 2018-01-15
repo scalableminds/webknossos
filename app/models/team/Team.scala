@@ -21,7 +21,7 @@ case class Team(
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
-    user.organization == organization && (user.isSuperVisorOf(name) || user.isAdmin)
+    user.organization == organization && (user.isSuperVisorOf(_id) || user.isAdmin)
 
   def couldBeAdministratedBy(user: User) =
     user.organization == organization
@@ -61,7 +61,7 @@ object Team extends FoxImplicits {
 
 object TeamService {
   def create(team: Team, user: User)(implicit ctx: DBAccessContext) = {
-    UserDAO.addTeam(user._id, TeamMembership(team.name, true))
+    UserDAO.addTeam(user._id, TeamMembership(team._id, true))
     TeamDAO.insert(team)
   }
 

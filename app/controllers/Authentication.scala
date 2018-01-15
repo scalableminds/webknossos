@@ -53,7 +53,7 @@ object AuthForms {
     "lastName" -> nonEmptyText
   )
   ((team, email, password, firstName, lastName) => SignUpData(team, email, firstName, lastName, password._1))
-  (signUpData => Some((signUpData.team, signUpData.email, ("",""), signUpData.firstName, signUpData.lastName)))
+  (signUpData => Some((signUpData.team, signUpData.email, ("", ""), signUpData.firstName, signUpData.lastName)))
   )
 
   // Sign in
@@ -117,9 +117,8 @@ class Authentication @Inject()(
   val automaticUserActivation: Boolean =
     configuration.getBoolean("application.authentication.enableDevAutoVerify").getOrElse(false)
 
-  val roleOnRegistration: Role =
-    if (configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)) Role.Admin
-    else Role.User
+  val roleOnRegistration: Boolean =
+    configuration.getBoolean("application.authentication.enableDevAutoAdmin").getOrElse(false)
 
   def normalizeName(name: String): Option[String] = {
     val replacementMap = Map("ü" -> "ue", "Ü" -> "Ue", "ö" -> "oe", "Ö" -> "Oe", "ä" -> "ae", "Ä" -> "Ae", "ß" -> "ss",
@@ -142,8 +141,12 @@ class Authentication @Inject()(
         val email = signUpData.email.toLowerCase
         val loginInfo = LoginInfo(CredentialsProvider.ID, email)
         var errors = List[String]()
-        val firstName = normalizeName(signUpData.firstName).getOrElse { errors ::= Messages("user.firstName.invalid"); "" }
-        val lastName = normalizeName(signUpData.lastName).getOrElse { errors ::= Messages("user.lastName.invalid"); "" }
+        val firstName = normalizeName(signUpData.firstName).getOrElse {
+          errors ::= Messages("user.firstName.invalid"); ""
+        }
+        val lastName = normalizeName(signUpData.lastName).getOrElse {
+          errors ::= Messages("user.lastName.invalid"); ""
+        }
         UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
           case Full(_) =>
             errors ::= Messages("user.email.alreadyInUse")
@@ -154,7 +157,7 @@ class Authentication @Inject()(
             } else {
               for {
                 user <- UserService.insert(signUpData.team, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
-                  loginInfo, passwordHasher.hash(signUpData.password))
+                  loginInfo, passwordHasher.hash(signUpData.password)) //TODO Frontend Change NOTNOW
                 brainDBResult <- BrainTracing.register(user).toFox
               } yield {
                 Mailer ! Send(DefaultMails.registerMail(user.name, user.email, brainDBResult))
@@ -317,10 +320,10 @@ class Authentication @Inject()(
   }
 
   def singleSignOn(sso: String, sig: String) = UserAwareAction.async { implicit request =>
-    if(ssoKey == "")
+    if (ssoKey == "")
       logger.warn("No SSO key configured! To use single-sign-on a sso key needs to be defined in the configuration.")
 
-    if(request.identity.isDefined) {
+    if (request.identity.isDefined) {
       // logged in
       val user = request.identity.get
       // Check if the request we recieved was signed using our private sso-key

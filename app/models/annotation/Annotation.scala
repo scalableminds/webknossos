@@ -22,7 +22,7 @@ case class Annotation(
                        _user: Option[BSONObjectID],
                        tracingReference: TracingReference,
                        dataSetName: String,
-                       team: String,
+                       team: BSONObjectID,
                        settings: AnnotationSettings,
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
@@ -160,7 +160,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         case Some(user: User) =>
           AllowIf(Json.obj(
             "$or" -> Json.arr(
-              Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)),
+              Json.obj("team" -> Json.obj("$in" -> user.supervisorTeams)),
               Json.obj("_user"-> user._id))
             ))
         case _ =>

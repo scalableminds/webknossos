@@ -28,7 +28,7 @@ class info(message: String) extends scala.annotation.StaticAnnotation
 
 case class Task(
                  @info("Reference to task type") _taskType: BSONObjectID,
-                 @info("Assigned name") team: String,
+                 @info("Assigned team ObjectID") team: BSONObjectID,
                  @info("Required experience") neededExperience: Experience = Experience.empty,
                  @info("Number of total instances") instances: Int = 1,
                  @info("Number of open (=remaining =unassigned) instances") openInstances: Int = 1,
@@ -146,7 +146,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     override def removeQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.supervisorTeamIds)))
         case _ =>
           DenyEveryone()
       }
@@ -163,7 +163,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
 
   def findAllAdministratable(user: User, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find(Json.obj(
-      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task]().collect[List](maxDocs = limit)
+      "team" -> Json.obj("$in" -> user.supervisorTeamIds))).cursor[Task]().collect[List](maxDocs = limit)
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {

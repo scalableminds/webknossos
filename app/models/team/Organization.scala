@@ -67,7 +67,11 @@ object OrganizationDAO extends SecuredBaseDAO[Organization] with FoxImplicits {
       }
     }
   }
+  def findByIdQ(id: BSONObjectID) = Json.obj("_id" -> id)
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) =
     findOne("name", name)
+
+  def addTeam(_organization: BSONObjectID, team: Team)(implicit ctx: DBAccessContext) =
+    update(findByIdQ(_organization), Json.obj("$push" -> Json.obj("teams" -> team._id)))
 }

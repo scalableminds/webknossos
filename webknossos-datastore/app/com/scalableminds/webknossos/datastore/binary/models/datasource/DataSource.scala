@@ -6,10 +6,11 @@ package com.scalableminds.webknossos.datastore.binary.models
 import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.GenericInboxDataSource
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import play.api.libs.json._
+import reactivemongo.bson.BSONObjectID
 
 package object datasource {
 
-  case class DataSourceId(name: String, team: String)
+  case class DataSourceId(name: String, team: BSONObjectID)
 
   object DataSourceId {
     implicit val dataSourceIdForamt = Json.format[DataSourceId]

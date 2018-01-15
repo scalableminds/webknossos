@@ -23,8 +23,8 @@ import scala.concurrent.Future
 
 class UserController @Inject()(val messagesApi: MessagesApi)
   extends Controller
-  with Dashboard
-  with FoxImplicits {
+    with Dashboard
+    with FoxImplicits {
 
   val defaultAnnotationLimit = 1000
 
@@ -121,7 +121,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-        _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
+      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
       content <- dashboardTaskAnnotations(user, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
       Ok(content)
@@ -141,7 +141,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   }
 
   // REST API
-  def list = SecuredAction.async{ implicit request =>
+  def list = SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
       Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.identity) == value),
@@ -176,18 +176,9 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
     Fox.combined(teams.map {
-      case (TeamMembership(_, Role.Admin), team) if(!team.couldBeAdministratedBy(user) && !team.parent.exists(p => teams.exists(_._1.team == p))) =>
+      case (TeamMembership(_, true), team) if (!team.couldBeAdministratedBy(user) ) => //&& !team.parent.exists(p => teams.exists(_._1.team == p))) =>
         Fox.failure(Messages("team.admin.notPossibleBy", team.name, user.name))
-      case (_, team)                                                                   =>
-        Fox.successful(team)
-    })
-  }
-
-  def ensureRoleExistence(teams: List[(TeamMembership, Team)]) = {
-    Fox.combined(teams.map {
-      case (TeamMembership(_, role), team) if !team.roles.contains(role) =>
-        Fox.failure(Messages("team.nonExistentRole", team.name, role.name))
-      case (_, team)                                                     =>
+      case (_, team) =>
         Fox.successful(team)
     })
   }
@@ -199,12 +190,11 @@ class UserController @Inject()(val messagesApi: MessagesApi)
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-          teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext) ?~> Messages("team.notFound")))
-          allTeams <- Fox.serialSequence(user.teams)(t => TeamDAO.findOneByName(t.team)(GlobalAccessContext)).map(_.flatten)
-          teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isAdminOf(t.team))
+          teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneById(t.team)(GlobalAccessContext) ?~> Messages("team.notFound")))
+          allTeams <- Fox.serialSequence(user.teams)(t => TeamDAO.findOneById(t.team)(GlobalAccessContext)).map(_.flatten)
+          teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isSuperVisorOf(t.team))
           assignedMembershipWTeams = assignedMemberships.zip(teams)
-          teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isAdminOf(t._1.team))
-          _ <- ensureRoleExistence(teamsWithUpdate)
+          teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isSuperVisorOf(t._1.team))
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate

@@ -59,7 +59,7 @@ class DataSourceController @Inject()(
           formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
         success = {
           case (name, team) =>
-            val id = DataSourceId(name, team)
+            val id = DataSourceId(name, team) //TODO NOTNOW
             for {
               _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
               zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")

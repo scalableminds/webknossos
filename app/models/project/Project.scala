@@ -20,7 +20,7 @@ import scala.concurrent.Future
 
 case class Project(
                     name: String,
-                    team: String,
+                    team: BSONObjectID, //TODO
                     _owner: BSONObjectID,
                     priority: Int,
                     paused: Boolean,

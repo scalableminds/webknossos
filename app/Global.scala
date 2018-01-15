@@ -19,7 +19,7 @@ import play.api.libs.json.Json
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 
-object Global extends GlobalSettings with LazyLogging{
+object Global extends GlobalSettings with LazyLogging {
 
   override def onStart(app: Application) {
     val conf = app.configuration
@@ -56,7 +56,9 @@ object Global extends GlobalSettings with LazyLogging{
     if (request.uri.matches("^(/annotations/|/datasets/|/api/|/data/|/assets/).*$")) {
       super.onRouteRequest(request)
     } else {
-      Some(Action {Ok(views.html.main())})
+      Some(Action {
+        Ok(views.html.main())
+      })
     }
   }
 
@@ -67,15 +69,17 @@ object Global extends GlobalSettings with LazyLogging{
 }
 
 /**
- * Initial set of data to be imported
- * in the sample application.
- */
+  * Initial set of data to be imported
+  * in the sample application.
+  */
 object InitialData extends GlobalDBAccess with LazyLogging {
 
-  val mpi = Team("Connectomics department", None, RoleService.roles)
+  val stdOrg = Organization("Connectomics department", Nil)
+  val mpi = Team("Connectomics department", stdOrg._id)
 
   def insert(conf: Configuration) = {
     insertDefaultUser(conf)
+    insertOrganizations()
     insertTeams()
     insertTasks()
     if (conf.getBoolean("datastore.enabled").getOrElse(true)) {
@@ -96,10 +100,20 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           "Boy",
           true,
           SCrypt.md5(password),
-          List(TeamMembership(mpi.name, Role.Admin)),
+          stdOrg._id,
+          List(TeamMembership(mpi.name, true)),
+          isAdmin = true,
           loginInfo = UserService.createLoginInfo(email),
           passwordInfo = UserService.createPasswordInfo(password))
         )
+    }
+  }
+
+  def insertOrganizations() = {
+    OrganizationDAO.findOne().futureBox.map {
+      case Full(_) =>
+      case _ =>
+        OrganizationDAO.insert(stdOrg)
     }
   }
 
@@ -108,6 +122,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
       case Full(_) =>
       case _ =>
         TeamDAO.insert(mpi)
+        OrganizationDAO.addTeam(mpi.organization, mpi)
     }
   }
 

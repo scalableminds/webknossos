@@ -64,12 +64,12 @@ object UserService extends FoxImplicits with IdentityService[User] {
     UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(teamName: String, email: String, firstName: String,
-             lastName: String, password: String, isActive: Boolean, teamRole: Role = Role.User, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
+  def insert(organization: BSONObjectID, teamId: BSONObjectID, email: String, firstName: String,
+             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
     for {
-      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
-      teamMemberships = teamOpt.map(t => TeamMembership(t.name, teamRole)).toList
-      user = User(email, firstName, lastName, isActive = isActive, md5(password), teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
+      teamOpt <- TeamDAO.findOneById(teamId)(GlobalAccessContext).futureBox //TODO
+      teamMemberships = teamOpt.map(t => TeamMembership(t._id, teamRole)).toList
+      user = User(email, firstName, lastName, isActive = isActive, md5(password), organization, teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo) //TODO
       _ <- UserDAO.insert(user)(GlobalAccessContext)
     } yield user
 
@@ -101,7 +101,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
-    if (user.teamNames.diff(issuingUser.adminTeamNames).isEmpty) {
+    if (user.teamNames.diff(issuingUser.supervisorTeamIds).isEmpty) {
       // if a user doesn't belong to any team any more he gets deleted
       UserDAO.removeById(user._id).flatMap {
         _ =>
@@ -110,7 +110,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
       }
     } else {
       // the issuing user is not able to remove the user from all teams, therefore the account is not getting deleted
-      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.adminTeams.contains(t.team)))
+      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.supervisorTeams.contains(t.team)))
     }
   }
 

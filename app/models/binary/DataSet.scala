@@ -13,16 +13,17 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.bson.BSONObjectID
 
 case class DataSet(
-  dataStoreInfo: DataStoreInfo,
-  dataSource: InboxDataSource,
-  allowedTeams: List[String],
-  isActive: Boolean = false,
-  isPublic: Boolean = false,
-  description: Option[String] = None,
-  defaultConfiguration: Option[DataSetConfiguration] = None,
-  created: Long = System.currentTimeMillis()) {
+                    dataStoreInfo: DataStoreInfo,
+                    dataSource: InboxDataSource,
+                    allowedTeams: List[BSONObjectID],
+                    isActive: Boolean = false,
+                    isPublic: Boolean = false,
+                    description: Option[String] = None,
+                    defaultConfiguration: Option[DataSetConfiguration] = None,
+                    created: Long = System.currentTimeMillis()) {
 
   def name = dataSource.id.name
 
@@ -32,7 +33,7 @@ case class DataSet(
     UriEncoding.encodePathSegment(name, "UTF-8")
 
   def isEditableBy(user: Option[User]) =
-    user.exists(_.isAdminOf(owningTeam))
+    user.exists(_.isSuperVisorOf(owningTeam))
 
   lazy val dataStore: DataStoreHandlingStrategy =
     DataStoreHandlingStrategy(this)
@@ -45,8 +46,8 @@ object DataSet {
     ((__ \ 'name).write[String] and
       (__ \ 'dataSource).write[InboxDataSource] and
       (__ \ 'dataStore).write[DataStoreInfo] and
-      (__ \ 'owningTeam).write[String] and
-      (__ \ 'allowedTeams).write[List[String]] and
+      (__ \ 'owningTeam).write[BSONObjectID] and
+      (__ \ 'allowedTeams).write[List[BSONObjectID]] and
       (__ \ 'isActive).write[Boolean] and
       (__ \ 'isPublic).write[Boolean] and
       (__ \ 'description).write[Option[String]] and
@@ -71,8 +72,8 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
           AllowIf(
             Json.obj("$or" -> Json.arr(
               Json.obj("isPublic" -> true),
-              Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
-              Json.obj("owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
+              Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)), //TODO
+              Json.obj("owningTeam" -> Json.obj("$in" -> user.supervisorTeams))
             )))
         case _                =>
           AllowIf(

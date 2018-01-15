@@ -25,7 +25,7 @@ case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assig
 object OpenTasksEntry { implicit val jsonFormat = Json.format[OpenTasksEntry] }
 
 case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks: Int, totalInstances: Int, openInstances: Int,
-                                finishedInstances: Int, inProgressInstances: Int)
+                                finishedInstances: Int, activeInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
 class ReportController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
@@ -49,24 +49,24 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
       firstTask <- TaskDAO.findOneByProject(project.name)
       totalInstances <- TaskDAO.sumInstancesByProject(project.name)
       finishedInstances <- AnnotationDAO.countFinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
-      inProgressInstances <- AnnotationDAO.countUnfinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
-      openInstances = totalInstances - finishedInstances - inProgressInstances
-      _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
-      _ <- assertExpDomain(firstTask, inProgressInstances, users)
-      _ <- assertAge(project, taskIds, inProgressInstances, openInstances)
+      activeInstances <- AnnotationDAO.countActiveByTaskIdsAndType(taskIds, AnnotationType.Task)
+      openInstances = totalInstances - finishedInstances - activeInstances
+      _ <- assertNotPaused(project, finishedInstances, activeInstances)
+      _ <- assertExpDomain(firstTask, activeInstances, users)
+      _ <- assertAge(project, taskIds, activeInstances, openInstances)
     } yield {
-      ProjectProgressEntry(project.name, project.paused, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
+      ProjectProgressEntry(project.name, project.paused, totalTasks, totalInstances, openInstances, finishedInstances, activeInstances)
     }
   }
 
-  private def assertNotPaused(project: Project, finishedInstances: Int, inProgressInstances: Int) = {
-    if (project.paused && finishedInstances == 0 && inProgressInstances == 0) {
+  private def assertNotPaused(project: Project, finishedInstances: Int, activeInstances: Int) = {
+    if (project.paused && finishedInstances == 0 && activeInstances == 0) {
       Fox.failure("")
     } else Fox.successful(())
   }
 
-  private def assertExpDomain(firstTask: Task, inProgressInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
-    if (inProgressInstances > 0) Fox.successful(())
+  private def assertExpDomain(firstTask: Task, activeInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
+    if (activeInstances > 0) Fox.successful(())
     else assertMatchesAnyUserOfTeam(firstTask.neededExperience, users)
   }
 
@@ -78,8 +78,8 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     }
   }
 
-  private def assertAge(project: Project, taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
-    if (inProgressInstances > 0 || (!project.paused && openInstances > 0)) Fox.successful(())
+  private def assertAge(project: Project, taskIds: List[BSONObjectID], activeInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
+    if (activeInstances > 0 || (!project.paused && openInstances > 0)) Fox.successful(())
     else {
       assertRecentlyModified(taskIds)
     }

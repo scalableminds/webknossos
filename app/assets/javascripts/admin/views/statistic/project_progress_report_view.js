@@ -116,11 +116,11 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               />
               <Column
                 title="Active"
-                dataIndex="inProgressInstances"
-                sorter={Utils.compareBy("inProgressInstances")}
+                dataIndex="activeInstances"
+                sorter={Utils.compareBy("activeInstances")}
                 render={(text, item) =>
-                  `${item.inProgressInstances} (${Math.round(
-                    item.inProgressInstances / item.totalInstances * 100,
+                  `${item.activeInstances} (${Math.round(
+                    item.activeInstances / item.totalInstances * 100,
                   )} %)`
                 }
               />

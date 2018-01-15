@@ -28,10 +28,10 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     }
 
     if (restrictions.allowFinish(user)) {
-      if (annotation.state == InProgress)
+      if (annotation.state == Active)
         executeFinish(annotation)
       else
-        Fox.failure("annotation.notInProgress")
+        Fox.failure("annotation.notActive")
     } else {
       Fox.failure("annotation.notPossible")
     }
@@ -57,7 +57,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     for {
       task <- annotation.task
       _ <- TaskAssignmentService.putBackInstance(task)
-      _ <- AnnotationDAO.updateState(annotation, Unassigned)
+      _ <- AnnotationDAO.updateState(annotation, Cancelled)
     } yield annotation
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {

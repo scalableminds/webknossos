@@ -10,7 +10,7 @@ import reactivemongo.bson.BSONObjectID
 
 package object datasource {
 
-  case class DataSourceId(name: String, team: BSONObjectID)
+  case class DataSourceId(name: String, team: String)
 
   object DataSourceId {
     implicit val dataSourceIdForamt = Json.format[DataSourceId]

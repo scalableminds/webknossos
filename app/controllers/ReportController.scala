@@ -33,7 +33,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(teamId)(GlobalAccessContext) ?~> "team.notFound"
-      teamWithParent = List(Some(team.name), team.parent).flatten
+      teamWithParent = List(Some(team.name), team.parent).flatten //TODO meaning
       users <- UserDAO.findByTeams(teamWithParent, false)
       projects <- ProjectDAO.findAllByTeamNames(teamWithParent)(GlobalAccessContext)
       entryBoxes <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))

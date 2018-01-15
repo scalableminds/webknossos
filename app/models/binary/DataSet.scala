@@ -33,7 +33,7 @@ case class DataSet(
     UriEncoding.encodePathSegment(name, "UTF-8")
 
   def isEditableBy(user: Option[User]) =
-    user.exists(_.isSuperVisorOf(owningTeam))
+    user.exists(_.isSuperVisorOf(BSONObjectID(owningTeam))) //TODO
 
   lazy val dataStore: DataStoreHandlingStrategy =
     DataStoreHandlingStrategy(this)
@@ -104,7 +104,7 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
     )
   }
 
-  def updateTeams(name: String, teams: List[String])(implicit ctx: DBAccessContext) =
+  def updateTeams(name: String, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
     update(
       byNameQ(name),
       Json.obj("$set" -> Json.obj(

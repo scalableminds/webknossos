@@ -101,7 +101,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           true,
           SCrypt.md5(password),
           stdOrg._id,
-          List(TeamMembership(mpi.name, true)),
+          List(TeamMembership(mpi._id, true)),
           isAdmin = true,
           loginInfo = UserService.createLoginInfo(email),
           passwordInfo = UserService.createPasswordInfo(password))
@@ -133,7 +133,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           val taskType = TaskType(
             "ek_0563_BipolarCells",
             "Check those cells out!",
-            mpi.name)
+            mpi._id)
           TaskTypeDAO.insert(taskType)
         }
     }

@@ -220,7 +220,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]().collect[List]()
   }
 
-  def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[String] = Nil)(implicit ctx: DBAccessContext) =
+  def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[BSONObjectID] = Nil)(implicit ctx: DBAccessContext) =
     count(defaultFindForUserQ(_user, annotationType) ++ Json.obj("team" -> Json.obj("$nin" -> excludeTeams)))
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =

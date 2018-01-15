@@ -73,7 +73,7 @@ object Project {
 
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[String] and
+      (__ \ 'team).read[BSONObjectID] and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Int] and

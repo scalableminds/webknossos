@@ -15,7 +15,7 @@ import reactivemongo.play.json.BSONFormats._
 case class TaskType(
                      summary: String,
                      description: String,
-                     team: String,
+                     team: BSONObjectID,
                      settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
                      isActive: Boolean = true,
                      _id: BSONObjectID = BSONObjectID.generate) {
@@ -37,7 +37,7 @@ object TaskType {
       summary,
       description,
       team,
-      settings)
+      settings) //TODO Frontend
   }
 
   def toForm(tt: TaskType) =
@@ -81,7 +81,7 @@ object TaskTypeDAO extends SecuredBaseDAO[TaskType] {
     override def removeQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match{
         case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.supervisorTeamIds)))
         case _ =>
           DenyEveryone()
       }

@@ -79,7 +79,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
         dataset <- DataSetDAO.findOneBySourceName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
         owningTeam = dataset.owningTeam
-        isAllowed <- ensureTeamAdministration(user, owningTeam).futureBox
+        isAllowed <- ensureTeamAdministration(user, owningTeam).futureBox //TODO
       } yield {
         Full(UserAccessAnswer(isAllowed.isDefined))
       }

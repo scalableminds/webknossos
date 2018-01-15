@@ -31,7 +31,7 @@ case class TaskParameters(
                            taskTypeId: String,
                            neededExperience: Experience,
                            openInstances: Int,
-                           team: String,
+                           team: BSONObjectID,
                            projectName: String,
                            scriptId: Option[String],
                            boundingBox: Option[BoundingBox],
@@ -47,7 +47,7 @@ case class NmlTaskParameters(
                               taskTypeId: String,
                               neededExperience: Experience,
                               openInstances: Int,
-                              team: String,
+                              team: BSONObjectID,
                               projectName: String,
                               scriptId: Option[String],
                               boundingBox: Option[BoundingBox])
@@ -287,19 +287,19 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
 
-  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = {
+  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[BSONObjectID]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
       if (numberOfOpen < MAX_OPEN_TASKS) {
         Fox.successful(user.teamNames)
       } else if (user.hasAdminAccess) {
-        Fox.successful(user.adminTeamNames)
+        Fox.successful(user.supervisorTeamIds)
       } else {
         Fox.failure(Messages("task.tooManyOpenOnes"))
       }
     }
   }
 
-  private def tryToGetNextAssignmentFor(user: User, teams: List[String], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[Task] = {
+  private def tryToGetNextAssignmentFor(user: User, teams: List[BSONObjectID], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[Task] = {
     val s = System.currentTimeMillis()
     TaskAssignmentService.findOneAssignableFor(user, teams).futureBox.flatMap {
       case Full(task) =>

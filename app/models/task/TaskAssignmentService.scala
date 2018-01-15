@@ -12,21 +12,22 @@ import play.api.libs.iteratee.Enumeratee.CheckDone
 import play.api.libs.iteratee._
 import reactivemongo.api.commands.WriteResult
 import play.api.libs.concurrent.Execution.Implicits.{defaultContext => dec}
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.{ExecutionContext, Future}
 
 object TaskAssignmentService extends FoxImplicits {
 
-  def findAllAssignableFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[List[Task]] =
+  def findAllAssignableFor(user: User, teams: List[BSONObjectID])(implicit ctx: DBAccessContext): Fox[List[Task]] =
     findAssignable(user, teams) |>>> Iteratee.getChunks[Task]
 
-  def findOneAssignableFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Task] =
+  def findOneAssignableFor(user: User, teams: List[BSONObjectID])(implicit ctx: DBAccessContext): Fox[Task] =
     findAssignable(user, teams) |>>> Iteratee.head[Task]
 
-  def findNAssignableFor(user: User, teams: List[String], limit: Int)(implicit ctx: DBAccessContext): Fox[Seq[Task]] =
+  def findNAssignableFor(user: User, teams: List[BSONObjectID], limit: Int)(implicit ctx: DBAccessContext): Fox[Seq[Task]] =
     findAssignable(user, teams) |>>> takeUpTo[Task](limit)
 
-  private def findAssignable(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[Task] = {
+  private def findAssignable(user: User, teams: List[BSONObjectID])(implicit ctx: DBAccessContext): Enumerator[Task] = {
     val notDoneYetFilter = filterM[Task] { task =>
       AnnotationService.countTaskOf(user, task._id).futureBox.map(_.contains(0))
     }

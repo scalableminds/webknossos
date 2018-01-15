@@ -47,7 +47,7 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
     persistTracing: Boolean,
     _user: Option[BSONObjectID],
     dataSetName: String,
-    team: String,
+    team: BSONObjectID,
     typ: AnnotationType,
     annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[Annotation] = {
     if (annotations.isEmpty)

@@ -265,7 +265,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   private def noRequiredExperience =
     Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
 
-  def findOrderedByPriorityFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[Task] = {
+  def findOrderedByPriorityFor(user: User, teams: List[BSONObjectID])(implicit ctx: DBAccessContext): Enumerator[Task] = {
     def byPriority =
       Json.obj("priority" -> -1)
 

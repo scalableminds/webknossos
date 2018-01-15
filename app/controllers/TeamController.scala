@@ -17,17 +17,15 @@ import play.api.mvc.{Action, _}
 
 import scala.concurrent.Future
 
-class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller{
+class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
 
   def list = SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: Team) =>
         el.isEditableBy(request.identity) == value),
-      Filter("isRoot", (value: Boolean, el: Team) =>
-        el.parent.isEmpty == value),
       Filter("amIAnAdmin", (value: Boolean, el: Team) =>
-        request.identity.isAdminOf(el.name) == value)
+        request.identity.isSuperVisorOf(el._id) == value)
     ) { filter =>
       for {
         allTeams <- TeamDAO.findAll
@@ -40,7 +38,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller{
   }
 
   def listAllTeams = Action.async { implicit request =>
-    for{
+    for {
       allTeams <- TeamDAO.findAll(GlobalAccessContext)
       js <- Future.traverse(allTeams)(Team.teamPublicWritesBasic(_)(GlobalAccessContext))
     } yield {
@@ -51,7 +49,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller{
   def delete(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)
-      _ <- team.owner.contains(request.identity._id) ?~> Messages("team.noOwner")
+      _ <- team.isAdminOfOrganization(request.identity) ?~> Messages("team.noOwner") //team.owner.contains(request.identity._id)
       _ <- TeamService.remove(team)
       _ <- UserService.removeTeamFromUsers(team)
     } yield {
@@ -59,18 +57,11 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller{
     }
   }
 
-  def ensureRootTeam(team: Team) = {
-    team.parent.isEmpty match {
-      case true => Full(true)
-      case _    => Empty
-    }
-  }
-
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Team.teamPublicReads(request.identity)) { team =>
       for {
         _ <- TeamDAO.findOneByName(team.name)(GlobalAccessContext).reverse ?~> Messages("team.name.alreadyTaken")
-        parent <- team.parent.toFox.flatMap(TeamDAO.findOneByName(_)(GlobalAccessContext)) ?~> Messages("team.parent.notFound")
+        parent <- team.parent.toFox.flatMap(TeamDAO.findOneByName(_)(GlobalAccessContext)) ?~> Messages("team.parent.notFound") //TODO
         _ <- ensureRootTeam(parent) ?~> Messages("team.parent.mustBeRoot") // current limitation
         _ <- TeamService.create(team, request.identity)
         js <- Team.teamPublicWrites(team, request.identity)

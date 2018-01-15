@@ -133,7 +133,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.identity)))
         teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_.name == t))
         teamsWithUpdate = teams.filter(t => userTeams.exists(_.name == t))
-        _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
+        _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate) //TODO
       } yield
       Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))
     }
@@ -150,7 +150,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       case (server, name, token, team) =>
         for {
           _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
-          _ <- ensureTeamAdministration(request.identity, team)
+          _ <- ensureTeamAdministration(request.identity, team) //TODO
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
           dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
           _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)

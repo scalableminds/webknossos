@@ -37,7 +37,7 @@ object AnnotationService
   with LazyLogging {
 
   private def selectSuitableTeam(user: User, dataSet: DataSet): String = {
-    val dataSetTeams = dataSet.owningTeam +: dataSet.allowedTeams
+    val dataSetTeams = dataSet.owningTeam +: dataSet.allowedTeams //TODO
     dataSetTeams.intersect(user.teamNames).head
   }
 
@@ -84,7 +84,7 @@ object AnnotationService
         Some(user._id),
         tracing,
         dataSet.name,
-        selectSuitableTeam(user, dataSet),
+        selectSuitableTeam(user, dataSet), //TODO
         AnnotationSettings.defaultFor(tracingType),
         _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
       _ <- annotation.saveToDB
@@ -133,7 +133,7 @@ object AnnotationService
     AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task)
 
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
+    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.supervisorTeamIds)
 
   def hasAnOpenTask(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.hasAnOpenAnnotation(user._id, AnnotationType.Task)
@@ -231,7 +231,7 @@ object AnnotationService
       Some(user._id),
       tracingReference,
       dataSet.name,
-      team = selectSuitableTeam(user, dataSet),
+      team = selectSuitableTeam(user, dataSet), //TODO
       settings = settings,
       _name = name,
       description = description,

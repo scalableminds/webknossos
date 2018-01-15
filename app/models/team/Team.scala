@@ -25,6 +25,9 @@ case class Team(
 
   def couldBeAdministratedBy(user: User) =
     user.organization == organization
+
+  def isAdminOfOrganization(user: User) =
+    user.organization == organization && user.isAdmin
 }
 
 object Team extends FoxImplicits {

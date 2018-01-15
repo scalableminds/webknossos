@@ -5,8 +5,8 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

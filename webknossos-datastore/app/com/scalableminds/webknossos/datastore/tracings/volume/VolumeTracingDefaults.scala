@@ -3,7 +3,7 @@
  */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.geometry.Vector3D
 
 object VolumeTracingDefaults {

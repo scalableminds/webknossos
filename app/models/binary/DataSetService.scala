@@ -3,8 +3,8 @@
  */
 package models.binary
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}

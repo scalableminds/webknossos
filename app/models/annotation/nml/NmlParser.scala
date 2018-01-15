@@ -5,7 +5,7 @@ package models.annotation.nml
 
 import java.io.InputStream
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.ElementClass
+import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings.ProtoGeometryImplicits

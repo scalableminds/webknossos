@@ -26,11 +26,11 @@ import type {
   EdgeType,
   NodeType,
   TreeType,
-  TemporaryMutableTreeType,
   BranchPointType,
   TreeMapType,
   CommentType,
 } from "oxalis/store";
+import DiffableMap from "libs/diffable_map";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
@@ -52,7 +52,7 @@ export function generateTreeName(state: OxalisState, timestamp: number, treeId: 
 }
 
 function getMaximumNodeId(trees: TreeMapType): number {
-  const newMaxNodeId = _.max(_.flatMap(trees, __ => _.map(__.nodes, n => n.id)));
+  const newMaxNodeId = _.max(_.flatMap(trees, __ => __.nodes.map(n => n.id)));
   return newMaxNodeId != null ? newMaxNodeId : Constants.MIN_NODE_ID - 1;
 }
 
@@ -122,7 +122,7 @@ export function deleteNode(
     if (allowUpdate) {
       // Delete Node
       const activeTree = update(tree, {
-        nodes: { $set: _.omit(tree.nodes, [node.id.toString()]) },
+        nodes: { $apply: nodes => nodes.delete(node.id) },
       });
 
       // Do we need to split trees? Are there edges leading to/from it?
@@ -239,22 +239,29 @@ function splitTreeByNodes(
     visitedEdges[getEdgeHash(deletedEdge)] = true;
   });
 
-  const traverseTree = (nodeId: number, newTree: TemporaryMutableTreeType) => {
-    visitedNodes[nodeId] = true;
-    const edges = nodeToEdgesMap[nodeId];
+  const traverseTree = (inputNodeId: number, newTree: TreeType) => {
+    const nodeQueue = [inputNodeId];
 
-    newTree.nodes[nodeId] = activeTree.nodes[nodeId];
+    while (nodeQueue.length !== 0) {
+      const nodeId = nodeQueue.shift();
+      const edges = nodeToEdgesMap[nodeId];
+      visitedNodes[nodeId] = true;
+      newTree.nodes.mutableSet(nodeId, activeTree.nodes.get(nodeId));
 
-    for (const edge of edges) {
-      const edgeHash = getEdgeHash(edge);
-      if (visitedEdges[edgeHash]) {
-        continue;
+      for (const edge of edges) {
+        const edgeHash = getEdgeHash(edge);
+        if (visitedEdges[edgeHash]) {
+          continue;
+        }
+        visitedEdges[edgeHash] = true;
+        newTree.edges.push(edge);
+
+        if (nodeId === edge.target) {
+          nodeQueue.push(edge.source);
+        } else {
+          nodeQueue.push(edge.target);
+        }
       }
-      visitedEdges[edgeHash] = true;
-      newTree.edges.push(edge);
-
-      traverseTree(edge.source, newTree);
-      traverseTree(edge.target, newTree);
     }
   };
 
@@ -280,7 +287,7 @@ function splitTreeByNodes(
           comments: [],
           edges: [],
           name: activeTree.name,
-          nodes: {},
+          nodes: new DiffableMap(),
           timestamp: activeTree.timestamp,
           treeId: activeTree.treeId,
           isVisible: true,
@@ -289,7 +296,7 @@ function splitTreeByNodes(
         const immutableNewTree = createTree(intermediateState, timestamp).get();
         // Cast to mutable tree type since we want to mutably do the split
         // in this reducer for performance reasons.
-        newTree = ((immutableNewTree: any): TemporaryMutableTreeType);
+        newTree = ((immutableNewTree: any): TreeType);
         intermediateState = update(intermediateState, {
           tracing: { trees: { [newTree.treeId]: { $set: newTree } } },
         });
@@ -303,7 +310,7 @@ function splitTreeByNodes(
   // Write branchpoints into correct trees
   activeTree.branchPoints.forEach(branchpoint => {
     cutTrees.forEach(newTree => {
-      if (newTree.nodes[branchpoint.nodeId]) {
+      if (newTree.nodes.has(branchpoint.nodeId)) {
         newTree.branchPoints.push(branchpoint);
       }
     });
@@ -312,7 +319,7 @@ function splitTreeByNodes(
   // Write comments into correct trees
   activeTree.comments.forEach(comment => {
     cutTrees.forEach(newTree => {
-      if (newTree.nodes[comment.nodeId]) {
+      if (newTree.nodes.has(comment.nodeId)) {
         newTree.comments.push(comment);
       }
     });
@@ -390,7 +397,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const tree: TreeType = {
         name,
         treeId: newTreeId,
-        nodes: {},
+        nodes: new DiffableMap(),
         timestamp,
         color: ColorGenerator.distinctColorForId(newTreeId),
         branchPoints: [],
@@ -418,11 +425,10 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapT
 
         // Create a map from old node ids to new node ids
         const idMap = {};
-        const newNodes = {};
-        for (const nodeId of Object.keys(tree.nodes)) {
-          const node = tree.nodes[Number(nodeId)];
-          idMap[nodeId] = newNodeId;
-          newNodes[newNodeId] = update(node, { id: { $set: newNodeId } });
+        const newNodes = new DiffableMap();
+        for (const node of tree.nodes.values()) {
+          idMap[node.id] = newNodeId;
+          newNodes.mutableSet(newNodeId, update(node, { id: { $set: newNodeId } }));
           newNodeId++;
         }
 
@@ -481,7 +487,7 @@ export function deleteTree(
         const maxTreeId = getMaximumTreeId(newTrees);
         newActiveTreeId = maxTreeId;
         // Object.keys returns strings and the newActiveNodeId should be an integer
-        newActiveNodeId = +_.first(Object.keys(newTrees[maxTreeId].nodes)) || null;
+        newActiveNodeId = +_.first(Array.from(newTrees[maxTreeId].nodes.keys())) || null;
       }
       const newMaxNodeId = getMaximumNodeId(newTrees);
 
@@ -508,9 +514,15 @@ export function mergeTrees(
     };
 
     let newTrees = _.omit(trees, sourceTree.treeId.toString());
+
+    const newNodes = targetTree.nodes.clone();
+    for (const [id, node] of sourceTree.nodes.entries()) {
+      newNodes.mutableSet(id, node);
+    }
+
     newTrees = update(newTrees, {
       [targetTree.treeId]: {
-        nodes: { $set: Object.assign({}, targetTree.nodes, sourceTree.nodes) },
+        nodes: { $set: newNodes },
         edges: { $set: targetTree.edges.concat(sourceTree.edges).concat([newEdge]) },
         comments: { $set: targetTree.comments.concat(sourceTree.comments) },
         branchPoints: { $set: targetTree.branchPoints.concat(sourceTree.branchPoints) },

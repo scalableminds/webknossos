@@ -6,14 +6,17 @@ package utils
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationSQL
-import play.api.libs.json.Json
-import slick.lifted.{AbstractTable, Rep, TableQuery}
-import slick.jdbc.PostgresProfile.api._
 import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.Json
+import reactivemongo.bson.BSONObjectID
+import slick.jdbc.PostgresProfile.api._
+import slick.lifted.{AbstractTable, Rep, TableQuery}
 
 
-case class ObjectId(id: String)
+case class ObjectId(id: String) {
+  def toBSONObjectId = BSONObjectID.parse(id).toOption
+}
+
 object ObjectId { implicit val jsonFormat = Json.format[ObjectId] }
 
 
@@ -37,12 +40,10 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
     }
   }
 
-  def parseTuple(literal: String) = parseTupleWith(literal, identity)
-
-  def parseTupleWith[T](literal: String, parseEach: String => T): List[T] = {
+  def parseTuple(literal: String): List[String] = {
     //TODO: error handling, escape handling. copy from js parser?
     val trimmed = literal.drop(1).dropRight(1)
     if (trimmed.isEmpty) List()
-    else trimmed.split(",", -1).toList.map(parseEach)
+    else trimmed.split(",", -1).toList
   }
 }

@@ -3,13 +3,74 @@ package models.task
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
+import com.scalableminds.webknossos.schema.Tables.{Tasktypes, _}
 import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
+import models.binary.DatasetSQL
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import slick.lifted.Rep
+import utils.{ObjectId, SQLDAO}
+
+case class TaskTypeSQL(
+                         _id: ObjectId,
+                         _team: ObjectId,
+                         summary: String,
+                         description: String,
+                         settings: AnnotationSettings,
+                         created: Long = System.currentTimeMillis(),
+                         isDeleted: Boolean = false
+                         )
+
+object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] {
+  val collection = Tasktypes
+
+  def idColumn(x: Tasktypes): Rep[String] = x._Id
+  def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
+
+  def parse(r: TasktypesRow): Option[TaskTypeSQL] =
+    Some(TaskTypeSQL(
+      ObjectId(r._Id),
+      ObjectId(r._Team),
+      r.summary,
+      r.description,
+      AnnotationSettings(
+        parseTuple(r.settingsAllowedmodes),
+        r.settingsPreferredmode,
+        r.settingsBranchpointsallowed,
+        r.settingsSomaclickingallowed,
+        r.settingsAdvancedoptionsallowed
+      ),
+      r.created.getTime,
+      r.isdeleted
+    ))
+}
+
+
+object DatasetSQLDAO extends SQLDAO[DatasetSQL, DatasetsRow, Datasets] {
+  val collection = Datasets
+
+  def idColumn(x: Datasets): Rep[String] = x._Id
+  def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
+
+  def parse(r: DatasetsRow): Option[DatasetSQL] =
+    Some(DatasetSQL(
+      ObjectId(r._Id),
+      ObjectId(r._Datastore),
+      ObjectId(r._Team),
+      r.defaultconfiguration.map(Json.parse(_).as[JsObject]),
+      r.description,
+      r.ispublic,
+      r.name,
+      r.created.getTime,
+      r.isdeleted
+    ))
+}
+
+
 
 
 case class TaskType(

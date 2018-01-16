@@ -7,10 +7,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
-import models.annotation.AnnotationType._
+import models.annotation.AnnotationType.AnnotationType
 import models.basics._
-import models.binary.DataSetDAO
-import models.task.{Task, TaskDAO}
+import models.binary.{DataSetDAO, DatasetSQLDAO}
+import models.task._
+import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits._
@@ -24,6 +25,7 @@ import utils.{ObjectId, SQLDAO}
 
 case class AnnotationSQL(
                           _id: ObjectId,
+                          _dataset: ObjectId,
                           _task: Option[ObjectId] = None,
                           _team: ObjectId,
                           _user: ObjectId,
@@ -54,9 +56,11 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       state <- AnnotationState.fromString(r.state)
       tracingTyp <- TracingType.fromString(r.tracingTyp)
+      annotationType <- AnnotationTypeSQL.fromString(r.typ)
     } yield {
       AnnotationSQL(
         ObjectId(r._Id),
+        ObjectId(r._Dataset),
         r._Task.map(ObjectId(_)),
         ObjectId(r._Team),
         ObjectId(r._User),
@@ -68,7 +72,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
         Json.parse(r.statistics).as[JsObject],
         parseTuple(r.tags).toSet,
         r.tracingtime,
-        AnnotationTypeSQL.fromString(r.typ).get, //todo: how do we feel about this .get? should we rely on the db following the schema?
+        annotationType,
         r.created.getTime,
         r.modified.getTime,
         r.isdeleted
@@ -101,6 +105,8 @@ case class Annotation(
                        isPublic: Boolean = false,
                        tags: Set[String] = Set.empty
                      ) extends FoxImplicits {
+
+
 
   lazy val muta = new AnnotationMutations(this)
 
@@ -172,8 +178,51 @@ case class Annotation(
   }
 }
 
-object Annotation  {
+object Annotation extends FoxImplicits {
   implicit val annotationFormat = Json.format[Annotation]
+
+  private def findSettingsFor(s: AnnotationSQL)(implicit ctx: DBAccessContext) = {
+    if (s.typ == AnnotationTypeSQL.Explorational)
+      Fox.successful(AnnotationSettings.defaultFor(s.tracing.typ))
+    else
+      for {
+        taskId <- s._task.toFox
+        task: TaskSQL <- TaskSQLDAO.findOne(taskId)
+        taskType <- TaskTypeSQLDAO.findOne(task._taskType)
+      } yield {
+        taskType.settings
+      }
+  }
+
+  def fromAnnotationSQL(s: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    for {
+      dataset <- DatasetSQLDAO.findOne(s._dataset)
+      team <- TeamSQLDAO.findOne(s._team)
+      settings <- findSettingsFor(s)
+      name: Option[String] = if (s.name.isEmpty) None else Some(s.name)
+    } yield {
+      Annotation(
+        s._user.toBSONObjectId,
+        s.tracing,
+        dataset.name,
+        team.name,
+        settings,
+        Some(s.statistics),
+        s.typ.toString,
+        s.state,
+        name,
+        s.description,
+        s.tracingTime,
+        s.created,
+        s.modified,
+        s._task.map(_.toBSONObjectId).flatten,
+        s._id.toBSONObjectId.get,
+        !s.isDeleted,
+        s.isPublic,
+        s.tags
+      )
+    }
+  }
 }
 
 

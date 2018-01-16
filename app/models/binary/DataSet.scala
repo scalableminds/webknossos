@@ -1,10 +1,10 @@
 package models.binary
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSourceLike => DataSource}
-import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
+import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSourceLike => DataSource}
+import com.scalableminds.webknossos.schema.Tables._
 import models.basics._
 import models.configuration.DataSetConfiguration
 import models.user.User
@@ -13,6 +13,41 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import reactivemongo.api.indexes.{Index, IndexType}
+import slick.lifted.Rep
+import utils.{ObjectId, SQLDAO}
+
+
+case class DatasetSQL(
+                     _id: ObjectId,
+                     _datastore: ObjectId,
+                     _team: ObjectId,
+                     defaultConfiguration: Option[JsObject] = None,
+                     description: Option[String] = None,
+                     isPublic: Boolean,
+                     name: String,
+                     created: Long = System.currentTimeMillis(),
+                     isDeleted: Boolean = false
+                     )
+
+object DatasetSQLDAO extends SQLDAO[DatasetSQL, DatasetsRow, Datasets] {
+  val collection = Datasets
+
+  def idColumn(x: Datasets): Rep[String] = x._Id
+  def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
+
+  def parse(r: DatasetsRow): Option[DatasetSQL] =
+    Some(DatasetSQL(
+        ObjectId(r._Id),
+        ObjectId(r._Datastore),
+        ObjectId(r._Team),
+        r.defaultconfiguration.map(Json.parse(_).as[JsObject]),
+        r.description,
+        r.ispublic,
+        r.name,
+        r.created.getTime,
+        r.isdeleted
+      ))
+}
 
 case class DataSet(
   dataStoreInfo: DataStoreInfo,
@@ -53,6 +88,8 @@ object DataSet {
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean]) (d =>
       (d.name, d.dataSource, d.dataStoreInfo, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+
+  def fromDatasetSQL(s: DatasetSQL) = ???
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {

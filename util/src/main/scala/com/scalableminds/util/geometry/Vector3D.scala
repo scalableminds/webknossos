@@ -86,6 +86,16 @@ object Vector3D {
   def apply(from: Point3D, to: Point3D): Vector3D =
     Vector3D(to) - Vector3D(from)
 
+  def fromArray[T <% Double](array: Array[T]) =
+    if (array.size >= 3)
+      Some(Vector3D(array(0), array(1), array(2)))
+    else
+      None
+
+  def fromList(l: List[Double]) = {
+    fromArray(l.toArray)
+  }
+
   implicit object Vector3DReads extends Format[Vector3D] {
     def reads(json: JsValue) = json match {
       case JsArray(ts) if ts.size == 3 =>

@@ -3,15 +3,51 @@ package models.team
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.webknossos.schema.Tables._
 import models.basics.SecuredBaseDAO
+import models.binary.DatasetSQL
 import models.user.{User, UserDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import slick.lifted.Rep
+import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.Future
+
+
+case class TeamSQL(
+                  _id: ObjectId,
+                  _owner: ObjectId,
+                  _parent: Option[ObjectId],
+                  name: String,
+                  behavesLikeRootTeam: Option[Boolean] = None,
+                  created: Long = System.currentTimeMillis(),
+                  isDeleted: Boolean = false
+                  )
+
+object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
+  val collection = Teams
+
+  def idColumn(x: Teams): Rep[String] = x._Id
+  def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
+
+  def parse(r: TeamsRow): Option[TeamSQL] =
+    Some(TeamSQL(
+      ObjectId(r._Id),
+      ObjectId(r._Owner),
+      r._Parent.map(ObjectId(_)),
+      r.name,
+      r.behaveslikerootteam,
+      r.created.getTime,
+      r.isdeleted
+    ))
+}
+
+
+
 
 case class Team(
   name: String,

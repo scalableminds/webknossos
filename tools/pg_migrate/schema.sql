@@ -29,6 +29,7 @@ CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'Tracin
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Unassigned', 'Assigned', 'InProgress', 'Finished');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
+  _dataset CHAR(24) NOT NULL,
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
@@ -50,14 +51,14 @@ CREATE TABLE webknossos.annotations(
 
 CREATE TABLE webknossos.datasets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _datastore CHAR(24) NOT NULL ,
   _team CHAR(24) NOT NULL,
-  _datastore VARCHAR(256) NOT NULL ,
-  name VARCHAR(256) NOT NULL UNIQUE,
-  description TEXT,
   defaultConfiguration JSONB,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  description TEXT,
   isPublic BOOLEAN NOT NULL DEFAULT false,
+  name VARCHAR(256) NOT NULL UNIQUE,
   created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _team)
 );
 
@@ -113,7 +114,7 @@ CREATE TABLE webknossos.tasktypes(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _team CHAR(24) NOT NULL,
   summary VARCHAR(256) NOT NULL UNIQUE,
-  description TEXT,
+  description TEXT NOT NULL,
   settings_allowedModes webknossos.TASKTYPE_MODES[] NOT NULL DEFAULT '{orthogonal, flight, oblique}',
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
@@ -125,19 +126,20 @@ CREATE TABLE webknossos.tasktypes(
 
 CREATE TABLE webknossos.tasks(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _team CHAR(24) NOT NULL,
   _project CHAR(24) NOT NULL,
   _script CHAR(24),
+  _tasktype CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
-  tracingTime INTERVAL,
+  tracingTime BIGINT,
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo VARCHAR(512),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
-  created TIMESTAMP NOT NULL DEFAULT NOW()
+  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE VIEW webknossos.task_instances AS
@@ -152,7 +154,8 @@ CREATE TABLE webknossos.teams(
   _parent CHAR(24),
   name VARCHAR(256) NOT NULL UNIQUE CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   behavesLikeRootTeam BOOLEAN,
-  created TIMESTAMP NOT NULL DEFAULT NOW()
+  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.timespans(
@@ -208,7 +211,7 @@ CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
 CREATE INDEX ON webknossos.users(email);
 
-insert into webknossos.annotations(_id, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
+insert into webknossos.annotations(_id, _dataset, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('id', 'dataset_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
 
 
 

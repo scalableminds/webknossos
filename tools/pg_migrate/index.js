@@ -57,7 +57,7 @@ function* csvWriter(name, cols) {
   const m = mongoClient.db(process.env.MONGODB || "webknossos-master");
 
   try {
-    const buffer = { teams: new Map(), projects: new Map() };
+    const buffer = { teams: new Map(), projects: new Map(), datasets: new Map() };
     async function lookupTeam(team) {
       if (!buffer.teams.has(team)) {
         buffer.teams.set(team, await m.collection("teams").findOne({ name: team }));
@@ -69,6 +69,12 @@ function* csvWriter(name, cols) {
         buffer.projects.set(project, await m.collection("projects").findOne({ name: project }));
       }
       return buffer.projects.get(project);
+    }
+    async function lookupDataset(dataset) {
+      if (!buffer.datasets.has(dataset)) {
+        buffer.datasets.set(dataset, await m.collection("datasets").findOne({ name: dataset}));
+      }
+      return buffer.datasets.get(dataset)
     }
 
     async function migrateTable(table, cols, func) {
@@ -139,25 +145,25 @@ function* csvWriter(name, cols) {
       "dataSets",
       [
         "_id",
-        "_team",
         "_datastore",
-        "name",
-        "description",
+        "_team",
         "defaultConfiguration",
-        "isDeleted",
+        "description",
         "isPublic",
+        "name",
         "created",
+        "isDeleted",
       ],
       async doc => ({
         _id: doc._id.toHexString(),
-        _team: (await lookupTeam(doc.dataSource.id.team))._id.toHexString(),
         _datastore: doc.dataStoreInfo.name,
-        name: doc.dataSource.id.name,
-        description: doc.description,
+        _team: (await lookupTeam(doc.dataSource.id.team))._id.toHexString(),
         defaultConfiguration: JSON.stringify(doc.defaultConfiguration),
-        isDeleted: !doc.isActive,
+        description: doc.description,
         isPublic: !!doc.isPublic,
+        name: doc.dataSource.id.name,
         created: new Date(doc.created),
+        isDeleted: !doc.isActive,
       }),
     );
 
@@ -184,6 +190,7 @@ function* csvWriter(name, cols) {
       ],
       async doc => ({
         _id: doc._id.toHexString(),
+        _dataset: doc.dataSetName != null ? (await lookupDatsaet(doc.dataSetName))._id.toHexString() : null
         _task: doc._task != null ? doc._task.toHexString() : null,
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
         _user: doc._user.toHexString(),
@@ -274,6 +281,7 @@ function* csvWriter(name, cols) {
         name: doc.name,
         behavesLikeRootTeam: !!doc.behavesLikeRootTeam,
         created: doc._id.getTimestamp(),
+        isDeleted: false,
       }),
     );
 
@@ -297,9 +305,10 @@ function* csvWriter(name, cols) {
       "tasks",
       [
         "_id",
-        "_team",
         "_project",
         "_script",
+        "_tasktype",
+        "_team",
         "neededExperience_domain",
         "neededExperience_value",
         "totalInstances",
@@ -308,8 +317,8 @@ function* csvWriter(name, cols) {
         "editPosition",
         "editRotation",
         "creationInfo",
-        "isDeleted",
         "created",
+        "isDeleted",
       ],
       async doc => {
         let project = await lookupProject(doc._project);
@@ -319,9 +328,10 @@ function* csvWriter(name, cols) {
         }
         return {
           _id: doc._id.toHexString(),
-          _team: (await lookupTeam(doc.team))._id.toHexString(),
           _project: project._id.toHexString(),
           _script: doc._script != "" ? doc._script : null,
+          _team: (await lookupTeam(doc.team))._id.toHexString(),
+          _tasktype: doc._taskType.toHexString(),
           neededExperience_domain: doc.neededExperience.domain,
           neededExperience_value: doc.neededExperience.value,
           totalInstances: doc.instances,
@@ -330,8 +340,8 @@ function* csvWriter(name, cols) {
           editPosition: formatVector3(doc.editPosition),
           editRotation: formatVector3(doc.editRotation),
           creationInfo: doc.creationInfo,
-          isDeleted: !doc.isActive,
           created: doc._id.getTimestamp(),
+          isDeleted: !doc.isActive,
         };
       },
     );

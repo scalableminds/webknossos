@@ -6,9 +6,11 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
 import models.basics._
 import models.project.{Project, ProjectDAO}
+import models.team.TeamSQL
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -20,6 +22,101 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONObjectID, BSONString}
 import reactivemongo.play.json.BSONFormats._
+import slick.lifted.Rep
+import utils.{ObjectId, SQLDAO}
+
+
+case class TaskSQL(
+                  _id: ObjectId,
+                  _project: ObjectId,
+                  _script: Option[ObjectId],
+                  _taskType: ObjectId,
+                  _team: ObjectId,
+                  neededExperience: Experience,
+                  totalInstances: Long,
+                  tracingTime: Option[Long], //TODO: INTERVAL?
+                  boundingBox: Option[BoundingBox],
+                  editPosition: Point3D, //TODO: discern in schema between point (int) and vector (double)?
+                  editRotation: Vector3D,
+                  creationInfo: Option[String],
+                  created: Long = System.currentTimeMillis(),
+                  isDeleted: Boolean = false
+                  )
+
+object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
+  val collection = Tasks
+
+  def idColumn(x: Tasks) = x._Id
+  def isDeletedColumn(x: Tasks) = x.isdeleted
+
+  def parse(r: TasksRow): Option[TaskSQL] =
+    for {
+      boundingBox <- r.boundingbox.map(b => parseTuple(b).map(_.toInt)).map(BoundingBox.fromSQL)
+      editPosition <- Point3D.fromList(parseTuple(r.editposition).map(_.toInt))
+      editRotation <- Vector3D.fromList(parseTuple(r.editrotation).map(_.toDouble))
+    } yield {
+      TaskSQL(
+        ObjectId(r._Id),
+        ObjectId(r._Project),
+        r._Script.map(ObjectId(_)),
+        ObjectId(r._Tasktype),
+        ObjectId(r._Team),
+        Experience(r.neededexperienceDomain, r.neededexperienceValue),
+        r.totalinstances,
+        r.tracingtime,
+        boundingBox,
+        editPosition,
+        editRotation,
+        r.creationinfo,
+        r.created.getTime,
+        r.isdeleted
+      )
+    }
+}
+
+object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
+  val collection = Teams
+
+  def idColumn(x: Teams): Rep[String] = x._Id
+  def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
+
+  def parse(r: TeamsRow): Option[TeamSQL] =
+    Some(TeamSQL(
+      ObjectId(r._Id),
+      ObjectId(r._Owner),
+      r._Parent.map(ObjectId(_)),
+      r.name,
+      r.behaveslikerootteam,
+      r.created.getTime,
+      r.isdeleted
+    ))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 case class OpenInstancesResult(_id: String, openInstances: Int)
 object OpenInstancesResult { implicit val format = Json.format[OpenInstancesResult] }

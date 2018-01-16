@@ -29,7 +29,7 @@ CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'Tracin
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Unassigned', 'Assigned', 'InProgress', 'Finished');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
-  _dataset CHAR(24) NOT NULL,
+  _ CHAR(24) NOT NULL,
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
@@ -49,9 +49,9 @@ CREATE TABLE webknossos.annotations(
   CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
 );
 
-CREATE TABLE webknossos.datasets(
+CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _datastore CHAR(24) NOT NULL ,
+  _dataStore CHAR(24) NOT NULL ,
   _team CHAR(24) NOT NULL,
   defaultConfiguration JSONB,
   description TEXT,
@@ -64,25 +64,25 @@ CREATE TABLE webknossos.datasets(
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
 CREATE TYPE webknossos.DATASET_LAYER_ELEMENT_CLASS AS ENUM ('uint8', 'uint16', 'uint24', 'uint32');
-CREATE TABLE webknossos.dataset_layers(
-  _dataset CHAR(24) NOT NULL,
+CREATE TABLE webknossos.dataSet_layers(
+  _dataSet CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL,
   category webknossos.DATASET_LAYER_CATEGORY NOT NULL,
   resolutions INT[] NOT NULL DEFAULT '{1}',
   elementClass webknossos.DATASET_LAYER_ELEMENT_CLASS NOT NULL,
   boundingBox webknossos.BOUNDING_BOX NOT NULL,
   scale webknossos.VECTOR3 NOT NULL,
-  PRIMARY KEY(_dataset, name)
+  PRIMARY KEY(_dataSet, name)
 );
 
-CREATE TABLE webknossos.dataset_allowedteams(
-  _dataset CHAR(24) NOT NULL,
+CREATE TABLE webknossos.dataSet_allowedteams(
+  _dataSet CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
-  PRIMARY KEY (_dataset, _team)
+  PRIMARY KEY (_dataSet, _team)
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');
-CREATE TABLE webknossos.datastores(
+CREATE TABLE webknossos.dataStores(
   name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
   url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
@@ -110,7 +110,7 @@ CREATE TABLE webknossos.scripts(
 );
 
 CREATE TYPE webknossos.TASKTYPE_MODES AS ENUM ('orthogonal', 'flight', 'oblique', 'volume');
-CREATE TABLE webknossos.tasktypes(
+CREATE TABLE webknossos.taskTypes(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _team CHAR(24) NOT NULL,
   summary VARCHAR(256) NOT NULL UNIQUE,
@@ -128,7 +128,7 @@ CREATE TABLE webknossos.tasks(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _project CHAR(24) NOT NULL,
   _script CHAR(24),
-  _tasktype CHAR(24) NOT NULL,
+  _taskType CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
@@ -177,7 +177,7 @@ CREATE TABLE webknossos.users(
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMP NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
-  datasetConfigurations JSONB NOT NULL,
+  dataSetConfigurations JSONB NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL DEFAULT 'credentials',
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'scrypt',
@@ -205,22 +205,22 @@ CREATE TABLE webknossos.user_experiences(
 
 CREATE INDEX ON webknossos.annotations(_user);
 CREATE INDEX ON webknossos.annotations(_task);
-CREATE INDEX ON webknossos.datasets(name);
+CREATE INDEX ON webknossos.dataSets(name);
 CREATE INDEX ON webknossos.tasks(_project);
 CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
 CREATE INDEX ON webknossos.users(email);
 
-insert into webknossos.annotations(_id, _dataset, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('expl_annotation_id', 'dataset_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
-insert into webknossos.annotations(_id, _dataset, _task, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('annotation_id', 'dataset_id', 'task_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Task');
+insert into webknossos.annotations(_id, _dataSet, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('expl_annotation_id', 'dataSet_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
+insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('annotation_id', 'dataSet_id', 'task_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Task');
 
-insert into webknossos.tasktypes(_id, _team, summary, description, settings_branchPointsAllowed, settings_somaClickingAllowed, settings_advancedOptionsAllowed) values('tasktype_id', 'team_id', 'tasktype_summary', 'tasktype_description', false, false, false);
+insert into webknossos.taskTypes(_id, _team, summary, description, settings_branchPointsAllowed, settings_somaClickingAllowed, settings_advancedOptionsAllowed) values('taskType_id', 'team_id', 'taskType_summary', 'taskType_description', false, false, false);
 
-insert into webknossos.tasks(_id, _project, _tasktype, _team, neededExperience_domain, neededExperience_value, totalInstances, tracingTime, editPosition, editRotation) values('task_id', 'project_id', 'tasktype_id', 'team_id', 'experience_domain', 1, 10, 0, '(0,0,0)', '(0,0,0)');
+insert into webknossos.tasks(_id, _project, _taskType, _team, neededExperience_domain, neededExperience_value, totalInstances, tracingTime, editPosition, editRotation) values('task_id', 'project_id', 'taskType_id', 'team_id', 'experience_domain', 1, 10, 0, '(0,0,0)', '(0,0,0)');
 
 insert into webknossos.teams(_id, _owner, name, behavesLikeRootTeam) values('team_id', 'user_id', 'team_name', false);
 
-insert into webknossos.datasets(_id, _datastore, _team, name) values('dataset_id', 'datastore_id', 'team_id', 'dataset_name');
+insert into webknossos.dataSets(_id, _dataStore, _team, name) values('dataSet_id', 'dataStore_id', 'team_id', 'dataSet_name');
 
 -- ALTER TABLE webknossos.analytics
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
@@ -228,20 +228,20 @@ insert into webknossos.datasets(_id, _datastore, _team, name) values('dataset_id
 --   ADD FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL,
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.datasets
+-- ALTER TABLE webknossos.dataSets
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_datastore) REFERENCES webknossos.datastores(name);
--- ALTER TABLE webknossos.dataset_layers
---   ADD FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.dataset_allowedTeams
---   ADD FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE,
+--   ADD FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name);
+-- ALTER TABLE webknossos.dataSet_layers
+--   ADD FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
+-- ALTER TABLE webknossos.dataSet_allowedTeams
+--   ADD FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE,
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.projects
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
 --   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
 -- ALTER TABLE webknossos.scripts
 --   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.tasktypes
+-- ALTER TABLE webknossos.taskTypes
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.tasks
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),

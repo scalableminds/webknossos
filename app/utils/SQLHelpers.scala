@@ -20,6 +20,9 @@ case class ObjectId(id: String) {
 object ObjectId { implicit val jsonFormat = Json.format[ObjectId] }
 
 
+trait InsertOnlySQLDAO extends FoxImplicits {
+
+}
 
 trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
   val db = Database.forConfig("postgres")

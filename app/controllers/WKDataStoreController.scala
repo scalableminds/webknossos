@@ -5,8 +5,8 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.DataSourceId
-import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -48,26 +48,33 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def updateAll(name: String) = DataStoreAction(name)(parse.json) { implicit request =>
+  def updateAll(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     request.body.validate[List[InboxDataSource]] match {
       case JsSuccess(dataSources, _) =>
-        DataSetService.deactivateDataSources(request.dataStore.name)(GlobalAccessContext)
-        DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
-        JsonOk
+        for {
+          _ <- DataSetService.deactivateUnreportedDataSources(request.dataStore.name, dataSources)(GlobalAccessContext)
+          _ <- DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
+        } yield {
+          JsonOk
+        }
+
       case e: JsError                =>
         logger.warn("Data store reported invalid json for data sources.")
-        JsonBadRequest(JsError.toFlatJson(e))
+        Fox.successful(JsonBadRequest(JsError.toFlatJson(e)))
     }
   }
 
-  def updateOne(name: String) = DataStoreAction(name)(parse.json) { implicit request =>
+  def updateOne(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     request.body.validate[InboxDataSource] match {
       case JsSuccess(dataSource, _) =>
-        DataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
-        JsonOk
+        for {
+          _ <- DataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
+        } yield {
+          JsonOk
+        }
       case e: JsError               =>
         logger.warn("Data store reported invalid json for data source.")
-        JsonBadRequest(JsError.toFlatJson(e))
+        Fox.successful(JsonBadRequest(JsError.toFlatJson(e)))
     }
   }
 

@@ -4,9 +4,8 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.binary.helpers.DataSourceRepository
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest, WebKnossosServer}
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
 import play.api.i18n.{Messages, MessagesApi}

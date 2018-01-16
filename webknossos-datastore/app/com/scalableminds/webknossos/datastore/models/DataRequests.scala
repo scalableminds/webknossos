@@ -3,8 +3,8 @@
  */
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.webknossos.datastore.binary.models.VoxelPosition
-import com.scalableminds.webknossos.datastore.binary.models.requests.{Cuboid, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.VoxelPosition
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
 import com.scalableminds.util.geometry.Point3D
 import play.api.libs.json.Json
 

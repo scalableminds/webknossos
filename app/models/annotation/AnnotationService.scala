@@ -2,7 +2,7 @@ package models.annotation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings._
@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefau
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils, BoxImplicits}
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler
@@ -115,8 +115,8 @@ object AnnotationService
   def annotationsFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation]().collect[List]()
 
-  def countUnfinishedAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countUnfinishedByTaskIdsAndType(List(task._id), AnnotationType.Task)
+  def countActiveAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.countActiveByTaskIdsAndType(List(task._id), AnnotationType.Task)
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
     for {
@@ -164,7 +164,7 @@ object AnnotationService
         newAnnotation = annotation.copy(
           _user = Some(user._id),
           tracingReference = newTracing,
-          state = InProgress,
+          state = Active,
           typ = AnnotationType.Task,
           _id = BSONObjectID.generate,
           createdTimestamp = System.currentTimeMillis,

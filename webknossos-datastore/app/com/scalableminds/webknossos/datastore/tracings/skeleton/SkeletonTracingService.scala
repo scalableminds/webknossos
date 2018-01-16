@@ -2,8 +2,8 @@
  * Copyright (C) 2011-2017 scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
  */
 package com.scalableminds.webknossos.datastore.tracings.skeleton
+
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValuePair}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.util.geometry.BoundingBox
@@ -31,7 +31,7 @@ class SkeletonTracingService @Inject()(
 
   implicit val updateActionReads = SkeletonUpdateAction.skeletonUpdateActionFormat
 
-  def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId).getOrElse(0L)
+  def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
 
   def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] = {
     tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions)
@@ -41,8 +41,8 @@ class SkeletonTracingService @Inject()(
     val existingVersion = tracing.version
     findDesiredOrNewestPossibleVersion(tracing, tracingId, desiredVersion).flatMap { newVersion =>
       if (newVersion > existingVersion) {
-        val pendingUpdates = findPendingUpdates(tracingId, existingVersion, newVersion)
         for {
+          pendingUpdates <- findPendingUpdates(tracingId, existingVersion, newVersion)
           updatedTracing <- update(tracing, tracingId, pendingUpdates, newVersion)
           _ <- save(updatedTracing, Some(tracingId), newVersion)
         } yield {
@@ -56,30 +56,23 @@ class SkeletonTracingService @Inject()(
 
   private def findDesiredOrNewestPossibleVersion(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[Long] = {
     (for {
-      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId)
+      newestUpdateVersion <- tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true))
     } yield {
       desiredVersion match {
         case None => newestUpdateVersion
         case Some(desiredSome) => math.min(desiredSome, newestUpdateVersion)
       }
-    }).getOrElse(tracing.version) //if there are no updates at all, assume tracing was created from NML
+    }).getOrElse(tracing.version) //if there are no updates at all, assume tracing is brand new (possibly created from NML)
   }
 
-  private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long): List[SkeletonUpdateAction] = {
-    def toListIter(versionIterator: Iterator[VersionedKeyValuePair[List[SkeletonUpdateAction]]],
-                   acc: List[List[SkeletonUpdateAction]]): List[List[SkeletonUpdateAction]] = {
-      if (!versionIterator.hasNext) acc
-      else {
-        val item = versionIterator.next()
-        if (item.version <= existingVersion) acc
-        else toListIter(versionIterator, item.value :: acc)
-      }
-    }
-
-    if (desiredVersion == existingVersion) List()
+  private def findPendingUpdates(tracingId: String, existingVersion: Long, desiredVersion: Long): Fox[List[SkeletonUpdateAction]] = {
+    if (desiredVersion == existingVersion) Fox.successful(List())
     else {
-      val versionIterator = tracingDataStore.skeletonUpdates.scanVersions(tracingId, Some(desiredVersion))(fromJson[List[SkeletonUpdateAction]])
-      toListIter(versionIterator, List()).flatten
+      for {
+        updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId, Some(desiredVersion), Some(existingVersion + 1))(fromJson[List[SkeletonUpdateAction]])
+      } yield {
+        updateActionGroups.reverse.flatten
+      }
     }
   }
 

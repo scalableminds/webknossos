@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResour
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import models.annotation._
-import models.binary.DataSetDAO
+import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
 import models.user.{User, UserToken, UserTokenDAO, UserTokenService}
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.MessagesApi
@@ -22,8 +22,6 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with WKDataStoreActionHelper
     with AnnotationInformationProvider {
-
-  val webKnossosToken = play.api.Play.current.configuration.getString("application.authentication.dataStoreToken").getOrElse("somethingSecure")
 
   def generateUserToken = UserAwareAction.async { implicit request =>
     val context = userAwareRequestToDBAccess(request)
@@ -43,7 +41,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
   def validateUserAccess(name: String, token: String) = DataStoreAction(name).async(validateJson[UserAccessRequest]) { implicit request =>
     val accessRequest = request.body
-    if (token == webKnossosToken) {
+    if (token == DataStoreHandlingStrategy.webKnossosToken) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {

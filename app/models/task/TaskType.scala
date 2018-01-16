@@ -3,6 +3,7 @@ package models.task
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Tasktypes, _}
 import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
@@ -31,14 +32,14 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] {
   def idColumn(x: Tasktypes): Rep[String] = x._Id
   def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TasktypesRow): Option[TaskTypeSQL] =
+  def parse(r: TasktypesRow): Fox[TaskTypeSQL] =
     Some(TaskTypeSQL(
       ObjectId(r._Id),
       ObjectId(r._Team),
       r.summary,
       r.description,
       AnnotationSettings(
-        parseTuple(r.settingsAllowedmodes),
+        parseArrayTuple(r.settingsAllowedmodes),
         r.settingsPreferredmode,
         r.settingsBranchpointsallowed,
         r.settingsSomaclickingallowed,
@@ -50,25 +51,6 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] {
 }
 
 
-object DatasetSQLDAO extends SQLDAO[DatasetSQL, DatasetsRow, Datasets] {
-  val collection = Datasets
-
-  def idColumn(x: Datasets): Rep[String] = x._Id
-  def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
-
-  def parse(r: DatasetsRow): Option[DatasetSQL] =
-    Some(DatasetSQL(
-      ObjectId(r._Id),
-      ObjectId(r._Datastore),
-      ObjectId(r._Team),
-      r.defaultconfiguration.map(Json.parse(_).as[JsObject]),
-      r.description,
-      r.ispublic,
-      r.name,
-      r.created.getTime,
-      r.isdeleted
-    ))
-}
 
 
 

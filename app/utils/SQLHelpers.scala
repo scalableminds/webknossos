@@ -29,18 +29,22 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 
-  def parse(row: X#TableElementType): Option[C]
+  def parse(row: X#TableElementType): Fox[C]
 
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] = {
     db.run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {
       case Some(r) =>
-        parse(r)
+        parse(r) ?~> ("sql: could not parse database row for object" + id)
       case _ =>
-        None
-    }
+        Fox.failure("sql: could not find object " + id)
+    }.flatten
   }
 
-  def parseTuple(literal: String): List[String] = {
+  def parseStructTuple(literal: String): List[String] = {
+    List(literal)
+  }
+
+  def parseArrayTuple(literal: String): List[String] = {
     //TODO: error handling, escape handling. copy from js parser?
     val trimmed = literal.drop(1).dropRight(1)
     if (trimmed.isEmpty) List()

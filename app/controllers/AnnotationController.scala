@@ -59,7 +59,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def sqlTest2(id: String) = UserAwareAction.async { implicit request =>
     for {
       annotationSQL <- AnnotationSQLDAO.findOne(ObjectId(id))
-      annotation <- Annotation.fromAnnotationSQL(annotationSQL)
+      annotation <- Annotation.fromAnnotationSQL(annotationSQL) ?~> Messages("annotation.notFound")
     } yield {
       Ok(Json.toJson(annotation))
     }

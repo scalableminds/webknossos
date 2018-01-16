@@ -1,16 +1,15 @@
 package models.task
 
-import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
 import models.basics._
 import models.project.{Project, ProjectDAO}
-import models.team.TeamSQL
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -22,7 +21,6 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONObjectID, BSONString}
 import reactivemongo.play.json.BSONFormats._
-import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
 
@@ -49,11 +47,11 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def idColumn(x: Tasks) = x._Id
   def isDeletedColumn(x: Tasks) = x.isdeleted
 
-  def parse(r: TasksRow): Option[TaskSQL] =
+
+  def parse(r: TasksRow): Fox[TaskSQL] =
     for {
-      boundingBox <- r.boundingbox.map(b => parseTuple(b).map(_.toInt)).map(BoundingBox.fromSQL)
-      editPosition <- Point3D.fromList(parseTuple(r.editposition).map(_.toInt))
-      editRotation <- Vector3D.fromList(parseTuple(r.editrotation).map(_.toDouble))
+      editPosition <- Point3D.fromList(parseArrayTuple(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
+      editRotation <- Vector3D.fromList(parseArrayTuple(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
     } yield {
       TaskSQL(
         ObjectId(r._Id),
@@ -64,7 +62,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
         Experience(r.neededexperienceDomain, r.neededexperienceValue),
         r.totalinstances,
         r.tracingtime,
-        boundingBox,
+        r.boundingbox.map(b => parseArrayTuple(b).map(_.toInt)).map(BoundingBox.fromSQL).flatten,
         editPosition,
         editRotation,
         r.creationinfo,
@@ -74,23 +72,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     }
 }
 
-object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
-  val collection = Teams
-
-  def idColumn(x: Teams): Rep[String] = x._Id
-  def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
-
-  def parse(r: TeamsRow): Option[TeamSQL] =
-    Some(TeamSQL(
-      ObjectId(r._Id),
-      ObjectId(r._Owner),
-      r._Parent.map(ObjectId(_)),
-      r.name,
-      r.behaveslikerootteam,
-      r.created.getTime,
-      r.isdeleted
-    ))
-}
 
 
 

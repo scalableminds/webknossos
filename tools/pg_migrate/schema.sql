@@ -211,7 +211,8 @@ CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
 CREATE INDEX ON webknossos.users(email);
 
-insert into webknossos.annotations(_id, _dataset, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('annotation_id', 'dataset_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
+insert into webknossos.annotations(_id, _dataset, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('expl_annotation_id', 'dataset_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
+insert into webknossos.annotations(_id, _dataset, _task, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('annotation_id', 'dataset_id', 'task_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Task');
 
 insert into webknossos.tasktypes(_id, _team, summary, description, settings_branchPointsAllowed, settings_somaClickingAllowed, settings_advancedOptionsAllowed) values('tasktype_id', 'team_id', 'tasktype_summary', 'tasktype_description', false, false, false);
 

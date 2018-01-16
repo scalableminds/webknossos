@@ -2,6 +2,7 @@ package models.binary
 
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.webknossos.schema.Tables._
@@ -35,8 +36,8 @@ object DatasetSQLDAO extends SQLDAO[DatasetSQL, DatasetsRow, Datasets] {
   def idColumn(x: Datasets): Rep[String] = x._Id
   def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
-  def parse(r: DatasetsRow): Option[DatasetSQL] =
-    Some(DatasetSQL(
+  def parse(r: DatasetsRow): Fox[DatasetSQL] =
+    Fox.successful(DatasetSQL(
         ObjectId(r._Id),
         ObjectId(r._Datastore),
         ObjectId(r._Team),

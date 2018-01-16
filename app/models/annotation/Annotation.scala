@@ -22,6 +22,8 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLDAO}
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 
 
 case class AnnotationSQL(
@@ -53,7 +55,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def idColumn(x: Annotations): Rep[String] = x._Id
   def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
-  def parse(r: AnnotationsRow): Option[AnnotationSQL] =
+  def parse(r: AnnotationsRow): Fox[AnnotationSQL] =
     for {
       state <- AnnotationState.fromString(r.state)
       tracingTyp <- TracingType.fromString(r.tracingTyp)
@@ -71,7 +73,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
         r.name,
         state,
         Json.parse(r.statistics).as[JsObject],
-        parseTuple(r.tags).toSet,
+        parseArrayTuple(r.tags).toSet,
         r.tracingtime,
         annotationType,
         r.created.getTime,

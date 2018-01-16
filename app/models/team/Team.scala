@@ -2,10 +2,9 @@ package models.team
 
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import models.basics.SecuredBaseDAO
-import models.binary.DatasetSQL
 import models.user.{User, UserDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -34,8 +33,8 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   def idColumn(x: Teams): Rep[String] = x._Id
   def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TeamsRow): Option[TeamSQL] =
-    Some(TeamSQL(
+  def parse(r: TeamsRow): Fox[TeamSQL] =
+    Fox.successful(TeamSQL(
       ObjectId(r._Id),
       ObjectId(r._Owner),
       r._Parent.map(ObjectId(_)),

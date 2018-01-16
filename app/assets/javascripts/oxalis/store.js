@@ -405,7 +405,6 @@ export const defaultState: OxalisState = {
       allowAccess: true,
       allowDownload: false,
       somaClickingAllowed: false,
-      advancedOptionsAllowed: true,
       allowedModes: ["orthogonal", "oblique", "flight"],
     },
     tags: [],

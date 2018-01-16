@@ -88,7 +88,6 @@ export type APIRestrictionsType = {
 export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 
 export type APISettingsType = {
-  +advancedOptionsAllowed: boolean,
   +allowedModes: Array<APIAllowedModeType>,
   +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,

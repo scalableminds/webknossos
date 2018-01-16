@@ -14,6 +14,7 @@ import models.task._
 import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import org.joda.time.format.DateTimeFormat
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
@@ -187,8 +188,8 @@ object Annotation extends FoxImplicits {
     else
       for {
         taskId <- s._task.toFox
-        task: TaskSQL <- TaskSQLDAO.findOne(taskId)
-        taskType <- TaskTypeSQLDAO.findOne(task._taskType)
+        task: TaskSQL <- TaskSQLDAO.findOne(taskId) ?~> Messages("task.notFound")
+        taskType <- TaskTypeSQLDAO.findOne(task._taskType) ?~> Messages("taskType.notFound")
       } yield {
         taskType.settings
       }
@@ -196,8 +197,8 @@ object Annotation extends FoxImplicits {
 
   def fromAnnotationSQL(s: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
-      dataset <- DatasetSQLDAO.findOne(s._dataset)
-      team <- TeamSQLDAO.findOne(s._team)
+      dataset <- DatasetSQLDAO.findOne(s._dataset) ?~> Messages("dataSet.notFound")
+      team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
       settings <- findSettingsFor(s)
       name: Option[String] = if (s.name.isEmpty) None else Some(s.name)
     } yield {
@@ -216,7 +217,7 @@ object Annotation extends FoxImplicits {
         s.created,
         s.modified,
         s._task.map(_.toBSONObjectId).flatten,
-        s._id.toBSONObjectId.get,
+        s._id.toBSONObjectId.getOrElse(BSONObjectID.generate()),
         !s.isDeleted,
         s.isPublic,
         s.tags

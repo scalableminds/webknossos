@@ -211,9 +211,15 @@ CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
 CREATE INDEX ON webknossos.users(email);
 
-insert into webknossos.annotations(_id, _dataset, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('id', 'dataset_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
+insert into webknossos.annotations(_id, _dataset, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('annotation_id', 'dataset_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
 
+insert into webknossos.tasktypes(_id, _team, summary, description, settings_branchPointsAllowed, settings_somaClickingAllowed, settings_advancedOptionsAllowed) values('tasktype_id', 'team_id', 'tasktype_summary', 'tasktype_description', false, false, false);
 
+insert into webknossos.tasks(_id, _project, _tasktype, _team, neededExperience_domain, neededExperience_value, totalInstances, tracingTime, editPosition, editRotation) values('task_id', 'project_id', 'tasktype_id', 'team_id', 'experience_domain', 1, 10, 0, '(0,0,0)', '(0,0,0)');
+
+insert into webknossos.teams(_id, _owner, name, behavesLikeRootTeam) values('team_id', 'user_id', 'team_name', false);
+
+insert into webknossos.datasets(_id, _datastore, _team, name) values('dataset_id', 'datastore_id', 'team_id', 'dataset_name');
 
 -- ALTER TABLE webknossos.analytics
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);

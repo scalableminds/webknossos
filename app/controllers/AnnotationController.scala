@@ -58,7 +58,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def sqlTest2(id: String) = UserAwareAction.async { implicit request =>
     for {
-      annotation <- AnnotationSQLDAO.findOne(ObjectId(id))
+      annotationSQL <- AnnotationSQLDAO.findOne(ObjectId(id))
+      annotation <- Annotation.fromAnnotationSQL(annotationSQL)
     } yield {
       Ok(Json.toJson(annotation))
     }

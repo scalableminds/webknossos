@@ -9,8 +9,8 @@ const { Option } = Select;
 
 type Props = {
   form: Object,
-  value: ?string,
-  onChange: (teamId: string) => Promise<*>,
+  value?: ?string,
+  onChange: (teamId: string) => Promise<*> | void,
 };
 type State = {
   teams: Array<APITeamType>,

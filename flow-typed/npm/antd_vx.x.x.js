@@ -56,6 +56,7 @@ declare module "antd" {
   declare class Switch<P> extends React$Component<P> {}
   declare class Table<P> extends React$Component<P> {
     static Column: React$ComponentType<P>;
+    static ColumnGroup: React$ComponentType<P>;
   }
   declare class Tabs<P> extends React$Component<P> {
     static TabPane: React$ComponentType<P>;

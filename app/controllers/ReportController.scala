@@ -21,11 +21,11 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.duration._
 
 
-case class OpenTasksEntry(user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
+case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
 object OpenTasksEntry { implicit val jsonFormat = Json.format[OpenTasksEntry] }
 
-case class ProjectProgressEntry(projectName: String, totalTasks: Int, totalInstances: Int, openInstances: Int,
-                                finishedInstances: Int, inProgressInstances: Int)
+case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks: Int, totalInstances: Int, openInstances: Int,
+                                finishedInstances: Int, activeInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
 class ReportController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
@@ -49,24 +49,24 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
       firstTask <- TaskDAO.findOneByProject(project.name)
       totalInstances <- TaskDAO.sumInstancesByProject(project.name)
       finishedInstances <- AnnotationDAO.countFinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
-      inProgressInstances <- AnnotationDAO.countUnfinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
-      openInstances = totalInstances - finishedInstances - inProgressInstances
-      _ <- assertNotPaused(project, finishedInstances, inProgressInstances)
-      _ <- assertExpDomain(firstTask, inProgressInstances, users)
-      _ <- assertAge(taskIds, inProgressInstances, openInstances)
+      activeInstances <- AnnotationDAO.countActiveByTaskIdsAndType(taskIds, AnnotationType.Task)
+      openInstances = totalInstances - finishedInstances - activeInstances
+      _ <- assertNotPaused(project, finishedInstances, activeInstances)
+      _ <- assertExpDomain(firstTask, activeInstances, users)
+      _ <- assertAge(project, taskIds, activeInstances, openInstances)
     } yield {
-      ProjectProgressEntry(project.name, totalTasks, totalInstances, openInstances, finishedInstances, inProgressInstances)
+      ProjectProgressEntry(project.name, project.paused, totalTasks, totalInstances, openInstances, finishedInstances, activeInstances)
     }
   }
 
-  private def assertNotPaused(project: Project, finishedInstances: Int, inProgressInstances: Int) = {
-    if (project.paused && finishedInstances == 0 && inProgressInstances == 0) {
+  private def assertNotPaused(project: Project, finishedInstances: Int, activeInstances: Int) = {
+    if (project.paused && finishedInstances == 0 && activeInstances == 0) {
       Fox.failure("")
     } else Fox.successful(())
   }
 
-  private def assertExpDomain(firstTask: Task, inProgressInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
-    if (inProgressInstances > 0) Fox.successful(())
+  private def assertExpDomain(firstTask: Task, activeInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
+    if (activeInstances > 0) Fox.successful(())
     else assertMatchesAnyUserOfTeam(firstTask.neededExperience, users)
   }
 
@@ -78,8 +78,8 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     }
   }
 
-  private def assertAge(taskIds: List[BSONObjectID], inProgressInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
-    if (inProgressInstances > 0 || openInstances > 0) Fox.successful(())
+  private def assertAge(project: Project, taskIds: List[BSONObjectID], activeInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
+    if (activeInstances > 0 || (!project.paused && openInstances > 0)) Fox.successful(())
     else {
       assertRecentlyModified(taskIds)
     }
@@ -101,7 +101,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
-      users <- UserDAO.findByTeams(List(team.name), true)(GlobalAccessContext)
+      users <- UserDAO.findByTeams(List(team.name), includeAnonymous = true, includeInactive = false)(GlobalAccessContext)
       nonAdminUsers = users.filterNot(_.isAdminOf(team.name))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield {
@@ -116,7 +116,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
         projects <- TaskDAO.findWithOpenByUserReturnOnlyProject(user).toFox
         assignmentCountsByProject <- getAssignmentsByProjectsFor(projects, user)
       } yield {
-        OpenTasksEntry(user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
+        OpenTasksEntry(user.id, user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
       }
     }
     Fox.combined(foxes.toList)

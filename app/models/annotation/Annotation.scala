@@ -3,7 +3,7 @@ package models.annotation
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, InProgress}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
@@ -37,7 +37,7 @@ case class AnnotationSQL(
                           description: String = "",
                           isPublic: Boolean = false,
                           name: String = "",
-                          state: AnnotationState.Value = InProgress,
+                          state: AnnotationState.Value = Active,
                           statistics: JsObject = Json.obj(),
                           tags: Set[String] = Set.empty,
                           tracingTime: Option[Long] = None,
@@ -86,8 +86,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
 
 
-
-
 case class Annotation(
                        _user: Option[BSONObjectID],
                        tracingReference: TracingReference,
@@ -96,7 +94,7 @@ case class Annotation(
                        settings: AnnotationSettings,
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
-                       state: AnnotationState.Value = InProgress,
+                       state: AnnotationState.Value = Active,
                        _name: Option[String] = None,
                        description: String = "",
                        tracingTime: Option[Long] = None,
@@ -299,7 +297,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
 
   def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
     "_user" -> _user,
-    "state" -> Json.obj("$in" -> AnnotationState.assignedButNotFinished),
+    "state" -> AnnotationState.Active,
     "typ" -> annotationType)
 
   def hasAnOpenAnnotation(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
@@ -308,7 +306,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     val q = Json.obj(
       "_user" -> _user,
-      "state" -> Json.obj("$in" -> finishedOptToStates(isFinished)),
+      "state" -> finishedOptToStateQuery(isFinished),
       "typ" -> annotationType)
 
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
@@ -320,16 +318,16 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType], limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     val q = Json.obj(
       "_user" -> _user,
-      "state" -> Json.obj("$in" -> finishedOptToStates(isFinished)),
+      "state" -> finishedOptToStateQuery(isFinished),
       "typ" -> Json.obj("$nin" -> annotationTypes))
 
     find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
   }
 
-  private def finishedOptToStates(isFinished: Option[Boolean]) = isFinished match {
-    case Some(true) => List(AnnotationState.Finished)
-    case Some(false) => AnnotationState.assignedButNotFinished
-    case None => AnnotationState.assignedStates
+  private def finishedOptToStateQuery(isFinished: Option[Boolean]): JsValue = isFinished match {
+    case Some(true) => Json.toJson(AnnotationState.Finished)
+    case Some(false) => Json.toJson(AnnotationState.Active)
+    case None => Json.obj("$ne" -> AnnotationState.Cancelled)
   }
 
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
@@ -353,12 +351,12 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     find(Json.obj(
       "_task" -> _task,
       "typ" -> annotationType,
-      "state" -> Json.obj("$in" -> AnnotationState.assignedStates)))
+      "state" -> Json.obj("$ne" -> AnnotationState.Cancelled)))
 
   def findAllUnfinishedByTaskIds(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     find(Json.obj(
       "_task" -> Json.obj("$in" -> Json.toJson(taskIds)),
-      "state" -> Json.obj("$in" -> AnnotationState.notFinished)
+      "state" -> Json.obj("$ne" -> AnnotationState.Finished)
     )).cursor[Annotation]().collect[List]()
   }
 
@@ -369,30 +367,24 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     )
   }
 
-  def countUnfinishedByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    count(Json.obj(
-      "_task" -> _task,
-      "typ" -> annotationType,
-      "state" -> Json.obj("$in" -> AnnotationState.assignedButNotFinished)))
-
-  def countUnfinishedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+  def countActiveByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(Json.obj(
       "_task" -> Json.obj("$in" -> _tasks),
       "typ" -> annotationType,
-      "state" -> Json.obj("$in" -> AnnotationState.assignedButNotFinished)))
+      "state" -> AnnotationState.Active))
 
   def countFinishedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(Json.obj(
       "_task" -> Json.obj("$in" -> _tasks),
       "typ" -> annotationType,
-      "state" -> "Finished"))
+      "state" -> AnnotationState.Finished))
 
   def countFinishedByTaskIdsAndUserIdAndType(_tasks: List[BSONObjectID], userId: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
       count(Json.obj(
         "_user" -> userId,
         "_task" -> Json.obj("$in" -> _tasks),
         "typ" -> annotationType,
-        "state" -> "Finished"
+        "state" -> AnnotationState.Finished
       ))
 
 
@@ -410,7 +402,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         "typ" -> Json.obj("$in" -> AnnotationType.UserTracings)),
       Json.obj(
         "$set" -> Json.obj(
-          "state" -> Unassigned)))
+          "state" -> Cancelled)))
 
   def updateState(annotation: Annotation, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =
     update(
@@ -465,7 +457,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       returnNew = true)
 
   def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    updateState(_annotation, InProgress)
+    updateState(_annotation, Active)
 
   def updateState(_annotation: BSONObjectID, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =
     findAndModify(

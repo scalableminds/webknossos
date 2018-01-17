@@ -6,9 +6,9 @@ package com.scalableminds.webknossos.datastore.tracings.volume
 import java.io.File
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.binary.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
-import com.scalableminds.webknossos.datastore.binary.models.BucketPosition
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSource, ElementClass, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
+import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.util.io.ZipIO

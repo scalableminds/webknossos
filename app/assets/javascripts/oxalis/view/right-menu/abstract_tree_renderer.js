@@ -91,7 +91,7 @@ class AbstractTreeRenderer {
 
   buildTree(): ?AbstractNodeType {
     // Asumption: Node with smallest id is root
-    const rootId = _.min(_.map(this.tree.nodes, "id"));
+    const rootId = _.min(Array.from(this.tree.nodes.keys()));
 
     const nodeToEdgesMap = getNodeToEdgesMap(this.tree, false);
 

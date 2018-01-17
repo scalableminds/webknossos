@@ -26,7 +26,7 @@ CREATE TABLE webknossos.analytics(
 
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
-CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Unassigned', 'Assigned', 'InProgress', 'Finished');
+CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _ CHAR(24) NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE webknossos.annotations(
   description TEXT NOT NULL DEFAULT '',
   isPublic BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL DEFAULT '',
-  state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Unassigned',
+  state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
   statistics JSONB NOT NULL,
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
@@ -145,7 +145,7 @@ CREATE TABLE webknossos.tasks(
 CREATE VIEW webknossos.task_instances AS
   SELECT t._id, COUNT(*) assignedInstances, t.totalinstances - COUNT(*) openInstances
   FROM webknossos.tasks t JOIN webknossos.annotations a ON t._id = a._task
-  WHERE a.typ = 'Task' AND a.state != 'Unassigned'
+  WHERE a.typ = 'Task' AND a.state != 'Cancelled'
   GROUP BY t._id, t.totalinstances;
 
 CREATE TABLE webknossos.teams(

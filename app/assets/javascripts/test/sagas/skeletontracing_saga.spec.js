@@ -4,6 +4,7 @@ import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import ChainReducer from "test/helpers/chainReducer";
 import { createSaveQueueFromUpdateActions, withoutUpdateTracing } from "../helpers/saveHelpers";
+import DiffableMap from "libs/diffable_map";
 
 const TIMESTAMP = 1494347146379;
 
@@ -53,7 +54,7 @@ const initialState = {
       "1": {
         treeId: 1,
         name: "TestTree",
-        nodes: {},
+        nodes: new DiffableMap(),
         timestamp: 12345678,
         branchPoints: [],
         edges: [],
@@ -334,6 +335,8 @@ test("SkeletonTracingSaga should emit update actions on split tree", t => {
     .apply(SkeletonTracingReducer, createNodeAction)
     .apply(SkeletonTracingReducer, mergeTreesAction)
     .unpack();
+
+  // Node 3 will be deleted since it is active in testState.
   const newState = SkeletonTracingReducer(testState, deleteNodeAction);
 
   const updateActions = testDiffing(testState.tracing, newState.tracing, newState.flycam);
@@ -347,9 +350,9 @@ test("SkeletonTracingSaga should emit update actions on split tree", t => {
   t.is(updateActions[3].name, "createNode");
   t.is(updateActions[3].value.id, 1);
   t.is(updateActions[3].value.treeId, 4);
-  t.deepEqual(updateActions[4], { name: "deleteNode", value: { treeId: 2, nodeId: 1 } });
-  t.deepEqual(updateActions[5], { name: "deleteNode", value: { treeId: 2, nodeId: 3 } });
-  t.deepEqual(updateActions[6], { name: "deleteNode", value: { treeId: 2, nodeId: 4 } });
+  t.deepEqual(updateActions[4], { name: "deleteNode", value: { treeId: 2, nodeId: 3 } });
+  t.deepEqual(updateActions[5], { name: "deleteNode", value: { treeId: 2, nodeId: 4 } });
+  t.deepEqual(updateActions[6], { name: "deleteNode", value: { treeId: 2, nodeId: 1 } });
   t.deepEqual(updateActions[7], { name: "deleteEdge", value: { treeId: 2, source: 2, target: 3 } });
   t.deepEqual(updateActions[8], { name: "deleteEdge", value: { treeId: 2, source: 3, target: 4 } });
   t.deepEqual(updateActions[9], { name: "deleteEdge", value: { treeId: 2, source: 1, target: 3 } });

@@ -7,14 +7,12 @@ import java.io.{ByteArrayOutputStream, OutputStream}
 import java.util.Base64
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.binary.api.BinaryDataService
-import com.scalableminds.webknossos.datastore.binary.helpers.{DataSourceRepository, ThumbnailHelpers}
-import com.scalableminds.webknossos.datastore.binary.models._
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataLayer, DataSource, SegmentationLayer}
-import com.scalableminds.webknossos.datastore.binary.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, BinaryDataService, DataSourceRepository, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.models._
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.requests.{DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.{DataRequest, ImageThumbnail, WebKnossosDataRequest}
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.image.{ImageCreator, ImageCreatorParameters, JPEGWriter}
 import com.scalableminds.util.tools.Fox
@@ -302,7 +300,7 @@ class BinaryDataController @Inject()(
                                    ): Fox[(OutputStream) => Unit] = {
     for {
       (_, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      position = ThumbnailHelpers.goodThumbnailParameters(dataLayer, width, height)
+      position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height)
       request = DataRequest(position, width, height, 1)
       image <- respondWithSpriteSheet(dataSetName, dataLayerName, request, 1, blackAndWhite = false)
     } yield {

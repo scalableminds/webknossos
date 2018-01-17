@@ -10,9 +10,10 @@ fi
 
 cmd=$1
 shift;
+additionalParams=$@
 
 function prepare {
-  rm -rf $testBundlePath && BABEL_ENV=test babel $jsPath --out-dir $testBundlePath "$@"
+  rm -rf $testBundlePath && BABEL_ENV=test babel $jsPath --out-dir $testBundlePath "$additionalParams"
 }
 
 function ensureUpToDateTests {

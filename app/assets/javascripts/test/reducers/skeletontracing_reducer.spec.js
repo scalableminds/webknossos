@@ -11,6 +11,7 @@ import _ from "lodash";
 import mock from "mock-require";
 import ChainReducer from "test/helpers/chainReducer";
 import update from "immutability-helper";
+import DiffableMap from "libs/diffable_map";
 
 mock.stopAll();
 mock("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -45,7 +46,7 @@ const initialState = {
       [1]: {
         treeId: 1,
         name: "TestTree",
-        nodes: {},
+        nodes: new DiffableMap(),
         timestamp: Date.now(),
         branchPoints: [],
         edges: [],
@@ -88,13 +89,13 @@ test("SkeletonTracing should add a new node", t => {
   t.is(newState.tracing.trees[1].name, initialState.tracing.trees[1].name);
 
   // This should be changed
-  const maxNodeId = _.max(Object.keys(newState.tracing.trees[1].nodes));
+  const maxNodeId = _.max(Array.from(newState.tracing.trees[1].nodes.keys()));
 
-  t.is(maxNodeId, "1");
+  t.is(maxNodeId, 1);
   t.is(newState.tracing.activeNodeId, 1);
   t.deepEqual(_.size(newState.tracing.trees[1].edges), 0);
 
-  deepEqualObjectContaining(t, newState.tracing.trees[1].nodes[1], {
+  deepEqualObjectContaining(t, newState.tracing.trees[1].nodes.get(1), {
     position,
     rotation,
     viewport,
@@ -119,11 +120,11 @@ test("SkeletonTracing should add a several nodes", t => {
 
   t.not(newState, initialState);
   const maxNodeId = _.max(
-    _.flatMap(newState.tracing.trees, tree => _.map(tree.nodes, node => node.id)),
+    _.flatMap(newState.tracing.trees, tree => tree.nodes.map(node => node.id)),
   );
   t.is(maxNodeId, 3);
   t.is(newState.tracing.activeNodeId, 3);
-  t.deepEqual(_.size(newState.tracing.trees[1].nodes), 3);
+  t.deepEqual(newState.tracing.trees[1].nodes.size(), 3);
   t.deepEqual(newState.tracing.trees[1].edges.length, 2);
   t.deepEqual(newState.tracing.trees[1].edges, [
     { source: 1, target: 2 },
@@ -148,13 +149,13 @@ test("SkeletonTracing should add nodes to a different tree", t => {
 
   t.not(newState, initialState);
   const maxNodeId = _.max(
-    _.flatMap(newState.tracing.trees, tree => _.map(tree.nodes, node => node.id)),
+    _.flatMap(newState.tracing.trees, tree => tree.nodes.map(node => node.id)),
   );
   t.is(maxNodeId, 3);
   t.is(newState.tracing.activeTreeId, 2);
   t.is(newState.tracing.activeNodeId, 3);
-  t.deepEqual(_.size(newState.tracing.trees[1].nodes), 1);
-  t.deepEqual(_.size(newState.tracing.trees[2].nodes), 2);
+  t.deepEqual(newState.tracing.trees[1].nodes.size(), 1);
+  t.deepEqual(newState.tracing.trees[2].nodes.size(), 2);
   t.deepEqual(newState.tracing.trees[1].edges.length, 0);
   t.deepEqual(newState.tracing.trees[2].edges, [{ source: 2, target: 3 }]);
 });
@@ -225,12 +226,12 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
           [0]: {
             treeId: 0,
             name: "TestTree-0",
-            nodes: {
-              [0]: createDummyNode(0),
-              [1]: createDummyNode(1),
-              [2]: createDummyNode(2),
-              [7]: createDummyNode(7),
-            },
+            nodes: new DiffableMap([
+              [0, createDummyNode(0)],
+              [1, createDummyNode(1)],
+              [2, createDummyNode(2)],
+              [7, createDummyNode(7)],
+            ]),
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
             edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 1, target: 7 }],
@@ -240,11 +241,11 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
           [1]: {
             treeId: 1,
             name: "TestTree-1",
-            nodes: {
-              [4]: createDummyNode(4),
-              [5]: createDummyNode(5),
-              [6]: createDummyNode(6),
-            },
+            nodes: new DiffableMap([
+              [4, createDummyNode(4)],
+              [5, createDummyNode(5)],
+              [6, createDummyNode(6)],
+            ]),
             timestamp: Date.now(),
             branchPoints: [],
             edges: [{ source: 4, target: 5 }, { source: 5, target: 6 }],
@@ -266,13 +267,13 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
   const newTrees = state1.tracing.trees;
 
   t.is(Object.keys(newTrees).length, 4);
-  t.is(newTrees[0].nodes[0].id, 0);
+  t.is(newTrees[0].nodes.get(0).id, 0);
   t.is(newTrees[0].comments.length, 1);
   t.is(newTrees[0].comments[0].nodeId, 0);
-  t.is(newTrees[1].nodes[4].id, 4);
+  t.is(newTrees[1].nodes.get(4).id, 4);
 
-  t.is(newTrees[2].nodes[2].id, 2);
-  t.is(newTrees[3].nodes[7].id, 7);
+  t.is(newTrees[2].nodes.get(2).id, 2);
+  t.is(newTrees[3].nodes.get(7).id, 7);
   t.is(newTrees[3].branchPoints[0].nodeId, 7);
 });
 
@@ -340,12 +341,12 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
           [0]: {
             treeId: 0,
             name: "TestTree-0",
-            nodes: {
-              [0]: createDummyNode(0),
-              [1]: createDummyNode(1),
-              [2]: createDummyNode(2),
-              [7]: createDummyNode(7),
-            },
+            nodes: new DiffableMap([
+              [0, createDummyNode(0)],
+              [1, createDummyNode(1)],
+              [2, createDummyNode(2)],
+              [7, createDummyNode(7)],
+            ]),
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
             edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 2, target: 7 }],
@@ -355,11 +356,11 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
           [1]: {
             treeId: 1,
             name: "TestTree-1",
-            nodes: {
-              [4]: createDummyNode(4),
-              [5]: createDummyNode(5),
-              [6]: createDummyNode(6),
-            },
+            nodes: new DiffableMap([
+              [4, createDummyNode(4)],
+              [5, createDummyNode(5)],
+              [6, createDummyNode(6)],
+            ]),
             timestamp: Date.now(),
             branchPoints: [],
             edges: [{ source: 4, target: 5 }, { source: 5, target: 6 }],
@@ -380,17 +381,17 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
   const newTrees = state1.tracing.trees;
 
   t.is(Object.keys(newTrees).length, 3);
-  t.is(newTrees[0].nodes[0].id, 0);
-  t.is(_.size(newTrees[0].nodes), 2);
+  t.is(newTrees[0].nodes.get(0).id, 0);
+  t.is(newTrees[0].nodes.size(), 2);
   t.is(newTrees[0].branchPoints[0].nodeId, 1);
-  t.is(newTrees[1].nodes[4].id, 4);
-  t.is(_.size(newTrees[1].nodes), 3);
+  t.is(newTrees[1].nodes.get(4).id, 4);
+  t.is(newTrees[1].nodes.size(), 3);
 
   t.is(newTrees[2].comments.length, 1);
   t.is(newTrees[2].comments[0].nodeId, 7);
-  t.is(newTrees[2].nodes[2].id, 2);
-  t.is(newTrees[2].nodes[7].id, 7);
-  t.is(_.size(newTrees[2].nodes), 2);
+  t.is(newTrees[2].nodes.get(2).id, 2);
+  t.is(newTrees[2].nodes.get(7).id, 7);
+  t.is(newTrees[2].nodes.size(), 2);
   t.is(newTrees[2].branchPoints[0].nodeId, 7);
 });
 
@@ -451,7 +452,7 @@ test("SkeletonTracing should set a new node radius", t => {
   newState = SkeletonTracingReducer(newState, setNodeRadiusAction);
 
   t.not(newState, initialState);
-  t.deepEqual(newState.tracing.trees[1].nodes[1].radius, newRadius);
+  t.deepEqual(newState.tracing.trees[1].nodes.get(1).radius, newRadius);
 });
 
 test("SkeletonTracing should create a branchpoint", t => {
@@ -543,7 +544,7 @@ test("SkeletonTracing should delete a branchpoint", t => {
 
   t.not(newState, initialState);
   t.is(newState.tracing.trees[1].branchPoints.length, 0);
-  t.is(_.size(newState.tracing.trees[1].nodes), 2);
+  t.is(newState.tracing.trees[1].nodes.size(), 2);
   t.is(newState.tracing.activeNodeId, 1);
   t.is(newState.tracing.activeTreeId, 1);
 });
@@ -569,7 +570,7 @@ test("SkeletonTracing should delete several branchpoints", t => {
 
   t.not(newState, initialState);
   t.is(newState.tracing.trees[1].branchPoints.length, 0);
-  t.is(_.size(newState.tracing.trees[1].nodes), 2);
+  t.is(newState.tracing.trees[1].nodes.size(), 2);
   t.is(newState.tracing.activeNodeId, 1);
   t.is(newState.tracing.activeTreeId, 1);
 });
@@ -594,7 +595,7 @@ test("SkeletonTracing shouldn't delete more branchpoints than available", t => {
 
   t.not(newState, initialState);
   t.is(newState.tracing.trees[1].branchPoints.length, 0);
-  t.is(_.size(newState.tracing.trees[1].nodes), 1);
+  t.is(newState.tracing.trees[1].nodes.size(), 1);
   t.is(newState.tracing.activeNodeId, 1);
   t.is(newState.tracing.activeTreeId, 1);
 });
@@ -660,7 +661,7 @@ test("SkeletonTracing should add a new tree", t => {
   deepEqualObjectContaining(t, newState.tracing.trees[2], {
     comments: [],
     branchPoints: [],
-    nodes: {},
+    nodes: new DiffableMap(),
     treeId: 2,
     color: [0, 0, 1],
     // name: ...
@@ -782,7 +783,7 @@ test("SkeletonTracing should merge two trees", t => {
 
   t.not(newState, initialState);
   t.is(_.size(newState.tracing.trees), 1);
-  t.is(_.size(newState.tracing.trees[2].nodes), 4);
+  t.is(newState.tracing.trees[2].nodes.size(), 4);
   t.deepEqual(newState.tracing.trees[2].edges, [
     { source: 2, target: 3 },
     { source: 3, target: 4 },
@@ -837,7 +838,7 @@ test("SkeletonTracing should merge two trees with comments and branchPoints", t 
 
   t.not(newState, initialState);
   t.is(_.size(newState.tracing.trees), 1);
-  t.is(_.size(newState.tracing.trees[2].nodes), 4);
+  t.is(newState.tracing.trees[2].nodes.size(), 4);
   t.deepEqual(newState.tracing.trees[2].edges, [
     { source: 2, target: 3 },
     { source: 3, target: 4 },
@@ -1108,7 +1109,7 @@ test("SkeletonTracing should add a node in a specified tree", t => {
     .unpack();
 
   t.not(newState, initialState);
-  t.truthy(newState.tracing.trees[2].nodes[1]);
+  t.truthy(newState.tracing.trees[2].nodes.get(1));
   t.is(newState.tracing.activeTreeId, 2);
   t.is(newState.tracing.activeNodeId, 1);
 });
@@ -1131,7 +1132,7 @@ test("SkeletonTracing should delete a specified node (1/2)", t => {
     .unpack();
 
   t.not(newState, initialState);
-  t.falsy(newState.tracing.trees[1].nodes[2]);
+  t.falsy(newState.tracing.trees[1].nodes.has(2));
   // tree is split
   t.truthy(newState.tracing.trees[2]);
   t.is(newState.tracing.activeNodeId, 1);
@@ -1156,7 +1157,7 @@ test("SkeletonTracing should delete a specified node (2/2)", t => {
     .unpack();
 
   t.not(newState, initialState);
-  t.falsy(newState.tracing.trees[1].nodes[2]);
+  t.falsy(newState.tracing.trees[1].nodes.has(2));
   // tree is split
   t.truthy(newState.tracing.trees[2]);
   t.is(newState.tracing.activeNodeId, 1);

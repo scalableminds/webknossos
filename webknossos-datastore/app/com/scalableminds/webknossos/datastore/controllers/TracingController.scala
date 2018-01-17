@@ -3,10 +3,9 @@
  */
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.scalableminds.webknossos.datastore.binary.helpers.DataSourceRepository
 import com.scalableminds.webknossos.datastore.SkeletonTracing.Color
 import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
-import com.scalableminds.webknossos.datastore.services.{UserAccessRequest, WebKnossosServer}
+import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.datastore.tracings.{TracingSelector, _}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.boxFormat

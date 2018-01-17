@@ -6,6 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import models.basics.SecuredBaseDAO
 import models.user.{User, UserDAO}
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -106,6 +107,32 @@ object Team extends FoxImplicits {
       (__ \ "roles").read[List[Role]] and
       (__ \ "parent").readNullable(Reads.minLength[String](3))
       )((name, roles, parent) => Team(name, parent, roles, Some(requestingUser._id)))
+
+
+  private def resolveParentTeam(idOpt: Option[ObjectId]): Fox[Option[TeamSQL]] = idOpt match {
+    case Some(id) => for {
+                      parentTeam <- TeamSQLDAO.findOne(id)
+                    } yield {
+                      Some(parentTeam)
+                    }
+    case None => Fox.successful(None)
+  }
+
+  def fromTeamSQL(s: TeamSQL)(implicit ctx: DBAccessContext) = {
+    for {
+      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId")
+      parentTeamOpt <- resolveParentTeam(s._parent)
+    } yield {
+      Team(
+        s.name,
+        parentTeamOpt.map(_.name),
+        List(Role.Admin, Role.User),
+        s._owner.toBSONObjectId,
+        s.behavesLikeRootTeam,
+        idBson
+      )
+    }
+  }
 }
 
 object TeamService {

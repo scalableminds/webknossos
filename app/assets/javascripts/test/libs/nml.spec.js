@@ -12,6 +12,11 @@ const TIMESTAMP = 123456789;
 const DateMock = {
   now: () => TIMESTAMP,
 };
+const buildInfo = {
+  webknossos: {
+    commitHash: "fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17",
+  },
+};
 mock("libs/date", DateMock);
 const { serializeToNml, getNmlName, parseNml } = mock.reRequire("oxalis/model/helpers/nml_helpers");
 const SkeletonTracingReducer = mock.reRequire("oxalis/model/reducers/skeletontracing_reducer")
@@ -83,6 +88,9 @@ const tracing = {
 const initialState = _.extend({}, defaultState, {
   tracing,
   activeUser: { firstName: "SCM", lastName: "Boy" },
+  task: {
+    id: 1,
+  },
 });
 
 async function throwsAsyncParseError(t, fn) {
@@ -99,7 +107,7 @@ async function throwsAsyncParseError(t, fn) {
 }
 
 test("NML serializing and parsing should yield the same state", async t => {
-  const serializedNml = serializeToNml(initialState, initialState.tracing);
+  const serializedNml = serializeToNml(initialState, initialState.tracing, buildInfo);
   const importedTrees = await parseNml(serializedNml);
 
   t.deepEqual(initialState.tracing.trees, importedTrees);
@@ -109,7 +117,7 @@ test("NML Serializer should only serialize visible trees", async t => {
   const state = update(initialState, {
     tracing: { trees: { "1": { isVisible: { $set: false } } } },
   });
-  const serializedNml = serializeToNml(state, state.tracing);
+  const serializedNml = serializeToNml(state, state.tracing, buildInfo);
   const importedTrees = await parseNml(serializedNml);
 
   // Tree 1 should not be exported as it is not visible
@@ -118,13 +126,15 @@ test("NML Serializer should only serialize visible trees", async t => {
 });
 
 test("NML serializer should produce correct NMLs", t => {
-  const serializedNml = serializeToNml(initialState, initialState.tracing);
+  const serializedNml = serializeToNml(initialState, initialState.tracing, buildInfo);
 
   t.snapshot(serializedNml, { id: "nml" });
 });
 
 test("Serialized nml should be correctly named", async t => {
-  t.is(getNmlName(initialState), "Test Dataset__explorational__sboy__tionId.nml");
+  t.is(getNmlName(initialState), "Test Dataset__1__sboy__tionId.nml");
+  const stateWithoutTask = _.omit(initialState, "task");
+  t.is(getNmlName(stateWithoutTask), "Test Dataset__explorational__sboy__tionId.nml");
 });
 
 test("NML Parser should throw errors for invalid nmls", async t => {
@@ -140,15 +150,21 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   const disconnectedTreeState = update(initialState, {
     tracing: { trees: { "2": { edges: { $set: [{ source: 4, target: 5 }] } } } },
   });
-  const nmlWithInvalidComment = serializeToNml(invalidCommentState, invalidCommentState.tracing);
+  const nmlWithInvalidComment = serializeToNml(
+    invalidCommentState,
+    invalidCommentState.tracing,
+    buildInfo,
+  );
   const nmlWithInvalidBranchPoint = serializeToNml(
     invalidBranchPointState,
     invalidBranchPointState.tracing,
+    buildInfo,
   );
-  const nmlWithInvalidEdge = serializeToNml(invalidEdgeState, invalidEdgeState.tracing);
+  const nmlWithInvalidEdge = serializeToNml(invalidEdgeState, invalidEdgeState.tracing, buildInfo);
   const nmlWithDisconnectedTree = serializeToNml(
     disconnectedTreeState,
     disconnectedTreeState.tracing,
+    buildInfo,
   );
 
   // TODO AVAs t.throws doesn't properly work with async functions yet, see https://github.com/avajs/ava/issues/1371

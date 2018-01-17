@@ -17,6 +17,7 @@ import type {
   TreeMapType,
   TemporaryMutableTreeMapType,
 } from "oxalis/store";
+import type { APIBuildInfoType } from "admin/api_flow_types";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -64,7 +65,11 @@ export function getNmlName(state: OxalisState): string {
   return `${datasetName}__${tracingType}__${userName}__${shortAnnotationId}.nml`;
 }
 
-export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType): string {
+export function serializeToNml(
+  state: OxalisState,
+  tracing: SkeletonTracingType,
+  buildInfo: APIBuildInfoType,
+): string {
   // Only visible trees will be serialized!
   // _.filter throws flow errors here, because the type definitions are wrong and I'm not able to fix them
   const visibleTrees = Object.keys(tracing.trees)
@@ -74,6 +79,7 @@ export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType)
     "<things>",
     ...indent(
       _.concat(
+        serializeMetaInformation(state, buildInfo),
         serializeParameters(state),
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
@@ -84,50 +90,81 @@ export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType)
   ].join("\n");
 }
 
+function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoType): Array<string> {
+  return _.compact([
+    serializeTag("meta", {
+      name: "software",
+      content: `nml_helpers.js - ${buildInfo.webknossos.commitHash}`,
+    }),
+    serializeTag("meta", {
+      name: "timestamp",
+      content: Date.now().toString(),
+    }),
+    serializeTag("meta", {
+      name: "annotationId",
+      content: state.tracing.annotationId,
+    }),
+    state.activeUser != null
+      ? serializeTag("meta", {
+          name: "username",
+          content: `${state.activeUser.firstName} ${state.activeUser.lastName}`,
+        })
+      : "",
+    state.task != null
+      ? serializeTag("meta", {
+          name: "taskId",
+          content: state.task.id,
+        })
+      : "",
+  ]);
+}
+
 function serializeParameters(state: OxalisState): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
   const userBB = state.tracing.userBoundingBox;
   return [
     "<parameters>",
-    ...indent([
-      serializeTag("experiment", {
-        name: state.dataset.name,
-        description: state.tracing.description,
-      }),
-      serializeTag("scale", {
-        x: state.dataset.scale[0],
-        y: state.dataset.scale[1],
-        z: state.dataset.scale[2],
-      }),
-      serializeTag("offset", {
-        x: 0,
-        y: 0,
-        z: 0,
-      }),
-      serializeTag("time", { ms: state.tracing.createdTimestamp }),
-      serializeTag("editPosition", {
-        x: editPosition[0],
-        y: editPosition[1],
-        z: editPosition[2],
-      }),
-      serializeTag("editRotation", {
-        xRot: editRotation[0],
-        yRot: editRotation[1],
-        zRot: editRotation[2],
-      }),
-      serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-      userBB != null
-        ? serializeTag("userBoundingBox", {
-            topLeftX: userBB.min[0],
-            topLeftY: userBB.min[1],
-            topLeftZ: userBB.min[2],
-            width: userBB.max[0] - userBB.min[0],
-            height: userBB.max[1] - userBB.min[1],
-            depth: userBB.max[2] - userBB.min[2],
-          })
-        : "",
-    ]),
+    ...indent(
+      _.compact([
+        serializeTag("experiment", {
+          name: state.dataset.name,
+          description: state.tracing.description,
+        }),
+        serializeTag("scale", {
+          x: state.dataset.scale[0],
+          y: state.dataset.scale[1],
+          z: state.dataset.scale[2],
+        }),
+        serializeTag("offset", {
+          x: 0,
+          y: 0,
+          z: 0,
+        }),
+        serializeTag("time", { ms: state.tracing.createdTimestamp }),
+        serializeTag("editPosition", {
+          x: editPosition[0],
+          y: editPosition[1],
+          z: editPosition[2],
+        }),
+        serializeTag("editRotation", {
+          xRot: editRotation[0],
+          yRot: editRotation[1],
+          zRot: editRotation[2],
+        }),
+        serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
+        userBB != null
+          ? serializeTag("userBoundingBox", {
+              topLeftX: userBB.min[0],
+              topLeftY: userBB.min[1],
+              topLeftZ: userBB.min[2],
+              width: userBB.max[0] - userBB.min[0],
+              height: userBB.max[1] - userBB.min[1],
+              depth: userBB.max[2] - userBB.min[2],
+            })
+          : "",
+      ]),
+    ),
     "</parameters>",
   ];
 }

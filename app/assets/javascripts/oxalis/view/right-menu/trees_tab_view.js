@@ -29,6 +29,7 @@ import Utils from "libs/utils";
 import FileUpload from "components/file_upload";
 import { saveAs } from "file-saver";
 import Toast from "libs/toast";
+import { getBuildInfo } from "admin/admin_rest_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
@@ -90,7 +91,8 @@ class TreesTabView extends React.PureComponent<Props, State> {
     // Wait for the Modal to render
     await Utils.sleep(1000);
     const state = Store.getState();
-    const nml = serializeToNml(state, this.props.skeletonTracing);
+    const buildInfo = await getBuildInfo();
+    const nml = serializeToNml(state, this.props.skeletonTracing, buildInfo);
     this.setState({ isDownloading: false });
 
     const blob = new Blob([nml], { type: "text/plain;charset=utf-8" });
@@ -179,11 +181,19 @@ class TreesTabView extends React.PureComponent<Props, State> {
       .map(activeTree => activeTree.name)
       .getOrElse("");
 
+    // Avoid that the title switches to the other title during the fadeout of the Modal
+    let title = "";
+    if (this.state.isDownloading) {
+      title = "Preparing NML";
+    } else if (this.state.isUploading) {
+      title = "Importing NML";
+    }
+
     return (
       <div id="tree-list" className="flex-column">
         <Modal
           visible={this.state.isDownloading || this.state.isUploading}
-          title={this.state.isDownloading ? "Preparing NML" : "Importing NML"}
+          title={title}
           closable={false}
           footer={null}
           width={200}

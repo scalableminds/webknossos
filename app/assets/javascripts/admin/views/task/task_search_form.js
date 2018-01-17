@@ -3,7 +3,7 @@ import _ from "lodash";
 import React from "react";
 import { Form, Row, Col, Button, Input, Select } from "antd";
 import { getUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
-import { loadPersisted, persist } from "components/state_persistence_component";
+import Persistence from "libs/persistence";
 import { PropTypes } from "prop-types";
 import { withRouter } from "react-router-dom";
 import type { APIUserType, APIProjectType, APITaskTypeType } from "admin/api_flow_types";
@@ -41,14 +41,17 @@ type State = {
   fieldValues: TaskFormFieldValuesType,
 };
 
-const STATE_TO_BE_PERSISTED: { [$Keys<State>]: Function } = {
-  fieldValues: PropTypes.shape({
-    taskId: PropTypes.string,
-    taskTypeId: PropTypes.string,
-    projectName: PropTypes.string,
-    userId: PropTypes.string,
-  }),
-};
+const persistence: Persistence<State> = new Persistence(
+  {
+    fieldValues: PropTypes.shape({
+      taskId: PropTypes.string,
+      taskTypeId: PropTypes.string,
+      projectName: PropTypes.string,
+      userId: PropTypes.string,
+    }),
+  },
+  "taskSearch",
+);
 
 class TaskSearchForm extends React.Component<Props, State> {
   state = {
@@ -59,7 +62,7 @@ class TaskSearchForm extends React.Component<Props, State> {
   };
 
   componentWillMount() {
-    this.setState(loadPersisted(this.props.history, "taskSearch", STATE_TO_BE_PERSISTED));
+    this.setState(persistence.load(this.props.history));
   }
 
   componentDidMount() {
@@ -78,7 +81,7 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 
   componentWillUpdate(nextProps, nextState) {
-    persist(this.props.history, "taskSearch", STATE_TO_BE_PERSISTED, nextState);
+    persistence.persist(this.props.history, nextState);
   }
 
   async fetchData() {

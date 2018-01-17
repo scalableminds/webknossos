@@ -9,7 +9,7 @@ import moment from "moment";
 import { Spin, Input, Button } from "antd";
 import AdvancedDatasetView from "dashboard/views/advanced_dataset/advanced_dataset_view";
 import GalleryDatasetView from "dashboard/views/gallery_dataset_view";
-import { loadPersisted, persist } from "components/state_persistence_component";
+import Persistence from "libs/persistence";
 import { PropTypes } from "prop-types";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { DataLayerType } from "oxalis/store";
@@ -35,9 +35,10 @@ type State = {
   isLoading: boolean,
 };
 
-const STATE_TO_BE_PERSISTED: { [$Keys<State>]: Function } = {
-  searchQuery: PropTypes.string,
-};
+const persistence: Persistence<State> = new Persistence(
+  { searchQuery: PropTypes.string },
+  "datasetList",
+);
 
 function createThumbnailURL(datasetName: string, layers: Array<DataLayerType>): string {
   const colorLayer = _.find(layers, { category: "color" });
@@ -71,7 +72,7 @@ class DatasetView extends React.PureComponent<Props, State> {
   };
 
   componentWillMount() {
-    this.setState(loadPersisted(this.props.history, "datasetList", STATE_TO_BE_PERSISTED));
+    this.setState(persistence.load(this.props.history));
   }
 
   componentDidMount() {
@@ -79,7 +80,7 @@ class DatasetView extends React.PureComponent<Props, State> {
   }
 
   componentWillUpdate(nextProps, nextState) {
-    persist(this.props.history, "datasetList", STATE_TO_BE_PERSISTED, nextState);
+    persistence.persist(this.props.history, nextState);
   }
 
   async fetchData(): Promise<void> {

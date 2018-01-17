@@ -14,7 +14,7 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/admin_rest_api";
-import { loadPersisted, persist } from "components/state_persistence_component";
+import Persistence from "libs/persistence";
 import { PropTypes } from "prop-types";
 import type { APIProjectType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -37,9 +37,10 @@ type State = {
   searchQuery: string,
 };
 
-const STATE_TO_BE_PERSISTED: { [$Keys<State>]: Function } = {
-  searchQuery: PropTypes.string,
-};
+const persistence: Persistence<State> = new Persistence(
+  { searchQuery: PropTypes.string },
+  "projectList",
+);
 
 class ProjectListView extends React.PureComponent<Props, State> {
   state = {
@@ -49,7 +50,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
   };
 
   componentWillMount() {
-    this.setState(loadPersisted(this.props.history, "projectList", STATE_TO_BE_PERSISTED));
+    this.setState(persistence.load(this.props.history));
   }
 
   componentDidMount() {
@@ -57,7 +58,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
   }
 
   componentWillUpdate(nextProps, nextState) {
-    persist(this.props.history, "projectList", STATE_TO_BE_PERSISTED, nextState);
+    persistence.persist(this.props.history, nextState);
   }
 
   async fetchData(): Promise<void> {

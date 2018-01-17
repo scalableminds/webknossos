@@ -15,7 +15,7 @@ import TemplateHelpers from "libs/template_helpers";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FileUpload from "components/file_upload";
-import { loadPersisted, persist } from "components/state_persistence_component";
+import Persistence from "libs/persistence";
 import { PropTypes } from "prop-types";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
@@ -43,10 +43,13 @@ type State = {
   isLoading: boolean,
 };
 
-const STATE_TO_BE_PERSISTED: { [$Keys<State>]: Function } = {
-  searchQuery: PropTypes.string,
-  shouldShowArchivedTracings: PropTypes.bool,
-};
+const persistence: Persistence<State> = new Persistence(
+  {
+    searchQuery: PropTypes.string,
+    shouldShowArchivedTracings: PropTypes.bool,
+  },
+  "explorativeList",
+);
 
 class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   state = {
@@ -64,7 +67,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   componentWillMount() {
-    this.setState(loadPersisted(this.props.history, "explorativeList", STATE_TO_BE_PERSISTED));
+    this.setState(persistence.load(this.props.history));
   }
 
   componentDidMount() {
@@ -73,7 +76,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   componentWillUpdate(nextProps, nextState) {
-    persist(this.props.history, "explorativeList", STATE_TO_BE_PERSISTED, nextState);
+    persistence.persist(this.props.history, nextState);
   }
 
   componentDidUpdate(prevProps, prevState) {

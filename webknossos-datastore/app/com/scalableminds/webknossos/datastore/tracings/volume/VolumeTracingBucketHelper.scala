@@ -3,17 +3,17 @@
  */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
-import com.scalableminds.webknossos.datastore.binary.models.BucketPosition
-import com.scalableminds.webknossos.datastore.binary.models.datasource.DataLayer
-import com.scalableminds.webknossos.datastore.binary.storage.kvstore.{KeyValueStoreImplicits, VersionedKeyValueStore}
+import com.scalableminds.webknossos.datastore.models.BucketPosition
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.{FossilDBClient, KeyValueStoreImplicits}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits {
 
-  implicit def volumeDataStore: VersionedKeyValueStore
+  implicit def volumeDataStore: FossilDBClient
 
   private def buildKeyPrefix(dataLayerName: String, resolution: Int): String = {
     s"$dataLayerName/${resolution}/"
@@ -44,7 +44,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
 
   def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
     val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.get(key).futureBox.map(_.toStream.headOption.map(_.value))
+    volumeDataStore.get(key, mayBeEmpty = Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
   }
 
   def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Fox[_] = {
@@ -54,8 +54,8 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
 
   def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
     val key = buildKeyPrefix(dataLayer.name, resolution)
-    volumeDataStore.scanKeys(key, Some(key)).flatMap { pair =>
+    volumeDataStore.getMultipleKeys(key, Some(key)).flatMap { pair =>
       parseBucketKey(pair.key).map(key => (key._2 , pair.value))
-    }
+    }.toIterator
   }
 }

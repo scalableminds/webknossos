@@ -239,12 +239,12 @@ class TaskListView extends React.PureComponent<Props, State> {
                   <br />
                   <span>
                     <Icon type="fork" />
-                    {status.inProgress}
+                    {status.active}
                   </span>
                   <br />
                   <span>
                     <Icon type="check-circle-o" />
-                    {status.completed}
+                    {status.finished}
                   </span>
                   <br />
                   <span>
@@ -260,7 +260,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={130}
               render={(__, task: APITaskType) => (
                 <span>
-                  {task.status.completed > 0 ? (
+                  {task.status.finished > 0 ? (
                     <a
                       href={`/annotations/CompoundTask/${task.id}`}
                       title="View all Finished Tracings"
@@ -273,7 +273,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                     <Icon type="edit" />Edit
                   </a>
                   <br />
-                  {task.status.completed > 0 ? (
+                  {task.status.finished > 0 ? (
                     <a
                       href={`/annotations/CompoundTask/${task.id}/download`}
                       title="Download all Finished Tracings"

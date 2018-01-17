@@ -2,7 +2,6 @@
  * model.js
  * @flow
  */
-
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
@@ -65,7 +64,7 @@ export type ServerBranchPointType = {
   nodeId: number,
 };
 
-type ServerSkeletonTracingTreeType = {
+export type ServerSkeletonTracingTreeType = {
   branchPoints: Array<ServerBranchPointType>,
   color: ?Vector3,
   comments: Array<CommentType>,
@@ -212,6 +211,10 @@ export class OxalisModel {
         Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
       } else {
         const skeletonTracing: ServerSkeletonTracingType = (tracing: any);
+
+        // To generate a huge amount of dummy trees, use:
+        // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
+        // tracing.trees = generateDummyTrees(1, 200000);
         Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }
     }

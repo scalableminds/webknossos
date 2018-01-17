@@ -100,7 +100,7 @@ const Utils = {
     isSortedAscending: boolean = true,
   ): Comparator<T> {
     // generic key comparator for array.prototype.sort
-    return function(a: T, b: T) {
+    return (a: T, b: T) => {
       if (!isSortedAscending) {
         [a, b] = [b, a];
       }

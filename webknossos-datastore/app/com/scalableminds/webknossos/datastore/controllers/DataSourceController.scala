@@ -6,15 +6,12 @@ package com.scalableminds.webknossos.datastore.controllers
 import java.io.File
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.binary.api.DataSourceService
-import com.scalableminds.webknossos.datastore.binary.helpers.DataSourceRepository
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSource, DataSourceId}
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest, WebKnossosServer}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
+import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
-import play.api.mvc._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

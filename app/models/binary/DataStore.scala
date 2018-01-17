@@ -6,9 +6,43 @@ package models.binary
 import java.util.UUID
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.schema.Tables.{Datastores, _}
 import models.basics.SecuredBaseDAO
+import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, Writes, __}
+import slick.lifted.Rep
+import utils.SQLDAO
+
+
+case class DataStoreSQL(
+                       name: String,
+                       url: String,
+                       typ: DataStoreType,
+                       key: String,
+                       isDeleted: Boolean = false
+                       )
+
+
+
+object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
+  val collection = Datastores
+
+  def idColumn(x: Datastores): Rep[String] = x.name
+  def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
+
+  def parse(r: DatastoresRow): Fox[DataStoreSQL] =
+    Fox.successful(DataStoreSQL(
+      r.name,
+      r.url,
+      DataStoreType.stringToType(r.typ),
+      r.key,
+      r.isdeleted
+    ))
+}
+
+
 
 case class DataStore(
   name: String,
@@ -34,6 +68,15 @@ object DataStore {
       (__ \ "url").write[String] and
       (__ \ "typ").write[DataStoreType]) (ds =>
       (ds.name, ds.url, ds.typ))
+
+  def fromDataStoreSQL(s: DataStoreSQL): Fox[DataStore] = {
+    Fox.successful(DataStore(
+      s.name,
+      s.url,
+      s.typ,
+      s.key
+    ))
+  }
 }
 
 object DataStoreDAO extends SecuredBaseDAO[DataStore] {

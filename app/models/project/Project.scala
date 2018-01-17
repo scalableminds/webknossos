@@ -3,20 +3,64 @@ package models.project
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.basics._
 import models.task.{TaskDAO, TaskService}
+import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import play.api.data.validation.ValidationError
+import play.api.i18n.Messages
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import slick.lifted.Rep
+import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.Future
+
+
+case class ProjectSQL(
+                     _id: ObjectId,
+                     _team: ObjectId,
+                     _owner: ObjectId,
+                     name: String,
+                     priority: Long,
+                     paused: Boolean,
+                     expectedTime: Option[Long],
+                     created: Long = System.currentTimeMillis(),
+                     isDeleted: Boolean = false
+                     )
+
+
+object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
+  val collection = Projects
+
+  def idColumn(x: Projects): Rep[String] = x.name
+  def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
+
+  def parse(r: ProjectsRow): Fox[ProjectSQL] =
+    Fox.successful(ProjectSQL(
+      ObjectId(r._Id),
+      ObjectId(r._Team),
+      ObjectId(r._Owner),
+      r.name,
+      r.priority,
+      r.paused,
+      r.expectedtime,
+      r.created.getTime,
+      r.isdeleted
+    ))
+}
+
+
+
 
 case class Project(
                     name: String,
@@ -36,7 +80,7 @@ case class Project(
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
 }
 
-object Project {
+object Project extends FoxImplicits {
   implicit val projectFormat = Json.format[Project]
 
   def StringObjectIdReads(key: String) =
@@ -80,6 +124,24 @@ object Project {
       (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
       (name, team, priority, paused, expectedTime, owner) =>
         Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
+
+  def fromProjectSQL(s: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Project] = {
+    for {
+      team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
+      ownerBSON <- s._owner.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id)
+      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id)
+    } yield {
+      Project(
+        s.name,
+        team.name,
+        ownerBSON,
+        s.priority.toInt,
+        s.paused,
+        s.expectedTime.map(_.toInt),
+        idBson
+      )
+    }
+  }
 }
 
 object ProjectService extends FoxImplicits with LazyLogging {

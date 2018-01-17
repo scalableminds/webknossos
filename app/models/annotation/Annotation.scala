@@ -3,18 +3,20 @@ package models.annotation
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, MongoHelpers}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, InProgress}
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.basics._
-import models.binary.{DataSetDAO, DatasetSQLDAO}
+import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.task._
 import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import org.joda.time.format.DateTimeFormat
+import play.api.Play.current
 import play.api.i18n.Messages
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.api.indexes.{Index, IndexType}
@@ -22,8 +24,6 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLDAO}
-import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
 
 
 case class AnnotationSQL(
@@ -197,10 +197,11 @@ object Annotation extends FoxImplicits {
 
   def fromAnnotationSQL(s: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
-      dataset <- DatasetSQLDAO.findOne(s._dataset) ?~> Messages("dataSet.notFound")
+      dataset <- DataSetSQLDAO.findOne(s._dataset) ?~> Messages("dataSet.notFound")
       team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
       settings <- findSettingsFor(s)
       name: Option[String] = if (s.name.isEmpty) None else Some(s.name)
+      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
     } yield {
       Annotation(
         s._user.toBSONObjectId,
@@ -217,7 +218,7 @@ object Annotation extends FoxImplicits {
         s.created,
         s.modified,
         s._task.map(_.toBSONObjectId).flatten,
-        s._id.toBSONObjectId.getOrElse(BSONObjectID.generate()),
+        idBson,
         !s.isDeleted,
         s.isPublic,
         s.tags

@@ -1,7 +1,7 @@
 DROP SCHEMA webknossos CASCADE;
 CREATE SCHEMA webknossos;
 
-CREATE EXTENSION pgcrypto;
+-- CREATE EXTENSION pgcrypto;
 
 CREATE TYPE webknossos.VECTOR3 AS (
   x DOUBLE PRECISION,
@@ -18,10 +18,12 @@ CREATE TYPE webknossos.BOUNDING_BOX AS (
 );
 
 CREATE TABLE webknossos.analytics(
+  _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _user CHAR(24),
   namespace VARCHAR(256) NOT NULL,
   value JSONB NOT NULL,
-  timestamp TIMESTAMP NOT NULL DEFAULT NOW()
+  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
@@ -29,7 +31,7 @@ CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'Tracin
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
-  _ CHAR(24) NOT NULL,
+  _dataSet CHAR(24) NOT NULL,
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
@@ -86,7 +88,8 @@ CREATE TABLE webknossos.dataStores(
   name VARCHAR(256) PRIMARY KEY NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\.]+$'),
   url VARCHAR(512) UNIQUE NOT NULL CHECK (url ~* '^https?://[a-z0-9\.]+.*$'),
   key VARCHAR(1024) NOT NULL,
-  typ webknossos.DATASTORE_TYPE NOT NULL DEFAULT 'webknossos-store'
+  typ webknossos.DATASTORE_TYPE NOT NULL DEFAULT 'webknossos-store',
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.projects(
@@ -96,8 +99,9 @@ CREATE TABLE webknossos.projects(
   name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'),
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
-  expectedTime INTERVAL,
-  created TIMESTAMP NOT NULL DEFAULT NOW()
+  expectedTime BIGINT,
+  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.scripts(
@@ -106,6 +110,7 @@ CREATE TABLE webknossos.scripts(
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   gist VARCHAR(1024) NOT NULL,
   created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   CHECK (gist ~* '^https?://[a-z0-9\-_\.]+.*$')
 );
 
@@ -211,8 +216,8 @@ CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
 CREATE INDEX ON webknossos.users(email);
 
-insert into webknossos.annotations(_id, _dataSet, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('expl_annotation_id', 'dataSet_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Explorational');
-insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('annotation_id', 'dataSet_id', 'task_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'InProgress', '{}', 'Task');
+insert into webknossos.annotations(_id, _dataSet, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('expl_annotation_id', 'dataSet_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'Active', '{}', 'Explorational');
+insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('annotation_id', 'dataSet_id', 'task_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'Active', '{}', 'Task');
 
 insert into webknossos.taskTypes(_id, _team, summary, description, settings_branchPointsAllowed, settings_somaClickingAllowed, settings_advancedOptionsAllowed) values('taskType_id', 'team_id', 'taskType_summary', 'taskType_description', false, false, false);
 

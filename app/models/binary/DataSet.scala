@@ -17,7 +17,7 @@ import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
 
-case class DatasetSQL(
+case class DataSetSQL(
                      _id: ObjectId,
                      _datastore: ObjectId,
                      _team: ObjectId,
@@ -29,14 +29,14 @@ case class DatasetSQL(
                      isDeleted: Boolean = false
                      )
 
-object DatasetSQLDAO extends SQLDAO[DatasetSQL, DatasetsRow, Datasets] {
+object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   val collection = Datasets
 
   def idColumn(x: Datasets): Rep[String] = x._Id
   def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
-  def parse(r: DatasetsRow): Fox[DatasetSQL] =
-    Fox.successful(DatasetSQL(
+  def parse(r: DatasetsRow): Fox[DataSetSQL] =
+    Fox.successful(DataSetSQL(
         ObjectId(r._Id),
         ObjectId(r._Datastore),
         ObjectId(r._Team),
@@ -89,7 +89,7 @@ object DataSet {
       (__ \ "isEditable").write[Boolean]) (d =>
       (d.name, d.dataSource, d.dataStoreInfo, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 
-  def fromDatasetSQL(s: DatasetSQL) = ???
+  def fromDatasetSQL(s: DataSetSQL) = ???
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {

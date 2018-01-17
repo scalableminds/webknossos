@@ -236,3 +236,5 @@ point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
 mail.welcome.subject = Welcome to ScalableMinds
 script.notFound=Script couldn''t be found
+
+sql.invalidBSONObjectId=Invalid BSONObjectID in SQL DB: {0}

@@ -1,16 +1,19 @@
 package models.task
 
-import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables.{Tasktypes, _}
 import models.annotation.AnnotationSettings
 import models.basics.SecuredBaseDAO
-import models.binary.DatasetSQL
+import models.team.TeamSQLDAO
 import models.user.User
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.lifted.Rep
@@ -66,7 +69,7 @@ case class TaskType(
   val id = _id.stringify
 }
 
-object TaskType {
+object TaskType extends FoxImplicits {
 
   implicit val taskTypeFormat = Json.format[TaskType]
 
@@ -103,6 +106,21 @@ object TaskType {
       "settings" -> Json.toJson(tt.settings)
     )
   }
+
+  def fromTaskTypeSQL(s: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[TaskType] =
+    for {
+      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
+      team <- TeamSQLDAO.findOne(s._team)
+    } yield {
+      TaskType(
+        s.summary,
+        s.description,
+        team.name,
+        s.settings,
+        !s.isDeleted,
+        idBson
+      )
+    }
 }
 
 object TaskTypeDAO extends SecuredBaseDAO[TaskType] {

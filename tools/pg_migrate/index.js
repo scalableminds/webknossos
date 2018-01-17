@@ -134,11 +134,13 @@ function* csvWriter(name, cols) {
       dataSet_layers.next();
     }
 
-    await migrateTable("analytics", ["_user", "namespace", "value", "timestamp"], async doc => ({
+    await migrateTable("analytics", ["_id", "_user", "namespace", "value", "created", "isDeleted"], async doc => ({
+      _id: doc._id,
       _user: doc.user != null ? doc.user.toHexString() : null,
       namespace: doc.namespace,
       value: JSON.stringify(doc.value),
-      timestamp: new Date(doc.timestamp),
+      created: new Date(doc.timestamp),
+      isDeleted: false
     }));
 
     await migrateTable(
@@ -210,11 +212,12 @@ function* csvWriter(name, cols) {
       }),
     );
 
-    await migrateTable("dataStores", ["name", "url", "key", "typ"], async doc => ({
+    await migrateTable("dataStores", ["name", "url", "key", "typ", "isDeleted"], async doc => ({
       name: doc.name,
       url: doc.url,
       key: doc.key,
       typ: doc.typ,
+      isDeleted: false
     }));
 
     await migrateTable(
@@ -229,6 +232,7 @@ function* csvWriter(name, cols) {
         paused: doc.paused,
         expectedTime: doc.expectedTime != null ? `${doc.expectedTime} milliseconds}` : null,
         created: doc._id.getTimestamp(),
+        isDeleted: false
       }),
     );
 

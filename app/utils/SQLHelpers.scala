@@ -15,14 +15,10 @@ import slick.lifted.{AbstractTable, Rep, TableQuery}
 
 case class ObjectId(id: String) {
   def toBSONObjectId = BSONObjectID.parse(id).toOption
+  override def toString = id
 }
 
 object ObjectId { implicit val jsonFormat = Json.format[ObjectId] }
-
-
-trait InsertOnlySQLDAO extends FoxImplicits {
-
-}
 
 trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
   val db = Database.forConfig("postgres")

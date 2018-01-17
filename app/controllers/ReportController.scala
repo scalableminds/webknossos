@@ -101,7 +101,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
-      users <- UserDAO.findByTeams(List(team.name), true)(GlobalAccessContext)
+      users <- UserDAO.findByTeams(List(team.name), includeAnonymous = true, includeInactive = false)(GlobalAccessContext)
       nonAdminUsers = users.filterNot(_.isAdminOf(team.name))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield {

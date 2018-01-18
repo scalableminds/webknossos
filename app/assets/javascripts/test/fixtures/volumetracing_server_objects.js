@@ -36,7 +36,6 @@ export const annotation = {
     allowedModes: ["volume"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
-    advancedOptionsAllowed: true,
   },
   tracingTime: 0,
 };

@@ -37,7 +37,7 @@ then
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
-  export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $(find $testBundlePath -name "*.e2e.js") "$@"
+  export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $(find $testBundlePath -name "*.e2e.js") --serial "$@"
 elif [ $cmd == "prepare" ]
 then
   prepare "$@"

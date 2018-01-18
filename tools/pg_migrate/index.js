@@ -93,8 +93,8 @@ function* csvWriter(name, cols) {
     }
 
     {
-      const dataSet_allowedteams = csvWriter("dataSet_allowedteams", ["_dataSet", "_team"]);
-      dataSet_allowedteams.next();
+      const dataSet_allowedTeams = csvWriter("dataSet_allowedTeams", ["_dataSet", "_team"]);
+      dataSet_allowedTeams.next();
       const dataSet_layers = csvWriter("dataSet_layers", [
         "_dataSet",
         "name",
@@ -110,7 +110,7 @@ function* csvWriter(name, cols) {
         const doc = await cursor.next();
 
         for (const team of doc.allowedTeams) {
-          dataSet_allowedteams.next({
+          dataSet_allowedTeams.next({
             _dataSet: doc._id.toHexString(),
             _team: (await lookupTeam(team))._id.toHexString(),
           });
@@ -130,7 +130,7 @@ function* csvWriter(name, cols) {
           }
         }
       }
-      dataSet_allowedteams.next();
+      dataSet_allowedTeams.next();
       dataSet_layers.next();
     }
 

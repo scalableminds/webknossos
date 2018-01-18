@@ -77,7 +77,7 @@ CREATE TABLE webknossos.dataSet_layers(
   PRIMARY KEY(_dataSet, name)
 );
 
-CREATE TABLE webknossos.dataSet_allowedteams(
+CREATE TABLE webknossos.dataSet_allowedTeams(
   _dataSet CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
   PRIMARY KEY (_dataSet, _team)

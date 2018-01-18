@@ -3,16 +3,20 @@ package models.binary
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
 import models.basics._
 import models.configuration.DataSetConfiguration
+import models.team.{Role, TeamMembership}
 import models.user.User
+import models.user.UserExperiencesSQLDAO.db
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import reactivemongo.api.indexes.{Index, IndexType}
+import slick.lifted.Rep
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
@@ -49,6 +53,23 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
       ))
 }
 
+
+
+
+object DataSetAllowedTeamsSQLDAO extends FoxImplicits {
+  val db = Database.forConfig("postgres")
+
+  def findAllowedTeamsForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[String]] = {
+
+    val query = for {
+      (allowedteam, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams  on (_._Team === _._Id)
+    } yield team.name
+
+    db.run(query.result).map(_.toList)
+
+  }
+}
+
 case class DataSet(
   dataStoreInfo: DataStoreInfo,
   dataSource: InboxDataSource,
@@ -73,7 +94,7 @@ case class DataSet(
     DataStoreHandlingStrategy(this)
 }
 
-object DataSet {
+object DataSet extends FoxImplicits {
   implicit val dataSetFormat = Json.format[DataSet]
 
   def dataSetPublicWrites(user: Option[User]): Writes[DataSet] =
@@ -89,7 +110,32 @@ object DataSet {
       (__ \ "isEditable").write[Boolean]) (d =>
       (d.name, d.dataSource, d.dataStoreInfo, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 
-  def fromDatasetSQL(s: DataSetSQL) = ???
+
+  private def parseDefaultConfiguration(jsValueOpt: Option[JsValue]): Fox[Option[DataSetConfiguration]] = jsValueOpt match {
+    case Some(jsValue) => for {
+                            conf <- JsonHelper.jsResultToFox(jsValue.validate[DataSetConfiguration])
+                          } yield Some(conf)
+    case None => Fox.successful(None)
+  }
+
+  def fromDatasetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
+    for {
+      datastore <- DataStoreSQLDAO.findOne(s._datastore)
+      allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllowedTeamsForDataSet(s._id)
+      defaultConfiguration <- parseDefaultConfiguration(s.defaultConfiguration)
+    } yield {
+      DataSet(
+        DataStoreInfo(datastore.name, datastore.url, datastore.typ),
+        dataSource,
+        allowedTeams,
+        !s.isDeleted,
+        s.isPublic,
+        s.description,
+        defaultConfiguration,
+        s.created
+      )
+    }
+  }
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {

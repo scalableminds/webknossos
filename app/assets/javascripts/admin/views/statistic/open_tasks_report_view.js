@@ -42,10 +42,11 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
           <Table
             dataSource={this.state.data}
             pagination={{
-              defaultPageSize: 100,
+              defaultPageSize: 500,
             }}
             rowKey="id"
             style={{ marginTop: 30, marginBotton: 30 }}
+            size="small"
           >
             <Column
               title="User"

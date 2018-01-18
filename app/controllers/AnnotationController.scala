@@ -11,7 +11,7 @@ import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time._
-import models.user.{UsedAnnotationDAO, User, UserDAO}
+import models.user.{UsedAnnotationDAO, User, UserDAO, UserSQLDAO}
 import net.liftweb.common.{Full, _}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
@@ -22,12 +22,7 @@ import utils.ObjectId
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 01.06.13
- * Time: 02:09
- */
+
 class AnnotationController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with FoxImplicits
@@ -58,10 +53,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def sqlTest2(id: String) = UserAwareAction.async { implicit request =>
     for {
-      annotationSQL <- AnnotationSQLDAO.findOne(ObjectId(id))
-      annotation <- Annotation.fromAnnotationSQL(annotationSQL) ?~> Messages("annotation.notFound")
+      userSQL <- UserSQLDAO.findOne(ObjectId(id))
+      user <- User.fromUserSQL(userSQL) ?~> Messages("user.notFound")
     } yield {
-      Ok(Json.toJson(annotation))
+      Ok(Json.toJson(user))
     }
   }
 

@@ -1,3 +1,6 @@
+/*
+ * Copyright (C) 2011-2018 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package models.annotation
 
 import com.scalableminds.util.mvc.Formatter

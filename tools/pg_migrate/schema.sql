@@ -99,7 +99,7 @@ CREATE TABLE webknossos.projects(
   name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'),
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
-  expectedTime BIGINT,
+  expectedTime BIGINT,  -- TODO: Interval?
   created TIMESTAMP NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -138,7 +138,7 @@ CREATE TABLE webknossos.tasks(
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
-  tracingTime BIGINT,
+  tracingTime BIGINT,  -- TODO: Interval?
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
@@ -167,10 +167,11 @@ CREATE TABLE webknossos.timespans(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _user CHAR(24) NOT NULL,
   _annotation CHAR(24),
-  time INTERVAL NOT NULL,
-  timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+  time BIGINT NOT NULL, -- TODO: Interval?
   lastUpdate TIMESTAMP NOT NULL DEFAULT NOW(),
-  numberOfUpdates BIGINT NOT NULL DEFAULT 1
+  numberOfUpdates BIGINT NOT NULL DEFAULT 1,
+  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
@@ -187,7 +188,7 @@ CREATE TABLE webknossos.users(
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'scrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT false, -- TODO: additional isActive, since inactive can be viewed in frontend?
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW()
 );
@@ -216,16 +217,27 @@ CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
 CREATE INDEX ON webknossos.users(email);
 
-insert into webknossos.annotations(_id, _dataSet, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('expl_annotation_id', 'dataSet_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'Active', '{}', 'Explorational');
-insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, state, statistics, typ) values('annotation_id', 'dataSet_id', 'task_id', 'team_id', 'user_id', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'Active', '{}', 'Task');
+insert into webknossos.annotations(_id, _dataSet, _team, _user, tracing_id, tracing_typ, state, statistics, typ)
+  values('596792e65d0000d304d77160', '596792e65d0000d304d77165', '596792e65d0000d304d77164', '596792e65d0000d304d77166', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'Active', '{}', 'Explorational');
 
-insert into webknossos.taskTypes(_id, _team, summary, description, settings_branchPointsAllowed, settings_somaClickingAllowed, settings_advancedOptionsAllowed) values('taskType_id', 'team_id', 'taskType_summary', 'taskType_description', false, false, false);
+insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, state, statistics, typ)
+  values('596792e65d0000d304d77161', '596792e65d0000d304d77165', '596792e65d0000d304d77163', '596792e65d0000d304d77164', '596792e65d0000d304d77166', 'ebeb2bc2-db28-48bf-a0c4-ea4cbd37a655', 'skeleton', 'Active', '{}', 'Task');
 
-insert into webknossos.tasks(_id, _project, _taskType, _team, neededExperience_domain, neededExperience_value, totalInstances, tracingTime, editPosition, editRotation) values('task_id', 'project_id', 'taskType_id', 'team_id', 'experience_domain', 1, 10, 0, '(0,0,0)', '(0,0,0)');
+insert into webknossos.taskTypes(_id, _team, summary, description, settings_branchPointsAllowed, settings_somaClickingAllowed, settings_advancedOptionsAllowed)
+  values('596792e65d0000d304d77162', '596792e65d0000d304d77164', 'taskType_summary', 'taskType_description', false, false, false);
 
-insert into webknossos.teams(_id, _owner, name, behavesLikeRootTeam) values('team_id', 'user_id', 'team_name', false);
+insert into webknossos.tasks(_id, _project, _taskType, _team, neededExperience_domain, neededExperience_value, totalInstances, tracingTime, editPosition, editRotation)
+  values('596792e65d0000d304d77163', 'project_id', '596792e65d0000d304d77162', '596792e65d0000d304d77164', 'experience_domain', 1, 10, 0, '(0,0,0)', '(0,0,0)');
 
-insert into webknossos.dataSets(_id, _dataStore, _team, name) values('dataSet_id', 'dataStore_id', 'team_id', 'dataSet_name');
+insert into webknossos.teams(_id, _owner, name, behavesLikeRootTeam)
+  values('596792e65d0000d304d77164', '596792e65d0000d304d77166', 'team_name', false);
+
+insert into webknossos.dataSets(_id, _dataStore, _team, name)
+  values('596792e65d0000d304d77165', 'dataStore_id', '596792e65d0000d304d77164', 'dataSet_name');
+
+insert into webknossos.users(_id, email, firstName, lastName, userConfiguration, dataSetConfigurations, loginInfo_providerKey, passwordInfo_password)
+  values('596792e65d0000d304d77166', 'scmboy@scalableminds.com', 'SCM', 'Boy', '{"configuration" : {}}', '{}', 'providerKey', 'passwordhash');
+
 
 -- ALTER TABLE webknossos.analytics
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);

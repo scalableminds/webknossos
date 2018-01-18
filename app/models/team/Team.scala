@@ -11,6 +11,8 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 import reactivemongo.play.json.BSONFormats._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
@@ -109,7 +111,7 @@ object Team extends FoxImplicits {
       )((name, roles, parent) => Team(name, parent, roles, Some(requestingUser._id)))
 
 
-  private def resolveParentTeam(idOpt: Option[ObjectId]): Fox[Option[TeamSQL]] = idOpt match {
+  private def resolveParentTeam(idOpt: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Option[TeamSQL]] = idOpt match {
     case Some(id) => for {
                       parentTeam <- TeamSQLDAO.findOne(id)
                     } yield {

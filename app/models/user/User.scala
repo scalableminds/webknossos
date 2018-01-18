@@ -5,19 +5,101 @@ import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo._
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.schema.Tables._
 import models.basics._
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json._
+import slick.jdbc.PostgresProfile.api._
+import slick.lifted.Rep
+import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.Future
+
+
+
+case class UserSQL(
+                  _id: ObjectId,
+                  email: String,
+                  firstName: String,
+                  lastName: String,
+                  lastActivity: Long = System.currentTimeMillis(),
+                  userConfiguration: JsValue,
+                  dataSetConfigurations: JsValue,
+                  loginInfo: LoginInfo,
+                  passwordInfo: PasswordInfo,
+                  isSuperUser: Boolean,
+                  created: Long = System.currentTimeMillis(),
+                  isDeleted: Boolean = false
+                  )
+
+
+
+object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
+  val collection = Users
+
+  def idColumn(x: Users): Rep[String] = x._Id
+  def isDeletedColumn(x: Users): Rep[Boolean] = x.isdeleted
+
+  def parse(r: UsersRow): Fox[UserSQL] =
+    Fox.successful(UserSQL(
+      ObjectId(r._Id),
+      r.email,
+      r.firstname,
+      r.lastname,
+      r.lastactivity.getTime,
+      Json.parse(r.userconfiguration),
+      Json.parse(r.datasetconfigurations),
+      LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
+      PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
+      r.issuperuser,
+      r.created.getTime,
+      r.isdeleted
+    ))
+}
+
+
+
+
+object UserTeamRolesSQLDAO extends FoxImplicits {
+  val db = Database.forConfig("postgres")
+
+  def findTeamRolesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembership]] = {
+    val query = for {
+      (role, team) <- UserTeamRoles.filter(_._User === userId.id) join Teams  on (_._Team === _._Id)
+    } yield (team.name, role.role)
+
+    for {
+      rows: Seq[(String, String)] <- db.run(query.result)
+    } yield {
+      rows.toList.map { case (teamName, role) => TeamMembership(teamName, Role(role)) }
+    }
+  }
+}
+
+object UserExperiencesSQLDAO extends FoxImplicits {
+  val db = Database.forConfig("postgres")
+
+  def findExperiencesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+    for {
+      rows <- db.run(UserExperiences.filter(_._User === userId.id).result)
+    } yield {
+      rows.map(r => (r.domain, r.value)).toMap
+    }
+  }
+}
+
+
 
 case class User(
                  email: String,
@@ -106,7 +188,7 @@ case class User(
   }
 }
 
-object User {
+object User extends FoxImplicits {
 
   implicit val passwordInfoJsonFormat = Json.format[PasswordInfo]
   implicit val userFormat = Json.format[User]
@@ -135,6 +217,34 @@ object User {
       (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams))
 
   val defaultDeactivatedUser = User("","","", teams = Nil, loginInfo = LoginInfo(CredentialsProvider.ID, ""), passwordInfo = PasswordInfo("SCrypt", ""))
+
+  def fromUserSQL(s: UserSQL)(implicit ctx: DBAccessContext) = {
+    for {
+      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
+      teamRoles <- UserTeamRolesSQLDAO.findTeamRolesForUser(s._id)
+      experiences <- UserExperiencesSQLDAO.findExperiencesForUser(s._id)
+      userConfiguration <- JsonHelper.jsResultToFox(s.userConfiguration.validate[UserConfiguration])
+      dataSetConfigurations <- JsonHelper.jsResultToFox(s.dataSetConfigurations.validate[Map[String, DataSetConfiguration]])
+    } yield {
+      User(
+        s.email,
+        s.firstName,
+        s.lastName,
+        !s.isDeleted,
+        "", //TODO: md5 ?
+        teamRoles,
+        userConfiguration,
+        dataSetConfigurations,
+        experiences,
+        s.lastActivity,
+        None,
+        Some(s.isSuperUser),
+        idBson,
+        s.loginInfo,
+        s.passwordInfo
+      )
+    }
+  }
 }
 
 object UserDAO extends SecuredBaseDAO[User] {

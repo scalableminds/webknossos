@@ -39,8 +39,8 @@ export type APIDatasetType = {
 
 export type APIRoleType = { +name: string };
 
-export type APITeamRoleType = {
-  +team: string,
+export type APITeamMembershipType = {
+  +id: string,
   +isSuperVisor: boolean,
 };
 
@@ -56,7 +56,7 @@ export type APIUserType = {
   +isAnonymous: boolean,
   +isEditable: boolean,
   +lastActivity: number,
-  +teams: Array<APITeamRoleType>,
+  +teams: Array<APITeamMembershipType>,
 };
 
 export type APITimeIntervalType = {

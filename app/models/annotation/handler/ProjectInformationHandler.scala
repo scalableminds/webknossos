@@ -5,7 +5,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.project.ProjectDAO
 import models.task.TaskDAO
-import models.team.Role
 import models.user.User
 import reactivemongo.bson.BSONObjectID
 

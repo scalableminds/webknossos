@@ -3,7 +3,7 @@ import * as React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import update from "immutability-helper";
 import { updateUser, getAdminTeams } from "admin/admin_rest_api";
-import type { APIUserType, APIRoleType, APITeamRoleType } from "admin/api_flow_types";
+import type { APIUserType, APIRoleType, APITeamMembershipType } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
@@ -34,7 +34,7 @@ type State = {
  * All team selection in this modal is based on whether their is a role
  * associated with the respective team. In other words, 'selectedTeams' contains
  * all globally available teams, but only those with an attached role are
- * significant. See <APITeamRoleType>
+ * significant. See <APITeamMembershipType>
  */
 
 class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State> {
@@ -84,7 +84,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
   setTeams = () => {
     const newTeams = this.state.selectedTeams.filter(team => team.role != null);
     // flow does not understand the purpose of .filter()
-    const newerTeams = ((newTeams: any): Array<APITeamRoleType>);
+    const newerTeams = ((newTeams: any): Array<APITeamMembershipType>);
 
     const newUserPromises = this.props.users.map(user => {
       if (this.props.selectedUserIds.includes(user.id)) {

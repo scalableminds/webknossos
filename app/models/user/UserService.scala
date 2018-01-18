@@ -110,7 +110,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
       }
     } else {
       // the issuing user is not able to remove the user from all teams, therefore the account is not getting deleted
-      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.supervisorTeams.contains(t.team)))
+      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.supervisorTeams.contains(t._id)))
     }
   }
 

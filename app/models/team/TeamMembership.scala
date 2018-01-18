@@ -10,13 +10,13 @@ import reactivemongo.play.json.BSONObjectIDFormat
   * Date: 14.07.13
   * Time: 16:49
   */
-case class TeamMembership(team: BSONObjectID, isSuperVisor: Boolean) {
+case class TeamMembership(_id: BSONObjectID = BSONObjectID.generate, isSuperVisor: Boolean) {
 
   override def toString =
     if (isSuperVisor)
-      s"supervisor - $team"
+      s"supervisor - ${_id}"
     else
-      s"user - $team"
+      s"user - ${_id}"
 }
 
 object TeamMembership {
@@ -27,15 +27,18 @@ object TeamMembership {
   implicit object teamMembershipFormat extends Format[TeamMembership] {
     override def reads(json: JsValue): JsResult[TeamMembership] = {
       for {
-        team <- json.validate((JsPath \ "team").read[String])
+        _id <- json.validate((JsPath \ "id").read[String])
         isSuperVisor <- json.validate((JsPath \ "isSuperVisor").read[Boolean])
       } yield {
-        TeamMembership(BSONObjectID(team), isSuperVisor)
+        TeamMembership(BSONObjectID(_id), isSuperVisor)
       }
     }
 
     override def writes(teamMembership: TeamMembership): JsValue = {
-      Json.obj("team" -> teamMembership.team.stringify, "isSuperVisor" -> teamMembership.isSuperVisor)
+      Json.obj(
+        "id" -> teamMembership._id.stringify,
+        "isSuperVisor" -> teamMembership.isSuperVisor
+      )
     }
   }
 

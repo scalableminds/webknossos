@@ -38,7 +38,7 @@ case class User(
                  loginInfo: LoginInfo,
                  passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity {
 
-  def teamNames = teams.map(_.team)
+  def teamNames = teams.map(_._id)
 
   def isSuperUser = _isSuperUser getOrElse false
 
@@ -53,7 +53,7 @@ case class User(
 
   lazy val supervisorTeams = teams.filter(_.isSuperVisor)
 
-  lazy val supervisorTeamIds = supervisorTeams.map(_.team)
+  lazy val supervisorTeamIds = supervisorTeams.map(_._id)
 
   lazy val hasAdminAccess = supervisorTeams.nonEmpty //adminTeams.nonEmpty
 
@@ -91,7 +91,7 @@ case class User(
     this.copy(teams = teamMemberships ::: teams)
 
   def removeTeam(team: String) =
-    this.copy(teams = teams.filterNot(_.team == team))
+    this.copy(teams = teams.filterNot(_._id == team))
 
   def lastActivityDays =
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
@@ -149,7 +149,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams.team" -> Json.obj("$in" -> user.teamNames)),
+            Json.obj("teams._id" -> Json.obj("$in" -> user.teamNames)),
             Json.obj("teams" -> Json.arr()))))
         case _ =>
           DenyEveryone()
@@ -160,7 +160,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       ctx.data match {
         case Some(user: User) if user.hasAdminAccess =>
           AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams.team" -> Json.obj("$in" -> user.supervisorTeams)),
+            Json.obj("teams._id" -> Json.obj("$in" -> user.supervisorTeams)),
             Json.obj("teams" -> Json.arr())
           )))
         case _ =>

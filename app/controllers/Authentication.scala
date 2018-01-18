@@ -9,7 +9,7 @@ import com.mohiva.play.silhouette.api.util.Credentials
 import com.scalableminds.util.mail._
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.team.{Role, TeamDAO, TeamService}
+import models.team.{TeamDAO, TeamService}
 import models.user.UserService.{Mailer => _, _}
 import models.user._
 import net.liftweb.common.{Empty, Failure, Full}

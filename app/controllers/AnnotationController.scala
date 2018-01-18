@@ -124,7 +124,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     // Reopening an annotation is allowed if either the user owns the annotation or the user is allowed to administrate
     // the team the annotation belongs to
     def isReopenAllowed(user: User, annotation: Annotation) = {
-       annotation._user.contains(user._id) || user.supervisorTeams.exists(_.team == annotation.team) //TODO
+       annotation._user.contains(user._id) || user.supervisorTeams.exists(_._id == annotation.team) //TODO
     }
 
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>

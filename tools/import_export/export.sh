@@ -6,12 +6,7 @@ if [ ! $1 ]; then
   exit 1
 fi
 
-host="$3"
-if [ ! $3 ]; then
-  host="localhost:27017"
-fi
-
-db=$1
+uri=$1
 out_dir=$2
 if [ ! $out_dir ]; then
   out_dir="./"
@@ -19,9 +14,9 @@ else
   mkdir -p $out_dir
 fi
 
-cols=`mongo "$host/$db" --eval "print(db.getCollectionNames())" | tail -n1 | tr ',' ' '`
+cols=`mongo "$uri" --eval "print(db.getCollectionNames())" | tail -n1 | tr ',' ' '`
 
 for c in $cols
 do
-  mongoexport --db "$db" --host "$host" --collection "$c" -o "$out_dir/${c}.json"
+  mongoexport --uri "$uri" --collection "$c" -o "$out_dir/${c}.json"
 done

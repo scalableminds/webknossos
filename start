@@ -1,4 +1,4 @@
 mongod > /dev/null &
 PID="$!"
-sbt run -mem 2048 -XX:MaxPermSize=512M -Dconfig.file=conf/application.conf
+./sbt run -mem 2048 -XX:MaxPermSize=512M -Dconfig.file=conf/application.conf
 kill -9 $PID

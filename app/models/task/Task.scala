@@ -31,7 +31,7 @@ case class Task(
                  @info("Assigned name") team: String,
                  @info("Required experience") neededExperience: Experience = Experience.empty,
                  @info("Number of total instances") instances: Int = 1,
-                 @info("Number of open (=remaining =unassigned) instances") openInstances: Int = 1,
+                 @info("Number of open (=remaining) instances") openInstances: Int = 1,
                  @info("Bounding Box (redundant to base tracing)") boundingBox: Option[BoundingBox] = None,
                  @info("Start point edit position (redundant to base tracing)") editPosition: Point3D,
                  @info("Start point edit rotation (redundant to base tracing)") editRotation: Vector3D,
@@ -61,16 +61,13 @@ case class Task(
   def annotationBase(implicit ctx: DBAccessContext) =
     AnnotationService.baseFor(this)
 
-  def inProgress(implicit ctx: DBAccessContext) =
-    AnnotationService.countUnfinishedAnnotationsFor(this)
+  def countActive(implicit ctx: DBAccessContext) =
+    AnnotationService.countActiveAnnotationsFor(this).getOrElse(0)
 
   def status(implicit ctx: DBAccessContext) = {
     for {
-      inProgress <- inProgress.getOrElse(0)
-    } yield CompletionStatus(
-      open = openInstances,
-      inProgress = inProgress,
-      completed = instances - (inProgress + openInstances))
+      active <- countActive
+    } yield CompletionStatus(openInstances, active, instances - (active + openInstances))
   }
 
   def hasEnoughExperience(user: User) = {
@@ -270,7 +267,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       Json.obj("priority" -> -1)
 
     find(validPriorityQ ++ Json.obj(
-      "instances" -> Json.obj("$gt" -> 0),
+      "openInstances" -> Json.obj("$gt" -> 0),
       "team" -> Json.obj("$in" -> teams),
       "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)))
       .sort(byPriority)
@@ -291,14 +288,14 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     import dao.BatchCommands.AggregationFramework._
 
     dao.aggregate(
-      Group(BSONString(groupingField))( "openInstances" -> SumField("instances"))
+      Group(BSONString(groupingField))( "openInstances" -> SumField("openInstances"))
     ).map{result => Json.toJson(result.firstBatch).as[List[OpenInstancesResult]].map( x => x._id -> x.openInstances).toMap }
   }
 
-  def findByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
+  def findWithOpenByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
     for {
       jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
-        "instances" -> Json.obj("$gt" -> 0),
+        "openInstances" -> Json.obj("$gt" -> 0),
         "team" -> Json.obj("$in" -> user.teamNames),
         "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
     } yield {

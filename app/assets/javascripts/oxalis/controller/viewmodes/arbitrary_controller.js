@@ -101,18 +101,13 @@ class ArbitraryController extends React.PureComponent<Props> {
   initMouse(): void {
     this.input.mouse = new InputMouse(CANVAS_SELECTOR, {
       leftDownMove: (delta: Point2) => {
-        const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
-        const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
         if (this.props.viewMode === constants.MODE_ARBITRARY) {
           Store.dispatch(
-            yawFlycamAction(
-              -delta.x * mouseInversionX * Store.getState().userConfiguration.mouseRotateValue,
-              true,
-            ),
+            yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
           );
           Store.dispatch(
             pitchFlycamAction(
-              delta.y * mouseInversionY * Store.getState().userConfiguration.mouseRotateValue,
+              delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
               true,
             ),
           );

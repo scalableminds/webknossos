@@ -42,21 +42,24 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
           <Table
             dataSource={this.state.data}
             pagination={{
-              defaultPageSize: 100,
+              defaultPageSize: 500,
             }}
-            rowKey="user"
+            rowKey="id"
             style={{ marginTop: 30, marginBotton: 30 }}
+            size="small"
           >
             <Column
               title="User"
               dataIndex="user"
-              defaultSortOrder="ascend"
               sorter={Utils.localeCompareBy("user")}
+              width={200}
             />
             <Column
               title="# Assignments"
               dataIndex="totalAssignments"
+              defaultSortOrder="ascend"
               sorter={Utils.compareBy("totalAssignments")}
+              width={100}
             />
             <Column
               title=""

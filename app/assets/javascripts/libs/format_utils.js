@@ -40,8 +40,8 @@ class FormatUtils {
   /**
    * Return current date and time
    */
-  static formatDate(): string {
-    return moment().format("YYYY-MM-DD HH:mm");
+  static formatDate(date?: number = Date.now()): string {
+    return moment(date).format("YYYY-MM-DD HH:mm");
   }
 }
 

@@ -1,7 +1,7 @@
 package models.binary
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataSourceLike => DataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource}
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}

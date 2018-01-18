@@ -171,9 +171,10 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) = findOne("email", email)
 
-  def findByTeams(teams: List[BSONObjectID], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = withExceptionCatcher {
+  def findByTeams(teams: List[BSONObjectID], includeAnonymous: Boolean, includeInactive: Boolean = true)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     val anonymousFilter = if (includeAnonymous) Json.obj() else Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))
-    find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team))) ++ anonymousFilter).cursor[User]().collect[List]()
+    val inactiveFilter = if (includeInactive) Json.obj() else Json.obj("isActive" -> true)
+    find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team))) ++ anonymousFilter ++ inactiveFilter).cursor[User]().collect[List]()
   }
 
   def findByIdQ(id: BSONObjectID) = Json.obj("_id" -> id)

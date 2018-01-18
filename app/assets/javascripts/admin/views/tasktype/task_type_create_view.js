@@ -36,7 +36,6 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       settings: {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
-        advancedOptionsAllowed: true,
         preferredMode: null,
       },
     };
@@ -152,11 +151,6 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               {getFieldDecorator("settings.branchPointsAllowed", {
                 valuePropName: "checked",
               })(<Checkbox>Allow Branchpoints</Checkbox>)}
-            </FormItem>
-            <FormItem>
-              {getFieldDecorator("settings.advancedOptionsAllowed", {
-                valuePropName: "checked",
-              })(<Checkbox> Advanced Tracing Options</Checkbox>)}
             </FormItem>
 
             <FormItem label="Preferred Mode" hasFeedback>

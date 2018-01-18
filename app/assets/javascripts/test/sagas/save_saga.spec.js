@@ -4,6 +4,7 @@
 import test from "ava";
 import mockRequire from "mock-require";
 import _ from "lodash";
+import DiffableMap from "libs/diffable_map";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
@@ -46,7 +47,7 @@ const initialState = {
       "1": {
         treeId: 1,
         name: "TestTree",
-        nodes: {},
+        nodes: new DiffableMap(),
         timestamp: 12345678,
         branchPoints: [],
         edges: [],

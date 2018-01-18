@@ -88,7 +88,6 @@ export type APIRestrictionsType = {
 export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 
 export type APISettingsType = {
-  +advancedOptionsAllowed: boolean,
   +allowedModes: Array<APIAllowedModeType>,
   +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,
@@ -114,7 +113,7 @@ export type APITaskTypeType = {
   +settings: SettingsType,
 };
 
-export type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
+export type TaskStatusType = { +open: number, +active: number, +finished: number };
 
 export type APIScriptType = {
   +id: string,
@@ -233,6 +232,7 @@ export type APITimeTrackingType = {
 
 export type APIProjectProgressReportType = {
   +projectName: string,
+  +paused: boolean,
   +totalTasks: number,
   +totalInstances: number,
   +openInstances: number,
@@ -241,6 +241,7 @@ export type APIProjectProgressReportType = {
 };
 
 export type APIOpenTasksReportType = {
+  +id: string,
   +user: string,
   +totalAssignments: number,
   +assignmentsByProjects: { [projectName: string]: number },

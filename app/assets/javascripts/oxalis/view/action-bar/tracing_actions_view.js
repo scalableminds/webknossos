@@ -125,7 +125,6 @@ class TracingActionsView extends PureComponent<StateProps, State> {
   render() {
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
-    const hasAdvancedOptions = this.props.restrictions.advancedOptionsAllowed;
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.restrictions;
 
@@ -155,7 +154,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
         ];
 
     const finishAndNextTaskButton =
-      hasAdvancedOptions && restrictions.allowFinish && this.props.task ? (
+      restrictions.allowFinish && this.props.task ? (
         <ButtonComponent
           key="next-button"
           icon="verticle-left"
@@ -167,58 +166,56 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
     const elements = [];
     const modals = [];
-    if (hasAdvancedOptions) {
-      if (restrictions.allowFinish) {
-        elements.push(
-          <Menu.Item key="finish-button">
-            <div onClick={this.handleFinish}>
-              <Icon type="check-circle-o" />
-              {archiveButtonText}
-            </div>
-          </Menu.Item>,
-        );
-      }
-      if (restrictions.allowDownload) {
-        elements.push(
-          <Menu.Item key="download-button">
-            <div onClick={this.handleDownload}>
-              <Icon type="download" />
-              Download
-            </div>
-          </Menu.Item>,
-        );
-      }
+    if (restrictions.allowFinish) {
       elements.push(
-        <Menu.Item key="share-button">
-          <div onClick={this.handleShareOpen}>
-            <Icon type="share-alt" />
-            Share
+        <Menu.Item key="finish-button">
+          <div onClick={this.handleFinish}>
+            <Icon type="check-circle-o" />
+            {archiveButtonText}
           </div>
         </Menu.Item>,
-      );
-      modals.push(
-        <ShareModalView
-          key="share-modal"
-          isVisible={this.state.isShareModalOpen}
-          onOk={this.handleShareClose}
-        />,
-      );
-      elements.push(
-        <Menu.Item key="user-scripts-button">
-          <div onClick={this.handleUserScriptsOpen}>
-            <Icon type="setting" />
-            Add Script
-          </div>
-        </Menu.Item>,
-      );
-      modals.push(
-        <UserScriptsModalView
-          key="user-scripts-modal"
-          isVisible={this.state.isUserScriptsModalOpen}
-          onOK={this.handleUserScriptsClose}
-        />,
       );
     }
+    if (restrictions.allowDownload) {
+      elements.push(
+        <Menu.Item key="download-button">
+          <div onClick={this.handleDownload}>
+            <Icon type="download" />
+            Download
+          </div>
+        </Menu.Item>,
+      );
+    }
+    elements.push(
+      <Menu.Item key="share-button">
+        <div onClick={this.handleShareOpen}>
+          <Icon type="share-alt" />
+          Share
+        </div>
+      </Menu.Item>,
+    );
+    modals.push(
+      <ShareModalView
+        key="share-modal"
+        isVisible={this.state.isShareModalOpen}
+        onOk={this.handleShareClose}
+      />,
+    );
+    elements.push(
+      <Menu.Item key="user-scripts-button">
+        <div onClick={this.handleUserScriptsOpen}>
+          <Icon type="setting" />
+          Add Script
+        </div>
+      </Menu.Item>,
+    );
+    modals.push(
+      <UserScriptsModalView
+        key="user-scripts-modal"
+        isVisible={this.state.isUserScriptsModalOpen}
+        onOK={this.handleUserScriptsClose}
+      />,
+    );
 
     if (isSkeletonMode && this.props.activeUser != null) {
       elements.push(

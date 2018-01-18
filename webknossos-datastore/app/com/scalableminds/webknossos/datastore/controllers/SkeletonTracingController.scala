@@ -4,9 +4,8 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.binary.helpers.DataSourceRepository
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessRequest, WebKnossosServer}
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.datastore.tracings.skeleton._
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingSelector, TracingType}
 import play.api.i18n.{Messages, MessagesApi}

@@ -66,7 +66,7 @@ export const tracing = {
 
 export const annotation = {
   created: "2017-08-09 20:19",
-  state: "InProgress",
+  state: "Active",
   id: "598b52293c00009906f043e7",
   name: "",
   typ: "Explorational",
@@ -81,7 +81,6 @@ export const annotation = {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
-    advancedOptionsAllowed: true,
   },
   tracingTime: 0,
 };

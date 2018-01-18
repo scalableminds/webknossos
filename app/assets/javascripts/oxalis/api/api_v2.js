@@ -57,6 +57,7 @@ import dimensions from "oxalis/model/dimensions";
 import { doWithToken } from "admin/admin_rest_api";
 import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
 import type { ToastStyleType } from "libs/toast";
+import update from "immutability-helper";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -75,6 +76,13 @@ function assertVolume(tracing: TracingType) {
     throw new Error("This api function should only be called in a volume tracing.");
   }
 }
+
+function makeTreeBackwardsCompatible(tree: TreeMapType) {
+  return update(tree, {
+    nodes: { $apply: nodes => nodes.toObject() },
+  });
+}
+
 /**
  * All tracing related API methods. This is the newest version of the API (version 2).
  * @version 2
@@ -139,11 +147,12 @@ class TracingApi {
   /**
    * Returns all trees belonging to a tracing.
    */
-  getAllTrees(): TreeMapType {
+  // Proper typing would be too tedious for a deprecated API.
+  getAllTrees(): any {
     const tracing = Store.getState().tracing;
     assertSkeleton(tracing);
     return getSkeletonTracing(tracing)
-      .map(skeletonTracing => skeletonTracing.trees)
+      .map(skeletonTracing => _.mapValues(skeletonTracing.trees, makeTreeBackwardsCompatible))
       .getOrElse({});
   }
 

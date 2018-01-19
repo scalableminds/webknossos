@@ -93,8 +93,12 @@ export function serializeToNml(
 function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoType): Array<string> {
   return _.compact([
     serializeTag("meta", {
-      name: "software",
-      content: `nml_helpers.js - ${buildInfo.webknossos.commitHash}`,
+      name: "writer",
+      content: "nml_helpers.js",
+    }),
+    serializeTag("meta", {
+      name: "writerGitCommit",
+      content: buildInfo.webknossos.commitHash,
     }),
     serializeTag("meta", {
       name: "timestamp",

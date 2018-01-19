@@ -221,14 +221,20 @@ class UserListView extends React.PureComponent<Props, State> {
               key="teams_"
               width={300}
               render={(teams: Array<APITeamMembershipType>, user: APIUserType) =>
-                teams.map(team => (
-                  <Tag
-                    key={`team_role_${user.id}_${team.team}`}
-                    color={TemplateHelpers.stringToColor(team.role.name)}
-                  >
-                    {team.team}: {team.role.name}
-                  </Tag>
-                ))
+                teams.map(team => {
+                  // eslint-disable-next-line no-nested-ternary
+                  const roleName = user.isAdmin
+                    ? "Admin"
+                    : teams.isSupervisor ? "Supervisor" : "User";
+                  return (
+                    <Tag
+                      key={`team_role_${user.id}_${team.id}`}
+                      color={TemplateHelpers.stringToColor(roleName)}
+                    >
+                      {team.name}: {roleName}
+                    </Tag>
+                  );
+                })
               }
             />
             <Column

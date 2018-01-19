@@ -113,13 +113,14 @@ object User {
       (__ \ "email").write[String] and
       (__ \ "firstName").write[String] and
       (__ \ "lastName").write[String] and
+      (__ \ "isAdmin").write[Boolean] and
       (__ \ "isActive").write[Boolean] and
       (__ \ "teams").write[List[JsObject]] and
       (__ \ "experiences").write[Map[String, Int]] and
       (__ \ "lastActivity").write[Long] and
       (__ \ "isAnonymous").write[Boolean] and
       (__ \ "isEditable").write[Boolean]) (u =>
-      (u.id, u.email, u.firstName, u.lastName, u.isActive, u.teams.map(TeamMembership.teamMembershipPublicWrites(_)), u.experiences,
+      (u.id, u.email, u.firstName, u.lastName, u.isAdmin, u.isActive, u.teams.map(TeamMembership.teamMembershipPublicWrites(_)), u.experiences,
         u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
 
   def userCompactWrites: Writes[User] =

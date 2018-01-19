@@ -52,6 +52,7 @@ export type APIUserType = {
   +firstName: string,
   +lastName: string,
   +id: string,
+  +isAdmin: boolean,
   +isActive: boolean,
   +isAnonymous: boolean,
   +isEditable: boolean,

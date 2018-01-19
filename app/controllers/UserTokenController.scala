@@ -13,9 +13,8 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.annotation._
 import models.binary.DataSetDAO
-import models.user.{User, UserTokenDAO}
 import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
-import models.user.{User, UserToken, UserTokenDAO, UserTokenService}
+import models.user.User
 import net.liftweb.common.{Box, Full}
 import oxalis.security.{TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
@@ -30,38 +29,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     with AnnotationInformationProvider {
 
   val webKnossosToken = play.api.Play.current.configuration.getString("application.authentication.dataStoreToken").getOrElse("somethingSecure")
-  val tokenDAO = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenDao
   val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
-
-  def test_robert = SecuredAction.async { implicit request =>
-    for {
-      //auth1 <- tokenDAO.findByLoginInfo(request.identity.loginInfo, TokenType.DataStore).toFox
-      //auth1 <- bearerTokenService.create(request.identity.loginInfo, TokenType.DataStore)
-      //test2 <- tokenDAO.add(auth1, TokenType.Authentication)
-      //auth <- tokenDAO.findByLoginInfo(request.identity.loginInfo, TokenType.Authentication).toFox
-      //test <- auth
-      /*
-      test1 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.Authentication)
-      test2 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.ResetPassword)
-      test3 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.DataStore)
-      test4 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.DataStore)
-      test5 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.Authentication)
-      test61 <- bearerTokenService.create(request.identity.loginInfo, TokenType.Authentication)
-      test62 <- tokenDAO.insert(test61, TokenType.Authentication)
-      test71 <- bearerTokenService.create(request.identity.loginInfo, TokenType.Authentication)
-      test72 <- tokenDAO.insert(test71, TokenType.Authentication)
-      test81 <- bearerTokenService.create(request.identity.loginInfo, TokenType.DataStore)
-      test82 <- tokenDAO.insert(test81, TokenType.DataStore)
-      test9 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.DataStore)
-      test10 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.Authentication)
-      */
-      test1 <- bearerTokenService.removeExpiredTokens()
-    } yield {
-      //Ok(Json.toJson(auth))
-      val test = Json.toJson("test")
-      Ok(test)
-    }
-  }
 
   def generateTokenForDataStore = UserAwareAction.async { implicit request =>
     val context = userAwareRequestToDBAccess(request)

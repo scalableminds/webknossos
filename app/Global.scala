@@ -31,9 +31,11 @@ object Global extends GlobalSettings with LazyLogging{
       InitialData.insert(conf)
     }
 
+    /*
     CleanUpService.register("deletion of expired dataTokens", UserToken.expirationTime) {
       UserTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
     }
+    */
 
     super.onStart(app)
   }

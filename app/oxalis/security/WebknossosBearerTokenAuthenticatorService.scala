@@ -9,7 +9,7 @@ import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticator,
 import com.mohiva.play.silhouette.impl.daos.AuthenticatorDAO
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.user.{User, UserService, UserTokenDAO}
+import models.user.{User, UserService}
 import org.joda.time.DateTime
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, Writes}

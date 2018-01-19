@@ -6,6 +6,7 @@ import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import { Modal, Button, Upload, Select, Form, Spin } from "antd";
+import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
 import type { ReactRouterHistoryType } from "react_router";
@@ -81,8 +82,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
   async merge(url: string) {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url);
-    Toast.messages(annotation.messages);
-    const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
+    Toast.success(messages["tracing.merged"]);
+    const redirectUrl = `/api/annotations/${annotation.typ}/${annotation.id}`;
     this.props.history.push(redirectUrl);
   }
 
@@ -106,7 +107,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       Toast.messages(info.file.response.messages);
       this.setState({ isUploading: false });
       const url =
-        `/annotations/${annotation.typ}/${annotation.id}/merge/` +
+        `/api/annotations/${annotation.typ}/${annotation.id}/merge/` +
         `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     } else if (info.file.status === "error") {
@@ -124,7 +125,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const { selectedTaskType } = this.state;
     if (selectedTaskType != null) {
       const url =
-        `/annotations/CompoundTaskType/${selectedTaskType}/` +
+        `/api/annotations/CompoundTaskType/${selectedTaskType}/` +
         `merge/${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
@@ -135,7 +136,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const { selectedProject } = this.state;
     if (selectedProject != null) {
       const url =
-        `/annotations/CompoundProject/${selectedProject}/merge/` +
+        `/api/annotations/CompoundProject/${selectedProject}/merge/` +
         `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
@@ -147,7 +148,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
     if (selectedExplorativeAnnotation != null) {
       const url =
-        `/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
+        `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
         `${this.props.tracingType}/${this.props.annotationId}`;
       this.merge(url);
     }
@@ -219,7 +220,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             <Form.Item label="NML">
               <Upload
                 name="nmlFile"
-                action="/annotations/upload"
+                action="/api/annotations/upload"
                 headers={{ authorization: "authorization-text" }}
                 beforeUpload={this.handleBeforeUploadNML}
                 onChange={this.handleChangeNML}

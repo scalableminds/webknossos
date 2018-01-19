@@ -13,9 +13,13 @@ import moment from "moment";
 import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/views/transfer_task_modal";
-import { deleteAnnotation, resetAnnotation } from "admin/admin_rest_api";
+import { deleteAnnotation, resetAnnotation, finishTask } from "admin/admin_rest_api";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
-import type { APITaskWithAnnotationType, APIUserType } from "admin/api_flow_types";
+import type {
+  APITaskWithAnnotationType,
+  APIUserType,
+  APIAnnotationType,
+} from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
@@ -38,7 +42,9 @@ type State = {
   currentAnnotationId: ?string,
 };
 
-const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnotationType => {
+const convertAnnotationToTaskWithAnnotationType = (
+  annotation: APIAnnotationType,
+): APITaskWithAnnotationType => {
   const { task } = annotation;
 
   if (!task) {
@@ -58,8 +64,10 @@ const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnot
     };
   }
 
-  task.annotation = annotation;
-  return task;
+  const newTask: APITaskWithAnnotationType = Object.assign({}, task, {
+    annotation,
+  });
+  return newTask;
 };
 
 class DashboardTaskListView extends React.PureComponent<Props, State> {
@@ -83,9 +91,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       content: messages["annotation.finish"],
       onOk: async () => {
         const annotation = task.annotation;
-        const url = `/annotations/${annotation.typ}/${annotation.id}/finish`;
 
-        const changedAnnotationWithTask = await Request.receiveJSON(url);
+        const changedAnnotationWithTask = await finishTask(annotation.id);
+
         const changedTask = convertAnnotationToTaskWithAnnotationType(changedAnnotationWithTask);
 
         const newUnfinishedTasks = this.state.unfinishedTasks.filter(t => t.id !== task.id);
@@ -163,15 +171,15 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         ) : null}
         {isAdmin ? (
           <div>
-            <a href={`/annotations/Task/${annotation.id}/download`}>
+            <a href={`/api/annotations/Task/${annotation.id}/download`}>
               <Icon type="download" />Download
             </a>
             <br />
-            <a href="#" onClick={() => this.resetTask(annotation.id)}>
+            <a href="#" onClick={() => this.resetTask(annotation)}>
               <Icon type="rollback" />Reset
             </a>
             <br />
-            <a href="#" onClick={() => this.cancelAnnotation(annotation.id)}>
+            <a href="#" onClick={() => this.cancelAnnotation(annotation)}>
               <Icon type="delete" />Cancel
             </a>
             <br />
@@ -186,20 +194,21 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     );
   };
 
-  async resetTask(annotationId: string) {
-    await resetAnnotation(annotationId);
+  async resetTask(annotation: APIAnnotationType) {
+    await resetAnnotation(annotation.id, annotation.typ);
     Toast.success(messages["task.reset_success"]);
   }
 
-  cancelAnnotation(annotationId: string) {
+  cancelAnnotation(annotation: APIAnnotationType) {
     const wasFinished = this.state.showFinishedTasks;
+    const annotationId = annotation.id;
 
     Modal.confirm({
       content: messages["annotation.delete"],
       cancelText: messages.no,
       okText: messages.yes,
       onOk: async () => {
-        await deleteAnnotation(annotationId);
+        await deleteAnnotation(annotationId, annotation.typ);
         if (wasFinished) {
           this.setState({
             finishedTasks: this.state.finishedTasks.filter(t => t.annotation.id !== annotationId),

@@ -13,10 +13,17 @@ import Toast from "libs/toast";
 import Utils from "libs/utils";
 import update from "immutability-helper";
 import TemplateHelpers from "libs/template_helpers";
+import messages from "messages";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FileUpload from "components/file_upload";
 import type { ReactRouterHistoryType } from "react_router";
+import {
+  finishAllAnnotations,
+  editAnnotation,
+  finishAnnotation,
+  reOpenAnnotation,
+} from "admin/admin_rest_api";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -121,13 +128,16 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
-    const url =
+    const newTracing =
       type === "finish"
-        ? `/annotations/${tracing.typ}/${tracing.id}/finish`
-        : `/annotations/${tracing.typ}/${tracing.id}/reopen`;
+        ? await finishAnnotation(tracing.id, tracing.typ)
+        : await reOpenAnnotation(tracing.id, tracing.typ);
 
-    const newTracing = await Request.receiveJSON(url);
-    Toast.messages(newTracing.messages);
+    if (type === "finish") {
+      Toast.success(messages["annotation.was_finished"]);
+    } else {
+      Toast.success(messages["annotation.was_re_opened"]);
+    }
 
     const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
 
@@ -161,7 +171,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
             <Icon type="play-circle-o" />Trace
           </Link>
           <br />
-          <a href={`/annotations/${typ}/${id}/download`}>
+          <a href={`/api/annotations/${typ}/${id}/download`}>
             <Icon type="download" />Download
           </a>
           <br />
@@ -210,11 +220,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         : "unarchivedTracings"]: newTracings,
     });
 
-    const url = `/annotations/${tracing.typ}/${tracing.id}/edit`;
-    const payload = { data: { name } };
-
-    Request.sendJSONReceiveJSON(url, payload).then(response => {
-      Toast.messages(response.messages);
+    editAnnotation(tracing.id, tracing.typ, { name }).then(() => {
+      Toast.success(messages["annotation.was_edited"]);
     });
   }
 
@@ -226,12 +233,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       } explorative annotations matching the current search query / tags?`,
       onOk: async () => {
         const selectedAnnotationIds = selectedAnnotations.map(t => t.id);
-        const data = await Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
-          method: "POST",
-          data: {
-            annotations: selectedAnnotationIds,
-          },
-        });
+        const data = await finishAllAnnotations(selectedAnnotationIds);
         Toast.messages(data.messages);
 
         this.setState({
@@ -277,9 +279,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         }
 
         // persist to server
-        const url = `/annotations/${newAnnotation.typ}/${newAnnotation.id}/edit`;
-        Request.sendJSONReceiveJSON(url, {
-          data: { tags: newAnnotation.tags },
+        editAnnotation(newAnnotation.id, newAnnotation.typ, {
+          tags: newAnnotation.tags,
         });
       }
       return newAnnotation;
@@ -428,7 +429,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         ) : (
           <div className="pull-right">
             <FileUpload
-              url="/annotations/upload"
+              url="/api/annotations/upload"
               accept=".nml, .zip"
               name="nmlFile"
               multiple

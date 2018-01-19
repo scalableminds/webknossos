@@ -189,25 +189,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def finishWithRedirect(typ: String, id: String) = SecuredAction.async { implicit request =>
-    val redirectTarget = if(!request.identity.isAnonymous) "/dashboard" else "/thankyou"
-
-    for {
-      annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
-      finished <- annotation.muta.finishAnnotation(request.identity, restrictions).futureBox
-    } yield {
-      finished match {
-        case Full((_, message)) =>
-          Redirect(redirectTarget).flashing("success" -> Messages(message))
-        case Failure(message, _, _) =>
-          Redirect(redirectTarget).flashing("error" -> Messages(message))
-        case _ =>
-          Redirect(redirectTarget).flashing("error" -> Messages("error.unknown"))
-      }
-    }
-  }
-
   def editAnnotation(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
 
     for {

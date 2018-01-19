@@ -15,7 +15,6 @@ import type {
   APIDatastoreType,
   NDStoreConfigType,
   DatasetConfigType,
-  APIRoleType,
   APIDatasetType,
   APITimeIntervalType,
   APIUserLoggedTimeType,
@@ -30,8 +29,6 @@ const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
 type NewTeamType = {
   +name: string,
-  +parent: string,
-  +roles: Array<APIRoleType>,
 };
 
 function assertResponseLimit(collection) {

@@ -58,7 +58,7 @@ class TeamListView extends React.PureComponent<Props, State> {
 
     this.setState({
       isLoading: false,
-      teams: teams.filter(p => p.owner),
+      teams: teams,
     });
   }
 
@@ -133,21 +133,6 @@ class TeamListView extends React.PureComponent<Props, State> {
                 dataIndex="name"
                 key="name"
                 sorter={Utils.localeCompareBy("name")}
-              />
-              <Column
-                title="Parent"
-                dataIndex="parent"
-                key="parent"
-                sorter={Utils.localeCompareBy("parent")}
-              />
-              <Column
-                title="Owner"
-                dataIndex="owner"
-                key="owner"
-                sorter={Utils.localeCompareBy((team: APITeamType) => team.owner.lastName)}
-                render={owner =>
-                  owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"
-                }
               />
               <Column
                 title="Action"

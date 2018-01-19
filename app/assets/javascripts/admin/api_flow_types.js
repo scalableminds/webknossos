@@ -73,9 +73,7 @@ export type APIUserLoggedTimeType = {
 export type APITeamType = {
   +id: string,
   +name: string,
-  +owner: APIUserType,
-  +parent: string,
-  +roles: Array<APIRoleType>,
+  +organization: string,
 };
 
 export type APIRestrictionsType = {

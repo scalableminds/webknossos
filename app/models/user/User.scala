@@ -38,7 +38,7 @@ case class User(
                  loginInfo: LoginInfo,
                  passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity {
 
-  def teamNames = teams.map(_._id)
+  def teamIds = teams.map(_._id)
 
   def isSuperUser = _isSuperUser getOrElse false
 
@@ -97,10 +97,10 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.hasAdminAccess && (teams.isEmpty || teamNames.exists(other.isSuperVisorOf)) //TODO
+    other.hasAdminAccess && (teams.isEmpty || teamIds.exists(other.isSuperVisorOf)) //TODO
 
   def isSuperVisorOf(user: User): Boolean =
-    user.teamNames.intersect(this.supervisorTeams).nonEmpty
+    user.teamIds.intersect(this.supervisorTeams).nonEmpty
 }
 
 object User {
@@ -114,12 +114,12 @@ object User {
       (__ \ "firstName").write[String] and
       (__ \ "lastName").write[String] and
       (__ \ "isActive").write[Boolean] and
-      (__ \ "teams").write[List[TeamMembership]] and
+      (__ \ "teams").write[List[JsObject]] and
       (__ \ "experiences").write[Map[String, Int]] and
       (__ \ "lastActivity").write[Long] and
       (__ \ "isAnonymous").write[Boolean] and
       (__ \ "isEditable").write[Boolean]) (u =>
-      (u.id, u.email, u.firstName, u.lastName, u.isActive, u.teams, u.experiences,
+      (u.id, u.email, u.firstName, u.lastName, u.isActive, u.teams.map(TeamMembership.teamMembershipPublicWrites(_)), u.experiences,
         u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
 
   def userCompactWrites: Writes[User] =
@@ -128,8 +128,8 @@ object User {
       (__ \ "firstName").write[String] and
       (__ \ "lastName").write[String] and
       (__ \ "isAnonymous").write[Boolean] and
-      (__ \ "teams").write[List[TeamMembership]]) (u =>
-      (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams))
+      (__ \ "teams").write[List[JsObject]]) (u =>
+      (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams.map(TeamMembership.teamMembershipPublicWrites(_))))
 
   val defaultDeactivatedUser = User("", "", "", organization = "", teams = Nil, loginInfo = LoginInfo(CredentialsProvider.ID, ""), passwordInfo = PasswordInfo("SCrypt", ""))
 }
@@ -149,7 +149,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       ctx.data match {
         case Some(user: User) =>
           AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams._id" -> Json.obj("$in" -> user.teamNames)),
+            Json.obj("teams._id" -> Json.obj("$in" -> user.teamIds)),
             Json.obj("teams" -> Json.arr()))))
         case _ =>
           DenyEveryone()
@@ -160,7 +160,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       ctx.data match {
         case Some(user: User) if user.hasAdminAccess =>
           AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams._id" -> Json.obj("$in" -> user.supervisorTeams)),
+            Json.obj("teams.team" -> Json.obj("$in" -> user.supervisorTeams)),
             Json.obj("teams" -> Json.arr())
           )))
         case _ =>

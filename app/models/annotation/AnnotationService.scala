@@ -37,7 +37,7 @@ object AnnotationService
   with LazyLogging {
 
   private def selectSuitableTeam(user: User, dataSet: DataSet): BSONObjectID = {
-      dataSet.allowedTeams.intersect(user.teamNames).head
+      dataSet.allowedTeams.intersect(user.teamIds).head
   }
 
   private def createVolumeTracing(dataSource: DataSource, withFallback: Boolean): VolumeTracing = {

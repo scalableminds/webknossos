@@ -101,7 +101,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
-    if (user.teamNames.diff(issuingUser.supervisorTeamIds).isEmpty) {
+    if (user.teamIds.diff(issuingUser.supervisorTeamIds).isEmpty) {
       // if a user doesn't belong to any team any more he gets deleted
       UserDAO.removeById(user._id).flatMap {
         _ =>

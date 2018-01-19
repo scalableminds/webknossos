@@ -36,7 +36,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
 
   def register(user: User): Future[String] = {
     // TODO: fix, make team dynamic
-    if (isActive && user.teamNames.contains("Connectomics department")) {
+    if (isActive && user.teamIds.contains("Connectomics department")) {
       val result = Promise[String]()
       val brainTracingRequest = WS
         .url(CREATE_URL)
@@ -100,7 +100,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   def logTime(user: User, time: Long, annotation: Option[Annotation])(implicit ctx: DBAccessContext): Future[Boolean] = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
-    if (isActive && !user.isAnonymous && user.teamNames.contains("Connectomics department")) {
+    if (isActive && !user.isAnonymous && user.teamIds.contains("Connectomics department")) {
       async {
         val task = await(annotation.toFox.flatMap(_.task).futureBox)
         val taskTypeFox = task.toFox.flatMap(_.taskType)

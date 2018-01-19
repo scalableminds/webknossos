@@ -35,7 +35,7 @@ object Team extends FoxImplicits {
   val teamFormat = Json.format[Team]
 
   def teamPublicWrites(team: Team)(implicit ctx: DBAccessContext): Future[JsObject] =
-    Future(
+    Future.successful(
       Json.obj(
         "id" -> team.id,
         "name" -> team.name,
@@ -73,7 +73,7 @@ object TeamDAO extends SecuredBaseDAO[Team] with FoxImplicits {
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
-          AllowIf(Json.obj("name" -> Json.obj("$in" -> user.teamNames)))
+          AllowIf(Json.obj("_id" -> Json.obj("$in" -> user.teamIds)))
         case _ =>
           DenyEveryone()
       }

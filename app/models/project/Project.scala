@@ -139,7 +139,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamIds)))
         case _ =>
           DenyEveryone()
       }

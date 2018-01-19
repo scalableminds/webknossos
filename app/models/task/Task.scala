@@ -135,7 +135,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamIds)))
         case _ =>
           DenyEveryone()
       }
@@ -297,7 +297,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     for {
       jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
         "openInstances" -> Json.obj("$gt" -> 0),
-        "team" -> Json.obj("$in" -> user.teamNames),
+        "team" -> Json.obj("$in" -> user.teamIds),
         "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
     } yield {
       jsObjects.map(p => (p \ "_project").asOpt[String]).flatten

@@ -291,7 +291,7 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
   private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[BSONObjectID]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
       if (numberOfOpen < MAX_OPEN_TASKS) {
-        Fox.successful(user.teamNames)
+        Fox.successful(user.teamIds)
       } else if (user.hasAdminAccess) {
         Fox.successful(user.supervisorTeamIds)
       } else {
@@ -338,7 +338,7 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
     val user = request.identity
 
     for {
-      assignments <- TaskAssignmentService.findNAssignableFor(user, user.teamNames, limit)
+      assignments <- TaskAssignmentService.findNAssignableFor(user, user.teamIds, limit)
     } yield {
       Ok(Json.toJson(assignments))
     }

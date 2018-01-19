@@ -87,14 +87,13 @@ GET           /annotations/:typ/:id/reset                                       
 GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
 POST          /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
 
-GET           /annotations/:typ/:id                                             controllers.AnnotationController.empty(typ: String, id: String)
-GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.emptyReadOnly(typ: String, id: String)
 
-GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
-GET           /annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)
-DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
-GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String)
+
+GET           /api/annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
+GET           /api/annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)
+DELETE        /api/annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
+GET           /api/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
+GET           /api/annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String)
 
 GET           /api/annotations/:typ/:id/loggedTime                              controllers.AnnotationController.loggedTime(typ: String, id: String)
 

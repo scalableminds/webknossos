@@ -144,7 +144,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       contentType <- TracingType.values.find(_.toString == typ).toFox
       annotation <- AnnotationService.createExplorationalFor(request.identity, dataSet, contentType, withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
     } yield {
-      Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
+      // Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
+      Redirect("/annotations/" + annotation.typ + "/" + annotation.id)
     }
   }
 

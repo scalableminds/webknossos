@@ -370,19 +370,19 @@ export async function updateTask(taskId: string, task: NewTaskType): Promise<API
 
 // ### Annotations
 export async function reOpenAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/reopen`);
+  return Request.receiveJSON(`/api/annotations/Task/${annotationId}/reopen`);
 }
 
 export async function finishAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/finish`);
+  return Request.receiveJSON(`/api/annotations/Task/${annotationId}/finish`);
 }
 
 export async function resetAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/reset`);
+  return Request.receiveJSON(`/api/annotations/Task/${annotationId}/reset`);
 }
 
 export async function deleteAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}`, {
+  return Request.receiveJSON(`/api/annotations/Task/${annotationId}`, {
     method: "DELETE",
   });
 }
@@ -391,7 +391,7 @@ export async function copyAnnotationToUserAccount(
   annotationId: string,
   tracingType: string,
 ): Promise<APIAnnotationType> {
-  const url = `/annotations/${tracingType}/${annotationId}/duplicate`;
+  const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url);
 }
 
@@ -402,7 +402,7 @@ export async function getAnnotationInformation(
   // Include /readOnly part whenever it is in the pathname
   const isReadOnly = location.pathname.endsWith("/readOnly");
   const readOnlyPart = isReadOnly ? "readOnly/" : "";
-  const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+  const infoUrl = `/api/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
   return Request.receiveJSON(infoUrl);
 }
 

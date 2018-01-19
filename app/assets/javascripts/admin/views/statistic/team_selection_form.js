@@ -9,6 +9,7 @@ const { Option } = Select;
 
 type Props = {
   form: Object,
+  value: ?string,
   onChange: (teamId: string) => void,
 };
 type State = {
@@ -49,7 +50,7 @@ class TeamSelectionView extends React.PureComponent<Props, State> {
         <Row gutter={40}>
           <Col span={12}>
             <FormItem {...formItemLayout} label="Team" style={{ marginBottom: 0 }}>
-              {getFieldDecorator("teamId")(
+              {getFieldDecorator("teamId", { initialValue: this.props.value })(
                 <Select
                   allowClear
                   showSearch

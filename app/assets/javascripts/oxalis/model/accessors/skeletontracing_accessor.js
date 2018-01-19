@@ -33,7 +33,7 @@ export function getActiveNode(tracing: TracingType) {
   return getSkeletonTracing(tracing).chain(skeletonTracing => {
     const { activeTreeId, activeNodeId } = skeletonTracing;
     if (activeTreeId != null && activeNodeId != null) {
-      return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes[activeNodeId]);
+      return Maybe.Just(skeletonTracing.trees[activeTreeId].nodes.get(activeNodeId));
     }
     return Maybe.Nothing();
   });
@@ -79,14 +79,14 @@ export function getActiveNodeFromTree(tracing: TracingType, tree: TreeType) {
   return getSkeletonTracing(tracing).chain(skeletonTracing => {
     const { activeNodeId } = skeletonTracing;
     if (activeNodeId != null) {
-      return Maybe.Just(tree.nodes[activeNodeId]);
+      return Maybe.Just(tree.nodes.get(activeNodeId));
     }
     return Maybe.Nothing();
   });
 }
 
 export function findTreeByNodeId(trees: TreeMapType, nodeId: number): Maybe<TreeType> {
-  return Maybe.fromNullable(_.values(trees).find(tree => tree.nodes[nodeId] != null));
+  return Maybe.fromNullable(_.values(trees).find(tree => tree.nodes.has(nodeId)));
 }
 
 export function getTree(tracing: TracingType, treeId: ?number) {
@@ -108,7 +108,7 @@ export function getNodeAndTree(tracing: TracingType, nodeId: ?number, treeId: ?n
     if (treeId != null) {
       tree = skeletonTracing.trees[treeId];
     } else if (nodeId != null) {
-      tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+      tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
     } else {
       const { activeTreeId } = skeletonTracing;
       if (activeTreeId != null) {
@@ -119,11 +119,11 @@ export function getNodeAndTree(tracing: TracingType, nodeId: ?number, treeId: ?n
     if (tree != null) {
       let node = null;
       if (nodeId != null) {
-        node = tree.nodes[nodeId];
+        node = tree.nodes.get(nodeId);
       } else {
         const { activeNodeId } = skeletonTracing;
         if (activeNodeId != null) {
-          node = tree.nodes[activeNodeId];
+          node = tree.nodes.get(activeNodeId);
         }
       }
       if (node != null) {
@@ -135,7 +135,11 @@ export function getNodeAndTree(tracing: TracingType, nodeId: ?number, treeId: ?n
 }
 
 export function getMaxNodeIdInTree(tree: TreeType) {
-  const maxNodeId = _.reduce(tree.nodes, (r, node) => Math.max(r, node.id), -Infinity);
+  const maxNodeId = _.reduce(
+    Array.from(tree.nodes.keys()),
+    (r, nodeId) => Math.max(r, nodeId),
+    -Infinity,
+  );
   return maxNodeId === -Infinity ? Maybe.Nothing() : Maybe.Just(maxNodeId);
 }
 
@@ -161,7 +165,7 @@ export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> 
     .chain(skeletonTracing => Maybe.fromNullable(skeletonTracing.trees))
     .map(trees => ({
       treeCount: _.size(trees),
-      nodeCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.nodes), 0),
+      nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
       edgeCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.edges), 0),
       branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
     }));

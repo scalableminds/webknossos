@@ -6,14 +6,13 @@ package com.scalableminds.webknossos.datastore.controllers
 import java.io.FileInputStream
 
 import com.google.protobuf.CodedInputStream
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.services.{AccessTokenService, UserAccessAnswer, UserAccessRequest}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Box
 import net.liftweb.util.Helpers.tryo
-import play.api.Play
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, Reads}
 import play.api.mvc.Results.BadRequest
@@ -34,13 +33,7 @@ trait TokenSecuredController extends Controller {
 
   case class TokenSecuredAction(accessRequest: UserAccessRequest) extends ActionBuilder[Request] {
 
-    val debugModeEnabled = Play.current.configuration.getBoolean("datastore.debugMode").getOrElse(false)
-
     private def hasUserAccess[A](implicit request: Request[A]): Fox[UserAccessAnswer] = {
-      // TODO RocksDB if (debugModeEnabled && Play.mode(Play.current) != Mode.Prod) {
-      //  return Future.successful(true)
-      //}
-
       request.getQueryString("token").map { token =>
         accessTokenService.hasUserAccess(token, accessRequest)
       }.getOrElse(Fox.successful(UserAccessAnswer(false, Some("No access token."))))

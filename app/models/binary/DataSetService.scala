@@ -3,8 +3,8 @@
  */
 package models.binary
 
-import com.scalableminds.webknossos.datastore.binary.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.binary.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -88,9 +88,11 @@ object DataSetService extends FoxImplicits with LazyLogging {
     }
   }
 
-  def deactivateDataSources(dataStoreName: String)(implicit ctx: DBAccessContext) = {
+  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     DataSetDAO.update(
-      Json.obj("dataStoreInfo.name" -> dataStoreName),
+      Json.obj(
+        "dataStoreInfo.name" -> dataStoreName,
+        "dataSource.id.name" -> Json.obj("$nin" -> Json.arr(dataSources.map(_.id.name)))),
       Json.obj(
         "$set" -> Json.obj(
           "isActive" -> false,

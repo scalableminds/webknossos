@@ -155,8 +155,6 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
                     elements.push(<Tag key="branchPointsAllowed">Branchpoints</Tag>);
                   if (settings.somaClickingAllowed)
                     elements.push(<Tag key="somaClickingAllowed">Soma clicking</Tag>);
-                  if (settings.advancedOptionsAllowed)
-                    elements.push(<Tag key="advancedOptionsAllowed">Advanced Options</Tag>);
                   return elements;
                 }}
                 width={100}

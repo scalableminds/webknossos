@@ -4,7 +4,6 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{Annotation, AnnotationMerger, AnnotationRestrictions, AnnotationType}
 import models.task.{TaskDAO, TaskTypeDAO}
-import models.team.Role
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID

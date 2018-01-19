@@ -64,38 +64,31 @@
     "build": "node_modules/.bin/webpack --env.production",
     "build-watch": "node_modules/.bin/webpack -w",
     "test": "tools/test.sh prepare -q && tools/test.sh test --timeout=30s",
-    "test-verbose":
-      "tools/test.sh prepare -q && tools/test.sh test --timeout=60s --verbose",
+    "test-verbose": "tools/test.sh prepare -q && tools/test.sh test --timeout=60s --verbose",
     "test-only": "tools/test.sh test --timeout=30s",
     "test-watch": "tools/test.sh test --watch",
     "test-debug": "tools/test.sh test --debug",
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w",
     "test-e2e": "tools/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
-    "test-help":
-      "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
+    "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-snapshots": "rm -r app/assets/javascripts/test/snapshots/public",
-    "create-snapshots":
-      "rm -r app/assets/javascripts/test/snapshots/public && docker-compose up e2e-tests",
+    "create-snapshots": "rm -r app/assets/javascripts/test/snapshots/public && docker-compose up e2e-tests",
     "flow": "node_modules/.bin/flow",
     "flow-check": "node_modules/.bin/flow check",
     "lint": "node_modules/.bin/eslint --quiet app/assets/javascripts/",
-    "pretty":
-      "node_modules/.bin/prettier --write --config .prettierrc \"app/assets/javascripts/**/*.js\"",
-    "am-i-pretty":
-      "node_modules/.bin/prettier --list-different --config .prettierrc \"app/assets/javascripts/**/*.js\"",
+    "pretty": "node_modules/.bin/prettier --write --config .prettierrc \"app/assets/javascripts/**/*.js\"",
+    "am-i-pretty": "node_modules/.bin/prettier --list-different --config .prettierrc \"app/assets/javascripts/**/*.js\"",
     "lint-fix": "node_modules/.bin/eslint --fix --quiet app/assets/javascripts/",
-    "flow-coverage":
-      "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
-    "docs":
-      "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
+    "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
+    "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "import-db": "./tools/import_export/import.sh webknossos-testing ./test/db/",
     "drop-db": "./tools/dropDB.sh webknossos-testing"
   },
   "dependencies": {
     "@scalableminds/saxophone": "^0.5.0",
     "airbrake-js": "^0.5.8",
-    "antd": "^3.0.1",
+    "antd": "^3.1.3",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
     "classnames": "^2.2.5",
@@ -127,7 +120,9 @@
     "whatwg-fetch": "^1.1.0"
   },
   "ava": {
-    "source": ["./public/test-bundle/**/*.{js,jsx}"],
+    "source": [
+      "./public/test-bundle/**/*.{js,jsx}"
+    ],
     "snapshotDir": "app/assets/javascripts/test/snapshots",
     "concurrency": 8,
     "babel": {}

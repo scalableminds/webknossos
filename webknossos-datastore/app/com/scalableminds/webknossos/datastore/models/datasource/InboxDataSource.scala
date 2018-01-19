@@ -58,4 +58,5 @@ package object inbox {
 
   type InboxDataSource = GenericInboxDataSource[DataLayer]
   type InboxDataSourceLike = GenericInboxDataSource[DataLayerLike]
+  type UnusableDataSourceLike = UnusableDataSource[DataLayerLike]
 }

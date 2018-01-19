@@ -1,13 +1,17 @@
 package models.binary
 
+import com.scalableminds.util.geometry.{BoundingBox, Vector3D}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSourceLike => UnusableDataSourcex}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import models.basics._
 import models.configuration.DataSetConfiguration
-import models.team.{Role, TeamMembership}
+import models.task.TaskSQLDAO.parseArrayTuple
+import models.team.{Role, TeamMembership, TeamSQL, TeamSQLDAO}
 import models.user.User
 import models.user.UserExperiencesSQLDAO.db
 import play.api.libs.concurrent.Execution.Implicits._
@@ -29,6 +33,8 @@ case class DataSetSQL(
                      description: Option[String] = None,
                      isPublic: Boolean,
                      name: String,
+                     scale: Option[Vector3D],
+                     status: String,
                      created: Long = System.currentTimeMillis(),
                      isDeleted: Boolean = false
                      )
@@ -39,8 +45,18 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   def idColumn(x: Datasets): Rep[String] = x._Id
   def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
-  def parse(r: DatasetsRow): Fox[DataSetSQL] =
-    Fox.successful(DataSetSQL(
+  private def parseVector3DOpt(literalOpt: Option[String]): Fox[Option[Vector3D]] = literalOpt match {
+    case Some(literal) => for {
+      scale <- Vector3D.fromList(parseArrayTuple(literal).map(_.toDouble)) ?~> "could not parse edit position"
+    } yield Some(scale)
+    case None => Fox.successful(None)
+  }
+
+  def parse(r: DatasetsRow): Fox[DataSetSQL] = {
+    for {
+      scale <- parseVector3DOpt(r.scale)
+    } yield {
+      DataSetSQL(
         ObjectId(r._Id),
         ObjectId(r._Datastore),
         ObjectId(r._Team),
@@ -48,11 +64,75 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
         r.description,
         r.ispublic,
         r.name,
+        scale,
+        r.status,
         r.created.getTime,
         r.isdeleted
-      ))
+      )
+    }
+  }
 }
 
+/*
+name: String,
+category: Category.Value,
+boundingBox: BoundingBox,
+resolutions: List[Int],
+elementClass: ElementClass.Value,
+largestSegmentId: Long,
+mappings: Set[String]
+ */
+
+/*
+name: String,
+category: Category.Value,
+boundingBox: BoundingBox,
+resolutions: List[Int],
+elementClass: ElementClass.Value
+ */
+
+object DataSetDataLayerSQLDAO extends FoxImplicits {
+  val db = Database.forConfig("postgres")
+
+  def parseRow(row: DatasetLayersRow): Fox[DataLayer] = {
+    val result: Fox[Fox[DataLayer]] = for {
+      category <- Category.fromString(row.category).toFox
+      boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt))
+      elementClass <- ElementClass.fromString(row.elementclass)
+    } yield {
+      (row.largestsegmentid, row.mappings) match {
+        case (Some(segmentId), Some(mappings)) =>
+                                  Fox.successful(AbstractSegmentationLayer(
+                                  row.name,
+                                  category,
+                                  boundingBox,
+                                  parseArrayTuple(row.resolutions).map(_.toInt),
+                                  elementClass,
+                                  segmentId,
+                                  parseArrayTuple(mappings).toSet
+                                ))
+        case (None, None) => Fox.successful(AbstractDataLayer(
+                                  row.name,
+                                  category,
+                                  boundingBox,
+                                  parseArrayTuple(row.resolutions).map(_.toInt),
+                                  elementClass
+                                ))
+        case _ => Fox.failure("")
+      }
+    }
+    result.flatten
+  }
+
+  def findDataLayersForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
+    for {
+      rows <- db.run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
+      rowsParsed <- Fox.combined(rows.map(parseRow))
+    } yield {
+      rowsParsed
+    }
+  }
+}
 
 
 
@@ -118,11 +198,27 @@ object DataSet extends FoxImplicits {
     case None => Fox.successful(None)
   }
 
+  private def constructDatasource(s: DataSetSQL, team: TeamSQL)(implicit ctx: DBAccessContext) = {
+    val dataSourceId = DataSourceId(s.name, team.name)
+    s.scale match {
+      case Some(scale) => for {
+        dataLayers <- DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id)
+      } yield {
+        //DataSource(dataSourceId, dataLayers, s.scale)
+        UnusableDataSourcex(dataSourceId, "TODO")
+      }
+      case None => Fox.successful(UnusableDataSourcex(dataSourceId, s.status))
+    }
+    val a = UnusableDataSourcex
+  }
+
   def fromDatasetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
     for {
       datastore <- DataStoreSQLDAO.findOne(s._datastore)
       allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllowedTeamsForDataSet(s._id)
       defaultConfiguration <- parseDefaultConfiguration(s.defaultConfiguration)
+      team <- TeamSQLDAO.findOne(s._team)
+      dataSource <- constructDatasource(s, team)
     } yield {
       DataSet(
         DataStoreInfo(datastore.name, datastore.url, datastore.typ),

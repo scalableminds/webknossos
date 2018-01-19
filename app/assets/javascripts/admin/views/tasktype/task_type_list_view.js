@@ -3,16 +3,23 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import Markdown from "react-remarkable";
 import Utils from "libs/utils";
 import messages from "messages";
 import { getTaskTypes, deleteTaskType } from "admin/admin_rest_api";
+import Persistence from "libs/persistence";
+import { PropTypes } from "prop-types";
 import type { APITaskTypeType } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 const { Search } = Input;
+
+type Props = {
+  history: RouterHistory,
+};
 
 type State = {
   isLoading: boolean,
@@ -20,15 +27,28 @@ type State = {
   searchQuery: string,
 };
 
-class TaskTypeListView extends React.PureComponent<{}, State> {
+const persistence: Persistence<State> = new Persistence(
+  { searchQuery: PropTypes.string },
+  "taskTypeList",
+);
+
+class TaskTypeListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: true,
     tasktypes: [],
     searchQuery: "",
   };
 
+  componentWillMount() {
+    this.setState(persistence.load(this.props.history));
+  }
+
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persistence.persist(this.props.history, nextState);
   }
 
   async fetchData(): Promise<void> {
@@ -77,6 +97,7 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
               onChange={this.handleSearch}
+              value={this.state.searchQuery}
             />
           </div>
           <h3>Task Types</h3>
@@ -198,4 +219,4 @@ class TaskTypeListView extends React.PureComponent<{}, State> {
   }
 }
 
-export default TaskTypeListView;
+export default withRouter(TaskTypeListView);

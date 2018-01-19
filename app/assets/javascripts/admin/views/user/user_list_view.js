@@ -3,17 +3,24 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Icon, Spin, Button, Input } from "antd";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
+import Persistence from "libs/persistence";
+import { PropTypes } from "prop-types";
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 const { Search } = Input;
+
+type Props = {
+  history: RouterHistory,
+};
 
 type State = {
   isLoading: boolean,
@@ -25,7 +32,15 @@ type State = {
   searchQuery: string,
 };
 
-class UserListView extends React.PureComponent<{}, State> {
+const persistence: Persistence<State> = new Persistence(
+  {
+    searchQuery: PropTypes.string,
+    activationFilter: PropTypes.arrayOf(PropTypes.string),
+  },
+  "userList",
+);
+
+class UserListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: true,
     users: [],
@@ -36,8 +51,16 @@ class UserListView extends React.PureComponent<{}, State> {
     searchQuery: "",
   };
 
+  componentWillMount() {
+    this.setState(persistence.load(this.props.history));
+  }
+
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persistence.persist(this.props.history, nextState);
   }
 
   async fetchData(): Promise<void> {
@@ -137,6 +160,7 @@ class UserListView extends React.PureComponent<{}, State> {
           style={{ width: 200, float: "right" }}
           onPressEnter={this.handleSearch}
           onChange={this.handleSearch}
+          value={this.state.searchQuery}
         />
 
         <Spin size="large" spinning={this.state.isLoading}>
@@ -267,4 +291,4 @@ class UserListView extends React.PureComponent<{}, State> {
   }
 }
 
-export default UserListView;
+export default withRouter(UserListView);

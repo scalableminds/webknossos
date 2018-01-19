@@ -47,9 +47,6 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   def findOne[V](attribute: String, value: V, tokenType: TokenType.Value)(implicit w: Writes[V], ctx: DBAccessContext): Fox[BearerTokenAuthenticator] =
     findOne(Json.obj(attribute -> w.writes(value), "tokenType" -> tokenType))
 
-  def findByLoginInfo(loginInfo: LoginInfo): Future[Option[BearerTokenAuthenticator]] =
-    findOne("loginInfo", loginInfo)(implicitly[Writes[LoginInfo]],GlobalAccessContext).futureBox.map(box => box.toOption)
-
   def findByLoginInfo(loginInfo: LoginInfo, tokenType: TokenType.Value): Future[Option[BearerTokenAuthenticator]] =
     findOne("loginInfo", loginInfo, tokenType)(implicitly[Writes[LoginInfo]],GlobalAccessContext).futureBox.map(box => box.toOption)
 

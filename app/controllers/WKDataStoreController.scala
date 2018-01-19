@@ -93,7 +93,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         case None => Fox.successful()
       }
       _ <- AnnotationDAO.updateModifiedTimestamp(annotation._id)(GlobalAccessContext)
-      userBox <- bearerTokenService.userForTokenOpt(userTokenOpt, TokenType.DataStore)(GlobalAccessContext).futureBox
+      userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
     } yield {
       userBox.map(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
       Ok

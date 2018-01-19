@@ -40,10 +40,25 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       //test2 <- tokenDAO.add(auth1, TokenType.Authentication)
       //auth <- tokenDAO.findByLoginInfo(request.identity.loginInfo, TokenType.Authentication).toFox
       //test <- auth
-      auth <- tokenDAO.findOne("id", "141d245b8c34742509dda3c1e9198ce9899e76451532845ff84c536bc8fc375feb8e840b8c73d7f714e4aca1cfab113f07340dabc0164d71b5703030e123efe4bce2d2fd59d11f7de6ceee933c2e8111a65f0d7d7ab7ee21acade01fa3495269d2c570c8533f40e001ece2f0d39d0be6c08f819f42b846e488efc87b6f4197c5", TokenType.DataStore)
+      /*
+      test1 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.Authentication)
+      test2 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.ResetPassword)
+      test3 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.DataStore)
+      test4 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.DataStore)
+      test5 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.Authentication)
+      test61 <- bearerTokenService.create(request.identity.loginInfo, TokenType.Authentication)
+      test62 <- tokenDAO.insert(test61, TokenType.Authentication)
+      test71 <- bearerTokenService.create(request.identity.loginInfo, TokenType.Authentication)
+      test72 <- tokenDAO.insert(test71, TokenType.Authentication)
+      test81 <- bearerTokenService.create(request.identity.loginInfo, TokenType.DataStore)
+      test82 <- tokenDAO.insert(test81, TokenType.DataStore)
+      test9 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.DataStore)
+      test10 <- bearerTokenService.createAndInit(request.identity.loginInfo, TokenType.Authentication)
+      */
+      test1 <- bearerTokenService.removeExpiredTokens()
     } yield {
       //Ok(Json.toJson(auth))
-      val test = Json.toJson(auth.id)
+      val test = Json.toJson("test")
       Ok(test)
     }
   }
@@ -52,12 +67,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     val context = userAwareRequestToDBAccess(request)
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        /*
-        val token = UserToken(user._id)
-        UserTokenDAO.insert(token).map(_ => token.token)
-        */
-        bearerTokenService.addNewTokenForDataStore(user.loginInfo).map(_.id).toFox
-
+        bearerTokenService.createAndInit(user.loginInfo, TokenType.DataStore).toFox
       case None => Fox.successful("")
     }
     for {
@@ -73,8 +83,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {
-        //userBox <- UserTokenService.userForToken(token)(GlobalAccessContext).futureBox
-        userBox <- bearerTokenService.userForToken(token, TokenType.DataStore)(GlobalAccessContext).futureBox
+        userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
         ctx = DBAccessContext(userBox)
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>

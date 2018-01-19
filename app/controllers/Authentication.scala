@@ -229,9 +229,7 @@ class Authentication @Inject()(
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => {
           for {
-            tokenAuthenticator <- bearerTokenAuthenticatorService.create(user.loginInfo)
-            token = tokenAuthenticator.id
-            _ <- bearerTokenAuthenticatorService.init(tokenAuthenticator, TokenType.ResetPassword)
+            token <- bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword)
           } yield {
             Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
             Ok
@@ -241,13 +239,12 @@ class Authentication @Inject()(
     )
   }
 
-  //TODO: test reset password
   // if a user has forgotten his password
   def handleResetPassword = Action.async { implicit request =>
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        bearerTokenAuthenticatorService.userForToken(passwords.token.trim, TokenType.ResetPassword)(GlobalAccessContext).futureBox.flatMap {
+        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
               _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)

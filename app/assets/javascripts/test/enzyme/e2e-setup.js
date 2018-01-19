@@ -29,7 +29,7 @@ async function waitForAllRequests(el: Object) {
   el.update();
 }
 
-function wait(milliseconds: number): Promise<number> {
+function wait(milliseconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 

@@ -34,18 +34,7 @@ object Team extends FoxImplicits {
 
   val teamFormat = Json.format[Team]
 
-  def teamPublicWrites(team: Team, requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] =
-    for {
-      org <- OrganizationDAO.findOneByName(team.organization).map(_.name).futureBox
-    } yield {
-      Json.obj(
-        "id" -> team.id,
-        "name" -> team.name,
-        "organization" -> org.toOption
-      )
-    }
-
-  def teamPublicWritesBasic(team: Team)(implicit ctx: DBAccessContext): Future[JsObject] =
+  def teamPublicWrites(team: Team)(implicit ctx: DBAccessContext): Future[JsObject] =
     Future(
       Json.obj(
         "id" -> team.id,
@@ -58,6 +47,9 @@ object Team extends FoxImplicits {
     ((__ \ "name").read[String](Reads.minLength[String](3)) and
       (__ \ "organization").read[String](Reads.minLength[String](3))
       ) ((name, organization) => Team(name, organization))
+
+  def teamReadsName(): Reads[String] =
+    (__ \ "name").read[String]
 }
 
 object TeamService {

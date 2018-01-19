@@ -27,10 +27,10 @@ object TeamMembership {
   implicit object teamMembershipFormat extends Format[TeamMembership] {
     override def reads(json: JsValue): JsResult[TeamMembership] = {
       for {
-        team <- json.validate((JsPath \ "team").read[String])
+        team <- json.validate((JsPath \ "team").read[BSONObjectID])
         isSuperVisor <- json.validate((JsPath \ "isSuperVisor").read[Boolean])
       } yield {
-        TeamMembership(BSONObjectID(team), isSuperVisor)
+        TeamMembership(team, isSuperVisor)
       }
     }
 

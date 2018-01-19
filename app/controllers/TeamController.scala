@@ -30,7 +30,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
       for {
         allTeams <- TeamDAO.findAll
         filteredTeams = filter.applyOn(allTeams)
-        js <- Future.traverse(filteredTeams)(Team.teamPublicWrites(_, request.identity))
+        js <- Future.traverse(filteredTeams)(Team.teamPublicWrites(_)
       } yield {
         Ok(Json.toJson(js))
       }
@@ -40,7 +40,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def listAllTeams = Action.async { implicit request =>
     for {
       allTeams <- TeamDAO.findAll(GlobalAccessContext)
-      js <- Future.traverse(allTeams)(Team.teamPublicWritesBasic(_)(GlobalAccessContext))
+      js <- Future.traverse(allTeams)(Team.teamPublicWrites(_)(GlobalAccessContext))
     } yield {
       Ok(Json.toJson(js))
     }
@@ -58,11 +58,13 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   }
 
   def create = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(Team.teamPublicReads(request.identity)) { team =>
+    withJsonBodyUsing(Team.teamReadsName) { teamName =>
+      val team = Team(teamName, request.identity.organization)
       for {
-        _ <- TeamDAO.findOneByName(team.name)(GlobalAccessContext).reverse ?~> Messages("team.name.alreadyTaken")
+        //_ <- TeamDAO.findOneByName(team.name)(GlobalAccessContext).reverse ?~> Messages("team.name.alreadyTaken")
+        _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
         _ <- TeamService.create(team, request.identity)
-        js <- Team.teamPublicWrites(team, request.identity)
+        js <- Team.teamPublicWrites(team)
       } yield {
         JsonOk(js, Messages("team.created"))
       }

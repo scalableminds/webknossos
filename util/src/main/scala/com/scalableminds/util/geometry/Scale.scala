@@ -42,4 +42,15 @@ object Scale{
         null
     }
   }
+
+  def fromArray[T <% Float](array: Array[T]) =
+    if (array.size >= 3)
+      Some(Scale(array(0), array(1), array(2)))
+    else
+      None
+
+  def fromList(l: List[Float]) = {
+    fromArray(l.toArray)
+  }
+
 }

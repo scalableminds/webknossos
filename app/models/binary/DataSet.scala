@@ -1,25 +1,22 @@
 package models.binary
 
-import com.scalableminds.util.geometry.{BoundingBox, Vector3D}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSourceLike => UnusableDataSourcex}
+import com.scalableminds.util.geometry.{BoundingBox, Scale}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import models.basics._
 import models.configuration.DataSetConfiguration
 import models.task.TaskSQLDAO.parseArrayTuple
-import models.team.{Role, TeamMembership, TeamSQL, TeamSQLDAO}
+import models.team.{TeamSQL, TeamSQLDAO}
 import models.user.User
-import models.user.UserExperiencesSQLDAO.db
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
 import reactivemongo.api.indexes.{Index, IndexType}
-import slick.lifted.Rep
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
@@ -33,7 +30,7 @@ case class DataSetSQL(
                      description: Option[String] = None,
                      isPublic: Boolean,
                      name: String,
-                     scale: Option[Vector3D],
+                     scale: Option[Scale],
                      status: String,
                      created: Long = System.currentTimeMillis(),
                      isDeleted: Boolean = false
@@ -45,16 +42,16 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   def idColumn(x: Datasets): Rep[String] = x._Id
   def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
-  private def parseVector3DOpt(literalOpt: Option[String]): Fox[Option[Vector3D]] = literalOpt match {
+  private def parseScaleOpt(literalOpt: Option[String]): Fox[Option[Scale]] = literalOpt match {
     case Some(literal) => for {
-      scale <- Vector3D.fromList(parseArrayTuple(literal).map(_.toDouble)) ?~> "could not parse edit position"
+      scale <- Scale.fromList(parseArrayTuple(literal).map(_.toFloat)) ?~> "could not parse edit position"
     } yield Some(scale)
     case None => Fox.successful(None)
   }
 
   def parse(r: DatasetsRow): Fox[DataSetSQL] = {
     for {
-      scale <- parseVector3DOpt(r.scale)
+      scale <- parseScaleOpt(r.scale)
     } yield {
       DataSetSQL(
         ObjectId(r._Id),
@@ -73,23 +70,6 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   }
 }
 
-/*
-name: String,
-category: Category.Value,
-boundingBox: BoundingBox,
-resolutions: List[Int],
-elementClass: ElementClass.Value,
-largestSegmentId: Long,
-mappings: Set[String]
- */
-
-/*
-name: String,
-category: Category.Value,
-boundingBox: BoundingBox,
-resolutions: List[Int],
-elementClass: ElementClass.Value
- */
 
 object DataSetDataLayerSQLDAO extends FoxImplicits {
   val db = Database.forConfig("postgres")
@@ -204,12 +184,10 @@ object DataSet extends FoxImplicits {
       case Some(scale) => for {
         dataLayers <- DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id)
       } yield {
-        //DataSource(dataSourceId, dataLayers, s.scale)
-        UnusableDataSourcex(dataSourceId, "TODO")
+        GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
       }
-      case None => Fox.successful(UnusableDataSourcex(dataSourceId, s.status))
+      case None => Fox.successful(UnusableDataSource[DataLayer](dataSourceId, s.status))
     }
-    val a = UnusableDataSourcex
   }
 
   def fromDatasetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {

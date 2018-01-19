@@ -9,10 +9,14 @@ import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
 import models.basics._
-import models.project.{Project, ProjectDAO}
+import models.project.{Project, ProjectDAO, ProjectSQLDAO}
+import models.team.TeamSQLDAO
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsArray, JsNull, JsObject, Json}
@@ -71,23 +75,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
       )
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -188,6 +175,36 @@ object Task extends FoxImplicits {
         "boundingBox" -> task.boundingBox,
         "editPosition" -> task.editPosition,
         "editRotation" -> task.editRotation
+      )
+    }
+  }
+
+  def fromTaskSQL(s: TaskSQL)(implicit ctx: DBAccessContext): Fox[Task] = {
+    for {
+      taskTypeIdBson <- s._taskType.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._taskType.toString)
+      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
+      team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
+      project <- ProjectSQLDAO.findOne(s._project) ?~> Messages("project.notFound")
+      priority = if (project.paused) -1 else project.priority
+      openInstances <- Some(5) // TODO SQL
+    } yield {
+      Task(
+        taskTypeIdBson,
+        team.name,
+        s.neededExperience,
+        s.totalInstances.toInt,
+        openInstances,
+        s.boundingBox,
+        s.editPosition,
+        s.editRotation,
+        s.tracingTime,
+        new DateTime(s.created),
+        !s.isDeleted,
+        project.name,
+        s._script.map(_.toString),
+        s.creationInfo,
+        priority.toInt,
+        idBson
       )
     }
   }

@@ -35,7 +35,3 @@ test("Get Dataset Access List", async t => {
 
   t.snapshot(accessList, { id: "dataset-accessList" });
 });
-
-// How should we test the following functions?
-// addNDStoreDataset
-// addDataset

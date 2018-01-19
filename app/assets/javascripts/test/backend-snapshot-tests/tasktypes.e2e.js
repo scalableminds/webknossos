@@ -30,7 +30,6 @@ test("createTaskType and deleteTaskType", async t => {
       somaClickingAllowed: true,
       branchPointsAllowed: true,
       advancedOptionsAllowed: true,
-      preferredMode: null,
       allowedModes: ["orthogonal"],
     },
   };
@@ -38,11 +37,10 @@ test("createTaskType and deleteTaskType", async t => {
   const createdTaskType = await api.createTaskType(newTaskType);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
-  const actualId = createdTaskType.id;
-  createdTaskType.id = "fixed-id";
-  t.snapshot(createdTaskType, { id: "taskTypes-createdTaskType" });
+  const createdTaskTypeWithFixedId = Object.assign({}, createdTaskType, { id: "fixed-id" });
+  t.snapshot(createdTaskTypeWithFixedId, { id: "taskTypes-createdTaskType" });
 
-  const response = await api.deleteTaskType(actualId);
+  const response = await api.deleteTaskType(createdTaskType.id);
   t.snapshot(response, { id: "taskTypes-deleteTaskType" });
 });
 

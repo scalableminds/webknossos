@@ -38,11 +38,9 @@ test("createTeam and deleteTeam", async t => {
   const createdTeam = await api.createTeam(newTeam);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
-  const actualId = createdTeam.id;
-  createdTeam.id = "fixed-team-id";
-  t.snapshot(createdTeam, { id: "teams-createTeam(newTeam: NewTeamType)" });
+  const createdTeamWithFixedId = Object.assign({}, createdTeam, { id: "fixed-team-id" });
+  t.snapshot(createdTeamWithFixedId, { id: "teams-createTeam(newTeam: NewTeamType)" });
 
-  const response = await api.deleteTeam(actualId);
-  console.log(response);
+  const response = await api.deleteTeam(createdTeam.id);
   t.snapshot(response, { id: "teams-deleteTeam(teamId: string)" });
 });

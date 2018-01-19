@@ -6,6 +6,7 @@ import test from "ava";
 import Request from "libs/request";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
+import type { APIProjectType, APIProjectUpdaterType, APIUserType } from "admin/api_flow_types";
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);
@@ -28,7 +29,6 @@ test.serial("createProject and deleteProject", async t => {
   const activeUser = await api.getActiveUser();
   const projectName = "test-new-project";
   const newProject = {
-    id: undefined,
     name: projectName,
     team: teamName,
     owner: activeUser.id,
@@ -41,28 +41,36 @@ test.serial("createProject and deleteProject", async t => {
   const createdProject = await api.createProject(newProject);
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
-  createdProject.id = "fixed-project-id";
-  t.snapshot(createdProject, { id: "projects-createProject(project: APIProjectType)" });
+  const createdProjectWithFixedId = Object.assign({}, createdProject, { id: "fixed-project-id" });
+  t.snapshot(createdProjectWithFixedId, { id: "projects-createProject(project: APIProjectType)" });
 
   const response = await api.deleteProject(projectName);
   t.snapshot(response, { id: "projects-deleteProject(projectName: string)" });
 });
 
+function convertProjectToProjectUpdater(project: APIProjectType): APIProjectUpdaterType {
+  // $FlowFixMe
+  return Object.assign({}, project, {
+    owner: project.owner.id,
+  });
+}
+
 test.serial("updateProject(projectName: string, project: APIProjectType)", async t => {
   const project = (await api.getProjects())[0];
   const projectName = project.name;
-  // TODO: how does flow deal with this?
-  project.owner = project.owner.id;
 
-  const updatedProject = await api.updateProject(
-    projectName,
-    Object.assign({}, project, { priority: 1337 }),
-  );
+  const projectWithOwnerId = convertProjectToProjectUpdater(project);
+
+  const projectWithNewPriority: APIProjectUpdaterType = Object.assign({}, projectWithOwnerId, {
+    priority: 1337,
+  });
+
+  const updatedProject = await api.updateProject(projectName, projectWithNewPriority);
   t.snapshot(updatedProject, {
     id: "projects-updateProject(projectName: string, project: APIProjectType)",
   });
 
-  const revertedProject = await api.updateProject(projectName, project);
+  const revertedProject = await api.updateProject(projectName, projectWithOwnerId);
   t.snapshot(revertedProject, {
     id: "projects-revertedProject",
   });

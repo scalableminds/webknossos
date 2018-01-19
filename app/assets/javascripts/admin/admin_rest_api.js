@@ -10,6 +10,8 @@ import type {
   APITaskTypeType,
   APITeamType,
   APIProjectType,
+  APIProjectCreatorType,
+  APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
   APIDatastoreType,
@@ -171,7 +173,9 @@ export async function getTaskType(taskTypeId: string): Promise<APITaskTypeType> 
   return Request.receiveJSON(`/api/taskTypes/${taskTypeId}`);
 }
 
-export async function createTaskType(taskType: APITaskTypeType): Promise<APITaskTypeType> {
+export async function createTaskType(
+  taskType: $Diff<APITaskTypeType, { id: string }>,
+): Promise<APITaskTypeType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
     method: "POST",
     data: taskType,
@@ -258,7 +262,7 @@ export async function deleteProject(projectName: string): Promise<void> {
   });
 }
 
-export async function createProject(project: APIProjectType): Promise<APIProjectType> {
+export async function createProject(project: APIProjectCreatorType): Promise<APIProjectType> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
   });
@@ -271,7 +275,7 @@ export async function createProject(project: APIProjectType): Promise<APIProject
 
 export async function updateProject(
   projectName: string,
-  project: APIProjectType,
+  project: APIProjectUpdaterType,
 ): Promise<APIProjectType> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),

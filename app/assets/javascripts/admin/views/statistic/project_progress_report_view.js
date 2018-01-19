@@ -33,15 +33,17 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
     const { teamId } = this.state;
     if (teamId == null) {
       this.setState({ data: [] });
+    } else if (suppressLoadingState) {
+      try {
+        const progessData = await getProjectProgressReport(teamId);
+        this.setState({ data: progessData, updatedAt: Date.now() });
+      } catch (err) {
+        // Fail silently
+      }
     } else {
-      if (!suppressLoadingState) {
-        this.setState({ isLoading: true });
-      }
+      this.setState({ isLoading: true });
       const progessData = await getProjectProgressReport(teamId);
-      this.setState({ data: progessData, updatedAt: Date.now() });
-      if (!suppressLoadingState) {
-        this.setState({ isLoading: false });
-      }
+      this.setState({ data: progessData, updatedAt: Date.now(), isLoading: false });
     }
   }
 
@@ -93,7 +95,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               sorter={Utils.localeCompareBy("projectName")}
               render={(text, item) => (
                 <span>
-                  {item.paused ? <Icon type="pause" /> : null} {text}
+                  {item.paused ? <Icon type="pause-circle-o" /> : null} {text}
                 </span>
               )}
             />

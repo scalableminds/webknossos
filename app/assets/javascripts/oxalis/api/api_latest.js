@@ -131,7 +131,7 @@ class TracingApi {
     return getSkeletonTracing(tracing)
       .map(skeletonTracing => {
         const { trees } = skeletonTracing;
-        return _.flatMap(trees, tree => _.values(tree.nodes));
+        return _.flatMap(trees, tree => Array.from(tree.nodes.values()));
       })
       .getOrElse([]);
   }
@@ -202,9 +202,9 @@ class TracingApi {
         if (treeId != null) {
           tree = skeletonTracing.trees[treeId];
           assertExists(tree, `Couldn't find tree ${treeId}.`);
-          assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
+          assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
         } else {
-          tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+          tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
           assertExists(tree, `Couldn't find node ${nodeId}.`);
         }
         // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
@@ -714,8 +714,6 @@ class UserApi {
     - isosurfaceBBsize
     - isosurfaceResolution
     - newNodeNewTree
-    - inverseX
-    - inverseY
     - keyboardDelay
     - particleSize
     - overrideNodeRadius

@@ -1,24 +1,16 @@
 // @flow
+import _ from "lodash";
 import React from "react";
 import { Form, Row, Col, Button, Input, Select } from "antd";
 import { getUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
+import Persistence from "libs/persistence";
+import { PropTypes } from "prop-types";
+import { withRouter } from "react-router-dom";
 import type { APIUserType, APIProjectType, APITaskTypeType } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
-
-type Props = {
-  form: Object,
-  onChange: Function,
-  initialFieldValues?: Object,
-  isLoading: boolean,
-};
-
-type State = {
-  users: Array<APIUserType>,
-  projects: Array<APIProjectType>,
-  taskTypes: Array<APITaskTypeType>,
-};
 
 export type QueryObjectType = {
   taskType?: string,
@@ -27,22 +19,69 @@ export type QueryObjectType = {
   user?: string,
 };
 
+export type TaskFormFieldValuesType = {
+  taskId?: string,
+  taskTypeId?: string,
+  projectName?: string,
+  userId?: string,
+};
+
+type Props = {
+  form: Object,
+  onChange: Function,
+  initialFieldValues?: TaskFormFieldValuesType,
+  isLoading: boolean,
+  history: RouterHistory,
+};
+
+type State = {
+  users: Array<APIUserType>,
+  projects: Array<APIProjectType>,
+  taskTypes: Array<APITaskTypeType>,
+  fieldValues: TaskFormFieldValuesType,
+};
+
+const persistence: Persistence<State> = new Persistence(
+  {
+    fieldValues: PropTypes.shape({
+      taskId: PropTypes.string,
+      taskTypeId: PropTypes.string,
+      projectName: PropTypes.string,
+      userId: PropTypes.string,
+    }),
+  },
+  "taskSearch",
+);
+
 class TaskSearchForm extends React.Component<Props, State> {
   state = {
     users: [],
     projects: [],
     taskTypes: [],
+    fieldValues: {},
   };
+
+  componentWillMount() {
+    this.setState(persistence.load(this.props.history));
+  }
 
   componentDidMount() {
     this.fetchData();
 
-    // initialize form with default values when navigation from
-    // project / taskType list views
-    if (this.props.initialFieldValues) {
-      this.props.form.setFieldsValue(this.props.initialFieldValues);
+    // initialize form with default values when navigating from
+    // project / taskType list views or when restoring values from persisted state
+    const fieldValues =
+      this.props.initialFieldValues != null
+        ? this.props.initialFieldValues
+        : this.state.fieldValues;
+    if (_.size(fieldValues) > 0) {
+      this.props.form.setFieldsValue(fieldValues);
       this.handleFormSubmit();
     }
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persistence.persist(this.props.history, nextState);
   }
 
   async fetchData() {
@@ -58,7 +97,7 @@ class TaskSearchForm extends React.Component<Props, State> {
       event.preventDefault();
     }
 
-    this.props.form.validateFields((err, formValues) => {
+    this.props.form.validateFields((err, formValues: TaskFormFieldValuesType) => {
       const queryObject: QueryObjectType = {};
 
       if (formValues.taskId) {
@@ -83,12 +122,15 @@ class TaskSearchForm extends React.Component<Props, State> {
         queryObject.project = formValues.projectName;
       }
 
+      this.setState({ fieldValues: formValues });
       this.props.onChange(queryObject);
     });
   };
 
   handleReset = () => {
     this.props.form.resetFields();
+    this.setState({ fieldValues: {} });
+    this.props.onChange({});
   };
 
   render() {
@@ -186,4 +228,4 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 }
 
-export default Form.create()(TaskSearchForm);
+export default withRouter(Form.create()(TaskSearchForm));

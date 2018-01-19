@@ -3,7 +3,6 @@
  * @flow
  */
 
-import _ from "lodash";
 import * as React from "react";
 import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
 import Store from "oxalis/store";
@@ -60,7 +59,7 @@ class ListTreeItemView extends React.PureComponent<ListTreeItemViewProps> {
           onChange={this.handleToggleTree}
           style={{ fontSize: 16 }}
         >
-          {_.size(this.props.tree.nodes)}
+          {this.props.tree.nodes.size()}
         </Checkbox>
 
         <a onClick={this.handleSetActive} className={aClassName}>

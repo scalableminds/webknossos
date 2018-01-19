@@ -3,15 +3,22 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
+import Persistence from "libs/persistence";
+import { PropTypes } from "prop-types";
 import type { APIScriptType, APIUserType } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 const { Search } = Input;
+
+type Props = {
+  history: RouterHistory,
+};
 
 type State = {
   isLoading: boolean,
@@ -19,15 +26,28 @@ type State = {
   searchQuery: string,
 };
 
-class ScriptListView extends React.PureComponent<{}, State> {
+const persistence: Persistence<State> = new Persistence(
+  { searchQuery: PropTypes.string },
+  "scriptList",
+);
+
+class ScriptListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: true,
     scripts: [],
     searchQuery: "",
   };
 
+  componentWillMount() {
+    this.setState(persistence.load(this.props.history));
+  }
+
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persistence.persist(this.props.history, nextState);
   }
 
   async fetchData(): Promise<void> {
@@ -76,6 +96,7 @@ class ScriptListView extends React.PureComponent<{}, State> {
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
               onChange={this.handleSearch}
+              value={this.state.searchQuery}
             />
           </div>
           <h3>Scripts</h3>
@@ -149,4 +170,4 @@ class ScriptListView extends React.PureComponent<{}, State> {
   }
 }
 
-export default ScriptListView;
+export default withRouter(ScriptListView);

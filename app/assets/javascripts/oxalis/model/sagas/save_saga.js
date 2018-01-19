@@ -276,7 +276,11 @@ function compactMovedNodesAndEdges(updateActions: Array<UpdateAction>) {
     }
 
     // Remove the original create/delete update actions of the moved nodes and edges
-    compactedActions = _.without(compactedActions, ..._.flatten(movedPairings));
+    // Call _.without with chunks to avoid Call Stack Size Exceeded errors due to the arguments spread
+    const movedPairingsChunks = _.chunk(movedPairings, 50000);
+    for (const pairingsChunk of movedPairingsChunks) {
+      compactedActions = _.without(compactedActions, ..._.flatten(pairingsChunk));
+    }
   }
 
   return compactedActions;
@@ -335,7 +339,8 @@ export function performDiffTracing(
   flycam: FlycamType,
 ): Array<UpdateAction> {
   if (tracing.type === "skeleton" && prevTracing.type === "skeleton") {
-    return Array.from(diffSkeletonTracing(prevTracing, tracing, flycam));
+    const result = Array.from(diffSkeletonTracing(prevTracing, tracing, flycam));
+    return result;
   } else if (tracing.type === "volume" && prevTracing.type === "volume") {
     return Array.from(diffVolumeTracing(prevTracing, tracing, flycam));
   } else {

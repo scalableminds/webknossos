@@ -7,8 +7,8 @@ import { getUsers, getTeams, createProject, getProject, updateProject } from "ad
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { APIUserType, APITeamType } from "admin/api_flow_types";
-import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -19,8 +19,8 @@ type StateProps = {
 
 type Props = {
   form: Object,
-  projectName: ?string,
-  history: ReactRouterHistoryType,
+  projectName?: string,
+  history: RouterHistory,
 } & StateProps;
 
 type State = {
@@ -168,4 +168,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: getActiveUser(state.activeUser),
 });
 
-export default withRouter(connect(mapStateToProps)(Form.create()(ProjectCreateView)));
+export default connect(mapStateToProps)(withRouter(Form.create()(ProjectCreateView)));

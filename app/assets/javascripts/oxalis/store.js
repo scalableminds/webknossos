@@ -30,6 +30,7 @@ import type {
   BoundingBoxType,
 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
+import DiffableMap from "libs/diffable_map";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
 import type {
@@ -70,7 +71,7 @@ export type BranchPointType = {
   +nodeId: number,
 };
 
-export type NodeMapType = { +[number]: NodeType };
+export type NodeMapType = DiffableMap<number, NodeType>;
 
 export type BoundingBoxObjectType = {
   +topLeft: Vector3,
@@ -92,11 +93,6 @@ type TreeTypeBase = {
 
 export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
-};
-
-type TemporaryMutableNodeMapType = { [number]: NodeType };
-export type TemporaryMutableTreeType = TreeTypeBase & {
-  +nodes: TemporaryMutableNodeMapType,
 };
 
 export type MappingType = {
@@ -237,8 +233,6 @@ export type UserConfigurationType = {
   +crosshairSize: number,
   +displayCrosshair: boolean,
   +dynamicSpaceDirection: boolean,
-  +inverseX: boolean,
-  +inverseY: boolean,
   +isosurfaceBBsize: number,
   +isosurfaceDisplay: boolean,
   +isosurfaceResolution: number,
@@ -356,8 +350,6 @@ export const defaultState: OxalisState = {
     crosshairSize: 0.1,
     displayCrosshair: true,
     dynamicSpaceDirection: true,
-    inverseX: false,
-    inverseY: false,
     isosurfaceBBsize: 1,
     isosurfaceDisplay: false,
     isosurfaceResolution: 80,
@@ -414,7 +406,6 @@ export const defaultState: OxalisState = {
       allowAccess: true,
       allowDownload: false,
       somaClickingAllowed: false,
-      advancedOptionsAllowed: true,
       allowedModes: ["orthogonal", "oblique", "flight"],
     },
     tags: [],

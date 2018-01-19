@@ -39,7 +39,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }
   }
 
-  private def exploreResolutions(baseDir: Path, previous: Option[List[DataResolution]])(implicit report: DataSourceImportReport[Path]): Box[List[(Int, WKWHeader, Option[Point3D])]] = {
+  private def exploreResolutions(baseDir: Path, previous: Option[List[DataResolution]])(implicit report: DataSourceImportReport[Path]): Box[List[(Int, WKWHeader, Point3D)]] = {
     def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
 
     PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutions =>
@@ -47,7 +47,8 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       val resolutionHeaders = resolutions.map { resolution =>
         val resolutionInt = resolution.getFileName.toString.toInt
         WKWHeader(resolution.resolve("header.wkw").toFile).map{ header =>
-          val scale = previous.flatMap(_.find(_.resolution == resolutionInt).map(_.scale))
+          val previousResolution = previous.flatMap(_.find(_.resolution == resolutionInt))
+          val scale = previousResolution.map(_.scale).getOrElse(Point3D(resolutionInt, resolutionInt, resolutionInt))
           (resolutionInt, header, scale)
         }.passFailure { f =>
           report.error(section => s"Error processing resolution '$resolution' - ${f.msg}")
@@ -58,12 +59,12 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }
   }
 
-  private def extractHeaderParameters(resolutions: List[(Int, WKWHeader, Option[Point3D])])(implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
+  private def extractHeaderParameters(resolutions: List[(Int, WKWHeader, Point3D)])(implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
     val headers = resolutions.map(_._2)
     val voxelTypes = headers.map(_.voxelType).toSet
     val bucketLengths = headers.map(_.numVoxelsPerBlockDimension).toSet
     val wkwResolutions = resolutions.map{ resolution =>
-      WKWResolution(resolution._1, resolution._2.numVoxelsPerBlockDimension * resolution._2.numBlocksPerCubeDimension, resolution._3)
+      WKWResolution(resolution._1, resolution._2.numVoxelsPerBlockDimension * resolution._2.numBlocksPerCubeDimension, Some(resolution._3))
     }
 
     if (voxelTypes.size == 1 && bucketLengths == Set(32)) {

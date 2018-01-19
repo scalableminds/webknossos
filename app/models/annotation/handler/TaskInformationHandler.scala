@@ -20,7 +20,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user.map(_._id),
-        dataSetName, task.team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+        dataSetName, task._team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: String)(implicit ctx: DBAccessContext) =
@@ -29,7 +29,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.exists(_.isSuperVisorOf(task.team))
+          user.exists(_.isSuperVisorOf(task._team))
       }
     }
 }

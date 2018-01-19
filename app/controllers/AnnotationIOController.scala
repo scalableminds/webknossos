@@ -173,7 +173,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       project <- ProjectDAO.findOneById(projectId) ?~> Messages("project.notFound", projectId)
-      _ <- user.supervisorTeamIds.contains(project.team) ?~> Messages("notAllowed")
+      _ <- user.supervisorTeamIds.contains(project._team) ?~> Messages("notAllowed")
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)
@@ -188,7 +188,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       task <- TaskDAO.findOneById(taskId).toFox ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(user, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(user, task._team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }
@@ -203,7 +203,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       tasktype <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(user, tasktype.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(user, tasktype._team) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }

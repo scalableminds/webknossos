@@ -195,7 +195,7 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
     val params = request.body
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, task._team) ?~> Messages("notAllowed")
       updatedTask <- TaskDAO.updateInstances(task._id, task.instances + params.openInstances - task.openInstances, params.openInstances)
       json <- Task.transformToJson(updatedTask)
     } yield {
@@ -206,7 +206,7 @@ class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def delete(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, task._team) ?~> Messages("notAllowed")
       _ <- TaskService.remove(task._id)
     } yield {
       JsonOk(Messages("task.removed"))

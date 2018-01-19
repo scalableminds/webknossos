@@ -26,7 +26,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- ensureTeamAdministration(request.identity, taskType.team)
+        _ <- ensureTeamAdministration(request.identity, taskType._team)
         _ <- TaskTypeDAO.insert(taskType)
       } yield {
         JsonOk(TaskType.transformToJson(taskType))
@@ -37,7 +37,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def get(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.identity, taskType.team)
+      _ <- ensureTeamAdministration(request.identity, taskType._team)
     } yield {
       JsonOk(TaskType.transformToJson(taskType))
     }
@@ -57,8 +57,8 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
       for {
         taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
         updatedTaskType = tt.copy(_id = taskType._id)
-        _ <- ensureTeamAdministration(request.identity, taskType.team)
-        _ <- ensureTeamAdministration(request.identity, updatedTaskType.team)
+        _ <- ensureTeamAdministration(request.identity, taskType._team)
+        _ <- ensureTeamAdministration(request.identity, updatedTaskType._team)
         _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
         _ <- Fox.serialSequence(tasks)(task => AnnotationDAO.updateSettingsForAllOfTask(task, updatedTaskType.settings))
@@ -71,7 +71,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def delete(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.identity, taskType.team)
+      _ <- ensureTeamAdministration(request.identity, taskType._team)
       updatedTaskType = taskType.copy(isActive = false)
       _ <- TaskTypeDAO.update(taskType._id, updatedTaskType) ?~> Messages("taskType.deleteFailure")
     } yield {

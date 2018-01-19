@@ -23,7 +23,7 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(taskType.id), persistTracing=false, user.map(_._id),
-        dataSetName, taskType.team, AnnotationType.CompoundTaskType, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+        dataSetName, taskType._team, AnnotationType.CompoundTaskType, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
 
@@ -33,7 +33,7 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.exists(_.isSuperVisorOf(taskType.team))
+          user.exists(_.isSuperVisorOf(taskType._team))
       }
     }
 }

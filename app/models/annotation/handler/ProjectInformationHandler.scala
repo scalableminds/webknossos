@@ -24,7 +24,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       _ <- assertNonEmpty(finishedAnnotations) ?~> "project.noAnnotations"
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.id), persistTracing=false, user.map(_._id),
-        dataSetName, project.team, AnnotationType.CompoundProject, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+        dataSetName, project._team, AnnotationType.CompoundProject, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
   }
 
@@ -34,7 +34,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.exists(_.isSuperVisorOf(project.team))
+          user.exists(_.isSuperVisorOf(project._team))
       }
     }
 }

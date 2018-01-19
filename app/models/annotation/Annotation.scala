@@ -22,7 +22,7 @@ case class Annotation(
                        _user: Option[BSONObjectID],
                        tracingReference: TracingReference,
                        dataSetName: String,
-                       team: BSONObjectID,
+                       _team: BSONObjectID,
                        settings: AnnotationSettings,
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
@@ -48,6 +48,7 @@ case class Annotation(
   val name = _name getOrElse ""
 
   lazy val id = _id.stringify
+  lazy val team = _team.stringify
 
   def user: Fox[User] =
     _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))

@@ -1,14 +1,13 @@
 package models.project
 
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, JsonFormatHelper}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.basics._
 import models.task.{TaskDAO, TaskService}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import play.api.data.validation.ValidationError
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
@@ -20,7 +19,7 @@ import scala.concurrent.Future
 
 case class Project(
                     name: String,
-                    team: BSONObjectID,
+                    _team: BSONObjectID,
                     _owner: BSONObjectID,
                     priority: Int,
                     paused: Boolean,
@@ -32,6 +31,7 @@ case class Project(
   def isOwnedBy(user: User) = user._id == _owner
 
   def id = _id.stringify
+  //def team
 
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
 }
@@ -39,16 +39,13 @@ case class Project(
 object Project {
   implicit val projectFormat = Json.format[Project]
 
-  def StringObjectIdReads(key: String) =
-    Reads.filter[String](ValidationError("objectid.invalid", key))(BSONObjectID.parse(_).isSuccess)
-
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
     for {
       owner <- project.owner.map(User.userCompactWrites.writes).futureBox
     } yield {
       Json.obj(
         "name" -> project.name,
-        "team" -> project.team,
+        "team" -> project._team,
         "owner" -> owner.toOption,
         "priority" -> project.priority,
         "paused" -> project.paused,
@@ -77,7 +74,7 @@ object Project {
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Int] and
-      (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
+      (__ \ 'owner).read[String](JsonFormatHelper.StringObjectIdReads("owner"))) (
       (name, team, priority, paused, expectedTime, owner) =>
         Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
 }
@@ -185,7 +182,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
     findAndModify(Json.obj("_id" -> _id), Json.obj("$set" ->
       Json.obj(
         "name" -> project.name,
-        "team" -> project.team,
+        "team" -> project._team,
         "_owner" -> project._owner,
         "priority" -> project.priority,
         "expectedTime" -> project.expectedTime,

@@ -28,7 +28,7 @@ class info(message: String) extends scala.annotation.StaticAnnotation
 
 case class Task(
                  @info("Reference to task type") _taskType: BSONObjectID,
-                 @info("Assigned team ObjectID") team: BSONObjectID,
+                 @info("Assigned team ObjectID") _team: BSONObjectID,
                  @info("Required experience") neededExperience: Experience = Experience.empty,
                  @info("Number of total instances") instances: Int = 1,
                  @info("Number of open (=remaining) instances") openInstances: Int = 1,
@@ -46,6 +46,7 @@ case class Task(
                ) extends FoxImplicits {
 
   lazy val id = _id.stringify
+  lazy val team = _team.stringify
 
   def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
@@ -96,7 +97,7 @@ object Task extends FoxImplicits {
     } yield {
       Json.obj(
         "id" -> task.id,
-        "team" -> task.team,
+        "team" -> task._team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> task._project,
         "type" -> tt,

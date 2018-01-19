@@ -14,7 +14,7 @@ import scala.concurrent.Future
 case class Script(
   name: String,
   gist: String,
-  _owner: String,
+  _owner: String, //TODO
   _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id: String = _id.stringify

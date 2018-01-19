@@ -30,7 +30,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
       for {
         allTeams <- TeamDAO.findAll
         filteredTeams = filter.applyOn(allTeams)
-        js <- Future.traverse(filteredTeams)(Team.teamPublicWrites(_)
+        js <- Future.traverse(filteredTeams)(Team.teamPublicWrites(_))
       } yield {
         Ok(Json.toJson(js))
       }

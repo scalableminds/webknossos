@@ -15,13 +15,13 @@ import reactivemongo.play.json.BSONFormats._
 case class TaskType(
                      summary: String,
                      description: String,
-                     _team: BSONObjectID,
+                     team: BSONObjectID,
                      settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
                      isActive: Boolean = true,
                      _id: BSONObjectID = BSONObjectID.generate) {
 
   val id = _id.stringify
-  val team = _team.stringify
+  val _team = team.stringify
 }
 
 object TaskType {

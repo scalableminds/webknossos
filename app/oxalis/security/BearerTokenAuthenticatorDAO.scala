@@ -32,11 +32,15 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   }
 
   override def update(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
-    findAndModify(Json.obj("loginInfo" -> LoginInfo(CredentialsProvider.ID, authenticator.loginInfo.providerKey)), Json.obj("$set" -> Json.obj(
+    for {
+      box <- findAndModify(Json.obj("loginInfo" -> LoginInfo(CredentialsProvider.ID, authenticator.loginInfo.providerKey)), Json.obj("$set" -> Json.obj(
       "id" -> authenticator.id,
       "lastUsedDateTime" -> authenticator.lastUsedDateTime,
       "expirationDateTime" -> authenticator.expirationDateTime,
-      "idleTimeout" -> authenticator.idleTimeout)), returnNew = true)(GlobalAccessContext).futureBox.map(_.get)
+      "idleTimeout" -> authenticator.idleTimeout)), returnNew = true)(GlobalAccessContext).futureBox
+    } yield {
+      box.openOrThrowException("update cannot return a box, as defined by trait AuthenticatorDAO")
+    }
 
   override def remove(id: String): Future[Unit] = for {
     _ <- remove("id", id)(implicitly[Writes[String]], GlobalAccessContext).futureBox

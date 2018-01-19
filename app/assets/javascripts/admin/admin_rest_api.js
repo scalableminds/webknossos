@@ -491,8 +491,11 @@ export async function getTimeTrackingForUser(
 
 export async function getProjectProgressReport(
   teamId: string,
+  doNotCatch?: boolean = false,
 ): Promise<Array<APIProjectProgressReportType>> {
-  const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`);
+  const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`, {
+    doNotCatch,
+  });
   assertResponseLimit(progressData);
   return progressData;
 }

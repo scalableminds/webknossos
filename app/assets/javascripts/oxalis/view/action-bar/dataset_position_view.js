@@ -55,7 +55,7 @@ class DatasetPositionView extends PureComponent<Props> {
               <Vector3Input
                 value={position}
                 onChange={this.handleChangePosition}
-                style={{ width: "120px" }}
+                style={{ maxWidth: "160px", textAlign: "center" }}
               />
             </Input.Group>
           </div>

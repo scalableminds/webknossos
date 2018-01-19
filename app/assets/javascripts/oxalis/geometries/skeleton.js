@@ -117,7 +117,7 @@ class Skeleton {
     this.pickingNode.remove(...this.pickingNode.children);
 
     const trees = skeletonTracing.trees;
-    const nodeCount = _.sum(_.map(trees, tree => _.size(tree.nodes)));
+    const nodeCount = _.sum(_.map(trees, tree => tree.nodes.size()));
     const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
 
     this.treeColorTexture = new THREE.DataTexture(
@@ -278,7 +278,13 @@ class Skeleton {
     for (const update of diff) {
       switch (update.name) {
         case "createNode": {
-          this.createNode(update.value.treeId, update.value);
+          const { treeId, id: nodeId } = update.value;
+          this.createNode(treeId, update.value);
+          const tree = skeletonTracing.trees[treeId];
+          const isBranchpoint = tree.branchPoints.find(bp => bp.nodeId === nodeId) != null;
+          if (isBranchpoint) {
+            this.updateNodeType(treeId, nodeId, NodeTypes.BRANCH_POINT);
+          }
           break;
         }
         case "deleteNode":
@@ -286,8 +292,8 @@ class Skeleton {
           break;
         case "createEdge": {
           const tree = skeletonTracing.trees[update.value.treeId];
-          const source = tree.nodes[update.value.source];
-          const target = tree.nodes[update.value.target];
+          const source = tree.nodes.get(update.value.source);
+          const target = tree.nodes.get(update.value.target);
           this.createEdge(tree.treeId, source, target);
           break;
         }
@@ -411,15 +417,15 @@ class Skeleton {
    * Usually called only once initially.
    */
   createTree(tree: TreeType) {
-    for (const node of _.values(tree.nodes)) {
+    for (const node of tree.nodes.values()) {
       this.createNode(tree.treeId, node);
     }
     for (const branchpoint of tree.branchPoints) {
       this.updateNodeType(tree.treeId, branchpoint.nodeId, NodeTypes.BRANCH_POINT);
     }
     for (const edge of tree.edges) {
-      const source = tree.nodes[edge.source];
-      const target = tree.nodes[edge.target];
+      const source = tree.nodes.get(edge.source);
+      const target = tree.nodes.get(edge.target);
       this.createEdge(tree.treeId, source, target);
     }
 

@@ -38,7 +38,7 @@ import type {
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
 import type { TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
-import type { ReactRouterHistoryType } from "react_router";
+import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -47,7 +47,7 @@ const RadioGroup = Radio.Group;
 type Props = {
   form: Object,
   taskId: ?string,
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
 };
 
 type State = {

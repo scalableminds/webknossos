@@ -105,6 +105,7 @@
     "mjs": "^1.0.0",
     "moment": "^2.19.3",
     "pako": "^0.2.8",
+    "prop-types": "https://github.com/scalableminds/prop-types",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",
     "react-google-charts": "^1.5.5",

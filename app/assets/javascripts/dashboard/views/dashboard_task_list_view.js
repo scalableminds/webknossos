@@ -3,7 +3,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
 import { Spin, Table, Button, Modal, Tag, Icon } from "antd";
@@ -15,8 +15,11 @@ import messages from "messages";
 import TransferTaskModal from "dashboard/views/transfer_task_modal";
 import { deleteAnnotation, resetAnnotation } from "admin/admin_rest_api";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import Persistence from "libs/persistence";
+import { PropTypes } from "prop-types";
 import type { APITaskWithAnnotationType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 
@@ -27,6 +30,7 @@ type StateProps = {
 type Props = {
   userId: ?string,
   isAdminView: boolean,
+  history: RouterHistory,
 } & StateProps;
 
 type State = {
@@ -37,6 +41,11 @@ type State = {
   isTransferModalVisible: boolean,
   currentAnnotationId: ?string,
 };
+
+const persistence: Persistence<State> = new Persistence(
+  { showFinishedTasks: PropTypes.bool },
+  "dashboardTaskList",
+);
 
 const convertAnnotationToTaskWithAnnotationType = (annotation): APITaskWithAnnotationType => {
   const { task } = annotation;
@@ -72,8 +81,16 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     currentAnnotationId: null,
   };
 
+  componentWillMount() {
+    this.setState(persistence.load(this.props.history));
+  }
+
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persistence.persist(this.props.history, nextState);
   }
 
   getFinishVerb = () => (this.state.showFinishedTasks ? "Unfinished" : "Finished");
@@ -371,4 +388,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: getActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(DashboardTaskListView);
+export default connect(mapStateToProps)(withRouter(DashboardTaskListView));

@@ -139,15 +139,9 @@ class PlaneController extends React.PureComponent<Props> {
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return {
       leftDownMove: (delta: Point2) => {
-        const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
-        const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
         const viewportScale = Store.getState().userConfiguration.scale;
 
-        return this.movePlane([
-          delta.x * mouseInversionX / viewportScale,
-          delta.y * mouseInversionY / viewportScale,
-          0,
-        ]);
+        return this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
       },
 
       scroll: this.scrollPlanes.bind(this),
@@ -416,11 +410,9 @@ class PlaneController extends React.PureComponent<Props> {
 
   moveTDView(delta: Point2): void {
     const state = Store.getState();
-    const mouseInversionX = state.userConfiguration.inverseX ? 1 : -1;
-    const mouseInversionY = state.userConfiguration.inverseY ? 1 : -1;
     const scale = state.userConfiguration.scale;
-    Store.dispatch(moveTDViewXAction(delta.x / scale * mouseInversionX));
-    Store.dispatch(moveTDViewYAction(delta.y / scale * mouseInversionY));
+    Store.dispatch(moveTDViewXAction(delta.x / scale * -1));
+    Store.dispatch(moveTDViewYAction(delta.y / scale * -1));
   }
 
   finishZoom = (): void => {

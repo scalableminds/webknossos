@@ -104,7 +104,7 @@ class DataSourceService @Inject()(
     val orderedScales = scaleByResolution.toList.sortBy(_.head.resolution).map(_.head.scale)
     // Check, that each dimension increases monotonically between different resolutions.
     val scalesProperlyOrdered = orderedScales.foldLeft[Option[Point3D]](Some(Point3D(0, 0, 0))){
-      case (Some(p1), p2) if p1.x <= p2.x && p1.y < p2.y && p1.z <= p2.z => Some(p2)
+      case (Some(p1), p2) if p1.x <= p2.x && p1.y <= p2.y && p1.z <= p2.z => Some(p2)
       case _ => None
     }
 

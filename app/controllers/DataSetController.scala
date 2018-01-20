@@ -33,7 +33,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
-  def view(dataSetName: String) = UserAwareAction.async { implicit request =>
+  def empty(dataSetName: String) = UserAwareAction.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
     } yield {

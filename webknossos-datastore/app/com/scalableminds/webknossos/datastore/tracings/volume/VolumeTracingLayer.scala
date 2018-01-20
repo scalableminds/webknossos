@@ -3,7 +3,7 @@
  */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -45,5 +45,5 @@ case class VolumeTracingLayer(
 
   val mappings: Set[String] = Set.empty
 
-  val resolutions: List[Int] = List(1)
+  val resolutions: List[DataResolution] = List(DataResolution.fromResolution(1))
 }

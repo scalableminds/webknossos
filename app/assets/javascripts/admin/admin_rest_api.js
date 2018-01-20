@@ -379,7 +379,7 @@ export async function transferTask(
   annotationId: string,
   userId: string,
 ): Promise<APIAnnotationType> {
-  return Request.sendJSONReceiveJSON(`/annotations/Task/${annotationId}/transfer`, {
+  return Request.sendJSONReceiveJSON(`/api/annotations/Task/${annotationId}/transfer`, {
     data: {
       userId,
     },
@@ -406,7 +406,7 @@ export async function editAnnotation(
   annotationType: APITracingType,
   data: $Shape<EditableAnnotationType>,
 ): Promise<APIAnnotationType> {
-  return Request.sendJSONReceiveJSON(`/annotations/${annotationType}/${annotationId}/edit`, {
+  return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
     data,
   });
 }
@@ -437,7 +437,7 @@ export async function deleteAnnotation(
 export async function finishAllAnnotations(
   selectedAnnotationIds: Array<string>,
 ): Promise<{ messages: Array<MessageType> }> {
-  return Request.sendJSONReceiveJSON("/annotations/Explorational/finish", {
+  return Request.sendJSONReceiveJSON("/api/annotations/Explorational/finish", {
     data: {
       annotations: selectedAnnotationIds,
     },

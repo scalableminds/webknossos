@@ -83,7 +83,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     await api.tracing.save();
     const annotation = await Request.receiveJSON(url);
     Toast.success(messages["tracing.merged"]);
-    const redirectUrl = `/api/annotations/${annotation.typ}/${annotation.id}`;
+    const redirectUrl = `/annotations/${annotation.typ}/${annotation.id}`;
     this.props.history.push(redirectUrl);
   }
 

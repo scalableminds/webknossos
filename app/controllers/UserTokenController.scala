@@ -5,30 +5,25 @@ package controllers
 
 import javax.inject.Inject
 
-import com.mohiva.play.silhouette.api.LoginInfo
-import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticatorService
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
-import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
-import models.binary.DataSetDAO
 import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
 import models.user.User
 import net.liftweb.common.{Box, Full}
+import oxalis.security.WebknossosSilhouette.UserAwareAction
 import oxalis.security.{TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class UserTokenController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with WKDataStoreActionHelper
     with AnnotationInformationProvider {
 
-  val webKnossosToken = play.api.Play.current.configuration.getString("application.authentication.dataStoreToken").getOrElse("somethingSecure")
   val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def generateTokenForDataStore = UserAwareAction.async { implicit request =>

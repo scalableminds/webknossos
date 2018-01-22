@@ -22,8 +22,6 @@ import play.api.mvc._
 
 object Global extends GlobalSettings with LazyLogging{
 
-  def tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
-
   override def onStart(app: Application) {
     val conf = app.configuration
 
@@ -34,7 +32,9 @@ object Global extends GlobalSettings with LazyLogging{
       InitialData.insert(conf)
     }
 
-    CleanUpService.register("deletion of expired dataTokens", tokenAuthenticatorService.DataStoreExpiry) {
+    val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
+
+    CleanUpService.register("deletion of expired dataTokens", tokenAuthenticatorService.dataStoreExpiry) {
       tokenAuthenticatorService.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
     }
 

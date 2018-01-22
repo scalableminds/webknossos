@@ -189,7 +189,7 @@ class Navbar extends React.PureComponent<Props> {
         </Menu>
         {!isAuthenticated ? (
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
-            <LoginView layout="inline" />
+            <LoginView layout="inline" redirect={this.props.history.location.pathname} />
           </div>
         ) : null}
       </Header>

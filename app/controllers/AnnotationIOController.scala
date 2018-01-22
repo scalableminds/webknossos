@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{UserAwareRequest, UserAwareAction, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
@@ -117,7 +117,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
         tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference)
-        scale <- dataSet.dataSource.toUsable.map(_.scale)
+        scale <- dataSet.dataSource.scaleOpt
       } yield {
         (NmlWriter.toNmlStream(Left(tracing), annotation.description, scale), name + ".nml")
       }
@@ -126,7 +126,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def volumeToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
         (tracing, data) <- dataSet.dataStore.getVolumeTracing(annotation.tracingReference)
-        scale <- dataSet.dataSource.toUsable.map(_.scale)
+        scale <- dataSet.dataSource.scaleOpt
       } yield {
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(

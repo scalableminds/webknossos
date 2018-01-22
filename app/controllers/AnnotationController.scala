@@ -9,9 +9,9 @@ import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
-import models.task.TaskDAO
+import models.task.{Task, TaskDAO, TaskSQLDAO}
 import models.user.time._
-import models.user.{UsedAnnotationDAO, User, UserDAO, UserSQLDAO}
+import models.user.{UsedAnnotationDAO, User, UserDAO}
 import net.liftweb.common.{Full, _}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
@@ -53,10 +53,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def sqlTest2(id: String) = UserAwareAction.async { implicit request =>
     for {
-      userSQL <- UserSQLDAO.findOne(ObjectId(id))
-      user <- User.fromUserSQL(userSQL) ?~> Messages("user.notFound")
+      taskSQL <- TaskSQLDAO.findOne(ObjectId(id))
+      task <- Task.fromTaskSQL(taskSQL) ?~> Messages("task.notFound")
     } yield {
-      Ok(Json.toJson(user))
+      Ok(Json.toJson(task))
     }
   }
 

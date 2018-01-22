@@ -181,12 +181,14 @@ object DataSet extends FoxImplicits {
   private def constructDatasource(s: DataSetSQL, team: TeamSQL)(implicit ctx: DBAccessContext) = {
     val dataSourceId = DataSourceId(s.name, team.name)
     s.scale match {
-      case Some(scale) => for {
-        dataLayers <- DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id)
-      } yield {
-        GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
-      }
-      case None => Fox.successful(UnusableDataSource[DataLayer](dataSourceId, s.status))
+      case Some(scale) =>
+        for {
+          dataLayers <- DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id)
+        } yield {
+          GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
+        }
+      case None =>
+        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, s.status))
     }
   }
 

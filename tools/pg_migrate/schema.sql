@@ -230,7 +230,7 @@ insert into webknossos.taskTypes(_id, _team, summary, description, settings_bran
   values('596792e65d0000d304d77162', '596792e65d0000d304d77164', 'taskType_summary', 'taskType_description', false, false, false);
 
 insert into webknossos.tasks(_id, _project, _taskType, _team, neededExperience_domain, neededExperience_value, totalInstances, tracingTime, editPosition, editRotation)
-  values('596792e65d0000d304d77163', 'project_id', '596792e65d0000d304d77162', '596792e65d0000d304d77164', 'experience_domain', 1, 10, 0, '(0,0,0)', '(0,0,0)');
+  values('596792e65d0000d304d77163', '596792e65d0000d304d77167', '596792e65d0000d304d77162', '596792e65d0000d304d77164', 'experience_domain', 1, 10, 0, '(0,0,0)', '(0,0,0)');
 
 insert into webknossos.teams(_id, _owner, name, behavesLikeRootTeam)
   values('596792e65d0000d304d77164', '596792e65d0000d304d77166', 'team_name', false);
@@ -241,6 +241,8 @@ insert into webknossos.dataSets(_id, _dataStore, _team, name)
 insert into webknossos.users(_id, email, firstName, lastName, userConfiguration, dataSetConfigurations, loginInfo_providerKey, passwordInfo_password)
   values('596792e65d0000d304d77166', 'scmboy@scalableminds.com', 'SCM', 'Boy', '{"configuration" : {}}', '{}', 'providerKey', 'passwordhash');
 
+insert into webknossos.projects(_id, _team, _owner, name)
+  values('596792e65d0000d304d77167', '596792e65d0000d304d77164', '596792e65d0000d304d77166', 'project_name')
 
 -- ALTER TABLE webknossos.analytics
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);

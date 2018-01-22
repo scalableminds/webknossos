@@ -15,8 +15,8 @@ import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
-import play.api.i18n.Messages.Implicits._
 import play.api.i18n.Messages
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsArray, JsNull, JsObject, Json}
@@ -25,6 +25,7 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONObjectID, BSONString}
 import reactivemongo.play.json.BSONFormats._
+import slick.driver.PostgresDriver.api._
 import utils.{ObjectId, SQLDAO}
 
 
@@ -74,11 +75,16 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
         r.isdeleted
       )
     }
+
+  def openInstanceCountForTask(taskId: ObjectId): Fox[Int] = {
+    for {
+      result <- db.run(sql"select openInstances from webknossos.task_instances where _id = ${taskId.toString}".as[Int])
+    } yield {
+      result.headOption
+    }
+  }
+
 }
-
-
-
-
 
 
 
@@ -184,9 +190,9 @@ object Task extends FoxImplicits {
       taskTypeIdBson <- s._taskType.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._taskType.toString)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
       team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
-      project <- ProjectSQLDAO.findOne(s._project) ?~> Messages("project.notFound")
+      project <- ProjectSQLDAO.findOne(s._project) ?~> Messages("project.notFound", s._project.toString)
       priority = if (project.paused) -1 else project.priority
-      openInstances <- Some(5) // TODO SQL
+      openInstances <- TaskSQLDAO.openInstanceCountForTask(s._id)
     } yield {
       Task(
         taskTypeIdBson,

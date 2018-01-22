@@ -42,7 +42,7 @@ case class ProjectSQL(
 object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
   val collection = Projects
 
-  def idColumn(x: Projects): Rep[String] = x.name
+  def idColumn(x: Projects): Rep[String] = x._Id
   def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
 
   def parse(r: ProjectsRow): Fox[ProjectSQL] =

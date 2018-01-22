@@ -112,7 +112,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
                   disabled={isEditMode}
                 >
                   {this.state.teams.map((team: APITeamType) => (
-                    <Option key={team.id} value={team.name}>
+                    <Option key={team.id} value={team.id}>
                       {team.name}
                     </Option>
                   ))}

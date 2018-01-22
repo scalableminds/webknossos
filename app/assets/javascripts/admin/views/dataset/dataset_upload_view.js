@@ -111,7 +111,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                     style={{ width: "100%" }}
                   >
                     {this.state.teams.map((team: APITeamType) => (
-                      <Option key={team.id} value={team.name}>
+                      <Option key={team.id} value={team.id}>
                         {`${team.name}`}
                       </Option>
                     ))}

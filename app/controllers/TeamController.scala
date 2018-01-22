@@ -61,7 +61,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
     withJsonBodyUsing(Team.teamReadsName) { teamName =>
       val team = Team(teamName, request.identity.organization)
       for {
-        //_ <- TeamDAO.findOneByName(team.name)(GlobalAccessContext).reverse ?~> Messages("team.name.alreadyTaken")
+        _ <- TeamDAO.findOneByName(team.name)(GlobalAccessContext).reverse ?~> Messages("team.name.alreadyTaken")
         _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
         _ <- TeamService.create(team, request.identity)
         js <- Team.teamPublicWrites(team)

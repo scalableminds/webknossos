@@ -266,12 +266,12 @@ object AnnotationService
     }
 
     def getScales(annotations: List[Annotation]) = {
-      val foxes = annotations.map(annotation =>
+      Fox.combined(annotations.map{ annotation =>
         for {
           dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName)
-          dataSource <- dataSet.dataSource.toUsable
-        } yield dataSource.scale)
-      Fox.combined(foxes)
+          scale <- dataSet.dataSource.scaleOpt
+        } yield { scale }
+      })
     }
 
     def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))

@@ -16,7 +16,7 @@ services:
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
       - -Dhttp.port=9000
-      - -DenableDevAutoLogin=true
+      - -Dapplication.authentication.enableDevAutoLogin=true
       - -Dmongodb.uri=mongodb://mongo:27017/webknossos
 
 

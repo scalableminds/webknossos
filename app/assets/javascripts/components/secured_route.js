@@ -2,39 +2,40 @@
 import React from "react";
 import { Route, withRouter } from "react-router-dom";
 import LoginView from "admin/views/auth/login_view";
-
-import type { ReactRouterMatchType, ReactRouterLocationType } from "react_router";
+import type { Match, Location, ContextRouter } from "react-router-dom";
+import type { ComponentType } from "react";
 
 type Props = {
-  component: typeof React$Component,
-  render: Function,
+  component?: ComponentType<*>,
+  path: string,
+  render?: (router: ContextRouter) => React$Node,
   isAuthenticated: boolean,
-  serverAuthenticationCallback: Function,
-  computedMatch: ReactRouterMatchType,
-  location: ReactRouterLocationType,
+  serverAuthenticationCallback?: Function,
+  computedMatch: Match,
+  location: Location,
 };
 
 type State = {
-  isAddtionallyAuthenticated: boolean,
+  isAdditionallyAuthenticated: boolean,
 };
 
 class SecuredRoute extends React.PureComponent<Props, State> {
   state = {
-    isAddtionallyAuthenticated: false,
+    isAdditionallyAuthenticated: false,
   };
 
   componentDidMount() {
-    if (this.props.serverAuthenticationCallback) {
-      this.fetchData();
-    }
+    this.fetchData();
   }
 
   async fetchData() {
-    const isAddtionallyAuthenticated = await this.props.serverAuthenticationCallback({
-      match: this.props.computedMatch,
-      location: this.props.location,
-    });
-    this.setState({ isAddtionallyAuthenticated });
+    if (this.props.serverAuthenticationCallback != null) {
+      const isAdditionallyAuthenticated = await this.props.serverAuthenticationCallback({
+        match: this.props.computedMatch,
+        location: this.props.location,
+      });
+      this.setState({ isAdditionallyAuthenticated });
+    }
   }
 
   render() {
@@ -47,7 +48,7 @@ class SecuredRoute extends React.PureComponent<Props, State> {
     } = this.props;
 
     const isCompletelyAuthenticated = serverAuthenticationCallback
-      ? isAuthenticated || this.state.isAddtionallyAuthenticated
+      ? isAuthenticated || this.state.isAdditionallyAuthenticated
       : isAuthenticated;
 
     return (
@@ -55,7 +56,13 @@ class SecuredRoute extends React.PureComponent<Props, State> {
         {...rest}
         render={props => {
           if (isCompletelyAuthenticated) {
-            return Component ? <Component {...props} /> : render(props);
+            if (Component != null) {
+              return <Component {...props} />;
+            } else if (render != null) {
+              return render(props);
+            } else {
+              throw Error("Specified neither component nor render function.");
+            }
           }
 
           return <LoginView layout="horizontal" redirect={this.props.location.pathname} />;

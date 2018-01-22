@@ -12,10 +12,11 @@ services:
     entrypoint: bin/oxalis
     command:
       - -Djava.io.tmpdir=disk
-      - -Dconfig.file=conf/application_dev.conf
+      - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
       - -Dhttp.port=9000
+      - -DenableDevAutoLogin=true
       - -Dmongodb.uri=mongodb://mongo:27017/webknossos
 
 

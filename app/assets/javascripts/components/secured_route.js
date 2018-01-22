@@ -65,7 +65,7 @@ class SecuredRoute extends React.PureComponent<Props, State> {
             }
           }
 
-          return <LoginView layout="horizontal" />;
+          return <LoginView layout="horizontal" redirect={this.props.location.pathname} />;
         }}
       />
     );

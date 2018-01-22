@@ -145,7 +145,8 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     ((__ \ 'server).read[String] and
       (__ \ 'name).read[String] and
       (__ \ 'token).read[String] and
-      (__ \ 'team).read[BSONObjectID]).tupled
+      (__ \ 'team).read[String]) (
+    (server, name, token, team) => (server, name, token, BSONObjectID(team)))
 
   private def createNDStoreDataSet(implicit request: SecuredRequest[JsValue]) =
     withJsonBodyUsing(externalDataSetFormReads){

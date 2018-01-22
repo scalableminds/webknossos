@@ -70,13 +70,13 @@ object Project {
 
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[BSONObjectID] and
+      (__ \ 'team).read[String] and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Int] and
       (__ \ 'owner).read[String](JsonFormatHelper.StringObjectIdReads("owner"))) (
       (name, team, priority, paused, expectedTime, owner) =>
-        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
+        Project(name, BSONObjectID(team), BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
 }
 
 object ProjectService extends FoxImplicits with LazyLogging {

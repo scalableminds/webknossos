@@ -12,6 +12,7 @@ import models.user._
 import net.liftweb.common.Full
 import oxalis.cleanup.CleanUpService
 import oxalis.jobs.AvailableTasksJob
+import oxalis.security.WebknossosSilhouette
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
@@ -20,6 +21,8 @@ import play.api.mvc.Results.Ok
 import play.api.mvc._
 
 object Global extends GlobalSettings with LazyLogging{
+
+  def tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
   override def onStart(app: Application) {
     val conf = app.configuration
@@ -31,11 +34,9 @@ object Global extends GlobalSettings with LazyLogging{
       InitialData.insert(conf)
     }
 
-    /*
-    CleanUpService.register("deletion of expired dataTokens", UserToken.expirationTime) {
-      UserTokenDAO.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
+    CleanUpService.register("deletion of expired dataTokens", tokenAuthenticatorService.DataStoreExpiry) {
+      tokenAuthenticatorService.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
     }
-    */
 
     super.onStart(app)
   }

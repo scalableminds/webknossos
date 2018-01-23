@@ -39,6 +39,7 @@ case class UserSQL(
                   loginInfo: LoginInfo,
                   passwordInfo: PasswordInfo,
                   isSuperUser: Boolean,
+                  isDeactivated: Boolean,
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
                   )
@@ -63,6 +64,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
       PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
       r.issuperuser,
+      r.isdeactivated,
       r.created.getTime,
       r.isdeleted
     ))
@@ -230,7 +232,7 @@ object User extends FoxImplicits {
         s.email,
         s.firstName,
         s.lastName,
-        !s.isDeleted,
+        !s.isDeactivated,
         "", //TODO: md5 ?
         teamRoles,
         userConfiguration,

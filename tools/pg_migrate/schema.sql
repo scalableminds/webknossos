@@ -191,7 +191,8 @@ CREATE TABLE webknossos.users(
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'scrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
-  isDeleted BOOLEAN NOT NULL DEFAULT false, -- TODO: additional isActive, since inactive can be viewed in frontend?
+  isDeactivated BOOLEAN NOT NULL DEFAULT false,
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMP NOT NULL DEFAULT NOW()
 );

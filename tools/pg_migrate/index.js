@@ -364,6 +364,7 @@ function* csvWriter(name, cols) {
         "loginInfo_providerKey",
         "passwordInfo_hasher",
         "passwordInfo_password",
+        "isDeactivated",
         "isDeleted",
         "isSuperUser",
         "created",
@@ -382,7 +383,8 @@ function* csvWriter(name, cols) {
               loginInfo_providerKey: doc.loginInfo.providerKey,
               passwordInfo_hasher: "scrypt",
               passwordInfo_password: doc.passwordInfo.password,
-              isDeleted: !doc.isActive,
+              isDeactivated: !doc.isActive,
+              isDeleted: false,
               isSuperUser: !!doc._isSuperUser,
               created: doc._id.getTimestamp(),
             }

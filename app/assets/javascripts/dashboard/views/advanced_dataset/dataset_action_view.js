@@ -5,6 +5,7 @@ import * as React from "react";
 import { Link } from "react-router-dom";
 import { Dropdown, Menu, Icon } from "antd";
 import type { APIDatasetType } from "admin/api_flow_types";
+import { createExplorational } from "admin/admin_rest_api";
 
 type Props = {
   dataset: APIDatasetType,
@@ -13,6 +14,16 @@ type Props = {
 type State = {};
 
 export default class DatasetActionView extends React.PureComponent<Props, State> {
+  createTracing = async (
+    dataset: APIDatasetType,
+    typ: "volume" | "skeleton",
+    withFallback: boolean,
+    event: Event,
+  ) => {
+    const annotation = await createExplorational(dataset, typ, withFallback);
+    window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
+  };
+
   render() {
     const dataset = this.props.dataset;
     const centerBackgroundImageStyle = {
@@ -23,7 +34,8 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
       <Menu>
         <Menu.Item key="existing">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=true`}
+            href="#"
+            onClick={this.createTracing.bind(this, dataset, "volume", true)}
             title="Create volume tracing"
           >
             Use Existing Segmentation Layer
@@ -31,7 +43,8 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         </Menu.Item>
         <Menu.Item key="new">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=false`}
+            href="#"
+            onClick={this.createTracing.bind(this, dataset, "volume", false)}
             title="Create volume tracing"
           >
             Use a New Segmentation Layer
@@ -75,7 +88,8 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
               <Icon type="eye-o" />View
             </a>
             <a
-              href={`/datasets/${dataset.name}/trace?typ=skeleton`}
+              href="#"
+              onClick={this.createTracing.bind(this, dataset, "skeleton", false)}
               title="Create skeleton tracing"
             >
               <img

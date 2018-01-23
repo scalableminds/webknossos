@@ -463,6 +463,21 @@ export async function getAnnotationInformation(
   return Request.receiveJSON(infoUrl);
 }
 
+export async function createExplorational(
+  dataset: APIDatasetType,
+  typ: "volume" | "skeleton",
+  withFallback: boolean,
+) {
+  const url =
+    typ === "skeleton"
+      ? `/api/datasets/${dataset.name}/createExplorational?typ=skeleton`
+      : `/api/datasets/${dataset.name}/createExplorational?typ=volume&withFallback=${
+          withFallback ? "true" : "false"
+        }`;
+
+  return Request.sendJSONReceiveJSON(url, { data: {} });
+}
+
 // ### Datasets
 export async function getDatasets(): Promise<Array<APIDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets");

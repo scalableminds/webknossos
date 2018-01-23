@@ -143,9 +143,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       contentType <- TracingType.values.find(_.toString == typ).toFox
       annotation <- AnnotationService.createExplorationalFor(request.identity, dataSet, contentType, withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
+      json <- annotation.toJson(Some(request.identity))
     } yield {
-      // Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
-      Redirect("/annotations/" + annotation.typ + "/" + annotation.id)
+      JsonOk(json)
     }
   }
 

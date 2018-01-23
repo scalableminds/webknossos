@@ -52,7 +52,7 @@ GET           /api/teams/:id/progressOverview                                   
 
 # DataSets
 GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
-GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean])
+POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean])
 
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)

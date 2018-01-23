@@ -18,7 +18,10 @@ case class ObjectId(id: String) {
   override def toString = id
 }
 
-object ObjectId { implicit val jsonFormat = Json.format[ObjectId] }
+object ObjectId {
+  implicit val jsonFormat = Json.format[ObjectId]
+  def fromBson(bson: BSONObjectID) = ObjectId(bson.stringify)
+}
 
 object SQLClient {
   lazy val db = Database.forConfig("postgres")

@@ -16,6 +16,7 @@ type Props = {
   form: Object,
   layout: "horizontal" | "inline",
   history: RouterHistory,
+  redirect?: string,
 };
 
 class LoginView extends React.PureComponent<Props> {
@@ -27,9 +28,17 @@ class LoginView extends React.PureComponent<Props> {
         await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
         if (!Utils.hasUrlParam("redirectPage")) {
           const user = await getActiveUser();
+
           Store.dispatch(setActiveUserAction(user));
-          this.props.history.push("/dashboard");
+          if (this.props.redirect) {
+            // Use "redirect" prop for internal redirects, e.g. for SecuredRoutes
+            this.props.history.push(this.props.redirect);
+          } else {
+            this.props.history.push("/dashboard");
+          }
         } else {
+          // Use "redirectPage" URL parameter to cause a full page reload and redirecting to external sites
+          // e.g. Discuss
           window.location.replace(Utils.getUrlParamValue("redirectPage"));
         }
       }

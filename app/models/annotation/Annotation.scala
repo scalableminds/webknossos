@@ -130,10 +130,6 @@ case class Annotation(
 
   val tracingType = tracingReference.typ
 
-  def removeTask() = {
-    this.copy(_task = None, typ = AnnotationType.Orphan)
-  }
-
   def saveToDB(implicit ctx: DBAccessContext): Fox[Annotation] = {
     AnnotationDAO.saveToDB(this)
   }
@@ -299,14 +295,6 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     }
   }
 
-  def defaultFindForUserQ(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
-    "_user" -> _user,
-    "state" -> AnnotationState.Active,
-    "typ" -> annotationType)
-
-  def hasAnOpenAnnotation(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    countOpenAnnotations(_user, annotationType).map(_ > 0)
-
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
     val q = Json.obj(
       "_user" -> _user,
@@ -319,14 +307,6 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("_id" -> _annotation), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
 
-  def findForWithTypeOtherThan(_user: BSONObjectID, isFinished: Option[Boolean], annotationTypes: List[AnnotationType], limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    val q = Json.obj(
-      "_user" -> _user,
-      "state" -> finishedOptToStateQuery(isFinished),
-      "typ" -> Json.obj("$nin" -> annotationTypes))
-
-    find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
-  }
 
   private def finishedOptToStateQuery(isFinished: Option[Boolean]): JsValue = isFinished match {
     case Some(true) => Json.toJson(AnnotationState.Finished)
@@ -334,12 +314,17 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     case None => Json.obj("$ne" -> AnnotationState.Cancelled)
   }
 
+  private def defaultFindForUserQuery(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
+    "_user" -> _user,
+    "state" -> AnnotationState.Active,
+    "typ" -> annotationType)
+
   def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(defaultFindForUserQ(_user, annotationType)).cursor[Annotation]().collect[List]()
+    find(defaultFindForUserQuery(_user, annotationType)).cursor[Annotation]().collect[List]()
   }
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[String] = Nil)(implicit ctx: DBAccessContext) =
-    count(defaultFindForUserQ(_user, annotationType) ++ Json.obj("team" -> Json.obj("$nin" -> excludeTeams)))
+    count(defaultFindForUserQuery(_user, annotationType) ++ Json.obj("team" -> Json.obj("$nin" -> excludeTeams)))
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("isActive" -> true, "_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
@@ -399,7 +384,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       "modifiedTimestamp" -> Json.obj("$gt" -> minimumTimestamp)
     ))
 
-  def unassignAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
+  def cancelAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(
       Json.obj(
         "_user" -> _user,

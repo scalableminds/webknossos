@@ -19,33 +19,25 @@ object AnnotationType {
 
   // User types
   val Task = "Task"
-  val View = "View"
   val Explorational = "Explorational"
+
+  // View is an artifact of the frontend using the same code for tracing and dataset viewing. never found in db
+  val View = "View"
+
+  // Compound types. never found in db
   val CompoundTask = "CompoundTask"
   val CompoundProject = "CompoundProject"
   val CompoundTaskType = "CompoundTaskType"
 
+  // System Types
+  val TracingBase = "Tracing Base"
+  val Orphan = "Orphan"  // Annotations whose task was deleted
+
   val UserTracings = List(
     Task,
-    Explorational,
-    CompoundTask,
-    CompoundProject,
-    CompoundTaskType,
-    View)
-
-  // System types
-  val TracingBase = "Tracing Base"
-  val Orphan = "Orphan"  // Annotations, where the task was deleted
+    Explorational)
 
   val SystemTracings = List(
     TracingBase,
     Orphan)
-
-  def isExploratory(t: Annotation): Boolean = t.typ == Explorational
-
-  def isSystemTracing(t: Annotation) =
-    SystemTracings.contains(t.typ)
-
-  def isUserTracing(t: Annotation) =
-    UserTracings.contains(t.typ)
 }

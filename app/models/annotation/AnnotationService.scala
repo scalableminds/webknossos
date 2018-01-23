@@ -122,28 +122,22 @@ object AnnotationService
     for {
       annotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
       _ = annotations.map(annotation => annotation.muta.cancelTask())
-      result <- AnnotationDAO.unassignAnnotationsOfUser(user._id)
+      result <- AnnotationDAO.cancelAnnotationsOfUser(user._id)
     } yield result
   }
 
   def openTasksFor(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
 
-  def countOpenTasks(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task)
-
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
-
-  def hasAnOpenTask(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.hasAnOpenAnnotation(user._id, AnnotationType.Task)
 
   def findTasksOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Task, limit)
 
   def findExploratoryOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) = {
     val systemTypes = AnnotationType.Task :: AnnotationType.SystemTracings
-    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, systemTypes, limit)
+    AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Explorational, limit)
   }
 
   def countTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =

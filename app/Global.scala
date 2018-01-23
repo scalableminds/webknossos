@@ -18,6 +18,7 @@ import play.api.libs.concurrent._
 import play.api.libs.json.Json
 import play.api.mvc.Results.Ok
 import play.api.mvc._
+import utils.SQLClient
 
 object Global extends GlobalSettings with LazyLogging{
 
@@ -36,6 +37,15 @@ object Global extends GlobalSettings with LazyLogging{
     }
 
     super.onStart(app)
+  }
+
+  override def onStop(app: Application): Unit = {
+    logger.info("Executing Global END")
+
+    logger.info("Closing SQL Database handle")
+    SQLClient.db.close()
+
+    super.onStop(app)
   }
 
   def startActors(conf: Config, app: Application) {
@@ -64,6 +74,7 @@ object Global extends GlobalSettings with LazyLogging{
     NewRelic.noticeError(ex)
     super.onError(request, ex)
   }
+
 }
 
 /**

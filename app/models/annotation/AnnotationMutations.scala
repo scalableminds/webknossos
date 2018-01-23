@@ -38,7 +38,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   }
 
   def reopen()(implicit ctx: DBAccessContext) = {
-    AnnotationDAO.reopen(annotation._id)
+    AnnotationDAO.updateState(annotation._id, AnnotationState.Active)
   }
 
   def rename(name: String)(implicit ctx: DBAccessContext) =

@@ -50,6 +50,7 @@ case class AnnotationSQL(
                           modified: Long = System.currentTimeMillis,
                           isDeleted: Boolean = false
                         )
+
 object AnnotationSQL { implicit val jsonFormat = Json.format[AnnotationSQL] }
 
 object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotations] {
@@ -229,8 +230,7 @@ object Annotation extends FoxImplicits {
 
 object AnnotationDAO extends SecuredBaseDAO[Annotation]
   with FoxImplicits
-  with MongoHelpers
-  with QuerySupportedDAO[Annotation] {
+  with MongoHelpers {
 
   val collectionName = "annotations"
 
@@ -445,9 +445,6 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       Json.obj("$set" -> Json.obj("tags" -> tags)),
       returnNew = true)
 
-  def reopen(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    updateState(_annotation, Active)
-
   def updateState(_annotation: BSONObjectID, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =
     findAndModify(
       Json.obj("_id" -> _annotation),
@@ -480,8 +477,4 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       Json.obj("$set" -> Json.obj(
         "_user" -> _user)),
       returnNew = true)
-
-  override def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Annotation]] = withExceptionCatcher{
-    find(q).cursor[Annotation]().collect[List](maxDocs = limit)
-  }
 }

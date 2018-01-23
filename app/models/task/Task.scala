@@ -216,7 +216,7 @@ object Task extends FoxImplicits {
   }
 }
 
-object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupportedDAO[Task] {
+object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   val collectionName = "tasks"
 
@@ -402,10 +402,5 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     } yield {
       jsObjects.map(p => (p \ "_project").asOpt[String]).flatten
     }
-  }
-
-  def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {
-    // Can't use local find, since it appends `isActive = true` to the query!
-    super.find(q).cursor[Task]().collect[List](maxDocs = limit)
   }
 }

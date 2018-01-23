@@ -1,17 +1,18 @@
 package models.binary
 
-import com.scalableminds.util.geometry.{BoundingBox, Scale}
+import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataResolution, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import models.basics._
 import models.configuration.DataSetConfiguration
 import models.task.TaskSQLDAO.parseArrayTuple
 import models.team.{TeamSQL, TeamSQLDAO}
 import models.user.User
+import net.liftweb.common.Full
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -19,7 +20,7 @@ import play.utils.UriEncoding
 import reactivemongo.api.indexes.{Index, IndexType}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLClient, SQLDAO}
 
 
 case class DataSetSQL(
@@ -73,14 +74,38 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 }
 
 
-object DataSetDataLayerSQLDAO extends FoxImplicits {
-  val db = Database.forConfig("postgres")
+object DataSetResolutionsSQLDAO extends FoxImplicits {
+  val db = SQLClient.db
 
-  def parseRow(row: DatasetLayersRow): Fox[DataLayer] = {
+  def parseRow(row: DatasetResolutionsRow): Fox[DataResolution] = {
+    for {
+      scale <- Point3D.fromList(parseArrayTuple(row.scale).map(_.toInt))
+    } yield {
+      DataResolution(row.resolution, scale)
+    }
+  }
+
+  def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[DataResolution]] = {
+    for {
+      rows <- db.run(DatasetResolutions.filter(r => r._Dataset === dataSetId.id && r.datalayername === dataLayerName).result).map(_.toList)
+      rowsParsed <- Fox.combined(rows.map(parseRow))
+    } yield {
+      rowsParsed
+    }
+  }
+
+}
+
+
+object DataSetDataLayerSQLDAO extends FoxImplicits {
+  val db = SQLClient.db
+
+  def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
       category <- Category.fromString(row.category).toFox
-      boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt))
-      elementClass <- ElementClass.fromString(row.elementclass)
+      boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt)).toFox
+      elementClass <- ElementClass.fromString(row.elementclass).toFox
+      resolutions <- DataSetResolutionsSQLDAO.findDataResolutionForLayer(dataSetId, row.name)
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
@@ -88,7 +113,7 @@ object DataSetDataLayerSQLDAO extends FoxImplicits {
                                   row.name,
                                   category,
                                   boundingBox,
-                                  parseArrayTuple(row.resolutions).map(_.toInt),
+                                  resolutions,
                                   elementClass,
                                   segmentId,
                                   parseArrayTuple(mappings).toSet
@@ -97,7 +122,7 @@ object DataSetDataLayerSQLDAO extends FoxImplicits {
                                   row.name,
                                   category,
                                   boundingBox,
-                                  parseArrayTuple(row.resolutions).map(_.toInt),
+                                  resolutions,
                                   elementClass
                                 ))
         case _ => Fox.failure("")
@@ -109,7 +134,7 @@ object DataSetDataLayerSQLDAO extends FoxImplicits {
   def findDataLayersForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
     for {
       rows <- db.run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow))
+      rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId)))
     } yield {
       rowsParsed
     }
@@ -180,17 +205,19 @@ object DataSet extends FoxImplicits {
     case None => Fox.successful(None)
   }
 
-  private def constructDatasource(s: DataSetSQL, team: TeamSQL)(implicit ctx: DBAccessContext) = {
+  private def constructDatasource(s: DataSetSQL, team: TeamSQL)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
     val dataSourceId = DataSourceId(s.name, team.name)
-    s.scale match {
-      case Some(scale) =>
-        for {
-          dataLayers <- DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id)
-        } yield {
-          GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
-        }
-      case None =>
-        Fox.successful(UnusableDataSource[DataLayer](dataSourceId, s.status))
+    for {
+      dataLayersBox <- DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id).futureBox
+    } yield {
+      dataLayersBox match {
+        case Full(dataLayers) =>
+          for {
+            scale <- s.scale
+          } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
+        case _ =>
+          Some(UnusableDataSource[DataLayer](dataSourceId, s.status, s.scale))
+      }
     }
   }
 

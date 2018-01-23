@@ -5,7 +5,7 @@ import { withRouter } from "react-router-dom";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
 import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
-import type { ReactRouterHistoryType } from "react_router";
+import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
@@ -14,7 +14,7 @@ const TextArea = Input.TextArea;
 type Props = {
   taskTypeId: ?string,
   form: Object,
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
 };
 
 type State = {
@@ -36,7 +36,6 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
       settings: {
         somaClickingAllowed: true,
         branchPointsAllowed: true,
-        advancedOptionsAllowed: true,
         preferredMode: null,
       },
     };
@@ -152,11 +151,6 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
               {getFieldDecorator("settings.branchPointsAllowed", {
                 valuePropName: "checked",
               })(<Checkbox>Allow Branchpoints</Checkbox>)}
-            </FormItem>
-            <FormItem>
-              {getFieldDecorator("settings.advancedOptionsAllowed", {
-                valuePropName: "checked",
-              })(<Checkbox> Advanced Tracing Options</Checkbox>)}
             </FormItem>
 
             <FormItem label="Preferred Mode" hasFeedback>

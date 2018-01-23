@@ -45,8 +45,7 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] {
         parseArrayTuple(r.settingsAllowedmodes),
         r.settingsPreferredmode,
         r.settingsBranchpointsallowed,
-        r.settingsSomaclickingallowed,
-        r.settingsAdvancedoptionsallowed
+        r.settingsSomaclickingallowed
       ),
       r.created.getTime,
       r.isdeleted
@@ -94,7 +93,6 @@ object TaskType extends FoxImplicits {
       tt.settings.allowedModes,
       tt.settings.preferredMode,
       tt.settings.branchPointsAllowed,
-      tt.settings.advancedOptionsAllowed,
       tt.settings.somaClickingAllowed))
 
   def transformToJson(tt: TaskType)(implicit ctx: DBAccessContext) = {

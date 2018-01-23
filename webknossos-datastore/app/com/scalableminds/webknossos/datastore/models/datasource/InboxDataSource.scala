@@ -3,6 +3,7 @@
  */
 package com.scalableminds.webknossos.datastore.models.datasource
 
+import com.scalableminds.util.geometry.Scale
 import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 package object inbox {
@@ -14,6 +15,8 @@ package object inbox {
     def toUsable: Option[GenericDataSource[T]]
 
     def isUsable: Boolean = toUsable.isDefined
+
+    def scaleOpt: Option[Scale]
   }
 
   object GenericInboxDataSource {
@@ -33,8 +36,10 @@ package object inbox {
     }
   }
 
-  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId, status: String) extends GenericInboxDataSource[T] {
+  case class UnusableDataSource[+T <: DataLayerLike](id: DataSourceId, status: String, scale: Option[Scale] = None) extends GenericInboxDataSource[T] {
     val toUsable: Option[GenericDataSource[T]] = None
+
+    val scaleOpt: Option[Scale] = scale
   }
 
   object UnusableDataSource {
@@ -44,13 +49,15 @@ package object inbox {
         for {
           id <- (json \ "id").validate[DataSourceId]
           status <- (json \ "status").validate[String]
-        } yield UnusableDataSource(id, status)
+          scale <- (json \ "scale").validateOpt[Scale]
+        } yield UnusableDataSource(id, status, scale)
       }
 
       def writes(ds: UnusableDataSource[T]): JsValue = {
         Json.obj(
           "id" -> Json.toJson(ds.id),
-          "status" -> ds.status
+          "status" -> ds.status,
+          "scale" -> ds.scale.map(Scale.scaleWrites.writes)
         )
       }
     }
@@ -58,5 +65,4 @@ package object inbox {
 
   type InboxDataSource = GenericInboxDataSource[DataLayer]
   type InboxDataSourceLike = GenericInboxDataSource[DataLayerLike]
-  type UnusableDataSourceLike = UnusableDataSource[DataLayerLike] // TODO
 }

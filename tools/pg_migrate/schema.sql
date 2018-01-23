@@ -58,6 +58,7 @@ CREATE TABLE webknossos.dataSets(
   defaultConfiguration JSONB,
   description TEXT,
   isPublic BOOLEAN NOT NULL DEFAULT false,
+  isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL UNIQUE,
   scale webknossos.VECTOR3,  -- TODO: add to migration
   status VARCHAR(1024) NOT NULL DEFAULT '',  -- TODO: add to migration

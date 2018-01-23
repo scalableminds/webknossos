@@ -35,6 +35,8 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 
+  def notdel(r: X) = isDeletedColumn(r) === false
+
   def parse(row: X#TableElementType): Fox[C]
 
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] = {

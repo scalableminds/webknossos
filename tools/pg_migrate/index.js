@@ -152,6 +152,7 @@ function* csvWriter(name, cols) {
         "defaultConfiguration",
         "description",
         "isPublic",
+        "isUsable"
         "name",
         "created",
         "isDeleted",
@@ -163,9 +164,10 @@ function* csvWriter(name, cols) {
         defaultConfiguration: JSON.stringify(doc.defaultConfiguration),
         description: doc.description,
         isPublic: !!doc.isPublic,
+        isUsable: doc.isActive,
         name: doc.dataSource.id.name,
         created: new Date(doc.created),
-        isDeleted: !doc.isActive,
+        isDeleted: false,
       }),
     );
 

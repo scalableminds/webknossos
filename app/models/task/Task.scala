@@ -251,6 +251,14 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
     }
   }
 
+  override def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext) =
+    for {
+      taskSQL <- TaskSQLDAO.findOne(ObjectId.fromBson(id))
+      parsed <- Task.fromTaskSQL(taskSQL)
+    } yield {
+      parsed
+    }
+
   override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
     super.find(query ++ Json.obj("isActive" -> true))
   }

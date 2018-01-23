@@ -86,8 +86,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       )
     }
 
-  def notdel(r: Annotations) = isDeletedColumn(r) === false
-
   def findFor(_user: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] = {
     def stateQuery(r: Annotations) = isFinished match {
       case Some(true) => r.state === AnnotationState.Finished.toString
@@ -95,7 +93,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       case None => r.state =!= AnnotationState.Cancelled.toString
     }
     for {
-      r <- db.run(Annotations.filter(r => notdel(r) && r._User === _user.id && stateQuery(r)).take(limit).sortBy(_._Id.desc).result)
+      r <- db.run(Annotations.filter(r => notdel(r) && r._User === _user.id && stateQuery(r) && r.typ === annotationType.toString).take(limit).sortBy(_._Id.desc).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield {
       parsed
@@ -211,6 +209,10 @@ object Annotation extends FoxImplicits {
       }
   }
 
+  def fromAnnotationsSQL(s: Seq[AnnotationSQL])(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
+    Fox.combined(s.map(Annotation.fromAnnotationSQL(_)).toList)
+
+
   def fromAnnotationSQL(s: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
       dataset <- DataSetSQLDAO.findOne(s._dataset) ?~> Messages("dataSet.notFound")
@@ -315,7 +317,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) =
     for {
       annotationsSQL: Seq[AnnotationSQL] <- AnnotationSQLDAO.findFor(ObjectId.fromBson(_user), isFinished, annotationType, limit)
-      annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)).toList)
+      annotations <- Annotation.fromAnnotationsSQL(annotationsSQL)
     } yield {
       annotations
     }

@@ -1,10 +1,9 @@
 // @flow
-/* eslint-disable jsx-a11y/href-no-hash */
 
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
@@ -15,8 +14,11 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/admin_rest_api";
+import Persistence from "libs/persistence";
+import { PropTypes } from "prop-types";
 import type { APIProjectType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -25,21 +27,38 @@ type StateProps = {
   activeUser: APIUserType,
 };
 
+type Props = {
+  history: RouterHistory,
+} & StateProps;
+
 type State = {
   isLoading: boolean,
   projects: Array<APIProjectType>,
   searchQuery: string,
 };
 
-class ProjectListView extends React.PureComponent<StateProps, State> {
+const persistence: Persistence<State> = new Persistence(
+  { searchQuery: PropTypes.string },
+  "projectList",
+);
+
+class ProjectListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: true,
     projects: [],
     searchQuery: "",
   };
 
+  componentWillMount() {
+    this.setState(persistence.load(this.props.history));
+  }
+
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persistence.persist(this.props.history, nextState);
   }
 
   async fetchData(): Promise<void> {
@@ -98,6 +117,7 @@ class ProjectListView extends React.PureComponent<StateProps, State> {
               style={{ width: 200 }}
               onPressEnter={this.handleSearch}
               onChange={this.handleSearch}
+              value={this.state.searchQuery}
             />
           </div>
           <h3>Projects</h3>
@@ -230,4 +250,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: getActiveUser(state.activeUser),
 });
 
-export default connect(mapStateToProps)(ProjectListView);
+export default connect(mapStateToProps)(withRouter(ProjectListView));

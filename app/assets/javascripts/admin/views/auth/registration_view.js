@@ -4,16 +4,16 @@ import { Link, withRouter } from "react-router-dom";
 import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
 import Request from "libs/request";
-import type { APITeamType } from "admin/api_flow_types";
 import Toast from "libs/toast";
-import type { ReactRouterHistoryType } from "react_router";
+import type { APITeamType } from "admin/api_flow_types";
+import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
 type Props = {
   form: Object,
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
 };
 
 type State = {

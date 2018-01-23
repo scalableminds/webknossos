@@ -33,15 +33,15 @@ import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 type StateProps = {
   viewMode: ModeType,
 };
 
 type Props = {
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,
@@ -358,4 +358,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default withRouter(connect(mapStateToProps)(Controller));
+export default connect(mapStateToProps)(withRouter(Controller));

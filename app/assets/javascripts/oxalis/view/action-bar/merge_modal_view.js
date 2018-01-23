@@ -2,14 +2,14 @@
 import React, { PureComponent } from "react";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import type { OxalisState } from "oxalis/store";
 import Toast from "libs/toast";
 import Request from "libs/request";
 import { Modal, Button, Upload, Select, Form, Spin } from "antd";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
-import type { ReactRouterHistoryType } from "react_router";
+import type { OxalisState } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 type AnnotationInfoType = {
   typ: string,
@@ -33,7 +33,7 @@ type StateProps = {
 type Props = {
   isVisible: boolean,
   onOk: () => void,
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
 } & StateProps;
 
 type MergeModalViewState = {
@@ -269,4 +269,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default withRouter(connect(mapStateToProps)(MergeModalView));
+export default connect(mapStateToProps)(withRouter(MergeModalView));

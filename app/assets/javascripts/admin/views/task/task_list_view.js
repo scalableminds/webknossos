@@ -3,7 +3,7 @@
 
 import _ from "lodash";
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Table, Tag, Spin, Button, Input, Modal, Icon, Card } from "antd";
 import Utils from "libs/utils";
 import Clipboard from "clipboard-js";
@@ -14,13 +14,19 @@ import { deleteTask, getTasks } from "admin/admin_rest_api";
 import TemplateHelpers from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
 import TaskAnnotationView from "admin/views/task/task_annotation_view";
+import Persistence from "libs/persistence";
+import { PropTypes } from "prop-types";
 import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
-import type { QueryObjectType } from "admin/views/task/task_search_form";
+import type { QueryObjectType, TaskFormFieldValuesType } from "admin/views/task/task_search_form";
+import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 const { Search, TextArea } = Input;
 
-type Props = { initialFieldValues?: Object };
+type Props = {
+  initialFieldValues?: TaskFormFieldValuesType,
+  history: RouterHistory,
+};
 
 type State = {
   isLoading: boolean,
@@ -29,6 +35,11 @@ type State = {
   isAnonymousTaskLinkModalVisible: boolean,
 };
 
+const persistence: Persistence<State> = new Persistence(
+  { searchQuery: PropTypes.string },
+  "taskList",
+);
+
 class TaskListView extends React.PureComponent<Props, State> {
   state = {
     isLoading: false,
@@ -36,6 +47,14 @@ class TaskListView extends React.PureComponent<Props, State> {
     searchQuery: "",
     isAnonymousTaskLinkModalVisible: Utils.hasUrlParam("showAnonymousLinks"),
   };
+
+  componentWillMount() {
+    this.setState(persistence.load(this.props.history));
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    persistence.persist(this.props.history, nextState);
+  }
 
   async fetchData(queryObject: QueryObjectType) {
     if (!_.isEmpty(queryObject)) {
@@ -46,6 +65,8 @@ class TaskListView extends React.PureComponent<Props, State> {
         tasks,
         isLoading: false,
       });
+    } else {
+      this.setState({ tasks: [] });
     }
   }
 
@@ -109,6 +130,7 @@ class TaskListView extends React.PureComponent<Props, State> {
             style={{ width: 200 }}
             onPressEnter={this.handleSearch}
             onChange={this.handleSearch}
+            value={this.state.searchQuery}
           />
         </div>
         <h3>Tasks</h3>
@@ -274,4 +296,4 @@ class TaskListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default TaskListView;
+export default withRouter(TaskListView);

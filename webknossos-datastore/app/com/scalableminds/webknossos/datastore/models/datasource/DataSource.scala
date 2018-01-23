@@ -19,6 +19,8 @@ package object datasource {
 
     val toUsable: Option[GenericDataSource[T]] = Some(this)
 
+    val scaleOpt: Option[Scale] = Some(scale)
+
     def getDataLayer(name: String): Option[T] =
       dataLayers.find(_.name == name)
 
@@ -45,7 +47,7 @@ package object datasource {
       def writes(ds: GenericDataSource[T]) = Json.obj(
         "id" -> DataSourceId.dataSourceIdForamt.writes(ds.id),
         "dataLayers" -> ds.dataLayers.map(Json.toJson(_)),
-        "scale" -> Scale.scaleWrites. writes(ds.scale)
+        "scale" -> Scale.scaleWrites.writes(ds.scale)
       )
     }
   }

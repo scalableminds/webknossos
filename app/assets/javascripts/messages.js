@@ -55,7 +55,7 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
-  "annotation.was_finished": "Annotation is archived",
+  "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to cancel this annotation?",
   "annotation.dataset_no_public":

@@ -29,7 +29,6 @@ class GalleryDatasetView extends React.PureComponent<Props> {
     dataset: DatasetType,
     typ: "volume" | "skeleton",
     withFallback: boolean,
-    event: Event,
   ) => {
     if (this.props.activeUser == null) {
       Modal.confirm({
@@ -66,7 +65,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         <Menu.Item key="existing">
           <a
             href="#"
-            onClick={this.createTracing.bind(this, dataset, "volume", true)}
+            onClick={() => this.createTracing(dataset, "volume", true)}
             title="Create volume tracing"
           >
             Use Existing Segmentation Layer
@@ -75,7 +74,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         <Menu.Item key="new">
           <a
             href="#"
-            onClick={this.createTracing.bind(this, dataset, "volume", false)}
+            onClick={() => this.createTracing(dataset, "volume", false)}
             title="Create volume tracing"
           >
             Use a New Segmentation Layer
@@ -116,7 +115,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           <a
             href="#"
             title="Create skeleton tracing"
-            onClick={this.createTracing.bind(this, dataset, "skeleton", false)}
+            onClick={() => this.createTracing(dataset, "skeleton", false)}
           >
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>

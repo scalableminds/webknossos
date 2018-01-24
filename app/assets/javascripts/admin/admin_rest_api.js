@@ -470,7 +470,7 @@ export async function createExplorational(
 ) {
   const url = `/api/datasets/${dataset.name}/createExplorational`;
 
-  return Request.sendJSONReceiveJSON(url, { data: { typ: typ, withFallback: withFallback } });
+  return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
 // ### Datasets

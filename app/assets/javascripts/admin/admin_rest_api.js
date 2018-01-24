@@ -468,14 +468,9 @@ export async function createExplorational(
   typ: "volume" | "skeleton",
   withFallback: boolean,
 ) {
-  const url =
-    typ === "skeleton"
-      ? `/api/datasets/${dataset.name}/createExplorational?typ=skeleton`
-      : `/api/datasets/${dataset.name}/createExplorational?typ=volume&withFallback=${
-          withFallback ? "true" : "false"
-        }`;
+  const url = `/api/datasets/${dataset.name}/createExplorational`;
 
-  return Request.sendJSONReceiveJSON(url, { data: {} });
+  return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
 // ### Datasets

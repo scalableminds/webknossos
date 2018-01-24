@@ -18,7 +18,6 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
     dataset: APIDatasetType,
     typ: "volume" | "skeleton",
     withFallback: boolean,
-    event: Event,
   ) => {
     const annotation = await createExplorational(dataset, typ, withFallback);
     window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
@@ -35,7 +34,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         <Menu.Item key="existing">
           <a
             href="#"
-            onClick={this.createTracing.bind(this, dataset, "volume", true)}
+            onClick={() => this.createTracing(dataset, "volume", true)}
             title="Create volume tracing"
           >
             Use Existing Segmentation Layer
@@ -44,7 +43,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         <Menu.Item key="new">
           <a
             href="#"
-            onClick={this.createTracing.bind(this, dataset, "volume", false)}
+            onClick={() => this.createTracing(dataset, "volume", false)}
             title="Create volume tracing"
           >
             Use a New Segmentation Layer
@@ -89,7 +88,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
             </a>
             <a
               href="#"
-              onClick={this.createTracing.bind(this, dataset, "skeleton", false)}
+              onClick={() => this.createTracing(dataset, "skeleton", false)}
               title="Create skeleton tracing"
             >
               <img

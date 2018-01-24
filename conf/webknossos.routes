@@ -51,8 +51,7 @@ GET           /api/teams/:id/openTasksOverview                                  
 GET           /api/teams/:id/progressOverview                                   controllers.ReportController.projectProgressOverview(id: String)
 
 # DataSets
-POST          /api/datasets/:dataSetName/createExplorational                   controllers.AnnotationController.createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean])
-
+POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String)
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)
@@ -74,24 +73,24 @@ POST          /api/datastores/:name/validateUserAccess                          
 GET           /api/userToken/generate                                           controllers.UserTokenController.generateUserToken
 
 # Annotations
-POST          /api/annotations/upload                                               controllers.AnnotationIOController.upload
-GET           /api/annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
-POST          /api/annotations/:typ/:id/edit                                        controllers.AnnotationController.editAnnotation(typ: String, id: String)
+POST          /api/annotations/upload                                           controllers.AnnotationIOController.upload
+GET           /api/annotations/:typ/:id/duplicate                               controllers.AnnotationController.duplicate(typ: String, id: String)
+POST          /api/annotations/:typ/:id/edit                                    controllers.AnnotationController.editAnnotation(typ: String, id: String)
 
-GET           /api/annotations/:typ/:id/finish                                      controllers.AnnotationController.finish(typ: String, id: String)
-POST          /api/annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
-GET           /api/annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
-GET           /api/annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
-GET           /api/annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
-POST          /api/annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
+GET           /api/annotations/:typ/:id/finish                                  controllers.AnnotationController.finish(typ: String, id: String)
+POST          /api/annotations/:typ/finish                                      controllers.AnnotationController.finishAll(typ: String)
+GET           /api/annotations/:typ/:id/reopen                                  controllers.AnnotationController.reopen(typ: String, id: String)
+GET           /api/annotations/:typ/:id/reset                                   controllers.AnnotationController.reset(typ: String, id: String)
+GET           /api/annotations/:typ/:id/revert                                  controllers.AnnotationController.revert(typ: String, id: String, version: Int)
+POST          /api/annotations/:typ/:id/transfer                                controllers.AnnotationController.transfer(typ: String, id: String)
 
 
 
-GET           /api/annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
-GET           /api/annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)
-DELETE        /api/annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
-GET           /api/annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /api/annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String)
+GET           /api/annotations/:typ/:id/info                                    controllers.AnnotationController.info(typ: String, id: String)
+GET           /api/annotations/:typ/:id/readOnly/info                           controllers.AnnotationController.infoReadOnly(typ: String, id: String)
+DELETE        /api/annotations/:typ/:id                                         controllers.AnnotationController.cancel(typ: String, id: String)
+GET           /api/annotations/:typ/:id/merge/:mergedTyp/:mergedId              controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
+GET           /api/annotations/:typ/:id/download                                controllers.AnnotationIOController.download(typ: String, id: String)
 
 GET           /api/annotations/:typ/:id/loggedTime                              controllers.AnnotationController.loggedTime(typ: String, id: String)
 

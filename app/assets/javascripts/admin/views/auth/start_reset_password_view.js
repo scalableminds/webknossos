@@ -5,13 +5,13 @@ import { Form, Icon, Input, Button, Col, Row } from "antd";
 import Request from "libs/request";
 import messages from "messages";
 import Toast from "libs/toast";
-import type { ReactRouterHistoryType } from "react_router";
+import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 
 type Props = {
   form: Object,
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
 };
 
 class StartResetPasswordView extends React.PureComponent<Props> {

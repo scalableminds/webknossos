@@ -13,7 +13,7 @@ import Store from "oxalis/store";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
-import type { ReactRouterHistoryType } from "react_router";
+import type { RouterHistory } from "react-router-dom";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -24,7 +24,7 @@ type StateProps = {
 
 type Props = {
   isAuthenticated: boolean,
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
 } & StateProps;
 
 class Navbar extends React.PureComponent<Props> {
@@ -189,7 +189,7 @@ class Navbar extends React.PureComponent<Props> {
         </Menu>
         {!isAuthenticated ? (
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
-            <LoginView layout="inline" />
+            <LoginView layout="inline" redirect={this.props.history.location.pathname} />
           </div>
         ) : null}
       </Header>
@@ -201,4 +201,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default withRouter(connect(mapStateToProps)(Navbar));
+export default connect(mapStateToProps)(withRouter(Navbar));

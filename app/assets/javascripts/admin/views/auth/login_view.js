@@ -7,15 +7,16 @@ import messages from "messages";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 import { getActiveUser } from "admin/admin_rest_api";
-import type { ReactRouterHistoryType } from "react_router";
 import Utils from "libs/utils";
+import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
 
 type Props = {
   form: Object,
   layout: "horizontal" | "inline",
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
+  redirect?: string,
 };
 
 class LoginView extends React.PureComponent<Props> {
@@ -27,9 +28,17 @@ class LoginView extends React.PureComponent<Props> {
         await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
         if (!Utils.hasUrlParam("redirectPage")) {
           const user = await getActiveUser();
+
           Store.dispatch(setActiveUserAction(user));
-          this.props.history.push("/dashboard");
+          if (this.props.redirect) {
+            // Use "redirect" prop for internal redirects, e.g. for SecuredRoutes
+            this.props.history.push(this.props.redirect);
+          } else {
+            this.props.history.push("/dashboard");
+          }
         } else {
+          // Use "redirectPage" URL parameter to cause a full page reload and redirecting to external sites
+          // e.g. Discuss
           window.location.replace(Utils.getUrlParamValue("redirectPage"));
         }
       }

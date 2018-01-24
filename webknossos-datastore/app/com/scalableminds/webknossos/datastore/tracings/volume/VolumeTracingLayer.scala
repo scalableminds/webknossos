@@ -45,5 +45,5 @@ case class VolumeTracingLayer(
 
   val mappings: Set[String] = Set.empty
 
-  val resolutions: List[DataResolution] = List(DataResolution.fromResolution(1))
+  val resolutions: List[Point3D] = List(Point3D(1, 1, 1))
 }

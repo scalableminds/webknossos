@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Mappi
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.webknossos.datastore.storage.DataCubeCache
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Empty, Failure, Full}
 
@@ -37,7 +37,7 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   lazy val boundingBox: BoundingBox = primary.boundingBox
 
-  val resolutions: List[DataResolution] = primary.resolutions.union(fallback.resolutions)
+  val resolutions: List[Point3D] = primary.resolutions.union(fallback.resolutions)
 
   val elementClass: ElementClass.Value = primary.elementClass
 

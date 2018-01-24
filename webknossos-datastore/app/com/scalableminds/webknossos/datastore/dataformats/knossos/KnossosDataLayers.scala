@@ -27,7 +27,7 @@ trait KnossosLayer extends DataLayer {
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.boundingBox))
 
-  lazy val resolutions: List[DataResolution] = sections.map(_.resolutions).reduce(_ union _).map(DataResolution.fromResolution)
+  lazy val resolutions: List[Point3D] = sections.map(_.resolutions).reduce(_ union _).map(r => Point3D(r, r, r))
 
   def lengthOfUnderlyingCubes(resolution: Int) = KnossosDataFormat.cubeLength
 

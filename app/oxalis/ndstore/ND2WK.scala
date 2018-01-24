@@ -3,7 +3,7 @@
  */
 package oxalis.ndstore
 
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataResolution, DataSourceId, AbstractDataLayer => NDDataLayer, DataLayerLike => DataLayer, DataSourceLike => DataSource, GenericDataSource => NDDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataSourceId, AbstractDataLayer => NDDataLayer, DataLayerLike => DataLayer, DataSourceLike => DataSource, GenericDataSource => NDDataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}
@@ -65,11 +65,12 @@ object ND2WK extends FoxImplicits {
         bbox <- boundingBoxFromNDChannelSize(nd)
         _ <- nd.resolutions.nonEmpty ?~> Messages("ndstore.invalid.resolutions")
       } yield {
+
         NDDataLayer(
           channel.name,
           channel.channelType,
           bbox,
-          nd.resolutions.map(r => DataResolution.fromResolution(math.pow(2, r).toInt)),
+          nd.resolutions.map(r => Point3D(math.pow(2, r).toInt, math.pow(2, r).toInt, math.pow(2, r).toInt)),
           channel.dataType
         )
       }

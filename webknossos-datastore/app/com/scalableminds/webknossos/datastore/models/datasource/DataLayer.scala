@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, Mappi
 import com.scalableminds.webknossos.datastore.dataformats.knossos.{KnossosDataLayer, KnossosSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import play.api.libs.json._
 
 object DataFormat extends Enumeration {
@@ -59,7 +59,7 @@ trait DataLayerLike {
 
   def boundingBox: BoundingBox
 
-  def resolutions: List[DataResolution]
+  def resolutions: List[Point3D]
 
   def elementClass: ElementClass.Value
 }
@@ -155,7 +155,7 @@ case class AbstractDataLayer(
                               name: String,
                               category: Category.Value,
                               boundingBox: BoundingBox,
-                              resolutions: List[DataResolution],
+                              resolutions: List[Point3D],
                               elementClass: ElementClass.Value
                             ) extends DataLayerLike
 
@@ -172,7 +172,7 @@ case class AbstractSegmentationLayer(
                                       name: String,
                                       category: Category.Value,
                                       boundingBox: BoundingBox,
-                                      resolutions: List[DataResolution],
+                                      resolutions: List[Point3D],
                                       elementClass: ElementClass.Value,
                                       largestSegmentId: Long,
                                       mappings: Set[String]

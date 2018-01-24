@@ -98,20 +98,20 @@ class DataSourceService @Inject()(
 
     // For each resolution, create a set of different DataResolution entries across all layers.
     // Each set should only contain a single element (i.e. all entries before consturcting the set should be identical).
-    val scaleByResolution = dataSource.dataLayers.flatMap(_.resolutions).groupBy(_.resolution).values.map(_.toSet)
+    // val scaleByResolution = dataSource.dataLayers.flatMap(_.resolutions).groupBy(_.resolution).values.map(_.toSet)
 
     // A sorted list of the single (hopefully unique) scale for each resolution across all layer.
-    val orderedScales = scaleByResolution.toList.sortBy(_.head.resolution).map(_.head.scale)
+    // val orderedScales = scaleByResolution.toList.sortBy(_.head.resolution).map(_.head.scale)
     // Check, that each dimension increases monotonically between different resolutions.
-    val scalesProperlyOrdered = orderedScales.foldLeft[Option[Point3D]](Some(Point3D(0, 0, 0))){
-      case (Some(p1), p2) if p1.x <= p2.x && p1.y <= p2.y && p1.z <= p2.z => Some(p2)
-      case _ => None
-    }
+    //val scalesProperlyOrdered = orderedScales.foldLeft[Option[Point3D]](Some(Point3D(0, 0, 0))){
+      //case (Some(p1), p2) if p1.x <= p2.x && p1.y <= p2.y && p1.z <= p2.z => Some(p2)
+      //case _ => None
+    //}
 
     val errors = List(
       Check(dataSource.scale.isValid, "DataSource scale is invalid"),
-      Check(scaleByResolution.forall(_.size == 1), "Different scales for the same resolution in different layers"),
-      Check(scalesProperlyOrdered.isDefined, "Scales do not monotonically increase in all dimensions"),
+      // Check(scaleByResolution.forall(_.size == 1), "Different scales for the same resolution in different layers"),
+      // Check(scalesProperlyOrdered.isDefined, "Scales do not monotonically increase in all dimensions"),
       Check(dataSource.dataLayers.nonEmpty, "DataSource must have at least one dataLayer"),
       Check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "DataSource bounding box must not be empty"),
       Check(dataSource.dataLayers.forall {

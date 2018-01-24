@@ -70,7 +70,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def sqlTest4(id: String) = UserAwareAction.async { implicit request =>
     for {
-      _ <- TaskSQLDAO.updateBoundingBox(ObjectId(id))
+      _ <- TaskSQLDAO.updateBoundingBoxPlainSQL(ObjectId(id))
     } yield {
       Ok("updated bounding box")
     }

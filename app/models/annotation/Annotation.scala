@@ -133,11 +133,21 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   }
 
   def insertOne(a: AnnotationSQL): Fox[Unit] = {
-    val newRow = AnnotationsRow(a._id.toString, a._dataset.id, a._task.map(_.id), a._team.id, a._user.id, java.util.UUID.fromString(a.tracing.id),
+
+    val query = sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+                       values(${a._id.toString}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, '#${java.util.UUID.fromString(a.tracing.id)}',
+                              '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${a.statistics.toString}',
+                              '#${writeArrayTuple(a.tags.toList)}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
+                              ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})"""
+
+    println("QUERY:")
+    query.statements.map(println)
+
+/*    val values = (a._id.toString, a._dataset.id, a._task.map(_.id), a._team.id, a._user.id, java.util.UUID.fromString(a.tracing.id),
                     a.tracing.typ.toString, a.description, a.isPublic, a.name, a.state.toString, a.statistics.toString, writeArrayTuple(a.tags.toList),
-                    a.tracingTime, a.typ.toString, new java.sql.Timestamp(a.created), new java.sql.Timestamp(a.modified), a.isDeleted)
+                    a.tracingTime, a.typ.toString, new java.sql.Timestamp(a.created), new java.sql.Timestamp(a.modified), a.isDeleted)*/
     for {
-      r <- db.run(Annotations += newRow)
+      r <- db.run(query)
     } yield ()
   }
 
@@ -344,6 +354,12 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     }
   }
 
+  override def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    for {
+      annotationSQL <- AnnotationSQLDAO.findOne(ObjectId(id))
+      parsed <- Annotation.fromAnnotationSQL(annotationSQL)
+    } yield parsed
+  }
 
   def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {

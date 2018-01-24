@@ -36,7 +36,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
 
   def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext) = {
     for {
-      annotation <- AnnotationDAO.findOneById(identifier) ?~> "annotation.notFound"
+      annotation <- provideAnnotation(identifier, None)
     } yield {
       AnnotationRestrictions.defaultAnnotationRestrictions(annotation)
     }

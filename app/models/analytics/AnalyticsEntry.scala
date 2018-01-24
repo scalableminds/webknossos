@@ -21,7 +21,7 @@ case class AnalyticsEntrySQL(
                              )
 
 
-object AnnotationSQLDAO extends SQLDAO[AnalyticsEntrySQL, AnalyticsRow, Analytics] {
+object AnalyticsSQLDAO extends SQLDAO[AnalyticsEntrySQL, AnalyticsRow, Analytics] {
   val collection = Analytics
 
   def idColumn(x: Analytics): Rep[String] = x._Id

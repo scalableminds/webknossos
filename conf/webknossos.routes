@@ -7,6 +7,8 @@ POST          /api/analytics/:namespace                                         
 
 GET           /api/sqltest                                                      controllers.AnnotationController.sqlTest
 GET           /api/sqltest2/:id                                                 controllers.AnnotationController.sqlTest2(id: String)
+GET           /api/sqltest3/:id                                                 controllers.AnnotationController.sqlTest3(id: String)
+GET           /api/sqltest4/:id                                                 controllers.AnnotationController.sqlTest4(id: String)
 
 # Authentication
 GET           /api/auth/autoLogin                                               controllers.Authentication.autoLogin

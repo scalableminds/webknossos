@@ -84,6 +84,22 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     }
   }
 
+  def updateTotalInstances(taskId: ObjectId, newTotalInstances: Long): Fox[Unit] = {
+    val q = for { c <- Tasks if c._Id === taskId.id } yield c.totalinstances
+    val updateAction = q.update(newTotalInstances)
+    for {
+      result <- db.run(updateAction)
+    } yield ()
+  }
+
+  def updateBoundingBox(taskId: ObjectId): Fox[Unit] = {
+    val q = for { c <- Tasks if c._Id === taskId.id } yield c.boundingbox
+    val updateAction = q.update(Some("{0,0,0,10,10,10}"))
+    for {
+      result <- db.run(updateAction)
+    } yield ()
+  }
+
 }
 
 

@@ -60,6 +60,22 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
+  def sqlTest3(id: String) = UserAwareAction.async { implicit request =>
+    for {
+      _ <- TaskSQLDAO.updateTotalInstances(ObjectId(id), 78)
+    } yield {
+      Ok("updated total instances")
+    }
+  }
+
+  def sqlTest4(id: String) = UserAwareAction.async { implicit request =>
+    for {
+      _ <- TaskSQLDAO.updateBoundingBox(ObjectId(id))
+    } yield {
+      Ok("updated bounding box")
+    }
+  }
+
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     val annotationId = AnnotationIdentifier(typ, id)
     withAnnotation(annotationId) { annotation =>

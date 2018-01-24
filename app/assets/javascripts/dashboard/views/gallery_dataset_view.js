@@ -130,11 +130,13 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           this.props.datasets.filter(ds => ds.isActive),
           ["name", "owningTeam", "description"],
           this.props.searchQuery,
-        ).map(ds => (
-          <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
-            {this.renderCard(ds)}
-          </Col>
-        ))}
+        )
+          .sort(Utils.localeCompareBy("formattedCreated", false))
+          .map(ds => (
+            <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
+              {this.renderCard(ds)}
+            </Col>
+          ))}
       </Row>
     );
   }

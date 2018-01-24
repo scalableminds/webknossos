@@ -197,20 +197,6 @@ export async function getEditableTeams(): Promise<Array<APITeamType>> {
   return teams;
 }
 
-export async function getRootTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?isRoot=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
-export async function getAdminTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?amIAnAdmin=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
 export async function createTeam(newTeam: NewTeamType): Promise<APITeamType> {
   return Request.sendJSONReceiveJSON("/api/teams", {
     data: newTeam,

@@ -37,10 +37,9 @@ export type APIDatasetType = {
   +sourceType: "wkw" | "knossos",
 };
 
-export type APIRoleType = { +name: string };
-
 export type APITeamMembershipType = {
   +id: string,
+  +name: string,
   +isSuperVisor: boolean,
 };
 

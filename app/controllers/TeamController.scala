@@ -23,9 +23,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def list = SecuredAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: Team) =>
-        el.isEditableBy(request.identity) == value),
-      Filter("amIAnAdmin", (value: Boolean, el: Team) =>
-        request.identity.isSuperVisorOf(el._id) == value)
+        el.isEditableBy(request.identity) == value)
     ) { filter =>
       for {
         allTeams <- TeamDAO.findAll

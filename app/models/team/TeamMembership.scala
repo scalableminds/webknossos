@@ -1,10 +1,14 @@
 package models.team
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, JsonFormatHelper}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, JsonFormatHelper, GlobalAccessContext}
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONObjectIDFormat
 import play.api.libs.functional.syntax._
+import models.team.TeamDAO
+
+import scala.concurrent.Future
+import com.scalableminds.util.tools.Fox
 
 /**
   * Company: scalableminds
@@ -28,11 +32,16 @@ object TeamMembership {
 
   implicit val teamMembershipFormat = Json.format[TeamMembership]
 
-  def teamMembershipPublicWrites(teamMembership: TeamMembership): JsObject =
-      Json.obj(
-        "id" -> teamMembership._id.stringify,
-        "isSuperVisor" -> teamMembership.isSuperVisor
-      )
+  def teamMembershipPublicWrites(teamMembership: TeamMembership): Fox[JsObject] =
+    for {
+      team <- TeamDAO.findOneById(teamMembership._id)(GlobalAccessContext)
+    } yield {
+        Json.obj(
+          "id" -> teamMembership._id.stringify,
+          "isSuperVisor" -> teamMembership.isSuperVisor,
+          "name" -> team.name
+        )
+    }
 
   def teamMembershipPublicReads(): Reads[TeamMembership] =
     ((__ \ "id").read[String](JsonFormatHelper.StringObjectIdReads("id")) and

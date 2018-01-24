@@ -1,8 +1,7 @@
 // @flow
 import * as React from "react";
 import { Modal, Input, Button } from "antd";
-import { getRootTeams, createTeam } from "admin/admin_rest_api";
-import type { APITeamType } from "admin/api_flow_types";
+import { createTeam } from "admin/admin_rest_api";
 
 type Props = {
   onOk: Function,

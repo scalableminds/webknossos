@@ -18,7 +18,7 @@ import {
 import {
   getActiveDatasets,
   getProjects,
-  getAdminTeams,
+  getEditableTeams,
   getScripts,
   getTaskTypes,
   getTask,
@@ -121,7 +121,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     const [datasets, projects, teams, scripts, taskTypes] = await Promise.all([
       getActiveDatasets(),
       getProjects(),
-      getAdminTeams(),
+      getEditableTeams(),
       getScripts(),
       getTaskTypes(),
     ]);

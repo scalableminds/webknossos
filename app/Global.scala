@@ -53,7 +53,7 @@ object Global extends GlobalSettings with LazyLogging{
   }
 
   override def onRouteRequest(request: RequestHeader): Option[Handler] = {
-    if (request.uri.matches("^(/datasets/|/api/|/data/|/assets/).*$")) {
+    if (request.uri.matches("^(/api/|/data/|/assets/).*$")) {
       super.onRouteRequest(request)
     } else {
       Some(Action {Ok(views.html.main())})

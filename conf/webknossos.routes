@@ -51,10 +51,7 @@ GET           /api/teams/:id/openTasksOverview                                  
 GET           /api/teams/:id/progressOverview                                   controllers.ReportController.projectProgressOverview(id: String)
 
 # DataSets
-GET           /datasets/:dataSetName/view                                       controllers.DataSetController.empty(dataSetName: String)
-GET           /datasets/:dataSetName/edit                                       controllers.DataSetController.empty(dataSetName: String)
 POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String)
-
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
 GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)

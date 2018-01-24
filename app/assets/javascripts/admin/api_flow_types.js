@@ -192,22 +192,7 @@ export type APIAnnotationType = {
   +user?: APIUserType,
 };
 
-export type APITaskWithAnnotationType = {
-  +id: string,
-  +team: string,
-  +formattedHash: string,
-  +projectName: string,
-  +type: APITaskTypeType,
-  +dataSet: string,
-  +editPosition: Vector3,
-  +editRotation: Vector3,
-  +boundingBox: null,
-  +neededExperience: ExperienceMapType,
-  +created: string,
-  +status: TaskStatusType,
-  +script: null,
-  +tracingTime: null,
-  +creationInfo: null,
+export type APITaskWithAnnotationType = APITaskType & {
   +annotation: APIAnnotationType,
 };
 

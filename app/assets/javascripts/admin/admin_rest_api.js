@@ -1,6 +1,7 @@
 // @flow
 import Request from "libs/request";
 import Toast from "libs/toast";
+import type { MessageType } from "libs/toast";
 import Utils from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
@@ -24,6 +25,7 @@ import type {
   APITimeTrackingType,
   APIProjectProgressReportType,
   APIOpenTasksReportType,
+  APITracingType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/views/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
@@ -140,7 +142,6 @@ export async function deleteScript(scriptId: string): Promise<void> {
 
 export async function createScript(script: APIScriptType): Promise<APIScriptType> {
   return Request.sendJSONReceiveJSON("/api/scripts", {
-    method: "POST",
     data: script,
   });
 }
@@ -177,7 +178,6 @@ export async function createTaskType(
   taskType: $Diff<APITaskTypeType, { id: string }>,
 ): Promise<APITaskTypeType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
-    method: "POST",
     data: taskType,
   });
 }
@@ -268,7 +268,6 @@ export async function createProject(project: APIProjectCreatorType): Promise<API
   });
 
   return Request.sendJSONReceiveJSON("/api/projects", {
-    method: "POST",
     data: transformedProject,
   });
 }
@@ -298,6 +297,10 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
 }
 
 // ### Tasks
+export async function requestTask(): Promise<APIAnnotationType> {
+  return Request.receiveJSON("/api/user/tasks/request");
+}
+
 export async function getAnnotationsForTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
 }
@@ -372,22 +375,76 @@ export async function updateTask(taskId: string, task: NewTaskType): Promise<API
   return transformTask(updatedTask);
 }
 
+export async function finishTask(annotationId: string): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/Task/${annotationId}/finish`);
+}
+
+export async function transferTask(
+  annotationId: string,
+  userId: string,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON(`/api/annotations/Task/${annotationId}/transfer`, {
+    data: {
+      userId,
+    },
+  });
+}
+
 // ### Annotations
-export async function reOpenAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/reopen`);
+export async function reOpenAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reopen`);
 }
 
-export async function finishAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/finish`);
+type EditableAnnotationType = {
+  name: string,
+  description: string,
+  isPublic: boolean,
+  tags: Array<string>,
+};
+
+export async function editAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+  data: $Shape<EditableAnnotationType>,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
+    data,
+  });
 }
 
-export async function resetAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/reset`);
+export async function finishAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/finish`);
 }
 
-export async function deleteAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}`, {
+export async function resetAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reset`);
+}
+
+export async function deleteAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}`, {
     method: "DELETE",
+  });
+}
+
+export async function finishAllAnnotations(
+  selectedAnnotationIds: Array<string>,
+): Promise<{ messages: Array<MessageType> }> {
+  return Request.sendJSONReceiveJSON("/api/annotations/Explorational/finish", {
+    data: {
+      annotations: selectedAnnotationIds,
+    },
   });
 }
 
@@ -395,7 +452,7 @@ export async function copyAnnotationToUserAccount(
   annotationId: string,
   tracingType: string,
 ): Promise<APIAnnotationType> {
-  const url = `/annotations/${tracingType}/${annotationId}/duplicate`;
+  const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url);
 }
 
@@ -406,8 +463,18 @@ export async function getAnnotationInformation(
   // Include /readOnly part whenever it is in the pathname
   const isReadOnly = location.pathname.endsWith("/readOnly");
   const readOnlyPart = isReadOnly ? "readOnly/" : "";
-  const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+  const infoUrl = `/api/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
   return Request.receiveJSON(infoUrl);
+}
+
+export async function createExplorational(
+  dataset: APIDatasetType,
+  typ: "volume" | "skeleton",
+  withFallback: boolean,
+) {
+  const url = `/api/datasets/${dataset.name}/createExplorational`;
+
+  return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
 // ### Datasets

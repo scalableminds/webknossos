@@ -3,8 +3,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Spin, Modal, Button, Select } from "antd";
-import Request from "libs/request";
-import { getUsers } from "admin/admin_rest_api";
+import { getUsers, transferTask } from "admin/admin_rest_api";
 import type { APIUserType, APIAnnotationType } from "admin/api_flow_types";
 
 const { Option } = Select;
@@ -47,16 +46,12 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
   }
 
   async transfer() {
-    if (!this.props.annotationId) {
+    const annotationId = this.props.annotationId;
+    if (!annotationId) {
       throw new Error("No annotation id provided");
     }
-    const url = `/annotations/Task/${this.props.annotationId}/transfer`;
     this.setState({ isLoading: true });
-    const updatedAnnotation = await Request.sendJSONReceiveJSON(url, {
-      data: {
-        userId: this.state.currentUserIdValue,
-      },
-    });
+    const updatedAnnotation = await transferTask(annotationId, this.state.currentUserIdValue);
     this.setState({ isLoading: false });
     this.props.onChange(updatedAnnotation);
   }

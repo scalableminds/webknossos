@@ -43,7 +43,9 @@ module.exports = function(env = {}) {
         parallel: true,
         sourceMap: true,
         uglifyOptions: {
-          compress: false,
+          compress: {
+            inline: 1,
+          },
         },
       }),
     );

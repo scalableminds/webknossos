@@ -48,8 +48,9 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
     }.flatten
   }
 
-  def parseStructTuple(literal: String): List[String] = {
-    List(literal)
+  def writeArrayTuple(elements: List[String]): String = {
+    val commaSeparated = elements.mkString(",")
+    s"{$commaSeparated}"
   }
 
   def parseArrayTuple(literal: String): List[String] = {

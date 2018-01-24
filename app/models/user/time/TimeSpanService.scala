@@ -204,7 +204,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     def receive = {
       case TrackTime(timestamps, _user, _annotation, ctx) =>
         // Only if the annotation belongs to the user, we are going to log the time on the annotation
-        val annotation = if (_annotation._user.contains(_user)) Some(_annotation) else None
+        val annotation = if (_annotation._user == _user) Some(_annotation) else None
         val start = timestamps.head
 
         var current = lastUserActivity.get(_user).flatMap(last => {

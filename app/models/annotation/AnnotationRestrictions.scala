@@ -46,21 +46,21 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         annotation.isPublic || user.exists {
           user =>
-            annotation._user.contains(user._id) || user.roleInTeam(annotation.team).contains(Role.Admin)
+            annotation._user == user._id || user.roleInTeam(annotation.team).contains(Role.Admin)
         }
       }
 
       override def allowUpdate(user: Option[User]) = {
         user.exists {
           user =>
-            annotation._user.contains(user._id) && !(annotation.state == Finished)
+            annotation._user == user._id && !(annotation.state == Finished)
         }
       }
 
       override def allowFinish(user: Option[User]) = {
         user.exists {
           user =>
-            (annotation._user.contains(user._id) || user.roleInTeam(annotation.team).contains(Role.Admin)) && !(annotation.state == Finished)
+            (annotation._user == user._id || user.roleInTeam(annotation.team).contains(Role.Admin)) && !(annotation.state == Finished)
         }
       }
     }

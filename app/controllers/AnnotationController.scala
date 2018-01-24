@@ -142,7 +142,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     // Reopening an annotation is allowed if either the user owns the annotation or the user is allowed to administrate
     // the team the annotation belongs to
     def isReopenAllowed(user: User, annotation: Annotation) = {
-       annotation._user.contains(user._id) || user.adminTeams.exists(_.team == annotation.team)
+       annotation._user == user._id || user.adminTeams.exists(_.team == annotation.team)
     }
 
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
@@ -163,13 +163,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- AnnotationService.createExplorationalFor(request.identity, dataSet, contentType, withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
     } yield {
       Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
-    }
-  }
-
-  def isUpdateable(Annotation: Annotation) = {
-    Annotation match {
-      case a: Annotation => Some(a)
-      case _             => None
     }
   }
 

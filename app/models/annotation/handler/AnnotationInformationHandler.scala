@@ -1,10 +1,8 @@
 package models.annotation.handler
 
-import oxalis.security.WebknossosSilhouette.{SecuredRequest}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
-import models.basics.Implicits._
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 

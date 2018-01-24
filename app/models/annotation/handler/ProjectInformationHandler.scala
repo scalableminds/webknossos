@@ -14,7 +14,7 @@ import models.annotation.AnnotationState._
 
 object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  def provideAnnotation(projectId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(projectId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
   {
     for {
       project <- ProjectDAO.findOneById(projectId) ?~> "project.notFound"
@@ -23,8 +23,9 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "project.noAnnotations"
+      user <- userOpt ?~> "user.notAuthorised"
       dataSetName = finishedAnnotations.head.dataSetName
-      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.id), persistTracing=false, user.map(_._id),
+      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.id), persistTracing=false, user._id,
         dataSetName, project.team, AnnotationType.CompoundProject, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
   }

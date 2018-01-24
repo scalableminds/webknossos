@@ -11,9 +11,9 @@ import com.scalableminds.webknossos.datastore.tracings.{TracingReference, Tracin
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
-import models.basics._
+import models.basics.SecuredBaseDAO
 import models.binary.{DataSetDAO, DataSetSQLDAO}
-import models.task._
+import models.task.{TaskDAO, TaskSQLDAO, TaskTypeSQLDAO, _}
 import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import org.joda.time.format.DateTimeFormat
@@ -26,6 +26,7 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
+import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
 
@@ -51,7 +52,38 @@ case class AnnotationSQL(
                           isDeleted: Boolean = false
                         )
 
-object AnnotationSQL { implicit val jsonFormat = Json.format[AnnotationSQL] }
+
+object AnnotationSQL extends FoxImplicits {
+  implicit val jsonFormat = Json.format[AnnotationSQL]
+
+  def fromAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
+    for {
+      dataSet <- DataSetSQLDAO.findOneByName(a.dataSetName) ?~> Messages("dataSet.notFound")
+      team <- TeamSQLDAO.findOneByName(a.team) ?~> Messages("team.notFound")
+      typ <- AnnotationTypeSQL.fromString(a.typ)
+    } yield {
+      AnnotationSQL(
+        ObjectId.fromBson(a._id),
+        dataSet._id,
+        a._task.map(ObjectId.fromBson),
+        team._id,
+        ObjectId.fromBson(a._user),
+        a.tracingReference,
+        a.description,
+        a.isPublic,
+        a.name,
+        a.state,
+        a.statistics.getOrElse(Json.obj()),
+        a.tags,
+        a.tracingTime,
+        typ,
+        a.createdTimestamp,
+        a.modifiedTimestamp,
+        !a.isActive
+      )
+    }
+  }
+}
 
 object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotations] {
   val collection = Annotations
@@ -61,9 +93,9 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def parse(r: AnnotationsRow): Fox[AnnotationSQL] =
     for {
-      state <- AnnotationState.fromString(r.state)
-      tracingTyp <- TracingType.fromString(r.tracingTyp)
-      annotationType <- AnnotationTypeSQL.fromString(r.typ)
+      state <- AnnotationState.fromString(r.state).toFox
+      tracingTyp <- TracingType.fromString(r.tracingTyp).toFox
+      typ <- AnnotationTypeSQL.fromString(r.typ).toFox
     } yield {
       AnnotationSQL(
         ObjectId(r._Id),
@@ -79,7 +111,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
         Json.parse(r.statistics).as[JsObject],
         parseArrayTuple(r.tags).toSet,
         r.tracingtime,
-        annotationType,
+        typ,
         r.created.getTime,
         r.modified.getTime,
         r.isdeleted
@@ -99,13 +131,23 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       parsed
     }
   }
+
+  def insertOne(a: AnnotationSQL): Fox[Unit] = {
+    val newRow = AnnotationsRow(a._id.toString, a._dataset.id, a._task.map(_.id), a._team.id, a._user.id, java.util.UUID.fromString(a.tracing.id),
+                    a.tracing.typ.toString, a.description, a.isPublic, a.name, a.state.toString, a.statistics.toString, writeArrayTuple(a.tags.toList),
+                    a.tracingTime, a.typ.toString, new java.sql.Timestamp(a.created), new java.sql.Timestamp(a.modified), a.isDeleted)
+    for {
+      r <- db.run(Annotations += newRow)
+    } yield ()
+  }
+
 }
 
 
 
 
 case class Annotation(
-                       _user: Option[BSONObjectID],
+                       _user: BSONObjectID,
                        tracingReference: TracingReference,
                        dataSetName: String,
                        team: String,
@@ -138,7 +180,7 @@ case class Annotation(
   lazy val id = _id.stringify
 
   def user: Fox[User] =
-    _user.toFox.flatMap(u => UserService.findOneById(u.stringify, useCache = true)(GlobalAccessContext))
+    UserService.findOneById(_user.stringify, useCache = true)(GlobalAccessContext)
 
   def task: Fox[Task] =
     _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
@@ -220,9 +262,10 @@ object Annotation extends FoxImplicits {
       settings <- findSettingsFor(s)
       name: Option[String] = if (s.name.isEmpty) None else Some(s.name)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
+      userIdBson <- s._user.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._user.toString)
     } yield {
       Annotation(
-        s._user.toBSONObjectId,
+        userIdBson,
         s.tracing,
         dataset.name,
         team.name,
@@ -301,7 +344,15 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     }
   }
 
+
   def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    for {
+      annotationSQL <- AnnotationSQL.fromAnnotation(annotation)
+      _ <- AnnotationSQLDAO.insertOne(annotationSQL)
+    } yield annotation
+  }
+
+/*  def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     update(
       Json.obj("_id" -> annotation._id),
       Json.obj(
@@ -311,7 +362,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       upsert = true).map { _ =>
       annotation
     }
-  }
+  }*/
 
 
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) =

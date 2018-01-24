@@ -81,7 +81,7 @@ object AnnotationService
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
       tracing <- createTracing(dataSource)
       annotation = Annotation(
-        Some(user._id),
+        user._id,
         tracing,
         dataSet.name,
         selectSuitableTeam(user, dataSet),
@@ -156,7 +156,7 @@ object AnnotationService
       for {
         newTracing <- tracingFromBase(annotation) ?~> "Failed to create tracing from base"
         newAnnotation = annotation.copy(
-          _user = Some(user._id),
+          _user = user._id,
           tracingReference = newTracing,
           state = Active,
           typ = AnnotationType.Task,
@@ -200,7 +200,7 @@ object AnnotationService
       task <- taskFox
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
-      _ <- Annotation(Some(userId), tracingReference, dataSetName, task.team, taskType.settings,
+      _ <- Annotation(userId, tracingReference, dataSetName, task.team, taskType.settings,
           typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
@@ -222,7 +222,7 @@ object AnnotationService
                 name: Option[String],
                 description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     val annotation = Annotation(
-      Some(user._id),
+      user._id,
       tracingReference,
       dataSet.name,
       team = selectSuitableTeam(user, dataSet),

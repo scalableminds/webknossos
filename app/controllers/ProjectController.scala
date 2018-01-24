@@ -131,7 +131,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       for {
         tasks <- TaskDAO.findAllByProject(projectName)
         annotations <- AnnotationDAO.findAllUnfinishedByTaskIds(tasks.map(_._id))
-        userIds = annotations.map(_._user).flatten
+        userIds = annotations.map(_._user)
         users <- UserDAO.findAllByIds(userIds)
       } yield {
         Ok(Json.toJson(users.map(_.email)))

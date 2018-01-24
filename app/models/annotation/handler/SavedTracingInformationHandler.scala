@@ -26,7 +26,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
       Future.successful(a.id)
   }
 
-  def provideAnnotation(annotationId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  def provideAnnotation(annotationId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
       annotation <- AnnotationDAO.findOneById(annotationId) ?~> "annotation.notFound"
     } yield {
@@ -36,7 +36,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
 
   def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext) = {
     for {
-      annotation <- provideAnnotation(identifier, None)
+      annotation <- AnnotationDAO.findOneById(identifier) ?~> "annotation.notFound"
     } yield {
       AnnotationRestrictions.defaultAnnotationRestrictions(annotation)
     }

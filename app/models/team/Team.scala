@@ -15,6 +15,7 @@ import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import reactivemongo.play.json.BSONFormats._
 import slick.lifted.Rep
+import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.Future
@@ -36,7 +37,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   def idColumn(x: Teams): Rep[String] = x._Id
   def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
 
-  def parse(r: TeamsRow): Fox[TeamSQL] =
+  def parse(r: TeamsRow): Fox[TeamSQL] = {
     Fox.successful(TeamSQL(
       ObjectId(r._Id),
       ObjectId(r._Owner),
@@ -46,6 +47,16 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
       r.created.getTime,
       r.isdeleted
     ))
+  }
+
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
+    db.run(Teams.filter(r => notdel(r) && r.name === name).result.headOption).map {
+      case Some(r) =>
+        parse(r) ?~> ("sql: could not parse database row for name" + name)
+      case _ =>
+        Fox.failure("sql: could not find team by name " + name)
+    }.flatten
+  }
 }
 
 

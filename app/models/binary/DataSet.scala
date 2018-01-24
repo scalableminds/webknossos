@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.basics._
 import models.configuration.DataSetConfiguration
 import models.task.TaskSQLDAO.parseArrayTuple
+import models.team.TeamSQLDAO.{db, notdel, parse}
 import models.team.{TeamSQL, TeamSQLDAO}
 import models.user.User
 import net.liftweb.common.Full
@@ -70,6 +71,15 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
         r.isdeleted
       )
     }
+  }
+
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSetSQL] = {
+    db.run(Datasets.filter(r => notdel(r) && r.name === name).result.headOption).map {
+      case Some(r) =>
+        parse(r) ?~> ("sql: could not parse database row for name" + name)
+      case _ =>
+        Fox.failure("sql: could not find dataset by name " + name)
+    }.flatten
   }
 }
 

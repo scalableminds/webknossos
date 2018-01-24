@@ -7,12 +7,12 @@ import Request from "libs/request";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 
-test("Load active datasets", async t => {
+test("Load all datastores", async t => {
   const datastores = await api.getDatastores();
   t.snapshot(datastores, { id: "misc-datastores" });
 });
 
-test("Load active datasets", async t => {
+test("Load active user", async t => {
   const activeUser = await api.getActiveUser();
   t.snapshot(activeUser, { id: "misc-activeUser" });
 });

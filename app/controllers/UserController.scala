@@ -171,6 +171,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     ((__ \ "firstName").read[String] and
       (__ \ "lastName").read[String] and
       (__ \ "isActive").read[Boolean] and
+      (__ \ "isAdmin").read[Boolean] and
       (__ \ "teams").read[List[TeamMembership]](Reads.list(TeamMembership.teamMembershipPublicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
@@ -186,7 +187,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def update(userId: String) = SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
-      case (firstName, lastName, activated, assignedMemberships, experiences) =>
+      case (firstName, lastName, isActive, isAdmin, assignedMemberships, experiences) =>
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
@@ -198,7 +199,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, activated, updatedTeams, trimmedExperiences)
+          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, isActive, isAdmin, updatedTeams, trimmedExperiences)
         } yield {
           Ok(User.userPublicWrites(request.identity).writes(updatedUser))
         }

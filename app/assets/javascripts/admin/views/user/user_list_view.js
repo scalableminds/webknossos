@@ -3,8 +3,9 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import TeamRoleModalView from "admin/views/user/team_role_modal_view";
 import ExperienceModalView from "admin/views/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
@@ -12,15 +13,23 @@ import Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "prop-types";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import messages from "messages";
+
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 const { Search } = Input;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   history: RouterHistory,
-};
+} & StateProps;
 
 type State = {
   isLoading: boolean,
@@ -113,6 +122,24 @@ class UserListView extends React.PureComponent<Props, State> {
     });
   };
 
+  grantAdminRights = async () => {
+    if (this.props.activeUser.isAdmin) {
+      const newUserPromises = this.state.users.map(user => {
+        if (this.state.selectedUserIds.includes(user.id)) {
+          const newUser = Object.assign({}, user, { isAdmin: true });
+
+          return updateUser(newUser);
+        }
+
+        return Promise.resolve(user);
+      });
+
+      this.setState({
+        users: await Promise.all(newUserPromises),
+      });
+    }
+  };
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -155,6 +182,24 @@ class UserListView extends React.PureComponent<Props, State> {
         >
           Change Experience
         </Button>
+        {this.props.activeUser.isAdmin ? (
+          <Button
+            onClick={() =>
+              Modal.confirm({
+                title: messages["users.grant_admin_rights_title"],
+                content: messages["users.grant_admin_rights"]({
+                  numUsers: this.state.selectedUserIds.length,
+                }),
+                onOk: this.grantAdminRights,
+              })
+            }
+            icon="rocket"
+            disabled={!hasRowsSelected}
+            style={marginRight}
+          >
+            Grant Admin Rights
+          </Button>
+        ) : null}
         {activationFilterWarning}
         <Search
           style={{ width: 200, float: "right" }}
@@ -297,4 +342,8 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(UserListView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(withRouter(UserListView));

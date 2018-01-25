@@ -180,11 +180,12 @@ object UserDAO extends SecuredBaseDAO[User] {
 
   def findByIdQ(id: BSONObjectID) = Json.obj("_id" -> id)
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, activated: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
     findAndModify(findByIdQ(_user), Json.obj("$set" -> Json.obj(
       "firstName" -> firstName,
       "lastName" -> lastName,
       "isActive" -> activated,
+      "isAdmin" -> isAdmin,
       "teams" -> teams,
       "experiences" -> experiences)), returnNew = true)
 

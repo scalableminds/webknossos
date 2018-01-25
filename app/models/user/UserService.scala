@@ -78,13 +78,14 @@ object UserService extends FoxImplicits with IdentityService[User] {
               firstName: String,
               lastName: String,
               activated: Boolean,
+              isAdmin: Boolean,
               teams: List[TeamMembership],
               experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (!user.isActive && activated) {
       Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
     }
-    UserDAO.update(user._id, firstName, lastName, activated, teams, experiences).map {
+    UserDAO.update(user._id, firstName, lastName, activated, isAdmin, teams, experiences).map {
       result =>
         UserCache.invalidateUser(user.id)
         result

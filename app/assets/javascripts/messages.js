@@ -1,4 +1,6 @@
 // @flow
+import _ from "lodash";
+
 export default {
   yes: "Yes",
   no: "No",
@@ -105,4 +107,8 @@ In order to restore the current window, a reload is necessary.`,
   "nml.different_dataset": "Imported NML was originally for a different dataset.",
   "users.is_admin":
     "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
+  "users.grant_admin_rights_title": "Do you really want to grant admin rights?",
+  "users.grant_admin_rights": _.template(
+    "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
+  ),
 };

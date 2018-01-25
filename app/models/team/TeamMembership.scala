@@ -16,7 +16,7 @@ import com.scalableminds.util.tools.Fox
   * Date: 14.07.13
   * Time: 16:49
   */
-case class TeamMembership(_id: BSONObjectID = BSONObjectID.generate, isSuperVisor: Boolean) {
+case class TeamMembership(_id: BSONObjectID = BSONObjectID.generate, name: String, isSuperVisor: Boolean) {
 
   override def toString =
     if (isSuperVisor)
@@ -32,19 +32,16 @@ object TeamMembership {
 
   implicit val teamMembershipFormat = Json.format[TeamMembership]
 
-  def teamMembershipPublicWrites(teamMembership: TeamMembership): Fox[JsObject] =
-    for {
-      team <- TeamDAO.findOneById(teamMembership._id)(GlobalAccessContext)
-    } yield {
-        Json.obj(
-          "id" -> teamMembership._id.stringify,
-          "isSuperVisor" -> teamMembership.isSuperVisor,
-          "name" -> team.name
-        )
-    }
+  def teamMembershipPublicWrites(teamMembership: TeamMembership): JsObject =
+    Json.obj(
+      "id" -> teamMembership._id.stringify,
+      "isSuperVisor" -> teamMembership.isSuperVisor,
+      "name" -> teamMembership.name
+    )
 
   def teamMembershipPublicReads(): Reads[TeamMembership] =
     ((__ \ "id").read[String](JsonFormatHelper.StringObjectIdReads("id")) and
+      (__ \ "name").read[String] and
       (__ \ "isSuperVisor").read[Boolean]
-      ) ((id, isSuperVisor) => TeamMembership(BSONObjectID(id), isSuperVisor))
+      ) ((id, name, isSuperVisor) => TeamMembership(BSONObjectID(id), name, isSuperVisor))
 }

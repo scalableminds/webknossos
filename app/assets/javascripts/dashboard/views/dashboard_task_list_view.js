@@ -145,10 +145,12 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
   renderActions = (task: APITaskWithAnnotationType) => {
     const annotation = task.annotation;
-    const isAdmin = this.props.activeUser.teams
-      .filter(team => team.role.name === "admin")
-      .map(team => team.team)
-      .includes(task.team);
+    const isAdmin =
+      this.props.activeUser.isAdmin ||
+      this.props.activeUser.teams
+        .filter(team => team.isSuperVisor)
+        .map(team => team.name)
+        .includes(task.team);
 
     // TODO use React fragments <> instead of spans / divs
     const label = this.props.isAdminView ? (

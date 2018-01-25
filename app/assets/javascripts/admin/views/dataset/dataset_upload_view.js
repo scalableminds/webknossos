@@ -6,7 +6,7 @@ import { Form, Input, Select, Button, Card, Spin, Upload, Icon } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import Utils from "libs/utils";
-import { getTeams, getDatastores, addDataset } from "admin/admin_rest_api";
+import { getEditableTeams, getDatastores, addDataset } from "admin/admin_rest_api";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import type { APITeamType, APIDatastoreType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -43,14 +43,11 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
 
   async fetchData() {
     const datastores = await getDatastores();
-    const teams = await getTeams();
-    const currentUserAdminTeams = this.props.activeUser.teams
-      .filter(team => team.role.name === "admin")
-      .map(team => team.team);
+    const teams = await getEditableTeams();
 
     this.setState({
       datastores,
-      teams: teams.filter(team => currentUserAdminTeams.includes(team.name)),
+      teams,
     });
   }
 

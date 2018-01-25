@@ -176,7 +176,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {
     Fox.combined(teams.map {
-      case (TeamMembership(_, true), team) if (!team.couldBeAdministratedBy(user) ) => //&& !team.parent.exists(p => teams.exists(_._1.team == p))) =>
+      case (TeamMembership(_, _, true), team) if (!team.couldBeAdministratedBy(user) ) => //&& !team.parent.exists(p => teams.exists(_._1.team == p))) =>
         Fox.failure(Messages("team.admin.notPossibleBy", team.name, user.name))
       case (_, team) =>
         Fox.successful(team)

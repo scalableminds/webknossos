@@ -2,7 +2,7 @@
 import React from "react";
 import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card } from "antd";
-import { getTeams, addNDStoreDataset } from "admin/admin_rest_api";
+import { getEditableTeams, addNDStoreDataset } from "admin/admin_rest_api";
 import Toast from "libs/toast";
 import messages from "messages";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -38,13 +38,9 @@ class DatasetRemoteView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const teams = await getTeams();
-    const currentUserAdminTeams = this.props.activeUser.teams
-      .filter(team => team.role.name === "admin")
-      .map(team => team.team);
-
+    const teams = await getEditableTeams();
     this.setState({
-      teams: teams.filter(team => currentUserAdminTeams.includes(team.name)),
+      teams,
     });
   }
 

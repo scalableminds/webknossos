@@ -31,7 +31,7 @@ export default class EdgeCollection {
     // todo: find out whether the edge already exists?
     const newOutgoingEdges = mutate ? this.outMap : this.outMap.clone();
     const newIngoingEdges = mutate ? this.inMap : this.inMap.clone();
-    let newEdgeCount = this.edgeCount + edges.length;
+    const newEdgeCount = this.edgeCount + edges.length;
 
     for (const edge of edges) {
       const outgoingEdges = this.outMap.has(edge.source) ? this.outMap.get(edge.source) : [];

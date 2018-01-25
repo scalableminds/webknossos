@@ -35,7 +35,6 @@ import type {
   TreeType,
   TreeMapType,
   NodeMapType,
-  EdgeType,
   FlycamType,
 } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";

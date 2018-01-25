@@ -11,7 +11,6 @@ import type {
   OxalisState,
   SkeletonTracingType,
   NodeMapType,
-  EdgeType,
   TreeType,
   TreeMapType,
   TemporaryMutableTreeMapType,

@@ -4,8 +4,6 @@ import _ from "lodash";
 import type {
   TracingType,
   SkeletonTracingType,
-  NodeType,
-  EdgeType,
   TreeType,
   TreeMapType,
   BranchPointType,
@@ -47,10 +45,6 @@ export function getActiveTree(tracing: TracingType) {
     }
     return Maybe.Nothing();
   });
-}
-
-export function getEdges(tree: TreeType, node: NodeType) {
-  return Array.from(tree.edges.all()).filter(e => e.source === node.id || e.target === node.id);
 }
 
 export function getActiveNodeFromTree(tracing: TracingType, tree: TreeType) {
@@ -144,7 +138,7 @@ export function getStats(tracing: TracingType): Maybe<SkeletonTracingStatsType> 
     .map(trees => ({
       treeCount: _.size(trees),
       nodeCount: _.reduce(trees, (sum, tree) => sum + tree.nodes.size(), 0),
-      edgeCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.edges), 0),
+      edgeCount: _.reduce(trees, (sum, tree) => sum + tree.edges.size(), 0),
       branchPointCount: _.reduce(trees, (sum, tree) => sum + _.size(tree.branchPoints), 0),
     }));
 }

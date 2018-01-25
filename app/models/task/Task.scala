@@ -266,7 +266,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
 
   override def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext) =
     for {
-      taskSQL <- TaskSQLDAO.findOne(ObjectId.fromBson(id))
+      taskSQL <- TaskSQLDAO.findOne(ObjectId.fromBsonId(id))
       parsed <- Task.fromTaskSQL(taskSQL)
     } yield {
       parsed

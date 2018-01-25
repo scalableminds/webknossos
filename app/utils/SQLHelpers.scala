@@ -20,7 +20,7 @@ case class ObjectId(id: String) {
 
 object ObjectId {
   implicit val jsonFormat = Json.format[ObjectId]
-  def fromBson(bson: BSONObjectID) = ObjectId(bson.stringify)
+  def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
 }
 
 object SQLClient {
@@ -48,6 +48,21 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
     }.flatten
   }
 
+  def setStringCol(id: ObjectId, column: (X) => Rep[String], newValue: String): Fox[Unit] = {
+    val q = for {row <- collection if (notdel(row) && idColumn(row) == id.id)} yield column(row)
+    for {_ <- db.run(q.update(newValue))} yield ()
+  }
+
+  def setIntCol(id: ObjectId, column: (X) => Rep[Int], newValue: Int): Fox[Unit] = {
+    val q = for {row <- collection if (notdel(row) && idColumn(row) == id.id)} yield column(row)
+    for {_ <- db.run(q.update(newValue))} yield ()
+  }
+
+  def setBooleanCol(id: ObjectId, column: (X) => Rep[Boolean], newValue: Boolean): Fox[Unit] = {
+    val q = for {row <- collection if (notdel(row) && idColumn(row) == id.id)} yield column(row)
+    for {_ <- db.run(q.update(newValue))} yield ()
+  }
+
   def writeArrayTuple(elements: List[String]): String = {
     val commaSeparated = elements.mkString(",")
     s"{$commaSeparated}"
@@ -59,4 +74,6 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
     if (trimmed.isEmpty) List()
     else trimmed.split(",", -1).toList
   }
+
+  def sanitize(aString: String) = aString // TODO: prevent sql injection
 }

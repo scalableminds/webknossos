@@ -81,7 +81,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   def handleTracingUpdateReport(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       tracingId <- (request.body \ "tracingId").asOpt[String].toFox
-      annotation: Annotation <- AnnotationDAO.findByTracingId(tracingId)(GlobalAccessContext)
+      annotation: Annotation <- AnnotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
       _ <- ensureAnnotationNotFinished(annotation)
       timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
       statisticsOpt = (request.body \ "statistics").asOpt[JsObject]

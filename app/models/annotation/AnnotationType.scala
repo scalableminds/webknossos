@@ -13,6 +13,8 @@ object AnnotationTypeSQL extends Enumeration {
   implicit def enumWrites: Writes[AnnotationTypeSQL.Value] = EnumUtils.enumWrites
 
   def fromString(s: String): Option[Value] = values.find(_.toString == s)
+
+  def UserTracings = List(Task, Explorational)
 }
 
 

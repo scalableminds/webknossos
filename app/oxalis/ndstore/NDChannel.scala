@@ -21,7 +21,7 @@ object NDChannels {
         ).tupled
 
     override def reads(json: JsValue): JsResult[List[NDChannel]] = {
-      json.validate(Reads.mapReads(channelBodyReads)).map { jso =>
+      json.validate(Reads.mapReads(channelBodyReads)).map { (jso: Map[String, (ElementClass.Value, Category.Value)]) =>
         jso.map {
           case (name, (dataType, channelType)) =>
             NDChannel(name, dataType, channelType)

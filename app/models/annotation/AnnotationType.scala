@@ -4,6 +4,8 @@ import play.api.libs.json.{Reads, Writes}
 import utils.EnumUtils
 
 object AnnotationTypeSQL extends Enumeration {
+  type AnnotationTypeSQL = Value
+
   val Task, View, Explorational, TracingBase, Orphan, CompoundTask, CompoundProject, CompoundTaskType = Value
 
   implicit val enumReads: Reads[AnnotationTypeSQL.Value] = EnumUtils.enumReads(AnnotationTypeSQL)

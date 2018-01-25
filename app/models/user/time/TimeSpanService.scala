@@ -125,7 +125,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
     private def logTimeToAnnotation(
       duration: Long,
-      annotation: Option[Annotation]) = {
+      annotation: Option[Annotation]): Fox[Unit] = {
       // Log time to annotation
       annotation match {
         case Some(a: Annotation) =>

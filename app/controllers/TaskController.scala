@@ -249,7 +249,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         for {
           userIdBson <- parseBsonToFox(userId)
           user <- UserDAO.findOneById(userIdBson) ?~> Messages("user.notFound")
-          userAnnotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
+          userAnnotations <- AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
           taskIdsFromAnnotations = userAnnotations.flatMap(_._task).map(_.stringify).toSet
           taskIds = idsOpt match {
             case Some(ids) => taskIdsFromAnnotations.intersect(ids.toSet)

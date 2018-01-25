@@ -109,28 +109,30 @@ object AnnotationService
     }
   }
 
-  def baseFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase).one[Annotation].toFox
+  def baseFor(task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] =
+    (for {
+      list <- AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase)
+    } yield list.headOption.toFox).flatten
 
   def annotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation]().collect[List]()
+    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task)
 
   def countActiveAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countActiveByTaskIdsAndType(List(task._id), AnnotationType.Task)
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
     for {
-      annotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
+      annotations <- AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
       _ = annotations.map(annotation => annotation.muta.cancelTask())
       result <- AnnotationDAO.cancelAnnotationsOfUser(user._id)
     } yield result
   }
 
   def openTasksFor(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
+    AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
 
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
+    AnnotationDAO.countActiveAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
 
   def findTasksOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Task, limit)

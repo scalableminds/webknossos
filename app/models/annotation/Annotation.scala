@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.tracings.{TracingReference, Tracin
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
+import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.basics.SecuredBaseDAO
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.task.{TaskDAO, TaskSQLDAO, TaskTypeSQLDAO, _}
@@ -56,6 +57,7 @@ case class AnnotationSQL(
 object AnnotationSQL extends FoxImplicits {
   implicit val jsonFormat = Json.format[AnnotationSQL]
 
+  //note that annotation settings are dropped here, because on reading, they will be reconstructed from the db relations directly
   def fromAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
     for {
       dataSet <- DataSetSQLDAO.findOneByName(a.dataSetName) ?~> Messages("dataSet.notFound")
@@ -118,6 +120,8 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       )
     }
 
+  // read operations
+
   def findFor(_user: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] = {
     def stateQuery(r: Annotations) = isFinished match {
       case Some(true) => r.state === AnnotationState.Finished.toString
@@ -127,28 +131,71 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       r <- db.run(Annotations.filter(r => notdel(r) && r._User === _user.id && stateQuery(r) && r.typ === annotationType.toString).take(limit).sortBy(_._Id.desc).result)
       parsed <- Fox.combined(r.toList.map(parse))
-    } yield {
-      parsed
-    }
+    } yield parsed
   }
 
-  def insertOne(a: AnnotationSQL): Fox[Unit] = {
+  def findActiveAnnotationsFor(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
+    for {
+      r <- db.run(Annotations.filter(r => notdel(r) && r._User === userId.id && r.typ === typ.toString && r.state === AnnotationState.Active.toString).result)
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
 
-    val query = sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+  def findByTaskIdAndType(taskId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
+    for {
+      r <- db.run(Annotations.filter(r => notdel(r) && r._Task == taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+
+  // count operations
+
+  def countAll(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      count <- db.run(Annotations.filter(r => notdel(r)).length.result)
+    } yield count
+
+  def countActiveAnnotationsFor(userId: ObjectId, typ: AnnotationTypeSQL, excludedTeamNames: List[String])(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      count <- db.run(Annotations.filter(r => (notdel(r) && r._User === userId.id && r.typ === typ.toString && r.state === AnnotationState.Active.toString))
+                     .join(Teams).on((_._Team === _._Id)).filterNot(r => r._2.name.inSetBind(excludedTeamNames)).length.result)
+    } yield count
+
+  def countByTaskAndUser(taskId: ObjectId, userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      count <- db.run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r._User === userId.id && r.typ === typ.toString).length.result)
+    } yield count
+
+
+  // write operations
+
+  def insertOne(a: AnnotationSQL): Fox[Unit] = {
+    for {
+      _ <- db.run(sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
                        values(${a._id.toString}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, '#${java.util.UUID.fromString(a.tracing.id)}',
                               '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${a.statistics.toString}',
                               '#${writeArrayTuple(a.tags.toList)}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
-                              ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})"""
-
-    println("QUERY:")
-    query.statements.map(println)
-
-/*    val values = (a._id.toString, a._dataset.id, a._task.map(_.id), a._team.id, a._user.id, java.util.UUID.fromString(a.tracing.id),
-                    a.tracing.typ.toString, a.description, a.isPublic, a.name, a.state.toString, a.statistics.toString, writeArrayTuple(a.tags.toList),
-                    a.tracingTime, a.typ.toString, new java.sql.Timestamp(a.created), new java.sql.Timestamp(a.modified), a.isDeleted)*/
-    for {
-      r <- db.run(query)
+                              ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})""")
     } yield ()
+  }
+
+  def removeAllWithTaskId(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Annotations if (notdel(row) && row._Task === taskId.id)} yield row.isdeleted
+    for {_ <- db.run(q.update(true))} yield ()
+  }
+
+  def logTime(time: Long, id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- db.run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${id.id}")
+    } yield ()
+
+  def finish(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Annotations if (notdel(row) && row._Id == id.id)} yield row.state
+    for {_ <- db.run(q.update(AnnotationState.Finished.toString))} yield ()
+  }
+
+  def rename(id: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Annotations if (notdel(row) && row._Id == id.id)} yield row.name
+    for {_ <- db.run(q.update(name))} yield ()
   }
 
 }
@@ -176,7 +223,6 @@ case class Annotation(
                        isPublic: Boolean = false,
                        tags: Set[String] = Set.empty
                      ) extends FoxImplicits {
-
 
 
   lazy val muta = new AnnotationMutations(this)
@@ -368,18 +414,6 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
     } yield annotation
   }
 
-/*  def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
-    update(
-      Json.obj("_id" -> annotation._id),
-      Json.obj(
-        "$set" -> formatWithoutId(annotation),
-        "$setOnInsert" -> Json.obj("_id" -> annotation._id)
-      ),
-      upsert = true).map { _ =>
-      annotation
-    }
-  }*/
-
 
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) =
     for {
@@ -389,53 +423,37 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       annotations
     }
 
-/*
-  def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    val q = Json.obj(
-      "_user" -> _user,
-      "state" -> finishedOptToStateQuery(isFinished),
-      "typ" -> annotationType)
-
-    find(q).sort(Json.obj("_id" -> -1)).cursor[Annotation]().collect[List](maxDocs = limit)
-  }*/
-
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> _annotation), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
+    AnnotationSQLDAO.logTime(time, ObjectId.fromBson(_annotation))
 
+  def findActiveAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    for {
+      typ <- AnnotationTypeSQL.fromString(annotationType).toFox
+      annotationsSQL <- AnnotationSQLDAO.findActiveAnnotationsFor(ObjectId.fromBson(_user), typ)
+      annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
+    } yield annotations
 
-  private def finishedOptToStateQuery(isFinished: Option[Boolean]): JsValue = isFinished match {
-    case Some(true) => Json.toJson(AnnotationState.Finished)
-    case Some(false) => Json.toJson(AnnotationState.Active)
-    case None => Json.obj("$ne" -> AnnotationState.Cancelled)
-  }
-
-  private def defaultFindForUserQuery(_user: BSONObjectID, annotationType: AnnotationType) = Json.obj(
-    "_user" -> _user,
-    "state" -> AnnotationState.Active,
-    "typ" -> annotationType)
-
-  def findOpenAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    find(defaultFindForUserQuery(_user, annotationType)).cursor[Annotation]().collect[List]()
-  }
-
-  def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[String] = Nil)(implicit ctx: DBAccessContext) =
-    count(defaultFindForUserQuery(_user, annotationType) ++ Json.obj("team" -> Json.obj("$nin" -> excludeTeams)))
+  def countActiveAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[String] = Nil)(implicit ctx: DBAccessContext) =
+    for {
+      typ <- AnnotationTypeSQL.fromString(annotationType).toFox
+      count <- AnnotationSQLDAO.countActiveAnnotationsFor(ObjectId.fromBson(_user), typ, excludeTeams)
+    } yield count
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("isActive" -> true, "_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)
+    AnnotationSQLDAO.removeAllWithTaskId(ObjectId.fromBson(_task))
 
-  def countByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = withExceptionCatcher{
-    count(Json.obj(
-      "_task" -> _task,
-      "typ" -> annotationType,
-      "_user" -> _user))
-  }
+  def countByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    for {
+      typ <- AnnotationTypeSQL.fromString(annotationType).toFox
+      count <- AnnotationSQLDAO.countByTaskAndUser(ObjectId.fromBson(_user), ObjectId.fromBson(_task), typ)
+    } yield count
 
   def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    find(Json.obj(
-      "_task" -> _task,
-      "typ" -> annotationType,
-      "state" -> Json.obj("$ne" -> AnnotationState.Cancelled)))
+    for {
+      typ <- AnnotationTypeSQL.fromString(annotationType).toFox
+      annotationsSQL <- AnnotationSQLDAO.findByTaskIdAndType(ObjectId.fromBson(_task), typ)
+      annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
+    } yield annotations
 
   def findAllUnfinishedByTaskIds(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     find(Json.obj(
@@ -493,34 +511,23 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       Json.obj("_id" -> annotation._id),
       Json.obj("$set" -> Json.obj("state" -> state)))
 
-  def updateSettingsForAllOfTask(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-    update(
-      Json.obj("_task" -> task._id),
-      Json.obj("$set" -> Json.obj("settings" -> settings))
-    )
-  }
+  //no longer necessary since settings are constructed on read from sql
+  def updateSettingsForAllOfTask(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = Fox.successful(())
 
   def countAll(implicit ctx: DBAccessContext) =
-    count(Json.obj("isActive" -> true))
+    AnnotationSQLDAO.countAll
 
   def finish(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj("state" -> Finished)),
-      returnNew = true)
+    for {
+      _ <- AnnotationSQLDAO.finish(ObjectId.fromBson(_annotation))
+      annotation <- findOneById(_annotation)
+    } yield annotation
 
   def rename(_annotation: BSONObjectID, name: String)(implicit ctx: DBAccessContext) =
-    if (name == "") {
-      findAndModify(
-        Json.obj("_id" -> _annotation),
-        Json.obj("$unset" -> Json.obj("_name" -> 1)),
-        returnNew = true)
-    } else {
-      findAndModify(
-        Json.obj("_id" -> _annotation),
-        Json.obj("$set" -> Json.obj("_name" -> name)),
-        returnNew = true)
-    }
+    for {
+      _ <- AnnotationSQLDAO.rename(ObjectId.fromBson(_annotation), name)
+      annotation <- findOneById(_annotation)
+    } yield annotation
 
   def setDescription(_annotation: BSONObjectID, description: String)(implicit ctx: DBAccessContext) =
     findAndModify(

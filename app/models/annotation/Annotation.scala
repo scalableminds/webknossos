@@ -180,6 +180,10 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       count <- db.run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r._User === userId.id && r.typ === typ.toString).length.result)
     } yield count
 
+  def countActiveByTask(taskId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      count <- db.run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString).length.result)
+    } yield count
 
   // write operations
 
@@ -225,23 +229,27 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def setTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- db.run(sqlu"update webknossos.annotations(tags) values('#${writeArrayTuple(tags.map(sanitize(_)))}'")
+      _ <- db.run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags.map(sanitize(_)))}' where _id = ${id.id}")
     } yield ()
 
   def setModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- db.run(sqlu"update webknossos.annotations(modified) values('${new java.sql.Timestamp(modified)}'")
+      _ <- db.run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = ${id.id}")
     } yield ()
 
   def setTracingReference(id: ObjectId, tracing: TracingReference)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- db.run(sqlu"update webknossos.annotations(tracingId, tracingTyp) values('#${java.util.UUID.fromString(tracing.id)}', '#${tracing.typ.toString}'")
+      _ <- db.run(sqlu"update webknossos.annotations set tracingId = '#${java.util.UUID.fromString(tracing.id)}', tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
     } yield ()
 
-  def setStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def setStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = sqlu"update webknossos.annotations set statistics = '#${sanitize(statistics.toString)}' where _id = ${id.id}"
+    println("statements: ")
+    q.statements.map(println)
     for {
-      _ <- db.run(sqlu"update webknossos.annotations(statistics) values('#${sanitize(statistics.toString)}'")
+      _ <- db.run(q)
     } yield ()
+  }
 
   def setUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     setObjectIdCol(id, _._User, userId)
@@ -392,10 +400,8 @@ object Annotation extends FoxImplicits {
 }
 
 
-object AnnotationDAO extends SecuredBaseDAO[Annotation]
-  with FoxImplicits
-  with MongoHelpers {
-
+object AnnotationDAO extends FoxImplicits {
+/*
   val collectionName = "annotations"
 
   val formatter = Annotation.annotationFormat
@@ -405,20 +411,10 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("tracingReference.id" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending, "typ" -> IndexType.Ascending)))
+*/
 
-  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
-    super.find(query ++ Json.obj("isActive" -> true))
-  }
-
-  override def count(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
-    super.count(query ++ Json.obj("isActive" -> true))
-  }
-
-  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
-    super.findOne(query ++ Json.obj("isActive" -> true))
-  }
-
-  override val AccessDefinitions = new DefaultAccessDefinitions{
+  /*
+  val AccessDefinitions = new DefaultAccessDefinitions{
 
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match{
@@ -445,9 +441,11 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
           DenyEveryone()
       }
     }
-  }
+  }*/
 
-  override def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Annotation] = findOneById(id.stringify)
+
+  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
       annotationSQL <- AnnotationSQLDAO.findOne(ObjectId(id))
       parsed <- Annotation.fromAnnotationSQL(annotationSQL)
@@ -526,6 +524,18 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       annotation <- Annotation.fromAnnotationSQL(annotationSQL)
     } yield annotation
 
+  def countActiveByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+    for {
+      typ <- AnnotationTypeSQL.fromString(annotationType).toFox
+      count <- AnnotationSQLDAO.countActiveByTask(ObjectId.fromBsonId(_task), typ)
+    } yield count
+
+  def countActiveByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
+  def countFinishedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
+  def countFinishedByTaskIdsAndUserIdAndType(_tasks: List[BSONObjectID], userId: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
+  def countRecentlyModifiedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType, minimumTimestamp: Long)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
+
+  /*
   def countActiveByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(Json.obj(
       "_task" -> Json.obj("$in" -> _tasks),
@@ -551,7 +561,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       "_task" -> Json.obj("$in" -> _tasks),
       "typ" -> annotationType,
       "modifiedTimestamp" -> Json.obj("$gt" -> minimumTimestamp)
-    ))
+    ))*/
 
   def cancelAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationSQLDAO.cancelAnnotationsOfUser(ObjectId.fromBsonId(_user))

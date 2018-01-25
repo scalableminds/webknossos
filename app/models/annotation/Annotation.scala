@@ -188,7 +188,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       _ <- db.run(sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
                        values(${a._id.toString}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, '#${java.util.UUID.fromString(a.tracing.id)}',
                               '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
-                              '#${writeArrayTuple(a.tags.toList.map(sanitize(_))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
+                              '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
                               ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})""")
     } yield ()
   }
@@ -208,7 +208,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {_ <- db.run(q.update(AnnotationState.Cancelled.toString))} yield ()
   }
 
-  def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext) =
+  def setState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext) =
     setStringCol(id, _.state, state.toString)
 
   def setDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext) =
@@ -223,10 +223,28 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def setIsPublic(id: ObjectId, isPublic: Boolean)(implicit ctx: DBAccessContext) =
     setBooleanCol(id, _.ispublic, isPublic)
 
-  def setTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext) =
+  def setTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- db.run(sqlu"update webknossos.annotations(tags) values('#${writeArrayTuple(tags.map(sanitize(_)))}'")
     } yield ()
+
+  def setModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- db.run(sqlu"update webknossos.annotations(modified) values('${new java.sql.Timestamp(modified)}'")
+    } yield ()
+
+  def setTracingReference(id: ObjectId, tracing: TracingReference)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- db.run(sqlu"update webknossos.annotations(tracingId, tracingTyp) values('#${java.util.UUID.fromString(tracing.id)}', '#${tracing.typ.toString}'")
+    } yield ()
+
+  def setStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- db.run(sqlu"update webknossos.annotations(statistics) values('#${sanitize(statistics.toString)}'")
+    } yield ()
+
+  def setUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    setObjectIdCol(id, _._User, userId)
 }
 
 
@@ -538,8 +556,11 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   def cancelAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationSQLDAO.cancelAnnotationsOfUser(ObjectId.fromBsonId(_user))
 
-  def updateState(annotation: Annotation, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =
-    AnnotationSQLDAO.updateState(ObjectId.fromBsonId(annotation._id), state)
+  def updateState(_annotation: BSONObjectID, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =
+    for {
+      _ <- AnnotationSQLDAO.setState(ObjectId.fromBsonId(_annotation), state)
+      annotation <- findOneById(_annotation)
+    } yield annotation
 
   //no longer necessary since settings are constructed on read from sql
   def updateSettingsForAllOfTask(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = Fox.successful(())
@@ -577,12 +598,6 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
       annotation <- findOneById(_annotation)
     } yield annotation
 
-  def updateState(_annotation: BSONObjectID, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =
-    for {
-      _ <- AnnotationSQLDAO.setState(ObjectId.fromBsonId(_annotation), state)
-      annotation <- findOneById(_annotation)
-    } yield annotation
-
   def updateModifiedTimestamp(_annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
     for {
       _ <- AnnotationSQLDAO.setModified(ObjectId.fromBsonId(_annotation), System.currentTimeMillis)
@@ -591,20 +606,20 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
 
   def updateTracingRefernce(_annotation: BSONObjectID, tracingReference: TracingReference)(implicit ctx: DBAccessContext) =
     for {
-      _ <- AnnotationSQLDAO.setTracingReference(ObjectId.fromBsonId(_annotation), TracingReference)
+      _ <- AnnotationSQLDAO.setTracingReference(ObjectId.fromBsonId(_annotation), tracingReference)
       annotation <- findOneById(_annotation)
     } yield annotation
 
   def updateStatistics(_annotation: BSONObjectID, statistics: JsObject)(implicit ctx: DBAccessContext) =
     for {
-      _ <- AnnotationSQLDAO.updateStatistics(ObjectId.fromBsonId(_annotation), statistics)
+      _ <- AnnotationSQLDAO.setStatistics(ObjectId.fromBsonId(_annotation), statistics)
       annotation <- findOneById(_annotation)
     } yield annotation
 
   def transfer(_annotation: BSONObjectID, _user: BSONObjectID)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      Json.obj("_id" -> _annotation),
-      Json.obj("$set" -> Json.obj(
-        "_user" -> _user)),
-      returnNew = true)
+    for {
+      _ <- AnnotationSQLDAO.setUser(ObjectId.fromBsonId(_annotation), ObjectId.fromBsonId(_user))
+      annotation <- findOneById(_annotation)
+    } yield annotation
+
 }

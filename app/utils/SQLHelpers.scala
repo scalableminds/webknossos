@@ -53,7 +53,9 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
     for {_ <- db.run(q.update(newValue))} yield ()
   }
 
-  def setIntCol(id: ObjectId, column: (X) => Rep[Int], newValue: Int): Fox[Unit] = {
+  def setObjectIdCol(id: ObjectId, column: (X) => Rep[String], newValue: ObjectId) = setStringCol(id, column, newValue.id)
+
+  def setLongCol(id: ObjectId, column: (X) => Rep[Long], newValue: Long): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) == id.id)} yield column(row)
     for {_ <- db.run(q.update(newValue))} yield ()
   }

@@ -57,7 +57,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     for {
       task <- annotation.task
       _ <- TaskAssignmentService.putBackInstance(task)
-      _ <- AnnotationDAO.updateState(annotation, Cancelled)
+      _ <- AnnotationDAO.updateState(annotation._id, Cancelled)
     } yield annotation
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {

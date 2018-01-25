@@ -171,7 +171,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     ((__ \ "firstName").read[String] and
       (__ \ "lastName").read[String] and
       (__ \ "isActive").read[Boolean] and
-      (__ \ "teams").read[List[TeamMembership]](TeamMembershipReads) and
+      (__ \ "teams").read[List[TeamMembership]](Reads.list(TeamMembership.teamMembershipPublicReads)) and
       (__ \ "experiences").read[Map[String, Int]]).tupled
 
   def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)]) = {

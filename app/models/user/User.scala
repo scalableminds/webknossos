@@ -55,7 +55,7 @@ case class User(
 
   lazy val supervisorTeamIds = supervisorTeams.map(_._id)
 
-  lazy val hasAdminAccess = supervisorTeams.nonEmpty //adminTeams.nonEmpty
+  lazy val hasAdminAccess = isAdmin // supervisorTeams.nonEmpty //adminTeams.nonEmpty
 
   def isSuperVisorOf(team: BSONObjectID) = supervisorTeamIds.contains(team)
 
@@ -97,7 +97,7 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.hasAdminAccess && (teams.isEmpty || teamIds.exists(other.isSuperVisorOf)) //TODO
+    other.hasAdminAccess || (teams.isEmpty || teamIds.exists(other.isSuperVisorOf)) //TODO
 
   def isSuperVisorOf(user: User): Boolean =
     user.teamIds.intersect(this.supervisorTeams).nonEmpty

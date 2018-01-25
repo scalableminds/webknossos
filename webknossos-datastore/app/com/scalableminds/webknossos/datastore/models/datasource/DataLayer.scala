@@ -186,3 +186,18 @@ object AbstractSegmentationLayer {
 
   implicit val abstractSegmentationLayerFormat = Json.format[AbstractSegmentationLayer]
 }
+
+trait ResolutionFormatHelper {
+
+  implicit object resolutionFormat extends Format[Either[Int, Point3D]] {
+
+    override def reads(json: JsValue): JsResult[Either[Int, Point3D]] = {
+      json.validate[Int].map[Either[Int, Point3D]](Left(_)).orElse(json.validate[Point3D].map(Right(_)))
+    }
+
+    override def writes(resolution: Either[Int, Point3D]): JsValue = resolution match {
+      case Left(r) => JsNumber(r)
+      case Right(r) => Point3D.Point3DWrites.writes(r)
+    }
+  }
+}

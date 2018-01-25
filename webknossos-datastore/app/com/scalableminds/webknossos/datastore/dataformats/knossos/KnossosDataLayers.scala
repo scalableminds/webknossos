@@ -6,17 +6,17 @@ package com.scalableminds.webknossos.datastore.dataformats.knossos
 import com.scalableminds.webknossos.datastore.models.CubePosition
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
-import play.api.libs.json.Json
+import play.api.libs.json._
 
-case class KnossosSection(name: String, resolutions: List[Int], boundingBox: BoundingBox) {
+case class KnossosSection(name: String, resolutions: List[Either[Int, Point3D]], boundingBox: BoundingBox) {
 
   def doesContainCube(cube: CubePosition): Boolean = {
     boundingBox.intersects(cube.toHighestResBoundingBox)
   }
 }
 
-object KnossosSection {
-  implicit val knossosSectionFormat = Json.format[KnossosSection]
+object KnossosSection extends ResolutionFormatHelper {
+  implicit val jsonFormat = Json.format[KnossosSection]
 }
 
 trait KnossosLayer extends DataLayer {
@@ -27,7 +27,10 @@ trait KnossosLayer extends DataLayer {
 
   lazy val boundingBox = BoundingBox.combine(sections.map(_.boundingBox))
 
-  lazy val resolutions: List[Point3D] = sections.map(_.resolutions).reduce(_ union _).map(r => Point3D(r, r, r))
+  lazy val resolutions: List[Point3D] = sections.map(_.resolutions).reduce(_ union _).map {
+    case Left(r) => Point3D(r, r, r)
+    case Right(r) => r
+  }
 
   def lengthOfUnderlyingCubes(resolution: Int) = KnossosDataFormat.cubeLength
 

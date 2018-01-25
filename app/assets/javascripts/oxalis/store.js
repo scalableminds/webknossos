@@ -110,16 +110,11 @@ export type VolumeCellMapType = { [number]: VolumeCellType };
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
 
-export type DataResolutionType = {
-  resolution: number,
-  scale: Vector3,
-};
-
 export type DataLayerType = {
   +name: string,
   +category: CategoryType,
   +boundingBox: BoundingBoxObjectType,
-  +resolutions: Array<DataResolutionType>,
+  +resolutions: Array<Vector3>,
   +elementClass: ElementClassType,
   +mappings?: Array<MappingType>,
 };

@@ -70,4 +70,10 @@ trait DataSourceImporter {
       paths => paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
     }.getOrElse(Nil).toSet
   }
+
+  protected def createResolution(resolutionInt: Int, previous: Option[List[Point3D]]): Either[Int, Point3D] = {
+    previous.flatMap(_.find(_.x == resolutionInt)).map { p =>
+      if (p.x == p.y && p.x == p.z) Left(p.x) else Right(p)
+    }.getOrElse(Left(resolutionInt))
+  }
 }

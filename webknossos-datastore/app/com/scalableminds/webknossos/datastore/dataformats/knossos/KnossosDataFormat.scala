@@ -7,7 +7,7 @@ import java.io.File
 import java.nio.file.Path
 
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, ElementClass, SegmentationLayer}
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes._
 import com.scalableminds.webknossos.datastore.services.{DataSourceImportReport, DataSourceImporter}
@@ -20,8 +20,8 @@ object KnossosDataFormat extends DataSourceImporter {
   val dataFileExtension = "raw"
 
   def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(implicit report: DataSourceImportReport[Path]): Box[DataLayer] = {
-    val previousSections = previous match {
-      case Some(l: KnossosLayer) => Some(l.sections)
+    val previousSections = previous.flatMap {
+      case l: KnossosLayer => Some(l.sections)
       case _ => None
     }
 
@@ -61,14 +61,18 @@ object KnossosDataFormat extends DataSourceImporter {
   }
 
   private def exploreSection(name: String, baseDir: Path, previous: Option[KnossosSection]): KnossosSection = {
-    val resolutions = exploreResolutions(baseDir)
+    val previousResolutions = previous.map(_.resolutions).map{_.map{
+      case Left(r) => Point3D(r, r, r)
+      case Right(r) => r
+    }}
+    val resolutions = exploreResolutions(baseDir, previousResolutions)
     KnossosSection(name, resolutions, previous.map(_.boundingBox).getOrElse(BoundingBox.empty))
   }
 
-  private def exploreResolutions(baseDir: Path): List[Int] = {
+  private def exploreResolutions(baseDir: Path, previous: Option[List[Point3D]]): List[Either[Int, Point3D]] = {
     def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
-    PathUtils.listDirectories(baseDir, resolutionDirFilter).map{
-      _.map(_.getFileName.toString.toInt)
+    PathUtils.listDirectories(baseDir, resolutionDirFilter).map { resolutionDirs =>
+      resolutionDirs.map(resolutionDir => createResolution(resolutionDir.getFileName.toString.toInt, previous))
     }.getOrElse(Nil)
   }
 

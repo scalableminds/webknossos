@@ -47,10 +47,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       val resolutionHeaders = resolutionDirs.sortBy(resolutionDirInt).map { resolutionDir =>
         val resolutionInt = resolutionDirInt(resolutionDir)
         WKWHeader(resolutionDir.resolve("header.wkw").toFile).map{ header =>
-          val previousResolution = previous.flatMap(_.find(_.x == resolutionInt)).map { p =>
-            if (p.x == p.y && p.x == p.z) Left(p.x) else Right(p)
-          }
-          (header, previousResolution.getOrElse(Left(resolutionInt)))
+          (header, createResolution(resolutionInt, previous))
         }.passFailure { f =>
           report.error(section => s"Error processing resolution '$resolutionInt' - ${f.msg}")
         }

@@ -16,6 +16,17 @@ import com.scalableminds.util.tools.Fox
   * Date: 14.07.13
   * Time: 16:49
   */
+  object TeamMembershipReads extends Reads[List[TeamMembership]] {
+
+  override def reads(json: JsValue): JsResult[List[TeamMembership]] = {
+    json.validate(Reads.mapReads(TeamMembership.teamMembershipPublicReads)).map { jso =>
+      jso.map {
+        case (id, name, isSuperVisor) => TeamMembership(BSONObjectID(id), name, isSuperVisor)
+      }.toList
+    }
+  }
+}
+
 case class TeamMembership(_id: BSONObjectID = BSONObjectID.generate, name: String, isSuperVisor: Boolean) {
 
   override def toString =

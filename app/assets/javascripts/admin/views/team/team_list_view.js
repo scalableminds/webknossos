@@ -58,7 +58,7 @@ class TeamListView extends React.PureComponent<Props, State> {
 
     this.setState({
       isLoading: false,
-      teams: teams,
+      teams,
     });
   }
 

@@ -103,4 +103,6 @@ In order to restore the current window, a reload is necessary.`,
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
   "nml.different_dataset": "Imported NML was originally for a different dataset.",
+  "users.is_admin":
+    "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
 };

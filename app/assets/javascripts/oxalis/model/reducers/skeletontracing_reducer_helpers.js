@@ -184,11 +184,7 @@ export function deleteEdge(
 
       const deletedEdge = sourceTree.edges
         .getEdgesForNode(sourceNode.id)
-        .find(
-          edge =>
-            (edge.source === sourceNode.id && edge.target === targetNode.id) ||
-            (edge.source === targetNode.id && edge.target === sourceNode.id),
-        );
+        .find(edge => edge.target === targetNode.id || edge.source === targetNode.id);
 
       if (deletedEdge == null) {
         // The two selected nodes do not share an edge

@@ -17,7 +17,6 @@ import {
   getSkeletonTracing,
   getActiveNodeFromTree,
   findTreeByNodeId,
-  getNodeToEdgesMap,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
 import type {
@@ -31,6 +30,7 @@ import type {
   CommentType,
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
@@ -103,7 +103,7 @@ export function createNode(
         },
       ])
       .getOrElse([]);
-    const edges = tree.edges.concat(newEdges);
+    const edges = tree.edges.addEdges(newEdges);
 
     return Maybe.Just([node, edges]);
   }
@@ -127,13 +127,10 @@ export function deleteNode(
 
       // Do we need to split trees? Are there edges leading to/from it?
       const neighborIds = [];
-      const deletedEdges = [];
-      activeTree.edges.forEach(edge => {
-        if (edge.target === node.id || edge.source === node.id) {
-          neighborIds.push(edge.target === node.id ? edge.source : edge.target);
-          deletedEdges.push(edge);
-        }
-      });
+      const deletedEdges = activeTree.edges.getEdgesForNode(node.id);
+      for (const edge of deletedEdges) {
+        neighborIds.push(edge.target === node.id ? edge.source : edge.target);
+      }
 
       if (neighborIds.length === 0) {
         return deleteTree(state, activeTree, timestamp);
@@ -185,11 +182,13 @@ export function deleteEdge(
         return Maybe.Nothing();
       }
 
-      const deletedEdge = sourceTree.edges.find(
-        edge =>
-          (edge.source === sourceNode.id && edge.target === targetNode.id) ||
-          (edge.source === targetNode.id && edge.target === sourceNode.id),
-      );
+      const deletedEdge = sourceTree.edges
+        .getEdgesForNode(sourceNode.id)
+        .find(
+          edge =>
+            (edge.source === sourceNode.id && edge.target === targetNode.id) ||
+            (edge.source === targetNode.id && edge.target === sourceNode.id),
+        );
 
       if (deletedEdge == null) {
         // The two selected nodes do not share an edge
@@ -226,7 +225,6 @@ function splitTreeByNodes(
   // Not every node id is guaranteed to be a new tree root as there may be cyclic trees.
 
   let newTrees = skeletonTracing.trees;
-  const nodeToEdgesMap = getNodeToEdgesMap(activeTree);
 
   // Traverse from each possible new root node in all directions (i.e., use each edge) and
   // remember which edges were already visited.
@@ -244,7 +242,7 @@ function splitTreeByNodes(
 
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
-      const edges = nodeToEdgesMap[nodeId];
+      const edges = activeTree.edges.getEdgesForNode(nodeId);
       visitedNodes[nodeId] = true;
       newTree.nodes.mutableSet(nodeId, activeTree.nodes.get(nodeId));
 
@@ -254,7 +252,7 @@ function splitTreeByNodes(
           continue;
         }
         visitedEdges[edgeHash] = true;
-        newTree.edges.push(edge);
+        newTree.edges.addEdge(edge, true);
 
         if (nodeId === edge.target) {
           nodeQueue.push(edge.source);
@@ -285,7 +283,7 @@ function splitTreeByNodes(
           branchPoints: [],
           color: activeTree.color,
           comments: [],
-          edges: [],
+          edges: new EdgeCollection(),
           name: activeTree.name,
           nodes: new DiffableMap(),
           timestamp: activeTree.timestamp,
@@ -401,7 +399,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
         timestamp,
         color: ColorGenerator.distinctColorForId(newTreeId),
         branchPoints: [],
-        edges: [],
+        edges: new EdgeCollection(),
         comments: [],
         isVisible: true,
       };
@@ -432,10 +430,12 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapT
           newNodeId++;
         }
 
-        const newEdges = tree.edges.map(edge => ({
-          source: idMap[edge.source],
-          target: idMap[edge.target],
-        }));
+        const newEdges = EdgeCollection.loadFromEdges(
+          tree.edges.map(edge => ({
+            source: idMap[edge.source],
+            target: idMap[edge.target],
+          })),
+        );
 
         const newComments = tree.comments.map(comment =>
           update(comment, { nodeId: { $set: idMap[comment.nodeId] } }),
@@ -523,7 +523,9 @@ export function mergeTrees(
     newTrees = update(newTrees, {
       [targetTree.treeId]: {
         nodes: { $set: newNodes },
-        edges: { $set: targetTree.edges.concat(sourceTree.edges).concat([newEdge]) },
+        edges: {
+          $set: targetTree.edges.addEdges(sourceTree.edges.asArray().concat(newEdge)),
+        },
         comments: { $set: targetTree.comments.concat(sourceTree.comments) },
         branchPoints: { $set: targetTree.branchPoints.concat(sourceTree.branchPoints) },
       },

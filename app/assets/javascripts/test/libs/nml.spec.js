@@ -6,6 +6,7 @@ import mock from "mock-require";
 import { defaultState } from "oxalis/store";
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 import type { NodeType } from "oxalis/store";
 
 const TIMESTAMP = 123456789;
@@ -44,7 +45,11 @@ const tracing = {
       ]),
       timestamp: TIMESTAMP,
       branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
-      edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 1, target: 7 }],
+      edges: EdgeCollection.loadFromEdges([
+        { source: 0, target: 1 },
+        { source: 2, target: 1 },
+        { source: 1, target: 7 },
+      ]),
       comments: [{ content: "comment", nodeId: 0 }],
       color: [23, 23, 23],
       isVisible: true,
@@ -59,7 +64,7 @@ const tracing = {
       ]),
       timestamp: TIMESTAMP,
       branchPoints: [],
-      edges: [{ source: 4, target: 5 }, { source: 5, target: 6 }],
+      edges: EdgeCollection.loadFromEdges([{ source: 4, target: 5 }, { source: 5, target: 6 }]),
       comments: [],
       color: [30, 30, 30],
       isVisible: true,
@@ -114,6 +119,7 @@ test("NML Serializer should only serialize visible trees", async t => {
 
   // Tree 1 should not be exported as it is not visible
   delete state.tracing.trees["1"];
+  t.deepEqual(Object.keys(state.tracing.trees), Object.keys(importedTrees));
   t.deepEqual(state.tracing.trees, importedTrees);
 });
 
@@ -135,10 +141,16 @@ test("NML Parser should throw errors for invalid nmls", async t => {
     tracing: { trees: { "2": { branchPoints: { $set: [{ timestamp: 0, nodeId: 99 }] } } } },
   });
   const invalidEdgeState = update(initialState, {
-    tracing: { trees: { "2": { edges: { $set: [{ source: 99, target: 5 }] } } } },
+    tracing: {
+      trees: {
+        "2": { edges: { $set: EdgeCollection.loadFromEdges([{ source: 99, target: 5 }]) } },
+      },
+    },
   });
   const disconnectedTreeState = update(initialState, {
-    tracing: { trees: { "2": { edges: { $set: [{ source: 4, target: 5 }] } } } },
+    tracing: {
+      trees: { "2": { edges: { $set: EdgeCollection.loadFromEdges([{ source: 4, target: 5 }]) } } },
+    },
   });
   const nmlWithInvalidComment = serializeToNml(invalidCommentState, invalidCommentState.tracing);
   const nmlWithInvalidBranchPoint = serializeToNml(
@@ -178,18 +190,20 @@ test("addTrees reducer should assign new node and tree ids", t => {
   t.is(newState.tracing.trees[4].nodes.size(), 3);
   t.is(newState.tracing.trees[4].nodes.get(12).id, 12);
 
+  const getSortedEdges = edges => _.sortBy(edges.asArray(), "source");
+
   // And node ids in edges, branchpoints and comments should have been replaced
-  t.deepEqual(newState.tracing.trees[3].edges, [
+  t.deepEqual(getSortedEdges(newState.tracing.trees[3].edges), [
     { source: 8, target: 9 },
-    { source: 10, target: 9 },
     { source: 9, target: 11 },
+    { source: 10, target: 9 },
   ]);
   t.deepEqual(newState.tracing.trees[3].branchPoints, [
     { nodeId: 9, timestamp: 0 },
     { nodeId: 11, timestamp: 0 },
   ]);
   t.deepEqual(newState.tracing.trees[3].comments, [{ content: "comment", nodeId: 8 }]);
-  t.deepEqual(newState.tracing.trees[4].edges, [
+  t.deepEqual(getSortedEdges(newState.tracing.trees[4].edges), [
     { source: 12, target: 13 },
     { source: 13, target: 14 },
   ]);

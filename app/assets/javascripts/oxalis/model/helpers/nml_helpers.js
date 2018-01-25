@@ -6,7 +6,6 @@ import messages from "messages";
 import Saxophone from "@scalableminds/saxophone";
 import Store from "oxalis/store";
 import Date from "libs/date";
-import { getNodeToEdgesMap } from "oxalis/model/accessors/skeletontracing_accessor";
 import DiffableMap from "libs/diffable_map";
 import type {
   OxalisState,
@@ -17,6 +16,7 @@ import type {
   TreeMapType,
   TemporaryMutableTreeMapType,
 } from "oxalis/store";
+import EdgeCollection from "oxalis/model/edge_collection";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -181,7 +181,7 @@ function serializeNodes(nodes: NodeMapType): Array<string> {
   });
 }
 
-function serializeEdges(edges: Array<EdgeType>): Array<string> {
+function serializeEdges(edges: EdgeCollection): Array<string> {
   return edges.map(edge => serializeTag("edge", { source: edge.source, target: edge.target }));
 }
 
@@ -258,7 +258,6 @@ function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
 }
 
 function isTreeConnected(tree: TreeType): boolean {
-  const nodeToEdgesMap = getNodeToEdgesMap(tree);
   const visitedNodes = new Map();
 
   if (tree.nodes.size() > 0) {
@@ -268,7 +267,7 @@ function isTreeConnected(tree: TreeType): boolean {
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
       visitedNodes.set(nodeId, true);
-      const edges = nodeToEdgesMap[nodeId];
+      const edges = tree.edges.getEdgesForNode(nodeId);
       // If there are no edges for a node, the tree is not connected
       if (edges == null) break;
 
@@ -316,7 +315,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               nodes: new DiffableMap(),
               branchPoints: [],
               timestamp: Date.now(),
-              edges: [],
+              edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
             };
             if (trees[currentTree.treeId] != null)
@@ -370,7 +369,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               throw new NmlParseError(
                 `${messages["nml.edge_with_same_source_target"]} ${JSON.stringify(currentEdge)}`,
               );
-            currentTree.edges.push(currentEdge);
+            currentTree.edges.addEdge(currentEdge, true);
             break;
           }
           case "comment": {

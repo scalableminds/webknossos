@@ -12,6 +12,7 @@ import mock from "mock-require";
 import ChainReducer from "test/helpers/chainReducer";
 import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 
 mock.stopAll();
 mock("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
@@ -49,7 +50,7 @@ const initialState = {
         nodes: new DiffableMap(),
         timestamp: Date.now(),
         branchPoints: [],
-        edges: [],
+        edges: new EdgeCollection(),
         comments: [],
         color: [23, 23, 23],
         isVisible: true,
@@ -93,7 +94,7 @@ test("SkeletonTracing should add a new node", t => {
 
   t.is(maxNodeId, 1);
   t.is(newState.tracing.activeNodeId, 1);
-  t.deepEqual(_.size(newState.tracing.trees[1].edges), 0);
+  t.deepEqual(newState.tracing.trees[1].edges.size(), 0);
 
   deepEqualObjectContaining(t, newState.tracing.trees[1].nodes.get(1), {
     position,
@@ -125,8 +126,8 @@ test("SkeletonTracing should add a several nodes", t => {
   t.is(maxNodeId, 3);
   t.is(newState.tracing.activeNodeId, 3);
   t.deepEqual(newState.tracing.trees[1].nodes.size(), 3);
-  t.deepEqual(newState.tracing.trees[1].edges.length, 2);
-  t.deepEqual(newState.tracing.trees[1].edges, [
+  t.deepEqual(newState.tracing.trees[1].edges.size(), 2);
+  t.deepEqual(newState.tracing.trees[1].edges.asArray(), [
     { source: 1, target: 2 },
     { source: 2, target: 3 },
   ]);
@@ -156,8 +157,8 @@ test("SkeletonTracing should add nodes to a different tree", t => {
   t.is(newState.tracing.activeNodeId, 3);
   t.deepEqual(newState.tracing.trees[1].nodes.size(), 1);
   t.deepEqual(newState.tracing.trees[2].nodes.size(), 2);
-  t.deepEqual(newState.tracing.trees[1].edges.length, 0);
-  t.deepEqual(newState.tracing.trees[2].edges, [{ source: 2, target: 3 }]);
+  t.deepEqual(newState.tracing.trees[1].edges.size(), 0);
+  t.deepEqual(newState.tracing.trees[2].edges.asArray(), [{ source: 2, target: 3 }]);
 });
 
 test("SkeletonTracing shouldn't delete a node from an empty tree", t => {
@@ -234,7 +235,11 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
             ]),
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
-            edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 1, target: 7 }],
+            edges: EdgeCollection.loadFromEdges([
+              { source: 0, target: 1 },
+              { source: 2, target: 1 },
+              { source: 1, target: 7 },
+            ]),
             comments: [{ content: "comment", nodeId: 0 }],
             color: [23, 23, 23],
           },
@@ -248,7 +253,10 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
             ]),
             timestamp: Date.now(),
             branchPoints: [],
-            edges: [{ source: 4, target: 5 }, { source: 5, target: 6 }],
+            edges: EdgeCollection.loadFromEdges([
+              { source: 4, target: 5 },
+              { source: 5, target: 6 },
+            ]),
             comments: [],
             color: [30, 30, 30],
           },
@@ -267,14 +275,15 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
   const newTrees = state1.tracing.trees;
 
   t.is(Object.keys(newTrees).length, 4);
-  t.is(newTrees[0].nodes.get(0).id, 0);
-  t.is(newTrees[0].comments.length, 1);
-  t.is(newTrees[0].comments[0].nodeId, 0);
-  t.is(newTrees[1].nodes.get(4).id, 4);
+  t.is(newTrees[2].nodes.get(0).id, 0);
+  t.is(newTrees[2].comments.length, 1);
+  t.is(newTrees[2].comments[0].nodeId, 0);
 
-  t.is(newTrees[2].nodes.get(2).id, 2);
-  t.is(newTrees[3].nodes.get(7).id, 7);
-  t.is(newTrees[3].branchPoints[0].nodeId, 7);
+  t.is(newTrees[1].nodes.get(4).id, 4);
+  t.is(newTrees[3].nodes.get(2).id, 2);
+
+  t.is(newTrees[0].nodes.get(7).id, 7);
+  t.is(newTrees[0].branchPoints[0].nodeId, 7);
 });
 
 test("SkeletonTracing should not delete an edge if the two nodes are not neighbors", t => {
@@ -349,7 +358,11 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
             ]),
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
-            edges: [{ source: 0, target: 1 }, { source: 2, target: 1 }, { source: 2, target: 7 }],
+            edges: EdgeCollection.loadFromEdges([
+              { source: 0, target: 1 },
+              { source: 2, target: 1 },
+              { source: 2, target: 7 },
+            ]),
             comments: [{ content: "comment", nodeId: 7 }],
             color: [23, 23, 23],
           },
@@ -363,7 +376,10 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
             ]),
             timestamp: Date.now(),
             branchPoints: [],
-            edges: [{ source: 4, target: 5 }, { source: 5, target: 6 }],
+            edges: EdgeCollection.loadFromEdges([
+              { source: 4, target: 5 },
+              { source: 5, target: 6 },
+            ]),
             comments: [],
             color: [30, 30, 30],
           },
@@ -784,7 +800,7 @@ test("SkeletonTracing should merge two trees", t => {
   t.not(newState, initialState);
   t.is(_.size(newState.tracing.trees), 1);
   t.is(newState.tracing.trees[2].nodes.size(), 4);
-  t.deepEqual(newState.tracing.trees[2].edges, [
+  t.deepEqual(newState.tracing.trees[2].edges.asArray(), [
     { source: 2, target: 3 },
     { source: 3, target: 4 },
     { source: 1, target: 3 },
@@ -839,7 +855,7 @@ test("SkeletonTracing should merge two trees with comments and branchPoints", t 
   t.not(newState, initialState);
   t.is(_.size(newState.tracing.trees), 1);
   t.is(newState.tracing.trees[2].nodes.size(), 4);
-  t.deepEqual(newState.tracing.trees[2].edges, [
+  t.deepEqual(newState.tracing.trees[2].edges.asArray(), [
     { source: 2, target: 3 },
     { source: 3, target: 4 },
     { source: 1, target: 3 },
@@ -1135,7 +1151,7 @@ test("SkeletonTracing should delete a specified node (1/2)", t => {
   t.falsy(newState.tracing.trees[1].nodes.has(2));
   // tree is split
   t.truthy(newState.tracing.trees[2]);
-  t.is(newState.tracing.activeNodeId, 1);
+  t.is(newState.tracing.activeNodeId, 3);
   t.is(newState.tracing.activeTreeId, 1);
 });
 
@@ -1160,7 +1176,7 @@ test("SkeletonTracing should delete a specified node (2/2)", t => {
   t.falsy(newState.tracing.trees[1].nodes.has(2));
   // tree is split
   t.truthy(newState.tracing.trees[2]);
-  t.is(newState.tracing.activeNodeId, 1);
+  t.is(newState.tracing.activeNodeId, 3);
   t.is(newState.tracing.activeTreeId, 1);
 });
 

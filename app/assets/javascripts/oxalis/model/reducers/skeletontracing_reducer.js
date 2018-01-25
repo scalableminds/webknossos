@@ -7,6 +7,7 @@ import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
+import EdgeCollection from "oxalis/model/edge_collection";
 import {
   createBranchPoint,
   deleteBranchPoint,
@@ -76,7 +77,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const trees = _.keyBy(
         action.tracing.trees.map((tree): TreeType => ({
           comments: tree.comments,
-          edges: tree.edges,
+          edges: EdgeCollection.loadFromEdges(tree.edges),
           name: tree.name,
           treeId: tree.treeId,
           nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),

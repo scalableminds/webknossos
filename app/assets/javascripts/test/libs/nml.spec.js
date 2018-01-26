@@ -193,4 +193,6 @@ test("addTrees reducer should assign new node and tree ids", t => {
     { source: 12, target: 13 },
     { source: 13, target: 14 },
   ]);
+  // The cachedMaxNodeId should be correct afterwards as well
+  t.is(newState.tracing.cachedMaxNodeId, 14);
 });

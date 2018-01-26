@@ -312,10 +312,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         case "ADD_TREES": {
           const { trees } = action;
           return addTrees(state, trees)
-            .map(updatedTrees =>
+            .map(([updatedTrees, newMaxNodeId]) =>
               update(state, {
                 tracing: {
                   trees: { $merge: updatedTrees },
+                  cachedMaxNodeId: { $set: newMaxNodeId },
                 },
               }),
             )

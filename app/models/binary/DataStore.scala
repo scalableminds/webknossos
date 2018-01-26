@@ -8,7 +8,6 @@ import java.util.UUID
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Datastores, _}
-import models.annotation.AnnotationTypeSQL
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, Writes, __}
@@ -59,14 +58,8 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
       parsed
     }
 
-  def findAll(implicit ctx: DBAccessContext): Fox[List[DataStoreSQL]] =
-    for {
-      r <- db.run(Datastores.result)
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
-
   def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Datastores if (notdel(row) && row.name === name && row.typ.inSetBind(AnnotationTypeSQL.UserTracings.map(_.toString)))} yield row.url
+    val q = for {row <- Datastores if (notdel(row) && row.name === name)} yield row.url
     for {_ <- db.run(q.update(url))} yield ()
   }
 

@@ -48,6 +48,17 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends FoxImplicits {
     }.flatten
   }
 
+  def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
+    for {
+      r <- db.run(collection.result)
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- collection if (notdel(row) && idColumn(row) == id.id)} yield isDeletedColumn(row)
+    for {_ <- db.run(q.update(false))} yield ()
+  }
+
   def setStringCol(id: ObjectId, column: (X) => Rep[String], newValue: String): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) == id.id)} yield column(row)
     for {_ <- db.run(q.update(newValue))} yield ()

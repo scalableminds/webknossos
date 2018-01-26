@@ -8,10 +8,11 @@ import java.util.UUID
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Datastores, _}
-import models.basics.SecuredBaseDAO
+import models.annotation.AnnotationTypeSQL
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, Writes, __}
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.SQLDAO
 
@@ -23,7 +24,6 @@ case class DataStoreSQL(
                        key: String,
                        isDeleted: Boolean = false
                        )
-
 
 
 object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
@@ -40,6 +40,48 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
       r.key,
       r.isdeleted
     ))
+
+  def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStoreSQL] =
+    for {
+      rOpt <- db.run(Datastores.filter(r => notdel(r) && r.key === key).result.headOption)
+      r <- rOpt.toFox
+      parsed <- parse(r)
+    } yield {
+      parsed
+    }
+
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStoreSQL] =
+    for {
+      rOpt <- db.run(Datastores.filter(r => notdel(r) && r.name === name).result.headOption)
+      r <- rOpt.toFox
+      parsed <- parse(r)
+    } yield {
+      parsed
+    }
+
+  def findAll(implicit ctx: DBAccessContext): Fox[List[DataStoreSQL]] =
+    for {
+      r <- db.run(Datastores.result)
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Datastores if (notdel(row) && row.name === name && row.typ.inSetBind(AnnotationTypeSQL.UserTracings.map(_.toString)))} yield row.url
+    for {_ <- db.run(q.update(url))} yield ()
+  }
+
+  def insertOne(d: DataStoreSQL): Fox[Unit] = {
+    for {
+      _ <- db.run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted)
+                         values(${d.name}, ${d.url}, ${d.key}, '#${d.typ.name}', ${d.isDeleted})""")
+    } yield ()
+  }
+
+}
+
+object DataStoreSQL {
+  def fromDataStore(d: DataStore) =
+    Fox.successful(DataStoreSQL(d.name, d.url, d.typ, d.key, false))
 }
 
 
@@ -79,14 +121,33 @@ object DataStore {
   }
 }
 
-object DataStoreDAO extends SecuredBaseDAO[DataStore] {
-  val collectionName = "dataStores"
+object DataStoreDAO {
 
-  val formatter = DataStore.dataStoreFormat
+  def findOneByKey(key: String)(implicit ctx: DBAccessContext) =
+    for {
+      dataStoreSQL <- DataStoreSQLDAO.findOneByKey(key)
+      dataStore <- DataStore.fromDataStoreSQL(dataStoreSQL)
+    } yield dataStore
 
-  def findByKey(key: String)(implicit ctx: DBAccessContext) =
-    findOne("key", key)
+  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
+    for {
+      dataStoreSQL <- DataStoreSQLDAO.findOneByName(name)
+      dataStore <- DataStore.fromDataStoreSQL(dataStoreSQL)
+    } yield dataStore
+
+  def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
+    for {
+      dataStoresSQL <- DataStoreSQLDAO.findAll
+      dataStores <- Fox.combined(dataStoresSQL.map(DataStore.fromDataStoreSQL(_)))
+    } yield dataStores
 
   def updateUrl(name: String, url: String)(implicit ctx: DBAccessContext) =
-    update(Json.obj("name" -> name), Json.obj("$set" -> Json.obj("url" -> url)))
+    DataStoreSQLDAO.updateUrlByName(name, url)
+
+  def insert(dataStore: DataStore)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      dataStoreSQL <- DataStoreSQL.fromDataStore(dataStore)
+      _ <- DataStoreSQLDAO.insertOne(dataStoreSQL)
+    } yield ()
+
 }

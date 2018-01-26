@@ -10,9 +10,9 @@ import models.task.{TaskDAO, TaskService}
 import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
+import play.api.Play.current
 import play.api.data.validation.ValidationError
 import play.api.i18n.Messages
-import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
@@ -20,6 +20,7 @@ import play.api.libs.json.{Json, _}
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
@@ -38,6 +39,24 @@ case class ProjectSQL(
                      isDeleted: Boolean = false
                      )
 
+object ProjectSQL {
+  def fromProject(p: Project) = {
+    for {
+      team <- TeamSQLDAO.findOneByName(p.team)
+    } yield {
+      ProjectSQL(
+        ObjectId.fromBsonId(p._id),
+        team._id,
+        ObjectId.fromBsonId(p._owner),
+        p.name,
+        p.priority,
+        p.paused,
+        p.expectedTime.map(_.toLong),
+        System.currentTimeMillis(),
+        false)
+    }
+  }
+}
 
 object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
   val collection = Projects
@@ -57,6 +76,23 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
       r.created.getTime,
       r.isdeleted
     ))
+
+  // read operations
+
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[ProjectSQL] =
+    for {
+      rOpt <- db.run(Projects.filter(r => notdel(r) && r.name === name).result.headOption)
+      r <- rOpt.toFox
+      parsed <- parse(r)
+    } yield {
+      parsed
+    }
+
+  // write operations
+
+  def setPaused(id: ObjectId, isPaused: Boolean) =
+    setBooleanCol(id, _.paused, isPaused)
+
 }
 
 
@@ -227,21 +263,28 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
   underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
-    findOne("name", name)
-  }
+  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
+    for {
+      projectSQL <- ProjectSQLDAO.findOneByName(name)
+      project <- Project.fromProjectSQL(projectSQL)
+    } yield project
 
-  def findAllByTeamName(teamName: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find("team", teamName).collect[List]()
-  }
+  override def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext) =
+    for {
+      projectSQL <- ProjectSQLDAO.findOne(ObjectId(id.stringify))
+      project <- Project.fromProjectSQL(projectSQL)
+    } yield project
 
+  /* TODO Reports
   def findAllByTeamNames(teamNames: List[String])(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find(Json.obj("team" -> Json.obj("$in" -> teamNames))).cursor[Project]().collect[List]()
-  }
+  } */
 
-  def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
-    findAndModify(Json.obj("_id" -> _id), Json.obj("$set" -> Json.obj("paused" -> isPaused)), returnNew = true)
-  }
+  def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) =
+    for {
+      _ <- ProjectSQLDAO.setPaused(ObjectId.fromBsonId(_id), isPaused)
+      project <- findOneById(_id)
+    } yield project
 
   def updateProject(_id: BSONObjectID, project: Project)(implicit ctx: DBAccessContext) = {
     findAndModify(Json.obj("_id" -> _id), Json.obj("$set" ->
@@ -252,6 +295,9 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
         "priority" -> project.priority,
         "expectedTime" -> project.expectedTime,
         "paused" -> project.paused)), returnNew = true)
-
   }
+
+  def insert = ???
+  def findAll = ???
+  def remove = ???
 }

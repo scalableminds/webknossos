@@ -15,7 +15,6 @@ import oxalis.jobs.AvailableTasksJob
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
-import play.api.libs.json.Json
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import utils.SQLClient
@@ -136,7 +135,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
   }
 
   def insertLocalDataStore(conf: Configuration) = {
-    DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
+    DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
         val url = conf.getString("http.uri").getOrElse("http://localhost:9000")
         val key = conf.getString("datastore.key").getOrElse("something-secure")

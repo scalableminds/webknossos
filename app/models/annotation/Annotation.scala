@@ -143,7 +143,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def findByTaskIdAndType(taskId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
-      r <- db.run(Annotations.filter(r => notdel(r) && r._Task == taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
+      r <- db.run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -208,7 +208,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     } yield ()
 
   def cancelAnnotationsOfUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Annotations if (notdel(row) && row._User == userId.id && row.typ.inSetBind(AnnotationTypeSQL.UserTracings.map(_.toString)))} yield row.state
+    val q = for {row <- Annotations if (notdel(row) && row._User === userId.id && row.typ.inSetBind(AnnotationTypeSQL.UserTracings.map(_.toString)))} yield row.state
     for {_ <- db.run(q.update(AnnotationState.Cancelled.toString))} yield ()
   }
 
@@ -535,7 +535,7 @@ object AnnotationDAO extends FoxImplicits {
   def countFinishedByTaskIdsAndUserIdAndType(_tasks: List[BSONObjectID], userId: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
   def countRecentlyModifiedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType, minimumTimestamp: Long)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
 
-  /*
+  /* TODO Reports
   def countActiveByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     count(Json.obj(
       "_task" -> Json.obj("$in" -> _tasks),

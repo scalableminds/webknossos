@@ -51,7 +51,7 @@ object AnalyticsSQLDAO extends SQLDAO[AnalyticsEntrySQL, AnalyticsRow, Analytics
 
   def insertOne(a: AnalyticsEntrySQL): Fox[Unit] = {
     for {
-      _ <- db.run(sqlu"""insert into webknossos.analytics(_id, _user, namespace, value, created, isDeleted)
+      _ <- run(sqlu"""insert into webknossos.analytics(_id, _user, namespace, value, created, isDeleted)
                          values(${a._id.toString}, ${a._user.map(_.id)}, ${a.namespace}, #${sanitize(a.value.toString)},
                                 ${new java.sql.Timestamp(a.created)}, ${a.isDeleted})""")
     } yield ()

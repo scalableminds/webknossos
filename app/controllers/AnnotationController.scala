@@ -38,44 +38,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     Ok(views.html.main())
   }
 
-  def sqlTest = UserAwareAction.async { implicit request =>
-    val db = Database.forConfig("postgres")
-
-    //db.run(Testtable.result).map(_.foreach{case TesttableRow(a,b,c) => {val x: Int = a; println(x) } case _ => println("did not match query result")})
-
-    for {
-      r <- db.run(Annotations.map(_.tags).result)
-    } yield {
-      db.close()
-      r.headOption match { case Some(aString) => Ok(aString) case _ => Ok("did not match query result")}
-    }
-  }
-
-  def sqlTest2(id: String) = UserAwareAction.async { implicit request =>
-    for {
-      taskSQL <- TaskSQLDAO.findOne(ObjectId(id))
-      task <- Task.fromTaskSQL(taskSQL) ?~> Messages("task.notFound")
-    } yield {
-      Ok(Json.toJson(task))
-    }
-  }
-
-  def sqlTest3(id: String) = UserAwareAction.async { implicit request =>
-    for {
-      _ <- TaskSQLDAO.updateTotalInstances(ObjectId(id), 78)
-    } yield {
-      Ok("updated total instances")
-    }
-  }
-
-  def sqlTest4(id: String) = UserAwareAction.async { implicit request =>
-    for {
-      _ <- TaskSQLDAO.updateBoundingBoxPlainSQL(ObjectId(id))
-    } yield {
-      Ok("updated bounding box")
-    }
-  }
-
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     val annotationId = AnnotationIdentifier(typ, id)
     withAnnotation(annotationId) { annotation =>

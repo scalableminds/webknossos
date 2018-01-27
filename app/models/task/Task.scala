@@ -25,7 +25,7 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONObjectID, BSONString}
 import reactivemongo.play.json.BSONFormats._
-import slick.driver.PostgresDriver.api._
+import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLDAO}
 
 
@@ -78,24 +78,25 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
   def openInstanceCountForTask(taskId: ObjectId): Fox[Int] = {
     for {
-      result <- db.run(sql"select openInstances from webknossos.task_instances where _id = ${taskId.toString}".as[Int])
+      result <- run(sql"select openInstances from webknossos.task_instances where _id = ${taskId.toString}".as[Int])
+      firstResult <- result.headOption.toFox
     } yield {
-      result.headOption
+      firstResult
     }
   }
 
   def updateTotalInstances(taskId: ObjectId, newTotalInstances: Long) = {
     val q = for { c <- Tasks if c._Id === taskId.id } yield c.totalinstances
-    db.run(q.update(newTotalInstances))
+    run(q.update(newTotalInstances))
   }
 
   def updateBoundingBox(taskId: ObjectId) = {
     val q = for { c <- Tasks if c._Id === taskId.id } yield c.boundingbox
-    db.run(q.update(Some("(0,0,0,10,10,10)")))
+    run(q.update(Some("(0,0,0,10,10,10)")))
   }
 
   def updateBoundingBoxPlainSQL(taskId: ObjectId) =
-    db.run(sqlu"update webknossos.tasks set boundingBox = '(0,0,0,10,10,10)'")
+    run(sqlu"update webknossos.tasks set boundingBox = '(0,0,0,10,10,10)'")
 
 }
 

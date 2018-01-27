@@ -50,7 +50,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   }
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
-    db.run(Teams.filter(r => notdel(r) && r.name === name).result.headOption).map {
+    run(Teams.filter(r => notdel(r) && r.name === name).result.headOption).map {
       case Some(r) =>
         parse(r) ?~> ("sql: could not parse database row for name" + name)
       case _ =>

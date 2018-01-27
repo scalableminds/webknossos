@@ -22,7 +22,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
 import scala.concurrent.Future
 
@@ -73,8 +73,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
 
 
 
-object UserTeamRolesSQLDAO extends FoxImplicits {
-  val db = Database.forConfig("postgres")
+object UserTeamRolesSQLDAO extends SimpleSQLDAO {
 
   def findTeamRolesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembership]] = {
     val query = for {
@@ -82,23 +81,23 @@ object UserTeamRolesSQLDAO extends FoxImplicits {
     } yield (team.name, role.role)
 
     for {
-      rows: Seq[(String, String)] <- db.run(query.result)
+      rows: Seq[(String, String)] <- run(query.result)
     } yield {
       rows.toList.map { case (teamName, role) => TeamMembership(teamName, Role(role)) }
     }
   }
 }
 
-object UserExperiencesSQLDAO extends FoxImplicits {
-  val db = Database.forConfig("postgres")
+object UserExperiencesSQLDAO extends SimpleSQLDAO {
 
   def findExperiencesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
     for {
-      rows <- db.run(UserExperiences.filter(_._User === userId.id).result)
+      rows <- run(UserExperiences.filter(_._User === userId.id).result)
     } yield {
       rows.map(r => (r.domain, r.value)).toMap
     }
   }
+
 }
 
 

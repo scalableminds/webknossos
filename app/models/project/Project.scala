@@ -78,7 +78,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[ProjectSQL] =
     for {
-      rOpt <- db.run(Projects.filter(r => notdel(r) && r.name === name).result.headOption)
+      rOpt <- run(Projects.filter(r => notdel(r) && r.name === name).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
     } yield {
@@ -89,13 +89,15 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
 
   def insertOne(p: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- db.run(sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, created, isDeleted)
+      _ <- run(sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, created, isDeleted)
                          values(${p._id.id}, ${p._team.id}, ${p._owner.id}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
     } yield ()
 
+
+
   def updateOne(p: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that p.created is skipped
-      _ <- db.run(sqlu"""update webknossos.projects
+      _ <- run(sqlu"""update webknossos.projects
                           set
                             _team = ${p._team.id},
                             _owner = ${p._owner.id},

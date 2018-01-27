@@ -10,7 +10,6 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.basics._
 import models.configuration.DataSetConfiguration
 import models.task.TaskSQLDAO.parseArrayTuple
-import models.team.TeamSQLDAO.{db, notdel, parse}
 import models.team.{TeamSQL, TeamSQLDAO}
 import models.user.User
 import net.liftweb.common.Full
@@ -21,7 +20,7 @@ import play.utils.UriEncoding
 import reactivemongo.api.indexes.{Index, IndexType}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLClient, SQLDAO}
+import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
 
 case class DataSetSQL(
@@ -74,7 +73,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   }
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSetSQL] = {
-    db.run(Datasets.filter(r => notdel(r) && r.name === name).result.headOption).map {
+    run(Datasets.filter(r => notdel(r) && r.name === name).result.headOption).map {
       case Some(r) =>
         parse(r) ?~> ("sql: could not parse database row for name" + name)
       case _ =>
@@ -84,8 +83,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 }
 
 
-object DataSetResolutionsSQLDAO extends FoxImplicits {
-  val db = SQLClient.db
+object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
 
   def parseRow(row: DatasetResolutionsRow): Fox[DataResolution] = {
     for {
@@ -97,7 +95,7 @@ object DataSetResolutionsSQLDAO extends FoxImplicits {
 
   def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[DataResolution]] = {
     for {
-      rows <- db.run(DatasetResolutions.filter(r => r._Dataset === dataSetId.id && r.datalayername === dataLayerName).result).map(_.toList)
+      rows <- run(DatasetResolutions.filter(r => r._Dataset === dataSetId.id && r.datalayername === dataLayerName).result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow))
     } yield {
       rowsParsed
@@ -107,8 +105,7 @@ object DataSetResolutionsSQLDAO extends FoxImplicits {
 }
 
 
-object DataSetDataLayerSQLDAO extends FoxImplicits {
-  val db = SQLClient.db
+object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
 
   def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
@@ -143,7 +140,7 @@ object DataSetDataLayerSQLDAO extends FoxImplicits {
 
   def findDataLayersForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
     for {
-      rows <- db.run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
+      rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId)))
     } yield {
       rowsParsed
@@ -153,8 +150,7 @@ object DataSetDataLayerSQLDAO extends FoxImplicits {
 
 
 
-object DataSetAllowedTeamsSQLDAO extends FoxImplicits {
-  val db = Database.forConfig("postgres")
+object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
 
   def findAllowedTeamsForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[String]] = {
 
@@ -162,7 +158,7 @@ object DataSetAllowedTeamsSQLDAO extends FoxImplicits {
       (allowedteam, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams  on (_._Team === _._Id)
     } yield team.name
 
-    db.run(query.result).map(_.toList)
+    run(query.result).map(_.toList)
 
   }
 }

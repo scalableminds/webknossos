@@ -42,7 +42,7 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
 
   def findOneByKey(key: String)(implicit ctx: DBAccessContext): Fox[DataStoreSQL] =
     for {
-      rOpt <- db.run(Datastores.filter(r => notdel(r) && r.key === key).result.headOption)
+      rOpt <- run(Datastores.filter(r => notdel(r) && r.key === key).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
     } yield {
@@ -51,7 +51,7 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStoreSQL] =
     for {
-      rOpt <- db.run(Datastores.filter(r => notdel(r) && r.name === name).result.headOption)
+      rOpt <- run(Datastores.filter(r => notdel(r) && r.name === name).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
     } yield {
@@ -60,12 +60,12 @@ object DataStoreSQLDAO extends SQLDAO[DataStoreSQL, DatastoresRow, Datastores] {
 
   def updateUrlByName(name: String, url: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- Datastores if (notdel(row) && row.name === name)} yield row.url
-    for {_ <- db.run(q.update(url))} yield ()
+    for {_ <- run(q.update(url))} yield ()
   }
 
   def insertOne(d: DataStoreSQL): Fox[Unit] = {
     for {
-      _ <- db.run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted)
+      _ <- run(sqlu"""insert into webknossos.dataStores(name, url, key, typ, isDeleted)
                          values(${d.name}, ${d.url}, ${d.key}, '#${d.typ.name}', ${d.isDeleted})""")
     } yield ()
   }

@@ -130,32 +130,32 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       case None => r.state =!= AnnotationState.Cancelled.toString
     }
     for {
-      r <- db.run(Annotations.filter(r => notdel(r) && r._User === _user.id && stateQuery(r) && r.typ === annotationType.toString).take(limit).sortBy(_._Id.desc).result)
+      r <- run(Annotations.filter(r => notdel(r) && r._User === _user.id && stateQuery(r) && r.typ === annotationType.toString).take(limit).sortBy(_._Id.desc).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
 
   def findActiveAnnotationsFor(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
-      r <- db.run(Annotations.filter(r => notdel(r) && r._User === userId.id && r.typ === typ.toString && r.state === AnnotationState.Active.toString).result)
+      r <- run(Annotations.filter(r => notdel(r) && r._User === userId.id && r.typ === typ.toString && r.state === AnnotationState.Active.toString).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findByTaskIdAndType(taskId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
-      r <- db.run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
+      r <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findUnfinishedByTaskIds(taskIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
-      r <- db.run(Annotations.filter(r => notdel(r) && r._Task.inSetBind(taskIds.map(_.id)) && r.state =!= AnnotationState.Finished.toString).result)
+      r <- run(Annotations.filter(r => notdel(r) && r._Task.inSetBind(taskIds.map(_.id)) && r.state =!= AnnotationState.Finished.toString).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findOneByTracingId(tracingId: java.util.UUID)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
     for {
-      rOpt <- db.run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
+      rOpt <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
       r <- rOpt.toFox
       parsed <- parse(r)
     } yield {
@@ -166,30 +166,30 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def countAll(implicit ctx: DBAccessContext): Fox[Int] =
     for {
-      count <- db.run(Annotations.filter(r => notdel(r)).length.result)
+      count <- run(Annotations.filter(r => notdel(r)).length.result)
     } yield count
 
   def countActiveAnnotationsFor(userId: ObjectId, typ: AnnotationTypeSQL, excludedTeamNames: List[String])(implicit ctx: DBAccessContext): Fox[Int] =
     for {
-      count <- db.run(Annotations.filter(r => (notdel(r) && r._User === userId.id && r.typ === typ.toString && r.state === AnnotationState.Active.toString))
-                     .join(Teams).on((_._Team === _._Id)).filterNot(r => r._2.name.inSetBind(excludedTeamNames)).length.result)
+      count <- run(Annotations.filter(r => (notdel(r) && r._User === userId.id && r.typ === typ.toString && r.state === AnnotationState.Active.toString))
+        .join(Teams).on((_._Team === _._Id)).filterNot(r => r._2.name.inSetBind(excludedTeamNames)).length.result)
     } yield count
 
   def countByTaskAndUser(taskId: ObjectId, userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
-      count <- db.run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r._User === userId.id && r.typ === typ.toString).length.result)
+      count <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r._User === userId.id && r.typ === typ.toString).length.result)
     } yield count
 
   def countActiveByTask(taskId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
-      count <- db.run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString).length.result)
+      count <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString).length.result)
     } yield count
 
   // write operations
 
   def insertOne(a: AnnotationSQL): Fox[Unit] = {
     for {
-      _ <- db.run(sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+      _ <- run(sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
                        values(${a._id.toString}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, '#${java.util.UUID.fromString(a.tracing.id)}',
                               '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
                               '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
@@ -199,17 +199,17 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def removeAllWithTaskId(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- Annotations if (notdel(row) && row._Task === taskId.id)} yield row.isdeleted
-    for {_ <- db.run(q.update(true))} yield ()
+    for {_ <- run(q.update(true))} yield ()
   }
 
   def logTime(time: Long, id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- db.run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${id.id}")
     } yield ()
 
   def cancelAnnotationsOfUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- Annotations if (notdel(row) && row._User === userId.id && row.typ.inSetBind(AnnotationTypeSQL.UserTracings.map(_.toString)))} yield row.state
-    for {_ <- db.run(q.update(AnnotationState.Cancelled.toString))} yield ()
+    for {_ <- run(q.update(AnnotationState.Cancelled.toString))} yield ()
   }
 
   def setState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext) =
@@ -229,17 +229,17 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def setTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- db.run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags.map(sanitize(_)))}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags.map(sanitize(_)))}' where _id = ${id.id}")
     } yield ()
 
   def setModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- db.run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = ${id.id}")
     } yield ()
 
   def setTracingReference(id: ObjectId, tracing: TracingReference)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- db.run(sqlu"update webknossos.annotations set tracingId = '#${java.util.UUID.fromString(tracing.id)}', tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set tracingId = '#${java.util.UUID.fromString(tracing.id)}', tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
     } yield ()
 
   def setStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] = {
@@ -247,7 +247,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     println("statements: ")
     q.statements.map(println)
     for {
-      _ <- db.run(q)
+      _ <- run(q)
     } yield ()
   }
 
@@ -283,8 +283,8 @@ case class Annotation(
   lazy val muta = new AnnotationMutations(this)
 
   /**
-   * Easy access methods
-   */
+    * Easy access methods
+    */
 
   val name = _name getOrElse ""
 
@@ -401,17 +401,17 @@ object Annotation extends FoxImplicits {
 
 
 object AnnotationDAO extends FoxImplicits {
-/*
-  val collectionName = "annotations"
+  /*
+    val collectionName = "annotations"
 
-  val formatter = Annotation.annotationFormat
+    val formatter = Annotation.annotationFormat
 
-  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("tracingReference.id" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending, "typ" -> IndexType.Ascending)))
-*/
+    underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending)))
+    underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+    underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
+    underlying.indexesManager.ensure(Index(Seq("tracingReference.id" -> IndexType.Ascending)))
+    underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending, "typ" -> IndexType.Ascending)))
+  */
 
   /*
   val AccessDefinitions = new DefaultAccessDefinitions{

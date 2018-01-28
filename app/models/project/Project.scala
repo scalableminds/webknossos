@@ -37,12 +37,12 @@ case class ProjectSQL(
                      )
 
 object ProjectSQL {
-  def fromProject(p: Project, overwriteId: Option[ObjectId] = None)(implicit ctx: DBAccessContext) = {
+  def fromProject(p: Project)(implicit ctx: DBAccessContext) = {
     for {
       team <- TeamSQLDAO.findOneByName(p.team)
     } yield {
       ProjectSQL(
-        overwriteId.getOrElse(ObjectId.fromBsonId(p._id)),
+        ObjectId.fromBsonId(p._id),
         team._id,
         ObjectId.fromBsonId(p._owner),
         p.name,
@@ -316,7 +316,7 @@ object ProjectDAO {
 
   def updateProject(_id: BSONObjectID, project: Project)(implicit ctx: DBAccessContext) =
     for {
-      projectSQL <- ProjectSQL.fromProject(project, overwriteId = Some(ObjectId.fromBsonId(_id)))
+      projectSQL <- ProjectSQL.fromProject(project.copy(_id = _id))
       _ <- ProjectSQLDAO.updateOne(projectSQL)
       updated <- findOneById(_id)
     } yield updated

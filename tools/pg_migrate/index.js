@@ -258,8 +258,8 @@ function* csvWriter(name, cols) {
         "settings_preferredMode",
         "settings_branchPointsAllowed",
         "settings_somaClickingAllowed",
-        "isDeleted",
         "created",
+        "isDeleted",
       ],
       async doc => ({
         _id: doc._id.toHexString(),
@@ -270,8 +270,8 @@ function* csvWriter(name, cols) {
         settings_preferredMode: doc.settings.preferredMode,
         settings_branchPointsAllowed: doc.settings.branchPointsAllowed,
         settings_somaClickingAllowed: doc.settings.somaClickingAllowed,
-        isDeleted: !doc.isActive,
         created: doc._id.getTimestamp(),
+        isDeleted: !doc.isActive,
       }),
     );
 

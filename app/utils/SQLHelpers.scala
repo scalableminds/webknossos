@@ -74,7 +74,7 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
 
   def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
     for {
-      r <- run(collection.result)
+      r <- run(collection.filter(row => notdel(row)).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -112,5 +112,10 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
     else trimmed.split(",", -1).toList
   }
 
-  def sanitize(aString: String) = aString // TODO: prevent sql injection
+  def sanitize(aString: String): String = aString // TODO: prevent sql injection
+
+  def optionLiteral(aStringOpt: Option[String]): String = aStringOpt match {
+    case Some(aString) => "'" + aString + "'"
+    case None => "null"
+  }
 }

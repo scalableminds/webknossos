@@ -33,15 +33,15 @@ class DiffableMap<K: number, V> {
   }
 
   get(key: K): V {
-    const value = this.getMaybe(key);
-    if (value) {
+    const value = this.getNullable(key);
+    if (value !== undefined) {
       return value;
     } else {
       throw new Error("Get empty");
     }
   }
 
-  getMaybe(key: K): ?V {
+  getNullable(key: K): ?V {
     let idx = 0;
     while (this.chunks[idx] != null) {
       if (this.chunks[idx].has(key)) {
@@ -50,11 +50,11 @@ class DiffableMap<K: number, V> {
       }
       idx++;
     }
-    return null;
+    return undefined;
   }
 
   has(key: K): boolean {
-    return this.getMaybe(key) !== null;
+    return this.getNullable(key) !== undefined;
   }
 
   set(key: K, value: V): DiffableMap<K, V> {
@@ -296,7 +296,7 @@ export function diffDiffableMaps<K: number, V>(
     const newOnlyA = onlyA.filter(id => !missingChangedIdSet.has(id));
     const newOnlyB = onlyB.filter(id => !missingChangedIdSet.has(id));
 
-    // Ensure that these elements are not equal before addng them to "changed"
+    // Ensure that these elements are not equal before adding them to "changed"
     const newChanged = changed.concat(
       missingChangedIds.filter(id => mapA.get(id) !== mapB.get(id)),
     );

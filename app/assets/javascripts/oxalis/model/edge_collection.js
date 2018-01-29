@@ -21,8 +21,8 @@ export default class EdgeCollection {
   }
 
   getEdgesForNode(nodeId: number): Array<EdgeType> {
-    const outgoingEdges = this.outMap.getMaybe(nodeId) || [];
-    const ingoingEdges = this.inMap.getMaybe(nodeId) || [];
+    const outgoingEdges = this.outMap.getNullable(nodeId) || [];
+    const ingoingEdges = this.inMap.getNullable(nodeId) || [];
 
     return outgoingEdges.concat(ingoingEdges);
   }
@@ -34,9 +34,9 @@ export default class EdgeCollection {
     const newEdgeCount = this.edgeCount + edges.length;
 
     for (const edge of edges) {
-      const outgoingEdges = this.outMap.getMaybe(edge.source) || [];
+      const outgoingEdges = this.outMap.getNullable(edge.source) || [];
 
-      const ingoingEdges = this.inMap.getMaybe(edge.target) || [];
+      const ingoingEdges = this.inMap.getNullable(edge.target) || [];
 
       newOutgoingEdges.mutableSet(edge.source, outgoingEdges.concat(edge));
       newIngoingEdges.mutableSet(edge.target, ingoingEdges.concat(edge));
@@ -54,8 +54,8 @@ export default class EdgeCollection {
   }
 
   removeEdge(edge: EdgeType) {
-    const outgoingEdges = this.outMap.getMaybe(edge.source) || [];
-    const ingoingEdges = this.inMap.getMaybe(edge.target) || [];
+    const outgoingEdges = this.outMap.getNullable(edge.source) || [];
+    const ingoingEdges = this.inMap.getNullable(edge.target) || [];
 
     const newOutgoingEdges = this.outMap.set(
       edge.source,
@@ -107,8 +107,6 @@ export default class EdgeCollection {
       } else {
         rawOutMap[edge.source] = [edge];
       }
-      // The doublyLinked flag determines (if true) that source AND target node should contain their connecting edge
-      // or (if false) that only the source node should contain the connecting edge
 
       if (rawInMap[edge.target]) {
         rawInMap[edge.target].push(edge);

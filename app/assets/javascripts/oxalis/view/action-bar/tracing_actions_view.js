@@ -13,13 +13,13 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { copyAnnotationToUserAccount } from "admin/admin_rest_api";
+import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, APITracingType } from "admin/api_flow_types";
 
 type StateProps = {
-  tracingType: string,
+  tracingType: APITracingType,
   annotationId: string,
   restrictions: RestrictionsType & SettingsType,
   task: ?TaskType,
@@ -67,15 +67,14 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
   handleFinish = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${
-      this.props.annotationId
-    }/finishAndRedirect`;
     await this.handleSave();
 
     Modal.confirm({
       title: messages["annotation.finish"],
-      onOk: () => {
-        location.href = url;
+      onOk: async () => {
+        await finishAnnotation(this.props.annotationId, this.props.tracingType);
+        // Force page refresh
+        location.href = "/dashboard";
       },
     });
   };
@@ -94,7 +93,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    const downloadUrl = `/annotations/${this.props.tracingType}/${
+    const downloadUrl = `/api/annotations/${this.props.tracingType}/${
       this.props.annotationId
     }/download`;
     win.location.href = downloadUrl;

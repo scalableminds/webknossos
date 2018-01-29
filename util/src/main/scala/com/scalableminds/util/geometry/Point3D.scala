@@ -31,7 +31,7 @@ case class Point3D(x: Int, y: Int, z: Int) {
 
   override def toString = "(%d, %d, %d)".format(x, y, z)
 
-  def toTuple = (x, y, z)
+  def toList = List(x, y, z)
 
   def move(dx: Int, dy: Int, dz: Int) =
     Point3D(x + dx, y + dy, z + dz)

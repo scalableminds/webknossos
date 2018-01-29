@@ -7,10 +7,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableD
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataResolution, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import models.configuration.DataSetConfiguration
-import models.task.TaskSQLDAO.parseArrayTuple
 import models.team.{TeamSQL, TeamSQLDAO}
 import models.user.User
 import net.liftweb.common.Full
+import play.api.Play.current
+import play.api.i18n.Messages
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
@@ -18,23 +20,44 @@ import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
-import views.html.helper.select
 
 
 case class DataSetSQL(
-                     _id: ObjectId,
-                     _datastore: ObjectId,
-                     _team: ObjectId,
-                     defaultConfiguration: Option[JsObject] = None,
-                     description: Option[String] = None,
-                     isPublic: Boolean,
-                     isUsable: Boolean,
-                     name: String,
-                     scale: Option[Scale],
-                     status: String,
-                     created: Long = System.currentTimeMillis(),
-                     isDeleted: Boolean = false
+                       _id: ObjectId,
+                       _dataStore: String,
+                       _team: ObjectId,
+                       defaultConfiguration: Option[JsValue] = None,
+                       description: Option[String] = None,
+                       isPublic: Boolean,
+                       isUsable: Boolean,
+                       name: String,
+                       scale: Option[Scale],
+                       status: String,
+                       created: Long = System.currentTimeMillis(),
+                       isDeleted: Boolean = false
                      )
+
+object DataSetSQL {
+  def fromDataSetWithId(d: DataSet, newId: ObjectId)(implicit ctx: DBAccessContext) =
+    for {
+      team <- TeamSQLDAO.findOneByName(d.dataSource.id.team)
+    } yield {
+      DataSetSQL(
+        newId,
+        d.dataStoreInfo.name,
+        team._id,
+        d.defaultConfiguration.map(Json.toJson(_)),
+        d.description,
+        d.isPublic,
+        d.isActive,
+        d.dataSource.id.name,
+        d.dataSource.scaleOpt,
+        d.dataSource.statusOpt.getOrElse(""),
+        d.created,
+        false
+      )
+    }
+}
 
 object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   val collection = Datasets
@@ -49,16 +72,13 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     case None => Fox.successful(None)
   }
 
-  private def writeScaleLiteral(scale: Scale): String =
-    writeArrayTuple(List(scale.x, scale.y, scale.z).map(_.toString))
-
   def parse(r: DatasetsRow): Fox[DataSetSQL] = {
     for {
       scale <- parseScaleOpt(r.scale)
     } yield {
       DataSetSQL(
         ObjectId(r._Id),
-        ObjectId(r._Datastore),
+        r._Datastore,
         ObjectId(r._Team),
         r.defaultconfiguration.map(Json.parse(_).as[JsObject]),
         r.description,
@@ -86,6 +106,15 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     for {_ <- run(q.update(description, isPublic))} yield ()
   }
 
+  def insertOne(d: DataSetSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      _ <- run(sqlu"""insert into webknossos.dataSets(_id, _dataStore, _team, defaultConfiguration, description, isPublic, isUsable, name, scale, status, created, isDeleted)
+               values(${d._id.id}, ${d._dataStore}, ${d._team.id}, #${optionLiteral(d.defaultConfiguration.map(_.toString).map(sanitize))}, ${d.description}, ${d.isPublic}, ${d.isUsable},
+                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+            """)
+    } yield ()
+  }
+
   def updateDataSourceByName(name: String, dataStoreName: String, source: InboxDataSource, isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     for {
@@ -96,13 +125,20 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
                         _team = ${team._id.id},
                         isUsable = ${isUsable},
                         scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
-                        status ${source.statusOpt.getOrElse("")} =
-                   where id = ${old._id}"""
+                        status = ${source.statusOpt.getOrElse("")}
+                   where _id = ${old._id.id}"""
       _ <- run(q)
       _ <- DataSetDataLayerSQLDAO.updateLayers(old._id, source)
     } yield ()
   }
-  //to update: dataStore (find by url), isUsable, team (find by name), datalayers (in other collection), scale, status
+
+  def deactivateUnreported(names: List[String], dataStoreName: String): Fox[Unit] = {
+    val q = for {row <- Datasets if (notdel(row) && row.name.inSetBind(names) && row._Datastore === dataStoreName) } yield (row.isusable, row.status)
+    for { _ <-run(q.update(false, "No longer available on datastore.")) } yield ()
+  }
+
+  private def writeScaleLiteral(scale: Scale): String =
+    writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
 }
 
 
@@ -123,6 +159,24 @@ object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
     } yield {
       rowsParsed
     }
+  }
+
+  def updateResolutions(_dataSet: ObjectId, dataLayersOpt: Option[List[DataLayer]]): Fox[Unit] = {
+    val clearQuery = sqlu"delete from webknossos.dataSet_resolutions where _dataSet = ${_dataSet.id}"
+    val insertQueries = dataLayersOpt match {
+      case Some(dataLayers: List[DataLayer]) => {
+        dataLayers.map { layer =>
+          layer.resolutions.map { resolution => {
+            sqlu"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution, scale)
+                       values(${_dataSet.id}, ${layer.name}, ${resolution.resolution}, '#${writeStructTuple(resolution.scale.toList.map(_.toString))}')"""
+          }}
+        }.flatten
+      }
+      case _ => List()
+    }
+    for {
+      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries))
+    } yield ()
   }
 
 }
@@ -170,27 +224,31 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
     }
   }
 
-  def updateLayers(_dataSet: ObjectId, source: InboxDataSource)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = (select _id from webknossos.dataSets where _id = ${_dataSet})"
-    val insertQuerys = source.toUsable match {
-      case Some(usable) => {
-        usable.dataLayers.map { layer =>
-          layer match {
-            case AbstractSegmentationLayer(name, category, bbox, resolutions, elementClass, segmentId, mappings) => {
-              sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings)
-                    values(${_dataSet}, ${name}, '#${category}', …TODO)
-                  """
-            }
-            case AbstractDataLayer(name, category, bbox, resolutions, elementClass) => {
-              sqlu"…TODO"
-            }
-              //TODO: update resolutions table
-            case _ => throw new Exception("DataLayer type mismatch")
-          }
-        }
+  def insertLayerQuery(_dataSet: ObjectId, layer: DataLayer) =
+    layer match {
+      case s: AbstractSegmentationLayer => {
+        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings)
+                    values(${_dataSet.id}, ${s.name}, '#${s.category.toString}', '#${s.elementClass.toString}',
+                     '#${writeStructTuple(s.boundingBox.toSql.map(_.toString))}', ${s.largestSegmentId}, '#${writeArrayTuple(s.mappings.map(sanitize(_)).toList)}')"""
       }
-      case None => Fox.failure("todo")
+      case d: AbstractDataLayer => {
+        sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox)
+                    values(${_dataSet.id}, ${d.name}, '#${d.category.toString}', '#${d.elementClass.toString}',
+                     '#${writeStructTuple(d.boundingBox.toSql.map(_.toString))}')"""
+      }
+      case _ => throw new Exception("DataLayer type mismatch")
     }
+
+  def updateLayers(_dataSet: ObjectId, source: InboxDataSource)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = (select _id from webknossos.dataSets where _id = ${_dataSet.id})"
+    val insertQueries = source.toUsable match {
+      case Some(usable) => usable.dataLayers.map(insertLayerQuery(_dataSet, _))
+      case None => List()
+    }
+    for {
+      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries))
+      _ <- DataSetResolutionsSQLDAO.updateResolutions(_dataSet, source.toUsable.map(_.dataLayers))
+    } yield ()
   }
 }
 
@@ -273,7 +331,7 @@ object DataSet extends FoxImplicits {
     case None => Fox.successful(None)
   }
 
-  private def constructDatasource(s: DataSetSQL, team: TeamSQL)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
+  private def constructDataSource(s: DataSetSQL, team: TeamSQL)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
     val dataSourceId = DataSourceId(s.name, team.name)
     for {
       dataLayersBox <- DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id).futureBox
@@ -291,11 +349,11 @@ object DataSet extends FoxImplicits {
 
   def fromDataSetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
     for {
-      datastore <- DataStoreSQLDAO.findOne(s._datastore)
-      allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllowedTeamsForDataSet(s._id)
+      datastore <- DataStoreSQLDAO.findOneByName(s._dataStore.trim) ?~> Messages("datastore.notFound")
+      allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllowedTeamsForDataSet(s._id) ?~> Messages("allowedTeams.notFound")
       defaultConfiguration <- parseDefaultConfiguration(s.defaultConfiguration)
-      team <- TeamSQLDAO.findOne(s._team)
-      dataSource <- constructDatasource(s, team)
+      team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
+      dataSource <- constructDataSource(s, team) ?~> Messages("dataSource.notFound")
     } yield {
       DataSet(
         DataStoreInfo(datastore.name, datastore.url, datastore.typ),
@@ -312,10 +370,6 @@ object DataSet extends FoxImplicits {
 }
 
 object DataSetDAO {
-
-  val collectionName = "dataSets"
-
-  val formatter = DataSet.dataSetFormat
 
 /*  underlying.indexesManager.ensure(Index(Seq("dataSource.id.name" -> IndexType.Ascending)))*/
 
@@ -344,11 +398,17 @@ object DataSetDAO {
     } yield dataSet
   }
 
+  def findAll(implicit ctx: DBAccessContext): Fox[List[DataSet]] =
+    for {
+      dataSetsSQL <- DataSetSQLDAO.findAll
+      dataSets <- Fox.combined(dataSetsSQL.map(DataSet.fromDataSetSQL(_)))
+    } yield dataSets
+
   def updateDataSource(
     name: String,
     dataStoreInfo: DataStoreInfo,
     source: InboxDataSource,
-    isActive: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {}
+    isActive: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     DataSetSQLDAO.updateDataSourceByName(name, dataStoreInfo.name, source, isActive)
 
   def updateTeams(name: String, teams: List[String])(implicit ctx: DBAccessContext) =
@@ -361,25 +421,19 @@ object DataSetDAO {
     } yield updated
   }
 
-  def insert(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = Fox.failure("todo")
-
-  def findAll: Fox[List[DataSet]] = Fox.failure("todo")
+  def insert(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val newId = ObjectId.generate
+    for {
+      dataSetSQL <- DataSetSQL.fromDataSetWithId(dataSet, newId)
+      _ <- DataSetSQLDAO.insertOne(dataSetSQL)
+      _ <- DataSetDataLayerSQLDAO.updateLayers(newId, dataSet.dataSource)
+      _ <- DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(dataSet.name, dataSet.allowedTeams)
+    } yield ()
+  }
 
   def count(implicit ctx: DBAccessContext): Fox[Int] = DataSetSQLDAO.countAll
 
-  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext): Fox[Unit] = Fox.failure("todo")
-  /*
-  {
-    DataSetDAO.update(
-      Json.obj(
-        "dataStoreInfo.name" -> dataStoreName,
-        "dataSource.id.name" -> Json.obj("$nin" -> Json.arr(dataSources.map(_.id.name)))),
-      Json.obj(
-        "$set" -> Json.obj(
-          "isActive" -> false,
-          "dataSource.status" -> "No longer available on datastore."),
-        // we need this $unset, so the data source will not be considered imported during deserialization
-        "$unset" -> Json.obj("dataSource.dataLayers" -> "")
-      ),
-      multi = true)*/
+  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext): Fox[Unit] =
+    DataSetSQLDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)
+
 }

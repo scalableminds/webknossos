@@ -34,6 +34,9 @@ case class BoundingBox(topLeft: Point3D, width: Int, height: Int, depth: Int) {
 
   def scale(s: Float) =
     BoundingBox(topLeft.scale(s), (width * s).toInt, (height * s).toInt, (depth * s).toInt)
+
+  def toSql =
+    List(topLeft.x, topLeft.y, topLeft.z, width, height, depth)
 }
 
 object BoundingBox {
@@ -101,9 +104,6 @@ object BoundingBox {
       Some(BoundingBox(Point3D(ints(0), ints(1), ints(2)), ints(3), ints(4), ints(5)))
     else
       None
-
-  def toSQL(bbox: BoundingBox) =
-    List(bbox.topLeft.x, bbox.topLeft.y, bbox.topLeft.z, bbox.width, bbox.height, bbox.depth)
 
   implicit val boundingBoxFormat = Json.format[BoundingBox]
 }

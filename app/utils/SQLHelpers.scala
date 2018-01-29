@@ -4,6 +4,7 @@
 package utils
 
 
+import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -25,6 +26,7 @@ case class ObjectId(id: String) {
 object ObjectId {
   implicit val jsonFormat = Json.format[ObjectId]
   def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
+  def generate = fromBsonId(BSONObjectID.generate)
 }
 
 object SQLClient {
@@ -51,6 +53,33 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
   private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
     logger.error("SQL Error: " + ex)
     logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
+  }
+
+
+
+
+  def writeArrayTuple(elements: List[String]): String = {
+    val commaSeparated = elements.mkString(",")
+    s"{$commaSeparated}"
+  }
+
+  def writeStructTuple(elements: List[String]): String = {
+    val commaSeparated = elements.mkString(",")
+    s"($commaSeparated)"
+  }
+
+  def parseArrayTuple(literal: String): List[String] = {
+    //TODO: error handling, escape handling. copy from js parser?
+    val trimmed = literal.drop(1).dropRight(1)
+    if (trimmed.isEmpty) List()
+    else trimmed.split(",", -1).toList
+  }
+
+  def sanitize(aString: String): String = aString // TODO: prevent sql injection
+
+  def optionLiteral(aStringOpt: Option[String]): String = aStringOpt match {
+    case Some(aString) => "'" + aString + "'"
+    case None => "null"
   }
 }
 
@@ -104,22 +133,4 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
     for {_ <- run(q.update(newValue))} yield ()
   }
 
-  def writeArrayTuple(elements: List[String]): String = {
-    val commaSeparated = elements.mkString(",")
-    s"{$commaSeparated}"
-  }
-
-  def parseArrayTuple(literal: String): List[String] = {
-    //TODO: error handling, escape handling. copy from js parser?
-    val trimmed = literal.drop(1).dropRight(1)
-    if (trimmed.isEmpty) List()
-    else trimmed.split(",", -1).toList
-  }
-
-  def sanitize(aString: String): String = aString // TODO: prevent sql injection
-
-  def optionLiteral(aStringOpt: Option[String]): String = aStringOpt match {
-    case Some(aString) => "'" + aString + "'"
-    case None => "null"
-  }
 }

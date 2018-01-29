@@ -9,6 +9,7 @@ let idCounter = 0;
 // Diffing is very fast when the given Maps are dependent, since the separate chunks
 // can be compared shallowly.
 // The insertion order of the DiffableMap is not guaranteed.
+// Stored values may be null. However, `undefined` is equal to "does not exist".
 
 class DiffableMap<K: number, V> {
   id: number;
@@ -41,7 +42,11 @@ class DiffableMap<K: number, V> {
     }
   }
 
-  getNullable(key: K): ?V {
+  // The return type cannot be ?V since this would also include null.
+  // In order to allow storing null values in this data structure,
+  // the typing makes it explicit by just using undefined as a place holder for
+  // "not existing".
+  getNullable(key: K): V | typeof undefined {
     let idx = 0;
     while (this.chunks[idx] != null) {
       if (this.chunks[idx].has(key)) {

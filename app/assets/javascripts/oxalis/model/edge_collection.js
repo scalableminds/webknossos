@@ -5,7 +5,7 @@ import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import type { EdgeType } from "oxalis/store";
 import Utils from "libs/utils";
 
-type EdgeMap = EdgeMap;
+type EdgeMap = DiffableMap<number, Array<EdgeType>>;
 
 export default class EdgeCollection {
   // Edge map keyed by the source id of the edges (outgoing)

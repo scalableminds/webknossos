@@ -11,6 +11,8 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
+import models.annotation.AnnotationDAO
+import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 
@@ -27,6 +29,8 @@ object NmlWriter {
     tracing match {
       case Right(volumeTracing) =>
         Xml.withinElementSync("things") {
+          volumeTracing.
+          writeMetaData()
           Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, description, scale))
           Xml.withinElementSync("volume") {
             writer.writeAttribute("id", "1")
@@ -37,6 +41,7 @@ object NmlWriter {
         writer.close()
       case Left(skeletonTracing) => {
         Xml.withinElementSync("things") {
+          writeMetaData
           Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, description, scale))
           writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
           Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
@@ -189,5 +194,43 @@ object NmlWriter {
         writer.writeAttribute("content", c.content)
       }
     }
+  }
+
+  def writeMetaData()(implicit writer: XMLStreamWriter) = {
+    val test =
+    Xml.withinElementSync("meta") {
+      writer.writeAttribute("name", "writer")
+      writer.writeAttribute("content", "NmlWriter.scala")
+    }
+    Xml.withinElementSync("meta") {
+      writer.writeAttribute("name", "writerGitCommit")
+      writer.writeAttribute("content", webknossos.BuildInfo.commitHash)
+    }
+    Xml.withinElementSync("meta") {
+      writer.writeAttribute("name", "timestamp")
+      writer.writeAttribute("content", DateTime.now().getMillis.toString)
+    }
+    Xml.withinElementSync("meta") {
+      writer.writeAttribute("name", "annotationId")
+      writer.writeAttribute("content", "testAnnotationId")
+    }
+    Xml.withinElementSync("meta") {
+      writer.writeAttribute("name", "username")
+      writer.writeAttribute("content", "testUsername")
+    }
+    Xml.withinElementSync("meta") {
+      writer.writeAttribute("name", "taskId")
+      writer.writeAttribute("content", "testId")
+    }
+    /*
+ * <meta name="writer" content="nml_helpers.js" />␊
+   <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
+   <meta name="timestamp" content="123456789" />
+                                   1517149384139
+   <meta name="annotationId" content="5a5f6110410000ad00bf208f" />
+   <meta name="username" content="SCM Boy" />
+   <meta name="taskId" content="5a5f63474100001201bf2097" />
+   <parameters>
+ * */
   }
 }

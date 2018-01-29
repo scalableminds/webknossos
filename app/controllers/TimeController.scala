@@ -135,7 +135,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     // only hours, min and sec are important in this scenario
     val h = millis / 3600000
     val m = (millis / 60000) % 60
-    val s = (millis / 1000) % 60
+    val s = (millis.toDouble / 1000) % 60
 
     s"PT${h}H${m}M${s}S"
   }

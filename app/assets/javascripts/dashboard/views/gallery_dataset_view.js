@@ -7,6 +7,7 @@ import Utils from "libs/utils";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import messages from "messages";
+import { createExplorational } from "admin/admin_rest_api";
 
 import type { DatasetType } from "dashboard/views/dataset_view";
 import type { OxalisState } from "oxalis/store";
@@ -24,15 +25,21 @@ type Props = {
 } & StateProps;
 
 class GalleryDatasetView extends React.PureComponent<Props> {
-  createTracing = (event: Event) => {
+  createTracing = async (
+    dataset: DatasetType,
+    typ: "volume" | "skeleton",
+    withFallback: boolean,
+  ) => {
     if (this.props.activeUser == null) {
-      event.preventDefault();
       Modal.confirm({
         content: messages["dataset.confirm_signup"],
         onOk: () => {
           window.location.href = "/auth/register";
         },
       });
+    } else {
+      const annotation = await createExplorational(dataset, typ, withFallback);
+      window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
     }
   };
 
@@ -57,8 +64,8 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       <Menu>
         <Menu.Item key="existing">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=true`}
-            onClick={this.createTracing}
+            href="#"
+            onClick={() => this.createTracing(dataset, "volume", true)}
             title="Create volume tracing"
           >
             Use Existing Segmentation Layer
@@ -66,8 +73,8 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         </Menu.Item>
         <Menu.Item key="new">
           <a
-            href={`/datasets/${dataset.name}/trace?typ=volume&withFallback=false`}
-            onClick={this.createTracing}
+            href="#"
+            onClick={() => this.createTracing(dataset, "volume", false)}
             title="Create volume tracing"
           >
             Use a New Segmentation Layer
@@ -91,7 +98,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         className="spotlight-item-card"
       >
         <div className="dataset-thumbnail-buttons">
-          <a href={`/datasets/${dataset.name}/view`} title="View dataset">
+          <a href="#" title="View dataset">
             <Icon
               type="eye-o"
               style={{
@@ -106,9 +113,9 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             />
           </a>
           <a
-            href={`/datasets/${dataset.name}/trace?typ=skeleton`}
+            href="#"
             title="Create skeleton tracing"
-            onClick={this.createTracing}
+            onClick={() => this.createTracing(dataset, "skeleton", false)}
           >
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>

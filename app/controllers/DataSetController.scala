@@ -32,14 +32,6 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
-  def empty(dataSetName: String) = UserAwareAction.async { implicit request =>
-    for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-    } yield {
-      Ok(views.html.main())
-    }
-  }
-
   def thumbnail(dataSetName: String, dataLayerName: String) = UserAwareAction.async { implicit request =>
 
     def imageFromCacheIfPossible(dataSet: DataSet) =

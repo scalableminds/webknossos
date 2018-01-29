@@ -175,7 +175,7 @@ object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
       case _ => List()
     }
     for {
-      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries))
+      _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
     } yield ()
   }
 

@@ -33,7 +33,7 @@ object ND2WK extends FoxImplicits {
         dataStoreInfo,
         dataSource,
         orgName,
-        List(organization.teamAll),
+        List(organization._organizationTeam),
         isActive = true,
         isPublic = false)
     }

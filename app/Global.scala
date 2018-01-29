@@ -18,6 +18,7 @@ import play.api.libs.concurrent._
 import play.api.libs.json.Json
 import play.api.mvc.Results.Ok
 import play.api.mvc._
+import reactivemongo.bson.BSONObjectID
 
 object Global extends GlobalSettings with LazyLogging {
 
@@ -74,8 +75,11 @@ object Global extends GlobalSettings with LazyLogging {
   */
 object InitialData extends GlobalDBAccess with LazyLogging {
 
-  val stdOrg = Organization("Connectomics department", Nil)
+  val orgTeamId = BSONObjectID.generate
+  val stdOrg = Organization("Connectomics department", Nil, orgTeamId)
+  val orgTeam = Team(stdOrg.name, stdOrg.name, orgTeamId)
   val mpi = Team("Connectomics department Team", stdOrg.name)
+
 
   def insert(conf: Configuration) = {
     insertDefaultUser(conf)
@@ -101,7 +105,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           true,
           SCrypt.md5(password),
           stdOrg.name,
-          List(TeamMembership(mpi._id, mpi.name, true)),
+          List(TeamMembership(mpi._id, mpi.name, true), TeamMembership(stdOrg._organizationTeam, stdOrg.name, true)),
           isAdmin = true,
           loginInfo = UserService.createLoginInfo(email),
           passwordInfo = UserService.createPasswordInfo(password))
@@ -121,6 +125,8 @@ object InitialData extends GlobalDBAccess with LazyLogging {
     TeamDAO.findOne().futureBox.map {
       case Full(_) =>
       case _ =>
+        TeamDAO.insert(orgTeam)
+        OrganizationDAO.addTeam(stdOrg._id, orgTeam)
         TeamDAO.insert(mpi)
         OrganizationDAO.addTeam(stdOrg._id, mpi)
     }

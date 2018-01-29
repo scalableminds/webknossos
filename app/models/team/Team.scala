@@ -79,7 +79,4 @@ object TeamDAO extends SecuredBaseDAO[Team] with FoxImplicits {
       }
     }
   }
-
-  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
-    findOne("name", name)
 }

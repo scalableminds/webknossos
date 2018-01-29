@@ -1,13 +1,14 @@
 package models.team
 
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, JsonFormatHelper}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.basics.SecuredBaseDAO
 import models.user.{User, UserDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
@@ -16,10 +17,11 @@ import scala.concurrent.Future
 case class Organization(
                          name: String,
                          teams: List[BSONObjectID],
+                         _organizationTeam: BSONObjectID,
                          _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
-  lazy val teamAll = BSONObjectID.generate
+  lazy val organizationTeam = _organizationTeam.stringify
 }
 
 object Organization extends FoxImplicits {
@@ -33,7 +35,8 @@ object Organization extends FoxImplicits {
       Json.obj(
         "id" -> organization.id,
         "name" -> organization.name,
-        "teams" -> teams.toOption)
+        "teams" -> teams.toOption,
+        "organizationTeam" -> organization.organizationTeam)
     }
 
   def organizationPublicWritesBasic(organization: Organization)(implicit ctx: DBAccessContext): Future[JsObject] =
@@ -43,13 +46,15 @@ object Organization extends FoxImplicits {
       Json.obj(
         "id" -> organization.id,
         "name" -> organization.name,
-        "teams" -> teams.toOption)
+        "teams" -> teams.toOption,
+        "organizationTeam" -> organization.organizationTeam)
     }
 
   def organizationsPublicReads(requestingUser: User): Reads[Organization] =
     ((__ \ "name").read[String](Reads.minLength[String](3)) and
-      (__ \ "teams").read[List[BSONObjectID]]
-      ) ((name, teams) => Organization(name, teams))
+      (__ \ "teams").read[List[BSONObjectID]] and
+      (__ \ "organizationTeam").read[String](JsonFormatHelper.StringObjectIdReads("organizationTeam"))
+      ) ((name, teams, organizationTeam) => Organization(name, teams, BSONObjectID(organizationTeam)))
 }
 
 object OrganizationDAO extends SecuredBaseDAO[Organization] with FoxImplicits {

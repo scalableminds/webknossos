@@ -31,7 +31,6 @@ case class Project(
   def isOwnedBy(user: User) = user._id == _owner
 
   def id = _id.stringify
-  //def team
 
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
 }
@@ -70,7 +69,7 @@ object Project {
 
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[String] and
+      (__ \ 'team).read[String](JsonFormatHelper.StringObjectIdReads("team")) and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Int] and

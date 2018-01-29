@@ -33,6 +33,15 @@ class DiffableMap<K: number, V> {
   }
 
   get(key: K): V {
+    const value = this.getMaybe(key);
+    if (value) {
+      return value;
+    } else {
+      throw new Error("Get empty");
+    }
+  }
+
+  getMaybe(key: K): ?V {
     let idx = 0;
     while (this.chunks[idx] != null) {
       if (this.chunks[idx].has(key)) {
@@ -41,16 +50,11 @@ class DiffableMap<K: number, V> {
       }
       idx++;
     }
-    throw new Error("Get empty");
+    return null;
   }
 
   has(key: K): boolean {
-    try {
-      this.get(key);
-      return true;
-    } catch (exception) {
-      return false;
-    }
+    return this.getMaybe(key) !== null;
   }
 
   set(key: K, value: V): DiffableMap<K, V> {

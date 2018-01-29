@@ -108,7 +108,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 
   def insertOne(d: DataSetSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert into webknossos.dataSets(_id, _dataStore, _team, defaultConfiguration, description, isPublic, isUsable, name, scale, status, created, isDeleted)
+      _ <- run(sqlu"""insert overwrite into webknossos.dataSets(_id, _dataStore, _team, defaultConfiguration, description, isPublic, isUsable, name, scale, status, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._team.id}, #${optionLiteral(d.defaultConfiguration.map(_.toString).map(sanitize))}, ${d.description}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
@@ -146,7 +146,7 @@ object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
 
   def parseRow(row: DatasetResolutionsRow): Fox[DataResolution] = {
     for {
-      scale <- Point3D.fromList(parseArrayTuple(row.scale).map(_.toInt))
+      scale <- Point3D.fromList(parseArrayTuple(row.scale).map(_.toInt)) ?~> "could not parse scale"
     } yield {
       DataResolution(row.resolution, scale)
     }
@@ -155,7 +155,7 @@ object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
   def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[DataResolution]] = {
     for {
       rows <- run(DatasetResolutions.filter(r => r._Dataset === dataSetId.id && r.datalayername === dataLayerName).result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow))
+      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse resolution row"
     } yield {
       rowsParsed
     }
@@ -186,10 +186,10 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
 
   def parseRow(row: DatasetLayersRow, dataSetId: ObjectId): Fox[DataLayer] = {
     val result: Fox[Fox[DataLayer]] = for {
-      category <- Category.fromString(row.category).toFox
-      boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt)).toFox
-      elementClass <- ElementClass.fromString(row.elementclass).toFox
-      resolutions <- DataSetResolutionsSQLDAO.findDataResolutionForLayer(dataSetId, row.name)
+      category <- Category.fromString(row.category).toFox ?~> "Could not parse Layer Category"
+      boundingBox <- BoundingBox.fromSQL(parseArrayTuple(row.boundingbox).map(_.toInt)).toFox  ?~> "Could not parse boundingbox"
+      elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
+      resolutions <- DataSetResolutionsSQLDAO.findDataResolutionForLayer(dataSetId, row.name)  ?~> "Could not find resolution for layer"
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
@@ -209,7 +209,7 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
                                   resolutions,
                                   elementClass
                                 ))
-        case _ => Fox.failure("")
+        case _ => Fox.failure("Could not match Dataset Layer")
       }
     }
     result.flatten
@@ -334,10 +334,10 @@ object DataSet extends FoxImplicits {
   private def constructDataSource(s: DataSetSQL, team: TeamSQL)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
     val dataSourceId = DataSourceId(s.name, team.name)
     for {
-      dataLayersBox <- DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id).futureBox
+      dataLayersBox <- (DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id) ?~> "could not find data layers" ).futureBox
     } yield {
       dataLayersBox match {
-        case Full(dataLayers) =>
+        case Full(dataLayers) if (dataLayers.length > 0) =>
           for {
             scale <- s.scale
           } yield GenericDataSource[DataLayer](dataSourceId, dataLayers, scale)
@@ -353,7 +353,7 @@ object DataSet extends FoxImplicits {
       allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllowedTeamsForDataSet(s._id) ?~> Messages("allowedTeams.notFound")
       defaultConfiguration <- parseDefaultConfiguration(s.defaultConfiguration)
       team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
-      dataSource <- constructDataSource(s, team) ?~> Messages("dataSource.notFound")
+      dataSource <- constructDataSource(s, team) ?~> "could not construct datasource"
     } yield {
       DataSet(
         DataStoreInfo(datastore.name, datastore.url, datastore.typ),

@@ -181,20 +181,21 @@ export function* diffTrees(
     _.map(prevTrees, tree => tree.treeId),
     _.map(trees, tree => tree.treeId),
   );
+
   for (const treeId of deletedTreeIds) {
-    const prevTree: TreeType = prevTrees[treeId];
+    const prevTree = prevTrees[treeId];
     yield* diffNodes(prevTree.nodes, new DiffableMap(), treeId);
     yield* diffEdges(prevTree.edges, new EdgeCollection(), treeId);
     yield deleteTree(treeId);
   }
   for (const treeId of addedTreeIds) {
-    const tree: TreeType = trees[treeId];
+    const tree = trees[treeId];
     yield createTree(tree);
     yield* diffNodes(new DiffableMap(), tree.nodes, treeId);
     yield* diffEdges(new EdgeCollection(), tree.edges, treeId);
   }
   for (const treeId of bothTreeIds) {
-    const tree: TreeType = trees[treeId];
+    const tree = trees[treeId];
     const prevTree: TreeType = prevTrees[treeId];
     if (tree !== prevTree) {
       yield* diffNodes(prevTree.nodes, tree.nodes, treeId);

@@ -2,31 +2,23 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.webknossos.datastore.tracings.TracingType
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import akka.util.Timeout
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time._
 import models.user.{UsedAnnotationDAO, User, UserDAO}
-import net.liftweb.common.{Full, _}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
-import play.twirl.api.Html
-import reactivemongo.core.nodeset.Authenticated
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 01.06.13
- * Time: 02:09
- */
+
 class AnnotationController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with FoxImplicits
@@ -138,15 +130,21 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }(securedRequestToUserAwareRequest)
   }
 
-  def createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean]) = SecuredAction.async { implicit request =>
-    for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      contentType <- TracingType.values.find(_.toString == typ).toFox
-      annotation <- AnnotationService.createExplorationalFor(request.identity, dataSet, contentType, withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
-    } yield {
-      Redirect(routes.AnnotationController.empty(annotation.typ, annotation.id))
+  
+  case class CreateExplorationalParameters(typ: String, withFallback: Option[Boolean])
+  object CreateExplorationalParameters {implicit val jsonFormat = Json.format[CreateExplorationalParameters]}
+
+  def createExplorational(dataSetName: String) =
+    SecuredAction.async(validateJson[CreateExplorationalParameters]) { implicit request =>
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+        contentType <- TracingType.values.find(_.toString == request.body.typ).toFox
+        annotation <- AnnotationService.createExplorationalFor(request.identity, dataSet, contentType, request.body.withFallback.getOrElse(true)) ?~> Messages("annotation.create.failed")
+        json <- annotation.toJson(Some(request.identity))
+      } yield {
+        JsonOk(json)
+      }
     }
-  }
 
   def isUpdateable(Annotation: Annotation) = {
     Annotation match {
@@ -184,25 +182,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
       results.map { results =>
         JsonOk(Messages("annotation.allFinished"))
-      }
-    }
-  }
-
-  def finishWithRedirect(typ: String, id: String) = SecuredAction.async { implicit request =>
-    val redirectTarget = if(!request.identity.isAnonymous) "/dashboard" else "/thankyou"
-
-    for {
-      annotation <- AnnotationDAO.findOneById(id) ?~> Messages("annotation.notFound")
-      restrictions <- restrictionsFor(AnnotationIdentifier(typ, id))
-      finished <- annotation.muta.finishAnnotation(request.identity, restrictions).futureBox
-    } yield {
-      finished match {
-        case Full((_, message)) =>
-          Redirect(redirectTarget).flashing("success" -> Messages(message))
-        case Failure(message, _, _) =>
-          Redirect(redirectTarget).flashing("error" -> Messages(message))
-        case _ =>
-          Redirect(redirectTarget).flashing("error" -> Messages("error.unknown"))
       }
     }
   }

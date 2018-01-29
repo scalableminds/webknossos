@@ -199,7 +199,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                     </Link>
                     <br />
                     <a
-                      href={`/annotations/CompoundTaskType/${taskType.id}/download`}
+                      href={`/api/annotations/CompoundTaskType/${taskType.id}/download`}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />Download

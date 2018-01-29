@@ -53,7 +53,7 @@ CREATE TABLE webknossos.annotations(
 
 CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _dataStore CHAR(24) NOT NULL ,
+  _dataStore CHAR(256) NOT NULL ,
   _team CHAR(24) NOT NULL,
   defaultConfiguration JSONB,
   description TEXT,

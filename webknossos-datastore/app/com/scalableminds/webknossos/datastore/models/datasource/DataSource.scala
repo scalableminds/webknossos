@@ -21,6 +21,8 @@ package object datasource {
 
     val scaleOpt: Option[Scale] = Some(scale)
 
+    val statusOpt: Option[String] = None
+
     def getDataLayer(name: String): Option[T] =
       dataLayers.find(_.name == name)
 

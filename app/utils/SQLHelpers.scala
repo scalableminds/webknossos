@@ -10,9 +10,9 @@ import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
+import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-import slick.sql.SqlAction
 
 import scala.util.{Failure, Success, Try}
 
@@ -32,7 +32,8 @@ object SQLClient {
 }
 
 trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
-  def run[R](query: SqlAction[R, NoStream, Nothing]): Fox[R] = {
+
+  def run[R](query: DBIOAction[R, NoStream, Nothing]): Fox[R] = {
     val foxFuture = SQLClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
         case Success(res) => {
@@ -47,7 +48,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
     foxFuture.toFox.flatten
   }
 
-  private def logError[R](ex: Throwable, query: SqlAction[R, NoStream, Nothing]) = {
+  private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
     logger.error("SQL Error: " + ex)
     logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
   }
@@ -77,6 +78,9 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
       r <- run(collection.filter(row => notdel(row)).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
+
+  def countAll(implicit ctx: DBAccessContext): Fox[Int] =
+    run(collection.filter(row => notdel(row)).length.result)
 
   def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield isDeletedColumn(row)

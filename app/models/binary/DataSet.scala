@@ -1,13 +1,11 @@
 package models.binary
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
-import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions}
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataResolution, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
-import models.basics._
 import models.configuration.DataSetConfiguration
 import models.task.TaskSQLDAO.parseArrayTuple
 import models.team.{TeamSQL, TeamSQLDAO}
@@ -17,7 +15,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
-import reactivemongo.api.indexes.{Index, IndexType}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
@@ -51,6 +48,9 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     case None => Fox.successful(None)
   }
 
+  private def writeScaleLiteral(scale: Scale): String =
+    writeArrayTuple(List(scale.x, scale.y, scale.z).map(_.toString))
+
   def parse(r: DatasetsRow): Fox[DataSetSQL] = {
     for {
       scale <- parseScaleOpt(r.scale)
@@ -71,15 +71,36 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
       )
     }
   }
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
+    for {
+      rOpt <- run(Datasets.filter(r => notdel(r) && r.name === name).result.headOption)
+      r <- rOpt.toFox
+      parsed <- parse(r)
+    } yield {
+      parsed
+    }
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSetSQL] = {
-    run(Datasets.filter(r => notdel(r) && r.name === name).result.headOption).map {
-      case Some(r) =>
-        parse(r) ?~> ("sql: could not parse database row for name" + name)
-      case _ =>
-        Fox.failure("sql: could not find dataset by name " + name)
-    }.flatten
+  def updateFieldsByName(name: String, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Datasets if (notdel(row) && row.name === name)} yield (row.description, row.ispublic)
+    for {_ <- run(q.update(description, isPublic))} yield ()
   }
+
+  def updateDataSourceByName(name: String, dataStoreName: String, source: InboxDataSource, isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
+
+    for {
+      team <- TeamSQLDAO.findOneByName(source.id.team)
+      q = sqlu"""update webknossos.dataSets
+                    set _dataStore = ${dataStoreName},
+                        _team = ${team._id.id},
+                        isUsable = ${isUsable},
+                        scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
+                        status ${source.statusOpt.getOrElse("")} =
+                   where name = ${name}"""
+      _ <- run(q)
+      _ <- DataSetDataLayerSQLDAO.updateLayers(source)
+    } yield ()
+  }
+  //to update: dataStore (find by url), isUsable, team (find by name), datalayers (in other collection), scale, status
 }
 
 
@@ -146,6 +167,13 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
       rowsParsed
     }
   }
+
+  def updateLayers(source: InboxDataSource)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    source.toUsable match {
+      case Some(usable) => Fox.failure("todo")
+      case None => Fox.failure("todo")
+    }
+  }
 }
 
 
@@ -160,6 +188,22 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
 
     run(query.result).map(_.toList)
 
+  }
+
+  def updateAllowedTeamsForDataSetByName(dataSetName: String, allowedTeams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val clearQuery = sqlu"""delete from webknossos.dataSet_allowedTeams
+                             where _dataSet = (
+                               select _id from webknossos.dataSets where name = ${dataSetName}
+                             )"""
+
+    val insertQueries = allowedTeams.map(teamName => sqlu"""insert into  webknossos.dataSet_allowedTeams(_dataSet, _team)
+                                                              values((select _id from webknossos.dataSets where name = ${dataSetName}),
+                                                                     (select _id from webknossos.teams where name = ${teamName}))""")
+
+    val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
+      for { //note that t.created is skipped
+        _ <- run(composedQuery.transactionally)
+      } yield ()
   }
 }
 
@@ -227,7 +271,7 @@ object DataSet extends FoxImplicits {
     }
   }
 
-  def fromDatasetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
+  def fromDataSetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
     for {
       datastore <- DataStoreSQLDAO.findOne(s._datastore)
       allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllowedTeamsForDataSet(s._id)
@@ -249,16 +293,15 @@ object DataSet extends FoxImplicits {
   }
 }
 
-object DataSetDAO extends SecuredBaseDAO[DataSet] {
+object DataSetDAO {
 
   val collectionName = "dataSets"
 
   val formatter = DataSet.dataSetFormat
 
-  underlying.indexesManager.ensure(Index(Seq("dataSource.id.name" -> IndexType.Ascending)))
+/*  underlying.indexesManager.ensure(Index(Seq("dataSource.id.name" -> IndexType.Ascending)))*/
 
-  // Security
-  override val AccessDefinitions = new DefaultAccessDefinitions {
+/*  override val AccessDefinitions = new DefaultAccessDefinitions {
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
@@ -274,40 +317,51 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
           )
       }
     }
+  }*/
+
+  def findOneBySourceName(name: String)(implicit ctx: DBAccessContext): Fox[DataSet] = {
+    for {
+      dataSetSQL <- DataSetSQLDAO.findOneByName(name)
+      dataSet <- DataSet.fromDataSetSQL(dataSetSQL)
+    } yield dataSet
   }
-
-  def byNameQ(name: String) =
-    Json.obj("dataSource.id.name" -> name)
-
-  def findOneBySourceName(name: String)(implicit ctx: DBAccessContext) =
-    findOne(byNameQ(name))
 
   def updateDataSource(
     name: String,
     dataStoreInfo: DataStoreInfo,
     source: InboxDataSource,
-    isActive: Boolean)(implicit ctx: DBAccessContext) = {
-    update(
-      byNameQ(name),
-      Json.obj("$set" -> Json.obj(
-        "dataStoreInfo" -> dataStoreInfo,
-        "isActive" -> isActive,
-        "dataSource" -> source
-      ))
-    )
-  }
+    isActive: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+    DataSetSQLDAO.updateDataSourceByName(name, dataStoreInfo.name, source, isActive)
 
   def updateTeams(name: String, teams: List[String])(implicit ctx: DBAccessContext) =
-    update(
-      byNameQ(name),
-      Json.obj("$set" -> Json.obj(
-        "allowedTeams" -> teams)))
+    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams)
 
-  def update(name: String, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =
-    findAndModify(
-      byNameQ(name),
-      Json.obj("$set" -> Json.obj(
-        "description" -> description,
-        "isPublic" -> isPublic)),
-      returnNew = true)
+  def update(name: String, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[DataSet] = {
+    for {
+      _ <- DataSetSQLDAO.updateFieldsByName(name, description, isPublic)
+      updated <- findOneBySourceName(name)
+    } yield updated
+  }
+
+  def insert(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[Unit] = Fox.failure("todo")
+
+  def findAll: Fox[List[DataSet]] = Fox.failure("todo")
+
+  def count(implicit ctx: DBAccessContext): Fox[Int] = DataSetSQLDAO.countAll
+
+  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext): Fox[Unit] = Fox.failure("todo")
+  /*
+  {
+    DataSetDAO.update(
+      Json.obj(
+        "dataStoreInfo.name" -> dataStoreName,
+        "dataSource.id.name" -> Json.obj("$nin" -> Json.arr(dataSources.map(_.id.name)))),
+      Json.obj(
+        "$set" -> Json.obj(
+          "isActive" -> false,
+          "dataSource.status" -> "No longer available on datastore."),
+        // we need this $unset, so the data source will not be considered imported during deserialization
+        "$unset" -> Json.obj("dataSource.dataLayers" -> "")
+      ),
+      multi = true)*/
 }

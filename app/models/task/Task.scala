@@ -90,14 +90,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     run(q.update(newTotalInstances))
   }
 
-  def updateBoundingBox(taskId: ObjectId) = {
-    val q = for { c <- Tasks if c._Id === taskId.id } yield c.boundingbox
-    run(q.update(Some("(0,0,0,10,10,10)")))
-  }
-
-  def updateBoundingBoxPlainSQL(taskId: ObjectId) =
-    run(sqlu"update webknossos.tasks set boundingBox = '(0,0,0,10,10,10)'")
-
 }
 
 

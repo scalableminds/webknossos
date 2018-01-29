@@ -18,6 +18,7 @@ import play.utils.UriEncoding
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
+import views.html.helper.select
 
 
 case class DataSetSQL(
@@ -88,6 +89,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   def updateDataSourceByName(name: String, dataStoreName: String, source: InboxDataSource, isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     for {
+      old <- findOneByName(name)
       team <- TeamSQLDAO.findOneByName(source.id.team)
       q = sqlu"""update webknossos.dataSets
                     set _dataStore = ${dataStoreName},
@@ -95,9 +97,9 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
                         isUsable = ${isUsable},
                         scale = #${optionLiteral(source.scaleOpt.map(s => writeScaleLiteral(s)))},
                         status ${source.statusOpt.getOrElse("")} =
-                   where name = ${name}"""
+                   where id = ${old._id}"""
       _ <- run(q)
-      _ <- DataSetDataLayerSQLDAO.updateLayers(source)
+      _ <- DataSetDataLayerSQLDAO.updateLayers(old._id, source)
     } yield ()
   }
   //to update: dataStore (find by url), isUsable, team (find by name), datalayers (in other collection), scale, status
@@ -168,9 +170,25 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
     }
   }
 
-  def updateLayers(source: InboxDataSource)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    source.toUsable match {
-      case Some(usable) => Fox.failure("todo")
+  def updateLayers(_dataSet: ObjectId, source: InboxDataSource)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val clearQuery = sqlu"delete from webknossos.dataset_layers where _dataSet = (select _id from webknossos.dataSets where _id = ${_dataSet})"
+    val insertQuerys = source.toUsable match {
+      case Some(usable) => {
+        usable.dataLayers.map { layer =>
+          layer match {
+            case AbstractSegmentationLayer(name, category, bbox, resolutions, elementClass, segmentId, mappings) => {
+              sqlu"""insert into webknossos.dataset_layers(_dataSet, name, category, elementClass, boundingBox, largestSegmentId, mappings)
+                    values(${_dataSet}, ${name}, '#${category}', …TODO)
+                  """
+            }
+            case AbstractDataLayer(name, category, bbox, resolutions, elementClass) => {
+              sqlu"…TODO"
+            }
+              //TODO: update resolutions table
+            case _ => throw new Exception("DataLayer type mismatch")
+          }
+        }
+      }
       case None => Fox.failure("todo")
     }
   }
@@ -330,7 +348,7 @@ object DataSetDAO {
     name: String,
     dataStoreInfo: DataStoreInfo,
     source: InboxDataSource,
-    isActive: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+    isActive: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {}
     DataSetSQLDAO.updateDataSourceByName(name, dataStoreInfo.name, source, isActive)
 
   def updateTeams(name: String, teams: List[String])(implicit ctx: DBAccessContext) =

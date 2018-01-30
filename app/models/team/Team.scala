@@ -57,6 +57,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
         Fox.failure("sql: could not find team by name " + name)
     }.flatten
   }
+
 }
 
 

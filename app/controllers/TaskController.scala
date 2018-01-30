@@ -1,21 +1,19 @@
 package controllers
 
-import java.util.UUID
 import javax.inject.Inject
 
-import com.newrelic.api.agent.NewRelic
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import models.annotation.nml.NmlService
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import net.liftweb.common.{Box, Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
@@ -195,7 +193,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
-      updatedTask <- TaskDAO.updateInstances(task._id, task.instances + params.openInstances - task.openInstances, params.openInstances)
+      updatedTask <- TaskDAO.updateInstances(task._id, task.instances + params.openInstances - task.openInstances)
       json <- Task.transformToJson(updatedTask)
     } yield {
       JsonOk(json, Messages("task.editSuccess"))
@@ -214,7 +212,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def list = SecuredAction.async { implicit request =>
     for {
-
       tasks <- TaskService.findAllAdministratable(request.identity, limit = 10000)
       js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
     } yield {
@@ -299,45 +296,15 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  private def tryToGetNextAssignmentFor(user: User, teams: List[String], retryCount: Int = 20)(implicit ctx: DBAccessContext): Fox[Task] = {
-    val s = System.currentTimeMillis()
-    TaskAssignmentService.findOneAssignableFor(user, teams).futureBox.flatMap {
-      case Full(task) =>
-        NewRelic.recordResponseTimeMetric("Custom/TaskController/findAssignableFor", System.currentTimeMillis - s)
-        TimeLogger.logTimeF("task request", logger.trace(_))(TaskAssignmentService.takeInstance(task)).flatMap {
-          updateResult =>
-            if (updateResult.n >= 1)
-              Fox.successful(task)
-            else if (retryCount > 0)
-              tryToGetNextAssignmentFor(user, teams, retryCount - 1)
-            else {
-              val e = System.currentTimeMillis()
-              logger.warn(s"Failed to remove any assignment for user ${user.email}. " +
-                s"Result: $updateResult n:${updateResult.n} ok:${updateResult.ok} " +
-                s"code:${updateResult.code} TOOK: ${e - s}ms")
-              Fox.failure(Messages("task.unavailable"))
-            }
-        }.futureBox
-      case f: Failure =>
-        logger.warn(s"Failure while trying to getNextTask (u: ${user.email} r: $retryCount): " + f)
-        if (retryCount > 0)
-          tryToGetNextAssignmentFor(user, teams, retryCount - 1).futureBox
-        else {
-          logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to FAILURE")
-          Fox.failure(Messages("assignment.retrieval.failed")).futureBox
-        }
-      case Empty =>
-        logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
-        Fox.failure(Messages("task.unavailable")).futureBox
-    }
-  }
-
+  private def tryToGetNextAssignmentFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Task] =
+    for {
+      task <- TaskAssignmentService.findOneAssignableFor(user, teams) ?~> Messages("task.unavailable")
+    } yield task
 
   def peekNext(limit: Int) = SecuredAction.async { implicit request =>
     val user = request.identity
-
     for {
-      assignments <- TaskAssignmentService.findNAssignableFor(user, user.teamNames, limit)
+      assignments <- TaskAssignmentService.findAllAssignableFor(user, user.teamNames, Some(limit))
     } yield {
       Ok(Json.toJson(assignments))
     }

@@ -120,13 +120,8 @@ object AnnotationService
   def countActiveAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countActiveByTaskIdsAndType(List(task._id), AnnotationType.Task)
 
-  def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
-    for {
-      annotations <- AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
-      _ = annotations.map(annotation => annotation.muta.cancelTask())
-      result <- AnnotationDAO.cancelAnnotationsOfUser(user._id)
-    } yield result
-  }
+  def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.cancelAnnotationsOfUser(user._id)
 
   def openTasksFor(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)

@@ -41,9 +41,6 @@ object TaskService
     }
   }
 
-  def handleProjectUpdate(updatedProject: Project)(implicit ctx: DBAccessContext) =
-    TaskDAO.updateAllOfProject(updatedProject).toFox
-
   def findAllByTaskType(_taskType: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     withValidId(_taskType)(TaskDAO.findAllByTaskType)
   }

@@ -194,9 +194,9 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {_ <- run(q.update(true))} yield ()
   }
 
-  def logTime(time: Long, id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(annotationId: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${annotationId.id}")
     } yield ()
 
   def cancelAnnotationsOfUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
@@ -457,7 +457,7 @@ object AnnotationDAO extends FoxImplicits {
     }
 
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationSQLDAO.logTime(time, ObjectId.fromBsonId(_annotation))
+    AnnotationSQLDAO.logTime(ObjectId.fromBsonId(_annotation), time)
 
   def findActiveAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     for {

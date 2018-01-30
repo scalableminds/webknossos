@@ -3,13 +3,12 @@
  */
 package models.annotation
 
-import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import models.task.TaskAssignmentService
+import com.scalableminds.webknossos.datastore.tracings.TracingType
+import models.annotation.AnnotationState._
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import models.annotation.AnnotationState._
 
 class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
 
@@ -54,11 +53,7 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     AnnotationDAO.setTags(annotation._id, tags)
 
   def cancelTask()(implicit ctx: DBAccessContext) =
-    for {
-      task <- annotation.task
-      _ <- TaskAssignmentService.putBackInstance(task)
-      _ <- AnnotationDAO.updateState(annotation._id, Cancelled)
-    } yield annotation
+    AnnotationDAO.updateState(annotation._id, Cancelled)
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {
     case AnnotationType.Explorational =>

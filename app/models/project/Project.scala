@@ -226,36 +226,11 @@ object ProjectService extends FoxImplicits with LazyLogging {
     }
   }
 
-  def update(_id: BSONObjectID, oldProject: Project, updateRequest: Project)(implicit ctx: DBAccessContext) = {
-    def updateTasksIfNecessary(updated: Project) = {
-      if (oldProject.priority == updated.priority)
-        Fox.successful(true)
-      else
-        TaskService.handleProjectUpdate(updated)
-    }
+  def update(_id: BSONObjectID, oldProject: Project, updateRequest: Project)(implicit ctx: DBAccessContext) =
+    ProjectDAO.updateProject(_id, updateRequest)
 
-    for {
-      updatedProject <- ProjectDAO.updateProject(_id, updateRequest)
-      _ <- updateTasksIfNecessary(updatedProject)
-    } yield updatedProject
-
-  }
-
-  def updatePauseStatus(project: Project, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
-    def updateTasksIfNecessary(updated: Project) = {
-      if (updated.paused == project.paused)
-        Fox.successful(true)
-      else
-        TaskService.handleProjectUpdate(updated)
-    }
-
-    val updated = project.copy(paused = isPaused)
-
-    for {
-      updatedProject <- ProjectDAO.updatePausedFlag(updated._id, updated.paused)
-      _ <- updateTasksIfNecessary(updated)
-    } yield updatedProject
-  }
+  def updatePauseStatus(project: Project, isPaused: Boolean)(implicit ctx: DBAccessContext) =
+    ProjectDAO.updatePausedFlag(project._id, isPaused)
 }
 
 object ProjectDAO {

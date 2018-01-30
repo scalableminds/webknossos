@@ -13,17 +13,15 @@ import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import net.liftweb.common.{Box, Empty}
+import net.liftweb.common.Box
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
-import scala.util.Success
 
 case class TaskParameters(
                            taskTypeId: String,
@@ -204,7 +202,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
       _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
-      _ <- TaskService.remove(task._id)
+      _ <- TaskService.removeOne(task._id)
     } yield {
       JsonOk(Messages("task.removed"))
     }
@@ -228,11 +226,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  private def parseBsonToFox(s: String): Fox[BSONObjectID] =
-    BSONObjectID.parse(s) match {
-      case Success(id) => Fox.successful(id)
-      case _ => Fox(Future.successful(Empty))
-    }
+
 
   def listTasks() = SecuredAction.async(parse.json) { implicit request =>
 
@@ -244,8 +238,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     userOpt match {
       case Some(userId) => {
         for {
-          userIdBson <- parseBsonToFox(userId)
-          user <- UserDAO.findOneById(userIdBson) ?~> Messages("user.notFound")
+          user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           userAnnotations <- AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
           taskIdsFromAnnotations = userAnnotations.flatMap(_._task).map(_.stringify).toSet
           taskIds = idsOpt match {

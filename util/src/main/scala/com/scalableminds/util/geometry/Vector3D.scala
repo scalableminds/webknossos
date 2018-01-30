@@ -73,6 +73,8 @@ case class Vector3D(x: Double = 0, y: Double = 0, z: Double = 0) {
 
   def toTuple = (x, y, z)
 
+  def toList = List(x, y, z)
+
   override def toString = s"($x, $y, $z)"
 }
 

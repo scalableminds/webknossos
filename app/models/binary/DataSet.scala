@@ -108,7 +108,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 
   def insertOne(d: DataSetSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert overwrite into webknossos.dataSets(_id, _dataStore, _team, defaultConfiguration, description, isPublic, isUsable, name, scale, status, created, isDeleted)
+      _ <- run(sqlu"""insert into webknossos.dataSets(_id, _dataStore, _team, defaultConfiguration, description, isPublic, isUsable, name, scale, status, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._team.id}, #${optionLiteral(d.defaultConfiguration.map(_.toString).map(sanitize))}, ${d.description}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)

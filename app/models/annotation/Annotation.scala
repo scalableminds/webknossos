@@ -189,11 +189,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     } yield ()
   }
 
-  def removeAllWithTaskId(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Annotations if (notdel(row) && row._Task === taskId.id)} yield row.isdeleted
-    for {_ <- run(q.update(true))} yield ()
-  }
-
   def logTime(annotationId: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${annotationId.id}")
@@ -282,7 +277,7 @@ case class Annotation(
     UserService.findOneById(_user.stringify, useCache = true)(GlobalAccessContext)
 
   def task: Fox[Task] =
-    _task.toFox.flatMap(id => TaskDAO.findOneById(id)(GlobalAccessContext))
+    _task.toFox.flatMap(id => TaskDAO.findOneById(id.stringify)(GlobalAccessContext))
 
   val tracingType = tracingReference.typ
 
@@ -471,9 +466,6 @@ object AnnotationDAO extends FoxImplicits {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
       count <- AnnotationSQLDAO.countActiveAnnotationsFor(ObjectId.fromBsonId(_user), typ, excludeTeams)
     } yield count
-
-  def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationSQLDAO.removeAllWithTaskId(ObjectId.fromBsonId(_task))
 
   def countByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     for {

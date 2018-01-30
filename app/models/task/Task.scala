@@ -23,6 +23,7 @@ import play.api.libs.json.{JsArray, JsNull, JsObject, Json}
 import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.{BSONObjectID, BSONString}
+import reactivemongo.core.commands.SumField
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLDAO}
@@ -44,6 +45,32 @@ case class TaskSQL(
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
                   )
+
+object TaskSQL {
+  def fromTask(t: Task)(implicit ctx: DBAccessContext): Fox[TaskSQL] = {
+    for {
+      project <- ProjectSQLDAO.findOneByName(t._project)
+      team <- TeamSQLDAO.findOneByName(t.team)
+    } yield {
+      TaskSQL(
+        ObjectId.fromBsonId(t._id),
+        project._id,
+        t._script.map(ObjectId(_)),
+        ObjectId.fromBsonId(t._taskType),
+        team._id,
+        t.neededExperience,
+        t.instances,
+        t.tracingTime,
+        t.boundingBox,
+        t.editPosition,
+        t.editRotation,
+        t.creationInfo,
+        t.created.getMillis,
+        !t.isActive
+      )
+    }
+  }
+}
 
 object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   val collection = Tasks
@@ -104,10 +131,10 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                (select *
                 from webknossos.user_experiences
                 where _user = ${userId.id})
-               as user_experiences on webknossos.tasks.neededExperience_domain == user_experiences.domain and webknossos.tasks.neededExperience_value >= user_experiences.value
+               as user_experiences on webknossos.tasks.neededExperience_domain = user_experiences.domain and webknossos.tasks.neededExperience_value >= user_experiences.value
              join webknossos.projects on webknossos.tasks._project = webknossos.projects._id
-           where webknossos.task_instances.openInstances > 0 and webknossos.tasks._team in #${writeStructTuple(teamIds.map(t => sanitize(t.id)))}
-           order by webknossos.tasks.priority
+           where webknossos.task_instances.openInstances > 0 and webknossos.tasks._team in #${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+           order by webknossos.projects.priority
            limit ${limit};
       """
 
@@ -121,9 +148,40 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     for {
       result <- run(sql"select openInstances from webknossos.task_instances where _id = ${taskId.toString}".as[Int])
       firstResult <- result.headOption.toFox
+    } yield firstResult
+  }
+
+  def countAllOpenInstances(implicit ctx: DBAccessContext): Fox[Int] = {
+    for {
+      result <- run(sql"select sum(openInstances) from webknossos.task_instances".as[Int])
+      firstResult <- result.headOption
+    } yield firstResult
+  }
+
+  def countOpenInstancesByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
+    for {
+      rowsRaw <- run(
+        sql"""select webknossos.tasks._project, sum(webknossos.task_instances.openInstances)
+              from webknossos.tasks join webknossos.task_instances on webknossos.tasks._id = webknossos.task_instances._id
+              group by webknossos.tasks._project
+           """.as[(String, Int)])
     } yield {
-      firstResult
+      rowsRaw.toList.map(r => (ObjectId(r._1), r._2))
     }
+  }
+
+  def insertOne(t: TaskSQL): Fox[Unit] = {
+    for {
+      _ <- run(
+        sqlu"""insert into webknossos.tasks(_id, _project, _script, _taskType, _team, neededExperience_domain, neededExperience_value,
+                                             totalInstances, tracingTime, boundingBox, editPosition, editRotation, creationInfo, created, isDeleted)
+                   values(${t._id.id}, ${t._project.id}, #${optionLiteral(t._script.map(s => sanitize(s.id)))}, ${t._taskType.id}, ${t._team.id},
+                          ${t.neededExperience.domain}, ${t.neededExperience.value},
+                          ${t.totalInstances}, ${t.tracingTime}, #${optionLiteral(t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple(_)))},
+                           '#${writeStructTuple(t.editPosition.toList.map(_.toString))}', '#${writeStructTuple(t.editRotation.toList.map(_.toString))}',
+                           #${optionLiteral(t.creationInfo.map(sanitize(_)))}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+        """)
+    } yield ()
   }
 
   def updateTotalInstances(taskId: ObjectId, newTotalInstances: Long): Fox[Unit] = {
@@ -144,6 +202,36 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
       _ <- run(sqlu"update webknossos.tasks set tracingTime = tracingTime + $time where _id = ${taskId.id}")
     } yield ()
 
+  def removeOneAndItsAnnotations(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val queries = List(
+      sqlu"update webknossos.tasks set isDeleted = true where _id = ${taskId.id}",
+      sqlu"update webknossos.annotations set isDeleted = true where _task = (select _id from webknossos.tasks where _id = ${taskId.id})"
+    )
+    for {
+      _ <- run(DBIO.sequence(queries).transactionally)
+    } yield ()
+  }
+
+  def removeAllWithTaskTypeAndItsAnnotations(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val queries = List(
+      sqlu"update webknossos.tasks set isDeleted = true where _taskType = ${taskTypeId.id}",
+      sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _id = ${taskTypeId.id})"
+    )
+    for {
+      _ <- run(DBIO.sequence(queries).transactionally)
+    } yield ()
+  }
+
+  def removeAllWithProjectAndItsAnnotations(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val queries = List(
+      sqlu"update webknossos.tasks set isDeleted = true where _project = ${projectId.id}",
+      sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _id = ${projectId.id})"
+    )
+    for {
+      _ <- run(DBIO.sequence(queries).transactionally)
+    } yield ()
+  }
+
 }
 
 
@@ -151,9 +239,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
 
 
-
-case class OpenInstancesResult(_id: String, openInstances: Int)
-object OpenInstancesResult { implicit val format = Json.format[OpenInstancesResult] }
 
 class info(message: String) extends scala.annotation.StaticAnnotation
 
@@ -276,21 +361,17 @@ object Task extends FoxImplicits {
   }
 }
 
-object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
-
-  val collectionName = "tasks"
-
-  val formatter = Task.taskFormat
-
+object TaskDAO {
+/*
   underlying.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
   underlying.indexesManager.ensure(Index(Seq("priority" -> IndexType.Descending)))
   underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending, "neededExperience" -> IndexType.Ascending, "priority" -> IndexType.Descending)))
+*/
 
-
-  override val AccessDefinitions = new DefaultAccessDefinitions {
+/*  override val AccessDefinitions = new DefaultAccessDefinitions {
 
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
@@ -309,11 +390,11 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
           DenyEveryone()
       }
     }
-  }
+  }*/
 
-  override def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext) =
+  def findOneById(id: String)(implicit ctx: DBAccessContext) =
     for {
-      taskSQL <- TaskSQLDAO.findOne(ObjectId.fromBsonId(id))
+      taskSQL <- TaskSQLDAO.findOne(ObjectId(id))
       parsed <- Task.fromTaskSQL(taskSQL)
     } yield {
       parsed
@@ -371,7 +452,60 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
   def findWithOpenByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = Fox.failure("not implemented")
 
 
-  def findAllByProjectTaskTypeIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext) = withExceptionCatcher {
+
+  def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) =
+    TaskSQLDAO.removeScriptFromTasks(ObjectId(_script))
+
+  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
+    TaskSQLDAO.logTime(ObjectId.fromBsonId(_task), time)
+
+  def updateInstances(_task: BSONObjectID, instances: Int)(implicit ctx: DBAccessContext): Fox[Task] =
+    for {
+      _ <- TaskSQLDAO.updateTotalInstances(ObjectId.fromBsonId(_task), instances)
+      updated <- findOneById(_task.stringify)
+    } yield updated
+
+
+  def findAllAssignableFor(user: User, teamNames: List[String], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
+    for {
+      teams <- Fox.combined(teamNames.map(TeamSQLDAO.findOneByName(_)))
+      tasksSQL <- TaskSQLDAO.findAllAssignableFor(ObjectId.fromBsonId(user._id), teams.map(_._id), limit)
+      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
+    } yield tasks
+  }
+
+  def countAllOpenInstances(implicit ctx: DBAccessContext) =
+    TaskSQLDAO.countAllOpenInstances
+
+  def countOpenInstancesByProjects(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+    for {
+      byProjectIds <- TaskSQLDAO.countOpenInstancesByProjects
+    } yield {
+      byProjectIds.map(row => row._1.toString -> row._2).toMap
+    }
+  }
+
+
+  def insert(task: Task)(implicit ctx: DBAccessContext): Fox[Task] =
+    for {
+      taskSQL <- TaskSQL.fromTask(task)
+      _ <- TaskSQLDAO.insertOne(taskSQL)
+    } yield task
+
+  def removeOneAndItsAnnotations(_task: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Unit] =
+    TaskSQLDAO.removeOneAndItsAnnotations(ObjectId.fromBsonId(_task))
+
+  def removeAllWithTaskTypeAndItsAnnotations(taskType: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
+    TaskSQLDAO.removeAllWithTaskTypeAndItsAnnotations(ObjectId.fromBsonId(taskType._id))
+
+  def removeAllWithProjectAndItsAnnotations(project: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
+    TaskSQLDAO.removeAllWithProjectAndItsAnnotations(ObjectId.fromBsonId(project._id))
+
+
+
+  // TODO
+
+  def findAllByProjectTaskTypeIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[Task]] = {
     val projectFilter = projectOpt match {
       case Some(project) => Json.obj(("_project") -> Json.toJson(project))
       case None => Json.obj()
@@ -387,46 +521,10 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits {
       case None => Json.obj()
     }
 
-    find(projectFilter ++ taskTypeFilter ++ idsFilter).cursor[Task]().collect[List]()
-  }
-
-  def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) =
-    TaskSQLDAO.removeScriptFromTasks(ObjectId(_script))
-
-  def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    TaskSQLDAO.logTime(ObjectId.fromBsonId(_task), time)
-
-  def updateInstances(_task: BSONObjectID, instances: Int)(implicit ctx: DBAccessContext): Fox[Task] =
-    for {
-      _ <- TaskSQLDAO.updateTotalInstances(ObjectId.fromBsonId(_task), instances)
-      updated <- findOneById(_task)
-    } yield updated
-
-
-  def findAllAssignableFor(user: User, teamNames: List[String], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
-    for {
-      teams <- Fox.combined(teamNames.map(TeamSQLDAO.findOneByName(_)))
-      tasksSQL <- TaskSQLDAO.findAllAssignableFor(ObjectId.fromBsonId(user._id), teams.map(_._id), limit)
-      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
-    } yield tasks
+    //find(projectFilter ++ taskTypeFilter ++ idsFilter).cursor[Task]().collect[List]()
+    Fox.failure("")
   }
 
 
-  def countOpenInstancesByProjects(implicit ctx: DBAccessContext) = {
-    countOpenInstances("$_project")
-  }
-
-  def countAllOpenInstances(implicit ctx: DBAccessContext) = {
-    countOpenInstances("all").map(_.get("all"))
-  }
-
-  def countOpenInstances(groupingField: String = "1")(implicit ctx: DBAccessContext) = {
-    val dao = underlying.db.collection[BSONCollection]("tasks")
-    import dao.BatchCommands.AggregationFramework._
-
-    dao.aggregate(
-      Group(BSONString(groupingField))( "openInstances" -> SumField("openInstances"))
-    ).map{result => Json.toJson(result.firstBatch).as[List[OpenInstancesResult]].map( x => x._id -> x.openInstances).toMap }
-  }
 
 }

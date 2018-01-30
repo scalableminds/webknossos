@@ -4,7 +4,6 @@
 package utils
 
 
-import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -65,6 +64,11 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
 
   def writeStructTuple(elements: List[String]): String = {
     val commaSeparated = elements.mkString(",")
+    s"($commaSeparated)"
+  }
+
+  def writeStructTupleWithQuotes(elements: List[String]): String = {
+    val commaSeparated = elements.map(e => s"'$e'").mkString(",")
     s"($commaSeparated)"
   }
 

@@ -34,7 +34,7 @@ object AnnotationType {
   val CompoundTaskType = "CompoundTaskType"
 
   // System Types
-  val TracingBase = "Tracing Base"
+  val TracingBase = "TracingBase"
   val Orphan = "Orphan"  // Annotations whose task was deleted
 
   val UserTracings = List(

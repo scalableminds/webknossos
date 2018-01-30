@@ -37,7 +37,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         allCounts <- TaskDAO.countOpenInstancesByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
-            openTaskInstances <- Fox.successful(allCounts.get(project.name).getOrElse(0))
+            openTaskInstances <- Fox.successful(allCounts.get(project._id.stringify).getOrElse(0))
             r <- Project.projectPublicWritesWithStatus(project, openTaskInstances, request.identity)
           } yield r
         }

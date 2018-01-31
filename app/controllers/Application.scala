@@ -2,18 +2,22 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, SecuredAction}
+import oxalis.security.WebknossosSilhouette.UserAwareAction
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
+import models.binary.DataStoreHandlingStrategy
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
-import play.twirl.api.Html
 
 class Application @Inject()(val messagesApi: MessagesApi) extends Controller{
 
   def buildInfo = UserAwareAction { implicit request =>
+    val token = request.identity.flatMap { user =>
+      if (user.isSuperUser) Some(DataStoreHandlingStrategy.webKnossosToken) else None
+    }
     Ok(Json.obj(
       "webknossos" -> webknossos.BuildInfo.toMap.mapValues(_.toString),
-      "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString)
+      "webknossos-wrap" -> webknossoswrap.BuildInfo.toMap.mapValues(_.toString),
+      "token" -> token
     ))
   }
 

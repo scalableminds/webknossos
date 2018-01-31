@@ -188,7 +188,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
       val updateResult = for {
         annotation <- getAnnotation(updated.annotation)
-        _ <- TimeSpanDAO.update(updated._id, updated)(ctx)
+        _ <- TimeSpanDAO.update(updated)(ctx)
         _ <- logTimeToAnnotation(duration, annotation)
         _ <- logTimeToTask(duration, annotation)
       } yield {}

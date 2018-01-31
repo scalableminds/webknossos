@@ -13,6 +13,7 @@ import play.api.i18n.Messages.Implicits._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.lifted.Rep
+import slick.jdbc.PostgresProfile.api._
 import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.duration._
@@ -28,6 +29,20 @@ case class TimeSpanSQL(
                       isDeleted: Boolean = false
                       )
 
+object TimeSpanSQL {
+  def fromTimeSpan(t: TimeSpan)(implicit ctx: DBAccessContext): Fox[TimeSpanSQL] = {
+    Fox.successful(TimeSpanSQL(
+        ObjectId.fromBsonId(t._id),
+        ObjectId.fromBsonId(t._user),
+        t.annotation.map(ObjectId(_)),
+        t.time,
+        t.lastUpdate,
+        t.numberOfUpdates.getOrElse(1),
+        t.timestamp,
+        false
+    ))
+  }
+}
 
 object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
   val collection = Timespans
@@ -46,6 +61,44 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
       r.created.getTime,
       r.isdeleted
     ))
+
+  def findAllByUser(userId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
+    for {
+      r <- run(Timespans.filter(r => notdel(r) && r._User === userId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(Long.MaxValue))).result)
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def findAllByAnnotation(annotationId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
+    for {
+      r <- run(Timespans.filter(r => notdel(r) && r._Annotation === annotationId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(Long.MaxValue))).result)
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def findAll(start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
+    for {
+      r <- run(Timespans.filter(r => notdel(r) && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(Long.MaxValue))).result)
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def insertOne(t: TimeSpanSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      r <- run(sqlu"""insert into webknossos.timespans(_id, _user, _annotation, time, lastUpdate, numberOfUpdates, created, isDeleted)
+                values(${t._id.id}, ${t._user.id}, ${t._annotation.map(_.id)}, ${t.time}, ${new java.sql.Timestamp(t.lastUpdate)}, ${t.numberOfUpdates}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
+    } yield ()
+  }
+
+  def updateOne(t: TimeSpanSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for { //note that t.created is skipped
+      r <- run(sqlu"""update webknossos.timespans
+                set
+                  _user = ${t._user.id},
+                  _annotation = ${t._annotation.map(_.id)},
+                  time = ${t.time},
+                  lastUpdate = ${new java.sql.Timestamp(t.lastUpdate)},
+                  numberOfUpdates = ${t.numberOfUpdates},
+                  isDeleted = ${t.isDeleted}""")
+    } yield ()
+  }
 }
 
 

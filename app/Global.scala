@@ -3,6 +3,7 @@ import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Mailer
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.security.SCrypt
+import com.scalableminds.util.tools.Fox
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
@@ -15,6 +16,7 @@ import oxalis.jobs.AvailableTasksJob
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
+import play.api.Play.current
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import utils.SQLClient
@@ -81,24 +83,26 @@ object Global extends GlobalSettings with LazyLogging{
  * in the sample application.
  */
 object InitialData extends GlobalDBAccess with LazyLogging {
-
-  val mpi = Team("Connectomics department", None, RoleService.roles)
+  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
+  val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").get
+  val rootTeamName = "Connectomics department"
 
   def insert(conf: Configuration) = {
-    insertDefaultUser(conf)
-    insertTeams()
-    insertTasks()
+    insertDefaultUser
+    insertRootTeam
+    giveDeafultUserTeam
+    insertTasks
     if (conf.getBoolean("datastore.enabled").getOrElse(true)) {
       insertLocalDataStore(conf)
     }
   }
 
-  def insertDefaultUser(conf: Configuration) = {
+  def insertDefaultUser = {
     UserService.defaultUser.futureBox.map {
       case Full(_) =>
       case _ =>
-        val email = conf.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
-        val password = conf.getString("application.authentication.defaultUser.password").getOrElse("secret")
+        val email = defaultUserEmail
+        val password = defaultUserPassword
         logger.info("Inserted default user scmboy")
         UserDAO.insert(User(
           email,
@@ -106,18 +110,26 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           "Boy",
           true,
           SCrypt.md5(password),
-          List(TeamMembership(mpi.name, Role.Admin)),
+          List(),
           loginInfo = UserService.createLoginInfo(email),
           passwordInfo = UserService.createPasswordInfo(password))
         )
     }
   }
 
-  def insertTeams() = {
-    TeamDAO.findOne().futureBox.map {
+  def insertRootTeam() = {
+    TeamDAO.findOneByName(rootTeamName).futureBox.map {
       case Full(_) =>
       case _ =>
-        TeamDAO.insert(mpi)
+        UserService.defaultUser.flatMap(user => TeamDAO.insert(Team(rootTeamName, None, RoleService.roles, user._id)))
+    }
+  }
+
+  def giveDeafultUserTeam = {
+    UserService.defaultUser.flatMap { user =>
+      if (!user.teamNames.contains(rootTeamName)) {
+        UserDAO.addTeam(user._id, TeamMembership(rootTeamName, Role.Admin))
+      } else Fox.successful()
     }
   }
 
@@ -128,7 +140,7 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           val taskType = TaskType(
             "ek_0563_BipolarCells",
             "Check those cells out!",
-            mpi.name)
+            rootTeamName)
           TaskTypeDAO.insert(taskType)
         }
     }

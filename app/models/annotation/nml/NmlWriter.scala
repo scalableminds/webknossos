@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
-import models.annotation.AnnotationDAO
+import models.annotation.{Annotation, AnnotationDAO}
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
@@ -19,19 +19,18 @@ import play.api.libs.iteratee.Enumerator
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], description: String, scale: Scale) = {
-    Enumerator.outputStream {os => toNml(tracing, description, os, scale); os.close()}
+  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Scale) = {
+    Enumerator.outputStream {os => toNml(tracing, annotation, os, scale); os.close()}
   }
 
-  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], description: String, outputStream: OutputStream, scale: Scale) = {
+  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, outputStream: OutputStream, scale: Scale) = {
     implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(outputStream))
 
     tracing match {
       case Right(volumeTracing) =>
         Xml.withinElementSync("things") {
-          volumeTracing.
-          writeMetaData()
-          Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, description, scale))
+          writeMetaData(annotation)
+          Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, annotation.description, scale))
           Xml.withinElementSync("volume") {
             writer.writeAttribute("id", "1")
             writer.writeAttribute("location", "data.zip")
@@ -41,8 +40,8 @@ object NmlWriter {
         writer.close()
       case Left(skeletonTracing) => {
         Xml.withinElementSync("things") {
-          writeMetaData
-          Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, description, scale))
+          writeMetaData(annotation)
+          Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, annotation.description, scale))
           writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
           Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
           Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))
@@ -196,7 +195,7 @@ object NmlWriter {
     }
   }
 
-  def writeMetaData()(implicit writer: XMLStreamWriter) = {
+  def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter) = {
     val test =
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
@@ -212,15 +211,15 @@ object NmlWriter {
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "annotationId")
-      writer.writeAttribute("content", "testAnnotationId")
+      writer.writeAttribute("content", annotation._id.stringify)
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "username")
-      writer.writeAttribute("content", "testUsername")
+      writer.writeAttribute("content", annotation._user.get.stringify)
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "taskId")
-      writer.writeAttribute("content", "testId")
+      writer.writeAttribute("content", annotation._task.get.stringify)
     }
     /*
  * <meta name="writer" content="nml_helpers.js" />␊

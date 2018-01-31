@@ -119,7 +119,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference)
         scale <- dataSet.dataSource.toUsable.map(_.scale)
       } yield {
-        (NmlWriter.toNmlStream(Left(tracing), annotation.description, scale), name + ".nml")
+        (NmlWriter.toNmlStream(Left(tracing), annotation, scale), name + ".nml")
       }
     }
 
@@ -131,7 +131,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(Right(tracing), annotation.description, scale)),
+              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(Right(tracing), annotation, scale)),
               new NamedEnumeratorStream("data.zip", data)
             ), outputStream)
         }, name + ".zip")

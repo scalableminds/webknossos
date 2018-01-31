@@ -78,7 +78,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def accessList(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
-      users <- UserService.findByTeams(dataSet.allowedTeams, includeAnonymous = false)
+      users <- UserService.findByTeams(dataSet.allowedTeams)
     } yield {
       Ok(Writes.list(User.userCompactWrites).writes(users))
     }

@@ -137,4 +137,9 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
     for {_ <- run(q.update(newValue))} yield ()
   }
 
+  def setTimestampCol(id: ObjectId, column: (X) => Rep[java.sql.Timestamp], newValue: java.sql.Timestamp): Fox[Unit] = {
+    val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
+    for {_ <- run(q.update(newValue))} yield ()
+  }
+
 }

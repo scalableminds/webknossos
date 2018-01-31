@@ -193,7 +193,6 @@ CREATE TABLE webknossos.users(
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMP NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
-  dataSetConfigurations JSONB NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL DEFAULT 'credentials',
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'scrypt',
@@ -219,6 +218,21 @@ CREATE TABLE webknossos.user_experiences(
   PRIMARY KEY (_user, domain)
 );
 
+CREATE TABLE webknossos.user_dataSetConfigurations( --TODO: add to migration
+  _user CHAR(24) NOT NULL,
+  _dataSet CHAR(24) NOT NULL,
+  configuration JSONB NOT NULL,
+  PRIMARY KEY (_user, _dataSet)
+);
+
+CREATE TABLE webknossos.tokens( -- TODO: add to migration
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
+  loginInfo_providerKey VARCHAR(512) NOT NULL,
+  lastUsedDateTime BIGINT NOT NULL,
+  expirationDateTime BIGINT NOT NULL,
+  idleTimeout BIGINT
+);
 
 CREATE INDEX ON webknossos.annotations(_user);
 CREATE INDEX ON webknossos.annotations(_task);

@@ -40,8 +40,8 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
       case Some(handler) =>
         for {
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfUsers <- UserService.countNonAnonymousUsers
-          numberOfDatasets <- DataSetDAO.count
+          numberOfUsers <- UserDAO.countAll
+          numberOfDatasets <- DataSetDAO.countAll
           numberOfAnnotations <- AnnotationDAO.countAll
           numberOfAssignments <- TaskDAO.countAllOpenInstances
         } yield {

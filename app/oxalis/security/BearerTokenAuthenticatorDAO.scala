@@ -13,9 +13,9 @@ import play.api.libs.json.Writes._
 import play.api.libs.json.{Json, _}
 
 import scala.concurrent.Future
-/**
-  * Created by robert on 14.11.17.
-  */
+
+
+
 class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthenticator] with SecuredBaseDAO[BearerTokenAuthenticator] {
   override def collectionName: String = "bearerTokenAuthenticators"
 
@@ -52,6 +52,6 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   }
 
   def findByLoginInfo(loginInfo: LoginInfo): Future[Option[BearerTokenAuthenticator]] =
-    findOne("loginInfo", loginInfo)(implicitly[Writes[LoginInfo]],GlobalAccessContext).futureBox.map(box => box.toOption)
+    findOne("loginInfo", loginInfo)(implicitly[Writes[LoginInfo]], GlobalAccessContext).futureBox.map(box => box.toOption)
 }
 

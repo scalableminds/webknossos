@@ -52,7 +52,7 @@ object TaskService
     Fox.serialSequence(tasks)(_.project).map(_.flatten).map(_.distinct)
 
   def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
-    UserDAO.findAllNonAnonymous
+    UserDAO.findAll
     .flatMap { users =>
       Fox.serialSequence(users){ user =>
         for{

@@ -431,7 +431,7 @@ object DataSetDAO {
     } yield ()
   }
 
-  def count(implicit ctx: DBAccessContext): Fox[Int] = DataSetSQLDAO.countAll
+  def countAll(implicit ctx: DBAccessContext): Fox[Int] = DataSetSQLDAO.countAll
 
   def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext): Fox[Unit] =
     DataSetSQLDAO.deactivateUnreported(dataSources.map(_.id.name), dataStoreName)

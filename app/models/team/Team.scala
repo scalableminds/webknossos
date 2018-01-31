@@ -217,7 +217,7 @@ object TeamDAO {
     }
   }*/
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Team] =
     for {
       teamSQL <- TeamSQLDAO.findOneByName(name)
       team <- Team.fromTeamSQL(teamSQL)

@@ -12,9 +12,12 @@ import com.scalableminds.util.geometry.Scale
 import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import models.annotation.{Annotation, AnnotationDAO}
+import models.user.UserService
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
+
+import scala.concurrent.Await
 
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
@@ -196,7 +199,7 @@ object NmlWriter {
   }
 
   def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter) = {
-    val test =
+    val userNameFuture = annotation.user.map(_.name).getOrElse("No user")
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
       writer.writeAttribute("content", "NmlWriter.scala")
@@ -211,11 +214,11 @@ object NmlWriter {
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "annotationId")
-      writer.writeAttribute("content", annotation._id.stringify)
+      writer.writeAttribute("content", annotation.id)
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "username")
-      writer.writeAttribute("content", annotation._user.get.stringify)
+      writer.writeAttribute("content", userNameFuture.toString)
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "taskId")
@@ -225,7 +228,6 @@ object NmlWriter {
  * <meta name="writer" content="nml_helpers.js" />␊
    <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
    <meta name="timestamp" content="123456789" />
-                                   1517149384139
    <meta name="annotationId" content="5a5f6110410000ad00bf208f" />
    <meta name="username" content="SCM Boy" />
    <meta name="taskId" content="5a5f63474100001201bf2097" />

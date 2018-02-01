@@ -194,13 +194,15 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       _ <- run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${annotationId.id}")
     } yield ()
 
-  def cancelAnnotationsOfUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Annotations if (notdel(row) && row._User === userId.id && row.typ.inSetBind(AnnotationTypeSQL.UserTracings.map(_.toString)))} yield row.state
-    for {_ <- run(q.update(AnnotationState.Cancelled.toString))} yield ()
-  }
+  def cancelAnnotationsOfUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- run(sqlu"update webknossos.annotations set state = '#${AnnotationState.Cancelled}' where state in #${writeStructTupleWithQuotes(AnnotationTypeSQL.UserTracings.map(_.toString))}")
+    } yield ()
 
   def setState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext) =
-    setStringCol(id, _.state, state.toString)
+    for {
+      _ <- run(sqlu"update webknossos.annotations set state = '#${state}' where _id = ${id.id}")
+    } yield ()
 
   def setDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext) =
     setStringCol(id, _.description, description)

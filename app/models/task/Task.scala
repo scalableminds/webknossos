@@ -133,7 +133,10 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                 where _user = ${userId.id})
                as user_experiences on webknossos.tasks.neededExperience_domain = user_experiences.domain and webknossos.tasks.neededExperience_value <= user_experiences.value
              join webknossos.projects on webknossos.tasks._project = webknossos.projects._id
-           where webknossos.task_instances.openInstances > 0 and webknossos.tasks._team in #${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+             left join (select _task from webknossos.annotations where _user = ${userId.id} and typ = '#${AnnotationType.Task}') as userAnnotations ON webknossos.tasks._id = userAnnotations._task
+           where webknossos.task_instances.openInstances > 0
+                 and webknossos.tasks._team in #${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+                 and userAnnotations._task is null -- there is no annotation by this user for this task
            order by webknossos.projects.priority
            limit ${limit};
       """

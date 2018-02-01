@@ -230,10 +230,12 @@ CREATE TABLE webknossos.tokens( -- TODO: add to migration
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
   loginInfo_providerKey VARCHAR(512) NOT NULL,
-  lastUsedDateTime BIGINT NOT NULL,
-  expirationDateTime BIGINT NOT NULL,
+  lastUsedDateTime TIMESTAMP NOT NULL,
+  expirationDateTime TIMESTAMP NOT NULL,
   idleTimeout BIGINT,
-  tokenType webknossos.TOKEN_TYPES NOT NULL
+  tokenType webknossos.TOKEN_TYPES NOT NULL,
+  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX ON webknossos.annotations(_user);

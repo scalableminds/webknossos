@@ -107,6 +107,7 @@ class Authentication @Inject()(
   import AuthForms._
 
   val env = WebknossosSilhouette.environment
+  val bearerTokenAuthenticatorService = env.combinedAuthenticatorService.tokenAuthenticatorService
 
   private lazy val Mailer =
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
@@ -225,11 +226,10 @@ class Authentication @Inject()(
       email => UserService.retrieve(LoginInfo(CredentialsProvider.ID, email.toLowerCase)).flatMap {
         case None => Future.successful(BadRequest(Messages("error.noUser")))
         case Some(user) => {
-          val token = UserToken(user._id)
           for {
-            _ <- UserTokenDAO.insert(token)(GlobalAccessContext)
+            token <- bearerTokenAuthenticatorService.createAndInit(user.loginInfo, TokenType.ResetPassword)
           } yield {
-            Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token.token))
+            Mailer ! Send(DefaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
             Ok
           }
         }
@@ -242,11 +242,11 @@ class Authentication @Inject()(
     resetPasswordForm.bindFromRequest.fold(
       bogusForm => Future.successful(BadRequest(bogusForm.toString)),
       passwords => {
-        UserTokenService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
+        bearerTokenAuthenticatorService.userForToken(passwords.token.trim)(GlobalAccessContext).futureBox.flatMap {
           case Full(user) =>
             for {
-              _ <- UserTokenDAO.removeByToken(passwords.token.trim)(GlobalAccessContext)
               _ <- UserDAO.changePasswordInfo(user._id, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+              _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
             } yield Ok
           case _ =>
             Future.successful(BadRequest(Messages("auth.invalidToken")))

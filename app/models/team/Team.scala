@@ -237,11 +237,11 @@ object TeamDAO {
       team <- Team.fromTeamSQL(teamSQL)
     } yield team
 
-  def insert(team: Team)(implicit ctx: DBAccessContext): Fox[Team] =
+  def insert(team: Team)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       teamSQL <- TeamSQL.fromTeam(team)
       _ <- TeamSQLDAO.insertOne(teamSQL)
-    } yield team
+    } yield ()
 
   def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {

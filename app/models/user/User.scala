@@ -103,9 +103,16 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     } yield parsed
 
 
-  def insertOne(user: UserSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertOne(u: UserSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"""""") //TODO
+      _ <- run(
+        sqlu"""insert into webknossos.users(_id, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
+                                            loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isSuperUser, created, isDeleted)
+                                            values(${u._id.id}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(u.lastActivity)},
+                                                   '#${sanitize(u.userConfiguration.toString)}', '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+                                                   '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isSuperUser},
+                                                   ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
+          """)
     } yield ()
 
   def setLastActivity(userId: ObjectId, lastActivity: Long)(implicit ctx: DBAccessContext): Fox[Unit] =

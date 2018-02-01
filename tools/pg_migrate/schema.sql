@@ -158,9 +158,9 @@ CREATE TABLE webknossos.tasks(
 );
 
 CREATE VIEW webknossos.task_instances AS
-  SELECT t._id, COUNT(*) assignedInstances, t.totalinstances - COUNT(*) openInstances
-  FROM webknossos.tasks t JOIN webknossos.annotations a ON t._id = a._task
-  WHERE a.typ = 'Task' AND a.state != 'Cancelled' AND a.isDeleted = false AND t.isDeleted = false
+  SELECT t._id, COUNT(annotations._id) assignedInstances, t.totalinstances - COUNT(annotations._id) openInstances
+  FROM webknossos.tasks t
+  left join (select * from webknossos.annotations a where typ = 'Task' and a.state != 'Cancelled' AND a.isDeleted = false) as annotations ON t._id = annotations._task
   GROUP BY t._id, t.totalinstances;
 
 CREATE TABLE webknossos.teams(
@@ -185,7 +185,7 @@ CREATE TABLE webknossos.timespans(
 );
 
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
-CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('scrypt');
+CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
@@ -195,12 +195,12 @@ CREATE TABLE webknossos.users(
   userConfiguration JSONB NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL DEFAULT 'credentials',
   loginInfo_providerKey VARCHAR(512) NOT NULL,
-  passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'scrypt',
+  passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
-  created TIMESTAMP NOT NULL DEFAULT NOW()
+  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TYPE webknossos.TEAM_ROLES AS ENUM ('user', 'admin');

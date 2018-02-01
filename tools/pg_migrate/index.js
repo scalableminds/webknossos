@@ -365,9 +365,9 @@ function* csvWriter(name, cols) {
         "passwordInfo_hasher",
         "passwordInfo_password",
         "isDeactivated",
-        "isDeleted",
         "isSuperUser",
         "created",
+        "isDeleted",
       ],
       async doc =>
         doc.email != null
@@ -381,12 +381,12 @@ function* csvWriter(name, cols) {
               dataSetConfigurations: JSON.stringify(doc.dataSetConfigurations),
               loginInfo_providerID: doc.loginInfo.providerID,
               loginInfo_providerKey: doc.loginInfo.providerKey,
-              passwordInfo_hasher: "scrypt",
+              passwordInfo_hasher: "SCrypt",
               passwordInfo_password: doc.passwordInfo.password,
               isDeactivated: !doc.isActive,
-              isDeleted: false,
               isSuperUser: !!doc._isSuperUser,
               created: doc._id.getTimestamp(),
+              isDeleted: false,
             }
           : null,
     );

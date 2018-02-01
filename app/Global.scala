@@ -3,20 +3,21 @@ import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Mailer
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.security.SCrypt
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
+import models.project.{Project, ProjectDAO}
 import models.task._
 import models.team._
 import models.user._
 import net.liftweb.common.Full
 import oxalis.cleanup.CleanUpService
 import oxalis.jobs.AvailableTasksJob
+import play.api.Play.current
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
-import play.api.Play.current
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import utils.SQLClient
@@ -82,24 +83,25 @@ object Global extends GlobalSettings with LazyLogging{
  * Initial set of data to be imported
  * in the sample application.
  */
-object InitialData extends GlobalDBAccess with LazyLogging {
+object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
   val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").get
   val rootTeamName = "Connectomics department"
 
-  def insert(conf: Configuration) = {
-    insertDefaultUser
-    insertRootTeam
-    giveDeafultUserTeam
-    insertTasks
-    if (conf.getBoolean("datastore.enabled").getOrElse(true)) {
-      insertLocalDataStore(conf)
-    }
-  }
+  def insert(conf: Configuration) =
+    for {
+      _ <- insertDefaultUser
+      _ <- insertRootTeam
+      _ <- giveDeafultUserTeam
+      _ <- insertTaskType
+      _ <- insertProject
+      _ <- if (conf.getBoolean("datastore.enabled").getOrElse(true)) insertLocalDataStore(conf) else Fox.successful(())
+    } yield ()
 
-  def insertDefaultUser = {
+  def insertDefaultUser: Fox[Unit] =
+  {
     UserService.defaultUser.futureBox.map {
-      case Full(_) =>
+      case Full(_) => Fox.successful(())
       case _ =>
         val email = defaultUserEmail
         val password = defaultUserPassword
@@ -112,33 +114,34 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           SCrypt.md5(password),
           List(),
           loginInfo = UserService.createLoginInfo(email),
-          passwordInfo = UserService.createPasswordInfo(password))
+          passwordInfo = UserService.createPasswordInfo(password),
+          experiences = Map("sampleExp" -> 10))
         )
-    }
+    }.flatten
   }
 
-  def insertRootTeam() = {
+  def insertRootTeam: Fox[Unit] = {
     TeamDAO.findOneByName(rootTeamName).futureBox.map {
-      case Full(_) =>
+      case Full(_) => Fox.successful(())
       case _ =>
         UserService.defaultUser.flatMap(user => TeamDAO.insert(Team(rootTeamName, None, RoleService.roles, user._id)))
-    }
+    }.flatten
   }
 
-  def giveDeafultUserTeam = {
+  def giveDeafultUserTeam: Fox[Unit] = {
     UserService.defaultUser.flatMap { user =>
       if (!user.teamNames.contains(rootTeamName)) {
         UserDAO.addTeam(user._id, TeamMembership(rootTeamName, Role.Admin))
-      } else Fox.successful()
+      } else Fox.successful(())
     }
   }
 
-  def insertTasks() = {
+  def insertTaskType: Fox[Unit] = {
     TaskTypeDAO.findAll.map {
       types =>
         if (types.isEmpty) {
           val taskType = TaskType(
-            "ek_0563_BipolarCells",
+            "sampleTaskType",
             "Check those cells out!",
             rootTeamName)
           TaskTypeDAO.insert(taskType)
@@ -146,7 +149,19 @@ object InitialData extends GlobalDBAccess with LazyLogging {
     }
   }
 
-  def insertLocalDataStore(conf: Configuration) = {
+  def insertProject: Fox[Unit] = {
+    ProjectDAO.findAll.map {
+      projects =>
+        if (projects.isEmpty) {
+          UserService.defaultUser.flatMap(user => {
+            val project = Project("sampleProject", rootTeamName, user._id, 100, false, Some(5400000))
+            ProjectDAO.insert(project)
+          })
+        }
+    }
+  }
+
+  def insertLocalDataStore(conf: Configuration): Fox[Any] = {
     DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
         val url = conf.getString("http.uri").getOrElse("http://localhost:9000")

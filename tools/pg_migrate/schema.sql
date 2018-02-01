@@ -225,13 +225,15 @@ CREATE TABLE webknossos.user_dataSetConfigurations( --TODO: add to migration
   PRIMARY KEY (_user, _dataSet)
 );
 
+CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TABLE webknossos.tokens( -- TODO: add to migration
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   lastUsedDateTime BIGINT NOT NULL,
   expirationDateTime BIGINT NOT NULL,
-  idleTimeout BIGINT
+  idleTimeout BIGINT,
+  tokenType webknossos.TOKEN_TYPES NOT NULL
 );
 
 CREATE INDEX ON webknossos.annotations(_user);

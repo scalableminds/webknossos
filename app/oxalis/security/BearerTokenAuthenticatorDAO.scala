@@ -7,6 +7,8 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.JsonHelper._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.basics.SecuredBaseDAO
+import org.joda.time.DateTime
+import oxalis.security.TokenTypeSQL.TokenTypeSQL
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json._
 import play.api.libs.json.Writes._
@@ -14,22 +16,31 @@ import play.api.libs.json.{Json, _}
 import reactivemongo.api.commands.WriteResult
 
 import scala.concurrent.Future
+import scala.concurrent.duration.FiniteDuration
 
+case class TokenSQL(id: String,
+                    loginInfo: LoginInfo,
+                    lastUsedDateTime: DateTime,
+                    expirationDateTime: DateTime,
+                    idleTimeout: Option[FiniteDuration],
+                    tokenType: TokenTypeSQL) {
+  def toBearerTokenAuthenticator = {
 
-
-class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthenticator] with SecuredBaseDAO[BearerTokenAuthenticator] {
-  override def collectionName: String = "bearerTokenAuthenticators"
-
-  override protected implicit def formatter: OFormat[BearerTokenAuthenticator] = JsonHelper.oFormat(Json.format[BearerTokenAuthenticator])
-
-  override def findOne[V](attribute: String, value: V)(implicit w: Writes[V], ctx: DBAccessContext): Fox[BearerTokenAuthenticator] = findOne(Json.obj(attribute -> w.writes(value)))
-
-  override def find(id: String): Future[Option[BearerTokenAuthenticator]] = findOne("id", id)(implicitly[Writes[String]],GlobalAccessContext).futureBox.map(box => box.toOption)
-
-  //adds the new token with tokenType = Authentication (and removes the old one)
-  override def add(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = {
-    add(authenticator, TokenType.Authentication)
   }
+}
+
+object TokenSQL {
+  def fromBearerTokenAuthenticator(b: BearerTokenAuthenticator, tokenType: TokenTypeSQL): Future[TokenSQL] = {
+
+  }
+}
+
+class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthenticator] {
+  override def find(id: String): Future[Option[BearerTokenAuthenticator]] =
+    findOne("id", id)(implicitly[Writes[String]],GlobalAccessContext).futureBox.map(box => box.toOption)
+
+  override def add(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
+    add(authenticator, TokenTypeSQL.Authentication)
 
   override def update(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
     for {
@@ -42,23 +53,21 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
       box.openOrThrowException("update cannot return a box, as defined by trait AuthenticatorDAO")
     }
 
-  override def remove(id: String): Future[Unit] = for {
-    _ <- remove("id", id)(implicitly[Writes[String]], GlobalAccessContext).futureBox
-  } yield {
-    ()
-  }
+  override def remove(id: String): Future[Unit] =
+    for {
+    _ <- remove("id", id)(GlobalAccessContext).futureBox
+    } yield ()
 
-  def findOne[V](attribute: String, value: V, tokenType: TokenType.Value)(implicit w: Writes[V], ctx: DBAccessContext): Fox[BearerTokenAuthenticator] =
+  def findOne[V](attribute: String, value: V, tokenType: TokenTypeSQL)(implicit w: Writes[V], ctx: DBAccessContext): Fox[BearerTokenAuthenticator] =
     findOne(Json.obj(attribute -> w.writes(value), "tokenType" -> tokenType))
 
-  def findByLoginInfo(loginInfo: LoginInfo, tokenType: TokenType.Value): Future[Option[BearerTokenAuthenticator]] =
+  def findByLoginInfo(loginInfo: LoginInfo, tokenType: TokenTypeSQL): Future[Option[BearerTokenAuthenticator]] =
     findOne("loginInfo", loginInfo, tokenType)(implicitly[Writes[LoginInfo]], GlobalAccessContext).futureBox.map(box => box.toOption)
 
-  def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenType.TokenTypeValue)(implicit ctx: DBAccessContext): Fox[WriteResult] =
+  def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenTypeSQL)(implicit ctx: DBAccessContext): Fox[WriteResult] =
     insert(formatter.writes(authenticator)+("tokenType" -> Json.toJson(tokenType)))
 
-  //adds the new token with the specified tokenType (and removes the old one)
-  def add(authenticator: BearerTokenAuthenticator, tokenType: TokenType.TokenTypeValue): Future[BearerTokenAuthenticator] = for {
+  def add(authenticator: BearerTokenAuthenticator, tokenType: TokenTypeSQL): Future[BearerTokenAuthenticator] = for {
     maybeOldAuthenticator <- findByLoginInfo(authenticator.loginInfo, tokenType)
     _ <- insert(authenticator, tokenType)(GlobalAccessContext).futureBox
   } yield {

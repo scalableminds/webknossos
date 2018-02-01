@@ -9,6 +9,7 @@ import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticator,
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
+import oxalis.security.TokenTypeSQL.TokenTypeSQL
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -29,11 +30,11 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
   val resetPasswordExpiry = config.getDuration("silhouette.tokenAuthenticator.resetPasswordExpiry").toMillis millis
   val dataStoreExpiry = config.getDuration("silhouette.tokenAuthenticator.dataStoreExpiry").toMillis millis
 
-  def create(loginInfo: LoginInfo, tokenType: TokenType.TokenTypeValue)(implicit request: RequestHeader): Future[BearerTokenAuthenticator] = {
+  def create(loginInfo: LoginInfo, tokenType: TokenTypeSQL)(implicit request: RequestHeader): Future[BearerTokenAuthenticator] = {
     val expiry: Duration = tokenType match {
-      case TokenType.Authentication => settings.authenticatorExpiry
-      case TokenType.ResetPassword => resetPasswordExpiry
-      case TokenType.DataStore => dataStoreExpiry
+      case TokenTypeSQL.Authentication => settings.authenticatorExpiry
+      case TokenTypeSQL.ResetPassword => resetPasswordExpiry
+      case TokenTypeSQL.DataStore => dataStoreExpiry
       case _ => throw new Exception("Cannot create an authenticator without a valid TokenType")
     }
     idGenerator.generate.map { id =>
@@ -49,7 +50,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     }
   }
 
-  def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType.TokenTypeValue)(implicit request: RequestHeader): Future[String] = {
+  def init(authenticator: BearerTokenAuthenticator, tokenType: TokenTypeSQL)(implicit request: RequestHeader): Future[String] = {
     dao.add(authenticator, tokenType).map { a =>
       a.id
     }.recover {
@@ -57,7 +58,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     }
   }
 
-  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType.TokenTypeValue)(implicit request: RequestHeader): Future[String] =
+  def createAndInit(loginInfo: LoginInfo, tokenType: TokenTypeSQL)(implicit request: RequestHeader): Future[String] =
     for {
       tokenAuthenticator <- create(loginInfo, tokenType)
       tokenId <- init(tokenAuthenticator, tokenType)

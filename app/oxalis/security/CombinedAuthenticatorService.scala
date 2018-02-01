@@ -38,8 +38,8 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   }
 
   def createToken(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
-    val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenType.Authentication)
-    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication))
+    val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenTypeSQL.Authentication)
+    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenTypeSQL.Authentication))
     tokenAuthenticator.map(CombinedAuthenticator(_))
   }
 
@@ -54,7 +54,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   // only called in token case
   def findByLoginInfo(loginInfo: LoginInfo) =
-    tokenDao.findByLoginInfo(loginInfo, TokenType.Authentication).map(opt => opt.map(CombinedAuthenticator(_)))
+    tokenDao.findByLoginInfo(loginInfo, TokenTypeSQL.Authentication).map(opt => opt.map(CombinedAuthenticator(_)))
 
   // only called in the cookie case
   override def init(authenticator: CombinedAuthenticator)(implicit request: RequestHeader): Future[Cookie] =

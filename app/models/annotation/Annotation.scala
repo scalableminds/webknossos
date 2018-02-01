@@ -206,7 +206,9 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     setStringCol(id, _.description, description)
 
   def finish(id: ObjectId)(implicit ctx: DBAccessContext) =
-    setStringCol(id, _.state, AnnotationState.Finished.toString)
+    for {
+      _ <- run(sqlu"update webknossos.annotations set state = '#${AnnotationState.Finished}' where _id = ${id.id}")
+    } yield ()
 
   def rename(id: ObjectId, name: String)(implicit ctx: DBAccessContext) =
     setStringCol(id, _.name, name)

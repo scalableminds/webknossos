@@ -13,13 +13,13 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, AnnotationDAO}
 import models.binary._
-import models.user.UserTokenService
 import models.user.time.TimeSpanService
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
 import models.annotation.AnnotationState._
+import oxalis.security.{TokenType, WebknossosSilhouette}
 
 import scala.concurrent.Future
 
@@ -27,6 +27,8 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   extends Controller
     with WKDataStoreActionHelper
     with LazyLogging {
+
+  val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
   def validateDataSetUpload(name: String) = DataStoreAction(name).async(parse.json){ implicit request =>
     for {
@@ -91,7 +93,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         case None => Fox.successful()
       }
       _ <- AnnotationDAO.updateModifiedTimestamp(annotation._id)(GlobalAccessContext)
-      userBox <- UserTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
+      userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
     } yield {
       userBox.map(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
       Ok

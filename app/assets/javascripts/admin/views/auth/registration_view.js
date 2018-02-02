@@ -5,7 +5,8 @@ import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import type { APITeamType } from "admin/api_flow_types";
+import { getOrganizations } from "admin/admin_rest_api";
+import type { APIOrganizationType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
@@ -18,13 +19,13 @@ type Props = {
 
 type State = {
   confirmDirty: boolean,
-  teams: Array<APITeamType>,
+  organizations: Array<APIOrganizationType>,
 };
 
 class RegistrationView extends React.PureComponent<Props, State> {
   state = {
     confirmDirty: false,
-    teams: [],
+    organizations: [],
   };
 
   componentDidMount() {
@@ -32,10 +33,9 @@ class RegistrationView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const url = "/api/allTeams";
-    const teams = await Request.receiveJSON(url);
+    const organizations = await getOrganizations();
 
-    this.setState({ teams });
+    this.setState({ organizations });
   }
 
   handleSubmit = (event: SyntheticInputEvent<>) => {
@@ -75,44 +75,21 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
   render() {
     const { getFieldDecorator } = this.props.form;
-    // const teamComponents =
-    //   this.state.teams.length > 0 ? (
-    //     <FormItem hasFeedback>
-    //       {getFieldDecorator("team", {
-    //         rules: [
-    //           {
-    //             required: true,
-    //             message: messages["auth.registration_team_input"],
-    //           },
-    //         ],
-    //       })(
-    //         <Select placeholder="Team">
-    //           {this.state.teams.map(team => (
-    //             <Option value={team.name} key={team.name}>
-    //               {team.name}
-    //             </Option>
-    //           ))}
-    //         </Select>,
-    //       )}
-    //     </FormItem>
-    //   ) : (
-    //     <FormItem hasFeedback>{getFieldDecorator("team")(<input type="hidden" />)}</FormItem>
-    //   );
 
-    const teamComponents = (
+    const organizationComponents = (
       <FormItem hasFeedback>
-        {getFieldDecorator("team", {
+        {getFieldDecorator("organization", {
           rules: [
             {
               required: true,
-              message: messages["auth.registration_team_input"],
+              message: messages["auth.registration_org_input"],
             },
           ],
         })(
-          <Select placeholder="Team">
-            {this.state.teams.map(team => (
-              <Option value={team.name} key={team.name}>
-                {team.name}
+          <Select placeholder="Organization">
+            {this.state.organizations.map(organization => (
+              <Option value={organization.name} key={organization.name}>
+                {organization.name}
               </Option>
             ))}
           </Select>,
@@ -125,12 +102,12 @@ class RegistrationView extends React.PureComponent<Props, State> {
         <Col span={8}>
           <h3>Registration</h3>
           <Card style={{ marginBottom: 24 }}>
-            Not a member of the listed teams?<br /> Contact{" "}
+            Not a member of the listed organizations?<br /> Contact{" "}
             <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get more
             information about how to get to use webKnossos.
           </Card>
           <Form onSubmit={this.handleSubmit}>
-            {teamComponents}
+            {organizationComponents}
             <FormItem hasFeedback>
               {getFieldDecorator("email", {
                 rules: [

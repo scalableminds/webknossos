@@ -245,4 +245,11 @@ export type APIOpenTasksReportType = {
   +assignmentsByProjects: { [projectName: string]: number },
 };
 
+export type APIOrganizationType = {
+  +id: string,
+  +name: string,
+  +teams: Array<string>,
+  +organizationTeam: string,
+};
+
 export default {};

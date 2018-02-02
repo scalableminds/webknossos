@@ -122,9 +122,10 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
 
   getRoleComponent(team: APITeamType) {
     const selectedTeam = this.state.selectedTeams[team.name];
-    const selectedValue = selectedTeam
-      ? selectedTeam.isSuperVisor ? ROLES.supervisor : ROLES.user
-      : null;
+    let selectedValue = null;
+    if (selectedTeam) {
+      selectedValue = selectedTeam.isSuperVisor ? ROLES.supervisor : ROLES.user;
+    }
 
     return (
       <RadioGroup

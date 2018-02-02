@@ -42,7 +42,12 @@ module.exports = function(env = {}) {
         cache: true,
         parallel: true,
         sourceMap: true,
-      })
+        uglifyOptions: {
+          compress: {
+            inline: 1,
+          },
+        },
+      }),
     );
   }
 

@@ -50,7 +50,7 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
       cancelText: messages.no,
       okText: messages.yes,
       onOk: () =>
-        deleteAnnotation(annotation.id).then(() =>
+        deleteAnnotation(annotation.id, annotation.typ).then(() =>
           this.setState({
             annotations: this.state.annotations.filter(a => a.id !== annotation.id),
           }),
@@ -59,12 +59,12 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
   };
 
   finishAnnotation = async (annotation: APIAnnotationType) => {
-    const updatedAnnotation = await finishAnnotation(annotation.id);
+    const updatedAnnotation = await finishAnnotation(annotation.id, annotation.typ);
     this.updateAnnotationState(updatedAnnotation);
   };
 
   reOpenAnnotation = async (annotation: APIAnnotationType) => {
-    const updatedAnnotation = await reOpenAnnotation(annotation.id);
+    const updatedAnnotation = await reOpenAnnotation(annotation.id, annotation.typ);
     this.updateAnnotationState(updatedAnnotation);
   };
 
@@ -106,12 +106,12 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
           </span>
         </Item>
         <Item key={`${annotation.id}-download`}>
-          <a href={`/annotations/Task/${annotation.id}/download`}>
+          <a href={`/api/annotations/Task/${annotation.id}/download`}>
             <Icon type="download" />Download
           </a>
         </Item>
         <Item key={`${annotation.id}-reset`}>
-          <span onClick={() => resetAnnotation(annotation.id)}>
+          <span onClick={() => resetAnnotation(annotation.id, annotation.typ)}>
             <Icon type="rollback" />Reset
           </span>
         </Item>

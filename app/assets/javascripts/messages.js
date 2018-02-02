@@ -34,6 +34,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.delete_tree": "Do you really want to delete the whole tree?",
   "tracing.delete_tree_with_initial_node":
     "This tree contains the initial node. Do you really want to delete the whole tree?",
+  "tracing.merged": "Merging successfully done",
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
   "datastore.unknown_type": "Unknown datastore type:",
@@ -56,9 +57,12 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
+  "annotation.was_finished": "Annotation was archived",
+  "annotation.was_re_opened": "Annotation was reopened",
   "annotation.delete": "Do you really want to cancel this annotation?",
   "annotation.dataset_no_public":
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
+  "annotation.was_edited": "Successfully updated annotation",
   "project.delete": "Do you really want to delete this project?",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",

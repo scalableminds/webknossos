@@ -134,8 +134,9 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   }
 
   def findAllByFilterByProjectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+    /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
     val projectFilterFox = projectOpt match {
-      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"and _project = '${project._id}'"
+      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"and _project = '${sanitize(project._id.toString)}'"
       case _ => Fox.successful("")
     }
     val taskTypeFilter = taskTypeOpt.map(tId => s"and _taskType = '${sanitize(tId)}'").getOrElse("")

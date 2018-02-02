@@ -176,6 +176,18 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     futureBox.map(_.map(f))
   }
 
+  def toFutureOption: Future[Option[A]] = {
+    futureBox.map(box => box.toOption)
+  }
+
+  def toFutureOrThrowException(justification: String): Future[A] = {
+    for {
+      box: Box[A] <- this.futureBox
+    } yield {
+      box.openOrThrowException(justification)
+    }
+  }
+
   /**
    * Helper to force an implicit conversation
    */

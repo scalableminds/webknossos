@@ -4,6 +4,7 @@ import com.mohiva.play.silhouette.api._
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import com.mohiva.play.silhouette.api.util.{Clock, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators._
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -38,8 +39,8 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   }
 
   def createToken(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
-    val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenTypeSQL.Authentication)
-    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenTypeSQL.Authentication))
+    val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenType.Authentication)
+    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication))
     tokenAuthenticator.map(CombinedAuthenticator(_))
   }
 
@@ -54,7 +55,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   // only called in token case
   def findByLoginInfo(loginInfo: LoginInfo) =
-    tokenDao.findByLoginInfo(loginInfo, TokenTypeSQL.Authentication).map(opt => opt.map(CombinedAuthenticator(_)))
+    tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication)(GlobalAccessContext).map(opt => opt.map(CombinedAuthenticator(_)))
 
   // only called in the cookie case
   override def init(authenticator: CombinedAuthenticator)(implicit request: RequestHeader): Future[Cookie] =

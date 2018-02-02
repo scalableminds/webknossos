@@ -38,7 +38,7 @@ object Global extends GlobalSettings with LazyLogging{
     val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
     CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
-      tokenAuthenticatorService.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
+      tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
     }
 
     super.onStart(app)

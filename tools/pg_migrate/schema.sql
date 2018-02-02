@@ -228,6 +228,7 @@ CREATE TABLE webknossos.user_dataSetConfigurations( --TODO: add to migration
 CREATE TYPE webknossos.TOKEN_TYPES AS ENUM ('Authentication', 'DataStore', 'ResetPassword');
 CREATE TABLE webknossos.tokens( -- TODO: add to migration
   _id CHAR(24) PRIMARY KEY DEFAULT '',
+  value Text NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
   loginInfo_providerKey VARCHAR(512) NOT NULL,
   lastUsedDateTime TIMESTAMP NOT NULL,

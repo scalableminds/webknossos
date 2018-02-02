@@ -117,7 +117,7 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
 
   def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield isDeletedColumn(row)
-    for {_ <- run(q.update(false))} yield ()
+    for {_ <- run(q.update(true))} yield ()
   }
 
   def setStringCol(id: ObjectId, column: (X) => Rep[String], newValue: String): Fox[Unit] = {

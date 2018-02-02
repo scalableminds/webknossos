@@ -86,14 +86,14 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
     for {
       _ <- insertDefaultUser
       _ <- insertRootTeam
-      _ <- giveDeafultUserTeam
+      _ <- giveDefaultUserTeam
       _ <- insertTaskType
       _ <- insertProject
       _ <- if (Play.configuration.getBoolean("datastore.enabled").getOrElse(true)) insertLocalDataStore else Fox.successful(())
     } yield ()
 
   def insertDefaultUser =  {
-    UserService.defaultUser.futureBox.map {
+    UserService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         val email = defaultUserEmail
@@ -110,18 +110,18 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
           passwordInfo = UserService.createPasswordInfo(password),
           experiences = Map("sampleExp" -> 10))
         )
-    }.flatten
+    }
   }
 
   def insertRootTeam = {
-    TeamDAO.findOneByName(rootTeamName).futureBox.map {
+    TeamDAO.findOneByName(rootTeamName).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         UserService.defaultUser.flatMap(user => TeamDAO.insert(Team(rootTeamName, None, RoleService.roles, Some(user._id))))
-    }.flatten
+    }
   }
 
-  def giveDeafultUserTeam = {
+  def giveDefaultUserTeam = {
     UserService.defaultUser.flatMap { user =>
       if (!user.teamNames.contains(rootTeamName)) {
         UserDAO.addTeam(user._id, TeamMembership(rootTeamName, Role.Admin))

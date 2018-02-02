@@ -95,7 +95,6 @@ GET           /api/annotations/:typ/:id/download                                
 GET           /api/annotations/:typ/:id/loggedTime                              controllers.AnnotationController.loggedTime(typ: String, id: String)
 
 # Tasks
-GET           /api/tasks                                                        controllers.TaskController.list
 POST          /api/tasks                                                        controllers.TaskController.create
 POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFile
 POST          /api/tasks/list                                                   controllers.TaskController.listTasks

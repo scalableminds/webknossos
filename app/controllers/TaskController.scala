@@ -208,15 +208,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     }
   }
 
-  def list = SecuredAction.async { implicit request =>
-    for {
-      tasks <- TaskService.findAllAdministratable(request.identity, limit = 10000)
-      js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
-    } yield {
-      Ok(Json.toJson(js))
-    }
-  }
-
   def listTasksForType(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       tasks <- TaskService.findAllByTaskType(taskTypeId)
@@ -228,7 +219,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
 
 
-  def listTasks() = SecuredAction.async(parse.json) { implicit request =>
+  def listTasks = SecuredAction.async(parse.json) { implicit request =>
 
     val userOpt = (request.body \ "user").asOpt[String]
     val projectOpt = (request.body \ "project").asOpt[String]
@@ -245,7 +236,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
             case Some(ids) => taskIdsFromAnnotations.intersect(ids.toSet)
             case None => taskIdsFromAnnotations
           }
-          tasks <- TaskDAO.findAllByProjectTaskTypeIds(projectOpt, taskTypeOpt, Some(taskIds.toList))
+          tasks <- TaskDAO.findAllByFilterByProjectAndTaskTypeAndIds(projectOpt, taskTypeOpt, Some(taskIds.toList))
           jsResult <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
         } yield {
           Ok(Json.toJson(jsResult))
@@ -253,7 +244,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       }
       case None => {
         for {
-          tasks <- TaskDAO.findAllByProjectTaskTypeIds(projectOpt, taskTypeOpt, idsOpt)
+          tasks <- TaskDAO.findAllByFilterByProjectAndTaskTypeAndIds(projectOpt, taskTypeOpt, idsOpt)
           jsResult <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
         } yield {
           Ok(Json.toJson(jsResult))

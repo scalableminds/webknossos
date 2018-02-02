@@ -79,7 +79,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
     else trimmed.split(",", -1).toList
   }
 
-  def sanitize(aString: String): String = aString // TODO: prevent sql injection
+  def sanitize(aString: String): String = aString.replaceAll("'", "")
 
   def optionLiteral(aStringOpt: Option[String]): String = aStringOpt match {
     case Some(aString) => "'" + aString + "'"

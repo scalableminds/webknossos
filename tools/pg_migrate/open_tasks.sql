@@ -2,13 +2,13 @@ WITH
   _projects AS (
     SELECT
       p._id
-    FROM 
-      projects p 
-      JOIN tasks t ON t._project = p._id
-      JOIN annotations a ON a._task = t._id
-      JOIN users u ON u._id = a._user
-      JOIN user_team_roles ut ON ut._user = u._id
-      JOIN user_experiences ue ON ue._user = u._id
+    FROM
+      webknossos.projects p
+      JOIN webknossos.tasks t ON t._project = p._id
+      JOIN webknossos.annotations a ON a._task = t._id
+      JOIN webknossos.users u ON u._id = a._user
+      JOIN webknossos.user_team_roles ut ON ut._user = u._id
+      JOIN webknossos.user_experiences ue ON ue._user = u._id
     WHERE
       p._team = '55c8bc233100004d016202ee' AND
       p.paused = FALSE AND

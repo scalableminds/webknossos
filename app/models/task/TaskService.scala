@@ -19,9 +19,6 @@ object TaskService
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     TaskDAO.findOneById(id)
 
-  def findAllAdministratable(user: User, limit: Int)(implicit ctx: DBAccessContext) =
-    TaskDAO.findAllAdministratable(user, limit)
-
   def removeOne(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     TaskDAO.removeOneAndItsAnnotations(_task)
 

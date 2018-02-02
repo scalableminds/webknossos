@@ -91,7 +91,7 @@ CREATE TABLE webknossos.dataSet_resolutions( -- TODO: add to migration
   dataLayerName CHAR(24),
   resolution INT NOT NULL,
   scale webknossos.VECTOR3 NOT NULL,
-  PRIMARY KEY (_dataSet, dataLayerName)
+  PRIMARY KEY (_dataSet, dataLayerName, resolution)
 );
 
 CREATE TYPE webknossos.DATASTORE_TYPE AS ENUM ('webknossos-store');

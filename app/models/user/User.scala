@@ -219,7 +219,20 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
     } yield ()
   }
 
-  def insertDatasetConfiguration(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def insertDatasetConfigurationsFor(userId: ObjectId, configurations: Map[String, DataSetConfiguration])(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      _ <- Fox.combined(configurations.map{case (dataSetName, configuration) => insertDatasetConfiguration(userId, dataSetName, configuration.configuration)}.toList)
+    } yield ()
+  }
+
+  private def insertDatasetConfiguration(userId: ObjectId, dataSetName: String, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      dataSet <- DataSetSQLDAO.findOneByName(dataSetName)
+      _ <- insertDatasetConfiguration(userId, dataSet.name, configuration)
+    } yield ()
+  }
+
+  private def insertDatasetConfiguration(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       _ <- run(
         sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
@@ -511,8 +524,7 @@ object UserDAO {
       teamMemberships <- Fox.combined(user.teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       _ <- Fox.combined(teamMemberships.map(UserTeamRolesSQLDAO.insertTeamMembership(userSQL._id, _)))
       _ <- UserExperiencesSQLDAO.setExperiences(userSQL._id, user.experiences)
-      //datasetConfigurationsSQL <- DataSetConfiguration.from??? // TODO
-      //_ <- Fox.combined(datasetConfigurationsSQL.map(UserDataSetConfigurationsSQLDAO.insertDatasetConfiguration(userSQL._id, _)))
+      _ <- UserDataSetConfigurationsSQLDAO.insertDatasetConfigurationsFor(userSQL._id, user.dataSetConfigurations)
     } yield ()
 
   def removeById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Unit] =

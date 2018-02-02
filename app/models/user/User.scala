@@ -90,9 +90,9 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     for {
       r <- run(sql"""select webknossos.users.*
                        from webknossos.users join webknossos.user_team_roles on webknossos.users._id = webknossos.user_team_roles._user
-                       where webknossos.user_team_roles.team in #${writeStructTupleWithQuotes(teams.map(_.id))}
+                       where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
                              and webknossos.users.isDeleted = false
-                             and (webknossos.users.isDeactivated = false or webknossos.users.isDeactivated ${includeDeactivated})""".as[UsersRow])
+                             and (webknossos.users.isDeactivated = false or webknossos.users.isDeactivated = ${includeDeactivated})""".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -511,7 +511,7 @@ object UserDAO {
       teamMemberships <- Fox.combined(user.teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       _ <- Fox.combined(teamMemberships.map(UserTeamRolesSQLDAO.insertTeamMembership(userSQL._id, _)))
       _ <- UserExperiencesSQLDAO.setExperiences(userSQL._id, user.experiences)
-      //datasetConfigurationsSQL <- ??? // TODO
+      //datasetConfigurationsSQL <- DataSetConfiguration.from??? // TODO
       //_ <- Fox.combined(datasetConfigurationsSQL.map(UserDataSetConfigurationsSQLDAO.insertDatasetConfiguration(userSQL._id, _)))
     } yield ()
 

@@ -2,23 +2,24 @@ package models.annotation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
 
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.tracings._
-import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.webknossos.datastore.tracings._
+import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.AnnotationState._
 import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
-import models.user.{UsedAnnotationDAO, User}
+import models.user.User
 import net.liftweb.common.Box
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
@@ -27,7 +28,6 @@ import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
-import models.annotation.AnnotationState._
 
 object AnnotationService
   extends BoxImplicits
@@ -103,10 +103,7 @@ object AnnotationService
 
   def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
     // WARNING: needs to be repeatable, might be called multiple times for an annotation
-    AnnotationDAO.finish(annotation._id).map { r =>
-      UsedAnnotationDAO.removeAll(AnnotationIdentifier(annotation.typ, annotation.id))
-      r
-    }
+    AnnotationDAO.finish(annotation._id)
   }
 
   def baseFor(task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] =

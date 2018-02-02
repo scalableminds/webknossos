@@ -10,7 +10,7 @@ import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time._
-import models.user.{UsedAnnotationDAO, User, UserDAO}
+import models.user.{User, UserDAO}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
@@ -43,7 +43,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         js <- annotation.toJson(request.identity, Some(restrictions), Some(readOnly))
       } yield {
         request.identity.foreach { user =>
-          UsedAnnotationDAO.use(user, annotationId)
           TimeSpanService.logUserInteraction(user, annotation)            // log time when a user starts working
         }
         Ok(js)
@@ -221,10 +220,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       for {
         _ <- ensureTeamAdministration(request.identity, annotation.team)
         result <- tryToCancel(annotation)
-      } yield {
-        UsedAnnotationDAO.removeAll(AnnotationIdentifier(typ, id))
-        result
-      }
+      } yield result
     }(securedRequestToUserAwareRequest)
   }
 

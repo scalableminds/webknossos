@@ -78,8 +78,8 @@ object Global extends GlobalSettings with LazyLogging{
  */
 object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
 
-  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
-  val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").get
+  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
+  val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").getOrElse("secret")
   val rootTeamName = "Connectomics department"
 
   def insert =

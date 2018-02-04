@@ -8,18 +8,18 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
 import models.project.{Project, ProjectDAO}
-import models.task._
+import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.Full
+import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.jobs.AvailableTasksJob
 import oxalis.security.WebknossosSilhouette
+import play.api.Play.current
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import play.api.libs.json.Json
-import play.api.Play.current
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 
@@ -32,7 +32,11 @@ object Global extends GlobalSettings with LazyLogging{
     startActors(conf.underlying, app)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insert
+      InitialData.insert.futureBox.map {
+        case Full(_) => ()
+        case Failure(msg, _, _) => logger.error("Error while inserting initial data: " + msg)
+        case _ => logger.error("Error while inserting initial data")
+      }
     }
 
     val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
@@ -82,7 +86,7 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
   val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").getOrElse("secret")
   val rootTeamName = "Connectomics department"
 
-  def insert =
+  def insert: Fox[Unit] =
     for {
       _ <- insertDefaultUser
       _ <- insertRootTeam

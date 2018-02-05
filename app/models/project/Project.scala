@@ -277,12 +277,6 @@ object ProjectDAO {
   def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Project] =
     findOneById(id.stringify)
 
-  def findAllByTeamNames(teamNames: List[String])(implicit ctx: DBAccessContext): Fox[List[Project]] = Fox.failure("not implemented")
-  /* TODO Reports
-  def findAllByTeamNames(teamNames: List[String])(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find(Json.obj("team" -> Json.obj("$in" -> teamNames))).cursor[Project]().collect[List]()
-  } */
-
   def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) =
     for {
       _ <- ProjectSQLDAO.setPaused(ObjectId.fromBsonId(_id), isPaused)

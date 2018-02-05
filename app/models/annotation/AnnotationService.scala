@@ -93,14 +93,6 @@ object AnnotationService
     }
   }
 
-  def updateAllOfTask(
-    task: Task,
-    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-    for {
-      _ <- AnnotationDAO.updateSettingsForAllOfTask(task, settings)
-    } yield true
-  }
-
   def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
     // WARNING: needs to be repeatable, might be called multiple times for an annotation
     AnnotationDAO.finish(annotation._id)
@@ -115,7 +107,7 @@ object AnnotationService
     AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task)
 
   def countActiveAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countActiveByTaskIdsAndType(List(task._id), AnnotationType.Task)
+    AnnotationDAO.countActiveByTaskIdAndType(task._id, AnnotationType.Task)
 
   def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.cancelAnnotationsOfUser(user._id)

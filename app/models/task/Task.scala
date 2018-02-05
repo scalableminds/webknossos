@@ -419,38 +419,6 @@ object TaskDAO {
       tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
     } yield tasks
 
-  /* TODO Reports
-  def sumInstancesByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    sumValues(Json.obj("_project" -> project), "instances")
-  }
-
-  def findAllByProjectReturnOnlyIds(project: String)(implicit ctx: DBAccessContext) = {
-    for {
-      jsObjects <- findWithProjection(Json.obj("_project" -> project), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
-    } yield {
-      jsObjects.map(p => (p \ "_id").asOpt[BSONObjectID]).flatten
-    }
-  }
-
-  def findOneByProject(projectName: String)(implicit ctx: DBAccessContext) = findOne(Json.obj("_project" -> projectName))
-
-
-  def findWithOpenByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
-    for {
-      jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
-        "openInstances" -> Json.obj("$gt" -> 0),
-        "team" -> Json.obj("$in" -> user.teamNames),
-        "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
-    } yield {
-      jsObjects.map(p => (p \ "_project").asOpt[String]).flatten
-    }
-  }
-  */
-  def sumInstancesByProject(project: String)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
-  def findAllByProjectReturnOnlyIds(project: String)(implicit ctx: DBAccessContext): Fox[List[BSONObjectID]] = Fox.failure("not implemented")
-  def findOneByProject(projectName: String)(implicit ctx: DBAccessContext): Fox[Task] = Fox.failure("not implemented")
-  def findWithOpenByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = Fox.failure("not implemented")
-
   def findAllAssignableFor(user: User, teamNames: List[String], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
     for {
       teams <- Fox.combined(teamNames.map(TeamSQLDAO.findOneByName(_)))

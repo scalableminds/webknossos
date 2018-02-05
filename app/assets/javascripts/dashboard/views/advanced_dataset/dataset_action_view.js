@@ -79,17 +79,17 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
             {dataset.isEditable ? (
-              <Link to={`/datasets/${dataset.name}/edit`} title="Edit dataset">
+              <Link to={`/datasets/${dataset.name}/edit`} title="Edit Dataset">
                 <Icon type="edit" />Edit
               </Link>
             ) : null}
-            <a href={`/datasets/${dataset.name}/view`} title="View dataset">
+            <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
               <Icon type="eye-o" />View
             </a>
             <a
               href="#"
               onClick={() => this.createTracing(dataset, "skeleton", false)}
-              title="Create skeleton tracing"
+              title="Create Skeleton Tracing"
             >
               <img
                 src="/assets/images/skeleton.svg"

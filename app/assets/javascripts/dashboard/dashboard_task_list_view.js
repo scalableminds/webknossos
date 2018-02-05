@@ -12,7 +12,7 @@ import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
 import messages from "messages";
-import TransferTaskModal from "dashboard/views/transfer_task_modal";
+import TransferTaskModal from "dashboard/transfer_task_modal";
 import { deleteAnnotation, resetAnnotation, finishTask } from "admin/admin_rest_api";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import Persistence from "libs/persistence";

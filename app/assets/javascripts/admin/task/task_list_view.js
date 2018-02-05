@@ -9,15 +9,15 @@ import Utils from "libs/utils";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import messages from "messages";
-import TaskSearchForm from "admin/views/task/task_search_form";
+import TaskSearchForm from "admin/task/task_search_form";
 import { deleteTask, getTasks } from "admin/admin_rest_api";
 import TemplateHelpers from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
-import TaskAnnotationView from "admin/views/task/task_annotation_view";
+import TaskAnnotationView from "admin/task/task_annotation_view";
 import Persistence from "libs/persistence";
 import { PropTypes } from "prop-types";
 import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
-import type { QueryObjectType, TaskFormFieldValuesType } from "admin/views/task/task_search_form";
+import type { QueryObjectType, TaskFormFieldValuesType } from "admin/task/task_search_form";
 import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;

@@ -223,7 +223,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                     </Link>
                     <br />
                     <a
-                      href={`/annotations/CompoundProject/${project.id}/download`}
+                      href={`/api/annotations/CompoundProject/${project.id}/download`}
                       title="Download all Finished Tracings"
                     >
                       <Icon type="download" />Download

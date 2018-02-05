@@ -231,14 +231,5 @@ object NmlWriter {
       writer.writeAttribute("name", "taskId")
       writer.writeAttribute("content", annotation._task.get.stringify)
     }
-    /*
- * <meta name="writer" content="nml_helpers.js" />␊
-   <meta name="writerGitCommit" content="fc0ea6432ec7107e8f9b5b308ee0e90eae0e7b17" />
-   <meta name="timestamp" content="123456789" />
-   <meta name="annotationId" content="5a5f6110410000ad00bf208f" />
-   <meta name="username" content="SCM Boy" />
-   <meta name="taskId" content="5a5f63474100001201bf2097" />
-   <parameters>
- * */
   }
 }

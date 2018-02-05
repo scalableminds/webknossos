@@ -9,6 +9,7 @@ services:
     links:
       - mongo
       - fossildb
+      - postgres
     entrypoint: bin/oxalis
     command:
       - -Djava.io.tmpdir=disk
@@ -22,6 +23,8 @@ services:
 
   base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.4.10_node-9.x_jdk-8
+    # links:
+    #  - postgres
     environment:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
@@ -70,6 +73,7 @@ services:
     links:
       - mongo
       - fossildb
+      - postgres
     command:
       - bash
       - -c
@@ -99,6 +103,9 @@ services:
     volumes:
       - "./dev-db/configdb:/data/configdb"
       - "./dev-db/db:/data/db"
+
+  postgres:
+    image: postgres:10-alpine
 
   fossildb:
     image: scalableminds/fossildb:master__222

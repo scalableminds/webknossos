@@ -111,6 +111,12 @@ services:
       POSTGRES_USER: webknossos
       POSTGRES_PASSWORD: ""
 
+  postgres-test:
+    image: postgres:10-alpine
+    links:
+      - postgres
+    command: sh -c "sleep 3 && psql --dbname=webknossos --host=postgres --username=webknossos"
+
   fossildb:
     image: scalableminds/fossildb:master__222
     command:

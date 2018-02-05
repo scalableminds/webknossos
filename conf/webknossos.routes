@@ -70,7 +70,7 @@ POST          /api/datastores/:name/verifyUpload                                
 POST          /api/datastores/:name/validateUserAccess                          controllers.UserTokenController.validateUserAccess(name: String, token: String)
 
 # User access tokens for datastore authentification
-GET           /api/userToken/generate                                           controllers.UserTokenController.generateUserToken
+GET           /api/userToken/generate                                           controllers.UserTokenController.generateTokenForDataStore
 
 # Annotations
 POST          /api/annotations/upload                                           controllers.AnnotationIOController.upload

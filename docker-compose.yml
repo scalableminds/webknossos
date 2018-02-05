@@ -106,6 +106,10 @@ services:
 
   postgres:
     image: postgres:10-alpine
+    environment:
+      POSTGRES_DB: webknossos
+      POSTGRES_USER: webknossos
+      POSTGRES_PASSWORD: ""
 
   fossildb:
     image: scalableminds/fossildb:master__222

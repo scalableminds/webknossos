@@ -76,21 +76,29 @@ object AssetCompilation {
   private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] =
     (runner in Compile, dependencyClasspath in Compile, sourceManaged, baseDirectory, streams, target) map { (runner, dc, sourceManaged, base, s, t) =>
 
-      println("Running slick sql access class generation task")
+      val schemaPath = base / "tools" / "pg_migrate" / "schema.sql"
+      val slickTablesOutPath = sourceManaged / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
-      val conf = com.typesafe.config.ConfigFactory.parseFile(new File("conf/application.conf")).resolve()
+      val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
-      val pgUrl = conf.getString("postgres.url")
-      val pgUser = conf.getString("postgres.user")
-      val pgPass = conf.getString("postgres.password")
-      val pgDriver = conf.getString("postgres.driver")
+      if (shouldUpdate) {
+        s.log.info("Updating Slick SQL schema from local database...")
+        val conf = com.typesafe.config.ConfigFactory.parseFile(new File("conf/application.conf")).resolve()
 
-      runner.run("slick.codegen.SourceCodeGenerator", dc.files,
-        Array("slick.jdbc.PostgresProfile", pgDriver, pgUrl, (sourceManaged / "schema").toString, "com.scalableminds.webknossos.schema", pgUser, pgPass),
-        s.log
-      )
+        val pgUrl = conf.getString("postgres.url")
+        val pgUser = conf.getString("postgres.user")
+        val pgPass = conf.getString("postgres.password")
+        val pgDriver = conf.getString("postgres.driver")
 
-      Seq((sourceManaged / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"))
+        runner.run("slick.codegen.SourceCodeGenerator", dc.files,
+          Array("slick.jdbc.PostgresProfile", pgDriver, pgUrl, (sourceManaged / "schema").toString, "com.scalableminds.webknossos.schema", pgUser, pgPass),
+          s.log
+        )
+      } else {
+        s.log.info("Slick SQL schema already up to date.")
+      }
+
+      Seq((slickTablesOutPath))
     }
 
   val settings = Seq(

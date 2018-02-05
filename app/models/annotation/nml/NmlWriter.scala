@@ -18,6 +18,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 
 import scala.concurrent.Await
+import scala.util.{Failure, Success}
 
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
@@ -200,6 +201,12 @@ object NmlWriter {
 
   def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter) = {
     val userNameFuture = annotation.user.map(_.name).getOrElse("No user")
+    var userName = ""
+    userNameFuture.onComplete {
+      case Success(name) => userName = name
+      case Failure(e) => userName = "No user"
+    }
+
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
       writer.writeAttribute("content", "NmlWriter.scala")
@@ -218,7 +225,7 @@ object NmlWriter {
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "username")
-      writer.writeAttribute("content", userNameFuture.toString)
+      writer.writeAttribute("content", userName)
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "taskId")

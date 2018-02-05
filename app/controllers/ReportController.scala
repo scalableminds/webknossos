@@ -7,8 +7,7 @@ import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationType}
-import models.task._
+import models.annotation.AnnotationTypeSQL
 import models.team.TeamDAO
 import models.user.{User, UserDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction
@@ -76,6 +75,32 @@ object ReportSQLDAO extends SimpleSQLDAO {
       r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7))
     }
   }
+
+
+  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+    for {
+      r <- run(sql"""
+        select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
+        from
+        webknossos.tasks t
+          join webknossos.task_instances ti on t._id = ti._id
+        join
+        (select *
+          from webknossos.user_experiences
+        where _user = ${userId.id})
+        as ue on t.neededExperience_domain = ue.domain and t.neededExperience_value <= ue.value
+        join webknossos.projects p on t._project = p._id
+        left join (select _task from webknossos.annotations where _user = ${userId.id} and typ = '#${AnnotationTypeSQL.Task}') as userAnnotations ON t._id = userAnnotations._task
+        where ti.openInstances > 0
+        and userAnnotations._task is null
+        group by p._id, p.name, t.neededExperience_domain, t.neededExperience_value
+      """.as[(String, String, String, Int, Int)])
+    } yield {
+      val formattedList = r.toList.map(row => (row._2 + "/" + row._3 + ": " + row._4, row._5))
+      formattedList.toMap.filter(_ match { case (title: String, openTaskCount: Int) => openTaskCount > 0 })
+    }
+  }
+
 }
 
 class ReportController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
@@ -86,26 +111,19 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     } yield Ok(Json.toJson(entries))
   }
 
-  /**
-    * assumes that all tasks of a project have the same required experience
-    */
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
       users <- UserDAO.findByTeams(List(team.name), includeInactive = false)(GlobalAccessContext)
       nonAdminUsers = users.filterNot(_.isAdminOf(team.name))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
-    } yield {
-      Ok(Json.toJson(entries))
-    }
+    } yield Ok(Json.toJson(entries))
   }
-
 
   private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
-        projects <- TaskDAO.findWithOpenByUserReturnOnlyProject(user).toFox
-        assignmentCountsByProject <- getAssignmentsByProjectsFor(projects, user)
+        assignmentCountsByProject <- ReportSQLDAO.getAssignmentsByProjectsFor(ObjectId(user.id))
       } yield {
         OpenTasksEntry(user.id, user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
       }
@@ -113,23 +131,5 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     Fox.combined(foxes.toList)
   }
 
-  private def getAssignmentsByProjectsFor(projects: Seq[String], user: User)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
-    val projectsGrouped = projects.groupBy(identity).mapValues(_.size)
-    val foxes: Iterable[Fox[(String, Int)]] = projectsGrouped.keys.map {
-      project =>
-        Fox(for {
-          tasksIds <- TaskDAO.findAllByProjectReturnOnlyIds(project)
-          doneTasks <- AnnotationDAO.countFinishedByTaskIdsAndUserIdAndType(tasksIds, user._id, AnnotationType.Task)
-          firstTask <- TaskDAO.findOneByProject(project)
-        } yield {
-          (project + "/" + firstTask.neededExperience.toString, projectsGrouped(project) - doneTasks)
-        })
-    }
-    for {
-      list <- Fox.combined(foxes.toList)
-    } yield {
-      list.toMap.filter(_ match { case (title: String, openTaskCount: Int) => openTaskCount > 0 })
-    }
-  }
 
 }

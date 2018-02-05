@@ -514,39 +514,6 @@ object AnnotationDAO extends FoxImplicits {
       count <- AnnotationSQLDAO.countActiveByTask(ObjectId.fromBsonId(_task), typ)
     } yield count
 
-  def countActiveByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
-  def countFinishedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
-  def countFinishedByTaskIdsAndUserIdAndType(_tasks: List[BSONObjectID], userId: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
-  def countRecentlyModifiedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType, minimumTimestamp: Long)(implicit ctx: DBAccessContext): Fox[Int] = Fox.failure("not implemented")
-
-  /* TODO Reports
-  def countActiveByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    count(Json.obj(
-      "_task" -> Json.obj("$in" -> _tasks),
-      "typ" -> annotationType,
-      "state" -> AnnotationState.Active))
-
-  def countFinishedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    count(Json.obj(
-      "_task" -> Json.obj("$in" -> _tasks),
-      "typ" -> annotationType,
-      "state" -> AnnotationState.Finished))
-
-  def countFinishedByTaskIdsAndUserIdAndType(_tasks: List[BSONObjectID], userId: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-      count(Json.obj(
-        "_user" -> userId,
-        "_task" -> Json.obj("$in" -> _tasks),
-        "typ" -> annotationType,
-        "state" -> AnnotationState.Finished
-      ))
-
-  def countRecentlyModifiedByTaskIdsAndType(_tasks: List[BSONObjectID], annotationType: AnnotationType, minimumTimestamp: Long)(implicit ctx: DBAccessContext) =
-    count(Json.obj(
-      "_task" -> Json.obj("$in" -> _tasks),
-      "typ" -> annotationType,
-      "modifiedTimestamp" -> Json.obj("$gt" -> minimumTimestamp)
-    ))*/
-
   def cancelAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
     AnnotationSQLDAO.cancelAnnotationsOfUser(ObjectId.fromBsonId(_user))
 
@@ -555,9 +522,6 @@ object AnnotationDAO extends FoxImplicits {
       _ <- AnnotationSQLDAO.setState(ObjectId.fromBsonId(_annotation), state)
       annotation <- findOneById(_annotation)
     } yield annotation
-
-  //no longer necessary since settings are constructed on read from sql
-  def updateSettingsForAllOfTask(task: Task, settings: AnnotationSettings)(implicit ctx: DBAccessContext) = Fox.successful(())
 
   def countAll(implicit ctx: DBAccessContext) =
     AnnotationSQLDAO.countAll

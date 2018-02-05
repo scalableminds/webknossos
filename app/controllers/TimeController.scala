@@ -63,6 +63,10 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     var date = input.parse(year.toString)
     val fullYear = output.format(date).toInt
 
+    //set them here to first day of selected month so getActualMaximum below will use the correct month entry
+    startDate.set(fullYear, month - 1, 1, 0, 0, 0)
+    endDate.set(fullYear, month - 1, 1, 0, 0, 0)
+
     val sDay = startDay.getOrElse(startDate.getActualMinimum(Calendar.DAY_OF_MONTH))
     val eDay = endDay.getOrElse(endDate.getActualMaximum(Calendar.DAY_OF_MONTH))
 

@@ -8,14 +8,14 @@ import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
 import models.project.{Project, ProjectDAO}
-import models.task._
+import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.Full
+import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.jobs.AvailableTasksJob
-import play.api.Play.current
 import oxalis.security.WebknossosSilhouette
+import play.api.Play.current
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
@@ -32,7 +32,11 @@ object Global extends GlobalSettings with LazyLogging{
     startActors(conf.underlying, app)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insert(conf)
+      InitialData.insert.futureBox.map {
+        case Full(_) => ()
+        case Failure(msg, _, _) => logger.error("Error while inserting initial data: " + msg)
+        case _ => logger.error("Error while inserting initial data")
+      }
     }
 
     val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
@@ -82,28 +86,29 @@ object Global extends GlobalSettings with LazyLogging{
 
 }
 
+
 /**
- * Initial set of data to be imported
- * in the sample application.
- */
+  * Initial set of data to be imported
+  * in the sample application.
+  */
 object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
-  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
-  val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").get
+
+  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
+  val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").getOrElse("secret")
   val rootTeamName = "Connectomics department"
 
-  def insert(conf: Configuration) =
+  def insert: Fox[Unit] =
     for {
       _ <- insertDefaultUser
       _ <- insertRootTeam
-      _ <- giveDeafultUserTeam
+      _ <- giveDefaultUserTeam
       _ <- insertTaskType
       _ <- insertProject
-      _ <- if (conf.getBoolean("datastore.enabled").getOrElse(true)) insertLocalDataStore(conf) else Fox.successful(())
+      _ <- if (Play.configuration.getBoolean("datastore.enabled").getOrElse(true)) insertLocalDataStore else Fox.successful(())
     } yield ()
 
-  def insertDefaultUser: Fox[Unit] =
-  {
-    UserService.defaultUser.futureBox.map {
+  def insertDefaultUser =  {
+    UserService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         val email = defaultUserEmail
@@ -120,18 +125,18 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
           passwordInfo = UserService.createPasswordInfo(password),
           experiences = Map("sampleExp" -> 10))
         )
-    }.flatten
+    }
   }
 
-  def insertRootTeam: Fox[Unit] = {
-    TeamDAO.findOneByName(rootTeamName).futureBox.map {
+  def insertRootTeam = {
+    TeamDAO.findOneByName(rootTeamName).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
         UserService.defaultUser.flatMap(user => TeamDAO.insert(Team(rootTeamName, None, RoleService.roles, user._id)))
-    }.flatten
+    }
   }
 
-  def giveDeafultUserTeam: Fox[Unit] = {
+  def giveDefaultUserTeam = {
     UserService.defaultUser.flatMap { user =>
       if (!user.teamNames.contains(rootTeamName)) {
         UserDAO.addTeam(user._id, TeamMembership(rootTeamName, Role.Admin))
@@ -139,7 +144,7 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
     }
   }
 
-  def insertTaskType: Fox[Unit] = {
+  def insertTaskType = {
     TaskTypeDAO.findAll.map {
       types =>
         if (types.isEmpty) {
@@ -152,23 +157,23 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
     }
   }
 
-  def insertProject: Fox[Unit] = {
+  def insertProject = {
     ProjectDAO.findAll.map {
       projects =>
         if (projects.isEmpty) {
-          UserService.defaultUser.flatMap(user => {
+          UserService.defaultUser.flatMap { user =>
             val project = Project("sampleProject", rootTeamName, user._id, 100, false, Some(5400000))
             ProjectDAO.insert(project)
-          })
+          }
         }
     }
   }
 
-  def insertLocalDataStore(conf: Configuration): Fox[Any] = {
+  def insertLocalDataStore: Fox[Any] = {
     DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        val url = conf.getString("http.uri").getOrElse("http://localhost:9000")
-        val key = conf.getString("datastore.key").getOrElse("something-secure")
+        val url = Play.configuration.getString("http.uri").getOrElse("http://localhost:9000")
+        val key = Play.configuration.getString("datastore.key").getOrElse("something-secure")
         DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, key))
       }
     }

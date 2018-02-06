@@ -3,7 +3,6 @@
 // @flow
 import "../enzyme/e2e-setup";
 import test from "ava";
-import Request from "libs/request";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import moment from "moment";
@@ -14,7 +13,7 @@ let firstTeam;
 test.before("Initialize values", async t => {
   activeUser = await api.getActiveUser();
 
-  const teams = _.sortBy(await api.getTeams(), t => t.name);
+  const teams = _.sortBy(await api.getTeams(), team => team.name);
   firstTeam = teams[0];
 });
 

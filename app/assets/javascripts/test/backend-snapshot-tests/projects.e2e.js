@@ -3,10 +3,9 @@
 // @flow
 import "../enzyme/e2e-setup";
 import test from "ava";
-import Request from "libs/request";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
-import type { APIProjectType, APIProjectUpdaterType, APIUserType } from "admin/api_flow_types";
+import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);
@@ -25,7 +24,7 @@ test.serial("getProject(projectName: string)", async t => {
 });
 
 test.serial("createProject and deleteProject", async t => {
-  const teamName = _.sortBy(await api.getTeams(), t => t.name)[0].name;
+  const teamName = _.sortBy(await api.getTeams(), team => team.name)[0].name;
   const activeUser = await api.getActiveUser();
   const projectName = "test-new-project";
   const newProject = {

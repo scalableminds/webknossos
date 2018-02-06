@@ -9,7 +9,7 @@ import TemplateHelpers from "libs/template_helpers";
 import messages from "messages";
 import { createExplorational } from "admin/admin_rest_api";
 
-import type { DatasetType } from "dashboard/views/dataset_view";
+import type { DatasetType } from "dashboard/dataset_view";
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
 

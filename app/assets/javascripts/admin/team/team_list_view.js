@@ -6,7 +6,7 @@ import * as React from "react";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
-import CreateTeamModal from "admin/views/team/create_team_modal_view.js";
+import CreateTeamModal from "admin/team/create_team_modal_view.js";
 import { getEditableTeams, deleteTeam } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "prop-types";

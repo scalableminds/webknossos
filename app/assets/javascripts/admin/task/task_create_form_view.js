@@ -37,7 +37,7 @@ import type {
 } from "admin/api_flow_types";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";
-import type { TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
+import type { TaskCreationResponseType } from "admin/task/task_create_bulk_view";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;

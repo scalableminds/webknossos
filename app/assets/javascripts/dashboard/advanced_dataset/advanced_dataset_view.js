@@ -5,10 +5,10 @@ import * as React from "react";
 import TemplateHelpers from "libs/template_helpers";
 import Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
-import DatasetActionView from "dashboard/views/advanced_dataset/dataset_action_view";
-import DatasetAccessListView from "dashboard/views/advanced_dataset/dataset_access_list_view";
-import TeamAssignmentModal from "dashboard/views/dataset/team_assignment_modal";
-import type { DatasetType } from "dashboard/views/dataset_view";
+import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
+import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
+import TeamAssignmentModal from "dashboard/dataset/team_assignment_modal";
+import type { DatasetType } from "dashboard/dataset_view";
 
 const { Column } = Table;
 

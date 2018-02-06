@@ -2,8 +2,8 @@
 /* eslint-disable react/prefer-stateless-function */
 import React from "react";
 import { Tabs } from "antd";
-import DatasetUploadView from "admin/views/dataset/dataset_upload_view";
-import DatasetRemoteView from "admin/views/dataset/dataset_remote_view";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
+import DatasetRemoteView from "admin/dataset/dataset_remote_view";
 
 const { TabPane } = Tabs;
 

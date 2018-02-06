@@ -66,7 +66,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           <a
             href="#"
             onClick={() => this.createTracing(dataset, "volume", true)}
-            title="Create volume tracing"
+            title="Create Volume Tracing"
           >
             Use Existing Segmentation Layer
           </a>
@@ -75,7 +75,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           <a
             href="#"
             onClick={() => this.createTracing(dataset, "volume", false)}
-            title="Create volume tracing"
+            title="Create Volume Tracing"
           >
             Use a New Segmentation Layer
           </a>
@@ -85,7 +85,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
 
     const createVolumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
-        <a href="#" title="Create volume tracing">
+        <a href="#" title="Create Volume Tracing">
           <img src="/assets/images/volume.svg" alt="Volume" />
         </a>
       </Dropdown>
@@ -98,7 +98,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         className="spotlight-item-card"
       >
         <div className="dataset-thumbnail-buttons">
-          <a href="#" title="View dataset">
+          <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
             <Icon
               type="eye-o"
               style={{

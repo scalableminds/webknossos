@@ -10,7 +10,7 @@ import moment from "moment";
 let activeUser;
 let firstTeam;
 
-test.before("Initialize values", async t => {
+test.before("Initialize values", async () => {
   activeUser = await api.getActiveUser();
 
   const teams = _.sortBy(await api.getTeams(), team => team.name);

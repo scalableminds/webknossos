@@ -122,15 +122,27 @@ export type APIScriptType = {
   +gist: string,
 };
 
-export type APIProjectType = {
-  +id: string,
+type APIProjectTypeBase = {
   +name: string,
   +team: string,
-  +owner: APIUserType,
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
   +numberOfOpenAssignments: number,
+};
+
+export type APIProjectType = APIProjectTypeBase & {
+  +id: string,
+  +owner: APIUserType,
+};
+
+export type APIProjectUpdaterType = APIProjectTypeBase & {
+  +id: string,
+  +owner: string,
+};
+
+export type APIProjectCreatorType = APIProjectTypeBase & {
+  +owner: string,
 };
 
 export type APITaskType = {

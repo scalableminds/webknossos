@@ -77,7 +77,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       const trees = _.keyBy(
         action.tracing.trees.map((tree): TreeType => ({
           comments: tree.comments,
-          edges: EdgeCollection.loadFromEdges(tree.edges),
+          edges: EdgeCollection.loadFromArray(tree.edges),
           name: tree.name,
           treeId: tree.treeId,
           nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),

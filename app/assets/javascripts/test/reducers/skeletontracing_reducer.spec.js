@@ -235,7 +235,7 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
             ]),
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
-            edges: EdgeCollection.loadFromEdges([
+            edges: EdgeCollection.loadFromArray([
               { source: 0, target: 1 },
               { source: 2, target: 1 },
               { source: 1, target: 7 },
@@ -253,7 +253,7 @@ test("SkeletonTracing should delete nodes and split the tree", t => {
             ]),
             timestamp: Date.now(),
             branchPoints: [],
-            edges: EdgeCollection.loadFromEdges([
+            edges: EdgeCollection.loadFromArray([
               { source: 4, target: 5 },
               { source: 5, target: 6 },
             ]),
@@ -358,7 +358,7 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
             ]),
             timestamp: Date.now(),
             branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
-            edges: EdgeCollection.loadFromEdges([
+            edges: EdgeCollection.loadFromArray([
               { source: 0, target: 1 },
               { source: 2, target: 1 },
               { source: 2, target: 7 },
@@ -376,7 +376,7 @@ test("SkeletonTracing should delete an edge and split the tree", t => {
             ]),
             timestamp: Date.now(),
             branchPoints: [],
-            edges: EdgeCollection.loadFromEdges([
+            edges: EdgeCollection.loadFromArray([
               { source: 4, target: 5 },
               { source: 5, target: 6 },
             ]),

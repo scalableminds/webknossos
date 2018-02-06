@@ -45,7 +45,7 @@ const tracing = {
       ]),
       timestamp: TIMESTAMP,
       branchPoints: [{ nodeId: 1, timestamp: 0 }, { nodeId: 7, timestamp: 0 }],
-      edges: EdgeCollection.loadFromEdges([
+      edges: EdgeCollection.loadFromArray([
         { source: 0, target: 1 },
         { source: 2, target: 1 },
         { source: 1, target: 7 },
@@ -64,7 +64,7 @@ const tracing = {
       ]),
       timestamp: TIMESTAMP,
       branchPoints: [],
-      edges: EdgeCollection.loadFromEdges([{ source: 4, target: 5 }, { source: 5, target: 6 }]),
+      edges: EdgeCollection.loadFromArray([{ source: 4, target: 5 }, { source: 5, target: 6 }]),
       comments: [],
       color: [30, 30, 30],
       isVisible: true,
@@ -143,13 +143,13 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   const invalidEdgeState = update(initialState, {
     tracing: {
       trees: {
-        "2": { edges: { $set: EdgeCollection.loadFromEdges([{ source: 99, target: 5 }]) } },
+        "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 99, target: 5 }]) } },
       },
     },
   });
   const disconnectedTreeState = update(initialState, {
     tracing: {
-      trees: { "2": { edges: { $set: EdgeCollection.loadFromEdges([{ source: 4, target: 5 }]) } } },
+      trees: { "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } } },
     },
   });
   const nmlWithInvalidComment = serializeToNml(invalidCommentState, invalidCommentState.tracing);

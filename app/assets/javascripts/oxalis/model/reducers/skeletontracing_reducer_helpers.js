@@ -69,7 +69,7 @@ export function createNode(
   viewport: number,
   resolution: number,
   timestamp: number,
-): Maybe<[NodeType, Array<EdgeType>]> {
+): Maybe<[NodeType, EdgeCollection]> {
   const { allowUpdate } = skeletonTracing.restrictions;
   const activeNodeMaybe = getActiveNodeFromTree(skeletonTracing, tree);
 
@@ -426,7 +426,7 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapT
           newNodeId++;
         }
 
-        const newEdges = EdgeCollection.loadFromEdges(
+        const newEdges = EdgeCollection.loadFromArray(
           tree.edges.map(edge => ({
             source: idMap[edge.source],
             target: idMap[edge.target],

@@ -27,15 +27,13 @@ export default class EdgeCollection {
     return outgoingEdges.concat(ingoingEdges);
   }
 
-  addEdges(edges: Array<EdgeType>, mutate: boolean = false) {
-    // todo: find out whether the edge already exists?
+  addEdges(edges: Array<EdgeType>, mutate: boolean = false): EdgeCollection {
     const newOutgoingEdges = mutate ? this.outMap : this.outMap.clone();
     const newIngoingEdges = mutate ? this.inMap : this.inMap.clone();
     const newEdgeCount = this.edgeCount + edges.length;
 
     for (const edge of edges) {
       const outgoingEdges = this.outMap.getNullable(edge.source) || [];
-
       const ingoingEdges = this.inMap.getNullable(edge.target) || [];
 
       newOutgoingEdges.mutableSet(edge.source, outgoingEdges.concat(edge));
@@ -49,11 +47,11 @@ export default class EdgeCollection {
     }
   }
 
-  addEdge(edge: EdgeType, mutate: boolean = false) {
+  addEdge(edge: EdgeType, mutate: boolean = false): EdgeCollection {
     return this.addEdges([edge], mutate);
   }
 
-  removeEdge(edge: EdgeType) {
+  removeEdge(edge: EdgeType): EdgeCollection {
     const outgoingEdges = this.outMap.getNullable(edge.source) || [];
     const ingoingEdges = this.inMap.getNullable(edge.target) || [];
 
@@ -97,7 +95,7 @@ export default class EdgeCollection {
     return cloned;
   }
 
-  static loadFromEdges(edges: Array<EdgeType>): EdgeCollection {
+  static loadFromArray(edges: Array<EdgeType>): EdgeCollection {
     // Build up temporary data structures for fast bulk processing
     const rawOutMap: { [number]: Array<EdgeType> } = {};
     const rawInMap: { [number]: Array<EdgeType> } = {};

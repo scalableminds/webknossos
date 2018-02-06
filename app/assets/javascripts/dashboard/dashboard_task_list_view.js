@@ -16,7 +16,7 @@ import TransferTaskModal from "dashboard/transfer_task_modal";
 import { deleteAnnotation, resetAnnotation, finishTask } from "admin/admin_rest_api";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import Persistence from "libs/persistence";
-import { PropTypes } from "prop-types";
+import { PropTypes } from "@scalableminds/prop-types";
 import type {
   APITaskWithAnnotationType,
   APIUserType,

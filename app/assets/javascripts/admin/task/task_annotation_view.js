@@ -12,7 +12,7 @@ import {
   deleteAnnotation,
 } from "admin/admin_rest_api";
 import messages from "messages";
-import TransferTaskModal from "dashboard/views/transfer_task_modal";
+import TransferTaskModal from "dashboard/transfer_task_modal";
 import type { APITaskType, APIAnnotationType } from "admin/api_flow_types";
 
 const { Item } = Menu;

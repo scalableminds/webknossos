@@ -36,10 +36,9 @@ mockRequire("antd/lib/button", props => (
   </div>
 ));
 
-const ProjectListView = mockRequire.reRequire("../../admin/views/project/project_list_view")
-  .default;
-const Dashboard = mockRequire.reRequire("../../dashboard/views/dashboard_view").default;
-const UserListView = mockRequire.reRequire("../../admin/views/user/user_list_view").default;
+const ProjectListView = mockRequire.reRequire("../../admin/project/project_list_view").default;
+const Dashboard = mockRequire.reRequire("../../dashboard/dashboard_view").default;
+const UserListView = mockRequire.reRequire("../../admin/user/user_list_view").default;
 const Store = mockRequire.reRequire("../../oxalis/throttled_store").default;
 const { setActiveUserAction } = mockRequire.reRequire("../../oxalis/model/actions/user_actions");
 const { getActiveUser } = mockRequire.reRequire("../../admin/admin_rest_api");

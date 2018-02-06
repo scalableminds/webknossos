@@ -6,9 +6,9 @@ import { connect } from "react-redux";
 import Request from "libs/request";
 import { Spin, Tabs } from "antd";
 import Utils from "libs/utils";
-import DatasetView from "dashboard/views/dataset_view";
-import DashboardTaskListView from "dashboard/views/dashboard_task_list_view";
-import ExplorativeAnnotationsView from "dashboard/views/explorative_annotations_view";
+import DatasetView from "dashboard/dataset_view";
+import DashboardTaskListView from "dashboard/dashboard_task_list_view";
+import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { APIUserType } from "admin/api_flow_types";

@@ -3,7 +3,7 @@ import _ from "lodash";
 import React from "react";
 import { Form, Input, Button, Card, Upload, Icon, Spin, Progress, Divider } from "antd";
 import { createTasks } from "admin/admin_rest_api";
-import { handleTaskCreationResponse } from "admin/views/task/task_create_form_view";
+import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
 import Messages from "messages";
 import Toast from "libs/toast";
 

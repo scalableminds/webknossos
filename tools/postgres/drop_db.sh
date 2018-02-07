@@ -3,4 +3,4 @@ set -Eeuo pipefail
 
 dbName='webknossos'
 
-psql -U postgres -h ${POSTGRES_HOST:-localhost} -c "DROP DATABASE $dbName;"
+PGPASSWORD=postgres psql -U postgres -h ${POSTGRES_HOST:-localhost} -c "DROP DATABASE $dbName;"

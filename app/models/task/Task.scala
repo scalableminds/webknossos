@@ -178,12 +178,12 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   }
 
   def sumInstancesByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    sumValues(Json.obj("_project" -> project), "instances")
+    sumValues(Json.obj("_project" -> project, "isActive" -> true), "instances")
   }
 
   def findAllByProjectReturnOnlyIds(project: String)(implicit ctx: DBAccessContext) = {
     for {
-      jsObjects <- findWithProjection(Json.obj("_project" -> project), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
+      jsObjects <- findWithProjection(Json.obj("_project" -> project, "isActive" -> true), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
     } yield {
       jsObjects.map(p => (p \ "_id").asOpt[BSONObjectID]).flatten
     }
@@ -295,6 +295,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   def findWithOpenByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
     for {
       jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
+        "isActive" -> true,
         "openInstances" -> Json.obj("$gt" -> 0),
         "team" -> Json.obj("$in" -> user.teamNames),
         "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()

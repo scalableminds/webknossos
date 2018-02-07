@@ -245,7 +245,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
 
 
-
 class info(message: String) extends scala.annotation.StaticAnnotation
 
 case class Task(
@@ -471,7 +470,5 @@ object TaskDAO {
       _ <- TaskSQLDAO.updateTotalInstances(ObjectId.fromBsonId(_task), instances)
       updated <- findOneById(_task.stringify)
     } yield updated
-
-
 
 }

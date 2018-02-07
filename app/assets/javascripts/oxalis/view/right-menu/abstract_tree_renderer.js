@@ -6,7 +6,6 @@
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
 import Utils from "libs/utils";
-import { getNodeToEdgesMap } from "oxalis/model/accessors/skeletontracing_accessor";
 import messages from "messages";
 import type { Vector2 } from "oxalis/constants";
 import type { TreeType } from "oxalis/store";
@@ -93,8 +92,6 @@ class AbstractTreeRenderer {
     // Asumption: Node with smallest id is root
     const rootId = _.min(Array.from(this.tree.nodes.keys()));
 
-    const nodeToEdgesMap = getNodeToEdgesMap(this.tree, false);
-
     const rootNode = { id: rootId, children: [] };
     const queue = [rootNode];
     const visitedNodes = {};
@@ -109,7 +106,7 @@ class AbstractTreeRenderer {
         visitedNodes[curNodeId] = true;
       }
 
-      const edges = nodeToEdgesMap[curNodeId] || [];
+      const edges = this.tree.edges.getEdgesForNode(curNodeId);
       const childrenIds = edges.map(edge => edge.target);
       for (const childId of childrenIds) {
         const child = {

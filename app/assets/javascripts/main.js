@@ -6,7 +6,7 @@
 import ErrorHandling from "libs/error_handling";
 
 import React from "react";
-import ReactRouter from "react_router";
+import Router from "router";
 import ReactDOM from "react-dom";
 import { Provider } from "react-redux";
 import Store from "oxalis/throttled_store";
@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (containerElement) {
     ReactDOM.render(
       <Provider store={Store}>
-        <ReactRouter />
+        <Router />
       </Provider>,
       containerElement,
     );

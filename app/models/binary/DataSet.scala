@@ -72,6 +72,9 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     case None => Fox.successful(None)
   }
 
+  private def writeScaleLiteral(scale: Scale): String =
+    writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
+
   def parse(r: DatasetsRow): Fox[DataSetSQL] = {
     for {
       scale <- parseScaleOpt(r.scale)
@@ -136,9 +139,6 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     val q = for {row <- Datasets if (notdel(row) && row.name.inSetBind(names) && row._Datastore === dataStoreName) } yield (row.isusable, row.status)
     for { _ <-run(q.update(false, "No longer available on datastore.")) } yield ()
   }
-
-  private def writeScaleLiteral(scale: Scale): String =
-    writeStructTuple(List(scale.x, scale.y, scale.z).map(_.toString))
 }
 
 
@@ -215,7 +215,7 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
     result.flatten
   }
 
-  def findDataLayersForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
+  def findAllDataLayersForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[DataLayer]] = {
     for {
       rows <- run(DatasetLayers.filter(_._Dataset === dataSetId.id).result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow(_, dataSetId)))
@@ -256,14 +256,12 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
 
 object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
 
-  def findAllowedTeamsForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[String]] = {
-
+  def findAllForDataSet(dataSetId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[String]] = {
     val query = for {
       (allowedteam, team) <- DatasetAllowedteams.filter(_._Dataset === dataSetId.id) join Teams  on (_._Team === _._Id)
     } yield team.name
 
     run(query.result).map(_.toList)
-
   }
 
   def updateAllowedTeamsForDataSetByName(dataSetName: String, allowedTeams: List[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
@@ -334,7 +332,7 @@ object DataSet extends FoxImplicits {
   private def constructDataSource(s: DataSetSQL, team: TeamSQL)(implicit ctx: DBAccessContext): Fox[InboxDataSource] = {
     val dataSourceId = DataSourceId(s.name, team.name)
     for {
-      dataLayersBox <- (DataSetDataLayerSQLDAO.findDataLayersForDataSet(s._id) ?~> "could not find data layers" ).futureBox
+      dataLayersBox <- (DataSetDataLayerSQLDAO.findAllDataLayersForDataSet(s._id) ?~> "could not find data layers" ).futureBox
     } yield {
       dataLayersBox match {
         case Full(dataLayers) if (dataLayers.length > 0) =>
@@ -350,7 +348,7 @@ object DataSet extends FoxImplicits {
   def fromDataSetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
     for {
       datastore <- DataStoreSQLDAO.findOneByName(s._dataStore.trim) ?~> Messages("datastore.notFound")
-      allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllowedTeamsForDataSet(s._id) ?~> Messages("allowedTeams.notFound")
+      allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllForDataSet(s._id) ?~> Messages("allowedTeams.notFound")
       defaultConfiguration <- parseDefaultConfiguration(s.defaultConfiguration)
       team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
       dataSource <- constructDataSource(s, team) ?~> "could not construct datasource"

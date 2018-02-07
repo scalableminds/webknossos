@@ -115,10 +115,10 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
           """)
     } yield ()
 
-  def setLastActivity(userId: ObjectId, lastActivity: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
-    setTimestampCol(userId, _.lastactivity, new java.sql.Timestamp(lastActivity))
+  def updateLastActivity(userId: ObjectId, lastActivity: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+    updateTimestampCol(userId, _.lastactivity, new java.sql.Timestamp(lastActivity))
 
-  def setPasswordInfo(userId: ObjectId, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updatePasswordInfo(userId: ObjectId, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === userId.id)} yield (row.passwordinfoHasher, row.passwordinfoPassword)
     for {
       _ <- run(sqlu"""update webknossos.users set
@@ -127,12 +127,12 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     } yield ()
   }
 
-  def setUserConfiguration(userId: ObjectId, userConfiguration: UserConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateUserConfiguration(userId: ObjectId, userConfiguration: UserConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(sqlu"update webknossos.users set userConfiguration = '#${sanitize(userConfiguration.configuration.toString)}'")
     } yield ()
 
-  def setValues(userId: ObjectId, firstName: String, lastName: String, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
+  def updateValues(userId: ObjectId, firstName: String, lastName: String, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
     val q = for {row <- Users if (notdel(row) && idColumn(row) === userId.id)} yield (row.firstname, row.lastname, row.isdeactivated)
     for {_ <- run(q.update(firstName, lastName, isDeactivated))} yield ()
   }
@@ -159,7 +159,7 @@ object UserTeamRolesSQLDAO extends SimpleSQLDAO {
   private def insertQuery(userId: ObjectId, teamMembership: TeamMembershipSQL) =
     sqlu"insert into webknossos.user_team_roles(_user, _team, role) values(${userId.id}, ${teamMembership.teamId.id}, '#${sanitize(teamMembership.role.name)}')"
 
-  def setTeamMemberships(userId: ObjectId, teamMemberships: List[TeamMembershipSQL])(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: List[TeamMembershipSQL])(implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.user_team_roles where _user = ${userId.id}"
     val insertQueries = teamMemberships.map(insertQuery(userId, _))
     for {
@@ -173,7 +173,7 @@ object UserTeamRolesSQLDAO extends SimpleSQLDAO {
     } yield ()
 
 
-  def removeTeamFromUsers(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def removeTeamFromAllUsers(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(sqlu"delete from webknossos.user_team_roles where _team = ${teamId.id}")
     } yield ()
@@ -182,7 +182,7 @@ object UserTeamRolesSQLDAO extends SimpleSQLDAO {
 
 object UserExperiencesSQLDAO extends SimpleSQLDAO {
 
-  def findExperiencesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+  def findAllExperiencesForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
     for {
       rows <- run(UserExperiences.filter(_._User === userId.id).result)
     } yield {
@@ -190,7 +190,7 @@ object UserExperiencesSQLDAO extends SimpleSQLDAO {
     }
   }
 
-  def setExperiences(userId: ObjectId, experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateExperiencesForUser(userId: ObjectId, experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = sqlu"delete from webknossos.user_experiences where _user = ${userId.id}"
     val insertQueries = experiences.map { case (domain, value) => sqlu"insert into webknossos.user_experiences(_user, domain, value) values(${userId.id}, ${domain}, ${value})"}
     for {
@@ -202,7 +202,7 @@ object UserExperiencesSQLDAO extends SimpleSQLDAO {
 
 object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
 
-  def findDataSetConfigurationsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] = {
+  def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] = {
     for {
       rows <- run(UserDatasetconfigurations.filter(_._User === userId.id).result)
     } yield {
@@ -210,7 +210,7 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
     }
   }
 
-  def setDatasetConfiguration(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updateDatasetConfigurationForUserAndDataset(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       _ <- run(
         sqlu"""update webknossos.user_dataSetConfigurations
@@ -370,7 +370,7 @@ object User extends FoxImplicits {
 
   private def fetchDatasetConfigurations(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, JsValue]] = {
     for {
-      jsValueByDataSetId: Map[ObjectId, JsValue] <- UserDataSetConfigurationsSQLDAO.findDataSetConfigurationsForUser(userId)
+      jsValueByDataSetId: Map[ObjectId, JsValue] <- UserDataSetConfigurationsSQLDAO.findAllForUser(userId)
       keyList: List[ObjectId] = jsValueByDataSetId.keySet.toList
       dataSets <- Fox.combined(keyList.map(dataSetId => DataSetSQLDAO.findOne(dataSetId)))
     } yield {
@@ -382,7 +382,7 @@ object User extends FoxImplicits {
     for {
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
       teamRoles <- UserTeamRolesSQLDAO.findTeamMembershipsForUser(s._id)
-      experiences <- UserExperiencesSQLDAO.findExperiencesForUser(s._id)
+      experiences <- UserExperiencesSQLDAO.findAllExperiencesForUser(s._id)
       userConfiguration <- JsonHelper.jsResultToFox(s.userConfiguration.validate[Map[String, JsValue]])
       dataSetConfigurations <- constructDatasetConfigurations(s._id)
     } yield {
@@ -457,9 +457,9 @@ object UserDAO {
     for {
       teamMembershipsSQL <- Fox.combined(teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       id = ObjectId.fromBsonId(_user)
-      _ <- UserSQLDAO.setValues(id, firstName, lastName, !activated)
-      _ <- UserTeamRolesSQLDAO.setTeamMemberships(id, teamMembershipsSQL)
-      _ <- UserExperiencesSQLDAO.setExperiences(id, experiences)
+      _ <- UserSQLDAO.updateValues(id, firstName, lastName, !activated)
+      _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(id, teamMembershipsSQL)
+      _ <- UserExperiencesSQLDAO.updateExperiencesForUser(id, experiences)
       updated <- findOneById(_user.stringify)
     } yield updated
 
@@ -472,26 +472,26 @@ object UserDAO {
   def updateTeams(_user: BSONObjectID, teamMemberships: List[TeamMembership])(implicit ctx: DBAccessContext) =
     for {
       teamMembershipsSQL <- Fox.combined(teamMemberships.map(TeamMembershipSQL.fromTeamMembership(_)))
-      _ <- UserTeamRolesSQLDAO.setTeamMemberships(ObjectId.fromBsonId(_user), teamMembershipsSQL)
+      _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(ObjectId.fromBsonId(_user), teamMembershipsSQL)
     } yield ()
 
   def removeTeamFromUsers(_team: BSONObjectID)(implicit ctx: DBAccessContext) =
-    UserTeamRolesSQLDAO.removeTeamFromUsers(ObjectId.fromBsonId(_team))
+    UserTeamRolesSQLDAO.removeTeamFromAllUsers(ObjectId.fromBsonId(_team))
 
   def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) =
-    UserSQLDAO.setUserConfiguration(ObjectId.fromBsonId(user._id), configuration)
+    UserSQLDAO.updateUserConfiguration(ObjectId.fromBsonId(user._id), configuration)
 
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) =
     for {
       dataSet <- DataSetSQLDAO.findOneByName(dataSetName)
-      _ <- UserDataSetConfigurationsSQLDAO.setDatasetConfiguration(ObjectId.fromBsonId(user._id), dataSet._id, configuration.configuration)
+      _ <- UserDataSetConfigurationsSQLDAO.updateDatasetConfigurationForUserAndDataset(ObjectId.fromBsonId(user._id), dataSet._id, configuration.configuration)
     } yield ()
 
   def logActivity(_user: BSONObjectID, lastActivity: Long)(implicit c: DBAccessContext) =
-    UserSQLDAO.setLastActivity(ObjectId.fromBsonId(_user), lastActivity)
+    UserSQLDAO.updateLastActivity(ObjectId.fromBsonId(_user), lastActivity)
 
   def changePasswordInfo(_user: BSONObjectID, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext) =
-    UserSQLDAO.setPasswordInfo(ObjectId.fromBsonId(_user), passwordInfo)
+    UserSQLDAO.updatePasswordInfo(ObjectId.fromBsonId(_user), passwordInfo)
 
   def findAllByIds(ids: List[BSONObjectID])(implicit ctx: DBAccessContext) =
     for {
@@ -523,7 +523,7 @@ object UserDAO {
       _ <- UserSQLDAO.insertOne(userSQL)
       teamMemberships <- Fox.combined(user.teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       _ <- Fox.combined(teamMemberships.map(UserTeamRolesSQLDAO.insertTeamMembership(userSQL._id, _)))
-      _ <- UserExperiencesSQLDAO.setExperiences(userSQL._id, user.experiences)
+      _ <- UserExperiencesSQLDAO.updateExperiencesForUser(userSQL._id, user.experiences)
       _ <- UserDataSetConfigurationsSQLDAO.insertDatasetConfigurationsFor(userSQL._id, user.dataSetConfigurations)
     } yield ()
 

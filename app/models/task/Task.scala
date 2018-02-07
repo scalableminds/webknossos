@@ -150,7 +150,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield parsed
   }
 
-  def openInstanceCountForTask(taskId: ObjectId): Fox[Int] = {
+  def countOpenInstancesForTask(taskId: ObjectId): Fox[Int] = {
     for {
       result <- run(sql"select openInstances from webknossos.task_instances where _id = ${taskId.toString}".as[Int])
       firstResult <- result.headOption.toFox
@@ -164,7 +164,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield firstResult
   }
 
-  def countOpenInstancesByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
+  def countAllOpenInstancesGroupedByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
     for {
       rowsRaw <- run(
         sql"""select webknossos.tasks._project, sum(webknossos.task_instances.openInstances)
@@ -197,7 +197,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield ()
   }
 
-  def removeScriptFromTasks(scriptId: ObjectId): Fox[Unit] = {
+  def removeScriptFromAllTasks(scriptId: ObjectId): Fox[Unit] = {
     for {
       _ <- run(sqlu"update webknossos.tasks set _script = null where _script = ${scriptId.id}")
     } yield ()
@@ -342,7 +342,7 @@ object Task extends FoxImplicits {
       team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
       project <- ProjectSQLDAO.findOne(s._project) ?~> Messages("project.notFound", s._project.toString)
       priority = if (project.paused) -1 else project.priority
-      openInstances <- TaskSQLDAO.openInstanceCountForTask(s._id)
+      openInstances <- TaskSQLDAO.countOpenInstancesForTask(s._id)
     } yield {
       Task(
         taskTypeIdBson,
@@ -437,7 +437,7 @@ object TaskDAO {
 
   def countOpenInstancesByProjects(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
     for {
-      byProjectIds <- TaskSQLDAO.countOpenInstancesByProjects
+      byProjectIds <- TaskSQLDAO.countAllOpenInstancesGroupedByProjects
     } yield {
       byProjectIds.map(row => row._1.toString -> row._2).toMap
     }
@@ -460,7 +460,7 @@ object TaskDAO {
     TaskSQLDAO.removeAllWithProjectAndItsAnnotations(ObjectId.fromBsonId(project._id))
 
   def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) =
-    TaskSQLDAO.removeScriptFromTasks(ObjectId(_script))
+    TaskSQLDAO.removeScriptFromAllTasks(ObjectId(_script))
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
     TaskSQLDAO.logTime(ObjectId.fromBsonId(_task), time)

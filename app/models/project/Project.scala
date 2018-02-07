@@ -109,8 +109,8 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
                           where _id = ${p._id.id}""")
     } yield ()
 
-  def setPaused(id: ObjectId, isPaused: Boolean) =
-    setBooleanCol(id, _.paused, isPaused)
+  def updatePaused(id: ObjectId, isPaused: Boolean) =
+    updateBooleanCol(id, _.paused, isPaused)
 
 }
 
@@ -279,7 +279,7 @@ object ProjectDAO {
 
   def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) =
     for {
-      _ <- ProjectSQLDAO.setPaused(ObjectId.fromBsonId(_id), isPaused)
+      _ <- ProjectSQLDAO.updatePaused(ObjectId.fromBsonId(_id), isPaused)
       project <- findOneById(_id)
     } yield project
 

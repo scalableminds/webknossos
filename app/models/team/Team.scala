@@ -77,7 +77,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
       parsed
     }
 
-  def findRootTeams(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] =
+  def findAllRootTeams(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] =
     for {
       r <- run(Teams.filter(t => notdel(t) && t.behaveslikerootteam).result)
       parsed <- Fox.combined(r.toList.map(parse))
@@ -226,7 +226,7 @@ object TeamDAO {
 
   def findRootTeams(implicit ctx: DBAccessContext): Fox[List[Team]] = {
     for {
-      teamsSQL <- TeamSQLDAO.findRootTeams
+      teamsSQL <- TeamSQLDAO.findAllRootTeams
       teams <- Fox.combined(teamsSQL.map(Team.fromTeamSQL(_)))
     } yield teams
   }

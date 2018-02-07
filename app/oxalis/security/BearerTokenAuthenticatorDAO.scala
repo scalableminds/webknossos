@@ -99,7 +99,7 @@ object TokenSQLDAO extends SQLDAO[TokenSQL, TokensRow, Tokens] {
                           ${new java.sql.Timestamp(t.expirationDateTime.getMillis)}, ${t.idleTimeout.map(_.toMillis)}, '#${t.tokenType}', ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
 
-  def setValues(_id: ObjectId, value: String, lastUsedDateTime: DateTime, expirationDateTime: DateTime, idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateValues(_id: ObjectId, value: String, lastUsedDateTime: DateTime, expirationDateTime: DateTime, idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(sqlu"""update webknossos.tokens
                       set
@@ -133,7 +133,7 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
     implicit val ctx = GlobalAccessContext
     (for {
       oldAuthenticatorSQL <- TokenSQLDAO.findOneByLoginInfo(newAuthenticator.loginInfo.providerID, newAuthenticator.loginInfo.providerKey, TokenType.Authentication)
-      _ <- TokenSQLDAO.setValues(oldAuthenticatorSQL._id, newAuthenticator.id, newAuthenticator.lastUsedDateTime, newAuthenticator.expirationDateTime, newAuthenticator.idleTimeout)
+      _ <- TokenSQLDAO.updateValues(oldAuthenticatorSQL._id, newAuthenticator.id, newAuthenticator.lastUsedDateTime, newAuthenticator.expirationDateTime, newAuthenticator.idleTimeout)
       updated <- findOneByValue(newAuthenticator.id)
     } yield updated).toFutureOrThrowException("Could not update Token. Throwing exception because update cannot return a box, as defined by Silhouette trait AuthenticatorDAO")
   }

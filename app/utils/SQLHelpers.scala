@@ -120,24 +120,24 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
     for {_ <- run(q.update(true))} yield ()
   }
 
-  def setStringCol(id: ObjectId, column: (X) => Rep[String], newValue: String): Fox[Unit] = {
+  def updateStringCol(id: ObjectId, column: (X) => Rep[String], newValue: String): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
     for {_ <- run(q.update(newValue))} yield ()
   }
 
-  def setObjectIdCol(id: ObjectId, column: (X) => Rep[String], newValue: ObjectId) = setStringCol(id, column, newValue.id)
+  def updateObjectIdCol(id: ObjectId, column: (X) => Rep[String], newValue: ObjectId) = updateStringCol(id, column, newValue.id)
 
-  def setLongCol(id: ObjectId, column: (X) => Rep[Long], newValue: Long): Fox[Unit] = {
+  def updateLongCol(id: ObjectId, column: (X) => Rep[Long], newValue: Long): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
     for {_ <- run(q.update(newValue))} yield ()
   }
 
-  def setBooleanCol(id: ObjectId, column: (X) => Rep[Boolean], newValue: Boolean): Fox[Unit] = {
+  def updateBooleanCol(id: ObjectId, column: (X) => Rep[Boolean], newValue: Boolean): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
     for {_ <- run(q.update(newValue))} yield ()
   }
 
-  def setTimestampCol(id: ObjectId, column: (X) => Rep[java.sql.Timestamp], newValue: java.sql.Timestamp): Fox[Unit] = {
+  def updateTimestampCol(id: ObjectId, column: (X) => Rep[java.sql.Timestamp], newValue: java.sql.Timestamp): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
     for {_ <- run(q.update(newValue))} yield ()
   }

@@ -14,18 +14,18 @@ test("EdgeCollection should have symmetrical inMap and outMap", t => {
     .removeEdge(edgeD);
 
   t.is(edgeCollection.size(), 3);
-  t.is(edgeCollection.inMap.size(), 3);
   t.is(edgeCollection.outMap.size(), 3);
+  t.is(edgeCollection.inMap.size(), 2);
 
-  t.deepEqual(edgeCollection.inMap.get(0), [edgeA]);
-  t.deepEqual(edgeCollection.inMap.get(1), []);
-  t.deepEqual(edgeCollection.inMap.get(2), [edgeB]);
-  t.deepEqual(edgeCollection.inMap.get(3), [edgeC]);
+  t.deepEqual(edgeCollection.outMap.get(0), [edgeA]);
+  t.false(edgeCollection.outMap.has(1));
+  t.deepEqual(edgeCollection.outMap.get(2), [edgeB]);
+  t.deepEqual(edgeCollection.outMap.get(3), [edgeC]);
 
-  t.deepEqual(edgeCollection.outMap.get(0), []);
-  t.deepEqual(edgeCollection.outMap.get(1), [edgeA, edgeB]);
-  t.deepEqual(edgeCollection.outMap.get(2), [edgeC]);
-  t.deepEqual(edgeCollection.outMap.get(3), []);
+  t.false(edgeCollection.inMap.has(0));
+  t.deepEqual(edgeCollection.inMap.get(1), [edgeA, edgeB]);
+  t.deepEqual(edgeCollection.inMap.get(2), [edgeC]);
+  t.false(edgeCollection.inMap.has(3));
 
   t.deepEqual(edgeCollection.getEdgesForNode(2), [edgeB, edgeC]);
 });

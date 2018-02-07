@@ -33,8 +33,8 @@ export default class EdgeCollection {
     const newEdgeCount = this.edgeCount + edges.length;
 
     for (const edge of edges) {
-      const outgoingEdges = this.outMap.getNullable(edge.source) || [];
-      const ingoingEdges = this.inMap.getNullable(edge.target) || [];
+      const outgoingEdges = newOutgoingEdges.getNullable(edge.source) || [];
+      const ingoingEdges = newIngoingEdges.getNullable(edge.target) || [];
 
       newOutgoingEdges.mutableSet(edge.source, outgoingEdges.concat(edge));
       newIngoingEdges.mutableSet(edge.target, ingoingEdges.concat(edge));
@@ -55,16 +55,19 @@ export default class EdgeCollection {
     const outgoingEdges = this.outMap.getNullable(edge.source) || [];
     const ingoingEdges = this.inMap.getNullable(edge.target) || [];
 
-    const newOutgoingEdges = this.outMap.set(
-      edge.source,
-      outgoingEdges.filter(e => e.target !== edge.target),
-    );
-    const newIngoingEdges = this.inMap.set(
-      edge.target,
-      ingoingEdges.filter(e => e.source !== edge.source),
-    );
+    const newOutgoingEdges = outgoingEdges.filter(e => e.target !== edge.target);
+    const newOutgoingEdgeMap =
+      newOutgoingEdges.length > 0
+        ? this.outMap.set(edge.source, newOutgoingEdges)
+        : this.outMap.delete(edge.source);
 
-    return EdgeCollection.loadFromMaps(newOutgoingEdges, newIngoingEdges, this.edgeCount - 1);
+    const newIngoingEdges = ingoingEdges.filter(e => e.source !== edge.source);
+    const newIngoingEdgeMap =
+      newIngoingEdges.length > 0
+        ? this.inMap.set(edge.target, newIngoingEdges)
+        : this.inMap.delete(edge.target);
+
+    return EdgeCollection.loadFromMaps(newOutgoingEdgeMap, newIngoingEdgeMap, this.edgeCount - 1);
   }
 
   map<T>(fn: (value: EdgeType) => T): Array<T> {

@@ -23,8 +23,8 @@ services:
 
   base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.4.10_node-9.x_jdk-8
-    # links:
-    #  - postgres
+    links:
+      - postgres
     environment:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
@@ -73,7 +73,6 @@ services:
     links:
       - mongo
       - fossildb
-      - postgres
     command:
       - bash
       - -c
@@ -108,14 +107,8 @@ services:
     image: postgres:10-alpine
     environment:
       POSTGRES_DB: webknossos
-      POSTGRES_USER: webknossos
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ""
-
-  postgres-test:
-    image: postgres:10-alpine
-    links:
-      - postgres
-    command: sh -c "sleep 3 && psql --dbname=webknossos --host=postgres --username=webknossos"
 
   fossildb:
     image: scalableminds/fossildb:master__222

@@ -3,11 +3,11 @@ set -Eeuo pipefail
 
 dbName='webknossos'
 
-if [ "$( psql -U postgres -h localhost -tAc "SELECT 1 FROM pg_database WHERE datname='$dbName'" )" = '1' ]
+if [ "$( psql -U postgres -h ${POSTGRES_HOST:-localhost} -tAc "SELECT 1 FROM pg_database WHERE datname='$dbName'" )" = '1' ]
 then
     echo "Database already exists"
-    exit
+else
+	psql -U postgres -h  ${POSTGRES_HOST:-localhost} -c "CREATE DATABASE $dbName;"
 fi
 
-psql -U postgres -h localhost -c "CREATE DATABASE $dbName;"
 $(dirname "$0")/ensure_schema.sh

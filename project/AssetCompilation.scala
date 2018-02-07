@@ -76,16 +76,19 @@ object AssetCompilation {
   private def slickClassesFromDBSchemaTask: Def.Initialize[Task[Seq[File]]] =
     (runner in Compile, dependencyClasspath in Compile, sourceManaged, baseDirectory, streams, target) map { (runner, dc, sourceManaged, base, s, t) =>
 
-      val schemaPath = base / "tools" / "pg_migrate" / "schema.sql"
+      val schemaPath = base / "tools" / "postgres" / "schema.sql"
       val slickTablesOutPath = sourceManaged / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
-      if (shouldUpdate) {
+      if (true) { //TODO shouldUpdate?
+        s.log.info("Ensuring SQL DB is running for Slick code generation...")
+        startProcess((base / "tools" / "postgres" / "ensure_db.sh").toString, List(), base)  ! s.log
+
         s.log.info("Updating Slick SQL schema from local database...")
         val conf = com.typesafe.config.ConfigFactory.parseFile(new File("conf/application.conf")).resolve()
 
-        val pgUrl = conf.getString("postgres.url")
+        val pgUrl = sys.env.get("POSTGRES_URL").getOrElse(conf.getString("postgres.url"))
         val pgUser = conf.getString("postgres.user")
         val pgPass = conf.getString("postgres.password")
         val pgDriver = conf.getString("postgres.driver")

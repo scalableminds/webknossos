@@ -17,7 +17,7 @@ import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import EditableTextIcon from "oxalis/view/components/editable_text_icon";
 import FileUpload from "components/file_upload";
 import Persistence from "libs/persistence";
-import { PropTypes } from "prop-types";
+import { PropTypes } from "@scalableminds/prop-types";
 import type { APIAnnotationType } from "admin/api_flow_types";
 import {
   finishAllAnnotations,

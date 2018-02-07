@@ -4,7 +4,7 @@ import React from "react";
 import { Form, Row, Col, Button, Input, Select } from "antd";
 import { getUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
-import { PropTypes } from "prop-types";
+import { PropTypes } from "@scalableminds/prop-types";
 import { withRouter } from "react-router-dom";
 import type { APIUserType, APIProjectType, APITaskTypeType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";

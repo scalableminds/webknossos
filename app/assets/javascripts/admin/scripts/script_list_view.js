@@ -9,7 +9,7 @@ import Utils from "libs/utils";
 import messages from "messages";
 import { getScripts, deleteScript } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
-import { PropTypes } from "prop-types";
+import { PropTypes } from "@scalableminds/prop-types";
 import type { APIScriptType, APIUserType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 

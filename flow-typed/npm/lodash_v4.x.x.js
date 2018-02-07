@@ -287,7 +287,7 @@ declare module "lodash" {
     keyBy<T: Object, V: string>(array: ?Array<T>, iteratee?: V): { [key: $ElementType<T, V>]: T };
     keyBy<V, A, I, T: { [id: I]: A }>(object: T, iteratee?: ValueOnlyIteratee<A>): { [key: V]: ?A };
     map<T, U>(array: ?Array<T>, iteratee?: MapIterator<T, U>): Array<U>;
-    map<V, T: Object, U>(object: ?T, iteratee?: OMapIterator<V, T, U>): Array<U>;
+    map<V, K, T: {[key: K]: V} | {+[key: K]: V}, U>(object: T, iteratee?: OMapIterator<V, T, U>): Array<U>;
     map(str: ?string, iteratee?: (char: string, index: number, str: string) => any): string;
     orderBy<T>(
       array: ?Array<T>,

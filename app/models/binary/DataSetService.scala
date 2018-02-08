@@ -95,9 +95,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
           "isActive" -> false,
           "dataSource.status" -> "No longer available on datastore."),
         // we need this $unset, so the data source will not be considered imported during deserialization
-        "$unset" -> Json.obj(
-          "dataSource.dataLayers" -> "",
-          "dataSource.scale" -> "")
+        "$unset" -> Json.obj("dataSource.dataLayers" -> "")
       ),
       multi = true)
   }

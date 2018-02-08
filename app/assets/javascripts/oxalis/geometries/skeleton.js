@@ -118,7 +118,7 @@ class Skeleton {
 
     const trees = skeletonTracing.trees;
     const nodeCount = _.sum(_.map(trees, tree => tree.nodes.size()));
-    const edgeCount = _.sum(_.map(trees, tree => _.size(tree.edges)));
+    const edgeCount = _.sum(_.map(trees, tree => tree.edges.size()));
 
     this.treeColorTexture = new THREE.DataTexture(
       new Float32Array(COLOR_TEXTURE_WIDTH * COLOR_TEXTURE_WIDTH * 4),
@@ -423,7 +423,7 @@ class Skeleton {
     for (const branchpoint of tree.branchPoints) {
       this.updateNodeType(tree.treeId, branchpoint.nodeId, NodeTypes.BRANCH_POINT);
     }
-    for (const edge of tree.edges) {
+    for (const edge of tree.edges.all()) {
       const source = tree.nodes.get(edge.source);
       const target = tree.nodes.get(edge.target);
       this.createEdge(tree.treeId, source, target);

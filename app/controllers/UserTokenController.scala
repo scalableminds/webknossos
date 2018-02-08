@@ -5,14 +5,15 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
-import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
 import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
-import models.user.{User, UserToken, UserTokenDAO, UserTokenService}
+import models.user.User
 import net.liftweb.common.{Box, Full}
+import oxalis.security.WebknossosSilhouette.UserAwareAction
+import oxalis.security.{TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
@@ -23,13 +24,13 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     with WKDataStoreActionHelper
     with AnnotationInformationProvider {
 
-  def generateUserToken = UserAwareAction.async { implicit request =>
-    val context = userAwareRequestToDBAccess(request)
+  val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
+  def generateTokenForDataStore = UserAwareAction.async { implicit request =>
+    val context = userAwareRequestToDBAccess(request)
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        val token = UserToken(user._id)
-        UserTokenDAO.insert(token).map(_ => token.token)
+        bearerTokenService.createAndInit(user.loginInfo, TokenType.DataStore).toFox
       case None => Fox.successful("")
     }
     for {
@@ -45,7 +46,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {
-        userBox <- UserTokenService.userForToken(token)(GlobalAccessContext).futureBox
+        userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
         ctx = DBAccessContext(userBox)
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>

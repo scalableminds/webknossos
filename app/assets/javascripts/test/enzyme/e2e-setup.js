@@ -29,7 +29,7 @@ async function waitForAllRequests(el: Object) {
   el.update();
 }
 
-function wait(milliseconds: number): Promise<number> {
+function wait(milliseconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
@@ -55,7 +55,10 @@ global.FetchError = FetchError;
 const { JSDOM } = require("jsdom");
 
 // set pretendToBeVisual to true, so that window.requestAnimationFrame is available from JSDOM
-const jsdom = new JSDOM("<!doctype html><html><body></body></html>", { pretendToBeVisual: true });
+const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
+  pretendToBeVisual: true,
+  url: "http://example.org/",
+});
 const { window } = jsdom;
 
 function copyProps(src, target) {

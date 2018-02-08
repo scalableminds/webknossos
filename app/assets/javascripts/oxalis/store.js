@@ -31,6 +31,7 @@ import type {
 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
 import type {
@@ -87,7 +88,7 @@ type TreeTypeBase = {
   +timestamp: number,
   +comments: Array<CommentType>,
   +branchPoints: Array<BranchPointType>,
-  +edges: Array<EdgeType>,
+  +edges: EdgeCollection,
   +isVisible: boolean,
 };
 
@@ -110,11 +111,16 @@ export type VolumeCellMapType = { [number]: VolumeCellType };
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
 
+export type DataResolutionType = {
+  resolution: number,
+  scale: Vector3,
+};
+
 export type DataLayerType = {
   +name: string,
   +category: CategoryType,
   +boundingBox: BoundingBoxObjectType,
-  +resolutions: Array<number>,
+  +resolutions: Array<DataResolutionType>,
   +elementClass: ElementClassType,
   +mappings?: Array<MappingType>,
 };
@@ -228,8 +234,6 @@ export type UserConfigurationType = {
   +crosshairSize: number,
   +displayCrosshair: boolean,
   +dynamicSpaceDirection: boolean,
-  +inverseX: boolean,
-  +inverseY: boolean,
   +isosurfaceBBsize: number,
   +isosurfaceDisplay: boolean,
   +isosurfaceResolution: number,
@@ -347,8 +351,6 @@ export const defaultState: OxalisState = {
     crosshairSize: 0.1,
     displayCrosshair: true,
     dynamicSpaceDirection: true,
-    inverseX: false,
-    inverseY: false,
     isosurfaceBBsize: 1,
     isosurfaceDisplay: false,
     isosurfaceResolution: 80,
@@ -405,7 +407,6 @@ export const defaultState: OxalisState = {
       allowAccess: true,
       allowDownload: false,
       somaClickingAllowed: false,
-      advancedOptionsAllowed: true,
       allowedModes: ["orthogonal", "oblique", "flight"],
     },
     tags: [],

@@ -352,7 +352,7 @@ type DropdownSettingProps = {
   onChange: (value: number) => void,
   label: string,
   value: number,
-  children?: Array<Select.Option>,
+  children?: Array<React.Node>,
 };
 
 export class DropdownSetting extends React.PureComponent<DropdownSettingProps> {

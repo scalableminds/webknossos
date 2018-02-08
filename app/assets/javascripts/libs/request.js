@@ -7,16 +7,18 @@ import _ from "lodash";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
 
+type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
+
 type RequestOptions = {
   headers?: { [key: string]: string },
-  method?: "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH",
+  method?: methodType,
   timeout?: number,
 };
 
 export type RequestOptionsWithData<T> = {
   data: T,
   headers?: { [key: string]: string },
-  method?: "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH",
+  method?: methodType,
   timeout?: number,
 };
 

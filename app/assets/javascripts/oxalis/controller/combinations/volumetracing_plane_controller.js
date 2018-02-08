@@ -89,14 +89,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       leftDownMove: (delta: Point2, pos: Point2) => {
         const tool = getVolumeTool(Store.getState().tracing).get();
         if (tool === VolumeToolEnum.MOVE) {
-          const mouseInversionX = Store.getState().userConfiguration.inverseX ? 1 : -1;
-          const mouseInversionY = Store.getState().userConfiguration.inverseY ? 1 : -1;
           const viewportScale = Store.getState().userConfiguration.scale;
-          this.movePlane([
-            delta.x * mouseInversionX / viewportScale,
-            delta.y * mouseInversionY / viewportScale,
-            0,
-          ]);
+          this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
         } else {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
@@ -119,7 +113,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         }
       },
 
-      rightMouseDown: (pos: Point2, plane: OrthoViewType, event: JQueryInputEventObject) => {
+      rightMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
         if (!event.shiftKey) {
           this.volumeTracingController.enterDeleteMode();
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));

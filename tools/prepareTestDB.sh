@@ -6,7 +6,7 @@ pushd "$(dirname "$0")" > /dev/null
 SCRIPT_DIR="$(pwd)"
 popd > /dev/null
 
-if [ -z "$MONGO_URI" ]; then
+if [ -z ${MONGO_URI+x} ]; then
   export MONGO_URI="mongodb://localhost:27017/webknossos-testing"
 fi
 

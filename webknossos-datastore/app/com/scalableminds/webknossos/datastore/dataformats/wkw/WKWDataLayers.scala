@@ -4,13 +4,13 @@
 package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import play.api.libs.json.Json
 
-case class WKWResolution(resolution: Int, cubeLength: Int)
+case class WKWResolution(resolution: Int, cubeLength: Int, scale: Option[Point3D])
 
 object WKWResolution {
-  implicit val wkwResolutionFormat = Json.format[WKWResolution]
+  implicit val jsonFormat = Json.format[WKWResolution]
 }
 
 trait WKWLayer extends DataLayer {
@@ -21,7 +21,14 @@ trait WKWLayer extends DataLayer {
 
   def wkwResolutions: List[WKWResolution]
 
-  def resolutions = wkwResolutions.map(_.resolution)
+  def resolutions = wkwResolutions.map { r =>
+    r.scale match {
+      case Some(scale) =>
+        DataResolution(r.resolution, scale)
+      case _ =>
+        DataResolution.fromResolution(r.resolution)
+    }
+  }
 
   def lengthOfUnderlyingCubes(resolution: Int): Int = {
     wkwResolutions.find(_.resolution == resolution).map(_.cubeLength).getOrElse(0)

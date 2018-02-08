@@ -1,16 +1,16 @@
 package controllers
 
-import java.util.UUID
 import javax.inject.Inject
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
+import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import models.annotation.nml.NmlService
-import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
+import models.annotation.{Annotation, AnnotationDAO, AnnotationService, AnnotationType}
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.task._
@@ -56,7 +56,7 @@ object NmlTaskParameters {
   implicit val nmlTaskParametersFormat = Json.format[NmlTaskParameters]
 }
 
-class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with FoxImplicits {
+class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ResultBox with ProtoGeometryImplicits with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -279,7 +279,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       teams <- getAllowedTeamsForNextTask(user)
       _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
       task <- tryToGetNextAssignmentFor(user, teams)
-      annotation <- AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
+      annotation <- createAnnotationOrPutBackOpenInstance(user, task)
       annotationJSON <- annotation.toJson(Some(user))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
@@ -330,6 +330,20 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
         logger.warn(s"Failed to retrieve any assignment after all retries (u: ${user.email}) due to EMPTY")
         Fox.failure(Messages("task.unavailable")).futureBox
     }
+  }
+
+  private def createAnnotationOrPutBackOpenInstance(user: User, task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    val creationFox = AnnotationService.createAnnotationFor(user, task) ?~> Messages("annotation.creationFailed")
+    creationFox.futureBox.map { box => box match {
+        case Full(annotation) => ()
+        case Failure(msg, _, chain) => {
+          logger.error("Failed to create Annotation from Base. User: " + user.email + ", task: " + task.id + ", msg: " + msg + ", chain: " + formatChainOpt(chain))
+          TaskAssignmentService.putBackInstance(task)
+        }
+        case _ => ()
+      }
+    }
+    creationFox
   }
 
 

@@ -72,8 +72,8 @@ class DataSourceController @Inject()(
     implicit request =>
       AllowRemoteOrigin {
         for {
-          dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
-          (dataSource, messages) <- dataSourceService.exploreDataSource(dataSource.id, dataSource.toUsable)
+          previousDataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
+          (dataSource, messages) <- dataSourceService.exploreDataSource(previousDataSource.id, previousDataSource.toUsable)
         } yield {
           Ok(Json.obj(
             "dataSource" -> dataSource,
@@ -87,7 +87,7 @@ class DataSourceController @Inject()(
     implicit request =>
       AllowRemoteOrigin {
         for {
-          dataSource <- dataSourceRepository.findByName (dataSetName) ?~ Messages ("dataSource.notFound") ~> 404
+          dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages ("dataSource.notFound") ~> 404
           _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
         } yield {
           Ok

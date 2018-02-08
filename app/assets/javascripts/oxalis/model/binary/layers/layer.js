@@ -9,6 +9,7 @@ import BucketBuilder from "oxalis/model/binary/layers/bucket_builder";
 import { doWithToken } from "admin/admin_rest_api";
 import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
 import type {
+  DataResolutionType,
   DataStoreInfoType,
   CategoryType,
   ElementClassType,
@@ -40,7 +41,7 @@ class Layer {
   upperBoundary: Vector3;
   mappings: ?Array<MappingType>;
   boundingBox: BoundingBoxObjectType;
-  resolutions: Array<number>;
+  resolutions: Array<DataResolutionType>;
 
   constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     this.dataStoreInfo = dataStoreInfo;

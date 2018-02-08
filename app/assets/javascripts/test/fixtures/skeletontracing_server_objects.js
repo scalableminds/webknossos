@@ -81,7 +81,6 @@ export const annotation = {
     allowedModes: ["orthogonal", "oblique", "flight"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
-    advancedOptionsAllowed: true,
   },
   tracingTime: 0,
 };

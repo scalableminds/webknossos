@@ -48,7 +48,6 @@ object TaskType {
       tt.settings.allowedModes,
       tt.settings.preferredMode,
       tt.settings.branchPointsAllowed,
-      tt.settings.advancedOptionsAllowed,
       tt.settings.somaClickingAllowed))
 
   def transformToJson(tt: TaskType)(implicit ctx: DBAccessContext) = {

@@ -5,7 +5,7 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import java.nio.file.Path
 
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataResolution, SegmentationLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes._
@@ -17,7 +17,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
   def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(implicit report: DataSourceImportReport[Path]): Box[DataLayer] = {
     (for {
-      resolutions <- exploreResolutions(baseDir)
+      resolutions <- exploreResolutions(baseDir, previous.map(_.resolutions))
       (voxelType, wkwResolutions) <- extractHeaderParameters(resolutions)
       elementClass <- voxelTypeToElementClass(voxelType)
     } yield {
@@ -39,15 +39,19 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }
   }
 
-  private def exploreResolutions(baseDir: Path)(implicit report: DataSourceImportReport[Path]): Box[List[(Int, WKWHeader)]] = {
+  private def exploreResolutions(baseDir: Path, previous: Option[List[DataResolution]])(implicit report: DataSourceImportReport[Path]): Box[List[(Int, WKWHeader, Point3D)]] = {
     def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
 
     PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutions =>
 
       val resolutionHeaders = resolutions.map { resolution =>
         val resolutionInt = resolution.getFileName.toString.toInt
-        WKWHeader(resolution.resolve("header.wkw").toFile).map(header => resolutionInt -> header).passFailure { f =>
-          report.error(section => s"Error processing section '$section' - ${f.msg}")
+        WKWHeader(resolution.resolve("header.wkw").toFile).map{ header =>
+          val previousResolution = previous.flatMap(_.find(_.resolution == resolutionInt))
+          val scale = previousResolution.map(_.scale).getOrElse(Point3D(resolutionInt, resolutionInt, resolutionInt))
+          (resolutionInt, header, scale)
+        }.passFailure { f =>
+          report.error(section => s"Error processing resolution '$resolution' - ${f.msg}")
         }
       }
 
@@ -55,11 +59,13 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }
   }
 
-  private def extractHeaderParameters(resolutions: List[(Int, WKWHeader)])(implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
+  private def extractHeaderParameters(resolutions: List[(Int, WKWHeader, Point3D)])(implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
     val headers = resolutions.map(_._2)
     val voxelTypes = headers.map(_.voxelType).toSet
     val bucketLengths = headers.map(_.numVoxelsPerBlockDimension).toSet
-    val wkwResolutions = resolutions.map(resolution => WKWResolution(resolution._1, resolution._2.numVoxelsPerBlockDimension * resolution._2.numBlocksPerCubeDimension))
+    val wkwResolutions = resolutions.map{ resolution =>
+      WKWResolution(resolution._1, resolution._2.numVoxelsPerBlockDimension * resolution._2.numBlocksPerCubeDimension, Some(resolution._3))
+    }
 
     if (voxelTypes.size == 1 && bucketLengths == Set(32)) {
       Full((voxelTypes.head, wkwResolutions))

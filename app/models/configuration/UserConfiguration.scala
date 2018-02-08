@@ -34,8 +34,6 @@ object UserConfiguration extends BasicSettings {
       "isosurfaceBBsize" -> JsNumber(1),
       "isosurfaceResolution" -> JsNumber(80),
       "newNodeNewTree" -> JsBoolean(false),
-      "inverseX" -> JsBoolean(false),
-      "inverseY" -> JsBoolean(false),
       "keyboardDelay" -> JsNumber(200),
       "particleSize" -> JsNumber(5),
       "overrideNodeRadius" -> JsBoolean(true),

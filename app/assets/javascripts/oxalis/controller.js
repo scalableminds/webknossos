@@ -19,7 +19,6 @@ import PlaneController from "oxalis/controller/viewmodes/plane_controller";
 import SkeletonTracingPlaneController from "oxalis/controller/combinations/skeletontracing_plane_controller";
 import VolumeTracingPlaneController from "oxalis/controller/combinations/volumetracing_plane_controller";
 import ArbitraryController from "oxalis/controller/viewmodes/arbitrary_controller";
-import MinimalSkeletonTracingArbitraryController from "oxalis/controller/combinations/minimal_skeletontracing_arbitrary_controller";
 import SceneController from "oxalis/controller/scene_controller";
 import UrlManager from "oxalis/controller/url_manager";
 import constants, { ControlModeEnum } from "oxalis/constants";
@@ -34,15 +33,15 @@ import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
-import type { ReactRouterHistoryType } from "react_router";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
+import type { RouterHistory } from "react-router-dom";
 
 type StateProps = {
   viewMode: ModeType,
 };
 
 type Props = {
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,
@@ -332,13 +331,7 @@ class Controller extends React.PureComponent<Props, State> {
     const isPlane = constants.MODES_PLANE.includes(mode);
 
     if (isArbitrary) {
-      if (state.tracing.restrictions.advancedOptionsAllowed) {
-        return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
-      } else {
-        return (
-          <MinimalSkeletonTracingArbitraryController onRender={this.updateStats} viewMode={mode} />
-        );
-      }
+      return <ArbitraryController onRender={this.updateStats} viewMode={mode} />;
     } else if (isPlane) {
       switch (state.tracing.type) {
         case "volume": {
@@ -365,4 +358,4 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default withRouter(connect(mapStateToProps)(Controller));
+export default connect(mapStateToProps)(withRouter(Controller));

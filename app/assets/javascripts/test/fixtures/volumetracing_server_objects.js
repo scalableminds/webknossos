@@ -9,7 +9,7 @@ export const tracing = {
       height: 131,
       depth: 384,
     },
-    resolutions: [1],
+    resolutions: [{ resolution: 1, scale: [1, 1, 1] }],
     fallbackLayer: "segmentation",
     elementClass: "uint16",
     largestSegmentId: 21890,
@@ -36,7 +36,6 @@ export const annotation = {
     allowedModes: ["volume"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
-    advancedOptionsAllowed: true,
   },
   tracingTime: 0,
 };

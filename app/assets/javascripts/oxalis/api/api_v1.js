@@ -280,8 +280,6 @@ class UserApi_DEPRECATED {
     - isosurfaceBBsize
     - isosurfaceResolution
     - newNodeNewTree
-    - inverseX
-    - inverseY
     - keyboardDelay
     - particleSize
     - overrideNodeRadius

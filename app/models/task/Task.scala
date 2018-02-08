@@ -1,11 +1,11 @@
 package models.task
 
-import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation._
 import models.basics._
 import models.project.{Project, ProjectDAO}
@@ -15,14 +15,12 @@ import org.joda.time.format.DateTimeFormat
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.{JsArray, JsNull, JsObject, Json}
-import reactivemongo.api.collections.bson.BSONCollection
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONObjectID, BSONString}
+import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
-case class OpenInstancesResult(_id: String, openInstances: Int)
-object OpenInstancesResult { implicit val format = Json.format[OpenInstancesResult] }
+import scala.concurrent.Future
 
 class info(message: String) extends scala.annotation.StaticAnnotation
 
@@ -178,12 +176,12 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
   }
 
   def sumInstancesByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    sumValues(Json.obj("_project" -> project), "instances")
+    sumValues(Json.obj("_project" -> project, "isActive" -> true), "instances")
   }
 
   def findAllByProjectReturnOnlyIds(project: String)(implicit ctx: DBAccessContext) = {
     for {
-      jsObjects <- findWithProjection(Json.obj("_project" -> project), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
+      jsObjects <- findWithProjection(Json.obj("_project" -> project, "isActive" -> true), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
     } yield {
       jsObjects.map(p => (p \ "_id").asOpt[BSONObjectID]).flatten
     }
@@ -275,26 +273,23 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       .enumerate(stopOnError = true)
   }
 
-  def countOpenInstancesByProjects(implicit ctx: DBAccessContext) = {
-    countOpenInstances("$_project")
-  }
-
   def countAllOpenInstances(implicit ctx: DBAccessContext) = {
-    countOpenInstances("all").map(_.get("all"))
+    sumValues(Json.obj("isActive" -> true), "openInstances")
   }
 
-  def countOpenInstances(groupingField: String = "1")(implicit ctx: DBAccessContext) = {
-    val dao =  underlying.db.collection[BSONCollection]("tasks")
-    import dao.BatchCommands.AggregationFramework._
+  def countOpenInstancesByProjects(implicit ctx: DBAccessContext): Future[Map[String, Int]] = {
+    import underlying.BatchCommands.AggregationFramework._
 
-    dao.aggregate(
-      Group(BSONString(groupingField))( "openInstances" -> SumField("openInstances"))
-    ).map{result => Json.toJson(result.firstBatch).as[List[OpenInstancesResult]].map( x => x._id -> x.openInstances).toMap }
+    underlying.aggregate(
+      Match(Json.obj("isActive" -> true)),
+      List(Group(Json.obj("_id" -> "$_project"))( "openInstances" -> SumField("openInstances")))
+    ).map{result => Json.toJson(result.firstBatch).as[List[JsObject]].map( x => (x \ "_id" \ "_id").as[String] -> (x \ "openInstances").as[Int]).toMap }
   }
 
   def findWithOpenByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
     for {
       jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
+        "isActive" -> true,
         "openInstances" -> Json.obj("$gt" -> 0),
         "team" -> Json.obj("$in" -> user.teamNames),
         "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()

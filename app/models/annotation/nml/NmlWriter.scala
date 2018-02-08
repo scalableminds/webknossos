@@ -200,13 +200,6 @@ object NmlWriter {
   }
 
   def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter) = {
-    val userNameFuture = annotation.user.map(_.name).getOrElse("No user")
-    var userName = ""
-    userNameFuture.onComplete {
-      case Success(name) => userName = name
-      case Failure(e) => userName = "No user"
-    }
-
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
       writer.writeAttribute("content", "NmlWriter.scala")
@@ -223,13 +216,17 @@ object NmlWriter {
       writer.writeAttribute("name", "annotationId")
       writer.writeAttribute("content", annotation.id)
     }
-    Xml.withinElementSync("meta") {
-      writer.writeAttribute("name", "username")
-      writer.writeAttribute("content", userName)
-    }
-    Xml.withinElementSync("meta") {
+    annotation.user.map(user =>
+      Xml.withinElementSync("meta") {
+        writer.writeAttribute("name", "username")
+        writer.writeAttribute("content", user.name)
+      }
+    )
+    annotation._task.map(taskId =>
+      Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "taskId")
-      writer.writeAttribute("content", annotation._task.get.stringify)
-    }
+      writer.writeAttribute("content", taskId.stringify)
+    })
+
   }
 }

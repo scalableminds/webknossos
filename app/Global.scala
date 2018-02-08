@@ -2,7 +2,6 @@ import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Mailer
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, GlobalDBAccess}
-import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
@@ -108,7 +107,6 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
           "SCM",
           "Boy",
           true,
-          SCrypt.md5(password),
           List(),
           loginInfo = UserService.createLoginInfo(email),
           passwordInfo = UserService.createPasswordInfo(password),

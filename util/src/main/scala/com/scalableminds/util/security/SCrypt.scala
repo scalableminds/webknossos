@@ -8,7 +8,7 @@ package com.scalableminds.util.security
  */
 object SCrypt {
 
-  import java.security.{MessageDigest, SecureRandom}
+  import java.security.SecureRandom
 
   /**
    * For readability.
@@ -55,7 +55,4 @@ object SCrypt {
     hashedPassword.compareTo(BCrypt.hashpw(plainTextPassword, hashedPassword)) == 0
   }
 
-  def md5(s: String) = {
-    MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02X".format(_)).mkString
-  }
 }

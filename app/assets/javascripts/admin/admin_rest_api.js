@@ -11,6 +11,8 @@ import type {
   APITaskTypeType,
   APITeamType,
   APIProjectType,
+  APIProjectCreatorType,
+  APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
   APIDatastoreType,
@@ -25,8 +27,8 @@ import type {
   APIOrganizationType,
   APITracingType,
 } from "admin/api_flow_types";
-import type { QueryObjectType } from "admin/views/task/task_search_form";
-import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
+import type { QueryObjectType } from "admin/task/task_search_form";
+import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -170,7 +172,9 @@ export async function getTaskType(taskTypeId: string): Promise<APITaskTypeType> 
   return Request.receiveJSON(`/api/taskTypes/${taskTypeId}`);
 }
 
-export async function createTaskType(taskType: APITaskTypeType): Promise<APITaskTypeType> {
+export async function createTaskType(
+  taskType: $Diff<APITaskTypeType, { id: string }>,
+): Promise<APITaskTypeType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
     data: taskType,
   });
@@ -242,7 +246,7 @@ export async function deleteProject(projectName: string): Promise<void> {
   });
 }
 
-export async function createProject(project: APIProjectType): Promise<APIProjectType> {
+export async function createProject(project: APIProjectCreatorType): Promise<APIProjectType> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
   });
@@ -254,7 +258,7 @@ export async function createProject(project: APIProjectType): Promise<APIProject
 
 export async function updateProject(
   projectName: string,
-  project: APIProjectType,
+  project: APIProjectUpdaterType,
 ): Promise<APIProjectType> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),

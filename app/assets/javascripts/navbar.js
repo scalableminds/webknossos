@@ -7,7 +7,7 @@ import { Layout, Menu, Icon } from "antd";
 import { connect } from "react-redux";
 import Request from "libs/request";
 import Utils from "libs/utils";
-import LoginView from "admin/views/auth/login_view";
+import LoginView from "admin/auth/login_view";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 

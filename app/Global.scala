@@ -3,16 +3,19 @@ import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Mailer
 import com.scalableminds.util.reactivemongo.{GlobalAccessContext, GlobalDBAccess}
 import com.scalableminds.util.security.SCrypt
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
-import models.task._
+import models.project.{Project, ProjectDAO}
+import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
-import net.liftweb.common.Full
+import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.jobs.AvailableTasksJob
 import oxalis.security.WebknossosSilhouette
+import play.api.Play.current
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
@@ -21,7 +24,9 @@ import play.api.mvc.Results.Ok
 import play.api.mvc._
 import reactivemongo.bson.BSONObjectID
 
-object Global extends GlobalSettings with LazyLogging {
+
+
+object Global extends GlobalSettings with LazyLogging{
 
   override def onStart(app: Application) {
     val conf = app.configuration
@@ -30,7 +35,11 @@ object Global extends GlobalSettings with LazyLogging {
     startActors(conf.underlying, app)
 
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insert(conf)
+      InitialData.insert.futureBox.map {
+        case Full(_) => ()
+        case Failure(msg, _, _) => logger.error("Error while inserting initial data: " + msg)
+        case _ => logger.error("Error while inserting initial data")
+      }
     }
 
     val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
@@ -60,9 +69,7 @@ object Global extends GlobalSettings with LazyLogging {
     if (request.uri.matches("^(/api/|/data/|/assets/).*$")) {
       super.onRouteRequest(request)
     } else {
-      Some(Action {
-        Ok(views.html.main())
-      })
+      Some(Action {Ok(views.html.main())})
     }
   }
 
@@ -73,33 +80,34 @@ object Global extends GlobalSettings with LazyLogging {
 }
 
 /**
-  * Initial set of data to be imported
-  * in the sample application.
-  */
-object InitialData extends GlobalDBAccess with LazyLogging {
+ * Initial set of data to be imported
+ * in the sample application.
+ */
+object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
+
+  val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
+  val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").getOrElse("secret")
 
   val orgTeamId = BSONObjectID.generate
   val stdOrg = Organization("Connectomics department", Nil, orgTeamId)
   val orgTeam = Team(stdOrg.name, stdOrg.name, orgTeamId)
-  val mpi = Team("Connectomics department Team", stdOrg.name)
 
+  def insert: Fox[Unit] =
+    for {
+      _ <- insertDefaultUser
+      _ <- insertOrganization
+      _ <- insertTeams
+      _ <- insertTaskType
+      _ <- insertProject
+      _ <- if (Play.configuration.getBoolean("datastore.enabled").getOrElse(true)) insertLocalDataStore else Fox.successful(())
+    } yield ()
 
-  def insert(conf: Configuration) = {
-    insertDefaultUser(conf)
-    insertOrganizations()
-    insertTeams()
-    insertTasks()
-    if (conf.getBoolean("datastore.enabled").getOrElse(true)) {
-      insertLocalDataStore(conf)
-    }
-  }
-
-  def insertDefaultUser(conf: Configuration) = {
-    UserService.defaultUser.futureBox.map {
-      case Full(_) =>
+  def insertDefaultUser =  {
+    UserService.defaultUser.futureBox.flatMap {
+      case Full(_) => Fox.successful(())
       case _ =>
-        val email = conf.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
-        val password = conf.getString("application.authentication.defaultUser.password").getOrElse("secret")
+        val email = defaultUserEmail
+        val password = defaultUserPassword
         logger.info("Inserted default user scmboy")
         UserDAO.insert(User(
           email,
@@ -108,15 +116,16 @@ object InitialData extends GlobalDBAccess with LazyLogging {
           true,
           SCrypt.md5(password),
           stdOrg.name,
-          List(TeamMembership(mpi._id, mpi.name, true), TeamMembership(stdOrg._organizationTeam, stdOrg.name, true)),
+          List(TeamMembership(orgTeam._id, orgTeam.name, true)),
           isAdmin = true,
           loginInfo = UserService.createLoginInfo(email),
-          passwordInfo = UserService.createPasswordInfo(password))
+          passwordInfo = UserService.createPasswordInfo(password),
+          experiences = Map("sampleExp" -> 10))
         )
     }
   }
 
-  def insertOrganizations() = {
+  def insertOrganization() = {
     OrganizationDAO.findOne().futureBox.map {
       case Full(_) =>
       case _ =>
@@ -130,29 +139,39 @@ object InitialData extends GlobalDBAccess with LazyLogging {
       case _ =>
         TeamDAO.insert(orgTeam)
         OrganizationDAO.addTeam(stdOrg._id, orgTeam)
-        TeamDAO.insert(mpi)
-        OrganizationDAO.addTeam(stdOrg._id, mpi)
     }
   }
 
-  def insertTasks() = {
+  def insertTaskType = {
     TaskTypeDAO.findAll.map {
       types =>
         if (types.isEmpty) {
           val taskType = TaskType(
-            "ek_0563_BipolarCells",
+            "sampleTaskType",
             "Check those cells out!",
-            mpi._id)
+            orgTeam._id)
           TaskTypeDAO.insert(taskType)
         }
     }
   }
 
-  def insertLocalDataStore(conf: Configuration) = {
+  def insertProject = {
+    ProjectDAO.findAll.map {
+      projects =>
+        if (projects.isEmpty) {
+          UserService.defaultUser.flatMap { user =>
+            val project = Project("sampleProject", orgTeam._id, user._id, 100, false, Some(5400000))
+            ProjectDAO.insert(project)
+          }
+        }
+    }
+  }
+
+  def insertLocalDataStore: Fox[Any] = {
     DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
-        val url = conf.getString("http.uri").getOrElse("http://localhost:9000")
-        val key = conf.getString("datastore.key").getOrElse("something-secure")
+        val url = Play.configuration.getString("http.uri").getOrElse("http://localhost:9000")
+        val key = Play.configuration.getString("datastore.key").getOrElse("something-secure")
         DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, key))
       }
     }

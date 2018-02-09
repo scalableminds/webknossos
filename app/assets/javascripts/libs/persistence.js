@@ -1,6 +1,6 @@
 // @flow
 import _ from "lodash";
-import { PropTypes } from "prop-types";
+import { PropTypes } from "@scalableminds/prop-types";
 import ErrorHandling from "libs/error_handling";
 import type { RouterHistory } from "react-router-dom";
 

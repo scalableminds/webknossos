@@ -33,17 +33,17 @@ object ReportSQLDAO extends SimpleSQLDAO {
         sql"""
           with filteredProjects as (select p._id, p.name, p.paused
           from
-            webknossos.projects p
-            JOIN webknossos.tasks t ON t._project = p._id
-            JOIN webknossos.annotations a ON a._task = t._id
-            JOIN webknossos.users u ON u._id = a._user
+            webknossos.projects_ p
+            JOIN webknossos.tasks_ t ON t._project = p._id
+            JOIN webknossos.annotations_ a ON a._task = t._id
+            JOIN webknossos.users_ u ON u._id = a._user
             JOIN webknossos.user_team_roles ut ON ut._user = u._id
             JOIN webknossos.user_experiences ue ON ue._user = u._id
-          where p._team = '5a74584e9700009400744f94' and
+          where p._team = ${teamId.id} and
           t.neededExperience_domain = ue.domain and
           t.neededExperience_value <= ue.value and
           a.modified > NOW() - INTERVAL '30 days'
-          group by p._id)
+          group by p._id, p.name, p.paused)
 
           ,s1 as (select
                p._id,
@@ -54,7 +54,7 @@ object ReportSQLDAO extends SimpleSQLDAO {
                sum(ti.openInstances) openInstances
           from
             filteredProjects p
-            join webknossos.tasks t on p._id = t._project
+            join webknossos.tasks_ t on p._id = t._project
             join webknossos.task_instances ti on t._id = ti._id
           group by p._id, p.name, p.paused)
 
@@ -62,8 +62,8 @@ object ReportSQLDAO extends SimpleSQLDAO {
              count(a) activeInstances
            FROM
              filteredProjects p
-             join webknossos.tasks t on p._id = t._project
-             left join (select * from webknossos.annotations a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
+             join webknossos.tasks_ t on p._id = t._project
+             left join (select * from webknossos.annotations_ a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
            group by p._id
            )
 
@@ -82,15 +82,15 @@ object ReportSQLDAO extends SimpleSQLDAO {
       r <- run(sql"""
         select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
         from
-        webknossos.tasks t
+        webknossos.tasks_ t
           join webknossos.task_instances ti on t._id = ti._id
         join
         (select *
           from webknossos.user_experiences
         where _user = ${userId.id})
         as ue on t.neededExperience_domain = ue.domain and t.neededExperience_value <= ue.value
-        join webknossos.projects p on t._project = p._id
-        left join (select _task from webknossos.annotations where _user = ${userId.id} and typ = '#${AnnotationTypeSQL.Task}') as userAnnotations ON t._id = userAnnotations._task
+        join webknossos.projects_ p on t._project = p._id
+        left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationTypeSQL.Task}') as userAnnotations ON t._id = userAnnotations._task
         where ti.openInstances > 0
         and userAnnotations._task is null
         group by p._id, p.name, t.neededExperience_domain, t.neededExperience_value

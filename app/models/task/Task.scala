@@ -110,21 +110,21 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
   def findAllAssignableFor(userId: ObjectId, teamIds: List[ObjectId], limit: Option[Int])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
     val q = sql"""
-           select webknossos.tasks.*
+           select webknossos.tasks_.*
            from
-             (webknossos.tasks
-             join webknossos.task_instances on webknossos.tasks._id = webknossos.task_instances._id)
+             (webknossos.tasks_
+             join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id)
              join
                (select *
                 from webknossos.user_experiences
                 where _user = ${userId.id})
-               as user_experiences on webknossos.tasks.neededExperience_domain = user_experiences.domain and webknossos.tasks.neededExperience_value <= user_experiences.value
-             join webknossos.projects on webknossos.tasks._project = webknossos.projects._id
-             left join (select _task from webknossos.annotations where _user = ${userId.id} and typ = '#${AnnotationType.Task}') as userAnnotations ON webknossos.tasks._id = userAnnotations._task
+               as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
+             join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
+             left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.task_instances.openInstances > 0
-                 and webknossos.tasks._team in #${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+                 and webknossos.tasks_._team in #${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
-           order by webknossos.projects.priority
+           order by webknossos.projects_.priority
            limit ${limit};
       """
     for {
@@ -167,9 +167,9 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def countAllOpenInstancesGroupedByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
     for {
       rowsRaw <- run(
-        sql"""select webknossos.tasks._project, sum(webknossos.task_instances.openInstances)
-              from webknossos.tasks join webknossos.task_instances on webknossos.tasks._id = webknossos.task_instances._id
-              group by webknossos.tasks._project
+        sql"""select webknossos.tasks_._project, sum(webknossos.task_instances.openInstances)
+              from webknossos.tasks_ join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id
+              group by webknossos.tasks_._project
            """.as[(String, Int)])
     } yield {
       rowsRaw.toList.map(r => (ObjectId(r._1), r._2))

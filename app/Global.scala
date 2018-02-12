@@ -45,6 +45,8 @@ object Global extends GlobalSettings with LazyLogging{
       tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
     }
 
+    ensurePostgresDatabase
+
     super.onStart(app)
   }
 
@@ -82,6 +84,10 @@ object Global extends GlobalSettings with LazyLogging{
   override def onError(request: RequestHeader, ex: Throwable) = {
     NewRelic.noticeError(ex)
     super.onError(request, ex)
+  }
+
+  def ensurePostgresDatabase = {
+    
   }
 
 }

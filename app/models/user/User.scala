@@ -88,11 +88,10 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
 
   def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(implicit ctx: DBAccessContext) =
     for {
-      r <- run(sql"""select webknossos.users.*
-                       from webknossos.users join webknossos.user_team_roles on webknossos.users._id = webknossos.user_team_roles._user
+      r <- run(sql"""select webknossos.users_.*
+                       from webknossos.users_ join webknossos.user_team_roles on webknossos.users_._id = webknossos.user_team_roles._user
                        where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
-                             and webknossos.users.isDeleted = false
-                             and (webknossos.users.isDeactivated = false or webknossos.users.isDeactivated = ${includeDeactivated})""".as[UsersRow])
+                             and (webknossos.users_.isDeactivated = false or webknossos.users_.isDeactivated = ${includeDeactivated})""".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

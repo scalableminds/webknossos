@@ -142,7 +142,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     override def removeQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.supervisorTeamIds)))
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamManagerTeamIds)))
         case _ =>
           DenyEveryone()
       }
@@ -159,7 +159,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
 
   def findAllAdministratable(user: User, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find(Json.obj(
-      "team" -> Json.obj("$in" -> user.supervisorTeamIds))).cursor[Task]().collect[List](maxDocs = limit)
+      "team" -> Json.obj("$in" -> user.teamManagerTeamIds))).cursor[Task]().collect[List](maxDocs = limit)
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {

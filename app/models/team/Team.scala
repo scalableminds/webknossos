@@ -21,7 +21,7 @@ case class Team(
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
-    user.organization == organization && (user.isSuperVisorOf(_id) || user.isAdmin)
+    user.organization == organization && (user.isTeamManagerOf(_id) || user.isAdmin)
 
   def couldBeAdministratedBy(user: User) =
     user.organization == organization

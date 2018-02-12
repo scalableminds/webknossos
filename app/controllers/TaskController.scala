@@ -294,7 +294,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       if (numberOfOpen < MAX_OPEN_TASKS) {
         Fox.successful(user.teamIds)
       } else if (user.hasAdminAccess) {
-        Fox.successful(user.supervisorTeamIds)
+        Fox.successful(user.teamManagerTeamIds)
       } else {
         Fox.failure(Messages("task.tooManyOpenOnes"))
       }

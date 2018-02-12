@@ -81,7 +81,7 @@ object TaskTypeDAO extends SecuredBaseDAO[TaskType] {
     override def removeQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match{
         case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.supervisorTeamIds)))
+          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamManagerTeamIds)))
         case _ =>
           DenyEveryone()
       }

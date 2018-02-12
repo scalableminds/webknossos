@@ -132,7 +132,7 @@ object AnnotationService
     AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task)
 
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.supervisorTeamIds)
+    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.teamManagerTeamIds)
 
   def hasAnOpenTask(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.hasAnOpenAnnotation(user._id, AnnotationType.Task)

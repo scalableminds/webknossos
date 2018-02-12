@@ -35,8 +35,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def user(userId: String) = SecuredAction.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      isEditable <- user.isEditableBy(request.identity)
-      x <- bool2Fox(isEditable) ?~> Messages("notAllowed")
+      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
     } yield {
       Ok(Json.toJson(user)(User.userPublicWrites(request.identity)))
     }
@@ -146,7 +145,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     UsingFilters(
       Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
       Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.identity) == value),
-      Filter("isAdmin", (value: Boolean, el: User) => el.hasAdminAccess == value)
+      Filter("isAdmin", (value: Boolean, el: User) => el.isAdmin == value)
     ) { filter =>
       for {
         users <- UserDAO.findAll

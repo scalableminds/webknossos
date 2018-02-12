@@ -35,7 +35,8 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def user(userId: String) = SecuredAction.async { implicit request =>
     for {
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
+      isEditable <- user.isEditableBy(request.identity)
+      x <- bool2Fox(isEditable) ?~> Messages("notAllowed")
     } yield {
       Ok(Json.toJson(user)(User.userPublicWrites(request.identity)))
     }
@@ -193,9 +194,9 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneById(t._id)(GlobalAccessContext) ?~> Messages("team.notFound")))
           allTeams <- Fox.serialSequence(user.teams)(t => TeamDAO.findOneById(t._id)(GlobalAccessContext)).map(_.flatten)
-          teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isSuperVisorOf(t._id))
+          teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isTeamManagerOf(t._id))
           assignedMembershipWTeams = assignedMemberships.zip(teams)
-          teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isSuperVisorOf(t._1._id))
+          teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isTeamManagerOf(t._1._id))
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate

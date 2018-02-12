@@ -51,13 +51,18 @@ case class User(
 
   lazy val id = _id.stringify
 
-  lazy val supervisorTeams = teams.filter(_.isSuperVisor)
+  lazy val teamManagerTeams = teams.filter(_.isSuperVisor)
 
-  lazy val supervisorTeamIds = supervisorTeams.map(_._id)
+  lazy val teamManagerTeamIds = teamManagerTeams.map(_._id)
 
   lazy val hasAdminAccess = isAdmin // supervisorTeams.nonEmpty //adminTeams.nonEmpty
 
-  def isSuperVisorOf(team: BSONObjectID) = supervisorTeamIds.contains(team)
+  def isTeamManagerOf(_team: BSONObjectID) =
+    for{
+      team <- TeamDAO.findOneById(_team)(GlobalAccessContext)
+    } yield {
+      teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
+    }
 
   def isAdminOf(organization: String): Boolean = isAdmin && organization == this.organization
 
@@ -97,10 +102,14 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.hasAdminAccess || (teams.isEmpty || teamIds.exists(other.isSuperVisorOf)) //TODO
+    for{
+      isTeamManagerList <- Fox.combined(teamIds.map(other.isTeamManagerOf))
+    } yield {
+      other.hasAdminAccess && other.organization == organization || teams.isEmpty || isTeamManagerList.foldLeft(false)(_ || _) //TODO
+    }
 
-  def isSuperVisorOf(user: User): Boolean =
-    user.teamIds.intersect(this.supervisorTeams).nonEmpty
+  def isTeamManagerOf(user: User): Boolean =
+    user.teamIds.intersect(teamManagerTeamIds).nonEmpty || organization == user.organization && isAdmin
 }
 
 object User {
@@ -161,7 +170,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       ctx.data match {
         case Some(user: User) if user.hasAdminAccess =>
           AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams.team" -> Json.obj("$in" -> user.supervisorTeams)),
+            Json.obj("teams.team" -> Json.obj("$in" -> user.teamManagerTeams)),
             Json.obj("teams" -> Json.arr())
           )))
         case _ =>

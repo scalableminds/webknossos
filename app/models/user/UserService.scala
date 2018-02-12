@@ -103,7 +103,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
-    if (user.teamIds.diff(issuingUser.supervisorTeamIds).isEmpty) {
+    if (user.teamIds.diff(issuingUser.teamManagerTeamIds).isEmpty) {
       // if a user doesn't belong to any team any more he gets deleted
       UserDAO.removeById(user._id).flatMap {
         _ =>
@@ -112,7 +112,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
       }
     } else {
       // the issuing user is not able to remove the user from all teams, therefore the account is not getting deleted
-      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.supervisorTeams.contains(t._id)))
+      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.teamManagerTeams.contains(t._id)))
     }
   }
 

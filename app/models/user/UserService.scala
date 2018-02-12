@@ -36,7 +36,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
-    UserDAO.removeTeamFromUsers(team.name)
+    UserDAO.removeTeamFromUsers(team._id)
   }
 
   def findAll()(implicit ctx: DBAccessContext) =

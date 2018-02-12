@@ -55,10 +55,12 @@ object Team extends FoxImplicits {
 object TeamService {
   def create(team: Team, user: User)(implicit ctx: DBAccessContext) = {
     UserDAO.addTeam(user._id, TeamMembership(team._id, team.name, true))
+    OrganizationDAO.addTeam(user.organization, team)
     TeamDAO.insert(team)
   }
 
   def remove(team: Team)(implicit ctx: DBAccessContext) = {
+    OrganizationDAO.removeTeam(team.organization, team)
     TeamDAO.removeById(team._id)
   }
 }

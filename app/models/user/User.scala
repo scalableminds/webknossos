@@ -409,10 +409,6 @@ object User extends FoxImplicits {
 
 object UserDAO {
   /*
-  underlying.indexesManager.ensure(Index(Seq("email" -> IndexType.Ascending)))
-   */
-
-  /*
   override val AccessDefinitions = new DefaultAccessDefinitions{
 
     override def findQueryFilter(implicit ctx: DBAccessContext) = {

@@ -383,17 +383,6 @@ object Annotation extends FoxImplicits {
 
 
 object AnnotationDAO extends FoxImplicits {
-  /*
-    val collectionName = "annotations"
-
-    val formatter = Annotation.annotationFormat
-
-    underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending)))
-    underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
-    underlying.indexesManager.ensure(Index(Seq("isActive" -> IndexType.Ascending, "_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
-    underlying.indexesManager.ensure(Index(Seq("tracingReference.id" -> IndexType.Ascending)))
-    underlying.indexesManager.ensure(Index(Seq("_task" -> IndexType.Ascending, "typ" -> IndexType.Ascending)))
-  */
 
   /*
   val AccessDefinitions = new DefaultAccessDefinitions{

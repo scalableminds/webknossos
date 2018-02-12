@@ -8,8 +8,6 @@ import reactivemongo.play.json.BSONFormats._
 import utils.ObjectId
 
 object TimeSpanDAO {
-/*  underlying.indexesManager.ensure(Index(List("timestamp" -> IndexType.Descending)))
-  underlying.indexesManager.ensure(Index(List("annotation" -> IndexType.Ascending)))*/
 
   def findByUser(user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) =
     for {

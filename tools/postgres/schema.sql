@@ -260,13 +260,20 @@ CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDe
 
 
 
-CREATE INDEX ON webknossos.annotations(_user);
-CREATE INDEX ON webknossos.annotations(_task);
+CREATE INDEX ON webknossos.annotations(isDeleted, _user);
+CREATE INDEX ON webknossos.annotations(isDeleted, _task);
+CREATE INDEX ON webknossos.annotations(isDeleted, _user, _task);
+CREATE INDEX ON webknossos.annotations(tracing_id);
+CREATE INDEX ON webknossos.annotations(isDeleted, _task, typ);
 CREATE INDEX ON webknossos.dataSets(name);
 CREATE INDEX ON webknossos.tasks(_project);
+CREATE INDEX ON webknossos.tasks(_team, neededExperience_domain, neededExperience_value);
+CREATE INDEX ON webknossos.tasks(_taskType);
 CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
 CREATE INDEX ON webknossos.users(email);
+CREATE INDEX ON webknossos.projects(name);
+CREATE INDEX ON webknossos.projects(_team);
 
 
 -- ALTER TABLE webknossos.analytics

@@ -257,11 +257,6 @@ object ProjectDAO {
   }
 */
 
-/*
-  underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
-  */
-
   def findOneByName(name: String)(implicit ctx: DBAccessContext) =
     for {
       projectSQL <- ProjectSQLDAO.findOneByName(name)

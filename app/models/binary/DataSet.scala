@@ -369,7 +369,6 @@ object DataSet extends FoxImplicits {
 
 object DataSetDAO {
 
-/*  underlying.indexesManager.ensure(Index(Seq("dataSource.id.name" -> IndexType.Ascending)))*/
 
 /*  override val AccessDefinitions = new DefaultAccessDefinitions {
     override def findQueryFilter(implicit ctx: DBAccessContext) = {

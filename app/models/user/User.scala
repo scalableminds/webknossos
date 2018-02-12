@@ -17,7 +17,8 @@ import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json._
 
-import scala.concurrent.Future
+import scala.concurrent.{Await, Future}
+import scala.concurrent.duration._
 
 case class User(
                  email: String,
@@ -55,14 +56,10 @@ case class User(
 
   lazy val teamManagerTeamIds = teamManagerTeams.map(_._id)
 
-  lazy val hasAdminAccess = isAdmin // supervisorTeams.nonEmpty //adminTeams.nonEmpty
-
-  def isTeamManagerOf(_team: BSONObjectID) =
-    for{
-      team <- TeamDAO.findOneById(_team)(GlobalAccessContext)
-    } yield {
-      teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
-    }
+  def isTeamManagerOf(_team: BSONObjectID) = {
+    val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 50 millis).openOrThrowException("Keep the teamManager Query synchronous")
+    teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
+  }
 
   def isAdminOf(organization: String): Boolean = isAdmin && organization == this.organization
 
@@ -101,12 +98,8 @@ case class User(
   def lastActivityDays =
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
-  def isEditableBy(other: User) =
-    for{
-      isTeamManagerList <- Fox.combined(teamIds.map(other.isTeamManagerOf))
-    } yield {
-      other.hasAdminAccess && other.organization == organization || teams.isEmpty || isTeamManagerList.foldLeft(false)(_ || _) //TODO
-    }
+  def isEditableBy(other: User) = other.isTeamManagerOf(this)
+     //teams.isEmpty || teamIds.map(other.isTeamManagerOf).foldLeft(false)(_ || _) //TODO
 
   def isTeamManagerOf(user: User): Boolean =
     user.teamIds.intersect(teamManagerTeamIds).nonEmpty || organization == user.organization && isAdmin
@@ -168,7 +161,7 @@ object UserDAO extends SecuredBaseDAO[User] {
 
     override def removeQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
-        case Some(user: User) if user.hasAdminAccess =>
+        case Some(user: User) if user.isAdmin =>
           AllowIf(Json.obj("$or" -> Json.arr(
             Json.obj("teams.team" -> Json.obj("$in" -> user.teamManagerTeams)),
             Json.obj("teams" -> Json.arr())
@@ -235,9 +228,9 @@ object UserDAO extends SecuredBaseDAO[User] {
     count(Json.obj("_isAnonymous" -> Json.obj("$ne" -> true)))
   }
 
-  def removeTeamFromUsers(team: String)(implicit ctx: DBAccessContext) = {
+  def removeTeamFromUsers(team: BSONObjectID)(implicit ctx: DBAccessContext) = {
     update(
-      Json.obj("teams.team" -> team), Json.obj("$pull" -> Json.obj("teams" -> Json.obj("team" -> team))),
+      Json.obj("teams._id" -> team), Json.obj("$pull" -> Json.obj("teams" -> Json.obj("_id" -> team))),
       multi = true
     )
   }

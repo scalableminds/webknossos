@@ -138,7 +138,7 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
       case Full(_) =>
       case _ =>
         TeamDAO.insert(orgTeam)
-        OrganizationDAO.addTeam(stdOrg._id, orgTeam)
+        OrganizationDAO.addTeam(stdOrg.name, orgTeam)
     }
   }
 

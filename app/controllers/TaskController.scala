@@ -293,8 +293,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
       if (numberOfOpen < MAX_OPEN_TASKS) {
         Fox.successful(user.teamIds)
-      } else if (user.hasAdminAccess) {
-        Fox.successful(user.supervisorTeamIds)
+      } else if (user.teamManagerTeamIds.nonEmpty) {
+        Fox.successful(user.teamManagerTeamIds)
       } else {
         Fox.failure(Messages("task.tooManyOpenOnes"))
       }

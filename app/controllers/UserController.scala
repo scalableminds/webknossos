@@ -145,7 +145,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     UsingFilters(
       Filter("includeAnonymous", (value: Boolean, el: User) => value || !el.isAnonymous, default = Some("false")),
       Filter("isEditable", (value: Boolean, el: User) => el.isEditableBy(request.identity) == value),
-      Filter("isAdmin", (value: Boolean, el: User) => el.hasAdminAccess == value)
+      Filter("isAdmin", (value: Boolean, el: User) => el.isAdmin == value)
     ) { filter =>
       for {
         users <- UserDAO.findAll
@@ -193,9 +193,9 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneById(t._id)(GlobalAccessContext) ?~> Messages("team.notFound")))
           allTeams <- Fox.serialSequence(user.teams)(t => TeamDAO.findOneById(t._id)(GlobalAccessContext)).map(_.flatten)
-          teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isSuperVisorOf(t._id))
+          teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isTeamManagerOf(t._id))
           assignedMembershipWTeams = assignedMemberships.zip(teams)
-          teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isSuperVisorOf(t._1._id))
+          teamsWithUpdate = assignedMembershipWTeams.filter(t => issuingUser.isTeamManagerOf(t._1._id))
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate

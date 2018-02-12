@@ -25,7 +25,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
-        _ <- request.identity.hasAdminAccess ?~> Messages("notAllowed")
+        _ <- request.identity.isAdmin ?~> Messages("notAllowed")
         _ <- ScriptDAO.insert(script)
         js <- Script.scriptPublicWrites(script)
       } yield {

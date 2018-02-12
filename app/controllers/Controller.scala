@@ -31,7 +31,7 @@ trait Controller extends PlayController
     r.request
 
   def ensureTeamAdministration(user: User, team: BSONObjectID) =
-    user.isSuperVisorOf(team) ?~> Messages("team.admin.notAllowed", team)
+    user.isTeamManagerOf(team) ?~> Messages("team.admin.notAllowed", team)
 
   def allowedToAdministrate(admin: User, dataSet: DataSet) =
     dataSet.isEditableBy(Some(admin)) ?~> Messages("notAllowed")

@@ -161,7 +161,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         case Some(user: User) =>
           AllowIf(Json.obj(
             "$or" -> Json.arr(
-              Json.obj("team" -> Json.obj("$in" -> user.supervisorTeams)),
+              Json.obj("team" -> Json.obj("$in" -> user.teamManagerTeams)),
               Json.obj("_user"-> user._id))
             ))
         case _ =>

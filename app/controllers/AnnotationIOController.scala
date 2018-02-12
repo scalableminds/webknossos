@@ -173,7 +173,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       project <- ProjectDAO.findOneById(projectId) ?~> Messages("project.notFound", projectId)
-      _ <- user.supervisorTeamIds.contains(project._team) ?~> Messages("notAllowed")
+      _ <- user.teamManagerTeamIds.contains(project._team) ?~> Messages("notAllowed")
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)

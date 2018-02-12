@@ -47,7 +47,7 @@ module.exports = function(env = {}) {
             inline: 1,
           },
         },
-      }),
+      })
     );
   }
 

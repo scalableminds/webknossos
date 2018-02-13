@@ -72,9 +72,9 @@ function* csvWriter(name, cols) {
     }
     async function lookupDataset(dataSet) {
       if (!buffer.dataSets.has(dataSet)) {
-        buffer.dataSets.set(dataSet, await m.collection("dataSets").findOne({ name: dataSet}));
+        buffer.dataSets.set(dataSet, await m.collection("dataSets").findOne({ "dataSource.id.name": dataSet}));
       }
-      return buffer.dataSets.get(dataSet)
+      return buffer.dataSets.get(dataSet);
     }
 
     async function migrateTable(table, cols, func) {
@@ -127,7 +127,7 @@ function* csvWriter(name, cols) {
               elementClass: doc_layer.elementClass,
               boundingBox: formatBB(doc_layer.boundingBox),
               largestSegmentId: doc_layer.largestSegmentId,
-              mappings: formatValue(doc_layer.mappings),
+              mappings: doc_layer.mappings,
             });
           }
         }
@@ -183,8 +183,8 @@ function* csvWriter(name, cols) {
         isPublic: !!doc.isPublic,
         isUsable: doc.isActive,
         name: doc.dataSource.id.name,
-        scale: formatVector3(doc.dataSource.scale),
-        status: doc.dataSource.status,
+        scale: doc.dataSource.scale =! null ? formatVector3(doc.dataSource.scale) : null,
+        status: doc.dataSource.status != null ? doc.dataSource.status : "",
         created: new Date(doc.created),
         isDeleted: false,
       }),
@@ -194,6 +194,7 @@ function* csvWriter(name, cols) {
       "annotations",
       [
         "_id",
+        "_dataSet",
         "_task",
         "_team",
         "_user",
@@ -243,7 +244,7 @@ function* csvWriter(name, cols) {
 
     await migrateTable(
       "projects",
-      ["_id", "_team", "_owner", "name", "priority", "paused", "expectedTime", "created"],
+      ["_id", "_team", "_owner", "name", "priority", "paused", "expectedTime", "created", "isDeleted"],
       async doc => ({
         _id: doc._id.toHexString(),
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
@@ -251,18 +252,19 @@ function* csvWriter(name, cols) {
         name: doc.name,
         priority: doc.priority,
         paused: doc.paused,
-        expectedTime: doc.expectedTime != null ? `${doc.expectedTime} milliseconds}` : null,
+        expectedTime: doc.expectedTime,
         created: doc._id.getTimestamp(),
         isDeleted: false
       }),
     );
 
-    await migrateTable("scripts", ["_id", "_owner", "name", "gist", "created"], async doc => ({
+    await migrateTable("scripts", ["_id", "_owner", "name", "gist", "created", "isDeleted"], async doc => ({
       _id: doc._id.toHexString(),
       _owner: doc._owner,
       name: doc.name,
       gist: doc.gist,
       created: doc._id.getTimestamp(),
+      isDeleted: false,
     }));
 
     // Need to delete {"summary":"synapse_to_axon", "isActive":false}
@@ -296,7 +298,7 @@ function* csvWriter(name, cols) {
 
     await migrateTable(
       "teams",
-      ["_id", "_owner", "_parent", "name", "behavesLikeRootTeam", "created"],
+      ["_id", "_owner", "_parent", "name", "behavesLikeRootTeam", "created", "isDeleted"],
       async doc => ({
         _id: doc._id.toHexString(),
         _owner: doc.owner != null ? doc.owner.toHexString() : DEFAULT_TEAM_OWNER,
@@ -310,15 +312,16 @@ function* csvWriter(name, cols) {
 
     await migrateTable(
       "timeSpans",
-      ["_id", "_user", "_annotation", "time", "timestamp", "lastUpdate", "numberOfUpdates"],
+      ["_id", "_user", "_annotation", "time", "lastUpdate", "numberOfUpdates", "created", "isDeleted"],
       async doc => ({
         _id: doc._id.toHexString(),
         _user: doc._user.toHexString(),
         _annotation: mongodb.ObjectID.isValid(doc.annotation) ? doc.annotation : null,
-        time: `${doc.time} milliseconds`,
-        timestamp: new Date(doc.timestamp),
+        time: `${doc.time}`,
         lastUpdate: new Date(doc.lastUpdate),
         numberOfUpdates: doc.numberOfUpdates != null ? doc.numberOfUpdates : 1,
+        created: new Date(doc.timestamp),
+        isDeleted: false
       }),
     );
 
@@ -358,7 +361,7 @@ function* csvWriter(name, cols) {
           neededExperience_domain: doc.neededExperience.domain,
           neededExperience_value: doc.neededExperience.value,
           totalInstances: doc.instances,
-          tracingTime: doc.tracingTime != null ? `${doc.tracingTime} milliseconds` : null,
+          tracingTime: doc.tracingTime,
           boundingBox: formatBB(doc.boundingBox),
           editPosition: formatVector3(doc.editPosition),
           editRotation: formatVector3(doc.editRotation),
@@ -370,6 +373,53 @@ function* csvWriter(name, cols) {
     );
 
     await migrateTable(
+      "bearerTokenAuthenticators",
+      [
+        "_id",
+        "value",
+        "loginInfo_providerID",
+        "loginInfo_providerKey",
+        "lastUsedDateTime",
+        "expirationDateTime",
+        "idleTimeout",
+        "tokenType",
+        "created",
+        "isDeleted",
+      ],
+      async doc => ({
+        _id: doc._id.toHexString(),
+        value: doc.id,
+        loginInfo_providerID: doc.loginInfo.providerID,
+        loginInfo_providerKey: doc.loginInfo.providerKey,
+        lastUsedDateTime: new Date(doc.lastUsedDateTime),
+        expirationDateTime: new Date(doc.expirationDateTime),
+        idleTimeout: doc.idleTimeout,
+        tokenType: doc.tokenType,
+        created: doc._id.getTimestamp(),
+        isDeleted: false,
+      }),
+    );
+
+    {
+      const user_dataSetConfigurations = csvWriter("user_dataSetConfigurations", ["_user", "_dataSet", "configuration"]);
+      user_dataSetConfigurations.next();
+      const cursor = m.collection("users").find({});
+      while (await cursor.hasNext()) {
+        const doc = await cursor.next();
+
+        for (const dataSetName in doc.dataSetConfigurations) {
+          user_dataSetConfigurations.next({
+            _user: doc._id.toHexString(),
+            _dataSet: (await lookupDataset(dataSetName))._id.toHexString(),
+            configuration: JSON.stringify(doc.dataSetConfigurations[dataSetName].configuration),
+          });
+        }
+      }
+
+      user_dataSetConfigurations.next();
+    }
+
+    await migrateTable(
       "users",
       [
         "_id",
@@ -378,7 +428,6 @@ function* csvWriter(name, cols) {
         "lastName",
         "lastActivity",
         "userConfiguration",
-        "dataSetConfigurations",
         "loginInfo_providerID",
         "loginInfo_providerKey",
         "passwordInfo_hasher",
@@ -397,7 +446,6 @@ function* csvWriter(name, cols) {
               lastName: doc.lastName,
               lastActivity: new Date(doc.lastActivity || 0),
               userConfiguration: JSON.stringify(doc.userConfiguration),
-              dataSetConfigurations: JSON.stringify(doc.dataSetConfigurations),
               loginInfo_providerID: doc.loginInfo.providerID,
               loginInfo_providerKey: doc.loginInfo.providerKey,
               passwordInfo_hasher: "SCrypt",

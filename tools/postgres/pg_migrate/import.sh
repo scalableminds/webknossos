@@ -1,8 +1,12 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-for f in $(find out -name "*.csv")
+if [ -f out/bearerTokenAuthenticators.csv ]; then
+	mv out/bearerTokenAuthenticators.csv out/tokens.csv
+fi
+
+for file in $(find out -name "*.csv")
 do
-  echo $f
-  psql -c "COPY webknossos.$(basename $f .csv) FROM STDOUT WITH CSV HEADER QUOTE ''''" < $f
+  echo $file
+  PGPASSWORD=postgres psql -U postgres -h ${POSTGRES_HOST:-localhost} --dbname="webknossos" -c "COPY webknossos.$(basename $file .csv) FROM STDOUT WITH CSV HEADER QUOTE ''''" < $file
 done;

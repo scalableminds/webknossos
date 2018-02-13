@@ -11,6 +11,7 @@ import {
   getArea,
   getRequestLogZoomStep,
   getTexturePosition,
+  getPosition,
 } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
@@ -55,7 +56,7 @@ class Plane {
     const tWidth = Constants.TEXTURE_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
-    const textureMaterial = new PlaneMaterialFactory(tWidth).getMaterial();
+    const textureMaterial = new PlaneMaterialFactory(4096).getMaterial();
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
     // create crosshair
@@ -117,6 +118,11 @@ class Plane {
   updateTexture(): void {
     const area = getArea(Store.getState(), this.planeID);
     for (const name of Object.keys(Model.binary)) {
+      // console.log("binary:", name);
+      // TODO: re-activate other planes
+      if (this.planeID !== "PLANE_XY" || name !== "color_1") {
+        continue;
+      }
       const binary = Model.binary[name];
       const dataBuffer = binary.planes[this.planeID].get({
         position: getTexturePosition(Store.getState(), this.planeID),
@@ -173,6 +179,9 @@ class Plane {
       offset.y = -1;
     }
     this.plane.position.copy(offset.addVectors(posVec, offset));
+
+    const globalPosition = getPosition(Store.getState().flycam);
+    this.plane.material.setGlobalPosition(globalPosition);
   };
 
   setVisible = (visible: boolean): void => {

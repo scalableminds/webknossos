@@ -127,40 +127,40 @@ class Plane2D {
     this.W = dimensions[2];
 
     this.listenTo(this.cube, "bucketLoaded", (bucket: Vector4): void => {
-      const zoomStepDiff = this.dataTexture.zoomStep - bucket[3];
-      if (zoomStepDiff > 0) {
-        bucket = [
-          bucket[0] >> zoomStepDiff,
-          bucket[1] >> zoomStepDiff,
-          bucket[2] >> zoomStepDiff,
-          this.dataTexture.zoomStep,
-        ];
-      }
+      //   const zoomStepDiff = this.dataTexture.zoomStep - bucket[3];
+      //   if (zoomStepDiff > 0) {
+      //     bucket = [
+      //       bucket[0] >> zoomStepDiff,
+      //       bucket[1] >> zoomStepDiff,
+      //       bucket[2] >> zoomStepDiff,
+      //       this.dataTexture.zoomStep,
+      //     ];
+      //   }
 
-      // Checking, whether the new bucket intersects with the current layer
-      if (
-        this.dataTexture.layer >> (BUCKET_SIZE_P + bucket[3]) === bucket[this.W] &&
-        this.dataTexture.topLeftBucket != null
-      ) {
-        // Get the tile, the bucket would be drawn to
-        const u = bucket[this.U] - this.dataTexture.topLeftBucket[this.U];
-        const v = bucket[this.V] - this.dataTexture.topLeftBucket[this.V];
+      //   // Checking, whether the new bucket intersects the current layer
+      //   if (
+      //     this.dataTexture.layer >> (BUCKET_SIZE_P + bucket[3]) === bucket[this.W] &&
+      //     this.dataTexture.topLeftBucket != null
+      //   ) {
+      //     // Get the tile, the bucket would be drawn to
+      //     const u = bucket[this.U] - this.dataTexture.topLeftBucket[this.U];
+      //     const v = bucket[this.V] - this.dataTexture.topLeftBucket[this.V];
 
-        // If the tile is part of the texture, mark it as changed
-        if (u >= 0 && u < this.BUCKETS_PER_ROW && v >= 0 && v < this.BUCKETS_PER_ROW) {
-          const tile = [u, v];
-          this.dataTexture.tiles[tileIndexByTile(tile)] = false;
+      //     // If the tile is part of the texture, mark it as changed
+      //     if (u >= 0 && u < this.BUCKETS_PER_ROW && v >= 0 && v < this.BUCKETS_PER_ROW) {
+      //       const tile = [u, v];
+      //       this.dataTexture.tiles[tileIndexByTile(tile)] = false;
 
-          if (
-            u >= this.dataTexture.area[0] ||
-            u <= this.dataTexture.area[2] ||
-            v >= this.dataTexture.area[1] ||
-            v <= this.dataTexture.area[3]
-          ) {
-            this.dataTexture.ready = false;
-          }
-        }
-      }
+      //       if (
+      //         u >= this.dataTexture.area[0] ||
+      //         u <= this.dataTexture.area[2] ||
+      //         v >= this.dataTexture.area[1] ||
+      //         v <= this.dataTexture.area[3]
+      //       ) {
+      this.dataTexture.ready = false;
+      //       }
+      //     }
+      //   }
     });
 
     this.cube.on("volumeLabeled", () => this.reset());
@@ -188,7 +188,128 @@ class Plane2D {
     zoomStep: number,
     area: Vector4,
   }): ?Uint8Array {
-    return this.getTexture(this.dataTexture, position, zoomStep, area);
+    // return this.getTexture(this.dataTexture, position, zoomStep, area);
+    // console.log("raw position", position);
+    // Making sure, position is top-left corner of some bucket
+    position = [position[0] & ~0b11111, position[1] & ~0b11111, position[2] & ~0b11111];
+    // Calculating the coordinates of the textures top-left corner
+    const topLeftPosition = _.clone(position);
+    topLeftPosition[this.U] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+    topLeftPosition[this.V] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+    const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, zoomStep);
+
+    // todo
+    if (this.index !== "PLANE_XY") {
+      return;
+    }
+
+    if (!_.isEqual(this.oldTopLeftBucket, topLeftBucket)) {
+      console.log("top left bucket changed", this.oldTopLeftBucket, topLeftBucket);
+    }
+
+    if (
+      _.isEqual(this.oldTopLeftBucket, topLeftBucket) &&
+      window.texture != null &&
+      this.dataTexture.ready
+    ) {
+      return window.texture;
+    }
+    this.oldTopLeftBucket = topLeftBucket;
+
+    const texture = window.texture || new Uint8Array(4096 * 4096);
+    window.texture = texture;
+    this.dataTexture.ready = true;
+
+    let counter = 0;
+
+    let [bucketX, bucketY, bucketZ, _zoomStep] = topLeftBucket;
+    // const [bucketX, bucketY, bucketZ, _zoomStep] = [12, 12, 3, 0];
+    console.log("address", bucketX, bucketY, bucketZ, _zoomStep, zoomStep);
+    // _zoomStep = 0;
+
+    const bucketPerDim = 22;
+    const bucketWidth = 32;
+    let savedBuckets = 0;
+    const bucketLength = Math.pow(bucketWidth, 3);
+    const notLoadedBucket = new Uint8Array(bucketLength);
+    const outOfBoundsBucket = new Uint8Array(bucketLength);
+    outOfBoundsBucket.fill(255, bucketLength);
+
+    for (let x = 0; x < bucketLength; x++) {
+      // notLoadedBucket.set([Math.floor(x / bucketWidth) % 2 === 0 ? 255 : 0], x);
+      notLoadedBucket.set([x / 4], x);
+    }
+    console.time("write buckets");
+
+    let misses = 0;
+    let outOfBoundsCounter = 0;
+    for (let y = 0; y < bucketPerDim; y++) {
+      for (let x = 0; x < bucketPerDim; x++) {
+        //   for (let z = 0; z < bucketPerDim - 1; z++) {
+        const z = 0;
+
+        // texture.set(notLoadedBucket, savedBuckets * bucketLength);
+        const bucket = this.cube.getBucket([bucketX + x, bucketY + y, bucketZ + z, _zoomStep]);
+        // if (x === y) {
+        if (bucket.hasData()) {
+          // hasData
+          console.log(bucket.getData().length);
+          texture.set(bucket.getData(), savedBuckets * bucketLength);
+          // texture.fill(255, savedBuckets * bucketLength, (savedBuckets + 1) * bucketLength);
+        } else {
+          if (bucket.isOutOfBoundingBox) {
+            outOfBoundsCounter++;
+          }
+          texture.set(
+            bucket.isOutOfBoundingBox ? outOfBoundsBucket : notLoadedBucket,
+            savedBuckets * bucketLength,
+          );
+          // texture.fill(100, savedBuckets * bucketLength, (savedBuckets + 1) * bucketLength);
+          misses++;
+        }
+        savedBuckets++;
+      }
+      // }
+    }
+    console.timeEnd("write buckets");
+    // texture.fill(0, 0, 4096 * 4096);
+    // texture.set([128], 2047);
+    console.log("misses", misses);
+    console.log("outOfBoundsCounter", outOfBoundsCounter);
+
+    // console.log("texture", texture);
+    return texture;
+
+    // let bucket = this.cube.getBucket([12, 12, 3, 0]);
+    // let anotherBucket = this.cube.getBucket([12, 13, 3, 0]);
+    // if (bucket.hasData()) {
+    //   if (anotherBucket.hasData()) {
+    //     texture.set(anotherBucket.getData(), bucket.getData().length);
+    //   }
+    //   return texture;
+    //   console.log("hasData");
+    //   debugger;
+    //   // return [[bucketX, bucketY, bucketZ, zoomStep]];
+    // }
+
+    // for (let x = 0; x < width; x++) {
+    //   for (let y = 0; y < width; y++) {
+    //     texture[y * width + x] =
+    //       (Math.floor(x / this.TEXTURE_SIZE * 70000) + Math.floor(y / this.TEXTURE_SIZE * 70000)) %
+    //       2
+    //         ? 0
+    //         : 128;
+    //     // texture[y * width + x] = y / width * 255;
+
+    //     // for (let y = 0; y < this.TEXTURE_SIZE; y++) {
+    //     // texture[counter++] = x < this.TEXTURE_SIZE / 2 ? 0.5 : 0.5;
+    //   }
+    // }
+    this.needsRedraw = false;
+    window.plane2d = this;
+    return texture;
+
+    // return this.getTexture(this.dataTexture, position, zoomStep, area);
   }
 
   getTexture(
@@ -262,17 +383,6 @@ class Plane2D {
         Math.max(oldTopLeftBucket[this.U] - texture.topLeftBucket[this.U], 0),
         Math.max(oldTopLeftBucket[this.V] - texture.topLeftBucket[this.V], 0),
       ];
-
-      // Copying tiles
-      for (let du = 1; du < width; du++) {
-        for (let dv = 1; dv < height; dv++) {
-          const oldTile = [oldOffset[0] + du, oldOffset[1] + dv];
-          const newTile = [newOffset[0] + du, newOffset[1] + dv];
-
-          tileIndexByTile(oldTile);
-          tileIndexByTile(newTile);
-        }
-      }
     }
 
     // If something has changed, only changed tiles are drawn
@@ -300,34 +410,6 @@ class Plane2D {
       // If the texture didn't need to be changed...
       return null;
     }
-  }
-
-  copyTile(
-    destTile: Vector2,
-    sourceTile: Vector2,
-    destBuffer: Uint8Array,
-    sourceBuffer: Uint8Array,
-  ): * {
-    const destOffset = bufferOffsetByTile(destTile, BUCKET_SIZE_P);
-    const sourceOffset = bufferOffsetByTile(sourceTile, BUCKET_SIZE_P);
-
-    return this.renderToBuffer(
-      {
-        buffer: destBuffer,
-        offset: destOffset,
-        widthP: BUCKET_SIZE_P,
-        rowDelta: 1 << constants.TEXTURE_SIZE_P,
-      },
-      {
-        buffer: sourceBuffer,
-        offset: sourceOffset,
-        pixelDelta: 1,
-        rowDelta: 1 << constants.TEXTURE_SIZE_P,
-        pixelRepeatP: 0,
-        rowRepeatP: 0,
-        mapping: null,
-      },
-    );
   }
 
   renderDataTile(tile: Vector2): void {

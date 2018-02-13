@@ -11,6 +11,8 @@ import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_p
 import type { Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -30,6 +32,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       alpha: {
         type: "f",
         value: 0,
+      },
+      globalPosition: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
+      zoomStep: {
+        type: "f",
+        value: 1,
       },
     });
   }
@@ -88,11 +98,20 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms.repeat.value.set(repeat.x, repeat.y);
     };
 
+    this.material.setGlobalPosition = ([x, y, z]) => {
+      this.uniforms.globalPosition.value.set(x, y, z);
+    };
+
     this.material.setSegmentationAlpha = alpha => {
       this.uniforms.alpha.value = alpha / 100;
     };
 
     this.material.side = THREE.DoubleSide;
+
+    listenToStoreProperty(
+      storeState => getRequestLogZoomStep(storeState),
+      zoomStep => (this.uniforms.zoomStep.value = zoomStep),
+    );
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
@@ -122,6 +141,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 <% } %>
 uniform vec2 offset, repeat;
 uniform float alpha;
+uniform vec3 globalPosition;
+uniform float zoomStep;
+
+varying vec2 vPos;
 varying vec2 vUv;
 /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
 vec3 hsv_to_rgb(vec4 HSV)
@@ -132,42 +155,78 @@ vec3 hsv_to_rgb(vec4 HSV)
   p = abs(fract(HSV.xxx + K.xyz) * 6.0 - K.www);
   return HSV.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), HSV.y);
 }
+
+float div(float a, float b) {
+  return floor(a / b);
+}
+
 void main() {
   float golden_ratio = 0.618033988749895;
   float color_value  = 0.0;
   vec2 texture_pos = vUv * repeat + offset;
-  // Need to mirror y for some reason.
+  // Need to mirror y since (0, 0) refers to the lower-left corner in WebGL instead of the upper-left corner
   texture_pos = vec2(texture_pos.x, 1.0 - texture_pos.y);
-  <% if (hasSegmentation) { %>
-    vec4 volume_color = texture2D(<%= segmentationName %>_texture, texture_pos);
-    float id = (volume_color.r * 255.0);
-  <% } else { %>
-    float id = 0.0;
-  <% } %>
-  /* Get Color Value(s) */
-  <% if (isRgb) { %>
-    vec3 data_color = texture2D( <%= layers[0] %>_texture, texture_pos).xyz;
-    data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
-  <% } else { %>
-    vec3 data_color = vec3(0.0, 0.0, 0.0);
-    <% _.each(layers, function(name){ %>
-      /* Get grayscale value */
-      color_value = texture2D( <%= name %>_texture, texture_pos).r;
-      /* Brightness / Contrast Transformation */
-      color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
+  // <% if (hasSegmentation) { %>
+  //   vec4 volume_color = texture2D(<%= segmentationName %>_texture, texture_pos);
+  //   float id = (volume_color.r * 255.0);
+  // <% } else { %>
+  //   float id = 0.0;
+  // <% } %>
+  // /* Get Color Value(s) */
+  // <% if (isRgb) { %>
+  //   vec3 data_color = texture2D( <%= layers[0] %>_texture, texture_pos).xyz;
+  //   data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
+  // <% } else { %>
+  //   vec3 data_color = vec3(0.0, 0.0, 0.0);
+  //   <% _.each(layers, function(name){ %>
+  //     /* Get grayscale value */
+  //     color_value = texture2D( <%= name %>_texture, texture_pos).r;
+  //     /* Brightness / Contrast Transformation */
+  //     color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
-      /* Multiply with color and weight */
-      data_color += color_value * <%= name %>_weight * <%= name %>_color;
-    <% }) %> ;
-    data_color = clamp(data_color, 0.0, 1.0);
-  <% } %>
-  /* Color map (<= to fight rounding mistakes) */
-  if ( id > 0.1 ) {
-    vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
-    gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
-  } else {
-    gl_FragColor = vec4(data_color, 1.0);
-  }
+  //     /* Multiply with color and weight */
+  //     data_color += color_value * <%= name %>_weight * <%= name %>_color;
+  //   <% }) %> ;
+  //   data_color = clamp(data_color, 0.0, 1.0);
+  // <% } %>
+  // /* Color map (<= to fight rounding mistakes) */
+  // if ( id > 0.1 ) {
+  //   vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
+  //   gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
+  // } else {
+  //   gl_FragColor = vec4(data_color, 1.0);
+  // }
+
+  float bucketPerDim = 22.0;
+  float bucketWidth = 32.0;
+  float bucketLength = bucketWidth * bucketWidth * bucketWidth;
+  float r_texture_width = 512.0;
+  float d_texture_width = 4096.0;
+  // texture_pos = vec2(mod(texture_pos.x, 1.0/9.0), mod(texture_pos.y, 1.0/9.0));
+  float xCoord = mod(floor(texture_pos.x * r_texture_width - 0.0000), r_texture_width);
+  float yCoord = mod(floor(texture_pos.y * r_texture_width - 0.0000), r_texture_width);
+  float xBucketIdx = div(xCoord, bucketWidth); // works
+  float yBucketIdx = div(yCoord, bucketWidth); // works
+  float bucketIdx = yBucketIdx * bucketPerDim + xBucketIdx; // works. todo: adapt when we pre-fetch in z-direction
+  float xOffsetInBucket = mod(xCoord, bucketWidth); // works
+  float yOffsetInBucket = mod(yCoord, bucketWidth); // works
+  float zOffsetInBucket = mod(floor(globalPosition[2] / (pow(2.0, zoomStep))), bucketWidth); // works
+
+  float bucketIdxInTexture = bucketIdx * bucketLength;
+  float pixelIdxInBucket = zOffsetInBucket * bucketWidth * bucketWidth + yOffsetInBucket * bucketWidth + xOffsetInBucket;
+  float finalPos = pixelIdxInBucket + bucketIdxInTexture;
+  float finalPosX = mod(finalPos, d_texture_width);
+  float finalPosY = div(finalPos, d_texture_width);
+
+  vec3 bucketColor = texture2D(
+    <%= layers[0] %>_texture,
+    vec2(
+      (floor(finalPosX + 0.5)) / d_texture_width,
+      (floor(finalPosY + 0.5)) / d_texture_width
+    )
+  ).rgb;
+
+  gl_FragColor = vec4(bucketColor, 1.0);
 }\
 `,
     )({

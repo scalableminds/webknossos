@@ -17,6 +17,7 @@ function formatBB(bb) {
 }
 
 function formatValue(value) {
+  console.log("formatting", value)
   if (value == null) {
     return "";
   }
@@ -183,7 +184,7 @@ function* csvWriter(name, cols) {
         isPublic: !!doc.isPublic,
         isUsable: doc.isActive,
         name: doc.dataSource.id.name,
-        scale: doc.dataSource.scale =! null ? formatVector3(doc.dataSource.scale) : null,
+        scale: doc.dataSource.scale != null ? formatVector3(doc.dataSource.scale) : null,
         status: doc.dataSource.status != null ? doc.dataSource.status : "",
         created: new Date(doc.created),
         isDeleted: false,

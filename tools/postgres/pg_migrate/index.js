@@ -99,12 +99,14 @@ function* csvWriter(name, cols) {
         "_dataSet",
         "name",
         "category",
-        "resolutions",
         "elementClass",
         "boundingBox",
-        "scale",
+        "largestSegmentId",
+        "mappings"
       ]);
       dataSet_layers.next();
+      const dataSet_resolutions = csvWriter("dataSet_resolutions", ["_dataSet", "dataLayerName", "resolution", "scale"]);
+      dataSet_resolutions.next();
       const cursor = m.collection("dataSets").find({});
       while (await cursor.hasNext()) {
         const doc = await cursor.next();
@@ -122,16 +124,29 @@ function* csvWriter(name, cols) {
               _dataSet: doc._id.toHexString(),
               name: doc_layer.name,
               category: doc_layer.category,
-              resolutions: doc_layer.resolutions,
               elementClass: doc_layer.elementClass,
               boundingBox: formatBB(doc_layer.boundingBox),
-              scale: formatVector3(doc.dataSource.scale),
+              largestSegmentId: doc_layer.largestSegmentId,
+              mappings: formatValue(doc_layer.mappings),
             });
           }
         }
+
+        if (doc.dataSource.resolutions != null) {
+          for (const doc_res of doc.dataSource.resolutions) {
+            dataSet_resolutions.next({
+              _dataSet: doc._id.toHexString(),
+              dataLayerName: doc_layer.name,
+              resolution: doc_res.resolution,
+              scale: formatVector3(doc_res.scale)
+            });
+          }
+        }
+
       }
       dataSet_allowedTeams.next();
       dataSet_layers.next();
+      dataSet_resolutions.next();
     }
 
     await migrateTable("analytics", ["_id", "_user", "namespace", "value", "created", "isDeleted"], async doc => ({
@@ -154,6 +169,8 @@ function* csvWriter(name, cols) {
         "isPublic",
         "isUsable",
         "name",
+        "scale",
+        "status",
         "created",
         "isDeleted",
       ],
@@ -166,6 +183,8 @@ function* csvWriter(name, cols) {
         isPublic: !!doc.isPublic,
         isUsable: doc.isActive,
         name: doc.dataSource.id.name,
+        scale: formatVector3(doc.dataSource.scale),
+        status: doc.dataSource.status,
         created: new Date(doc.created),
         isDeleted: false,
       }),
@@ -194,7 +213,7 @@ function* csvWriter(name, cols) {
       ],
       async doc => ({
         _id: doc._id.toHexString(),
-        _dataSet: doc.dataSetName != null ? (await lookupDatsaet(doc.dataSetName))._id.toHexString() : null,
+        _dataSet: doc.dataSetName != null ? (await lookupDataset(doc.dataSetName))._id.toHexString() : null,
         _task: doc._task != null ? doc._task.toHexString() : null,
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
         _user: doc._user.toHexString(),

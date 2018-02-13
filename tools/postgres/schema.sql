@@ -64,8 +64,8 @@ CREATE TABLE webknossos.dataSets(
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL UNIQUE,
-  scale webknossos.VECTOR3,  -- TODO: add to migration
-  status VARCHAR(1024) NOT NULL DEFAULT '',  -- TODO: add to migration
+  scale webknossos.VECTOR3,
+  status VARCHAR(1024) NOT NULL DEFAULT '',
   created TIMESTAMP NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _team)
@@ -79,8 +79,8 @@ CREATE TABLE webknossos.dataSet_layers(
   category webknossos.DATASET_LAYER_CATEGORY NOT NULL,
   elementClass webknossos.DATASET_LAYER_ELEMENT_CLASS NOT NULL,
   boundingBox webknossos.BOUNDING_BOX NOT NULL,
-  largestSegmentId BIGINT, -- TODO: add to migration
-  mappings VARCHAR(256)[], -- TODO: add to migration
+  largestSegmentId BIGINT,
+  mappings VARCHAR(256)[],
   PRIMARY KEY(_dataSet, name)
 );
 
@@ -90,7 +90,7 @@ CREATE TABLE webknossos.dataSet_allowedTeams(
   PRIMARY KEY (_dataSet, _team)
 );
 
-CREATE TABLE webknossos.dataSet_resolutions( -- TODO: add to migration
+CREATE TABLE webknossos.dataSet_resolutions(
   _dataSet CHAR(24) NOT NULL,
   dataLayerName CHAR(24),
   resolution INT NOT NULL,

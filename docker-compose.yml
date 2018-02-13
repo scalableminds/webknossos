@@ -20,6 +20,8 @@ services:
       - -Dapplication.authentication.enableDevAutoLogin=true
       - -Dmongodb.uri=mongodb://mongo:27017/webknossos
       - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
+    environment:
+      - POSTGRES_HOST=postgres
 
 
   base:

@@ -42,7 +42,7 @@ function* csvWriter(name, cols) {
   let obj = null;
   let i = 0;
   while ((obj = yield) != null) {
-    // console.log(obj);
+    console.log(obj);
     f.write(cols.map(a => formatValue(obj[a])).join(","));
     f.write("\n");
     i++;
@@ -152,7 +152,7 @@ function* csvWriter(name, cols) {
         "defaultConfiguration",
         "description",
         "isPublic",
-        "isUsable"
+        "isUsable",
         "name",
         "created",
         "isDeleted",
@@ -194,7 +194,7 @@ function* csvWriter(name, cols) {
       ],
       async doc => ({
         _id: doc._id.toHexString(),
-        _dataSet: doc.dataSetName != null ? (await lookupDatsaet(doc.dataSetName))._id.toHexString() : null
+        _dataSet: doc.dataSetName != null ? (await lookupDatsaet(doc.dataSetName))._id.toHexString() : null,
         _task: doc._task != null ? doc._task.toHexString() : null,
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
         _user: doc._user.toHexString(),

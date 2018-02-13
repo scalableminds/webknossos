@@ -1,3 +1,5 @@
+import java.nio.file.Files
+
 import sbt.Keys._
 import sbt.{Task, _}
 
@@ -63,6 +65,15 @@ object AssetCompilation {
   }
 
   private def assetsGenerationTask: Def.Initialize[Task[Unit]] = (webpackPath, baseDirectory, streams, target) map { (webpack, base, s, t) =>
+    try {
+      val destination = t  / "universal" / "stage" / "tools" / "postgres"
+      destination.mkdirs
+      (base / "tools" / "postgres").listFiles().foreach(
+        file => Files.copy(file.toPath, (destination / file.name).toPath)
+      )
+    } catch {
+      case e: Exception => s.log.error("Could not copy SQL schema to stage dir: " + e.getMessage)
+    }
     try{
       val exitValue = startProcess(webpack, List("--env.production"), base) ! s.log
       if(exitValue != 0)

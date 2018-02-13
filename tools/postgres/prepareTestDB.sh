@@ -5,7 +5,8 @@ pushd "$(dirname "$0")" > /dev/null
 SCRIPT_DIR="$(pwd)"
 popd > /dev/null
 
-DB_NAME="webknossos_testing" $SCRIPT_DIR/refresh_db.sh
+DB_NAME="webknossos_testing" $SCRIPT_DIR/ensure_db.sh
+DB_NAME="webknossos_testing" $SCRIPT_DIR/refresh_schema.sh
 
 for file in $(find $SCRIPT_DIR/../../test/db_postgres -name "*.csv")
 do

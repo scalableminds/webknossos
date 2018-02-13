@@ -31,7 +31,7 @@ case class TaskSQL(
                   _team: ObjectId,
                   neededExperience: Experience,
                   totalInstances: Long,
-                  tracingTime: Option[Long], //TODO: INTERVAL?
+                  tracingTime: Option[Long],
                   boundingBox: Option[BoundingBox],
                   editPosition: Point3D, //TODO: discern in schema between point (int) and vector (double)?
                   editRotation: Vector3D,

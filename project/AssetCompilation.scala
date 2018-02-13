@@ -1,4 +1,4 @@
-import java.nio.file.Files
+import java.nio.file.{Files, StandardCopyOption}
 
 import sbt.Keys._
 import sbt.{Task, _}
@@ -69,7 +69,7 @@ object AssetCompilation {
       val destination = t  / "universal" / "stage" / "tools" / "postgres"
       destination.mkdirs
       (base / "tools" / "postgres").listFiles().foreach(
-        file => Files.copy(file.toPath, (destination / file.name).toPath)
+        file => Files.copy(file.toPath, (destination / file.name).toPath, StandardCopyOption.REPLACE_EXISTING)
       )
     } catch {
       case e: Exception => s.log.error("Could not copy SQL schema to stage dir: " + e.getMessage)
@@ -92,7 +92,7 @@ object AssetCompilation {
 
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
-      if (true) { //TODO shouldUpdate?
+      if (shouldUpdate) {
         s.log.info("Ensuring SQL DB is running for Slick code generation...")
         startProcess((base / "tools" / "postgres" / "ensure_db.sh").toString, List(), base)  ! s.log
 

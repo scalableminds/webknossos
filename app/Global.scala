@@ -32,6 +32,8 @@ object Global extends GlobalSettings with LazyLogging{
     logger.info("Executing Global START")
     startActors(conf.underlying, app)
 
+    ensurePostgresDatabase
+
     if (conf.getBoolean("application.insertInitialData") getOrElse false) {
       InitialData.insert.futureBox.map {
         case Full(_) => ()
@@ -45,8 +47,6 @@ object Global extends GlobalSettings with LazyLogging{
     CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
       tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
     }
-
-    ensurePostgresDatabase
 
     super.onStart(app)
   }

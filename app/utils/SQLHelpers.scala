@@ -11,7 +11,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
+import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
+import play.api.Play.current
 import slick.lifted.{AbstractTable, Rep, TableQuery}
 
 import scala.util.{Failure, Success, Try}
@@ -29,7 +31,7 @@ object ObjectId {
 }
 
 object SQLClient {
-  lazy val db = Database.forConfig("postgres")
+  lazy val db: PostgresProfile.backend.Database = Database.forConfig("postgres", play.api.Play.configuration.underlying)
 }
 
 trait SimpleSQLDAO extends FoxImplicits with LazyLogging {

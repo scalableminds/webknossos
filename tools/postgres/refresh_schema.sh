@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-dbName='webknossos'
+dbName=${DB_NAME:-webknossos}
 
 schemaPath="$(dirname "$0")/schema.sql"
 

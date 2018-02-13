@@ -106,7 +106,7 @@ class AbstractTreeRenderer {
         visitedNodes[curNodeId] = true;
       }
 
-      const edges = this.tree.edges.getEdgesForNode(curNodeId);
+      const edges = this.tree.edges.getOutgoingEdgesForNode(curNodeId);
       const childrenIds = edges.map(edge => edge.target);
       for (const childId of childrenIds) {
         const child = {

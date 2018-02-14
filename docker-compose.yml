@@ -17,6 +17,7 @@ services:
       - -Dhttp.address=0.0.0.0
       - -Dhttp.port=9000
       - -Dapplication.authentication.enableDevAutoLogin=true
+      - -Ddatastore.fossildb.address=fossildb
       - -Dmongodb.uri=mongodb://mongo:27017/webknossos
 
 
@@ -74,7 +75,7 @@ services:
       - bash
       - -c
       - >
-        ./sbt
+        sbt
         -v -d
         "test-only * --
           -Dconfig.file=./conf/application_$${MODE}.conf

@@ -19,10 +19,9 @@ services:
       - -Dhttp.port=9000
       - -Dapplication.authentication.enableDevAutoLogin=true
       - -Dmongodb.uri=mongodb://mongo:27017/webknossos
-      - -Dpostgres.url=$${POSTGRES_URL}
+      - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
-
 
   base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.4.10_node-9.x_jdk-8

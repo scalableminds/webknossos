@@ -88,6 +88,8 @@ object Global extends GlobalSettings with LazyLogging{
   }
 
   def ensurePostgresDatabase = {
+    logger.info("Running ensure_db.sh with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
+
     // this script is copied to the stage directory in AssetCompilation
     val result = "./tools/postgres/ensure_db.sh" !
 

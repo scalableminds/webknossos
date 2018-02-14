@@ -93,10 +93,12 @@ object AssetCompilation {
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
       if (shouldUpdate) {
-        s.log.info("Ensuring SQL DB is running for Slick code generation...")
+        s.log.info("Ensuring Postgres DB is running for Slick code generation...")
         startProcess((base / "tools" / "postgres" / "ensure_db.sh").toString, List(), base)  ! s.log
 
         s.log.info("Updating Slick SQL schema from local database...")
+
+        //cannot use play config because this happens before play lifecycle. Thus, parsing the config file directly
         val conf = com.typesafe.config.ConfigFactory.parseFile(new File("conf/application.conf")).resolve()
 
         val pgUrl = sys.env.get("POSTGRES_URL").getOrElse(conf.getString("postgres.url"))

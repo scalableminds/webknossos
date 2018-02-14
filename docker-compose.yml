@@ -19,9 +19,9 @@ services:
       - -Dhttp.port=9000
       - -Dapplication.authentication.enableDevAutoLogin=true
       - -Dmongodb.uri=mongodb://mongo:27017/webknossos
-      - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
+      - -Dpostgres.url=$${POSTGRES_URL}
     environment:
-      - POSTGRES_HOST=postgres
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
 
 
   base:
@@ -31,7 +31,6 @@ services:
       - USER_UID
       - USER_GID
       - TZ=${TZ:-Europe/Berlin}
-      - POSTGRES_HOST=postgres
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
@@ -100,7 +99,6 @@ services:
           -Dpostgres.url=$${POSTGRES_URL}"
     environment:
       - MONGO_URI=mongodb://mongo:27017/webknossos-testing
-      - DB_NAME=webknossos_testing
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
       - PORT=9000
       - MODE=dev

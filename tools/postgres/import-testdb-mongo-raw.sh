@@ -1,6 +1,8 @@
 #!/bin/bash
 # Adjusted from http://stackoverflow.com/a/13550669/783758
 
+# was just used once to convert the testdata from mongo to sql.
+# TODO: Remove before merge
 
 uri="mongodb://localhost:27017/webknossos-testing"
 dump_dir=~/scm/code/webknossos/test/db

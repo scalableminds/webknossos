@@ -1,15 +1,16 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-pushd "$(dirname "$0")" > /dev/null
-SCRIPT_DIR="$(pwd)"
-popd > /dev/null
+scriptdir=$(dirname "$0")
 
-DB_NAME="webknossos_testing" $SCRIPT_DIR/ensure_db.sh
-DB_NAME="webknossos_testing" $SCRIPT_DIR/refresh_schema.sh
+dbName="webknossos_testing"
+dbHost=$($scriptdir/db_host.sh)
 
-for file in $(find $SCRIPT_DIR/../../test/db_postgres -name "*.csv")
+POSTGRES_URL="jdbc:postgresql://$dbHost/$dbName" $scriptdir/ensure_db.sh
+POSTGRES_URL="jdbc:postgresql://$dbHost/$dbName" $scriptdir/refresh_schema.sh
+
+for file in $(find $scriptdir/../../test/db_postgres -name "*.csv")
 do
   echo $file
-  PGPASSWORD=postgres psql -U postgres -h ${POSTGRES_HOST:-localhost} --dbname="webknossos_testing" -c "COPY webknossos.$(basename $file .csv) FROM STDOUT WITH CSV HEADER QUOTE ''''" < $file
+  PGPASSWORD=postgres psql -U postgres -h $dbHost --dbname=$dbName -c "COPY webknossos.$(basename $file .csv) FROM STDOUT WITH CSV HEADER QUOTE ''''" < $file
 done;

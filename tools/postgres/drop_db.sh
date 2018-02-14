@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-dbName=${DB_NAME:-webknossos}
+scriptdir=$(dirname "$0")
 
-PGPASSWORD=postgres psql -U postgres -h ${POSTGRES_HOST:-localhost} -c "DROP DATABASE $dbName;"
+dbName=$($scriptdir/db_name.sh)
+dbHost=$($scriptdir/db_host.sh)
+
+PGPASSWORD=postgres psql -U postgres -h $dbHost -c "DROP DATABASE $dbName;"

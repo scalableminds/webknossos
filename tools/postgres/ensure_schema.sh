@@ -1,14 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-dbName=${DB_NAME:-webknossos}
+scriptdir=$(dirname "$0")
 
-schemaPath="$(dirname "$0")/schema.sql"
+dbName=$($scriptdir/db_name.sh)
+dbHost=$($scriptdir/db_host.sh)
 
-if [ "$(PGPASSWORD=postgres psql -U postgres -h  ${POSTGRES_HOST:-localhost} --dbname=$dbName -tAc "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'webknossos';")" = 'webknossos' ]
+schemaPath="$scriptdir/schema.sql"
+
+if [ "$(PGPASSWORD=postgres psql -U postgres -h  $dbHost --dbname=$dbName -tAc "SELECT schema_name FROM information_schema.schemata WHERE schema_name = 'webknossos';")" = 'webknossos' ]
 then
-    echo "schema already exists"
+    echo "Schema already exists"
     exit
 fi
 
-PGPASSWORD=postgres psql -U postgres -h  ${POSTGRES_HOST:-localhost} --dbname=$dbName -f $schemaPath
+PGPASSWORD=postgres psql -U postgres -h  $dbHost --dbname=$dbName -f $schemaPath

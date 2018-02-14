@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-dbName=${DB_NAME:-webknossos}
+scriptdir=$(dirname "$0")
 
-schemaPath="$(dirname "$0")/schema.sql"
+dbName=$($scriptdir/db_name.sh)
+dbHost=$($scriptdir/db_host.sh)
 
-PGPASSWORD=postgres psql -U postgres -h  ${POSTGRES_HOST:-localhost} --dbname=$dbName -f $schemaPath
+PGPASSWORD=postgres psql -U postgres -h  $dbHost --dbname=$dbName -f $scriptdir/schema.sql

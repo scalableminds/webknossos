@@ -81,6 +81,8 @@ jobs:
           background: true
           command: |
             set -x
+            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d fossildb
+            sleep 5
             DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos
       - run:
           name: Run webknossos smoke test

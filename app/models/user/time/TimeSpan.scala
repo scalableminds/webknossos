@@ -46,6 +46,7 @@ object TimeSpanSQL {
 
 object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
   val collection = Timespans
+  val MAX_TIMESTAMP = 253370761200000L
 
   def idColumn(x: Timespans): Rep[String] = x._Id
   def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted
@@ -64,19 +65,19 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
 
   def findAllByUser(userId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
     for {
-      r <- run(Timespans.filter(r => notdel(r) && r._User === userId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(Long.MaxValue))).result)
+      r <- run(Timespans.filter(r => notdel(r) && r._User === userId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAllByAnnotation(annotationId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
     for {
-      r <- run(Timespans.filter(r => notdel(r) && r._Annotation === annotationId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(Long.MaxValue))).result)
+      r <- run(Timespans.filter(r => notdel(r) && r._Annotation === annotationId.id && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAll(start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
     for {
-      r <- run(Timespans.filter(r => notdel(r) && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(Long.MaxValue))).result)
+      r <- run(Timespans.filter(r => notdel(r) && (r.created >= new java.sql.Timestamp(start.getOrElse(0))) && r.created <= new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))).result)
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

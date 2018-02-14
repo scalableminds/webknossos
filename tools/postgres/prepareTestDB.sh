@@ -3,11 +3,11 @@ set -Eeuo pipefail
 
 scriptdir=$(dirname "$0")
 
-dbName="webknossos_testing"
-dbHost=$($scriptdir/db_host.sh)
+$scriptdir/ensure_db.sh
+$scriptdir/refresh_schema.sh
 
-POSTGRES_URL="jdbc:postgresql://$dbHost/$dbName" $scriptdir/ensure_db.sh
-POSTGRES_URL="jdbc:postgresql://$dbHost/$dbName" $scriptdir/refresh_schema.sh
+dbName=$($scriptdir/db_name.sh)
+dbHost=$($scriptdir/db_host.sh)
 
 for file in $(find $scriptdir/../../test/db_postgres -name "*.csv")
 do

@@ -82,11 +82,12 @@ services:
     links:
       - mongo
       - postgres
+      - fossildb
     command:
       - bash
       - -c
       - >
-        ./sbt
+        sbt
         -v -d
         "test-only * --
           -Dconfig.file=./conf/application_$${MODE}.conf

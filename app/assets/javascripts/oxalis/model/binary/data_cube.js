@@ -71,10 +71,10 @@ class DataCube {
   // Each bucket consists of an access-value, the zoomStep and the actual data.
   // The access-values are used for garbage collection. When a bucket is accessed, its
   // access-flag is set to true.
-  // When buckets have to be collected, an iterator will loop through the the buckets at the beginning of the queue will be removed
-  // from the queue and the access-value will be decreased. If the access-value of a
-  // bucket becomes 0, itsis no longer in the access-queue and is least resently used.
-  // It is then removed from the cube.
+  // When buckets have to be collected, an iterator will loop through the the buckets at
+  // the beginning of the queue will be removed from the queue and the access-value will
+  // be decreased. If the access-value of a bucket becomes 0, itsis no longer in the
+  // access-queue and is least resently used. It is then removed from the cube.
 
   constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;

@@ -40,17 +40,21 @@ export class AbstractPingStrategy {
     return this.roundTripTimeRangeStart <= value && value <= this.roundTripTimeRangeEnd;
   }
 
-  getBucketArray(center: Vector3, width: number, height: number) {
+  getBucketArray(center: Vector3, width: number, height: number): Array<Vector3> {
     const buckets = [];
     const uOffset = Math.ceil(width / 2);
     const vOffset = Math.ceil(height / 2);
+    console.log("width", Math.ceil(width));
+    console.log("height", Math.ceil(height));
 
     for (let u = -uOffset; u <= uOffset; u++) {
       for (let v = -vOffset; v <= vOffset; v++) {
-        const bucket = center.slice(0);
+        const bucket = center.slice();
         bucket[this.u] += u;
         bucket[this.v] += v;
-        buckets.push(_.min(bucket) >= 0 ? bucket : null);
+        if (_.min(bucket) >= 0) {
+          buckets.push(bucket);
+        }
       }
     }
     return buckets;
@@ -102,26 +106,24 @@ export class PingStrategy extends AbstractPingStrategy {
       const buckets = this.getBucketArray(centerBucket3, width, height);
 
       for (const bucket of buckets) {
-        if (bucket != null) {
-          const priority =
-            Math.abs(bucket[0] - centerBucket3[0]) +
-            Math.abs(bucket[1] - centerBucket3[1]) +
-            Math.abs(bucket[2] - centerBucket3[2]);
-          pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
-          if (plane === activePlane) {
-            // preload only for active plane
-            for (let slide = 0; slide < this.preloadingSlides; slide++) {
-              if (direction[this.w] >= 0) {
-                bucket[this.w]++;
-              } else {
-                bucket[this.w]--;
-              }
-              const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
-              pullQueue.push({
-                bucket: [bucket[0], bucket[1], bucket[2], zoomStep],
-                priority: preloadingPriority,
-              });
+        const priority =
+          Math.abs(bucket[0] - centerBucket3[0]) +
+          Math.abs(bucket[1] - centerBucket3[1]) +
+          Math.abs(bucket[2] - centerBucket3[2]);
+        pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
+        if (plane === activePlane) {
+          // preload only for active plane
+          for (let slide = 0; slide < this.preloadingSlides; slide++) {
+            if (direction[this.w] >= 0) {
+              bucket[this.w]++;
+            } else {
+              bucket[this.w]--;
             }
+            const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
+            pullQueue.push({
+              bucket: [bucket[0], bucket[1], bucket[2], zoomStep],
+              priority: preloadingPriority,
+            });
           }
         }
       }

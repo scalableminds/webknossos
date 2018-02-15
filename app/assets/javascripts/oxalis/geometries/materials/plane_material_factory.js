@@ -110,7 +110,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     listenToStoreProperty(
       storeState => getRequestLogZoomStep(storeState),
-      zoomStep => (this.uniforms.zoomStep.value = zoomStep),
+      zoomStep => {
+        this.uniforms.zoomStep.value = zoomStep
+      },
     );
   }
 

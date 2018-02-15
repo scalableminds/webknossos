@@ -7,6 +7,7 @@ package utils
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
+import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
@@ -86,6 +87,13 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
   def optionLiteral(aStringOpt: Option[String]): String = aStringOpt match {
     case Some(aString) => "'" + aString + "'"
     case None => "null"
+  }
+
+  def userIdFromCtx(implicit ctx: DBAccessContext): Option[ObjectId] = {
+    ctx.data match {
+      case Some(user: User) => Some(ObjectId.fromBsonId(user._id))
+      case _ => None
+    }
   }
 }
 

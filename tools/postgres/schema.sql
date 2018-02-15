@@ -22,7 +22,7 @@ CREATE TABLE webknossos.analytics(
   _user CHAR(24),
   namespace VARCHAR(256) NOT NULL,
   value JSONB NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -49,8 +49,8 @@ CREATE TABLE webknossos.annotations(
   tags VARCHAR(256)[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
-  modified TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CHECK ((typ IN ('TracingBase', 'Task')) = (_task IS NOT NULL))
 );
@@ -66,7 +66,7 @@ CREATE TABLE webknossos.dataSets(
   name VARCHAR(256) NOT NULL UNIQUE,
   scale webknossos.VECTOR3,
   status VARCHAR(1024) NOT NULL DEFAULT '',
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _team)
 );
@@ -115,7 +115,7 @@ CREATE TABLE webknossos.projects(
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
   expectedTime BIGINT,  -- TODO: Interval?
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -124,7 +124,7 @@ CREATE TABLE webknossos.scripts(
   _owner CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   gist VARCHAR(1024) NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   CHECK (gist ~* '^https?://[a-z0-9\-_\.]+.*$')
 );
@@ -139,7 +139,7 @@ CREATE TABLE webknossos.taskTypes(
   settings_preferredMode webknossos.TASKTYPE_MODES DEFAULT 'orthogonal',
   settings_branchPointsAllowed BOOLEAN NOT NULL,
   settings_somaClickingAllowed BOOLEAN NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -157,7 +157,7 @@ CREATE TABLE webknossos.tasks(
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo VARCHAR(512),
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -173,7 +173,7 @@ CREATE TABLE webknossos.teams(
   _parent CHAR(24),
   name VARCHAR(256) NOT NULL UNIQUE CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   behavesLikeRootTeam BOOLEAN,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -182,9 +182,9 @@ CREATE TABLE webknossos.timespans(
   _user CHAR(24) NOT NULL,
   _annotation CHAR(24),
   time BIGINT NOT NULL, -- TODO: Interval?
-  lastUpdate TIMESTAMP NOT NULL DEFAULT NOW(),
+  lastUpdate TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   numberOfUpdates BIGINT NOT NULL DEFAULT 1,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -195,7 +195,7 @@ CREATE TABLE webknossos.users(
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
-  lastActivity TIMESTAMP NOT NULL DEFAULT NOW(),
+  lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL DEFAULT 'credentials',
   loginInfo_providerKey VARCHAR(512) NOT NULL,
@@ -203,7 +203,7 @@ CREATE TABLE webknossos.users(
   passwordInfo_password VARCHAR(512) NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
@@ -235,11 +235,11 @@ CREATE TABLE webknossos.tokens(
   value Text NOT NULL,
   loginInfo_providerID webknossos.USER_LOGININFO_PROVDERIDS NOT NULL,
   loginInfo_providerKey VARCHAR(512) NOT NULL,
-  lastUsedDateTime TIMESTAMP NOT NULL,
-  expirationDateTime TIMESTAMP NOT NULL,
+  lastUsedDateTime TIMESTAMPTZ NOT NULL,
+  expirationDateTime TIMESTAMPTZ NOT NULL,
   idleTimeout BIGINT,
   tokenType webknossos.TOKEN_TYPES NOT NULL,
-  created TIMESTAMP NOT NULL DEFAULT NOW(),
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 

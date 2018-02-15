@@ -31,19 +31,31 @@ object ReportSQLDAO extends SimpleSQLDAO {
     for {
       r <- run(
         sql"""
-          with filteredProjects as (select p._id, p.name, p.paused
+          with teamMembers as (select _user from webknossos.user_team_roles ut where ut._team = '570b9f4b2a7c0e3b008da6ec')
+
+          ,experiences as (select ue.domain, ue.value
+          from
+            teamMembers u
+            JOIN webknossos.user_experiences ue on ue._user = u._user
+          )
+
+          ,filteredProjects as (select p._id, p.name, p.paused
           from
             webknossos.projects_ p
             JOIN webknossos.tasks_ t ON t._project = p._id
-            JOIN webknossos.annotations_ a ON a._task = t._id
-            JOIN webknossos.users_ u ON u._id = a._user
-            JOIN webknossos.user_team_roles ut ON ut._user = u._id
-            JOIN webknossos.user_experiences ue ON ue._user = u._id
-          where p._team = ${teamId.id} and
+            CROSS JOIN experiences ue
+          where p._team = '570b9f4b2a7c0e3b008da6ec' and
           t.neededExperience_domain = ue.domain and
-          t.neededExperience_value <= ue.value and
-          a.modified > NOW() - INTERVAL '30 days'
+          t.neededExperience_value <= ue.value
           group by p._id, p.name, p.paused)
+
+          ,projectModifiedTimes as (select p._id, MAX(a.modified) as modified
+          from
+            filteredProjects p
+            JOIN webknossos.tasks_ t ON t._project = p._id
+            LEFT JOIN webknossos.annotations_ a ON t._id = a._task
+            group by p._id
+          )
 
           ,s1 as (select
                p._id,
@@ -68,8 +80,11 @@ object ReportSQLDAO extends SimpleSQLDAO {
            )
 
 
-          select s1.projectName, s1.paused, s1.totalTasks, s1.totalInstances, s1.openInstances, (s1.totalInstances - s1.openInstances - s2.activeInstances) finishedInstances, s2.activeInstances from s1 join s2 on s1._id = s2._id
-          where not (paused and s1.totalInstances = s1.openInstances)
+          select s1.projectName, s1.paused, s1.totalTasks, s1.totalInstances, s1.openInstances, (s1.totalInstances - s1.openInstances - s2.activeInstances) finishedInstances, s2.activeInstances
+          from s1
+            join s2 on s1._id = s2._id
+            join projectModifiedTimes pmt on s1._id = pmt._id
+          where (not (paused and s1.totalInstances = s1.openInstances)) and (s1.openInstances > 0 or s2.activeInstances > 0 or pmt.modified > NOW() - INTERVAL '30 days')
         """.as[(String, Boolean, Int, Int, Int, Int, Int)])
     } yield {
       r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7))

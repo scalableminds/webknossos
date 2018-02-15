@@ -2,16 +2,15 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationSettings}
+import com.scalableminds.util.tools.FoxImplicits
+import models.annotation.AnnotationSettings
 import models.task._
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import play.twirl.api.Html
 
 class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits{
 
@@ -69,8 +68,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.identity, taskType.team)
-      updatedTaskType = taskType.copy(isActive = false)
-      _ <- TaskTypeDAO.update(taskType._id, updatedTaskType) ?~> Messages("taskType.deleteFailure")
+      _ <- TaskTypeDAO.removeById(taskType._id) ?~> Messages("taskType.deleteFailure")
     } yield {
       TaskService.removeAllWithTaskType(taskType)
       JsonOk(Messages("taskType.deleteSuccess", taskType.summary))

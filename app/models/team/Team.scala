@@ -175,7 +175,7 @@ object Team extends FoxImplicits {
       Team(
         s.name,
         parentTeamOpt.map(_.name),
-        List(Role.Admin, Role.User),
+        List(Role.User, Role.Admin),
         ownerBsonId,
         s.behavesLikeRootTeam,
         idBson
@@ -185,14 +185,14 @@ object Team extends FoxImplicits {
 }
 
 object TeamService {
-  def create(team: Team, user: User)(implicit ctx: DBAccessContext) = {
-    UserDAO.addTeam(user._id, TeamMembership(team.name, Role.Admin))
-    TeamDAO.insert(team)
-  }
+  def create(team: Team, user: User)(implicit ctx: DBAccessContext) =
+    for {
+      _ <- TeamDAO.insert(team)
+      _ <- UserDAO.addTeam(user._id, TeamMembership(team.name, Role.Admin))
+    } yield ()
 
-  def remove(team: Team)(implicit ctx: DBAccessContext) = {
+  def remove(team: Team)(implicit ctx: DBAccessContext) =
     TeamDAO.removeById(team._id)
-  }
 
   def rootTeams =
     TeamDAO.findRootTeams(GlobalAccessContext)

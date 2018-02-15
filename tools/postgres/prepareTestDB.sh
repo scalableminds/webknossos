@@ -14,3 +14,5 @@ do
   echo $file
   PGPASSWORD=postgres psql -U postgres -h $dbHost --dbname=$dbName -c "COPY webknossos.$(basename $file .csv) FROM STDOUT WITH CSV HEADER QUOTE ''''" < $file
 done;
+
+echo "Done preparing test db (host=$dbHost, name=$dbName)"

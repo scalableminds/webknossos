@@ -67,6 +67,13 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] {
     ))
 
 
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskTypeSQL] =
+    for { //Access definition? userFromCtx? Global? where _team in (select _team from webknossos.user_team_roles where (_user = ${requestingUserId.id}) or ${global})
+      rList <- run(sql"select * from webknossos.taskTypes_ where _id = ${id.id}".as[TasktypesRow])
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
+    } yield parsed
+
   def insertOne(t: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val allowedModes = writeArrayTuple(t.settings.allowedModes)
     for {
@@ -217,7 +224,7 @@ object TaskTypeDAO {
       updated <- findOneById(_id)
     } yield updated
 
-  def removeById(id: String)(implicit ctx: DBAccessContext) =
-    TaskTypeSQLDAO.deleteOne(ObjectId(id))
+  def removeById(_id: BSONObjectID)(implicit ctx: DBAccessContext) =
+    TaskTypeSQLDAO.deleteOne(ObjectId.fromBsonId(_id))
 
 }

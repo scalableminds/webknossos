@@ -130,20 +130,18 @@ function* csvWriter(name, cols) {
               largestSegmentId: doc_layer.largestSegmentId,
               mappings: doc_layer.mappings,
             });
+            if (doc_layer.resolutions != null) {
+              for (const doc_res of doc_layer.resolutions) {
+                dataSet_resolutions.next({
+                  _dataSet: doc._id.toHexString(),
+                  dataLayerName: doc_layer.name,
+                  resolution: doc_res.resolution,
+                  scale: formatVector3(doc_res.scale)
+                });
+              }
+            }
           }
         }
-
-        if (doc.dataSource.resolutions != null) {
-          for (const doc_res of doc.dataSource.resolutions) {
-            dataSet_resolutions.next({
-              _dataSet: doc._id.toHexString(),
-              dataLayerName: doc_layer.name,
-              resolution: doc_res.resolution,
-              scale: formatVector3(doc_res.scale)
-            });
-          }
-        }
-
       }
       dataSet_allowedTeams.next();
       dataSet_layers.next();

@@ -16,8 +16,7 @@ services:
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
-      - -Dhttp.port=9000
-      - -Dapplication.authentication.enableDevAutoLogin=true
+      - -Ddatastore.fossildb.address=fossildb
       - -Dmongodb.uri=mongodb://mongo:27017/webknossos
       - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
     environment:
@@ -64,7 +63,6 @@ services:
         "run
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Dhttp.port=$${PORT}
           -Ddatastore.fossildb.address=fossildb-dev
           -Dmongodb.uri=$${MONGO_URI}
           -Dpostgres.url=$${POSTGRES_URL}"
@@ -90,10 +88,9 @@ services:
         sbt
         -v -d
         "test-only * --
-          -Dconfig.file=./conf/application_$${MODE}.conf
+          -Dconfig.file=./conf/application.conf
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Dhttp.port=$${PORT}
           -Ddatastore.fossildb.address=fossildb
           -Dmongodb.uri=$${MONGO_URI}
           -Dpostgres.url=$${POSTGRES_URL}"
@@ -101,7 +98,6 @@ services:
       - MONGO_URI=mongodb://mongo:27017/webknossos-testing
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
       - PORT=9000
-      - MODE=dev
 
   mongo:
     image: mongo:3.4
@@ -123,12 +119,12 @@ services:
       POSTGRES_PASSWORD: postgres
 
   fossildb:
-    image: scalableminds/fossildb:master__222
+    image: scalableminds/fossildb:master__257
     command:
       - fossildb
       - -c
       - skeletons,skeletonUpdates,volumes,volumeData
-    user: ${USER_UID:-1000}:${USER_GID:-1000}
+    user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
 
   fossildb-dev:
     extends:

@@ -24,12 +24,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import slick.jdbc.PostgresProfile.api._
-import slick.jdbc.SQLActionBuilder
-import slick.lifted.Rep
-import slick.sql.SqlStreamingAction
-import utils.{Keks, ObjectId, SQLDAO}
 import slick.jdbc.GetResult._
+import slick.jdbc.PostgresProfile.api._
+import slick.lifted.Rep
+import utils.{ObjectId, SQLDAO}
 
 
 case class AnnotationSQL(
@@ -94,18 +92,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def idColumn(x: Annotations): Rep[String] = x._Id
   def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
-  /*override def asRow[K](builder: SQLActionBuilder): SqlStreamingAction[Vector[K], K, Effect] = {
-    implicit val rconv = GetResultAnnotationsRow
-    builder.as[AnnotationsRow]
-  }*/
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
-    for {
-      accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
-      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
-      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
-    } yield parsed
 
   def parse(r: AnnotationsRow): Fox[AnnotationSQL] =
     for {
@@ -119,7 +105,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
         r._Task.map(ObjectId(_)),
         ObjectId(r._Team),
         ObjectId(r._User),
-        TracingReference(r.tracingId.toString, tracingTyp),
+        TracingReference(r.tracingId, tracingTyp),
         r.description,
         r.ispublic,
         r.name,
@@ -135,6 +121,14 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     }
 
   // read operations
+
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
 
   def findAllFor(_user: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] = {
     def stateQuery(r: Annotations) = isFinished match {
@@ -166,7 +160,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findOneByTracingId(tracingId: java.util.UUID)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
+  def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
     for {
       rOpt <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
       r <- rOpt.toFox
@@ -198,7 +192,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def insertOne(a: AnnotationSQL): Fox[Unit] = {
     for {
       _ <- run(sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-                       values(${a._id.toString}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, '#${java.util.UUID.fromString(a.tracing.id)}',
+                       values(${a._id.toString}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
                               '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
                               '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
                               ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})""")
@@ -241,7 +235,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def updateTracingReference(id: ObjectId, tracing: TracingReference)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"update webknossos.annotations set tracingId = '#${java.util.UUID.fromString(tracing.id)}', tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set tracingId = ${tracing.id}, tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -504,7 +498,7 @@ object AnnotationDAO extends FoxImplicits {
 
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      annotationSQL <- AnnotationSQLDAO.findOneByTracingId(java.util.UUID.fromString(tracingId))
+      annotationSQL <- AnnotationSQLDAO.findOneByTracingId(tracingId)
       annotation <- Annotation.fromAnnotationSQL(annotationSQL)
     } yield annotation
 

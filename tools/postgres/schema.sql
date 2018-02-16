@@ -39,7 +39,7 @@ CREATE TABLE webknossos.annotations(
   _task CHAR(24),
   _team CHAR(24) NOT NULL,
   _user CHAR(24) NOT NULL,
-  tracing_id UUID NOT NULL, -- UNIQUE,
+  tracing_id CHAR(36) NOT NULL UNIQUE,
   tracing_typ webknossos.ANNOTATION_TRACING_TYPE NOT NULL,
   description TEXT NOT NULL DEFAULT '',
   isPublic BOOLEAN NOT NULL DEFAULT false,

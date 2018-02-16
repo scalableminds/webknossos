@@ -109,7 +109,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
                           where _id = ${p._id.id}""")
     } yield ()
 
-  def updatePaused(id: ObjectId, isPaused: Boolean) =
+  def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext) =
     updateBooleanCol(id, _.paused, isPaused)
 
 }

@@ -13,7 +13,7 @@ import models.annotation.AnnotationType.AnnotationType
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.task.{TaskDAO, TaskSQLDAO, TaskTypeSQLDAO, _}
-import models.team.TeamSQLDAO
+import models.team.{Role, TeamSQLDAO}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import org.joda.time.format.DateTimeFormat
@@ -92,6 +92,9 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def idColumn(x: Annotations): Rep[String] = x._Id
   def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
+  override def anonymousReadAccessQ = s"_isPublic"
+  override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}'"
+  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}"
 
   def parse(r: AnnotationsRow): Fox[AnnotationSQL] =
     for {
@@ -393,36 +396,6 @@ object Annotation extends FoxImplicits {
 
 
 object AnnotationDAO extends FoxImplicits {
-
-  /*
-  val AccessDefinitions = new DefaultAccessDefinitions{
-
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match{
-        case Some(user: User) =>
-          AllowIf(Json.obj(
-            "$or" -> Json.arr(
-              Json.obj("team" -> Json.obj("$in" -> user.teamNames)),
-              Json.obj("_user"-> user._id))
-          ))
-        case _ =>
-          AllowIf(Json.obj("isPublic" -> true))
-      }
-    }
-
-    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match{
-        case Some(user: User) =>
-          AllowIf(Json.obj(
-            "$or" -> Json.arr(
-              Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)),
-              Json.obj("_user"-> user._id))
-            ))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-  }*/
 
   def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Annotation] = findOneById(id.stringify)
 

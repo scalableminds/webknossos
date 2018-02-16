@@ -8,6 +8,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
+import net.liftweb.common.Full
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -94,6 +95,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
   def collectionName: String
   def existingCollectionName = collectionName + "_"
 
+  def anonymousReadAccessQ: String = "false"
   def readAccessQ(requestingUserId: ObjectId): String = "true"
   def updateAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
   def deleteAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
@@ -102,8 +104,13 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
     if (ctx.globalAccess) Fox.successful("true")
     else {
       for {
-        userId <- userIdFromCtx
-      } yield readAccessQ(userId)
+        userIdBox <- userIdFromCtx.futureBox
+      } yield {
+        userIdBox match {
+          case Full(userId) => readAccessQ(userId)
+          case _ => anonymousReadAccessQ
+        }
+      }
     }
   }
 
@@ -170,29 +177,45 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
 
   def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield isDeletedColumn(row)
-    for {_ <- run(q.update(true))} yield ()
+    for {
+      _ <- assertDeleteAccess(id)
+      _ <- run(q.update(true))
+    } yield ()
   }
 
-  def updateStringCol(id: ObjectId, column: (X) => Rep[String], newValue: String): Fox[Unit] = {
+  def updateStringCol(id: ObjectId, column: (X) => Rep[String], newValue: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
-    for {_ <- run(q.update(newValue))} yield ()
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q.update(newValue))
+    } yield ()
   }
 
-  def updateObjectIdCol(id: ObjectId, column: (X) => Rep[String], newValue: ObjectId) = updateStringCol(id, column, newValue.id)
+  def updateObjectIdCol(id: ObjectId, column: (X) => Rep[String], newValue: ObjectId)(implicit ctx: DBAccessContext) =
+    updateStringCol(id, column, newValue.id)
 
-  def updateLongCol(id: ObjectId, column: (X) => Rep[Long], newValue: Long): Fox[Unit] = {
+  def updateLongCol(id: ObjectId, column: (X) => Rep[Long], newValue: Long)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
-    for {_ <- run(q.update(newValue))} yield ()
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q.update(newValue))
+    } yield ()
   }
 
-  def updateBooleanCol(id: ObjectId, column: (X) => Rep[Boolean], newValue: Boolean): Fox[Unit] = {
+  def updateBooleanCol(id: ObjectId, column: (X) => Rep[Boolean], newValue: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
-    for {_ <- run(q.update(newValue))} yield ()
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q.update(newValue))
+    } yield ()
   }
 
-  def updateTimestampCol(id: ObjectId, column: (X) => Rep[java.sql.Timestamp], newValue: java.sql.Timestamp): Fox[Unit] = {
+  def updateTimestampCol(id: ObjectId, column: (X) => Rep[java.sql.Timestamp], newValue: java.sql.Timestamp)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- collection if (notdel(row) && idColumn(row) === id.id)} yield column(row)
-    for {_ <- run(q.update(newValue))} yield ()
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q.update(newValue))
+    } yield ()
   }
 
 }

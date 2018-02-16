@@ -8,14 +8,15 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
+import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
-import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
-import play.api.Play.current
+import slick.jdbc.{PostgresProfile, SQLActionBuilder}
 import slick.lifted.{AbstractTable, Rep, TableQuery}
+import slick.sql.SqlStreamingAction
 
 import scala.util.{Failure, Success, Try}
 
@@ -59,7 +60,6 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
 
 
 
-
   def writeArrayTuple(elements: List[String]): String = {
     val commaSeparated = elements.mkString(",")
     s"{$commaSeparated}"
@@ -89,38 +89,70 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
     case None => "null"
   }
 
-  def userIdFromCtx(implicit ctx: DBAccessContext): Option[ObjectId] = {
-    ctx.data match {
-      case Some(user: User) => Some(ObjectId.fromBsonId(user._id))
-      case _ => None
-    }
-  }
 }
 
-trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
+trait SecuredSQLDAO extends SimpleSQLDAO {
+  def collectionName: String
+  def existingCollectionName = collectionName + "_"
+
+  def readAccessQ(requestingUserId: ObjectId): String = "true"
+  def updateAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
+  def deleteAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
+
+  def readAccessQuery(implicit ctx: DBAccessContext): Fox[String] = {
+    if (ctx.globalAccess) Fox.successful("true")
+    else {
+      for {
+        userId <- userIdFromCtx
+      } yield readAccessQ(userId)
+    }
+  }
+
+  def assertUpdateAccess(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    if (ctx.globalAccess) Fox.successful(())
+    else {
+      for {
+        userId <- userIdFromCtx
+        resultList <- run(sql"select _id from #${existingCollectionName} where _id = ${id.id} and #${updateAccessQ(userId)}".as[String]) ?~> "Failed to check write access. Does the object exist?"
+        _ <- resultList.headOption.toFox ?~> "Access denied."
+      } yield ()
+    }
+  }
+
+  def assertDeleteAccess(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    if (ctx.globalAccess) Fox.successful(())
+    else {
+      for {
+        userId <- userIdFromCtx
+        resultList <- run(sql"select _id from #${existingCollectionName} where _id = ${id.id} and #${deleteAccessQ(userId)}".as[String]) ?~> "Failed to check delete access. Does the object exist?"
+        _ <- resultList.headOption.toFox ?~> "Access denied."
+      } yield ()
+    }
+  }
+
+  //note that this needs to be guaranteed to be sanitized (currently so because it converts from BSONObjectID)
+  private def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
+    ctx.data match {
+      case Some(user: User) => Fox.successful(ObjectId.fromBsonId(user._id))
+      case _ => Fox.failure("Access denied.")
+    }
+  }
+
+}
+
+trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
   def collection: TableQuery[X]
+  def collectionName = collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 
   def notdel(r: X) = isDeletedColumn(r) === false
 
-  def parse(row: X#TableElementType): Fox[C]
+  def parse(row: R): Fox[C]
 
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] = {
-    run(collection.filter(r => isDeletedColumn(r) === false && idColumn(r) === id.id).result.headOption).map {
-      case Some(r) =>
-        parse(r) ?~> ("sql: could not parse database row for object" + id)
-      case _ =>
-        Fox.failure("sql: could not find object " + id)
-    }.flatten
-  }
-
-  def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
-    for {
-      r <- run(collection.filter(row => notdel(row)).result)
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] = Fox.failure("TODO")
+  def findAll(implicit ctx: DBAccessContext): Fox[List[C]] = Fox.failure("TODO")
 
   def countAll(implicit ctx: DBAccessContext): Fox[Int] =
     run(collection.filter(row => notdel(row)).length.result)
@@ -152,4 +184,26 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SimpleSQLDAO {
     for {_ <- run(q.update(newValue))} yield ()
   }
 
+}
+
+trait Keks[C, R, X <: AbstractTable[R]] extends SQLDAO[C, R, X] {
+
+  def parse(row: R): Fox[C]
+
+  def asRow(builder: SQLActionBuilder): SqlStreamingAction[Vector[R], R, Effect]
+
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(asRow(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}"))
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where and #${accessQuery}".as[R])
+      parsed <- Fox.combined(r.toList.map(parse)) ?~> ("SQLDAO Error: Could not parse one of the database rows in " + collectionName)
+    } yield parsed
 }

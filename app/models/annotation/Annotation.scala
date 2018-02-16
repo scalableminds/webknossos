@@ -25,8 +25,11 @@ import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.SQLActionBuilder
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import slick.sql.SqlStreamingAction
+import utils.{Keks, ObjectId, SQLDAO}
+import slick.jdbc.GetResult._
 
 
 case class AnnotationSQL(
@@ -90,6 +93,19 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def idColumn(x: Annotations): Rep[String] = x._Id
   def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
+
+  /*override def asRow[K](builder: SQLActionBuilder): SqlStreamingAction[Vector[K], K, Effect] = {
+    implicit val rconv = GetResultAnnotationsRow
+    builder.as[AnnotationsRow]
+  }*/
+
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
 
   def parse(r: AnnotationsRow): Fox[AnnotationSQL] =
     for {

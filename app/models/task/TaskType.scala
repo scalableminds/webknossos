@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationSettings
-import models.team.TeamSQLDAO
+import models.team.{Role, TeamSQLDAO}
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -15,7 +15,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.{ObjectId, SQLDAO}
+import utils.{ObjectId, SecuredSQLDAO, SQLDAO}
 
 case class TaskTypeSQL(
                          _id: ObjectId,
@@ -44,7 +44,7 @@ object TaskTypeSQL {
     }
 }
 
-object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] {
+object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with SecuredSQLDAO {
   val collection = Tasktypes
 
   def idColumn(x: Tasktypes): Rep[String] = x._Id
@@ -66,13 +66,8 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] {
       r.isdeleted
     ))
 
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskTypeSQL] =
-    for { //Access definition? userFromCtx? Global? where _team in (select _team from webknossos.user_team_roles where (_user = ${requestingUserId.id}) or ${global})
-      rList <- run(sql"select * from webknossos.taskTypes_ where _id = ${id.id}".as[TasktypesRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
-    } yield parsed
+  override def readAccessQ(requestingUserId: ObjectId) = s"_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')"
+  override def updateAccessQ(requestingUserId: ObjectId) = s"_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')"
 
   def insertOne(t: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val allowedModes = writeArrayTuple(t.settings.allowedModes)
@@ -87,6 +82,7 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] {
 
   def updateOne(t: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that t.created is skipped
+      _ <- assertUpdateAccess(t._id)
       _ <- run(sqlu"""update webknossos.taskTypes
                           set
                            _team = ${t._team.id},
@@ -172,28 +168,6 @@ object TaskType extends FoxImplicits {
 }
 
 object TaskTypeDAO {
-/*
-  override val AccessDefinitions = new DefaultAccessDefinitions{
-
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match{
-        case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-
-    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match{
-        case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-  }*/
-
 
   def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[TaskType] = findOneById(id.stringify)
 

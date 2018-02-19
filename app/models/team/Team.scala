@@ -68,6 +68,10 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     ))
   }
 
+  override def readAccessQ(requestingUserId: ObjectId) =
+    s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
+   or (_parent in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"""
+
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
     for {
       rOpt <- run(Teams.filter(r => notdel(r) && r.name === name).result.headOption)
@@ -199,23 +203,6 @@ object TeamService {
 }
 
 object TeamDAO {
-
-/*
-  override val AccessDefinitions = new DefaultAccessDefinitions{
-
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match{
-        case Some(user: User) =>
-          AllowIf(Json.obj(
-            "$or" -> Json.arr(
-              Json.obj("name" -> Json.obj("$in" -> user.teamNames)),
-              Json.obj("parent"-> Json.obj("$in" -> user.teamNames)))
-          ))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-  }*/
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Team] =
     for {

@@ -8,7 +8,7 @@ import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
 import models.project.{Project, ProjectDAO, ProjectSQLDAO}
-import models.team.TeamSQLDAO
+import models.team.{Role, TeamSQLDAO}
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -72,7 +72,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def idColumn(x: Tasks) = x._Id
   def isDeletedColumn(x: Tasks) = x.isdeleted
 
-
   def parse(r: TasksRow): Fox[TaskSQL] =
     for {
       editPosition <- Point3D.fromList(parseArrayTuple(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
@@ -95,6 +94,9 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
         r.isdeleted
       )
     }
+
+  override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"
+  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}'))"
 
   def findAllByTaskType(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] =
     for {
@@ -367,26 +369,6 @@ object Task extends FoxImplicits {
 }
 
 object TaskDAO {
-/*  override val AccessDefinitions = new DefaultAccessDefinitions {
-
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-
-    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-  }*/
 
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     for {

@@ -76,6 +76,12 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       r.isdeleted
     ))
 
+  override def readAccessQ(requestingUserId: ObjectId) =
+    s"""_id not in (select _user from webknossos.user_team_roles)
+       or (_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')))"""
+  override def deleteAccessQ(requestingUserId: ObjectId) =
+    s"""_id not in (select _user from webknossos.user_team_roles)
+       or (_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')))"""
 
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[UserSQL] =
     for {
@@ -408,33 +414,6 @@ object User extends FoxImplicits {
 
 
 object UserDAO {
-  /*
-  override val AccessDefinitions = new DefaultAccessDefinitions{
-
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams.team" -> Json.obj("$in" -> user.teamNames)),
-            Json.obj("teams" -> Json.arr()))))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-
-    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) if user.hasAdminAccess =>
-          AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams.team" -> Json.obj("$in" -> user.adminTeamNames)),
-            Json.obj("teams" -> Json.arr())
-            )))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-  }*/
-
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext) =
     for {
       userSQL <- UserSQLDAO.findOneByEmail(email)

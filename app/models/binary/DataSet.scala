@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableD
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataResolution, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import models.configuration.DataSetConfiguration
-import models.team.{TeamSQL, TeamSQLDAO}
+import models.team.{Role, TeamSQL, TeamSQLDAO}
 import models.user.User
 import net.liftweb.common.Full
 import play.api.Play.current
@@ -95,6 +95,13 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
       )
     }
   }
+
+  override def anonymousReadAccessQ = s"_isPublic"
+  override def readAccessQ(requestingUserId: ObjectId) =
+    s"""(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}'))' +
+        or _id in (select _dataSet
+          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))"""
+
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
     for {
       rOpt <- run(Datasets.filter(r => notdel(r) && r.name === name).result.headOption)
@@ -368,25 +375,6 @@ object DataSet extends FoxImplicits {
 }
 
 object DataSetDAO {
-
-
-/*  override val AccessDefinitions = new DefaultAccessDefinitions {
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(
-            Json.obj("$or" -> Json.arr(
-              Json.obj("isPublic" -> true),
-              Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamNames)),
-              Json.obj("owningTeam" -> Json.obj("$in" -> user.adminTeamNames))
-            )))
-        case _                =>
-          AllowIf(
-            Json.obj("isPublic" -> true)
-          )
-      }
-    }
-  }*/
 
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext): Fox[DataSet] = {
     for {

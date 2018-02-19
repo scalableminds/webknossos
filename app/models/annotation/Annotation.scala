@@ -92,10 +92,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def idColumn(x: Annotations): Rep[String] = x._Id
   def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
-  override def anonymousReadAccessQ = s"_isPublic"
-  override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}'"
-  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}"
-
   def parse(r: AnnotationsRow): Fox[AnnotationSQL] =
     for {
       state <- AnnotationState.fromString(r.state).toFox
@@ -122,6 +118,10 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
         r.isdeleted
       )
     }
+
+  override def anonymousReadAccessQ = s"_isPublic"
+  override def readAccessQ(requestingUserId: ObjectId) = s"_isPublic or (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}'"
+  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}"
 
   // read operations
 
@@ -190,7 +190,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       count <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString).length.result)
     } yield count
 
-  // write operations
+  // update operations
 
   def insertOne(a: AnnotationSQL): Fox[Unit] = {
     for {

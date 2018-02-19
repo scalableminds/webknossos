@@ -74,6 +74,9 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
       r.isdeleted
     ))
 
+  override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _owner = '${requestingUserId.id}'"
+  override def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}"
+
   // read operations
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[ProjectSQL] =
@@ -234,29 +237,6 @@ object ProjectService extends FoxImplicits with LazyLogging {
 }
 
 object ProjectDAO {
-
-  /*
-  override val AccessDefinitions = new DefaultAccessDefinitions {
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-
-    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("_owner" -> user._id))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-  }
-*/
-
   def findOneByName(name: String)(implicit ctx: DBAccessContext) =
     for {
       projectSQL <- ProjectSQLDAO.findOneByName(name)

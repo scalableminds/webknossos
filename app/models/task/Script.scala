@@ -73,6 +73,7 @@ object ScriptSQLDAO extends SQLDAO[ScriptSQL, ScriptsRow, Scripts] {
 
   def updateOne(s: ScriptSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that s.created is skipped
+      _ <- assertUpdateAccess(s._id)
       _ <- run(sqlu"""update webknossos.scripts
                           set
                             _owner = ${s._owner.id},

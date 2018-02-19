@@ -192,30 +192,33 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield ()
   }
 
-  def updateTotalInstances(taskId: ObjectId, newTotalInstances: Long): Fox[Unit] = {
-    val q = for { c <- Tasks if c._Id === taskId.id } yield c.totalinstances
+  def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for { c <- Tasks if c._Id === id.id } yield c.totalinstances
     for {
+      _ <- assertUpdateAccess(id)
       _ <- run(q.update(newTotalInstances))
     } yield ()
   }
 
-  def removeScriptFromAllTasks(scriptId: ObjectId): Fox[Unit] = {
+  def removeScriptFromAllTasks(scriptId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       _ <- run(sqlu"update webknossos.tasks set _script = null where _script = ${scriptId.id}")
     } yield ()
   }
 
-  def logTime(taskId: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"update webknossos.tasks set tracingTime = tracingTime + $time where _id = ${taskId.id}")
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"update webknossos.tasks set tracingTime = tracingTime + $time where _id = ${id.id}")
     } yield ()
 
-  def removeOneAndItsAnnotations(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val queries = List(
-      sqlu"update webknossos.tasks set isDeleted = true where _id = ${taskId.id}",
-      sqlu"update webknossos.annotations set isDeleted = true where _task = (select _id from webknossos.tasks where _id = ${taskId.id})"
+      sqlu"update webknossos.tasks set isDeleted = true where _id = ${id.id}",
+      sqlu"update webknossos.annotations set isDeleted = true where _task = (select _id from webknossos.tasks where _id = ${id.id})"
     )
     for {
+      _ <- assertUpdateAccess(id)
       _ <- run(DBIO.sequence(queries).transactionally)
     } yield ()
   }

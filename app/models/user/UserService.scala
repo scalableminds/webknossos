@@ -9,7 +9,6 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationService
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
 import oxalis.mail.DefaultMails
@@ -89,20 +88,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
       _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
     } yield {
       passwordInfo
-    }
-  }
-
-  def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
-    if (user.teamNames.diff(issuingUser.adminTeamNames).isEmpty) {
-      // if a user doesn't belong to any team any more he gets deleted
-      UserDAO.removeById(user._id).flatMap {
-        _ =>
-          UserCache.invalidateUser(user.id)
-          AnnotationService.freeAnnotationsOfUser(user)
-      }
-    } else {
-      // the issuing user is not able to remove the user from all teams, therefore the account is not getting deleted
-      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.adminTeams.contains(t.team)))
     }
   }
 

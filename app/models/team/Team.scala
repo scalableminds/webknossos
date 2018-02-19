@@ -69,7 +69,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   }
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
+    s"""  (_id in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
    or (_parent in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"""
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] =

@@ -4,18 +4,18 @@ import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.mohiva.play.silhouette.impl.daos.AuthenticatorDAO
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import org.joda.time.DateTime
 import oxalis.security.TokenType.TokenType
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import slick.lifted.Rep
 import slick.jdbc.PostgresProfile.api._
+import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
-import scala.concurrent.duration._
 import scala.concurrent.Future
+import scala.concurrent.duration._
 
 case class TokenSQL(_id: ObjectId,
                     value: String,
@@ -99,14 +99,16 @@ object TokenSQLDAO extends SQLDAO[TokenSQL, TokensRow, Tokens] {
                           ${new java.sql.Timestamp(t.expirationDateTime.getMillis)}, ${t.idleTimeout.map(_.toMillis)}, '#${t.tokenType}', ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})""")
     } yield ()
 
-  def updateValues(_id: ObjectId, value: String, lastUsedDateTime: DateTime, expirationDateTime: DateTime, idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateValues(id: ObjectId, value: String, lastUsedDateTime: DateTime, expirationDateTime: DateTime, idleTimeout: Option[FiniteDuration])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(id)
       _ <- run(sqlu"""update webknossos.tokens
                       set
                         value = ${value},
                         lastUsedDateTime = ${new java.sql.Timestamp(lastUsedDateTime.getMillis)},
                         expirationDateTime = ${new java.sql.Timestamp(expirationDateTime.getMillis)},
-                        idleTimeout = ${idleTimeout.map(_.toMillis)}""")
+                        idleTimeout = ${idleTimeout.map(_.toMillis)}
+                      where id = ${id.id}""")
     } yield ()
 
   def deleteOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[Unit] = {

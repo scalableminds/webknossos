@@ -90,6 +90,7 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
 
   def updateOne(t: TimeSpanSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for { //note that t.created is skipped
+      _ <- assertUpdateAccess(t._id)
       r <- run(sqlu"""update webknossos.timespans
                 set
                   _user = ${t._user.id},

@@ -113,7 +113,9 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 
   def updateFieldsByName(name: String, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- Datasets if (notdel(row) && row.name === name)} yield (row.description, row.ispublic)
-    for {_ <- run(q.update(description, isPublic))} yield ()
+    for {
+      _ <- run(q.update(description, isPublic))
+    } yield ()
   }
 
   def insertOne(d: DataSetSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {

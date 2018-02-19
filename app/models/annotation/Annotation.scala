@@ -202,18 +202,15 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     } yield ()
   }
 
-  def logTime(annotationId: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${annotationId.id}")
-    } yield ()
-
-  def cancelAllOfUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- run(sqlu"update webknossos.annotations set state = '#${AnnotationState.Cancelled}' where state in #${writeStructTupleWithQuotes(AnnotationTypeSQL.UserTracings.map(_.toString))}")
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"update webknossos.annotations set tracingTime = tracingTime + $time where _id = ${id.id}")
     } yield ()
 
   def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext) =
     for {
+      _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set state = '#${state}' where _id = ${id.id}")
     } yield ()
 
@@ -228,21 +225,25 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set tags = '#${writeArrayTuple(tags.map(sanitize(_)))}' where _id = ${id.id}")
     } yield ()
 
   def updateModified(id: ObjectId, modified: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set modified = ${new java.sql.Timestamp(modified)} where _id = ${id.id}")
     } yield ()
 
   def updateTracingReference(id: ObjectId, tracing: TracingReference)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set tracingId = ${tracing.id}, tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
+      _ <- assertUpdateAccess(id)
       _ <- run(sqlu"update webknossos.annotations set statistics = '#${sanitize(statistics.toString)}' where _id = ${id.id}")
     } yield ()
 
@@ -480,9 +481,6 @@ object AnnotationDAO extends FoxImplicits {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
       count <- AnnotationSQLDAO.countActiveByTask(ObjectId.fromBsonId(_task), typ)
     } yield count
-
-  def cancelAnnotationsOfUser(_user: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationSQLDAO.cancelAllOfUser(ObjectId.fromBsonId(_user))
 
   def updateState(_annotation: BSONObjectID, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =
     for {

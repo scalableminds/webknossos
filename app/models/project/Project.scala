@@ -100,6 +100,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
 
   def updateOne(p: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for { //note that p.created is skipped
+      _ <- assertUpdateAccess(p._id)
       _ <- run(sqlu"""update webknossos.projects
                           set
                             _team = ${p._team.id},

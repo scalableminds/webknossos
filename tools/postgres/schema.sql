@@ -114,7 +114,7 @@ CREATE TABLE webknossos.projects(
   name VARCHAR(256) NOT NULL CHECK (name ~* '^.{3,}$'),
   priority BIGINT NOT NULL DEFAULT 100,
   paused BOOLEAN NOT NULL DEFAULT false,
-  expectedTime BIGINT,  -- TODO: Interval?
+  expectedTime BIGINT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
@@ -152,7 +152,7 @@ CREATE TABLE webknossos.tasks(
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
-  tracingTime BIGINT,  -- TODO: Interval?
+  tracingTime BIGINT,
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
@@ -181,7 +181,7 @@ CREATE TABLE webknossos.timespans(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _user CHAR(24) NOT NULL,
   _annotation CHAR(24),
-  time BIGINT NOT NULL, -- TODO: Interval?
+  time BIGINT NOT NULL,
   lastUpdate TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   numberOfUpdates BIGINT NOT NULL DEFAULT 1,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),

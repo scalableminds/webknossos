@@ -119,8 +119,8 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       )
     }
 
-  override def anonymousReadAccessQ = s"_isPublic"
-  override def readAccessQ(requestingUserId: ObjectId) = s"_isPublic or (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}'"
+  override def anonymousReadAccessQ = s"isPublic"
+  override def readAccessQ(requestingUserId: ObjectId) = s"isPublic or (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}'"
   override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}"
 
   // read operations
@@ -133,40 +133,52 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
-  def findAllFor(_user: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] = {
-    def stateQuery(r: Annotations) = isFinished match {
-      case Some(true) => r.state === AnnotationState.Finished.toString
-      case Some(false) => r.state === AnnotationState.Active.toString
-      case None => r.state =!= AnnotationState.Cancelled.toString
+  def findAllFor(userId: ObjectId, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] = {
+    val stateQuery = isFinished match {
+      case Some(true) => s"state = '${AnnotationState.Finished.toString}'"
+      case Some(false) => s"state = '${AnnotationState.Active.toString}'"
+      case None => s"state != '${AnnotationState.Cancelled.toString}'"
     }
     for {
-      r <- run(Annotations.filter(r => notdel(r) && r._User === _user.id && stateQuery(r) && r.typ === annotationType.toString).take(limit).sortBy(_._Id.desc).result)
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select * from #${existingCollectionName}
+                     where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}
+                     order by _id desc limit ${limit}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
 
   def findAllActiveFor(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
-      r <- run(Annotations.filter(r => notdel(r) && r._User === userId.id && r.typ === typ.toString && r.state === AnnotationState.Active.toString).result)
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select * from #${existingCollectionName}
+                     where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAllByTaskIdAndType(taskId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
       r <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select * from #${existingCollectionName}
+                     where _task = ${taskId.id} and typ = '#${typ.toString}' and state != '#${AnnotationState.Cancelled.toString}' and #${accessQuery}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAllUnfinishedByTaskIds(taskIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
-      r <- run(Annotations.filter(r => notdel(r) && r._Task.inSetBind(taskIds.map(_.id)) && r.state =!= AnnotationState.Finished.toString).result)
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select * from #${existingCollectionName}
+                     where _task in #{writeStructTupleWithQuotes(taskIds.map(_.id)} and state != '#${AnnotationState.Finished.toString}' and #${accessQuery}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
     for {
-      rOpt <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
-      r <- rOpt.toFox
+      rList <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
+      r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
       parsed
@@ -176,18 +188,19 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def countActiveAnnotationsFor(userId: ObjectId, typ: AnnotationTypeSQL, excludedTeamNames: List[String])(implicit ctx: DBAccessContext): Fox[Int] =
     for {
-      count <- run(Annotations.filter(r => (notdel(r) && r._User === userId.id && r.typ === typ.toString && r.state === AnnotationState.Active.toString))
-        .join(Teams).on((_._Team === _._Id)).filterNot(r => r._2.name.inSetBind(excludedTeamNames)).length.result)
-    } yield count
-
-  def countByTaskAndUser(taskId: ObjectId, userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[Int] =
-    for {
-      count <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r._User === userId.id && r.typ === typ.toString).length.result)
+      accessQuery <- readAccessQuery
+      countList <- run(sql"""select count(*)
+                         from (select a._id from (select * from #${existingCollectionName} where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) a
+                           join webknossos.teams t on a._team = t._id where not t.name in #${writeStructTupleWithQuotes(excludedTeamNames)}) q
+                         """.as[Int])
+      count <- countList.headOption
     } yield count
 
   def countActiveByTask(taskId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
-      count <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString).length.result)
+      accessQuery <- readAccessQuery
+      countList <- run(sql"select count(*) from (select _id from #${existingCollectionName} where _task = ${taskId.id} and typ = '#${typ.toString}' and #${accessQuery}) q".as[Int])
+      count <- countList.headOption
     } yield count
 
   // update operations
@@ -437,12 +450,6 @@ object AnnotationDAO extends FoxImplicits {
     for {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
       count <- AnnotationSQLDAO.countActiveAnnotationsFor(ObjectId.fromBsonId(_user), typ, excludeTeams)
-    } yield count
-
-  def countByTaskIdAndUser(_user: BSONObjectID, _task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
-    for {
-      typ <- AnnotationTypeSQL.fromString(annotationType).toFox
-      count <- AnnotationSQLDAO.countByTaskAndUser(ObjectId.fromBsonId(_user), ObjectId.fromBsonId(_task), typ)
     } yield count
 
   def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = {

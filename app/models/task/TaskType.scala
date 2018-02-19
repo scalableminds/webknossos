@@ -69,7 +69,6 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with 
   override def readAccessQ(requestingUserId: ObjectId) = s"_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')"
   override def updateAccessQ(requestingUserId: ObjectId) = s"_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')"
 
-
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskTypeSQL] =
     for {
       accessQuery <- readAccessQuery

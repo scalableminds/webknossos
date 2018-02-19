@@ -1,6 +1,6 @@
 package models.team
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import models.user.{User, UserDAO}
@@ -72,20 +72,31 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     s"""  (_id in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))
    or (_parent in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"""
 
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TeamsRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[TeamsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
     for {
-      rOpt <- run(Teams.filter(r => notdel(r) && r.name === name).result.headOption)
-      r <- rOpt.toFox
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[TeamsRow])
+      r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
       parsed
     }
-
-  def findAllRootTeams(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] =
-    for {
-      r <- run(Teams.filter(t => notdel(t) && t.behaveslikerootteam).result)
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
 
   def insertOne(t: TeamSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
@@ -197,9 +208,6 @@ object TeamService {
 
   def remove(team: Team)(implicit ctx: DBAccessContext) =
     TeamDAO.removeById(team._id)
-
-  def rootTeams =
-    TeamDAO.findRootTeams(GlobalAccessContext)
 }
 
 object TeamDAO {
@@ -209,14 +217,6 @@ object TeamDAO {
       teamSQL <- TeamSQLDAO.findOneByName(name)
       team <- Team.fromTeamSQL(teamSQL)
     } yield team
-
-
-  def findRootTeams(implicit ctx: DBAccessContext): Fox[List[Team]] = {
-    for {
-      teamsSQL <- TeamSQLDAO.findAllRootTeams
-      teams <- Fox.combined(teamsSQL.map(Team.fromTeamSQL(_)))
-    } yield teams
-  }
 
   def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[Team] =
     for {

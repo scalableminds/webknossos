@@ -15,8 +15,8 @@ import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
@@ -86,10 +86,28 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     s"""_id not in (select _user from webknossos.user_team_roles)
        or (_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')))"""
 
+
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[UserSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[UsersRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[UserSQL]] = {
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[UsersRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[UserSQL] =
     for {
-      rOpt <- run(Users.filter(r => notdel(r) && r.email === email).result.headOption)
-      r <- rOpt.toFox
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where email = ${email} and #${accessQuery}".as[UsersRow])
+      r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
       parsed
@@ -97,16 +115,18 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
 
   def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(implicit ctx: DBAccessContext) =
     for {
-      r <- run(sql"""select webknossos.users_.*
-                       from webknossos.users_ join webknossos.user_team_roles on webknossos.users_._id = webknossos.user_team_roles._user
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select u.*
+                       from (select * from ${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                        where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
-                             and (webknossos.users_.isDeactivated = false or webknossos.users_.isDeactivated = ${includeDeactivated})""".as[UsersRow])
+                             and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})""".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[UserSQL]] =
     for {
-      r <- run(Users.filter(row => notdel(row) && row._Id.inSetBind(ids.map(_.id))).result)
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from ${existingCollectionName} where _id in #${writeStructTupleWithQuotes(ids.map(_.id))} and #${accessQuery}".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

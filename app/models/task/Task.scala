@@ -98,15 +98,33 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"
   override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}'))"
 
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TasksRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[TasksRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
   def findAllByTaskType(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] =
     for {
-      r <- run(Tasks.filter(t => notdel(t) && t._Tasktype === taskTypeId.id).result)
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where _taskType = ${taskTypeId.id} and #${accessQuery}".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] =
     for {
-      r <- run(Tasks.filter(t => notdel(t) && t._Project === projectId.id).result)
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -138,15 +156,16 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def findAllByPojectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
     /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
     val projectFilterFox = projectOpt match {
-      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"and _project = '${sanitize(project._id.toString)}'"
-      case _ => Fox.successful("")
+      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"(_project = '${sanitize(project._id.toString)}')"
+      case _ => Fox.successful("true")
     }
-    val taskTypeFilter = taskTypeOpt.map(tId => s"and _taskType = '${sanitize(tId)}'").getOrElse("")
-    val idsFilter = idsOpt.map(ids => if (ids.isEmpty) "and false" else s"and _id in ${writeStructTupleWithQuotes(ids.map(sanitize(_)))}").getOrElse("")
+    val taskTypeFilter = taskTypeOpt.map(tId => s"(_taskType = '${sanitize(tId)}')").getOrElse("true")
+    val idsFilter = idsOpt.map(ids => if (ids.isEmpty) "false" else s"(_id in ${writeStructTupleWithQuotes(ids.map(sanitize(_)))})").getOrElse("true")
 
     for {
       projectFilter <- projectFilterFox
-      q = sql"select * from webknossos.tasks where webknossos.tasks.isDeleted = false #${projectFilter} #${taskTypeFilter} #${idsFilter}"
+      accessQuery <- readAccessQuery
+      q = sql"select * from webknossos.tasks where webknossos.tasks.isDeleted = false and #${projectFilter} and #${taskTypeFilter} and #${idsFilter} and #${accessQuery}"
       r <- run(q.as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed

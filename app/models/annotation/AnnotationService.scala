@@ -123,9 +123,6 @@ object AnnotationService
     AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Explorational, limit)
   }
 
-  def countTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countByTaskIdAndUser(user._id, _task, AnnotationType.Task)
-
   def tracingFromBase(annotationBase: Annotation)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
     for {
       dataSet: DataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName)

@@ -96,16 +96,33 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     }
   }
 
-  override def anonymousReadAccessQ = s"_isPublic"
+  override def anonymousReadAccessQ = s"isPublic"
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}'))' +
-        or _id in (select _dataSet
+    s"""(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}'))
+          or _id in (select _dataSet
           from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))"""
+
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[DatasetsRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataSetSQL]] = {
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[DatasetsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
     for {
-      rOpt <- run(Datasets.filter(r => notdel(r) && r.name === name).result.headOption)
-      r <- rOpt.toFox
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[DatasetsRow])
+      r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
       parsed

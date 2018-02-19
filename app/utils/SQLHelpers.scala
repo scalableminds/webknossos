@@ -107,8 +107,8 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
         userIdBox <- userIdFromCtx.futureBox
       } yield {
         userIdBox match {
-          case Full(userId) => readAccessQ(userId)
-          case _ => anonymousReadAccessQ
+          case Full(userId) => "(" + readAccessQ(userId) + ")"
+          case _ => "(" + anonymousReadAccessQ + ")"
         }
       }
     }

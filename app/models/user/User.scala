@@ -117,7 +117,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"""select u.*
-                       from (select * from ${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
+                       from (select * from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                        where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
                              and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})""".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
@@ -126,7 +126,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[UserSQL]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from ${existingCollectionName} where _id in #${writeStructTupleWithQuotes(ids.map(_.id))} and #${accessQuery}".as[UsersRow])
+      r <- run(sql"select * from #${existingCollectionName} where _id in #${writeStructTupleWithQuotes(ids.map(_.id))} and #${accessQuery}".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

@@ -90,7 +90,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
   override def findAll(implicit ctx: DBAccessContext): Fox[List[ProjectSQL]] = {
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[ProjectsRow])
+      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery} order by created".as[ProjectsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }

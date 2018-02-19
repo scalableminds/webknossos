@@ -30,6 +30,7 @@ case class UserSQL(
                   lastName: String,
                   lastActivity: Long = System.currentTimeMillis(),
                   userConfiguration: JsValue,
+                  md5hash: String,
                   loginInfo: LoginInfo,
                   passwordInfo: PasswordInfo,
                   isSuperUser: Boolean,
@@ -47,6 +48,7 @@ object UserSQL {
       user.lastName,
       user.lastActivity,
       Json.toJson(user.userConfiguration.configuration),
+      user.md5hash,
       user.loginInfo,
       user.passwordInfo,
       user.isSuperUser,
@@ -68,6 +70,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       r.lastname,
       r.lastactivity.getTime,
       Json.parse(r.userconfiguration),
+      r.md5hash,
       LoginInfo(r.logininfoProviderid, r.logininfoProviderkey),
       PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
       r.issuperuser,
@@ -111,10 +114,10 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   def insertOne(u: UserSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- run(
-        sqlu"""insert into webknossos.users(_id, email, firstName, lastName, lastActivity, userConfiguration, loginInfo_providerID,
+        sqlu"""insert into webknossos.users(_id, email, firstName, lastName, lastActivity, userConfiguration, md5hash, loginInfo_providerID,
                                             loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isSuperUser, created, isDeleted)
                                             values(${u._id.id}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(u.lastActivity)},
-                                                   '#${sanitize(u.userConfiguration.toString)}', '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+                                                   '#${sanitize(u.userConfiguration.toString)}', ${u.md5hash}, '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
                                                    '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isSuperUser},
                                                    ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
@@ -406,7 +409,7 @@ object User extends FoxImplicits {
         s.firstName,
         s.lastName,
         !s.isDeactivated,
-        "", //TODO: md5 ?
+        s.md5hash,
         teamRoles,
         UserConfiguration(userConfiguration),
         dataSetConfigurations,

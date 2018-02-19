@@ -33,7 +33,7 @@ case class TaskSQL(
                   totalInstances: Long,
                   tracingTime: Option[Long],
                   boundingBox: Option[BoundingBox],
-                  editPosition: Point3D, //TODO: discern in schema between point (int) and vector (double)?
+                  editPosition: Point3D,
                   editRotation: Vector3D,
                   creationInfo: Option[String],
                   created: Long = System.currentTimeMillis(),

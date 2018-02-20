@@ -90,10 +90,12 @@ object Global extends GlobalSettings with LazyLogging{
   def ensurePostgresDatabase = {
     logger.info("Running ensure_db.sh with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
 
-    // this script is copied to the stage directory in AssetCompilation
-    val result = "./tools/postgres/ensure_db.sh" !
+    val processLogger = ProcessLogger(
+      (o: String) => logger.info(o),
+      (e: String) => logger.error(e))
 
-    //TODO: redirect output to logger
+    // this script is copied to the stage directory in AssetCompilation
+    val result = "./tools/postgres/ensure_db.sh" ! processLogger
 
     if (result != 0)
       throw new Exception("Could not ensure Postgres database. Is postgres installed?")

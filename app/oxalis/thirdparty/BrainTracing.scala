@@ -46,7 +46,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
           "firstname" -> user.firstName,
           "lastname" -> user.lastName,
           "email" -> user.email,
-          "pword" -> user.md5hash)
+          "pword" -> "")
         .get()
         .map { response =>
           result complete (response.status match {

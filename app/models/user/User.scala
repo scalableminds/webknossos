@@ -24,7 +24,6 @@ case class User(
                  firstName: String,
                  lastName: String,
                  isActive: Boolean = false,
-                 md5hash: String = "",
                  teams: List[TeamMembership],
                  userConfiguration: UserConfiguration = UserConfiguration.default,
                  dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,

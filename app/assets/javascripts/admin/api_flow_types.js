@@ -244,4 +244,8 @@ export type APIOpenTasksReportType = {
   +assignmentsByProjects: { [projectName: string]: number },
 };
 
+export type APIFeatureToggles = {
+  +discussionBoard: boolean,
+};
+
 export default {};

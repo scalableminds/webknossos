@@ -2,13 +2,15 @@ package controllers
 
 import javax.inject.Inject
 
+import com.typesafe.config.ConfigRenderOptions
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import models.analytics.{AnalyticsDAO, AnalyticsEntry}
 import models.binary.DataStoreHandlingStrategy
 import play.api.i18n.MessagesApi
+import play.api.Play.current
 import play.api.libs.json.Json
 
-class Application @Inject()(val messagesApi: MessagesApi) extends Controller{
+class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
 
   def buildInfo = UserAwareAction { implicit request =>
     val token = request.identity.flatMap { user =>
@@ -29,4 +31,9 @@ class Application @Inject()(val messagesApi: MessagesApi) extends Controller{
         request.body))
     Ok
   }
+
+  def features = UserAwareAction { implicit request =>
+    Ok(current.configuration.underlying.getConfig("features").resolve.root.render(ConfigRenderOptions.concise()))
+  }
+
 }

@@ -45,8 +45,8 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long) = SecuredAction.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, false) ?~> Messages("user.notFound")
-      _ <- request.identity.isAdminOf(user) ?~> Messages("user.notAuthorised")
-      js <- loggedTimeForUserListByTimestamp(user,startDate, endDate)
+      _ <- request.identity.isAdminOfOrSelf(user) ?~> Messages("user.notAuthorised")
+      js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
     } yield {
       Ok(js)
     }

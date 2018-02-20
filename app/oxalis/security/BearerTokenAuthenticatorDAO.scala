@@ -129,7 +129,7 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
     findOneByValue(value)(GlobalAccessContext).toFutureOption
 
   override def add(authenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] =
-    replaceOrInsert(authenticator, TokenType.Authentication)(GlobalAccessContext)
+    add(authenticator, TokenType.Authentication)(GlobalAccessContext)
 
   override def update(newAuthenticator: BearerTokenAuthenticator): Future[BearerTokenAuthenticator] = {
     implicit val ctx = GlobalAccessContext
@@ -160,11 +160,13 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
       tokenAuthenticator <- tokenSQL.toBearerTokenAuthenticator
     } yield tokenAuthenticator).toFutureOption
 
-  def replaceOrInsert(authenticator: BearerTokenAuthenticator, tokenType: TokenType)(implicit ctx: DBAccessContext): Future[BearerTokenAuthenticator] = for {
+  def add(authenticator: BearerTokenAuthenticator, tokenType: TokenType, deleteOld: Boolean = true)(implicit ctx: DBAccessContext): Future[BearerTokenAuthenticator] = for {
     oldAuthenticatorOpt <- findOneByLoginInfo(authenticator.loginInfo, tokenType)
     _ <- insert(authenticator, tokenType)(GlobalAccessContext).futureBox
   } yield {
-    oldAuthenticatorOpt.map(a => remove(a.id))
+    if (deleteOld) {
+      oldAuthenticatorOpt.map(a => remove(a.id))
+    }
     authenticator
   }
 

@@ -363,9 +363,12 @@ case class User(
   def isEditableBy(other: User) =
     other.hasAdminAccess && ( teams.isEmpty || teamNames.exists(other.isAdminOf))
 
-  def isAdminOf(user: User): Boolean ={
+  def isAdminOfOrSelf(other: User) =
+    other._id == _id || isAdminOf(other)
+
+  def isAdminOf(user: User): Boolean =
     user.teamNames.intersect(this.adminTeamNames).nonEmpty
-  }
+
 }
 
 object User extends FoxImplicits {

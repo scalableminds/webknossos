@@ -7,12 +7,17 @@ import _ from "lodash";
 import * as THREE from "three";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
-import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
+import AbstractPlaneMaterialFactory, {
+  sanitizeName,
+  createDataTexture,
+} from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { TextureMapType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { zoomedAddressToPosition } from "oxalis/model/binary/texture_bucket_manager";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -37,6 +42,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
       },
+      anchorPoint: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
       zoomStep: {
         type: "f",
         value: 1,
@@ -48,20 +57,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     return [color[0] / 255, color[1] / 255, color[2] / 255];
   }
 
-  createTextures(): void {
+  attachTextures(textures: TextureMapType): void {
     // create textures
-    let shaderName;
-    this.textures = {};
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      const bytes = binary.targetBitDepth >> 3;
-      shaderName = this.sanitizeName(name);
-      this.textures[shaderName] = this.createDataTexture(this.tWidth, bytes);
-      this.textures[shaderName].binaryCategory = binary.category;
-      this.textures[shaderName].binaryName = binary.name;
-    }
+    this.textures = textures;
 
-    for (shaderName of Object.keys(this.textures)) {
+    // debugger;
+
+    for (let shaderName of Object.keys(this.textures)) {
       const texture = this.textures[shaderName];
       this.uniforms[`${shaderName}_texture`] = {
         type: "t",
@@ -78,6 +80,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         };
       }
     }
+    console.log("uniforms", this.uniforms);
   }
 
   makeMaterial(options?: ShaderMaterialOptionsType): void {
@@ -102,6 +105,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms.globalPosition.value.set(x, y, z);
     };
 
+    this.material.setAnchorPoint = ([x, y, z]) => {
+      this.uniforms.anchorPoint.value.set(x, y, z);
+    };
+
     this.material.setSegmentationAlpha = alpha => {
       this.uniforms.alpha.value = alpha / 100;
     };
@@ -111,7 +118,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     listenToStoreProperty(
       storeState => getRequestLogZoomStep(storeState),
       zoomStep => {
-        this.uniforms.zoomStep.value = zoomStep
+        this.uniforms.zoomStep.value = zoomStep;
       },
     );
   }
@@ -126,13 +133,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   getFragmentShader(): string {
-    const colorLayerNames = _.map(Model.getColorBinaries(), b => this.sanitizeName(b.name));
+    const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
     const segmentationBinary = Model.getSegmentationBinary();
 
     return _.template(
       `\
 <% _.each(layers, function(name) { %>
   uniform sampler2D <%= name %>_texture;
+  uniform sampler2D <%= name %>_lookup_texture;
   uniform float <%= name %>_brightness;
   uniform float <%= name %>_contrast;
   uniform vec3 <%= name %>_color;
@@ -144,6 +152,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 uniform vec2 offset, repeat;
 uniform float alpha;
 uniform vec3 globalPosition;
+uniform vec3 anchorPoint;
 uniform float zoomStep;
 
 varying vec2 vPos;
@@ -162,11 +171,33 @@ float div(float a, float b) {
   return floor(a / b);
 }
 
+float round(float a) {
+  return floor(a + 0.5);
+}
+
+vec3 getRGBAtIndex(sampler2D texture, float textureWidth, float idx, float multiplier) {
+  float finalPosX = mod(idx, textureWidth);
+  float finalPosY = div(idx, textureWidth);
+
+  return texture2D(
+      texture,
+      vec2(
+        (floor(finalPosX) + 0.5 * multiplier) / textureWidth,
+        (floor(finalPosY) + 0.5 * multiplier) / textureWidth
+      )
+    ).rgb;
+}
+
+float linearizeVec3ToIndex(vec3 position, float base) {
+  return position.z * base * base + position.y * base + position.x;
+}
+
+
 void main() {
   float golden_ratio = 0.618033988749895;
   float color_value  = 0.0;
   vec2 texture_pos = vUv * repeat + offset;
-  // Need to mirror y since (0, 0) refers to the lower-left corner in WebGL instead of the upper-left corner
+  // Mirror y since (0, 0) refers to the lower-left corner in WebGL instead of the upper-left corner
   texture_pos = vec2(texture_pos.x, 1.0 - texture_pos.y);
   // <% if (hasSegmentation) { %>
   //   vec4 volume_color = texture2D(<%= segmentationName %>_texture, texture_pos);
@@ -199,42 +230,83 @@ void main() {
   //   gl_FragColor = vec4(data_color, 1.0);
   // }
 
-  float bucketPerDim = 22.0;
+  float bucketPerDim = 16.0;
   float bucketWidth = 32.0;
   float bucketLength = bucketWidth * bucketWidth * bucketWidth;
   float r_texture_width = 512.0;
-  float d_texture_width = 4096.0;
+  float d_texture_width = 8192.0;
+  float l_texture_width = 64.0; // next power of two ceil(floor(bucketsPerDim**3))
+  float bytesPerLookUpEntry = 1.0; // todo: pass as uniform or from template
+
   // texture_pos = vec2(mod(texture_pos.x, 1.0/9.0), mod(texture_pos.y, 1.0/9.0));
-  float xCoord = mod(floor(texture_pos.x * r_texture_width - 0.0000), r_texture_width);
-  float yCoord = mod(floor(texture_pos.y * r_texture_width - 0.0000), r_texture_width);
-  float xBucketIdx = div(xCoord, bucketWidth); // works
-  float yBucketIdx = div(yCoord, bucketWidth); // works
-  float bucketIdx = yBucketIdx * bucketPerDim + xBucketIdx; // works. todo: adapt when we pre-fetch in z-direction
-  float xOffsetInBucket = mod(xCoord, bucketWidth); // works
-  float yOffsetInBucket = mod(yCoord, bucketWidth); // works
-  float zOffsetInBucket = mod(floor(globalPosition[2] / (pow(2.0, zoomStep))), bucketWidth); // works
+  // old
+  // float xCoord = mod(floor(texture_pos.x * r_texture_width - 0.0000), r_texture_width); // [0...512]
+  // float yCoord = mod(floor(texture_pos.y * r_texture_width - 0.0000), r_texture_width);
 
-  float bucketIdxInTexture = bucketIdx * bucketLength;
-  float pixelIdxInBucket = zOffsetInBucket * bucketWidth * bucketWidth + yOffsetInBucket * bucketWidth + xOffsetInBucket;
-  float finalPos = pixelIdxInBucket + bucketIdxInTexture;
-  float finalPosX = mod(finalPos, d_texture_width);
-  float finalPosY = div(finalPos, d_texture_width);
+  // previous
+  // float xCoord = mod(floor(texture_pos.x * ((r_texture_width - 1.0)/r_texture_width)), r_texture_width);
+  // float yCoord = mod(floor(texture_pos.y * ((r_texture_width - 1.0)/r_texture_width)), r_texture_width);
 
-  vec3 bucketColor = texture2D(
+  float xCoord = mod(floor(texture_pos.x * (r_texture_width * 0.99999)), r_texture_width);
+  float yCoord = mod(floor(texture_pos.y * (r_texture_width * 0.99999)), r_texture_width);
+
+  float zCoord = floor((globalPosition[2] - anchorPoint[2] * pow(2.0, 5.0 + zoomStep)) / pow(2.0, zoomStep));
+  // float zCoord = floor((globalPosition[2] / pow(2.0, zoomStep) - anchorPoint[2] / 32.0));
+
+  vec3 bucketPosition = vec3(
+    div(xCoord, bucketWidth), // works
+    div(yCoord, bucketWidth), // works
+    div(zCoord, bucketWidth)  // works
+  );
+  float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim); // save
+  float bucketIdxInTexture = bucketIdx * bytesPerLookUpEntry; // save
+
+  float bucketAddress = getRGBAtIndex(
+    <%= layers[0] %>_lookup_texture,
+    l_texture_width,
+    bucketIdxInTexture,
+    0.1
+  ).x;
+
+
+  vec3 offsetInBucket = vec3(
+    mod(xCoord, bucketWidth), // works
+    mod(yCoord, bucketWidth), // works
+    mod(zCoord, bucketWidth)  // works
+  );
+
+  float pixelIdxInBucket = linearizeVec3ToIndex(offsetInBucket, bucketWidth);
+  float pixelIdxInDataTexture = pixelIdxInBucket + bucketLength * bucketAddress;
+
+  vec3 bucketColor = getRGBAtIndex(
     <%= layers[0] %>_texture,
-    vec2(
-      (floor(finalPosX + 0.5)) / d_texture_width,
-      (floor(finalPosY + 0.5)) / d_texture_width
-    )
-  ).rgb;
+    d_texture_width,
+    pixelIdxInDataTexture,
+    1.
+  );
 
   gl_FragColor = vec4(bucketColor, 1.0);
-}\
+  // gl_FragColor = vec4(mix(bucketColor, vec3(bucketAddress / 144., 0.0, 0.0), <%= layers[0] %>_brightness), 1.0);
+  // mix( data_color, hsv_to_rgb(HSV), alpha )
+  // gl_FragColor = vec4(bucketPosition / vec3(12.0, 12.0, 12.0), 1.0);
+
+  // gl_FragColor = vec4(bucketAddress / 144.0, 0.0, 0.0, 1.0);
+  if (bucketAddress < 0.) {
+    gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+  }
+  // gl_FragColor = vec4(bucketAddress / pow(12.0, 2.0), 0.0, 0.0, 1.0);
+  // gl_FragColor = vec4(pixelIdxInBucket / pow(32.0, 2.0), 0.0, 0.0, 1.0);
+  // gl_FragColor = vec4(texture_pos.x, texture_pos.y, 0.0, 1.0);
+  // gl_FragColor = vec4(0.0, bucketIdx / pow(l_texture_width, 2.0), 0.0, 1.0);
+}
+
+
+\
 `,
     )({
       layers: colorLayerNames,
       hasSegmentation: segmentationBinary != null,
-      segmentationName: this.sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
+      segmentationName: sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
     });
   }

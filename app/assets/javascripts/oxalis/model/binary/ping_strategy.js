@@ -44,8 +44,6 @@ export class AbstractPingStrategy {
     const buckets = [];
     const uOffset = Math.ceil(width / 2);
     const vOffset = Math.ceil(height / 2);
-    console.log("width", Math.ceil(width));
-    console.log("height", Math.ceil(height));
 
     for (let u = -uOffset; u <= uOffset; u++) {
       for (let v = -vOffset; v <= vOffset; v++) {
@@ -100,8 +98,8 @@ export class PingStrategy extends AbstractPingStrategy {
       ];
       const width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff;
       const height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff;
-
       const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
+      // console.log("ping strategy centerBucket", centerBucket);
       const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
       const buckets = this.getBucketArray(centerBucket3, width, height);
 

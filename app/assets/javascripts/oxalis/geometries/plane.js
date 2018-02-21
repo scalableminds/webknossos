@@ -14,6 +14,7 @@ import {
   getPosition,
 } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
+import { sanitizeName } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
 import Constants, {
@@ -35,10 +36,12 @@ class Plane {
   scaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
+  renderer: THREE.WebGLRenderer;
 
-  constructor(planeID: OrthoViewType) {
+  constructor(planeID: OrthoViewType, renderer: THREE.WebGLRenderer) {
     this.planeID = planeID;
     this.displayCrosshair = true;
+    this.renderer = renderer;
 
     // PLANE_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane
@@ -53,10 +56,24 @@ class Plane {
 
   createMeshes(): void {
     const pWidth = Constants.PLANE_WIDTH;
-    const tWidth = Constants.TEXTURE_WIDTH;
+    const tWidth = Constants.DATA_TEXTURE_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
-    const textureMaterial = new PlaneMaterialFactory(4096).getMaterial();
+
+    // Gather data textures from binary
+    const textures = {};
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
+      const [dataTexture, lookUpTexture] = binary.getDataTextures();
+
+      const shaderName = sanitizeName(name);
+      const lookUpBufferName = sanitizeName(name + "_lookup");
+      textures[shaderName] = dataTexture;
+      // textures[shaderName].needsUpdate = true;
+      textures[lookUpBufferName] = lookUpTexture;
+    }
+    const textureMaterial = new PlaneMaterialFactory(tWidth, textures).getMaterial();
+
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
     // create crosshair
@@ -124,16 +141,25 @@ class Plane {
         continue;
       }
       const binary = Model.binary[name];
-      const dataBuffer = binary.planes[this.planeID].get({
-        position: getTexturePosition(Store.getState(), this.planeID),
-        zoomStep: getRequestLogZoomStep(Store.getState()),
-        area,
-      });
-
-      if (dataBuffer) {
-        this.plane.material.setData(name, dataBuffer);
-        app.vent.trigger("rerender");
+      // const dataBuffer = binary.planes[this.planeID].get({
+      //   position: getTexturePosition(Store.getState(), this.planeID),
+      //   zoomStep: getRequestLogZoomStep(Store.getState()),
+      //   area,
+      // });
+      const anchorPoint = binary.updateDataTextures(
+        getPosition(Store.getState().flycam),
+        getRequestLogZoomStep(Store.getState()),
+      );
+      if (anchorPoint) {
+        this.plane.material.setAnchorPoint(anchorPoint);
       }
+      // if (buffers) {
+      //   const [dataBuffer, lookUpBuffer, anchorPoint] = buffers;
+      //   // this.plane.material.setData(name, dataBuffer);
+      //   // this.plane.material.setData(name + "_lookup", lookUpBuffer);
+      //   console.log("anchorPoint", anchorPoint);
+      //   app.vent.trigger("rerender");
+      // }
     }
 
     this.plane.material.setScaleParams({

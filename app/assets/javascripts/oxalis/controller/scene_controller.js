@@ -65,13 +65,13 @@ class SceneController {
   }
 
   initialize() {
-    this.createMeshes();
-    this.bindToEvents();
-
     this.renderer = new THREE.WebGLRenderer({
       canvas: document.getElementById("render-canvas"),
       antialias: true,
     });
+
+    this.createMeshes();
+    this.bindToEvents();
     this.scene = new THREE.Scene();
 
     // Because the voxel coordinates do not have a cube shape but are distorted,
@@ -122,9 +122,9 @@ class SceneController {
     }
 
     this.planes = {
-      [OrthoViews.PLANE_XY]: new Plane(OrthoViews.PLANE_XY),
-      [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
-      [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
+      [OrthoViews.PLANE_XY]: new Plane(OrthoViews.PLANE_XY, this.renderer),
+      [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ, this.renderer),
+      [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ, this.renderer),
     };
 
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));
@@ -324,6 +324,7 @@ class SceneController {
   }
 
   bindToEvents(): void {
+    // TODO: check whether setting is necessary as this might be performance hogs
     Store.subscribe(() => {
       const {
         clippingDistance,
@@ -335,8 +336,13 @@ class SceneController {
       this.setClippingDistance(clippingDistance);
       this.setDisplayCrosshair(displayCrosshair);
       this.setDisplayPlanes(tdViewDisplayPlanes);
-      this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.interpolation,
+      // Setting interpolation is expensive as THREE will re-render everything and also re-upload
+      // textures
+      interpolation => this.setInterpolation(interpolation),
+    );
     listenToStoreProperty(
       storeState => storeState.tracing.userBoundingBox,
       bb => this.setUserBoundingBox(bb),

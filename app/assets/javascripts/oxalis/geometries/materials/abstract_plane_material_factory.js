@@ -5,11 +5,16 @@
 
 import _ from "lodash";
 import * as THREE from "three";
+import UpdatableTexture from "libs/UpdatableTexture";
 import app from "app";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+
+export type TextureMapType = {
+  [key: string]: THREE.DataTexture,
+};
 
 export type UniformsType = {
   [key: string]: {
@@ -24,24 +29,84 @@ export type ShaderMaterialOptionsType = {
   polygonOffsetUnits?: number,
 };
 
+export function createDataTexture(
+  width: number,
+  bytes: number,
+  optUseFloat: boolean = false,
+  minFilter: THREE.NearestFilter,
+  maxFilter: THREE.NearestFilter,
+): THREE.DataTexture {
+  const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
+
+  const newTexture = new THREE.DataTexture(
+    new (optUseFloat ? Float32Array : Uint8Array)(bytes * width * width),
+    width,
+    width,
+    format, // optUseFloat ? THREE.RGBAFormat :
+    optUseFloat ? THREE.FloatType : THREE.UnsignedByteType,
+    THREE.UVMapping,
+    THREE.ClampToEdgeWrapping,
+    THREE.ClampToEdgeWrapping,
+    minFilter,
+    maxFilter,
+  );
+
+  return newTexture;
+}
+
+export function createUpdatableTexture(
+  width: number,
+  bytes: number,
+  optUseFloat: boolean = false,
+  minFilter: THREE.NearestFilter,
+  maxFilter: THREE.NearestFilter,
+  renderer: THREE.WebGLRenderer,
+): UpdatableTexture {
+  const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
+
+  const newTexture = new UpdatableTexture(
+    width,
+    width,
+    format,
+    optUseFloat ? THREE.FloatType : THREE.UnsignedByteType,
+    THREE.UVMapping,
+    THREE.ClampToEdgeWrapping,
+    THREE.ClampToEdgeWrapping,
+    minFilter,
+    maxFilter,
+  );
+  newTexture.setRenderer(renderer);
+  newTexture.setSize(width, width);
+
+  return newTexture;
+}
+
+export function sanitizeName(name: ?string): string {
+  // Make sure name starts with a letter and contains
+  // no "-" signs
+
+  if (name == null) {
+    return "";
+  }
+  return `binary_${name.replace(/-/g, "_")}`;
+}
+
 class AbstractPlaneMaterialFactory {
   material: THREE.ShaderMaterial;
   uniforms: UniformsType;
   attributes: Object;
-  textures: {
-    [key: string]: THREE.DataTexture,
-  };
+  textures: TextureMapType;
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
   tWidth: number;
 
-  constructor(tWidth: number) {
+  constructor(tWidth: number, textures: TextureMapType) {
     this.setupUniforms();
     this.makeMaterial();
     this.tWidth = tWidth;
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
-    this.createTextures();
+    this.attachTextures(textures);
     this.setupChangeListeners();
   }
 
@@ -49,7 +114,7 @@ class AbstractPlaneMaterialFactory {
     this.uniforms = {};
 
     for (const binary of Model.getColorBinaries()) {
-      const name = this.sanitizeName(binary.name);
+      const name = sanitizeName(binary.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",
         value: 1.0,
@@ -71,11 +136,16 @@ class AbstractPlaneMaterialFactory {
     );
 
     this.material.setData = (name, data) => {
-      const textureName = this.sanitizeName(name);
-      Utils.__guard__(this.textures[textureName], x => x.image.data.set(data));
-      Utils.__guard__(this.textures[textureName], x => {
-        x.needsUpdate = true;
-      });
+      const textureName = sanitizeName(name);
+      const texture = this.textures[textureName];
+      if (texture) {
+        console.time("set texture" + name);
+        // debugger;
+        // texture.image.data.set(data);
+        texture.image.data = data;
+        console.timeEnd("set texture" + name);
+        texture.needsUpdate = true;
+      }
     };
   }
 
@@ -84,7 +154,7 @@ class AbstractPlaneMaterialFactory {
       state => state.datasetConfiguration.layers,
       layerSettings => {
         _.forEach(layerSettings, (settings, layerName) => {
-          const name = this.sanitizeName(layerName);
+          const name = sanitizeName(layerName);
           this.updateUniformsForLayer(settings, name);
         });
 
@@ -103,35 +173,8 @@ class AbstractPlaneMaterialFactory {
     return this.material;
   }
 
-  createTextures(): void {
+  attachTextures(textures: TextureMapType): void {
     throw new Error("Subclass responsibility");
-  }
-
-  sanitizeName(name: ?string): string {
-    // Make sure name starts with a letter and contains
-    // no "-" signs
-
-    if (name == null) {
-      return "";
-    }
-    return `binary_${name.replace(/-/g, "_")}`;
-  }
-
-  createDataTexture(width: number, bytes: number): void {
-    const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
-
-    return new THREE.DataTexture(
-      new Uint8Array(bytes * width * width),
-      width,
-      width,
-      format,
-      THREE.UnsignedByteType,
-      THREE.UVMapping,
-      THREE.ClampToEdgeWrapping,
-      THREE.ClampToEdgeWrapping,
-      this.minFilter,
-      this.maxFilter,
-    );
   }
 
   getFragmentShader(): string {

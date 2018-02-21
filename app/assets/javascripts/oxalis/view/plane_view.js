@@ -135,13 +135,13 @@ class PlaneView {
       this.trigger("render");
 
       const viewport: OrthoViewMapType<Vector2> = {
-        [OrthoViews.PLANE_XY]: [0, this.curWidth + Constants.VIEWPORT_GAP_WIDTH],
-        [OrthoViews.PLANE_YZ]: [
+        [OrthoViews.PLANE_XY]: [0, 0],
+        [OrthoViews.PLANE_YZ]: [this.curWidth + Constants.VIEWPORT_GAP_WIDTH, 0],
+        [OrthoViews.PLANE_XZ]: [0, this.curWidth + Constants.VIEWPORT_GAP_WIDTH],
+        [OrthoViews.TDView]: [
           this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
           this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
         ],
-        [OrthoViews.PLANE_XZ]: [0, 0],
-        [OrthoViews.TDView]: [this.curWidth + Constants.VIEWPORT_GAP_WIDTH, 0],
       };
       renderer.autoClear = true;
 
@@ -155,6 +155,7 @@ class PlaneView {
       setupRenderArea(0, 0, renderer.domElement.width, 0xffffff);
       renderer.clear();
 
+      // todo: re-activate all planes
       for (const plane of OrthoViewValues) {
         this.trigger("renderCam", plane);
         setupRenderArea(

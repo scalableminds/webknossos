@@ -4,6 +4,7 @@
  */
 
 import _ from "lodash";
+import * as THREE from "three";
 import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
 import type { CategoryType } from "oxalis/store";
@@ -18,11 +19,21 @@ import {
   SkeletonPingStrategy,
   VolumePingStrategy,
 } from "oxalis/model/binary/ping_strategy";
+import SceneController from "oxalis/controller/scene_controller";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import TextureBucketManager from "./binary/texture_bucket_manager";
+import { getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
+import Dimensions from "oxalis/model/dimensions";
+import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import {
+  createUpdatableTexture,
+  createDataTexture,
+} from "oxalis/geometries/materials/abstract_plane_material_factory";
+import Constants from "oxalis/constants";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -30,6 +41,9 @@ import type Layer from "oxalis/model/binary/layers/layer";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
+
+// todo: find out how many we really need
+export const bucketPerDim = 16;
 
 type PingOptions = {
   zoomStep: number,
@@ -59,14 +73,18 @@ class Binary {
   lastPosition: ?Vector3;
   lastZoomStep: ?number;
   lastAreas: ?OrthoViewMapType<Vector4>;
+  textureBucketManager: TextureBucketManager;
+  lastZoomedAnchorPoint: ?Vector4;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
   constructor(layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
+    this.textureBucketManager = new TextureBucketManager(bucketPerDim);
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
+    this.lastZoomedAnchorPoint = null;
     _.extend(this, BackboneEvents);
 
     this.category = this.layer.category;
@@ -122,6 +140,107 @@ class Binary {
     this.cube.on({
       newMapping: () => this.forcePlaneRedraw(),
     });
+  }
+
+  setupDataTextures(): void {
+    const bytes = this.targetBitDepth >> 3;
+    const tWidth = Constants.DATA_TEXTURE_WIDTH;
+
+    const dataTexture = createUpdatableTexture(
+      tWidth,
+      bytes,
+      false,
+      THREE.NearestFilter,
+      THREE.NearestFilter,
+      SceneController.renderer,
+    );
+    // const dataTexture = createDataTexture(tWidth, bytes, false, THREE.NearestFilter, THREE.NearestFilter);
+    dataTexture.binaryCategory = this.category;
+    dataTexture.binaryName = this.name;
+
+    // TODO: make this DRY with texture bucket manager
+    const bucketPerDim = 16;
+    const bytesPerLookUpEntry = 1;
+    const lookUpBufferSize = Math.pow(bucketPerDim, 3) * bytesPerLookUpEntry;
+    const lookUpBufferWidth = 64; // has to be next power of two from Math.ceil(Math.sqrt(lookUpBufferSize));
+    const lookUpTexture = createUpdatableTexture(
+      lookUpBufferWidth,
+      1,
+      true,
+      THREE.NearestFilter,
+      THREE.NearestFilter,
+      SceneController.renderer,
+    );
+
+    this.textureBucketManager.setupDataTextures(dataTexture, lookUpTexture);
+    this.dataTexture = dataTexture;
+    this.lookUpTexture = lookUpTexture;
+  }
+
+  getDataTextures(): [] {
+    if (!this.dataTexture || !this.lookUpTexture) {
+      // Initialize lazily since SceneController.renderer is not availble earlier
+      this.setupDataTextures();
+    }
+    return [this.dataTexture, this.lookUpTexture];
+  }
+
+  updateDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
+    const anchorPoint = _.clone(position);
+    // Coerce to bucket boundary
+    anchorPoint[0] &= -1 << (5 + zoomStep);
+    anchorPoint[1] &= -1 << (5 + zoomStep);
+    anchorPoint[2] &= -1 << (5 + zoomStep);
+
+    // Hit texture top-left coordinate
+    anchorPoint[0] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+    anchorPoint[1] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+    anchorPoint[2] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+
+    const zoomedAnchorPoint = this.cube.positionToZoomedAddress(anchorPoint, zoomStep);
+    if (_.isEqual(zoomedAnchorPoint, this.lastZoomedAnchorPoint)) {
+      return null;
+    }
+    this.lastZoomedAnchorPoint = zoomedAnchorPoint;
+
+    // find out which buckets we need for each plane
+    const requiredBucketSet = new Set();
+
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const [u, v, w] = Dimensions.getIndices(planeId);
+      let texturePosition = getTexturePosition(Store.getState(), planeId);
+
+      // Making sure, position is top-left corner of some bucket
+      // Probably not necessary?
+      texturePosition = [
+        texturePosition[0] & ~0b11111,
+        texturePosition[1] & ~0b11111,
+        texturePosition[2] & ~0b11111,
+      ];
+
+      // Calculating the coordinates of the textures top-left corner
+      const topLeftPosition = _.clone(texturePosition);
+      topLeftPosition[u] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+      topLeftPosition[v] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+
+      const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, zoomStep);
+
+      for (let y = 0; y < bucketPerDim; y++) {
+        for (let x = 0; x < bucketPerDim; x++) {
+          const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
+          bucketAddress[u] += x;
+          bucketAddress[v] += y;
+          const bucket = this.cube.getOrCreateBucket(bucketAddress);
+
+          if (bucket.type !== "null") {
+            requiredBucketSet.add(bucket);
+          }
+        }
+      }
+    }
+
+    this.textureBucketManager.storeBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
+    return zoomedAnchorPoint.slice(0, 3);
   }
 
   forcePlaneRedraw(): void {

@@ -216,7 +216,7 @@ class Plane2D {
     }
     this.oldTopLeftBucket = topLeftBucket;
 
-    const texture = window.texture || new Uint8Array(4096 * 4096);
+    const texture = window.texture || new Uint8Array(8192 * 8192);
     window.texture = texture;
     this.dataTexture.ready = true;
 
@@ -227,7 +227,7 @@ class Plane2D {
     console.log("address", bucketX, bucketY, bucketZ, _zoomStep, zoomStep);
     // _zoomStep = 0;
 
-    const bucketPerDim = 22;
+    const bucketPerDim = 16;
     const bucketWidth = 32;
     let savedBuckets = 0;
     const bucketLength = Math.pow(bucketWidth, 3);
@@ -253,7 +253,7 @@ class Plane2D {
         // if (x === y) {
         if (bucket.hasData()) {
           // hasData
-          console.log(bucket.getData().length);
+          // console.log(bucket.getData().length);
           texture.set(bucket.getData(), savedBuckets * bucketLength);
           // texture.fill(255, savedBuckets * bucketLength, (savedBuckets + 1) * bucketLength);
         } else {
@@ -272,7 +272,7 @@ class Plane2D {
       // }
     }
     console.timeEnd("write buckets");
-    // texture.fill(0, 0, 4096 * 4096);
+    // texture.fill(0, 0, 8192 * 8192);
     // texture.set([128], 2047);
     console.log("misses", misses);
     console.log("outOfBoundsCounter", outOfBoundsCounter);

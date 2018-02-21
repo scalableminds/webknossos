@@ -34,6 +34,7 @@ export class DataBucket {
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
+  off: Function;
 
   constructor(
     BIT_DEPTH: number,

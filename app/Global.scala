@@ -22,6 +22,8 @@ import play.api.libs.concurrent._
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import utils.SQLClient
+
+import scala.concurrent.Future
 import sys.process._
 
 object Global extends GlobalSettings with LazyLogging{
@@ -32,13 +34,13 @@ object Global extends GlobalSettings with LazyLogging{
     logger.info("Executing Global START")
     startActors(conf.underlying, app)
 
-    ensurePostgresDatabase
-
-    if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insert.futureBox.map {
-        case Full(_) => ()
-        case Failure(msg, _, _) => logger.error("Error while inserting initial data: " + msg)
-        case _ => logger.error("Error while inserting initial data")
+    ensurePostgresDatabase.onComplete { _ =>
+      if (conf.getBoolean("application.insertInitialData") getOrElse false) {
+        InitialData.insert.futureBox.map {
+          case Full(_) => ()
+          case Failure(msg, _, _) => logger.error("Error while inserting initial data: " + msg)
+          case _ => logger.error("Error while inserting initial data")
+        }
       }
     }
 
@@ -99,6 +101,8 @@ object Global extends GlobalSettings with LazyLogging{
 
     if (result != 0)
       throw new Exception("Could not ensure Postgres database. Is postgres installed?")
+
+    Future.successful(())
   }
 
 }

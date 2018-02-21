@@ -17,7 +17,7 @@ function formatBB(bb) {
 }
 
 function formatValue(value) {
-  console.log("formatting", value)
+  //console.log("formatting", value)
   if (value == null) {
     return "";
   }
@@ -43,7 +43,7 @@ function* csvWriter(name, cols) {
   let obj = null;
   let i = 0;
   while ((obj = yield) != null) {
-    console.log(obj);
+    //console.log(obj);
     f.write(cols.map(a => formatValue(obj[a])).join(","));
     f.write("\n");
     i++;
@@ -60,22 +60,37 @@ function* csvWriter(name, cols) {
   try {
     const buffer = { teams: new Map(), projects: new Map(), dataSets: new Map() };
     async function lookupTeam(team) {
+      //console.log("looking up team " + team);
       if (!buffer.teams.has(team)) {
         buffer.teams.set(team, await m.collection("teams").findOne({ name: team }));
       }
-      return buffer.teams.get(team);
+      let res = buffer.teams.get(team);
+      if ( res == null) {
+        console.log("warning: could not look up team " + team);
+      }
+      return res
     }
     async function lookupProject(project) {
+      //console.log("looking up project " + project);
       if (!buffer.projects.has(project)) {
         buffer.projects.set(project, await m.collection("projects").findOne({ name: project }));
       }
-      return buffer.projects.get(project);
+      let res = buffer.projects.get(project);
+      if ( res == null) {
+        console.log("warning: could not look up project " + project);
+      }
+      return res
     }
     async function lookupDataset(dataSet) {
+      //console.log("looking up dataSet " + dataSet);
       if (!buffer.dataSets.has(dataSet)) {
         buffer.dataSets.set(dataSet, await m.collection("dataSets").findOne({ "dataSource.id.name": dataSet}));
       }
-      return buffer.dataSets.get(dataSet);
+      let res = buffer.dataSets.get(dataSet);
+      if ( res == null) {
+        console.log("warning: could not look up dataSet " + dataSet);
+      }
+      return res
     }
 
     async function migrateTable(table, cols, func) {
@@ -113,10 +128,15 @@ function* csvWriter(name, cols) {
         const doc = await cursor.next();
 
         for (const team of doc.allowedTeams) {
-          dataSet_allowedTeams.next({
-            _dataSet: doc._id.toHexString(),
-            _team: (await lookupTeam(team))._id.toHexString(),
-          });
+          let teamObject = await lookupTeam(team);
+          if (teamObject != null) {
+            dataSet_allowedTeams.next({
+              _dataSet: doc._id.toHexString(),
+              _team: teamObject._id.toHexString(),
+            });
+          } else {
+            console.log("warning: skipping allowed team " + team + " because it does not exist")
+          }
         }
 
         if (doc.dataSource.dataLayers != null) {
@@ -149,7 +169,7 @@ function* csvWriter(name, cols) {
     }
 
     await migrateTable("analytics", ["_id", "_user", "namespace", "value", "created", "isDeleted"], async doc => ({
-      _id: doc._id,
+      _id: doc._id.toHexString(),
       _user: doc.user != null ? doc.user.toHexString() : null,
       namespace: doc.namespace,
       value: JSON.stringify(doc.value),
@@ -213,7 +233,7 @@ function* csvWriter(name, cols) {
       ],
       async doc => ({
         _id: doc._id.toHexString(),
-        _dataSet: doc.dataSetName != null ? (await lookupDataset(doc.dataSetName))._id.toHexString() : null,
+        _dataSet: (doc.dataSetName != null && doc.dataSetName != "") ? (await lookupDataset(doc.dataSetName.trim()))._id.toHexString() : null,
         _task: doc._task != null ? doc._task.toHexString() : null,
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
         _user: doc._user.toHexString(),
@@ -407,11 +427,16 @@ function* csvWriter(name, cols) {
         const doc = await cursor.next();
 
         for (const dataSetName in doc.dataSetConfigurations) {
-          user_dataSetConfigurations.next({
-            _user: doc._id.toHexString(),
-            _dataSet: (await lookupDataset(dataSetName))._id.toHexString(),
-            configuration: JSON.stringify(doc.dataSetConfigurations[dataSetName].configuration),
-          });
+          let dataSetObj = await lookupDataset(dataSetName);
+          if (dataSetObj != null) {
+            user_dataSetConfigurations.next({
+              _user: doc._id.toHexString(),
+              _dataSet: dataSetObj._id.toHexString(),
+              configuration: JSON.stringify(doc.dataSetConfigurations[dataSetName].configuration),
+            });
+          } else {
+            console.log("warning: skipping user dataset configuration for " + dataSetName + " because it does not exist")
+          }
         }
       }
 

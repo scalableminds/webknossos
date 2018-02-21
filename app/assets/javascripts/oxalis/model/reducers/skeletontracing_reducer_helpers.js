@@ -405,7 +405,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
   });
 }
 
-export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapType> {
+export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<[TreeMapType, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = skeletonTracing.restrictions;
 
@@ -413,7 +413,7 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapT
       const newTrees = {};
       // Assign new ids for all nodes and trees to avoid duplicates
       let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
-      let newNodeId = getMaximumNodeId(skeletonTracing.trees) + 1;
+      let newNodeId = skeletonTracing.cachedMaxNodeId + 1;
       for (const treeId of Object.keys(trees)) {
         const tree = trees[Number(treeId)];
 
@@ -450,7 +450,7 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<TreeMapT
         });
         newTreeId++;
       }
-      return Maybe.Just(newTrees);
+      return Maybe.Just([newTrees, newNodeId - 1]);
     }
     return Maybe.Nothing();
   });

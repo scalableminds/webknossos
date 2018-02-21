@@ -9,6 +9,7 @@ import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
 import models.annotation.{Annotation, AnnotationDAO}
@@ -23,8 +24,14 @@ import scala.util.{Failure, Success}
 object NmlWriter {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
-  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Scale) = {
-    Enumerator.outputStream {os => toNml(tracing, annotation, os, scale); os.close()}
+  def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Scale) = Enumerator.outputStream { os =>
+    for {
+      nml <- toNml(tracing, annotation, os, scale)
+      _ = os.close // this never happends
+    } yield {
+      nml
+      //os.close()
+    }
   }
 
   def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, outputStream: OutputStream, scale: Scale) = {
@@ -32,26 +39,32 @@ object NmlWriter {
 
     tracing match {
       case Right(volumeTracing) =>
-        Xml.withinElementSync("things") {
-          writeMetaData(annotation)
-          Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, annotation.description, scale))
-          Xml.withinElementSync("volume") {
-            writer.writeAttribute("id", "1")
-            writer.writeAttribute("location", "data.zip")
+        Xml.withinElement("things") {
+          for {
+            metaData <- writeMetaData(annotation)
+            _ = Xml.withinElementSync("parameters")(writeParametersAsXml(volumeTracing, annotation.description, scale))
+            _ = Xml.withinElementSync("volume") {
+                  writer.writeAttribute("id", "1")
+                  writer.writeAttribute("location", "data.zip")}
+
+            _ = writer.writeEndDocument()
+            _ = writer.close()
+          } yield {
+
           }
         }
-        writer.writeEndDocument()
-        writer.close()
       case Left(skeletonTracing) => {
-        Xml.withinElementSync("things") {
-          writeMetaData(annotation)
-          Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, annotation.description, scale))
-          writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
-          Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
-          Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))
+        Xml.withinElement("things") {
+          for {
+            metaData <- writeMetaData(annotation)
+            test1 <- Fox.successful(Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, annotation.description, scale)))
+            test2 <- Fox.successful(writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty)))
+            test3 <- Fox.successful(Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp))))
+            test4 <- Fox.successful(Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments))))
+            _ = writer.writeEndDocument()
+            _ = writer.close()
+          } yield ()
         }
-        writer.writeEndDocument()
-        writer.close()
       }
     }
   }
@@ -199,7 +212,8 @@ object NmlWriter {
     }
   }
 
-  def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter) = {
+  def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter): Fox[Unit] = {
+
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
       writer.writeAttribute("content", "NmlWriter.scala")
@@ -209,24 +223,43 @@ object NmlWriter {
       writer.writeAttribute("content", webknossos.BuildInfo.commitHash)
     }
     Xml.withinElementSync("meta") {
-      writer.writeAttribute("name", "timestamp")
-      writer.writeAttribute("content", DateTime.now().getMillis.toString)
+        writer.writeAttribute("name", "timestamp")
+        writer.writeAttribute("content", DateTime.now().getMillis.toString)
     }
     Xml.withinElementSync("meta") {
-      writer.writeAttribute("name", "annotationId")
-      writer.writeAttribute("content", annotation.id)
+        writer.writeAttribute("name", "annotationId")
+        writer.writeAttribute("content", annotation.id)
     }
+    Xml.withinElement("meta") {
+      for{
+        user <- annotation.user
+      } yield {
+        writer.writeAttribute("name", "username")
+        writer.writeAttribute("content", user.name)
+      }
+    }
+    /*
     annotation.user.map(user =>
-      Xml.withinElementSync("meta") {
+      Xml.withinElement("meta") {
         writer.writeAttribute("name", "username")
         writer.writeAttribute("content", user.name)
       }
     )
-    annotation._task.map(taskId =>
-      Xml.withinElementSync("meta") {
+    */
+    /*annotation._task.map(taskId =>
+      Xml.withinElement("meta") {
       writer.writeAttribute("name", "taskId")
       writer.writeAttribute("content", taskId.stringify)
     })
+    */
 
+    Xml.withinElement("meta") {
+      for{
+        task <- annotation.task
+      } yield {
+        writer.writeAttribute("name", "taskId")
+        writer.writeAttribute("content", task.id)
+      }
+    }
   }
 }

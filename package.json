@@ -116,7 +116,7 @@
     "redux-saga": "^0.14.3",
     "scroll-into-view-if-needed": "^1.4.1",
     "stats.js": "^1.0.0",
-    "three": "^0.84.0",
+    "three": "^0.87.0",
     "tween.js": "^16.3.1",
     "whatwg-fetch": "^1.1.0"
   },

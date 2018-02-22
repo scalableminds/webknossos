@@ -31,7 +31,6 @@ import Dimensions from "oxalis/model/dimensions";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import {
   createUpdatableTexture,
-  createDataTexture,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import Constants from "oxalis/constants";
 
@@ -150,11 +149,9 @@ class Binary {
       tWidth,
       bytes,
       false,
-      THREE.NearestFilter,
-      THREE.NearestFilter,
       SceneController.renderer,
     );
-    // const dataTexture = createDataTexture(tWidth, bytes, false, THREE.NearestFilter, THREE.NearestFilter);
+
     dataTexture.binaryCategory = this.category;
     dataTexture.binaryName = this.name;
 
@@ -167,8 +164,6 @@ class Binary {
       lookUpBufferWidth,
       1,
       true,
-      THREE.NearestFilter,
-      THREE.NearestFilter,
       SceneController.renderer,
     );
 

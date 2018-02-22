@@ -155,7 +155,6 @@ class PlaneView {
       setupRenderArea(0, 0, renderer.domElement.width, 0xffffff);
       renderer.clear();
 
-      // todo: re-activate all planes
       for (const plane of OrthoViewValues) {
         this.trigger("renderCam", plane);
         setupRenderArea(

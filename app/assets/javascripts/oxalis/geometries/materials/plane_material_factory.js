@@ -12,16 +12,25 @@ import AbstractPlaneMaterialFactory, {
   createDataTexture,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { TextureMapType } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { Vector3 } from "oxalis/constants";
+import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedAddressToPosition } from "oxalis/model/binary/texture_bucket_manager";
+import { OrthoViews } from "oxalis/constants";
+import Dimensions from "oxalis/model/dimensions";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
+  planeID: OrthoViewType;
+
+  constructor(tWidth: number, textures: TextureMapType, planeID: OrthoViewType) {
+    // this.planeID = planeID;
+    super(tWidth, textures, planeID);
+  }
+
   setupUniforms(): void {
     super.setupUniforms();
 
@@ -50,6 +59,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 1,
       },
+      uvw: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      }
     });
   }
 
@@ -109,6 +122,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms.anchorPoint.value.set(x, y, z);
     };
 
+    this.material.setUVW = ([u, v, w]) => {
+      this.uniforms.anchorPoint.value.set(u, v, w);
+    };
+
     this.material.setSegmentationAlpha = alpha => {
       this.uniforms.alpha.value = alpha / 100;
     };
@@ -154,6 +171,7 @@ uniform float alpha;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
 uniform float zoomStep;
+uniform vec3 uvw;
 
 varying vec2 vPos;
 varying vec2 vUv;
@@ -188,10 +206,39 @@ vec3 getRGBAtIndex(sampler2D texture, float textureWidth, float idx, float multi
     ).rgb;
 }
 
+vec3 getRGBAtXYIndex(sampler2D texture, float textureWidth, float x, float y) {
+  return texture2D(
+      texture,
+      vec2(
+        (floor(x) + 0.5) / textureWidth,
+        (floor(y) + 0.5) / textureWidth
+      )
+    ).rgb;
+}
+
 float linearizeVec3ToIndex(vec3 position, float base) {
   return position.z * base * base + position.y * base + position.x;
 }
 
+float linearizeVec3ToIndexWithMod(vec3 position, float base, float m) {
+  return mod(mod(position.z * base * base, m) + mod(position.y * base, m) + position.x, m);
+}
+
+vec3 transDim(vec3 array) {
+  <%= (function () {
+      switch (planeID) {
+        case OrthoViews.PLANE_XY:
+          return "return array;";
+        case OrthoViews.PLANE_YZ:
+          return "return vec3(array.z, array.y, array.x);"; // [2, 1, 0]
+        case OrthoViews.PLANE_XZ:
+          return "return vec3(array.x, array.z, array.y);"; //[0, 2, 1]"
+        default:
+          throw new Error("Invalid planeID provided to fragment shader");
+      }
+    })()
+  %>
+}
 
 void main() {
   float golden_ratio = 0.618033988749895;
@@ -247,16 +294,22 @@ void main() {
   // float xCoord = mod(floor(texture_pos.x * ((r_texture_width - 1.0)/r_texture_width)), r_texture_width);
   // float yCoord = mod(floor(texture_pos.y * ((r_texture_width - 1.0)/r_texture_width)), r_texture_width);
 
-  float xCoord = mod(floor(texture_pos.x * (r_texture_width * 0.99999)), r_texture_width);
-  float yCoord = mod(floor(texture_pos.y * (r_texture_width * 0.99999)), r_texture_width);
+  // float anisotropyFactor = 44.599998474121094 / 22.0;
+   // <%= this.planeID === OrthoViews.PLANE_YZ ? "texture_pos.x = texture_pos.x / 2.0;" : "" %>
+  vec3 coords = transDim(vec3(
+    mod(floor(texture_pos.x * (r_texture_width * 0.99999)), r_texture_width),
+    mod(floor(texture_pos.y * (r_texture_width * 0.99999)), r_texture_width),
+    floor((globalPosition[<%= uvw[2] %>] - anchorPoint[<%= uvw[2] %>] * pow(2.0, 5.0 + zoomStep)) / pow(2.0, zoomStep))
+  ));
 
-  float zCoord = floor((globalPosition[2] - anchorPoint[2] * pow(2.0, 5.0 + zoomStep)) / pow(2.0, zoomStep));
-  // float zCoord = floor((globalPosition[2] / pow(2.0, zoomStep) - anchorPoint[2] / 32.0));
+  float xCoord = coords.x;
+  float yCoord = coords.y;
+  float zCoord = coords.z;
 
   vec3 bucketPosition = vec3(
-    div(xCoord, bucketWidth), // works
-    div(yCoord, bucketWidth), // works
-    div(zCoord, bucketWidth)  // works
+    div(xCoord, bucketWidth),
+    div(yCoord, bucketWidth),
+    div(zCoord, bucketWidth)
   );
   float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim); // save
   float bucketIdxInTexture = bucketIdx * bytesPerLookUpEntry; // save
@@ -270,19 +323,22 @@ void main() {
 
 
   vec3 offsetInBucket = vec3(
-    mod(xCoord, bucketWidth), // works
-    mod(yCoord, bucketWidth), // works
-    mod(zCoord, bucketWidth)  // works
+    mod(xCoord, bucketWidth),
+    mod(yCoord, bucketWidth),
+    mod(zCoord, bucketWidth)
   );
 
   float pixelIdxInBucket = linearizeVec3ToIndex(offsetInBucket, bucketWidth);
   float pixelIdxInDataTexture = pixelIdxInBucket + bucketLength * bucketAddress;
 
-  vec3 bucketColor = getRGBAtIndex(
+  float x = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, d_texture_width);
+  float y = div(pixelIdxInDataTexture, d_texture_width);
+
+  vec3 bucketColor = getRGBAtXYIndex(
     <%= layers[0] %>_texture,
     d_texture_width,
-    pixelIdxInDataTexture,
-    1.
+    x,
+    y
   );
 
   gl_FragColor = vec4(bucketColor, 1.0);
@@ -290,9 +346,8 @@ void main() {
   // mix( data_color, hsv_to_rgb(HSV), alpha )
   // gl_FragColor = vec4(bucketPosition / vec3(12.0, 12.0, 12.0), 1.0);
 
-  // gl_FragColor = vec4(bucketAddress / 144.0, 0.0, 0.0, 1.0);
   if (bucketAddress < 0.) {
-    gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);
+    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
   }
   // gl_FragColor = vec4(bucketAddress / pow(12.0, 2.0), 0.0, 0.0, 1.0);
   // gl_FragColor = vec4(pixelIdxInBucket / pow(32.0, 2.0), 0.0, 0.0, 1.0);
@@ -308,6 +363,9 @@ void main() {
       hasSegmentation: segmentationBinary != null,
       segmentationName: sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
+      OrthoViews,
+      planeID: this.planeID,
+      uvw: Dimensions.getIndices(this.planeID)
     });
   }
 }

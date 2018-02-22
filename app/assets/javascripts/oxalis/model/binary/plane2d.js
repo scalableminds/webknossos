@@ -126,7 +126,7 @@ class Plane2D {
     this.V = dimensions[1];
     this.W = dimensions[2];
 
-    this.listenTo(this.cube, "bucketLoaded", (bucket: Vector4): void => {
+    // this.listenTo(this.cube, "bucketLoaded", (bucket: Vector4): void => {
       //   const zoomStepDiff = this.dataTexture.zoomStep - bucket[3];
       //   if (zoomStepDiff > 0) {
       //     bucket = [
@@ -157,11 +157,11 @@ class Plane2D {
       //         v >= this.dataTexture.area[1] ||
       //         v <= this.dataTexture.area[3]
       //       ) {
-      this.dataTexture.ready = false;
+      // this.dataTexture.ready = false;
       //       }
       //     }
       //   }
-    });
+    // });
 
     this.cube.on("volumeLabeled", () => this.reset());
   }
@@ -197,11 +197,6 @@ class Plane2D {
     topLeftPosition[this.U] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
     topLeftPosition[this.V] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
     const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, zoomStep);
-
-    // todo
-    if (this.index !== "PLANE_XY") {
-      return;
-    }
 
     if (!_.isEqual(this.oldTopLeftBucket, topLeftBucket)) {
       console.log("top left bucket changed", this.oldTopLeftBucket, topLeftBucket);

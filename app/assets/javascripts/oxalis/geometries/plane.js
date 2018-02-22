@@ -9,7 +9,6 @@ import * as THREE from "three";
 import Model from "oxalis/model";
 import {
   getArea,
-  getRequestLogZoomStep,
   getTexturePosition,
   getPosition,
 } from "oxalis/model/accessors/flycam_accessor";
@@ -69,10 +68,10 @@ class Plane {
       const shaderName = sanitizeName(name);
       const lookUpBufferName = sanitizeName(name + "_lookup");
       textures[shaderName] = dataTexture;
-      // textures[shaderName].needsUpdate = true;
       textures[lookUpBufferName] = lookUpTexture;
     }
-    const textureMaterial = new PlaneMaterialFactory(tWidth, textures).getMaterial();
+    const textureMaterial = new PlaneMaterialFactory(tWidth, textures, this.planeID).getMaterial();
+    // textureMaterial.setUVW(Dimensions.getIndices(this.planeID));
 
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
@@ -132,34 +131,11 @@ class Plane {
     });
   };
 
-  updateTexture(): void {
+  updateTexture(anchorPoint: ?Vector3): void {
     const area = getArea(Store.getState(), this.planeID);
-    for (const name of Object.keys(Model.binary)) {
-      // console.log("binary:", name);
-      // TODO: re-activate other planes
-      if (this.planeID !== "PLANE_XY" || name !== "color_1") {
-        continue;
-      }
-      const binary = Model.binary[name];
-      // const dataBuffer = binary.planes[this.planeID].get({
-      //   position: getTexturePosition(Store.getState(), this.planeID),
-      //   zoomStep: getRequestLogZoomStep(Store.getState()),
-      //   area,
-      // });
-      const anchorPoint = binary.updateDataTextures(
-        getPosition(Store.getState().flycam),
-        getRequestLogZoomStep(Store.getState()),
-      );
-      if (anchorPoint) {
-        this.plane.material.setAnchorPoint(anchorPoint);
-      }
-      // if (buffers) {
-      //   const [dataBuffer, lookUpBuffer, anchorPoint] = buffers;
-      //   // this.plane.material.setData(name, dataBuffer);
-      //   // this.plane.material.setData(name + "_lookup", lookUpBuffer);
-      //   console.log("anchorPoint", anchorPoint);
-      //   app.vent.trigger("rerender");
-      // }
+
+    if (anchorPoint) {
+      this.plane.material.setAnchorPoint(anchorPoint);
     }
 
     this.plane.material.setScaleParams({

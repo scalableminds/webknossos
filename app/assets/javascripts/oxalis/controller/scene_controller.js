@@ -13,6 +13,7 @@ import {
   getPosition,
   getPlaneScalingFactor,
   getViewportBoundingBox,
+  getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
@@ -241,12 +242,26 @@ class SceneController {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
+    let anchorPoint;
+
+    for (const name of Object.keys(Model.binary)) {
+      // if (this.planeID !== "PLANE_XY" || name !== "color_1") {
+      //   continue;
+      // }
+      const binary = Model.binary[name];
+      anchorPoint = binary.updateDataTextures(
+        gPos,
+        getRequestLogZoomStep(Store.getState()),
+      );
+    }
+
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.planes[planeId].updateTexture();
+      const currentPlane = this.planes[planeId];
+      currentPlane.updateTexture(anchorPoint);
       // Update plane position
-      this.planes[planeId].setPosition(globalPosVec);
+      currentPlane.setPosition(globalPosVec);
       // Update plane scale
-      this.planes[planeId].setScale(planeScale);
+      currentPlane.setScale(planeScale);
     }
   };
 

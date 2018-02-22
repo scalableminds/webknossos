@@ -58,8 +58,6 @@ export function createUpdatableTexture(
   width: number,
   bytes: number,
   optUseFloat: boolean = false,
-  minFilter: THREE.NearestFilter,
-  maxFilter: THREE.NearestFilter,
   renderer: THREE.WebGLRenderer,
 ): UpdatableTexture {
   const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
@@ -70,10 +68,10 @@ export function createUpdatableTexture(
     format,
     optUseFloat ? THREE.FloatType : THREE.UnsignedByteType,
     THREE.UVMapping,
+    THREE.ClampToEdgeWrapping, // todo?
     THREE.ClampToEdgeWrapping,
-    THREE.ClampToEdgeWrapping,
-    minFilter,
-    maxFilter,
+    THREE.NearestFilter,
+    THREE.NearestFilter,
   );
   newTexture.setRenderer(renderer);
   newTexture.setSize(width, width);
@@ -100,7 +98,9 @@ class AbstractPlaneMaterialFactory {
   maxFilter: THREE.NearestFilter;
   tWidth: number;
 
-  constructor(tWidth: number, textures: TextureMapType) {
+  constructor(tWidth: number, textures: TextureMapType, planeID) {
+    // move planeID in PlaneMaterialFactory somehow
+    this.planeID = planeID;
     this.setupUniforms();
     this.makeMaterial();
     this.tWidth = tWidth;
@@ -134,6 +134,8 @@ class AbstractPlaneMaterialFactory {
         fragmentShader: this.getFragmentShader(),
       }),
     );
+
+    window.materials = (window.materials || []).concat(this.material);
 
     this.material.setData = (name, data) => {
       const textureName = sanitizeName(name);

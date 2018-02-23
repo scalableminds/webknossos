@@ -199,7 +199,7 @@ object Project extends FoxImplicits {
 
   def fromProjectSQL(s: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Project] = {
     for {
-      team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
+      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
       ownerBSON <- s._owner.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id)
     } yield {

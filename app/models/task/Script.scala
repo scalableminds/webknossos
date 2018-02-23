@@ -43,7 +43,7 @@ object ScriptSQL {
 object ScriptSQLDAO extends SQLDAO[ScriptSQL, ScriptsRow, Scripts] {
   val collection = Scripts
 
-  def idColumn(x: Scripts): Rep[String] = x.name
+  def idColumn(x: Scripts): Rep[String] = x._Id
   def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
 
   def parse(r: ScriptsRow): Fox[ScriptSQL] =
@@ -55,15 +55,6 @@ object ScriptSQLDAO extends SQLDAO[ScriptSQL, ScriptsRow, Scripts] {
       r.created.getTime,
       r.isdeleted
     ))
-
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[ScriptSQL] =
-    for {
-      rOpt <- run(Scripts.filter(r => notdel(r) && r.name === name).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
-    } yield {
-      parsed
-    }
 
   def insertOne(s: ScriptSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
@@ -134,12 +125,6 @@ object Script extends FoxImplicits {
 
 
 object ScriptDAO {
-
-  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
-    for {
-      scriptSQL <- ScriptSQLDAO.findOneByName(name)
-      script <- Script.fromScriptSQL(scriptSQL)
-    } yield script
 
   def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Script] = findOneById(id.stringify)
 

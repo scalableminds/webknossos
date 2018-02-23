@@ -59,8 +59,8 @@ object AnnotationSQL extends FoxImplicits {
   //note that annotation settings are dropped here, because on reading, they will be reconstructed from the db relations directly
   def fromAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
     for {
-      dataSet <- DataSetSQLDAO.findOneByName(a.dataSetName) ?~> Messages("dataSet.notFound")
-      team <- TeamSQLDAO.findOneByName(a.team) ?~> Messages("team.notFound")
+      dataSet <- DataSetSQLDAO.findOneByName(a.dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
+      team <- TeamSQLDAO.findOneByName(a.team)(GlobalAccessContext) ?~> Messages("team.notFound")
       typ <- AnnotationTypeSQL.fromString(a.typ)
     } yield {
       AnnotationSQL(
@@ -120,7 +120,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     }
 
   override def anonymousReadAccessQ = s"isPublic"
-  override def readAccessQ(requestingUserId: ObjectId) = s"isPublic or (_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}'"
+  override def readAccessQ(requestingUserId: ObjectId) = s"isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'"
   override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}"
 
   // read operations
@@ -189,9 +189,13 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def countActiveAnnotationsFor(userId: ObjectId, typ: AnnotationTypeSQL, excludedTeamNames: List[String])(implicit ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
+      excludeTeamsQ = if (excludedTeamNames.isEmpty) "true" else s"(not t.name in ${writeStructTupleWithQuotes(excludedTeamNames.map(sanitize))})"
       countList <- run(sql"""select count(*)
-                         from (select a._id from (select * from #${existingCollectionName} where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) a
-                           join webknossos.teams t on a._team = t._id where not t.name in #${writeStructTupleWithQuotes(excludedTeamNames)}) q
+                         from (select a._id from
+                                  (select *
+                                   from #${existingCollectionName}
+                                   where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) a
+                                  join webknossos.teams t on a._team = t._id where #${excludeTeamsQ}) q
                          """.as[Int])
       count <- countList.headOption
     } yield count

@@ -1,6 +1,6 @@
 package models.team
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import models.user.{User, UserDAO}
@@ -185,7 +185,7 @@ object Team extends FoxImplicits {
     for {
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId")
       ownerBsonId <- s._owner.toBSONObjectId.toFox
-      parentTeamOpt <- resolveParentTeam(s._parent)
+      parentTeamOpt <- resolveParentTeam(s._parent)(GlobalAccessContext)
     } yield {
       Team(
         s.name,

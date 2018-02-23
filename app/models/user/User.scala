@@ -137,7 +137,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
         sqlu"""insert into webknossos.users(_id, email, firstName, lastName, lastActivity, userConfiguration, md5hash, loginInfo_providerID,
                                             loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isSuperUser, created, isDeleted)
                                             values(${u._id.id}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(u.lastActivity)},
-                                                   '#${sanitize(u.userConfiguration.toString)}', ${u.md5hash}, '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
+                                                   '#${sanitize(Json.toJson(u.userConfiguration).toString)}', ${u.md5hash}, '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
                                                    '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isSuperUser},
                                                    ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
           """)
@@ -159,7 +159,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   def updateUserConfiguration(userId: ObjectId, userConfiguration: UserConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(sqlu"update webknossos.users set userConfiguration = '#${sanitize(userConfiguration.configuration.toString)}'")
+      _ <- run(sqlu"update webknossos.users set userConfiguration = '#${sanitize(Json.toJson(userConfiguration.configuration).toString)}'")
     } yield ()
 
   def updateValues(userId: ObjectId, firstName: String, lastName: String, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
@@ -422,10 +422,10 @@ object User extends FoxImplicits {
   def fromUserSQL(s: UserSQL)(implicit ctx: DBAccessContext): Fox[User] = {
     for {
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      teamRoles <- UserTeamRolesSQLDAO.findTeamMembershipsForUser(s._id)
-      experiences <- UserExperiencesSQLDAO.findAllExperiencesForUser(s._id)
+      teamRoles <- UserTeamRolesSQLDAO.findTeamMembershipsForUser(s._id)(GlobalAccessContext)
+      experiences <- UserExperiencesSQLDAO.findAllExperiencesForUser(s._id)(GlobalAccessContext)
       userConfiguration <- JsonHelper.jsResultToFox(s.userConfiguration.validate[Map[String, JsValue]])
-      dataSetConfigurations <- constructDatasetConfigurations(s._id)
+      dataSetConfigurations <- constructDatasetConfigurations(s._id)(GlobalAccessContext)
     } yield {
       User(
         s.email,

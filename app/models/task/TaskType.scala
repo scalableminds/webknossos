@@ -1,6 +1,6 @@
 package models.task
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
@@ -170,7 +170,7 @@ object TaskType extends FoxImplicits {
   def fromTaskTypeSQL(s: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      team <- TeamSQLDAO.findOne(s._team)
+      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext)
     } yield {
       TaskType(
         s.summary,

@@ -1,7 +1,7 @@
 package models.binary
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataResolution, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
@@ -373,11 +373,11 @@ object DataSet extends FoxImplicits {
 
   def fromDataSetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
     for {
-      datastore <- DataStoreSQLDAO.findOneByName(s._dataStore.trim) ?~> Messages("datastore.notFound")
-      allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllForDataSet(s._id) ?~> Messages("allowedTeams.notFound")
+      datastore <- DataStoreSQLDAO.findOneByName(s._dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
+      allowedTeams <- DataSetAllowedTeamsSQLDAO.findAllForDataSet(s._id)(GlobalAccessContext) ?~> Messages("allowedTeams.notFound")
       defaultConfiguration <- parseDefaultConfiguration(s.defaultConfiguration)
-      team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
-      dataSource <- constructDataSource(s, team) ?~> "could not construct datasource"
+      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
+      dataSource <- constructDataSource(s, team)(GlobalAccessContext) ?~> "could not construct datasource"
     } yield {
       DataSet(
         DataStoreInfo(datastore.name, datastore.url, datastore.typ),

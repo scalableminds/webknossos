@@ -363,8 +363,8 @@ object Task extends FoxImplicits {
     for {
       taskTypeIdBson <- s._taskType.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._taskType.toString)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
-      project <- ProjectSQLDAO.findOne(s._project) ?~> Messages("project.notFound", s._project.toString)
+      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
+      project <- ProjectSQLDAO.findOne(s._project)(GlobalAccessContext) ?~> Messages("project.notFound", s._project.toString)
       priority = if (project.paused) -1 else project.priority
       openInstances <- TaskSQLDAO.countOpenInstancesForTask(s._id)
     } yield {

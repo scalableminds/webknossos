@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
@@ -289,10 +289,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def peekNext(limit: Int) = SecuredAction.async { implicit request =>
     val user = request.identity
     for {
-      assignments <- TaskAssignmentService.findAllAssignableFor(user, user.teamNames, Some(limit))
-    } yield {
-      Ok(Json.toJson(assignments))
-    }
+      tasks <- TaskAssignmentService.findAllAssignableFor(user, user.teamNames, Some(limit))
+      tasksJson <- Fox.combined(tasks.map(t => Task.transformToJson(t)(GlobalAccessContext)))
+    } yield Ok(Json.toJson(tasksJson))
   }
 
 }

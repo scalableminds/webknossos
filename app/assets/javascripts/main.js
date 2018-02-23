@@ -6,9 +6,10 @@
 import ErrorHandling from "libs/error_handling";
 
 import React from "react";
-import ReactRouter from "react_router";
+import Router from "router";
 import ReactDOM from "react-dom";
 import { Provider } from "react-redux";
+import { load as loadFeatureToggles } from "features";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 
@@ -25,6 +26,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // try retreive the currently active user if logged in
   try {
+    await loadFeatureToggles();
     const user = await getActiveUser({ doNotCatch: true });
     Store.dispatch(setActiveUserAction(user));
     ErrorHandling.setCurrentUser(user);
@@ -36,7 +38,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (containerElement) {
     ReactDOM.render(
       <Provider store={Store}>
-        <ReactRouter />
+        <Router />
       </Provider>,
       containerElement,
     );

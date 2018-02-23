@@ -42,7 +42,6 @@ import type {
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
-import Request from "libs/request";
 import window, { location } from "libs/window";
 import Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
@@ -54,7 +53,7 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
-import { doWithToken } from "admin/admin_rest_api";
+import { requestTask, finishAnnotation, doWithToken } from "admin/admin_rest_api";
 import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
 import type { ToastStyleType } from "libs/toast";
 
@@ -275,13 +274,11 @@ class TracingApi {
     const state = Store.getState();
     const { tracingType, annotationId } = state.tracing;
     const task = state.task;
-    const finishUrl = `/annotations/${tracingType}/${annotationId}/finish`;
-    const requestTaskUrl = "/api/user/tasks/request";
 
     await Model.save();
-    await Request.triggerRequest(finishUrl);
+    await finishAnnotation(annotationId, tracingType);
     try {
-      const annotation = await Request.receiveJSON(requestTaskUrl);
+      const annotation = await requestTask();
 
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(task, x => x.type.id);

@@ -122,15 +122,27 @@ export type APIScriptType = {
   +gist: string,
 };
 
-export type APIProjectType = {
-  +id: string,
+type APIProjectTypeBase = {
   +name: string,
   +team: string,
-  +owner: APIUserType,
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
   +numberOfOpenAssignments: number,
+};
+
+export type APIProjectType = APIProjectTypeBase & {
+  +id: string,
+  +owner: APIUserType,
+};
+
+export type APIProjectUpdaterType = APIProjectTypeBase & {
+  +id: string,
+  +owner: string,
+};
+
+export type APIProjectCreatorType = APIProjectTypeBase & {
+  +owner: string,
 };
 
 export type APITaskType = {
@@ -180,22 +192,7 @@ export type APIAnnotationType = {
   +user?: APIUserType,
 };
 
-export type APITaskWithAnnotationType = {
-  +id: string,
-  +team: string,
-  +formattedHash: string,
-  +projectName: string,
-  +type: APITaskTypeType,
-  +dataSet: string,
-  +editPosition: Vector3,
-  +editRotation: Vector3,
-  +boundingBox: null,
-  +neededExperience: ExperienceMapType,
-  +created: string,
-  +status: TaskStatusType,
-  +script: null,
-  +tracingTime: null,
-  +creationInfo: null,
+export type APITaskWithAnnotationType = APITaskType & {
   +annotation: APIAnnotationType,
 };
 
@@ -245,6 +242,10 @@ export type APIOpenTasksReportType = {
   +user: string,
   +totalAssignments: number,
   +assignmentsByProjects: { [projectName: string]: number },
+};
+
+export type APIFeatureToggles = {
+  +discussionBoard: boolean,
 };
 
 export default {};

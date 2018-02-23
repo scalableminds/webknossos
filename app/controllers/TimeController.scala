@@ -45,8 +45,8 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long) = SecuredAction.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, false) ?~> Messages("user.notFound")
-      _ <- request.identity.isAdminOf(user) ?~> Messages("user.notAuthorised")
-      js <- loggedTimeForUserListByTimestamp(user,startDate, endDate)
+      _ <- request.identity.isAdminOfOrSelf(user) ?~> Messages("user.notAuthorised")
+      js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
     } yield {
       Ok(js)
     }
@@ -62,6 +62,10 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     val output = new SimpleDateFormat("yyyy")
     var date = input.parse(year.toString)
     val fullYear = output.format(date).toInt
+
+    //set them here to first day of selected month so getActualMaximum below will use the correct month entry
+    startDate.set(fullYear, month - 1, 1, 0, 0, 0)
+    endDate.set(fullYear, month - 1, 1, 0, 0, 0)
 
     val sDay = startDay.getOrElse(startDate.getActualMinimum(Calendar.DAY_OF_MONTH))
     val eDay = endDay.getOrElse(endDate.getActualMaximum(Calendar.DAY_OF_MONTH))
@@ -135,7 +139,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     // only hours, min and sec are important in this scenario
     val h = millis / 3600000
     val m = (millis / 60000) % 60
-    val s = (millis / 1000) % 60
+    val s = (millis.toDouble / 1000) % 60
 
     s"PT${h}H${m}M${s}S"
   }

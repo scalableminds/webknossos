@@ -165,6 +165,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 <% }) %>
 <% if (hasSegmentation) { %>
   uniform sampler2D <%= segmentationName %>_texture;
+  uniform sampler2D <%= segmentationName %>_lookup_texture;
 <% } %>
 uniform vec2 offset, repeat;
 uniform float alpha;
@@ -175,6 +176,16 @@ uniform vec3 uvw;
 
 varying vec2 vPos;
 varying vec2 vUv;
+
+// todo: pass as uniform or from template
+const float bucketPerDim = 16.0;
+const float bucketWidth = 32.0;
+const float bucketLength = bucketWidth * bucketWidth * bucketWidth;
+const float r_texture_width = 512.0;
+const float d_texture_width = 8192.0;
+const float l_texture_width = 64.0;
+const float bytesPerLookUpEntry = 1.0;
+
 /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
 vec3 hsv_to_rgb(vec4 HSV)
 {
@@ -193,15 +204,15 @@ float round(float a) {
   return floor(a + 0.5);
 }
 
-vec3 getRGBAtIndex(sampler2D texture, float textureWidth, float idx, float multiplier) {
+vec3 getRGBAtIndex(sampler2D texture, float textureWidth, float idx) {
   float finalPosX = mod(idx, textureWidth);
   float finalPosY = div(idx, textureWidth);
 
   return texture2D(
       texture,
       vec2(
-        (floor(finalPosX) + 0.5 * multiplier) / textureWidth,
-        (floor(finalPosY) + 0.5 * multiplier) / textureWidth
+        (floor(finalPosX) + 0.5) / textureWidth,
+        (floor(finalPosY) + 0.5) / textureWidth
       )
     ).rgb;
 }
@@ -240,119 +251,99 @@ vec3 transDim(vec3 array) {
   %>
 }
 
+vec3 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosition, vec3 offsetInBucket) {
+  float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim);
+  float bucketIdxInTexture = bucketIdx * bytesPerLookUpEntry;
+  float pixelIdxInBucket = linearizeVec3ToIndex(offsetInBucket, bucketWidth);
+
+  float bucketAddress = getRGBAtIndex(
+    lookUpTexture,
+    l_texture_width,
+    bucketIdxInTexture
+  ).x;
+
+  // todo: does this make sense? what happens when there are multiple layers and we are mixing data with non-data?
+  if (bucketAddress < 0.) {
+    return vec3(0.0, 0.0, 0.0);
+  }
+
+  float x = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, d_texture_width);
+  float pixelIdxInDataTexture = pixelIdxInBucket + bucketLength * bucketAddress;
+  float y = div(pixelIdxInDataTexture, d_texture_width);
+
+  vec3 bucketColor = getRGBAtXYIndex(
+    dataTexture,
+    d_texture_width,
+    x,
+    y
+  );
+  return bucketColor;
+}
+
 void main() {
   float golden_ratio = 0.618033988749895;
   float color_value  = 0.0;
   vec2 texture_pos = vUv * repeat + offset;
   // Mirror y since (0, 0) refers to the lower-left corner in WebGL instead of the upper-left corner
   texture_pos = vec2(texture_pos.x, 1.0 - texture_pos.y);
-  // <% if (hasSegmentation) { %>
-  //   vec4 volume_color = texture2D(<%= segmentationName %>_texture, texture_pos);
-  //   float id = (volume_color.r * 255.0);
-  // <% } else { %>
-  //   float id = 0.0;
-  // <% } %>
-  // /* Get Color Value(s) */
-  // <% if (isRgb) { %>
-  //   vec3 data_color = texture2D( <%= layers[0] %>_texture, texture_pos).xyz;
-  //   data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
-  // <% } else { %>
-  //   vec3 data_color = vec3(0.0, 0.0, 0.0);
-  //   <% _.each(layers, function(name){ %>
-  //     /* Get grayscale value */
-  //     color_value = texture2D( <%= name %>_texture, texture_pos).r;
-  //     /* Brightness / Contrast Transformation */
-  //     color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
-  //     /* Multiply with color and weight */
-  //     data_color += color_value * <%= name %>_weight * <%= name %>_color;
-  //   <% }) %> ;
-  //   data_color = clamp(data_color, 0.0, 1.0);
-  // <% } %>
-  // /* Color map (<= to fight rounding mistakes) */
-  // if ( id > 0.1 ) {
-  //   vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
-  //   gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
-  // } else {
-  //   gl_FragColor = vec4(data_color, 1.0);
-  // }
-
-  float bucketPerDim = 16.0;
-  float bucketWidth = 32.0;
-  float bucketLength = bucketWidth * bucketWidth * bucketWidth;
-  float r_texture_width = 512.0;
-  float d_texture_width = 8192.0;
-  float l_texture_width = 64.0; // next power of two ceil(floor(bucketsPerDim**3))
-  float bytesPerLookUpEntry = 1.0; // todo: pass as uniform or from template
-
-  // texture_pos = vec2(mod(texture_pos.x, 1.0/9.0), mod(texture_pos.y, 1.0/9.0));
-  // old
-  // float xCoord = mod(floor(texture_pos.x * r_texture_width - 0.0000), r_texture_width); // [0...512]
-  // float yCoord = mod(floor(texture_pos.y * r_texture_width - 0.0000), r_texture_width);
-
-  // previous
-  // float xCoord = mod(floor(texture_pos.x * ((r_texture_width - 1.0)/r_texture_width)), r_texture_width);
-  // float yCoord = mod(floor(texture_pos.y * ((r_texture_width - 1.0)/r_texture_width)), r_texture_width);
-
-  // float anisotropyFactor = 44.599998474121094 / 22.0;
-   // <%= this.planeID === OrthoViews.PLANE_YZ ? "texture_pos.x = texture_pos.x / 2.0;" : "" %>
   vec3 coords = transDim(vec3(
     mod(floor(texture_pos.x * (r_texture_width * 0.99999)), r_texture_width),
     mod(floor(texture_pos.y * (r_texture_width * 0.99999)), r_texture_width),
     floor((globalPosition[<%= uvw[2] %>] - anchorPoint[<%= uvw[2] %>] * pow(2.0, 5.0 + zoomStep)) / pow(2.0, zoomStep))
   ));
 
-  float xCoord = coords.x;
-  float yCoord = coords.y;
-  float zCoord = coords.z;
-
   vec3 bucketPosition = vec3(
-    div(xCoord, bucketWidth),
-    div(yCoord, bucketWidth),
-    div(zCoord, bucketWidth)
+    div(coords.x, bucketWidth),
+    div(coords.y, bucketWidth),
+    div(coords.z, bucketWidth)
   );
-  float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim); // save
-  float bucketIdxInTexture = bucketIdx * bytesPerLookUpEntry; // save
-
-  float bucketAddress = getRGBAtIndex(
-    <%= layers[0] %>_lookup_texture,
-    l_texture_width,
-    bucketIdxInTexture,
-    0.1
-  ).x;
-
-
   vec3 offsetInBucket = vec3(
-    mod(xCoord, bucketWidth),
-    mod(yCoord, bucketWidth),
-    mod(zCoord, bucketWidth)
+    mod(coords.x, bucketWidth),
+    mod(coords.y, bucketWidth),
+    mod(coords.z, bucketWidth)
   );
 
-  float pixelIdxInBucket = linearizeVec3ToIndex(offsetInBucket, bucketWidth);
-  float pixelIdxInDataTexture = pixelIdxInBucket + bucketLength * bucketAddress;
+  <% if (hasSegmentation) { %>
+    // todo: test
+    vec3 volume_color = getColorFor(<%= segmentationName %>_lookup_texture, <%= segmentationName %>_texture, bucketPosition, offsetInBucket).xyz;
+    // vec4 volume_color = texture2D(<%= segmentationName %>_texture, texture_pos);
+    float id = (volume_color.r * 255.0);
+  <% } else { %>
+    float id = 0.0;
+  <% } %>
 
-  float x = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, d_texture_width);
-  float y = div(pixelIdxInDataTexture, d_texture_width);
+  // Get Color Value(s)
+  <% if (isRgb) { %>
+    // todo: data texture needs to be rgb
+    vec3 data_color = getColorFor( <%= layers[0] %>_lookup_texture, <%= layers[0] %>_texture, bucketPosition, offsetInBucket).xyz;
+    data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
+  <% } else { %>
+    vec3 data_color = vec3(0.0, 0.0, 0.0);
+    <% _.each(layers, function(name){ %>
+      // Get grayscale value
+      color_value = getColorFor(<%= layers[0] %>_lookup_texture, <%= layers[0] %>_texture, bucketPosition, offsetInBucket).x;
 
-  vec3 bucketColor = getRGBAtXYIndex(
-    <%= layers[0] %>_texture,
-    d_texture_width,
-    x,
-    y
-  );
+      // Brightness / Contrast Transformation
+      color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
-  gl_FragColor = vec4(bucketColor, 1.0);
-  // gl_FragColor = vec4(mix(bucketColor, vec3(bucketAddress / 144., 0.0, 0.0), <%= layers[0] %>_brightness), 1.0);
-  // mix( data_color, hsv_to_rgb(HSV), alpha )
-  // gl_FragColor = vec4(bucketPosition / vec3(12.0, 12.0, 12.0), 1.0);
+      // Multiply with color and weight
+      data_color += color_value * <%= name %>_weight * <%= name %>_color;
+    <% }) %> ;
+    data_color = clamp(data_color, 0.0, 1.0);
+  <% } %>
 
-  if (bucketAddress < 0.) {
-    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+  // Color map (<= to fight rounding mistakes)
+  if ( id > 0.1 ) {
+    vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
+    gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
+  } else {
+    gl_FragColor = vec4(data_color, 1.0);
   }
+
   // gl_FragColor = vec4(bucketAddress / pow(12.0, 2.0), 0.0, 0.0, 1.0);
   // gl_FragColor = vec4(pixelIdxInBucket / pow(32.0, 2.0), 0.0, 0.0, 1.0);
   // gl_FragColor = vec4(texture_pos.x, texture_pos.y, 0.0, 1.0);
-  // gl_FragColor = vec4(0.0, bucketIdx / pow(l_texture_width, 2.0), 0.0, 1.0);
 }
 
 

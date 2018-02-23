@@ -76,16 +76,19 @@ export default class TextureBucketManager {
     );
 
     this.storedBucketToIndexMap.set(bucket, index);
+    const updateBucketData = () => {
+      // Check that the bucket is still in the data texture.
+      // Also the index could have changed, so retrieve the index again.
+      const bucketIndex = this.storedBucketToIndexMap.get(bucket);
+      if (bucketIndex != null) {
+        this._writeBucketToBuffer(bucket, bucketIndex);
+      }
+    };
+
     if (!bucket.hasData()) {
-      bucket.once("bucketLoaded", () => {
-        // Check that the bucket is still in the data texture.
-        // Also the index could have changed, so retrieve the index again.
-        const bucketIndex = this.storedBucketToIndexMap.get(bucket);
-        if (bucketIndex != null) {
-          this._writeBucketToBuffer(bucket, bucketIndex);
-        }
-      });
+      bucket.once("bucketLoaded", updateBucketData);
     }
+    bucket.on("bucketLabeled", updateBucketData);
   }
 
   storeBuckets(buckets: Array<DataBucket>, anchorPoint: Vector3): number {

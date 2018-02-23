@@ -96,7 +96,7 @@ UpdatableTexture.prototype.update = function(src, x, y, width, height) {
     height,
     this.utils.convert(this.format),
     this.utils.convert(this.type),
-    src,
+    src
   );
   this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
 };

@@ -78,6 +78,7 @@ export class DataBucket {
   label(labelFunc: Uint8Array => void) {
     labelFunc(this.getOrCreateData());
     this.dirty = true;
+    this.trigger("bucketLabeled");
   }
 
   hasData(): boolean {

@@ -66,7 +66,6 @@ class Binary {
   mappings: Mappings;
   pingStrategies: Array<PingStrategy>;
   pingStrategies3d: Array<PingStrategy3d>;
-  planes: OrthoViewMapType<Plane2D>;
   direction: Vector3;
   activeMapping: ?string;
   lastPosition: ?Vector3;
@@ -116,18 +115,6 @@ class Binary {
     this.pingStrategies = [new SkeletonPingStrategy(this.cube), new VolumePingStrategy(this.cube)];
     this.pingStrategies3d = [new DslSlowPingStrategy3d(this.cube)];
 
-    this.planes = {};
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.planes[planeId] = new Plane2D(
-        planeId,
-        this.cube,
-        this.layer.bitDepth,
-        this.targetBitDepth,
-        32,
-        this.category === "segmentation",
-      );
-    }
-
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
       listenToStoreProperty(
         state => state.datasetConfiguration.fourBit,
@@ -142,13 +129,15 @@ class Binary {
   }
 
   setupDataTextures(): void {
-    const bytes = this.targetBitDepth >> 3;
+    const bytes = this.layer.bitDepth >> 3;
+    console.log(this.category, "bytes", bytes);
+    // const bytes = this.targetBitDepth >> 3;
     const tWidth = Constants.DATA_TEXTURE_WIDTH;
 
     const dataTexture = createUpdatableTexture(
       tWidth,
       bytes,
-      false,
+      THREE.UnsignedByteType,
       SceneController.renderer,
     );
 
@@ -163,7 +152,7 @@ class Binary {
     const lookUpTexture = createUpdatableTexture(
       lookUpBufferWidth,
       1,
-      true,
+      THREE.FloatType,
       SceneController.renderer,
     );
 
@@ -239,9 +228,10 @@ class Binary {
   }
 
   forcePlaneRedraw(): void {
-    for (const plane of _.values(this.planes)) {
-      plane.forceRedraw();
-    }
+    // todo!
+    // for (const plane of _.values(this.planes)) {
+    //   plane.forceRedraw();
+    // }
   }
 
   setActiveMapping(mappingName: string): void {

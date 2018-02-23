@@ -56,17 +56,26 @@ export function createDataTexture(
 
 export function createUpdatableTexture(
   width: number,
-  bytes: number,
-  optUseFloat: boolean = false,
+  channelCount: number,
+  type: THREE.FloatType | THREE.UnsignedByteType | THREE.Uint32BufferAttribute,
   renderer: THREE.WebGLRenderer,
 ): UpdatableTexture {
-  const format = bytes === 1 ? THREE.LuminanceFormat : THREE.RGBFormat;
+  let format;
+  if (channelCount === 1) {
+    format = THREE.LuminanceFormat
+  } else if (channelCount === 3) {
+    format = THREE.RGBFormat;
+  } else if (channelCount === 4) {
+    format = THREE.RGBAFormat;
+  } else {
+    throw new Error("Unhandled byte count");
+  }
 
   const newTexture = new UpdatableTexture(
     width,
     width,
     format,
-    optUseFloat ? THREE.FloatType : THREE.UnsignedByteType,
+    type,
     THREE.UVMapping,
     THREE.ClampToEdgeWrapping, // todo?
     THREE.ClampToEdgeWrapping,

@@ -31,7 +31,7 @@ object ReportSQLDAO extends SimpleSQLDAO {
     for {
       r <- run(
         sql"""
-          with teamMembers as (select _user from webknossos.user_team_roles ut where ut._team = ${teamId})
+          with teamMembers as (select _user from webknossos.user_team_roles ut where ut._team = ${teamId.id})
 
           ,experiences as (select ue.domain, ue.value
           from
@@ -44,7 +44,7 @@ object ReportSQLDAO extends SimpleSQLDAO {
             webknossos.projects_ p
             JOIN webknossos.tasks_ t ON t._project = p._id
             CROSS JOIN experiences ue
-          where p._team = ${teamId} and
+          where p._team = ${teamId.id} and
           t.neededExperience_domain = ue.domain and
           t.neededExperience_value <= ue.value
           group by p._id, p.name, p.paused)

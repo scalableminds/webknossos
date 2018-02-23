@@ -152,14 +152,18 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       _ <- assertUpdateAccess(userId)
       _ <- run(sqlu"""update webknossos.users set
                           passwordInfo_hasher = '#${sanitize(passwordInfo.hasher)}',
-                          passwordInfo_password = ${passwordInfo.password}""")
+                          passwordInfo_password = ${passwordInfo.password}
+                      where _id = ${userId.id}""")
     } yield ()
   }
 
   def updateUserConfiguration(userId: ObjectId, userConfiguration: UserConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(sqlu"update webknossos.users set userConfiguration = '#${sanitize(Json.toJson(userConfiguration.configuration).toString)}'")
+      _ <- run(
+        sqlu"""update webknossos.users
+               set userConfiguration = '#${sanitize(Json.toJson(userConfiguration.configuration).toString)}'
+               where _id = ${userId.id}""")
     } yield ()
 
   def updateValues(userId: ObjectId, firstName: String, lastName: String, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {

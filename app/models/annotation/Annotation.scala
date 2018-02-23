@@ -381,9 +381,9 @@ object Annotation extends FoxImplicits {
 
   def fromAnnotationSQL(s: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
-      dataset <- DataSetSQLDAO.findOne(s._dataset) ?~> Messages("dataSet.notFound")
-      team <- TeamSQLDAO.findOne(s._team) ?~> Messages("team.notFound")
-      settings <- findSettingsFor(s)
+      dataset <- DataSetSQLDAO.findOne(s._dataset)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
+      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
+      settings <- findSettingsFor(s)(GlobalAccessContext)
       name: Option[String] = if (s.name.isEmpty) None else Some(s.name)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
       userIdBson <- s._user.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._user.toString)

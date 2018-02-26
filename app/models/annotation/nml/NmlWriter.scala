@@ -3,39 +3,66 @@
  */
 package models.annotation.nml
 
-import java.io.OutputStream
 import javax.xml.stream.{XMLOutputFactory, XMLStreamWriter}
 
+import com.scalableminds.util.geometry.Scale
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.xml.Xml
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.util.geometry.Scale
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.util.xml.Xml
 import com.sun.xml.txw2.output.IndentingXMLStreamWriter
-import models.annotation.{Annotation, AnnotationDAO}
-import models.user.UserService
+import models.annotation.Annotation
+import net.liftweb.common.Full
 import org.joda.time.DateTime
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 
-import scala.concurrent.Await
-import scala.util.{Failure, Success}
-
-object NmlWriter {
+object NmlWriter extends FoxImplicits {
   private lazy val outputService = XMLOutputFactory.newInstance()
 
   def toNmlStream(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Scale) = Enumerator.outputStream { os =>
+    implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(os))
+
     for {
-      nml <- toNml(tracing, annotation, os, scale)
-      _ = os.close // this never happends
+      _ <- Fox.successful( println("BEFORE"))
+      //nml <- toNmlMinimal(tracing, annotation, scale)
+      nml <- toNml(tracing, annotation, scale)
+      _ <- Fox.successful( println("DONE TONML"))
+      _ <- Fox.successful(os.close)
     } yield {
       nml
-      //os.close()
     }
   }
 
-  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, outputStream: OutputStream, scale: Scale) = {
-    implicit val writer = new IndentingXMLStreamWriter(outputService.createXMLStreamWriter(outputStream))
+  def toNmlMinimal(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Scale)(implicit writer: XMLStreamWriter): Fox[Unit] = {
+
+    tracing match {
+      case Right(volumeTracing) =>
+        for {
+          _ <- Fox.successful("")
+          _ <- Fox.successful(writer.writeStartElement("something"))
+          _ <- Fox.successful(writer.writeAttribute("test", "hi"))
+          _ <- Xml.withinElement("things") {
+            writeMetaData(annotation)
+          }
+          _ <- Fox.successful(writer.writeEndElement())
+          _ <- Fox.successful(println("BEFORE-IN-FOR"))
+          _ <- Fox.successful(println("AFTER-WITHIN"))
+          _ <- Fox.successful(writer.writeEndDocument())
+          _ <- Fox.successful(writer.close())
+        } yield ()
+      case Left(skeletonTracing) =>
+        for {
+          _ <- Xml.withinElement("things") {
+            writeMetaData(annotation)
+          }
+          _ <- Fox.successful(writer.writeEndDocument())
+          _ <- Fox.successful(writer.close())
+        } yield ()
+    }
+  }
+
+  def toNml(tracing: Either[SkeletonTracing, VolumeTracing], annotation: Annotation, scale: Scale)(implicit writer: XMLStreamWriter): Fox[Unit] = {
 
     tracing match {
       case Right(volumeTracing) =>
@@ -49,24 +76,26 @@ object NmlWriter {
 
             _ = writer.writeEndDocument()
             _ = writer.close()
-          } yield {
-
-          }
-        }
-      case Left(skeletonTracing) => {
-        Xml.withinElement("things") {
-          for {
-            metaData <- writeMetaData(annotation)
-            test1 <- Fox.successful(Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, annotation.description, scale)))
-            test2 <- Fox.successful(writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty)))
-            test3 <- Fox.successful(Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp))))
-            test4 <- Fox.successful(Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments))))
-            _ = writer.writeEndDocument()
-            _ = writer.close()
           } yield ()
         }
+      case Left(skeletonTracing) => {
+        for {
+          _ <- Xml.withinElement("things") { writeSkeletonThings(annotation, skeletonTracing, scale)}
+          _ <- Fox.successful(writer.writeEndDocument())
+          _ <- Fox.successful(writer.close())
+        } yield ()
       }
     }
+  }
+
+  def writeSkeletonThings(annotation: Annotation, skeletonTracing: SkeletonTracing, scale: Scale)(implicit writer: XMLStreamWriter): Fox[Unit] = {
+    for {
+      _ <- writeMetaData(annotation)
+      _ <- Fox.successful(Xml.withinElementSync("parameters")(writeParametersAsXml(skeletonTracing, annotation.description, scale)))
+      _ <- Fox.successful(writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty)))
+      _ <- Fox.successful(Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp))))
+      _ <- Fox.successful(Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments))))
+    } yield ()
   }
 
   def writeParametersAsXml(tracing: SkeletonTracing, description: String, scale: Scale)(implicit writer: XMLStreamWriter) = {
@@ -213,53 +242,48 @@ object NmlWriter {
   }
 
   def writeMetaData(annotation: Annotation)(implicit writer: XMLStreamWriter): Fox[Unit] = {
-
-    Xml.withinElementSync("meta") {
-      writer.writeAttribute("name", "writer")
-      writer.writeAttribute("content", "NmlWriter.scala")
-    }
-    Xml.withinElementSync("meta") {
+    for {
+      _ <- Fox.successful(Xml.withinElementSync("meta") {
+          writer.writeAttribute("name", "writer")
+          writer.writeAttribute("content", "NmlWriter.scala")
+        })
+      _ <- Fox.successful(Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writerGitCommit")
       writer.writeAttribute("content", webknossos.BuildInfo.commitHash)
-    }
-    Xml.withinElementSync("meta") {
+    })
+      _ <- Fox.successful(Xml.withinElementSync("meta") {
         writer.writeAttribute("name", "timestamp")
         writer.writeAttribute("content", DateTime.now().getMillis.toString)
-    }
-    Xml.withinElementSync("meta") {
+    })
+      _ <- Fox.successful(Xml.withinElementSync("meta") {
         writer.writeAttribute("name", "annotationId")
         writer.writeAttribute("content", annotation.id)
-    }
-    Xml.withinElement("meta") {
-      for{
-        user <- annotation.user
-      } yield {
-        writer.writeAttribute("name", "username")
-        writer.writeAttribute("content", user.name)
-      }
-    }
-    /*
-    annotation.user.map(user =>
-      Xml.withinElement("meta") {
-        writer.writeAttribute("name", "username")
-        writer.writeAttribute("content", user.name)
-      }
-    )
-    */
-    /*annotation._task.map(taskId =>
-      Xml.withinElement("meta") {
-      writer.writeAttribute("name", "taskId")
-      writer.writeAttribute("content", taskId.stringify)
     })
-    */
+      _ <-
+            for {
+              userBox <- annotation.user.futureBox
+            } yield {
+              userBox match {
+                case Full(user) => Xml.withinElementSync("meta") {
+                  writer.writeAttribute("name", "username")
+                  writer.writeAttribute("content", user.name)
+                }
+                case _ => ()
+              }
+            }
+      _ <- for {
+            taskBox <- annotation.task.futureBox
+          } yield {
+            taskBox match {
+              case Full(task) => Xml.withinElementSync("meta") {
+                writer.writeAttribute("name", "taskId")
+                writer.writeAttribute("content", task.id)
+              }
+              case _ => ()
+            }
+          }
 
-    Xml.withinElement("meta") {
-      for{
-        task <- annotation.task
-      } yield {
-        writer.writeAttribute("name", "taskId")
-        writer.writeAttribute("content", task.id)
-      }
-    }
+    } yield ()
+
   }
 }

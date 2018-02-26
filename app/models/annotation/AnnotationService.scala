@@ -125,8 +125,8 @@ object AnnotationService
 
   def tracingFromBase(annotationBase: Annotation)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
     for {
-      dataSet: DataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName)
-      dataSource <- dataSet.dataSource.toUsable.toFox
+      dataSet: DataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName) ?~> ("Could not find DataSet " + annotationBase.dataSetName)
+      dataSource <- dataSet.dataSource.toUsable.toFox ?~> "Could not convert to usable DataSource"
       newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(annotationBase.tracingReference)
     } yield newTracingReference
   }

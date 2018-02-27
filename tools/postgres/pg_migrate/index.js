@@ -88,7 +88,8 @@ function* csvWriter(name, cols) {
       }
       let res = buffer.dataSets.get(dataSet);
       if ( res == null) {
-        console.log("warning: could not look up dataSet " + dataSet);
+        console.log("warning: could not look up dataSet " + dataSet + ", replacing with id aaaaaaaaaaaaaaaaaaaaaaaa");
+        return {_id:new mongodb.ObjectID('aaaaaaaaaaaaaaaaaaaaaaaa')}
       }
       return res
     }
@@ -233,7 +234,7 @@ function* csvWriter(name, cols) {
       ],
       async doc => ({
         _id: doc._id.toHexString(),
-        _dataSet: (doc.dataSetName != null && doc.dataSetName != "") ? (await lookupDataset(doc.dataSetName.trim()))._id.toHexString() : null,
+        _dataSet: (doc.dataSetName != null && doc.dataSetName != "") ? (await lookupDataset(doc.dataSetName.trim()))._id.toHexString() : 'aaaaaaaaaaaaaaaaaaaaaaaa',
         _task: doc._task != null ? doc._task.toHexString() : null,
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
         _user: doc._user.toHexString(),
@@ -368,8 +369,8 @@ function* csvWriter(name, cols) {
       async doc => {
         let project = await lookupProject(doc._project);
         if (project == null) {
-          let project = await lookupProject(DEFAULT_PROJECT);
-          return null;
+          console.log("falling back to project " + DEFAULT_PROJECT)
+          project = await lookupProject(DEFAULT_PROJECT);
         }
         return {
           _id: doc._id.toHexString(),

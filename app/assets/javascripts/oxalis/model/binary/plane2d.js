@@ -127,40 +127,40 @@ class Plane2D {
     this.W = dimensions[2];
 
     // this.listenTo(this.cube, "bucketLoaded", (bucket: Vector4): void => {
-      //   const zoomStepDiff = this.dataTexture.zoomStep - bucket[3];
-      //   if (zoomStepDiff > 0) {
-      //     bucket = [
-      //       bucket[0] >> zoomStepDiff,
-      //       bucket[1] >> zoomStepDiff,
-      //       bucket[2] >> zoomStepDiff,
-      //       this.dataTexture.zoomStep,
-      //     ];
-      //   }
+    //   const zoomStepDiff = this.dataTexture.zoomStep - bucket[3];
+    //   if (zoomStepDiff > 0) {
+    //     bucket = [
+    //       bucket[0] >> zoomStepDiff,
+    //       bucket[1] >> zoomStepDiff,
+    //       bucket[2] >> zoomStepDiff,
+    //       this.dataTexture.zoomStep,
+    //     ];
+    //   }
 
-      //   // Checking, whether the new bucket intersects the current layer
-      //   if (
-      //     this.dataTexture.layer >> (BUCKET_SIZE_P + bucket[3]) === bucket[this.W] &&
-      //     this.dataTexture.topLeftBucket != null
-      //   ) {
-      //     // Get the tile, the bucket would be drawn to
-      //     const u = bucket[this.U] - this.dataTexture.topLeftBucket[this.U];
-      //     const v = bucket[this.V] - this.dataTexture.topLeftBucket[this.V];
+    //   // Checking, whether the new bucket intersects the current layer
+    //   if (
+    //     this.dataTexture.layer >> (BUCKET_SIZE_P + bucket[3]) === bucket[this.W] &&
+    //     this.dataTexture.topLeftBucket != null
+    //   ) {
+    //     // Get the tile, the bucket would be drawn to
+    //     const u = bucket[this.U] - this.dataTexture.topLeftBucket[this.U];
+    //     const v = bucket[this.V] - this.dataTexture.topLeftBucket[this.V];
 
-      //     // If the tile is part of the texture, mark it as changed
-      //     if (u >= 0 && u < this.BUCKETS_PER_ROW && v >= 0 && v < this.BUCKETS_PER_ROW) {
-      //       const tile = [u, v];
-      //       this.dataTexture.tiles[tileIndexByTile(tile)] = false;
+    //     // If the tile is part of the texture, mark it as changed
+    //     if (u >= 0 && u < this.BUCKETS_PER_ROW && v >= 0 && v < this.BUCKETS_PER_ROW) {
+    //       const tile = [u, v];
+    //       this.dataTexture.tiles[tileIndexByTile(tile)] = false;
 
-      //       if (
-      //         u >= this.dataTexture.area[0] ||
-      //         u <= this.dataTexture.area[2] ||
-      //         v >= this.dataTexture.area[1] ||
-      //         v <= this.dataTexture.area[3]
-      //       ) {
-      // this.dataTexture.ready = false;
-      //       }
-      //     }
-      //   }
+    //       if (
+    //         u >= this.dataTexture.area[0] ||
+    //         u <= this.dataTexture.area[2] ||
+    //         v >= this.dataTexture.area[1] ||
+    //         v <= this.dataTexture.area[3]
+    //       ) {
+    // this.dataTexture.ready = false;
+    //       }
+    //     }
+    //   }
     // });
 
     this.cube.on("volumeLabeled", () => this.reset());

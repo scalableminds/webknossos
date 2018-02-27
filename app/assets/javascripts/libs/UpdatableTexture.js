@@ -87,6 +87,7 @@ UpdatableTexture.prototype.update = function(src, x, y, width, height) {
 
   var activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
   this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
+  console.log(this.format, src.length);
   this.gl.texSubImage2D(
     this.gl.TEXTURE_2D,
     0,
@@ -96,7 +97,7 @@ UpdatableTexture.prototype.update = function(src, x, y, width, height) {
     height,
     this.utils.convert(this.format),
     this.utils.convert(this.type),
-    src
+    src,
   );
   this.gl.bindTexture(this.gl.TEXTURE_2D, activeTexture);
 };

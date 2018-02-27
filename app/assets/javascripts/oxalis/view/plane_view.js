@@ -129,7 +129,8 @@ class PlaneView {
       }
     }
 
-    if (forceRender || this.needsRerender || modelChanged) {
+    if (forceRender || this.needsRerender || modelChanged || window.needsRerender) {
+      window.needsRerender = false;
       const { renderer, scene } = SceneController;
 
       this.trigger("render");

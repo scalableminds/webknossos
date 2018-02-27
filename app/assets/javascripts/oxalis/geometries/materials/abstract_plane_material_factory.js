@@ -62,11 +62,14 @@ export function createUpdatableTexture(
 ): UpdatableTexture {
   let format;
   if (channelCount === 1) {
-    format = THREE.LuminanceFormat
+    format = THREE.LuminanceFormat;
+    console.log("use THREE.LuminanceFormat", format);
   } else if (channelCount === 3) {
     format = THREE.RGBFormat;
+    console.log("use THREE.RGBFormat;", format);
   } else if (channelCount === 4) {
     format = THREE.RGBAFormat;
+    console.log("use THREE.RGBAFormat;", format);
   } else {
     throw new Error("Unhandled byte count");
   }

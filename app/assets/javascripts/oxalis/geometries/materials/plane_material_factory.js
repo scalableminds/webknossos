@@ -62,7 +62,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       uvw: {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
-      }
+      },
     });
   }
 
@@ -356,7 +356,7 @@ void main() {
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
       OrthoViews,
       planeID: this.planeID,
-      uvw: Dimensions.getIndices(this.planeID)
+      uvw: Dimensions.getIndices(this.planeID),
     });
   }
 }

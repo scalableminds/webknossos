@@ -5,6 +5,7 @@ import constants from "oxalis/constants";
 import _ from "lodash";
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
+import window from "libs/window";
 
 const bucketWidth = 32;
 const bucketSize = Math.pow(bucketWidth, 3);
@@ -21,33 +22,45 @@ export function zoomedAddressToPosition([x, y, z, zoomStep]: Vector4): Vector3 {
 const grayBuffer = new Uint8Array(bucketSize);
 grayBuffer.fill(100);
 
+const oneByteFloatBuffer = new Float32Array(1);
+
 export default class TextureBucketManager {
-  dataBuffer: Uint8Array;
   dataTexture: UpdatableTexture;
   lookUpBuffer: Float32Array;
   lookUpTexture: THREE.DataTexture;
   storedBucketToIndexMap: Map<DataBucket, number>;
   freeIndexSet: Set<number>;
+  isRefreshBufferOutOfDate: boolean;
 
   bucketPerDim: number;
   bufferCapacity: number;
 
-  constructor(bucketPerDim: number) {
+  constructor(bucketPerDim: number, layer) {
+    this.layer = layer;
     // each plane gets bucketPerDim**2 buckets
     this.bufferCapacity = 3 * Math.pow(bucketPerDim, 2);
-    const dataBufferSize = this.bufferCapacity * bucketSize;
     // the look up buffer is bucketPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(64, 2); // Math.pow(bucketPerDim, 3) * bytesPerLookUpEntry;
-    // const lookUpBufferWidth = Math.ceil(Math.sqrt(lookUpBufferSize)); // Textures have to be quadratical
 
-    this.dataBuffer = new Uint8Array(8192 ** 2); // dataBufferSize
-    window.dataBuffers = (window.dataBuffers || []).concat(this.dataBuffer);
     this.lookUpBuffer = new Float32Array(lookUpBufferSize);
 
     this.storedBucketToIndexMap = new Map();
     this.freeIndexSet = new Set(_.range(this.bufferCapacity));
 
     this.bucketPerDim = bucketPerDim;
+    this._refreshLookUpBufferDebounced = _.debounce(() => this._refreshLookUpBuffer(), 20);
+    this.currentAnchorPoint = null;
+    this.isRefreshBufferOutOfDate = false;
+    this.keepRefreshBufferUpToDate();
+  }
+
+  keepRefreshBufferUpToDate() {
+    if (this.isRefreshBufferOutOfDate) {
+      this._refreshLookUpBuffer();
+    }
+    window.requestAnimationFrame(() => {
+      this.keepRefreshBufferUpToDate();
+    });
   }
 
   setupDataTextures(dataTexture: UpdatableTexture, lookUpTexture: THREE.DataTexture): void {
@@ -59,21 +72,32 @@ export default class TextureBucketManager {
     return this.lookUpBuffer;
   }
 
-  // getDataBuffer() {
-  //   return this.dataBuffer;
-  // }
-
   _writeBucketToBuffer(bucket: Bucket, index: number): void {
     this.freeIndexSet.delete(index);
 
     const bucketHeightInTexture = 4;
-    this.dataTexture.update(
-      bucket.hasData() ? bucket.getData() : grayBuffer,
-      0,
-      bucketHeightInTexture * index,
-      constants.DATA_TEXTURE_WIDTH,
-      bucketHeightInTexture,
-    );
+
+    const writeBucketImpl = (_index, async = true) => {
+      // console.log("writing to", this.layer.name);
+      if (!bucket.hasData()) {
+        return;
+      }
+      const then = new Date();
+      this.dataTexture.update(
+        bucket.getData(),
+        0,
+        bucketHeightInTexture * _index,
+        constants.DATA_TEXTURE_WIDTH,
+        bucketHeightInTexture,
+      );
+      window.timeSpent = (window.timeSpent || 0) + (new Date() - then);
+      window.bucketsWritten = (window.bucketsWritten || 0) + 1;
+      window.needsRerender = true;
+      if (async) {
+        this.isRefreshBufferOutOfDate = true;
+      }
+    };
+    writeBucketImpl(index, false);
 
     this.storedBucketToIndexMap.set(bucket, index);
     const updateBucketData = () => {
@@ -81,19 +105,23 @@ export default class TextureBucketManager {
       // Also the index could have changed, so retrieve the index again.
       const bucketIndex = this.storedBucketToIndexMap.get(bucket);
       if (bucketIndex != null) {
-        this._writeBucketToBuffer(bucket, bucketIndex);
+        writeBucketImpl(bucketIndex);
+      } else {
+        bucket.off("bucketLabeled", debouncedUpdateBucketData);
       }
     };
+    const debouncedUpdateBucketData = _.debounce(updateBucketData, 16);
 
     if (!bucket.hasData()) {
       bucket.once("bucketLoaded", updateBucketData);
     }
-    bucket.on("bucketLabeled", updateBucketData);
+    bucket.on("bucketLabeled", debouncedUpdateBucketData);
   }
 
   storeBuckets(buckets: Array<DataBucket>, anchorPoint: Vector3): number {
     // Mantain a dirty set so that we know which buckets, we can replace
     const dirtySet = new Set(this.storedBucketToIndexMap.keys());
+    this.currentAnchorPoint = anchorPoint;
 
     const freeIndexArray = Array.from(this.freeIndexSet);
     let updatedBuckets = 0;
@@ -120,24 +148,25 @@ export default class TextureBucketManager {
 
     // Completely re-write the lookup buffer. This could be smarter, but it's probably not worth it.
     // console.time("rewrite-looup-buffer");
-    // this.dataTexture.image.data = this.dataBuffer;
-    // this.dataTexture.needsUpdate = true;
-    this._refreshLookUpBuffer(anchorPoint);
+    this._refreshLookUpBuffer();
     // console.timeEnd("rewrite-looup-buffer");
     return updatedBuckets;
   }
 
-  _refreshLookUpBuffer(anchorPoint: Vector3) {
+  _refreshLookUpBuffer() {
+    const anchorPoint = this.currentAnchorPoint;
     this.lookUpBuffer.fill(-1);
 
     for (const [bucket, address] of this.storedBucketToIndexMap) {
       const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
-      this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = address;
+      this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = bucket.hasData() ? address : -address;
+      // this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = address;
     }
     // this.lookUpTexture.image.data = this.lookUpBuffer;
     // this.lookUpTexture.needsUpdate = true;
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, 64, 64);
-    console.log("updating lookup buffer");
+    // console.log("updating lookup buffer");
+    this.isRefreshBufferOutOfDate = false;
   }
 
   _getBucketIndex(bucket: DataBucket, anchorPoint: Vector3): number {

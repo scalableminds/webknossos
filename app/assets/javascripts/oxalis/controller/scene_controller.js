@@ -249,10 +249,7 @@ class SceneController {
       //   continue;
       // }
       const binary = Model.binary[name];
-      anchorPoint = binary.updateDataTextures(
-        gPos,
-        getRequestLogZoomStep(Store.getState()),
-      );
+      anchorPoint = binary.updateDataTextures(gPos, getRequestLogZoomStep(Store.getState()));
     }
 
     for (const planeId of OrthoViewValuesWithoutTDView) {

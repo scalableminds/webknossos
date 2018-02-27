@@ -29,9 +29,7 @@ import TextureBucketManager from "./binary/texture_bucket_manager";
 import { getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
-import {
-  createUpdatableTexture,
-} from "oxalis/geometries/materials/abstract_plane_material_factory";
+import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import Constants from "oxalis/constants";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
@@ -78,7 +76,7 @@ class Binary {
   listenTo: Function;
 
   constructor(layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
-    this.textureBucketManager = new TextureBucketManager(bucketPerDim);
+    this.textureBucketManager = new TextureBucketManager(bucketPerDim, layer);
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
@@ -144,6 +142,8 @@ class Binary {
     dataTexture.binaryCategory = this.category;
     dataTexture.binaryName = this.name;
 
+    // console.log("new TextureBucketManager", this.category, this.name, bytes);
+
     // TODO: make this DRY with texture bucket manager
     const bucketPerDim = 16;
     const bytesPerLookUpEntry = 1;
@@ -170,6 +170,7 @@ class Binary {
   }
 
   updateDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
+    console.log("updateDataTextures");
     const anchorPoint = _.clone(position);
     // Coerce to bucket boundary
     anchorPoint[0] &= -1 << (5 + zoomStep);

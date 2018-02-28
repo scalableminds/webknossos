@@ -48,13 +48,13 @@ object DataSet {
       (__ \ 'dataSource).write[InboxDataSource] and
       (__ \ 'dataStore).write[DataStoreInfo] and
       (__ \ 'owningOrganization).write[String] and
-      (__ \ 'allowedTeams).write[List[BSONObjectID]] and
+      (__ \ 'allowedTeams).write[List[String]] and
       (__ \ 'isActive).write[Boolean] and
       (__ \ 'isPublic).write[Boolean] and
       (__ \ 'description).write[Option[String]] and
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean]) (d =>
-      (d.name, d.dataSource, d.dataStoreInfo, d.owningOrganization, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+      (d.name, d.dataSource, d.dataStoreInfo, d.owningOrganization, d.allowedTeams.map(_.stringify), d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
 }
 
 object DataSetDAO extends SecuredBaseDAO[DataSet] {

@@ -32,7 +32,7 @@ case class TaskParameters(
                            taskTypeId: String,
                            neededExperience: Experience,
                            openInstances: Int,
-                           team: BSONObjectID,
+                           team: String,
                            projectName: String,
                            scriptId: Option[String],
                            boundingBox: Option[BoundingBox],
@@ -113,7 +113,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       nmlParams.taskTypeId,
       nmlParams.neededExperience,
       nmlParams.openInstances,
-      nmlParams.team,
+      nmlParams.team.stringify,
       nmlParams.projectName,
       nmlParams.scriptId,
       nmlParams.boundingBox,
@@ -175,10 +175,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId)
-      _ <- ensureTeamAdministration(request.identity, params.team)
+      _ <- ensureTeamAdministration(request.identity, BSONObjectID(params.team))
       task = Task(
         taskType._id,
-        params.team,
+        BSONObjectID(params.team),
         params.neededExperience,
         params.openInstances,
         params.openInstances,
@@ -216,7 +216,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
 
   def list = SecuredAction.async { implicit request =>
     for {
-
       tasks <- TaskService.findAllAdministratable(request.identity, limit = 10000)
       js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
     } yield {

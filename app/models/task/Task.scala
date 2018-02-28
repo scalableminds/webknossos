@@ -95,7 +95,7 @@ object Task extends FoxImplicits {
     } yield {
       Json.obj(
         "id" -> task.id,
-        "team" -> task._team,
+        "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> task._project,
         "type" -> tt,
@@ -133,7 +133,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     override def findQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamIds)))
+          AllowIf(Json.obj("_team" -> Json.obj("$in" -> user.teamIds)))
         case _ =>
           DenyEveryone()
       }
@@ -142,7 +142,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
     override def removeQueryFilter(implicit ctx: DBAccessContext) = {
       ctx.data match {
         case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamManagerTeamIds)))
+          AllowIf(Json.obj("_team" -> Json.obj("$in" -> user.teamManagerTeamIds)))
         case _ =>
           DenyEveryone()
       }
@@ -159,7 +159,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
 
   def findAllAdministratable(user: User, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     find(Json.obj(
-      "team" -> Json.obj("$in" -> user.teamManagerTeamIds))).cursor[Task]().collect[List](maxDocs = limit)
+      "_team" -> Json.obj("$in" -> user.teamManagerTeamIds))).cursor[Task]().collect[List](maxDocs = limit)
   }
 
   def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {

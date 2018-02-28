@@ -6,6 +6,9 @@ import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
+import {fetchWrapper} from "../enzyme/e2e-setup";
+
+test.beforeEach(global.fetch = fetchWrapper);
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);

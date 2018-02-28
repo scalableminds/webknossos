@@ -4,6 +4,9 @@
 import "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
+import {fetchWrapper} from "../enzyme/e2e-setup";
+
+test.beforeEach(global.fetch = fetchWrapper);
 
 test("getTaskTypes()", async t => {
   const taskTypes = await api.getTaskTypes();

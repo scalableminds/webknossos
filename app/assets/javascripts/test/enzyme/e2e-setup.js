@@ -33,7 +33,7 @@ function wait(milliseconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
-global.fetch = function fetchWrapper(url, options) {
+function fetchWrapper(url, options) {
   let newUrl = url;
   if (url.indexOf("http:") === -1) {
     newUrl = `http://localhost:9000${url}`;
@@ -47,6 +47,7 @@ global.fetch = function fetchWrapper(url, options) {
   console.log("Fetching", newUrl);
   return promise;
 };
+global.fetch = fetchWrapper;
 global.Headers = Headers;
 global.Request = Request;
 global.Response = Response;
@@ -93,6 +94,21 @@ function debugWrapper(wrapper: any, name: string) {
   );
 }
 
+function changeXAuthToken(url, options) {
+  let newUrl = url;
+  if (url.indexOf("http:") === -1) {
+    newUrl = `http://localhost:9000${url}`;
+  }
+  options.headers.set(
+    "X-Auth-Token",
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+  );
+  const promise = fetch(newUrl, options);
+  requests.push(promise);
+  console.log("Fetching", newUrl);
+  return promise;
+};
+
 configure({ adapter: new Adapter() });
 
-export { waitForAllRequests, createSnapshotable, wait, debugWrapper };
+export { waitForAllRequests, createSnapshotable, wait, debugWrapper, fetchWrapper, changeXAuthToken };

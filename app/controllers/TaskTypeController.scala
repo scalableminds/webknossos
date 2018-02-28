@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
+import com.scalableminds.util.reactivemongo.JsonFormatHelper
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationSettings}
 import models.task._
@@ -14,13 +15,14 @@ import play.api.libs.json._
 import play.twirl.api.Html
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONObjectIDFormat
+import com.scalableminds.util.reactivemongo
 
 class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits{
 
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'team).read[String] and
+      (__ \ 'team).read[String] (JsonFormatHelper.StringObjectIdReads("team")) and
       (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>

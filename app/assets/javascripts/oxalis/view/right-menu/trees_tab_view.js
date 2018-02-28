@@ -130,7 +130,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     const activeMenuKey = this.props.userConfiguration.sortTreesByName
       ? "sortByName"
       : "sortByTime";
-    console.log("activeMenuKey", activeMenuKey);
+
     return (
       <Menu selectedKeys={[activeMenuKey]} onClick={this.handleDropdownClick}>
         <Menu.Item key="sortByName">by name</Menu.Item>

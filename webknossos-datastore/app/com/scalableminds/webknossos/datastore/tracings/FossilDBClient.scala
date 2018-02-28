@@ -93,8 +93,6 @@ class FossilDBClient(collection: String, config: Configuration) extends FoxImpli
     val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, key, prefix, version, limit))
     if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
     val parsedValues: List[Box[T]] = reply.values.map{ v => fromByteArray(v.toByteArray)}.toList
-    println("\nfetched keys:")
-    reply.keys.toList.map(println(_))
     flatCombineTuples(reply.keys.toList, parsedValues).map{t => KeyValuePair(t._1, t._2)}
   }
 

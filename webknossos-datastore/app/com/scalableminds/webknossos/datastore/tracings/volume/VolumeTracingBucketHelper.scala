@@ -43,14 +43,13 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
 
 
 class BucketIterator(prefix: String, volumeDataStore: FossilDBClient) extends Iterator[(BucketPosition, Array[Byte])] with WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits  {
-  val batchSize = 10
+  val batchSize = 64
 
   var currentStartKey = prefix
   var currentBatchIterator: Iterator[KeyValuePair[Array[Byte]]] = fetchNext
 
-  def fetchNext = {
+  def fetchNext =
     volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), None, Some(batchSize)).toIterator
-  }
 
   def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -59,15 +58,11 @@ class BucketIterator(prefix: String, volumeDataStore: FossilDBClient) extends It
   }
 
   override def hasNext: Boolean = {
-    println("hasNext!")
     if (currentBatchIterator.hasNext) true
-    else {
-      fetchNextAndSave.hasNext
-    }
+    else fetchNextAndSave.hasNext
   }
 
   override def next: (BucketPosition, Array[Byte]) = {
-    println("next")
     val nextRes = currentBatchIterator.next
     currentStartKey = nextRes.key
     parseBucketKey(nextRes.key).map(key => (key._2 , nextRes.value)).get

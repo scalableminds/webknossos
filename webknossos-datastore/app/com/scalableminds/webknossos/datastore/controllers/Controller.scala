@@ -33,11 +33,11 @@ trait TokenSecuredController extends Controller {
 
   case class TokenSecuredAction(accessRequest: UserAccessRequest) extends ActionBuilder[Request] {
 
-    private def hasUserAccess[A](implicit request: Request[A]): Fox[UserAccessAnswer] = Fox.successful(UserAccessAnswer(true)) /*{
+    private def hasUserAccess[A](implicit request: Request[A]): Fox[UserAccessAnswer] = {
       request.getQueryString("token").map { token =>
         accessTokenService.hasUserAccess(token, accessRequest)
       }.getOrElse(Fox.successful(UserAccessAnswer(false, Some("No access token."))))
-    }*/
+    }
 
     def invokeBlock[A](request: Request[A], block: (Request[A]) => Future[Result]): Future[Result] = {
       hasUserAccess(request).flatMap {

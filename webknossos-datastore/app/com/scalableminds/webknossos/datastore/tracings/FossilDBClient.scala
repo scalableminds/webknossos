@@ -4,18 +4,17 @@
 package com.scalableminds.webknossos.datastore.tracings
 
 import com.google.protobuf.ByteString
-import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.fossildb.proto.fossildbapi._
+import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Box, Empty, Failure, Full}
-import net.liftweb.util.Helpers.tryo
-import play.api.libs.json.{Json, Reads, Writes}
 import io.grpc.netty.NettyChannelBuilder
-import play.api.{Configuration, Play}
+import net.liftweb.common.{Box, Empty, Full}
+import net.liftweb.util.Helpers.tryo
+import play.api.Configuration
+import play.api.libs.json.{Json, Reads, Writes}
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.util.Try
 
 
 
@@ -82,7 +81,7 @@ class FossilDBClient(collection: String, config: Configuration) extends FoxImpli
     }
   }
 
-  def getMultipleKeys[T](key: String, prefix: Option[String] = None, version: Option[Long] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[KeyValuePair[T]] = {
+  def getMultipleKeys[T](key: String, prefix: Option[String] = None, version: Option[Long] = None, limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[KeyValuePair[T]] = {
     def flatCombineTuples[A,B](keys: List[A], values: List[Box[B]]) = {
       val boxTuples: List[Box[(A,B)]] = keys.zip(values).map {
         case (k, Full(v)) => Full(k,v)
@@ -91,9 +90,11 @@ class FossilDBClient(collection: String, config: Configuration) extends FoxImpli
       boxTuples.flatten
     }
 
-    val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, key, prefix, version))
+    val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, key, prefix, version, limit))
     if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
     val parsedValues: List[Box[T]] = reply.values.map{ v => fromByteArray(v.toByteArray)}.toList
+    println("\nfetched keys:")
+    reply.keys.toList.map(println(_))
     flatCombineTuples(reply.keys.toList, parsedValues).map{t => KeyValuePair(t._1, t._2)}
   }
 

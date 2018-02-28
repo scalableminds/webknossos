@@ -267,7 +267,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
 
     find(validPriorityQ ++ Json.obj(
       "openInstances" -> Json.obj("$gt" -> 0),
-      "team" -> Json.obj("$in" -> teams),
+      "_team" -> Json.obj("$in" -> teams),
       "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)))
       .sort(byPriority)
       .cursor[Task]()
@@ -292,7 +292,7 @@ object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupporte
       jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
         "isActive" -> true,
         "openInstances" -> Json.obj("$gt" -> 0),
-        "team" -> Json.obj("$in" -> user.teamIds),
+        "_team" -> Json.obj("$in" -> user.teamIds),
         "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
     } yield {
       jsObjects.map(p => (p \ "_project").asOpt[String]).flatten

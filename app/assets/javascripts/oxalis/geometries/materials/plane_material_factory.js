@@ -35,11 +35,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     super.setupUniforms();
 
     this.uniforms = _.extend(this.uniforms, {
-      offset: {
-        type: "v2",
-        value: new THREE.Vector2(0, 0),
-      },
       repeat: {
+        type: "v2",
+        value: new THREE.Vector2(1, 1),
+      },
+      buffer: {
         type: "v2",
         value: new THREE.Vector2(1, 1),
       },
@@ -55,6 +55,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
       },
+      fallbackAnchorPoint: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
       zoomStep: {
         type: "f",
         value: 1,
@@ -64,6 +68,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: new THREE.Vector3(0, 0, 0),
       },
     });
+
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
+      this.uniforms[sanitizeName(`${name}_maxZoomStep`)] = {
+        type: "f",
+        value: binary.cube.MAX_ZOOM_STEP,
+      };
+    }
   }
 
   convertColor(color: Vector3): Vector3 {
@@ -74,14 +86,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     // create textures
     this.textures = textures;
 
-    // debugger;
-
     for (let shaderName of Object.keys(this.textures)) {
       const texture = this.textures[shaderName];
       this.uniforms[`${shaderName}_texture`] = {
         type: "t",
         value: texture,
       };
+
       if (texture.binaryCategory !== "segmentation") {
         this.uniforms[`${shaderName}_weight`] = {
           type: "f",
@@ -93,7 +104,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         };
       }
     }
-    console.log("uniforms", this.uniforms);
   }
 
   makeMaterial(options?: ShaderMaterialOptionsType): void {
@@ -109,9 +119,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       }
     };
 
-    this.material.setScaleParams = ({ offset, repeat }) => {
-      this.uniforms.offset.value.set(offset.x, offset.y);
+    this.material.setScaleParams = ({ buffer, repeat }) => {
       this.uniforms.repeat.value.set(repeat.x, repeat.y);
+
+      this.uniforms.buffer.value.set(...buffer);
     };
 
     this.material.setGlobalPosition = ([x, y, z]) => {
@@ -122,8 +133,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms.anchorPoint.value.set(x, y, z);
     };
 
-    this.material.setUVW = ([u, v, w]) => {
-      this.uniforms.anchorPoint.value.set(u, v, w);
+    this.material.setFallbackAnchorPoint = ([x, y, z]) => {
+      this.uniforms.fallbackAnchorPoint.value.set(x, y, z);
     };
 
     this.material.setSegmentationAlpha = alpha => {
@@ -158,6 +169,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 <% _.each(layers, function(name) { %>
   uniform sampler2D <%= name %>_texture;
   uniform sampler2D <%= name %>_lookup_texture;
+  uniform sampler2D <%= name %>_fallback_texture;
+  uniform sampler2D <%= name %>_lookup_fallback_texture;
+  uniform float <%= name %>_maxZoomStep;
+
   uniform float <%= name %>_brightness;
   uniform float <%= name %>_contrast;
   uniform vec3 <%= name %>_color;
@@ -166,11 +181,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 <% if (hasSegmentation) { %>
   uniform sampler2D <%= segmentationName %>_texture;
   uniform sampler2D <%= segmentationName %>_lookup_texture;
+  uniform sampler2D <%= segmentationName %>_fallback_texture;
+  uniform sampler2D <%= segmentationName %>_lookup_fallback_texture;
 <% } %>
-uniform vec2 offset, repeat;
+uniform vec2 repeat, buffer;
 uniform float alpha;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
+uniform vec3 fallbackAnchorPoint;
 uniform float zoomStep;
 uniform vec3 uvw;
 
@@ -283,14 +301,38 @@ vec3 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
 void main() {
   float golden_ratio = 0.618033988749895;
   float color_value  = 0.0;
+
+  float useFallback = 1.0;
+  float usedZoomStep = useFallback == 1.0 ? <%= layers[0]%>_maxZoomStep : zoomStep;
+  vec3 usedAnchorPoint = useFallback == 1.0 ? fallbackAnchorPoint : anchorPoint;
+  float zoomStepDiff = usedZoomStep - zoomStep;
+  float zoomFactor = pow(2.0, zoomStep + 5.0 + zoomStepDiff);
+
+  vec2 globalPositionUV = vec2(
+    globalPosition[<%= uvw[0] %>],
+    globalPosition[<%= uvw[1] %>]
+  );
+  // Offset to bucket boundary (only consider the first k bits by subtracting the "floored" value)
+  vec2 unscaledOffset = globalPositionUV - floor(globalPositionUV / zoomFactor) * zoomFactor;
+
+  vec2 offset = buffer / 2.0 + unscaledOffset / pow(2.0, zoomStep);
+  offset.y = offset.y + repeat.y * r_texture_width;
+  offset = offset / r_texture_width;
+  offset.y = 1.0 - offset.y;
+
   vec2 texture_pos = vUv * repeat + offset;
   // Mirror y since (0, 0) refers to the lower-left corner in WebGL instead of the upper-left corner
   texture_pos = vec2(texture_pos.x, 1.0 - texture_pos.y);
 
+  float upsamplingFactor = pow(2.0, zoomStepDiff);
+  float upsamplingOffset = 0.5 - 0.5 / upsamplingFactor; // 0.25 for zoomStepDiff == 1
+  texture_pos.x = texture_pos.x / upsamplingFactor + upsamplingOffset;
+  texture_pos.y = texture_pos.y / upsamplingFactor + upsamplingOffset;
+
   vec3 coords = transDim(vec3(
-    mod(floor(texture_pos.x * (r_texture_width * 0.99999)), r_texture_width),
-    mod(floor(texture_pos.y * (r_texture_width * 0.99999)), r_texture_width),
-    floor((globalPosition[<%= uvw[2] %>] - anchorPoint[<%= uvw[2] %>] * pow(2.0, 5.0 + zoomStep)) / pow(2.0, zoomStep))
+    floor(texture_pos.x * (r_texture_width * 0.99999)),
+    floor(texture_pos.y * (r_texture_width * 0.99999)),
+    floor((globalPosition[<%= uvw[2] %>] - usedAnchorPoint[<%= uvw[2] %>] * pow(2.0, 5.0 + usedZoomStep)) / pow(2.0, usedZoomStep))
   ));
 
   vec3 bucketPosition = vec3(
@@ -306,7 +348,7 @@ void main() {
 
   <% if (hasSegmentation) { %>
     // todo: test
-    vec3 volume_color = getColorFor(<%= segmentationName %>_lookup_texture, <%= segmentationName %>_texture, bucketPosition, offsetInBucket).xyz;
+    vec3 volume_color = getColorFor(<%= segmentationName %>_lookup_fallback_texture, <%= segmentationName %>_fallback_texture, bucketPosition, offsetInBucket).xyz;
     // vec4 volume_color = texture2D(<%= segmentationName %>_texture, texture_pos);
     float id = (volume_color.r * 255.0);
   <% } else { %>
@@ -321,13 +363,16 @@ void main() {
   <% } else { %>
     vec3 data_color = vec3(0.0, 0.0, 0.0);
     <% _.each(layers, function(name){ %>
-      // Get grayscale value
-      color_value = getColorFor(<%= layers[0] %>_lookup_texture, <%= layers[0] %>_texture, bucketPosition, offsetInBucket).x;
+      // Get grayscale value for <%= name %>
+      color_value =
+        useFallback == 0.0
+          ? getColorFor(<%= name %>_lookup_texture, <%= name %>_texture, bucketPosition, offsetInBucket).x
+          : getColorFor(<%= name %>_lookup_fallback_texture, <%= name %>_fallback_texture, bucketPosition, offsetInBucket).x;
 
-      // Brightness / Contrast Transformation
+      // Brightness / Contrast Transformation for <%= name %>
       color_value = (color_value + <%= name %>_brightness - 0.5) * <%= name %>_contrast + 0.5;
 
-      // Multiply with color and weight
+      // Multiply with color and weight for <%= name %>
       data_color += color_value * <%= name %>_weight * <%= name %>_color;
     <% }) %> ;
     data_color = clamp(data_color, 0.0, 1.0);

@@ -242,19 +242,18 @@ class SceneController {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
-    let anchorPoint;
+    let anchorPoint, fallbackAnchorPoint;
 
     for (const name of Object.keys(Model.binary)) {
-      // if (this.planeID !== "PLANE_XY" || name !== "color_1") {
-      //   continue;
-      // }
       const binary = Model.binary[name];
-      anchorPoint = binary.updateDataTextures(gPos, getRequestLogZoomStep(Store.getState()));
+      const zoomStep = getRequestLogZoomStep(Store.getState());
+      anchorPoint = binary.updateDataTextures(gPos, zoomStep);
+      fallbackAnchorPoint = binary.updateFallbackDataTextures(gPos, zoomStep);
     }
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const currentPlane = this.planes[planeId];
-      currentPlane.updateTexture(anchorPoint);
+      currentPlane.updateTexture(anchorPoint, fallbackAnchorPoint);
       // Update plane position
       currentPlane.setPosition(globalPosVec);
       // Update plane scale

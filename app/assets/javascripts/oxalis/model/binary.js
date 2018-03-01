@@ -29,7 +29,6 @@ import TextureBucketManager from "./binary/texture_bucket_manager";
 import { getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
-import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import Constants from "oxalis/constants";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
@@ -70,17 +69,17 @@ class Binary {
   lastZoomStep: ?number;
   lastAreas: ?OrthoViewMapType<Vector4>;
   textureBucketManager: TextureBucketManager;
-  lastZoomedAnchorPoint: ?Vector4;
+  // This object is responsible for managing the buckets of the highest zoomStep
+  // which can be used as a fallback in the shader, when better data is not available
+  fallbackTextureBucketManager: TextureBucketManager;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
   constructor(layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
-    this.textureBucketManager = new TextureBucketManager(bucketPerDim, layer);
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
-    this.lastZoomedAnchorPoint = null;
     _.extend(this, BackboneEvents);
 
     this.category = this.layer.category;
@@ -128,49 +127,50 @@ class Binary {
 
   setupDataTextures(): void {
     const bytes = this.layer.bitDepth >> 3;
-    console.log(this.category, "bytes", bytes);
-    // const bytes = this.targetBitDepth >> 3;
-    const tWidth = Constants.DATA_TEXTURE_WIDTH;
 
-    const dataTexture = createUpdatableTexture(
-      tWidth,
-      bytes,
-      THREE.UnsignedByteType,
-      SceneController.renderer,
-    );
-
-    dataTexture.binaryCategory = this.category;
-    dataTexture.binaryName = this.name;
+    this.textureBucketManager = new TextureBucketManager(bucketPerDim, this.layer);
+    this.textureBucketManager.setupDataTextures(bytes, this.category);
 
     // console.log("new TextureBucketManager", this.category, this.name, bytes);
-
-    // TODO: make this DRY with texture bucket manager
-    const bucketPerDim = 16;
-    const bytesPerLookUpEntry = 1;
-    const lookUpBufferSize = Math.pow(bucketPerDim, 3) * bytesPerLookUpEntry;
-    const lookUpBufferWidth = 64; // has to be next power of two from Math.ceil(Math.sqrt(lookUpBufferSize));
-    const lookUpTexture = createUpdatableTexture(
-      lookUpBufferWidth,
-      1,
-      THREE.FloatType,
-      SceneController.renderer,
-    );
-
-    this.textureBucketManager.setupDataTextures(dataTexture, lookUpTexture);
-    this.dataTexture = dataTexture;
-    this.lookUpTexture = lookUpTexture;
+    this.fallbackTextureBucketManager = new TextureBucketManager(bucketPerDim, this.layer);
+    this.fallbackTextureBucketManager.setupDataTextures(bytes, this.category);
   }
 
   getDataTextures(): [] {
-    if (!this.dataTexture || !this.lookUpTexture) {
+    if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not availble earlier
       this.setupDataTextures();
     }
-    return [this.dataTexture, this.lookUpTexture];
+    return [
+      this.textureBucketManager.dataTexture,
+      this.textureBucketManager.lookUpTexture
+    ];
+  }
+
+  getFallbackDataTextures(): [] {
+    if (!this.fallbackTextureBucketManager) {
+      // Initialize lazily since SceneController.renderer is not availble earlier
+      this.setupDataTextures();
+    }
+    return [
+      this.fallbackTextureBucketManager.dataTexture,
+      this.fallbackTextureBucketManager.lookUpTexture
+    ];
   }
 
   updateDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
-    console.log("updateDataTextures");
+    return this.updateDataTexturesForManager(position, zoomStep, this.textureBucketManager);
+  }
+
+  updateFallbackDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
+    // if (zoomStep < this.cube.MAX_ZOOM_STEP){
+      return this.updateDataTexturesForManager(position, this.cube.MAX_ZOOM_STEP, this.fallbackTextureBucketManager);
+    // }
+    return null;
+  }
+
+  updateDataTexturesForManager(position: Vector3, zoomStep: number, textureBucketManager: TextureBucketManager): ?Vector3 {
+    // console.log("updateDataTextures");
     const anchorPoint = _.clone(position);
     // Coerce to bucket boundary
     anchorPoint[0] &= -1 << (5 + zoomStep);
@@ -183,10 +183,10 @@ class Binary {
     anchorPoint[2] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
 
     const zoomedAnchorPoint = this.cube.positionToZoomedAddress(anchorPoint, zoomStep);
-    if (_.isEqual(zoomedAnchorPoint, this.lastZoomedAnchorPoint)) {
+    if (_.isEqual(zoomedAnchorPoint, textureBucketManager.lastZoomedAnchorPoint)) {
       return null;
     }
-    this.lastZoomedAnchorPoint = zoomedAnchorPoint;
+    textureBucketManager.lastZoomedAnchorPoint = zoomedAnchorPoint;
 
     // find out which buckets we need for each plane
     const requiredBucketSet = new Set();
@@ -224,7 +224,7 @@ class Binary {
       }
     }
 
-    this.textureBucketManager.storeBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
+    textureBucketManager.storeBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
     return zoomedAnchorPoint.slice(0, 3);
   }
 

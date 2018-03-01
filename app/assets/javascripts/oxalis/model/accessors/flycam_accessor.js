@@ -101,21 +101,17 @@ export function getRequestLogZoomStep(state: OxalisState): number {
   );
 }
 
-export function calculateTextureBuffer(state: OxalisState): OrthoViewMapType<Vector2> {
+export function calculateTextureBuffer(state: OxalisState, planeId: OrthoViewType): Vector2 {
   // Buffer in this context means "cushion".
-  // How many pixels is the texture larger than the canvas on each dimension?
-  // Returns: two dimensional array with buffer[planeId][dimension], dimension: x->0, y->1
+  // How many pixels is the texture larger than the canvas?
   const pixelNeeded = constants.PLANE_WIDTH * getTextureScalingFactor(state);
   const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
-  const buffer = {};
-  for (const planeId of OrthoViewValues) {
-    const scaleArray = Dimensions.transDim(baseVoxelFactors, planeId);
-    buffer[planeId] = [
-      constants.TEXTURE_WIDTH - pixelNeeded * scaleArray[0],
-      constants.TEXTURE_WIDTH - pixelNeeded * scaleArray[1],
-    ];
-  }
-  return buffer;
+
+  const scaleArray = Dimensions.transDim(baseVoxelFactors, planeId);
+  return [
+    constants.TEXTURE_WIDTH - pixelNeeded * scaleArray[0],
+    constants.TEXTURE_WIDTH - pixelNeeded * scaleArray[1],
+  ];
 }
 
 export function getTextureScalingFactor(state: OxalisState): number {
@@ -157,24 +153,35 @@ export function getTexturePosition(state: OxalisState, planeId: OrthoViewType): 
   const texturePosition = _.clone(getPosition(state.flycam));
   // As the Model does not render textures for exact positions, the last 5 bits of
   // the X and Y coordinates for each texture have to be set to 0
-  for (let i = 0; i <= 2; i++) {
-    if (i !== Dimensions.getIndices(planeId)[2]) {
-      texturePosition[i] &= -1 << (5 + getRequestLogZoomStep(state));
-    }
-  }
+  const ind = Dimensions.getIndices(planeId);
+  const bitMask = -1 << (5 + getRequestLogZoomStep(state));
+  texturePosition[ind[0]] &= bitMask;
+  texturePosition[ind[1]] &= bitMask;
   return texturePosition;
 }
 
 export function getOffsets(state: OxalisState, planeId: OrthoViewType): Vector2 {
   // return the coordinate of the upper left corner of the viewport as texture-relative coordinate
-  const buffer = calculateTextureBuffer(state);
+  const buffer = calculateTextureBuffer(state, planeId);
   const position = getPosition(state.flycam);
   const requestZoomStep = Math.pow(2, getRequestLogZoomStep(state));
   const texturePosition = getTexturePosition(state, planeId);
   const ind = Dimensions.getIndices(planeId);
   return [
-    buffer[planeId][0] / 2 + (position[ind[0]] - texturePosition[ind[0]]) / requestZoomStep,
-    buffer[planeId][1] / 2 + (position[ind[1]] - texturePosition[ind[1]]) / requestZoomStep,
+    buffer[0] / 2 + (position[ind[0]] - texturePosition[ind[0]]) / requestZoomStep,
+    buffer[1] / 2 + (position[ind[1]] - texturePosition[ind[1]]) / requestZoomStep,
+  ];
+}
+
+export function getExtent(state: OxalisState, planeId: OrthoViewType): Vector2 {
+  const scaleArray = Dimensions.transDim(
+    scaleInfo.getBaseVoxelFactors(state.dataset.scale),
+    planeId,
+  );
+  const size = getTextureScalingFactor(state) * constants.PLANE_WIDTH;
+  return [
+    size * scaleArray[0],
+    size * scaleArray[1],
   ];
 }
 

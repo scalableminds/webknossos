@@ -45,7 +45,7 @@ export class DataBucket {
     this.BIT_DEPTH = BIT_DEPTH;
     this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
     this.BYTE_OFFSET = this.BIT_DEPTH >> 3;
-    console.log("BIT_DEPTH", BIT_DEPTH);
+    // console.log("BIT_DEPTH", BIT_DEPTH);
 
     this.zoomedAddress = zoomedAddress;
     this.temporalBucketManager = temporalBucketManager;
@@ -125,7 +125,7 @@ export class DataBucket {
   }
 
   receiveData(data: Uint8Array): void {
-    console.log("receiveData length", data.length);
+    // console.log("receiveData length", data.length);
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         if (this.dirty) {

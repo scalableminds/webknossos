@@ -7,12 +7,12 @@ import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import { getArea, getTexturePosition, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { calculateTextureBuffer, getOffsets, getExtent, getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import { sanitizeName } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
-import Constants, {
+import constants, {
   OrthoViews,
   OrthoViewColors,
   OrthoViewCrosshairColors,
@@ -50,8 +50,8 @@ class Plane {
   }
 
   createMeshes(): void {
-    const pWidth = Constants.PLANE_WIDTH;
-    const tWidth = Constants.DATA_TEXTURE_WIDTH;
+    const pWidth = constants.PLANE_WIDTH;
+    const tWidth = constants.DATA_TEXTURE_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
@@ -60,14 +60,20 @@ class Plane {
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
       const [dataTexture, lookUpTexture] = binary.getDataTextures();
+      const [fallbackDataTexture, fallbackLookUpTexture] = binary.getFallbackDataTextures();
 
       const shaderName = sanitizeName(name);
       const lookUpBufferName = sanitizeName(name + "_lookup");
       textures[shaderName] = dataTexture;
       textures[lookUpBufferName] = lookUpTexture;
+
+      const fshaderName = sanitizeName(name + "_fallback");
+      const flookUpBufferName = sanitizeName(name + "_lookup" + "_fallback");
+
+      textures[fshaderName] = fallbackDataTexture;
+      textures[flookUpBufferName] = fallbackLookUpTexture;
     }
     const textureMaterial = new PlaneMaterialFactory(tWidth, textures, this.planeID).getMaterial();
-    // textureMaterial.setUVW(Dimensions.getIndices(this.planeID));
 
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
@@ -127,22 +133,24 @@ class Plane {
     });
   };
 
-  updateTexture(anchorPoint: ?Vector3): void {
-    const area = getArea(Store.getState(), this.planeID);
-
+  updateTexture(anchorPoint: ?Vector3, fallbackAnchorPoint: ?Vector3): void {
     if (anchorPoint) {
       this.plane.material.setAnchorPoint(anchorPoint);
     }
 
+    if (fallbackAnchorPoint) {
+      this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
+    }
+
+    const buffer = calculateTextureBuffer(Store.getState(), this.planeID);
+    const extent = getExtent(Store.getState(), this.planeID);
+
     this.plane.material.setScaleParams({
       repeat: {
-        x: (area[2] - area[0]) / Constants.TEXTURE_WIDTH,
-        y: (area[3] - area[1]) / Constants.TEXTURE_WIDTH,
+        x: extent[0] / constants.TEXTURE_WIDTH,
+        y: extent[1] / constants.TEXTURE_WIDTH,
       },
-      offset: {
-        x: area[0] / Constants.TEXTURE_WIDTH,
-        y: 1 - area[3] / Constants.TEXTURE_WIDTH,
-      },
+      buffer
     });
   }
 

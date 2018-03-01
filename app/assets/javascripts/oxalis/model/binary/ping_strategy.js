@@ -40,7 +40,7 @@ export class AbstractPingStrategy {
     return this.roundTripTimeRangeStart <= value && value <= this.roundTripTimeRangeEnd;
   }
 
-  getBucketArray(center: Vector3, width: number, height: number): Array<Vector3> {
+  getBucketPositions(center: Vector3, width: number, height: number): Array<Vector3> {
     const buckets = [];
     const uOffset = Math.ceil(width / 2);
     const vOffset = Math.ceil(height / 2);
@@ -71,12 +71,47 @@ export class PingStrategy extends AbstractPingStrategy {
   ping(
     position: Vector3,
     direction: Vector3,
-    requestedZoomStep: number,
+    currentZoomStep: number,
     areas: OrthoViewMapType<Vector4>,
     activePlane: OrthoViewType,
   ): Array<PullQueueItemType> {
-    const zoomStep = Math.min(requestedZoomStep, this.cube.MAX_ZOOM_STEP);
-    const zoomStepDiff = requestedZoomStep - zoomStep;
+    const zoomStep = Math.min(currentZoomStep, this.cube.MAX_ZOOM_STEP);
+    const zoomStepDiff = currentZoomStep - zoomStep;
+
+    const queueItemsForCurrentZoomStep = this.pingImpl(
+      position,
+      direction,
+      zoomStep,
+      zoomStepDiff,
+      areas,
+      activePlane,
+    );
+
+    let queueItemsForLargestZoomStep = [];
+    if (zoomStep < this.cube.MAX_ZOOM_STEP) {
+      queueItemsForLargestZoomStep = this.pingImpl(
+        position,
+        direction,
+        this.cube.MAX_ZOOM_STEP,
+        0,
+        areas,
+        activePlane,
+      );
+      // console.log("queueItemsForLargestZoomStep", queueItemsForLargestZoomStep.length);
+    }
+
+    return queueItemsForCurrentZoomStep.concat(queueItemsForLargestZoomStep);
+  }
+
+
+  pingImpl(
+    position: Vector3,
+    direction: Vector3,
+    zoomStep: number,
+    zoomStepDiff: number,
+    areas: OrthoViewMapType<Vector4>,
+    activePlane: OrthoViewType,
+  ): Array<PullQueueItemType> {
     const pullQueue = [];
 
     if (zoomStepDiff > MAX_ZOOM_STEP_DIFF) {
@@ -101,9 +136,9 @@ export class PingStrategy extends AbstractPingStrategy {
       const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
       // console.log("ping strategy centerBucket", centerBucket);
       const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
-      const buckets = this.getBucketArray(centerBucket3, width, height);
+      const bucketPositions = this.getBucketPositions(centerBucket3, width, height);
 
-      for (const bucket of buckets) {
+      for (const bucket of bucketPositions) {
         const priority =
           Math.abs(bucket[0] - centerBucket3[0]) +
           Math.abs(bucket[1] - centerBucket3[1]) +

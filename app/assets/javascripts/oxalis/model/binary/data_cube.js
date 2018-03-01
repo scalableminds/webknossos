@@ -73,8 +73,8 @@ class DataCube {
   // access-flag is set to true.
   // When buckets have to be collected, an iterator will loop through the the buckets at
   // the beginning of the queue will be removed from the queue and the access-value will
-  // be decreased. If the access-value of a bucket becomes 0, itsis no longer in the
-  // access-queue and is least resently used. It is then removed from the cube.
+  // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
+  // access-queue and is least recently used. It is then removed from the cube.
 
   constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;

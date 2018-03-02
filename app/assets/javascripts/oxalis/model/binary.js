@@ -39,7 +39,7 @@ const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
 // todo: find out how many we really need
-export const bucketPerDim = 16;
+export const bucketPerDim = 17;
 
 type PingOptions = {
   zoomStep: number,

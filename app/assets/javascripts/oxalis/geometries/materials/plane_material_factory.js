@@ -192,11 +192,12 @@ uniform vec3 fallbackAnchorPoint;
 uniform float zoomStep;
 uniform vec3 uvw;
 
-varying vec2 vPos;
+varying vec2 vPos2;
+varying vec4 vPos;
 varying vec2 vUv;
 
 // todo: pass as uniform or from template
-const float bucketPerDim = 16.0;
+const float bucketPerDim = 17.0;
 const float bucketWidth = 32.0;
 const float bucketLength = bucketWidth * bucketWidth * bucketWidth;
 const float r_texture_width = 512.0;

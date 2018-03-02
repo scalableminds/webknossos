@@ -104,7 +104,7 @@ class PlaneView {
     const renderTarget = new THREE.WebGLRenderTarget(this.curWidth, this.curWidth);
     const buffer = new Uint8Array(this.curWidth * this.curWidth * 4);
 
-    this.trigger("renderCam", plane);
+    SceneController.updateSceneForCam(plane);
     renderer.render(scene, this.cameras[plane], renderTarget);
     renderer.readRenderTargetPixels(renderTarget, 0, 0, this.curWidth, this.curWidth, buffer);
     return buffer;
@@ -157,7 +157,8 @@ class PlaneView {
       renderer.clear();
 
       for (const plane of OrthoViewValues) {
-        this.trigger("renderCam", plane);
+        SceneController.updateSceneForCam(plane);
+
         setupRenderArea(
           viewport[plane][0],
           viewport[plane][1],

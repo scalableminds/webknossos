@@ -197,14 +197,17 @@ class AbstractPlaneMaterialFactory {
 
   getVertexShader(): string {
     return `
-    varying vec2 vPos;
-
+varying vec4 vPos;
+varying vec2 vPos2;
 varying vec2 vUv;
 
 void main() {
   vUv = uv;
-  vPos = position.xy;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }`;
+  vPos = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+  vPos2 = position.xy;
+  gl_Position = vPos;
+}`;
+
   }
 }
 

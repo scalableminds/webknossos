@@ -8,6 +8,7 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import window from "libs/window";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import SceneController from "oxalis/controller/scene_controller";
+import type { Bucket } from "oxalis/model/binary/bucket";
 
 const bucketWidth = 32;
 const bucketSize = Math.pow(bucketWidth, 3);
@@ -37,8 +38,8 @@ export default class TextureBucketManager {
 
   bucketPerDim: number;
   bufferCapacity: number;
-  lastZoomedAnchorPoint: ?Vector4;
-  writerQueue: Array<{bucket: Bucket, index: number}>;
+  currentAnchorPoint: ?Vector4;
+  writerQueue: Array<{ bucket: Bucket, index: number }>;
 
   constructor(bucketPerDim: number, layer) {
     this.layer = layer;
@@ -54,7 +55,6 @@ export default class TextureBucketManager {
     this.committedBucketSet = new Set();
 
     this.bucketPerDim = bucketPerDim;
-    this._refreshLookUpBufferDebounced = _.debounce(() => this._refreshLookUpBuffer(), 20);
     this.currentAnchorPoint = null;
 
     this.isRefreshBufferOutOfDate = false;
@@ -83,7 +83,7 @@ export default class TextureBucketManager {
     const maxBucketCommitsPerFrame = 30;
 
     while (processedItems++ < maxBucketCommitsPerFrame && this.writerQueue.length > 0) {
-      const {bucket, _index} = this.writerQueue.pop();
+      const { bucket, _index } = this.writerQueue.pop();
       this.dataTexture.update(
         bucket.getData(),
         0,
@@ -98,7 +98,7 @@ export default class TextureBucketManager {
 
     window.requestAnimationFrame(() => {
       this.processWriterQueue();
-    })
+    });
   }
 
   setupDataTextures(bytes: number, binaryCategory: string): void {
@@ -132,11 +132,11 @@ export default class TextureBucketManager {
   _requestWriteBucketToBuffer(bucket: Bucket, index: number): void {
     this.freeIndexSet.delete(index);
 
-    const requestWriteBucketImpl = (_index) => {
+    const requestWriteBucketImpl = _index => {
       if (!bucket.hasData()) {
         return;
       }
-      this.writerQueue.unshift({bucket, _index });
+      this.writerQueue.unshift({ bucket, _index });
     };
     requestWriteBucketImpl(index, false);
 

@@ -368,7 +368,8 @@ void main() {
   vec3 bucketPosition = div(coords, bucketWidth);
   vec3 offsetInBucket = mod(coords, bucketWidth);
 
-  vec3 fallbackCoords = getCoords(<%= layers[0]%>_maxZoomStep);
+  float fallbackZoomStep = min(<%= layers[0]%>_maxZoomStep, zoomStep + 1.0);
+  vec3 fallbackCoords = getCoords(fallbackZoomStep);
   vec3 fbucketPosition = div(fallbackCoords, bucketWidth);
   vec3 foffsetInBucket = mod(fallbackCoords, bucketWidth);
 

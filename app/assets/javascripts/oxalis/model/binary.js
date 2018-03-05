@@ -141,10 +141,7 @@ class Binary {
       // Initialize lazily since SceneController.renderer is not availble earlier
       this.setupDataTextures();
     }
-    return [
-      this.textureBucketManager.dataTexture,
-      this.textureBucketManager.lookUpTexture
-    ];
+    return [this.textureBucketManager.dataTexture, this.textureBucketManager.lookUpTexture];
   }
 
   getFallbackDataTextures(): [] {
@@ -154,7 +151,7 @@ class Binary {
     }
     return [
       this.fallbackTextureBucketManager.dataTexture,
-      this.fallbackTextureBucketManager.lookUpTexture
+      this.fallbackTextureBucketManager.lookUpTexture,
     ];
   }
 
@@ -163,13 +160,22 @@ class Binary {
   }
 
   updateFallbackDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
-    // if (zoomStep < this.cube.MAX_ZOOM_STEP){
-      return this.updateDataTexturesForManager(position, this.cube.MAX_ZOOM_STEP, this.fallbackTextureBucketManager);
-    // }
+    const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, zoomStep + 1);
+    if (zoomStep < fallbackZoomStep) {
+      return this.updateDataTexturesForManager(
+        position,
+        fallbackZoomStep,
+        this.fallbackTextureBucketManager,
+      );
+    }
     return null;
   }
 
-  updateDataTexturesForManager(position: Vector3, zoomStep: number, textureBucketManager: TextureBucketManager): ?Vector3 {
+  updateDataTexturesForManager(
+    position: Vector3,
+    zoomStep: number,
+    textureBucketManager: TextureBucketManager,
+  ): ?Vector3 {
     // console.log("updateDataTextures");
     const anchorPoint = _.clone(position);
     // Coerce to bucket boundary

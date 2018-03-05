@@ -7,7 +7,11 @@ import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import { calculateTextureBuffer, getExtent, getPosition } from "oxalis/model/accessors/flycam_accessor";
+import {
+  calculateTextureBuffer,
+  getExtent,
+  getPosition,
+} from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import { sanitizeName } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
@@ -150,7 +154,7 @@ class Plane {
         x: extent[0] / constants.TEXTURE_WIDTH,
         y: extent[1] / constants.TEXTURE_WIDTH,
       },
-      buffer
+      buffer,
     });
   }
 
@@ -205,7 +209,7 @@ class Plane {
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
 
   setLinearInterpolationEnabled = (enabled: boolean) => {
-    this.plane.material.setColorInterpolation(enabled ? THREE.LinearFilter : THREE.NearestFilter);
+    this.plane.material.setUseBilinearFiltering(enabled);
   };
 }
 

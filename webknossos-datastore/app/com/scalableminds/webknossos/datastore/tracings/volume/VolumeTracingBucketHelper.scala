@@ -3,10 +3,10 @@
  */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.tracings.{FossilDBClient, KeyValueStoreImplicits}
+import com.scalableminds.webknossos.datastore.tracings.{FossilDBClient, KeyValuePair, KeyValueStoreImplicits}
 import com.scalableminds.webknossos.wrap.WKWMortonHelper
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -22,6 +22,50 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
   private def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
     val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
     s"$dataLayerName/${bucket.resolution}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
+  }
+
+  def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
+    val key = buildBucketKey(dataLayer.name, bucket)
+    volumeDataStore.get(key, mayBeEmpty = Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
+  }
+
+  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Fox[_] = {
+    val key = buildBucketKey(dataLayer.name, bucket)
+    volumeDataStore.put(key, 0, data)
+  }
+
+  def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
+    val key = buildKeyPrefix(dataLayer.name, resolution)
+    new BucketIterator(key, volumeDataStore)
+  }
+}
+
+
+
+class BucketIterator(prefix: String, volumeDataStore: FossilDBClient) extends Iterator[(BucketPosition, Array[Byte])] with WKWMortonHelper with KeyValueStoreImplicits with FoxImplicits  {
+  val batchSize = 64
+
+  var currentStartKey = prefix
+  var currentBatchIterator: Iterator[KeyValuePair[Array[Byte]]] = fetchNext
+
+  def fetchNext =
+    volumeDataStore.getMultipleKeys(currentStartKey, Some(prefix), None, Some(batchSize)).toIterator
+
+  def fetchNextAndSave = {
+    currentBatchIterator = fetchNext
+    if (currentBatchIterator.hasNext) currentBatchIterator.next //in pagination, skip first entry because it was already the last entry of the previous batch
+    currentBatchIterator
+  }
+
+  override def hasNext: Boolean = {
+    if (currentBatchIterator.hasNext) true
+    else fetchNextAndSave.hasNext
+  }
+
+  override def next: (BucketPosition, Array[Byte]) = {
+    val nextRes = currentBatchIterator.next
+    currentStartKey = nextRes.key
+    parseBucketKey(nextRes.key).map(key => (key._2 , nextRes.value)).get
   }
 
   private def parseBucketKey(key: String): Option[(String, BucketPosition)] = {
@@ -42,20 +86,4 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
     }
   }
 
-  def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
-    val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.get(key, mayBeEmpty = Some(true)).futureBox.map(_.toStream.headOption.map(_.value))
-  }
-
-  def saveBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition, data: Array[Byte]): Fox[_] = {
-    val key = buildBucketKey(dataLayer.name, bucket)
-    volumeDataStore.put(key, 0, data)
-  }
-
-  def bucketStream(dataLayer: VolumeTracingLayer, resolution: Int): Iterator[(BucketPosition, Array[Byte])] = {
-    val key = buildKeyPrefix(dataLayer.name, resolution)
-    volumeDataStore.getMultipleKeys(key, Some(key)).flatMap { pair =>
-      parseBucketKey(pair.key).map(key => (key._2 , pair.value))
-    }.toIterator
-  }
 }

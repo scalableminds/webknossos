@@ -97,7 +97,7 @@ services:
       - "./dev-db/db:/data/db"
 
   fossildb:
-    image: scalableminds/fossildb:master__257
+    image: scalableminds/fossildb:master__272
     command:
       - fossildb
       - -c

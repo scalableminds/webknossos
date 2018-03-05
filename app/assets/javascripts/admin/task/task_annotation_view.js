@@ -2,6 +2,7 @@
 /* eslint-disable jsx-a11y/href-no-hash */
 import { Dropdown, Menu, Icon, Modal } from "antd";
 import React from "react";
+import { connect } from "react-redux";
 import moment from "moment";
 import FormatUtils from "libs/format_utils";
 import {
@@ -13,7 +14,8 @@ import {
 } from "admin/admin_rest_api";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
-import type { APITaskType, APIAnnotationType } from "admin/api_flow_types";
+import type { APIUserType, APITaskType, APIAnnotationType } from "admin/api_flow_types";
+import type { OxalisState } from "oxalis/store";
 
 const { Item } = Menu;
 const { confirm } = Modal;
@@ -22,13 +24,17 @@ type Props = {
   task: APITaskType,
 };
 
+type StateProps = {
+  activeUser: ?APIUserType,
+};
+
 type State = {
   isTransferModalVisible: boolean,
   annotations: Array<APIAnnotationType>,
   currentAnnotation: ?APIAnnotationType,
 };
 
-class TaskAnnotationView extends React.PureComponent<Props, State> {
+class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> {
   state = {
     currentAnnotation: null,
     isTransferModalVisible: false,
@@ -79,8 +85,14 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
 
   getDropdownMenu(annotation: APIAnnotationType) {
     // TODO use react fragments <> instead of spans
+    let doesAnnotationBelongToActiveUser = false;
+
+    if (annotation.user && this.props.activeUser) {
+      doesAnnotationBelongToActiveUser = annotation.user.id !== this.props.activeUser.id;
+    }
+
     const label =
-      annotation.state === "Finished" ? (
+      annotation.state === "Finished" || doesAnnotationBelongToActiveUser ? (
         <span>
           <Icon type="eye-o" />View
         </span>
@@ -191,4 +203,8 @@ class TaskAnnotationView extends React.PureComponent<Props, State> {
   }
 }
 
-export default TaskAnnotationView;
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(TaskAnnotationView);

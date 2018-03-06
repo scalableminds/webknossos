@@ -113,13 +113,18 @@ class ReactRouter extends React.Component<Props> {
           <Navbar isAuthenticated={isAuthenticated} />
           <Content>
             <Switch>
-              <SecuredRoute
-                isAuthenticated={isAuthenticated}
+              <Route
                 exact
                 path="/"
-                render={() => <DashboardView userId={null} isAdminView={false} />}
+                render={() =>
+                  isAuthenticated ? (
+                    <DashboardView userId={null} isAdminView={false} />
+                  ) : (
+                    <Redirect to="/spotlight" />
+                  )
+                }
               />
-              <SecuredRoute
+              <Route
                 isAuthenticated={isAuthenticated}
                 path="/dashboard"
                 render={() => <DashboardView userId={null} isAdminView={false} />}

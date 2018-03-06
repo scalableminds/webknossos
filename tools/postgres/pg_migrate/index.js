@@ -4,6 +4,7 @@ const fs = require("fs");
 
 const DEFAULT_TEAM_OWNER = "5447d5902d00001c35e1c965";
 const DEFAULT_PROJECT = "orphaned-tasks";
+const DELETED_USER = "594bb2eb640000c8bd22f6bc";
 
 function formatVector3(vec) {
   return `(${vec[0]},${vec[1]},${vec[2]})`;
@@ -17,7 +18,6 @@ function formatBB(bb) {
 }
 
 function formatValue(value) {
-  //console.log("formatting", value)
   if (value == null) {
     return "";
   }
@@ -60,7 +60,6 @@ function* csvWriter(name, cols) {
   try {
     const buffer = { teams: new Map(), projects: new Map(), dataSets: new Map() };
     async function lookupTeam(team) {
-      //console.log("looking up team " + team);
       if (!buffer.teams.has(team)) {
         buffer.teams.set(team, await m.collection("teams").findOne({ name: team }));
       }
@@ -71,7 +70,6 @@ function* csvWriter(name, cols) {
       return res
     }
     async function lookupProject(project) {
-      //console.log("looking up project " + project);
       if (!buffer.projects.has(project)) {
         buffer.projects.set(project, await m.collection("projects").findOne({ name: project }));
       }
@@ -82,14 +80,12 @@ function* csvWriter(name, cols) {
       return res
     }
     async function lookupDataset(dataSet) {
-      //console.log("looking up dataSet " + dataSet);
       if (!buffer.dataSets.has(dataSet)) {
         buffer.dataSets.set(dataSet, await m.collection("dataSets").findOne({ "dataSource.id.name": dataSet}));
       }
       let res = buffer.dataSets.get(dataSet);
       if ( res == null) {
-        console.log("warning: could not look up dataSet " + dataSet + ", replacing with id aaaaaaaaaaaaaaaaaaaaaaaa");
-        return {_id:new mongodb.ObjectID('aaaaaaaaaaaaaaaaaaaaaaaa')}
+        console.log("warning: could not look up dataSet " + dataSet);
       }
       return res
     }
@@ -234,7 +230,7 @@ function* csvWriter(name, cols) {
       ],
       async doc => ({
         _id: doc._id.toHexString(),
-        _dataSet: (doc.dataSetName != null && doc.dataSetName != "") ? (await lookupDataset(doc.dataSetName.trim()))._id.toHexString() : 'aaaaaaaaaaaaaaaaaaaaaaaa',
+        _dataSet: (doc.dataSetName != null && doc.dataSetName != "") ? (await lookupDataset(doc.dataSetName.trim()))._id.toHexString() : null,
         _task: doc._task != null ? doc._task.toHexString() : null,
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
         _user: doc._user.toHexString(),
@@ -274,7 +270,7 @@ function* csvWriter(name, cols) {
         paused: doc.paused,
         expectedTime: doc.expectedTime,
         created: doc._id.getTimestamp(),
-        isDeleted: false
+        isDeleted: doc.isActive == null ? false : !doc.isActive
       }),
     );
 
@@ -287,7 +283,6 @@ function* csvWriter(name, cols) {
       isDeleted: false,
     }));
 
-    // Need to delete {"summary":"synapse_to_axon", "isActive":false}
     await migrateTable(
       "taskTypes",
       [
@@ -345,8 +340,6 @@ function* csvWriter(name, cols) {
       }),
     );
 
-    // Need to delete {"_project":"Oxalis Training"}
-    // Recreate project {"name":"DalilaTest"}
     await migrateTable(
       "tasks",
       [
@@ -485,7 +478,6 @@ function* csvWriter(name, cols) {
           : null,
     );
 
-    // Need to fix teams of {"email":"mike@mhlab.net"}
     {
       const user_team_roles = csvWriter("user_team_roles", ["_user", "_team", "role"]);
       user_team_roles.next();

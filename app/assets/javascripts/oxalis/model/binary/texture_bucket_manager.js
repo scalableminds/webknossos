@@ -78,7 +78,7 @@ export default class TextureBucketManager {
     // uniqBy removes multiple write-buckets-requests for the same index.
     // It preserves the first occurence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
-    // back (via pop).
+    // back (via pop). This ensures that the newest bucket is written.
     this.writerQueue = _.uniqBy(this.writerQueue, el => el._index);
     const maxBucketCommitsPerFrame = 30;
 
@@ -138,7 +138,7 @@ export default class TextureBucketManager {
       }
       this.writerQueue.unshift({ bucket, _index });
     };
-    requestWriteBucketImpl(index, false);
+    requestWriteBucketImpl(index);
 
     this.storedBucketToIndexMap.set(bucket, index);
     const updateBucketData = () => {
@@ -162,40 +162,39 @@ export default class TextureBucketManager {
     bucket.on("bucketLabeled", debouncedUpdateBucketData);
   }
 
-  storeBuckets(buckets: Array<DataBucket>, anchorPoint: Vector3): number {
-    // Mantain a dirty set so that we know which buckets, we can replace
-    const dirtySet = new Set(this.storedBucketToIndexMap.keys());
+  storeBuckets(buckets: Array<DataBucket>, anchorPoint: Vector3): void {
     this.currentAnchorPoint = anchorPoint;
-
-    const freeIndexArray = Array.from(this.freeIndexSet);
-    let updatedBuckets = 0;
-    while (buckets.length > 0 && freeIndexArray.length > 0) {
-      const nextBucket = buckets.shift();
-      dirtySet.delete(nextBucket);
-      if (!this.storedBucketToIndexMap.has(nextBucket)) {
-        const freeBucketIdx = freeIndexArray.shift();
-        this._requestWriteBucketToBuffer(nextBucket, freeBucketIdx);
-        updatedBuckets++;
-      }
+    // Find out which buckets are not needed anymore
+    const freeBucketSet = new Set(this.storedBucketToIndexMap.keys());
+    for (const bucket of buckets) {
+      freeBucketSet.delete(bucket);
     }
 
-    // console.time("write new buckets");
-    const freeBuckets = Array.from(dirtySet.values());
-
     // Remove unused buckets
+    const freeBuckets = Array.from(freeBucketSet.values());
     for (const freeBucket of freeBuckets) {
       const unusedIndex = this.storedBucketToIndexMap.get(freeBucket);
       this.storedBucketToIndexMap.delete(freeBucket);
       this.committedBucketSet.delete(freeBucket);
       this.freeIndexSet.add(unusedIndex);
     }
-    // console.timeEnd("write new buckets");
 
-    // Completely re-write the lookup buffer. This could be smarter, but it's probably not worth it.
-    // console.time("rewrite-looup-buffer");
+    const freeIndexArray = Array.from(this.freeIndexSet);
+    while (buckets.length > 0) {
+      const nextBucket = buckets.shift();
+      freeBucketSet.delete(nextBucket);
+      if (!this.storedBucketToIndexMap.has(nextBucket)) {
+        if (freeIndexArray.length === 0) {
+          throw new Error("A new bucket should be stored but there is no space for it?");
+        }
+        const freeBucketIdx = freeIndexArray.shift();
+        this._requestWriteBucketToBuffer(nextBucket, freeBucketIdx);
+      }
+    }
+
+    // Completely re-write the lookup buffer. This could be smarter, but it's
+    // probably not worth it.
     this._refreshLookUpBuffer();
-    // console.timeEnd("rewrite-looup-buffer");
-    return updatedBuckets;
   }
 
   _refreshLookUpBuffer() {

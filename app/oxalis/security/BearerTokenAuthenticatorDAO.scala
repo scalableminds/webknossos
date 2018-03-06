@@ -57,12 +57,13 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   def insert(authenticator: BearerTokenAuthenticator, tokenType: TokenType.TokenTypeValue)(implicit ctx: DBAccessContext): Fox[WriteResult] =
     insert(formatter.writes(authenticator)+("tokenType" -> Json.toJson(tokenType)))
 
-  //adds the new token with the specified tokenType (and removes the old one)
-  def add(authenticator: BearerTokenAuthenticator, tokenType: TokenType.TokenTypeValue): Future[BearerTokenAuthenticator] = for {
+  def add(authenticator: BearerTokenAuthenticator, tokenType: TokenType.TokenTypeValue, deleteOld: Boolean = true): Future[BearerTokenAuthenticator] = for {
     maybeOldAuthenticator <- findByLoginInfo(authenticator.loginInfo, tokenType)
     _ <- insert(authenticator, tokenType)(GlobalAccessContext).futureBox
   } yield {
-    maybeOldAuthenticator.map(a => remove(a.id))
+    if (deleteOld) {
+      maybeOldAuthenticator.map(a => remove(a.id))
+    }
     authenticator
   }
 }

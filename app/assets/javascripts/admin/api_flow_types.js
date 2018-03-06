@@ -249,4 +249,8 @@ export type APIOrganizationType = {
   +organizationTeam: string,
 };
 
+export type APIFeatureToggles = {
+  +discussionBoard: boolean,
+};
+
 export default {};

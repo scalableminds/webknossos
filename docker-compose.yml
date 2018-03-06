@@ -15,8 +15,7 @@ services:
       - -Dconfig.file=conf/application.conf
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
-      - -Dhttp.port=9000
-      - -Dapplication.authentication.enableDevAutoLogin=true
+      - -Ddatastore.fossildb.address=fossildb
       - -Dmongodb.uri=mongodb://mongo:27017/webknossos
 
 
@@ -53,7 +52,6 @@ services:
         "run
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Dhttp.port=$${PORT}
           -Ddatastore.fossildb.address=fossildb-dev
           -Dmongodb.uri=$${MONGO_URI}"
     environment:
@@ -74,19 +72,17 @@ services:
       - bash
       - -c
       - >
-        ./sbt
+        sbt
         -v -d
         "test-only * --
-          -Dconfig.file=./conf/application_$${MODE}.conf
+          -Dconfig.file=./conf/application.conf
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
-          -Dhttp.port=$${PORT}
           -Ddatastore.fossildb.address=fossildb
           -Dmongodb.uri=$${MONGO_URI}"
     environment:
       - MONGO_URI=mongodb://mongo:27017/webknossos-testing
       - PORT=9000
-      - MODE=dev
 
   mongo:
     image: mongo:3.4
@@ -101,12 +97,12 @@ services:
       - "./dev-db/db:/data/db"
 
   fossildb:
-    image: scalableminds/fossildb:master__222
+    image: scalableminds/fossildb:master__272
     command:
       - fossildb
       - -c
       - skeletons,skeletonUpdates,volumes,volumeData
-    user: ${USER_UID:-1000}:${USER_GID:-1000}
+    user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
 
   fossildb-dev:
     extends:

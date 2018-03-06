@@ -3,6 +3,7 @@
 # ~~~~
 
 GET           /api/buildinfo                                                    controllers.Application.buildInfo
+GET           /api/features                                                     controllers.Application.features
 POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
 
 # Authentication

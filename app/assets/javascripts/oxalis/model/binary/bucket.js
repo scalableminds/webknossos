@@ -155,6 +155,58 @@ export class DataBucket {
     throw new Error(`Unexpected state: ${this.state}`);
   }
 
+  upsampleFromLowerBucket(bucket: Bucket): void {
+    const xOffset = (bucket.zoomedAddress[0] % 2) * 16,
+      yOffset = (bucket.zoomedAddress[1] % 2) * 16,
+      zOffset = (bucket.zoomedAddress[2] % 2) * 16;
+
+    if (!this.data) {
+      this.data = new Uint8Array(this.BUCKET_LENGTH);
+    }
+
+    const xyzToIdx = (x, y, z) => Math.pow(32, 2) * z + 32 * y + x;
+
+    for (let z = 0; z < 16; z++) {
+      for (let y = 0; y < 16; y++) {
+        for (let x = 0; x < 16; x++) {
+          const linearizedIndex = xyzToIdx(x + xOffset, y + yOffset, z + zOffset);
+          for (let byteOffset = 0; byteOffset < this.BYTE_OFFSET; byteOffset++) {
+            const targetIdx = linearizedIndex * this.BYTE_OFFSET + byteOffset;
+            const srcIdx = xyzToIdx(2 * x, 2 * y, 2 * z) * this.BYTE_OFFSET + byteOffset;
+            let a = bucket.data[srcIdx];
+            // + 0 * bucket.data[xyzToIdx(2 * x + 1, 2 * y, 2 * z) * this.BYTE_OFFSET + byteOffset];
+            // a /= 2;
+
+            // let b =
+            //   bucket.data[xyzToIdx(2 * x, 2 * y + 1, 2 * z) * this.BYTE_OFFSET + byteOffset] +
+            //   bucket.data[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z) * this.BYTE_OFFSET + byteOffset];
+            // b /= 2;
+
+            // let c =
+            //   bucket.data[xyzToIdx(2 * x, 2 * y, 2 * z + 1) * this.BYTE_OFFSET + byteOffset] +
+            //   bucket.data[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1) * this.BYTE_OFFSET + byteOffset];
+            // c /= 2;
+
+            // let d =
+            //   bucket.data[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1) * this.BYTE_OFFSET + byteOffset] +
+            //   bucket.data[
+            //     xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1) * this.BYTE_OFFSET + byteOffset
+            //   ];
+            // d /= 2;
+
+            // this.data[targetIdx] = Math.round(((a + b) / 2 + (c + d) / 2) / 2);
+            this.data[targetIdx] = a;
+
+            //  +
+            //   bucket.data[(linearizedIndex + 1) * this.BYTE_OFFSET + byteOffset]) /
+            // 2;
+          }
+        }
+      }
+    }
+    this.trigger("bucketLoaded");
+  }
+
   merge(newData: Uint8Array): void {
     if (this.data == null) {
       throw new Error("Bucket.merge() called, but data does not exist.");

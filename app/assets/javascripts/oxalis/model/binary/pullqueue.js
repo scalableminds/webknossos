@@ -96,12 +96,37 @@ class PullQueue {
 
       let offset = 0;
       for (const bucketAddress of batch) {
+        // todo: tmp
+        if (bucketAddress[3] > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+          console.log("skipping", bucketAddress[3]);
+          continue;
+        }
         bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
         const bucket = this.cube.getBucket(bucketAddress);
         this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
         this.maybeWhitenEmptyBucket(bucketData);
         if (bucket.type === "data") {
           bucket.receiveData(bucketData);
+          if (this.cube.upsampledZoomStepCount > 0) {
+            const higherAddress = bucketAddress.slice();
+            higherAddress[0] = higherAddress[0] >> 1;
+            higherAddress[1] = higherAddress[1] >> 1;
+            higherAddress[2] = higherAddress[2] >> 1;
+            higherAddress[3]++;
+            const higherBucket = this.cube.getOrCreateBucket(higherAddress);
+            // todo: instead of hasData, check whether this particular 8th subset is there
+            if (higherBucket.type === "data") {
+              // && !higherBucket.hasData()) {
+              // if (higherBucket.state === "UNREQUESTED") {
+              //   higherBucket.pull();
+              // }
+              // console.time("upsampleFromLowerBucket");
+              higherBucket.upsampleFromLowerBucket(bucket);
+              // console.timeEnd("upsampleFromLowerBucket");
+            } else {
+              // console.log("higherBucket.type == null", higherBucket);
+            }
+          }
         }
       }
     } catch (error) {

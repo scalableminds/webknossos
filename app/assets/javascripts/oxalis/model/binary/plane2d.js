@@ -117,9 +117,9 @@ class Plane2D {
 
     this.needsRedraw = false;
 
-    for (let i = 0; i <= this.cube.LOOKUP_DEPTH_DOWN; i++) {
-      this.MAP_SIZE += 1 << (i << 1);
-    }
+    // for (let i = 0; i <= this.cube.LOOKUP_DEPTH_DOWN; i++) {
+    //   this.MAP_SIZE += 1 << (i << 1);
+    // }
 
     const dimensions = Dimensions.getIndices(this.index);
     this.U = dimensions[0];
@@ -179,133 +179,133 @@ class Plane2D {
     return !this.dataTexture.ready;
   }
 
-  get({
-    position,
-    zoomStep,
-    area,
-  }: {
-    position: Vector3,
-    zoomStep: number,
-    area: Vector4,
-  }): ?Uint8Array {
-    // return this.getTexture(this.dataTexture, position, zoomStep, area);
-    // console.log("raw position", position);
-    // Making sure, position is top-left corner of some bucket
-    position = [position[0] & ~0b11111, position[1] & ~0b11111, position[2] & ~0b11111];
-    // Calculating the coordinates of the textures top-left corner
-    const topLeftPosition = _.clone(position);
-    topLeftPosition[this.U] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
-    topLeftPosition[this.V] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
-    const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, zoomStep);
+  // get({
+  //   position,
+  //   zoomStep,
+  //   area,
+  // }: {
+  //   position: Vector3,
+  //   zoomStep: number,
+  //   area: Vector4,
+  // }): ?Uint8Array {
+  //   // return this.getTexture(this.dataTexture, position, zoomStep, area);
+  //   // console.log("raw position", position);
+  //   // Making sure, position is top-left corner of some bucket
+  //   position = [position[0] & ~0b11111, position[1] & ~0b11111, position[2] & ~0b11111];
+  //   // Calculating the coordinates of the textures top-left corner
+  //   const topLeftPosition = _.clone(position);
+  //   topLeftPosition[this.U] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+  //   topLeftPosition[this.V] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+  //   const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, zoomStep);
 
-    if (!_.isEqual(this.oldTopLeftBucket, topLeftBucket)) {
-      console.log("top left bucket changed", this.oldTopLeftBucket, topLeftBucket);
-    }
+  //   if (!_.isEqual(this.oldTopLeftBucket, topLeftBucket)) {
+  //     console.log("top left bucket changed", this.oldTopLeftBucket, topLeftBucket);
+  //   }
 
-    if (
-      _.isEqual(this.oldTopLeftBucket, topLeftBucket) &&
-      window.texture != null &&
-      this.dataTexture.ready
-    ) {
-      return window.texture;
-    }
-    this.oldTopLeftBucket = topLeftBucket;
+  //   if (
+  //     _.isEqual(this.oldTopLeftBucket, topLeftBucket) &&
+  //     window.texture != null &&
+  //     this.dataTexture.ready
+  //   ) {
+  //     return window.texture;
+  //   }
+  //   this.oldTopLeftBucket = topLeftBucket;
 
-    const texture = window.texture || new Uint8Array(8192 * 8192);
-    window.texture = texture;
-    this.dataTexture.ready = true;
+  //   const texture = window.texture || new Uint8Array(8192 * 8192);
+  //   window.texture = texture;
+  //   this.dataTexture.ready = true;
 
-    let counter = 0;
+  //   let counter = 0;
 
-    let [bucketX, bucketY, bucketZ, _zoomStep] = topLeftBucket;
-    // const [bucketX, bucketY, bucketZ, _zoomStep] = [12, 12, 3, 0];
-    console.log("address", bucketX, bucketY, bucketZ, _zoomStep, zoomStep);
-    // _zoomStep = 0;
+  //   let [bucketX, bucketY, bucketZ, _zoomStep] = topLeftBucket;
+  //   // const [bucketX, bucketY, bucketZ, _zoomStep] = [12, 12, 3, 0];
+  //   console.log("address", bucketX, bucketY, bucketZ, _zoomStep, zoomStep);
+  //   // _zoomStep = 0;
 
-    const bucketPerDim = 16;
-    const bucketWidth = 32;
-    let savedBuckets = 0;
-    const bucketLength = Math.pow(bucketWidth, 3);
-    const notLoadedBucket = new Uint8Array(bucketLength);
-    const outOfBoundsBucket = new Uint8Array(bucketLength);
-    outOfBoundsBucket.fill(255, bucketLength);
+  //   const bucketPerDim = 17;
+  //   const bucketWidth = 32;
+  //   let savedBuckets = 0;
+  //   const bucketLength = Math.pow(bucketWidth, 3);
+  //   const notLoadedBucket = new Uint8Array(bucketLength);
+  //   const outOfBoundsBucket = new Uint8Array(bucketLength);
+  //   outOfBoundsBucket.fill(255, bucketLength);
 
-    for (let x = 0; x < bucketLength; x++) {
-      // notLoadedBucket.set([Math.floor(x / bucketWidth) % 2 === 0 ? 255 : 0], x);
-      notLoadedBucket.set([x / 4], x);
-    }
-    console.time("write buckets");
+  //   for (let x = 0; x < bucketLength; x++) {
+  //     // notLoadedBucket.set([Math.floor(x / bucketWidth) % 2 === 0 ? 255 : 0], x);
+  //     notLoadedBucket.set([x / 4], x);
+  //   }
+  //   console.time("write buckets");
 
-    let misses = 0;
-    let outOfBoundsCounter = 0;
-    for (let y = 0; y < bucketPerDim; y++) {
-      for (let x = 0; x < bucketPerDim; x++) {
-        //   for (let z = 0; z < bucketPerDim - 1; z++) {
-        const z = 0;
+  //   let misses = 0;
+  //   let outOfBoundsCounter = 0;
+  //   for (let y = 0; y < bucketPerDim; y++) {
+  //     for (let x = 0; x < bucketPerDim; x++) {
+  //       //   for (let z = 0; z < bucketPerDim - 1; z++) {
+  //       const z = 0;
 
-        // texture.set(notLoadedBucket, savedBuckets * bucketLength);
-        const bucket = this.cube.getBucket([bucketX + x, bucketY + y, bucketZ + z, _zoomStep]);
-        // if (x === y) {
-        if (bucket.hasData()) {
-          // hasData
-          // console.log(bucket.getData().length);
-          texture.set(bucket.getData(), savedBuckets * bucketLength);
-          // texture.fill(255, savedBuckets * bucketLength, (savedBuckets + 1) * bucketLength);
-        } else {
-          if (bucket.isOutOfBoundingBox) {
-            outOfBoundsCounter++;
-          }
-          texture.set(
-            bucket.isOutOfBoundingBox ? outOfBoundsBucket : notLoadedBucket,
-            savedBuckets * bucketLength,
-          );
-          // texture.fill(100, savedBuckets * bucketLength, (savedBuckets + 1) * bucketLength);
-          misses++;
-        }
-        savedBuckets++;
-      }
-      // }
-    }
-    console.timeEnd("write buckets");
-    // texture.fill(0, 0, 8192 * 8192);
-    // texture.set([128], 2047);
-    console.log("misses", misses);
-    console.log("outOfBoundsCounter", outOfBoundsCounter);
+  //       // texture.set(notLoadedBucket, savedBuckets * bucketLength);
+  //       const bucket = this.cube.getBucket([bucketX + x, bucketY + y, bucketZ + z, _zoomStep]);
+  //       // if (x === y) {
+  //       if (bucket.hasData()) {
+  //         // hasData
+  //         // console.log(bucket.getData().length);
+  //         texture.set(bucket.getData(), savedBuckets * bucketLength);
+  //         // texture.fill(255, savedBuckets * bucketLength, (savedBuckets + 1) * bucketLength);
+  //       } else {
+  //         if (bucket.isOutOfBoundingBox) {
+  //           outOfBoundsCounter++;
+  //         }
+  //         texture.set(
+  //           bucket.isOutOfBoundingBox ? outOfBoundsBucket : notLoadedBucket,
+  //           savedBuckets * bucketLength,
+  //         );
+  //         // texture.fill(100, savedBuckets * bucketLength, (savedBuckets + 1) * bucketLength);
+  //         misses++;
+  //       }
+  //       savedBuckets++;
+  //     }
+  //     // }
+  //   }
+  //   console.timeEnd("write buckets");
+  //   // texture.fill(0, 0, 8192 * 8192);
+  //   // texture.set([128], 2047);
+  //   console.log("misses", misses);
+  //   console.log("outOfBoundsCounter", outOfBoundsCounter);
 
-    // console.log("texture", texture);
-    return texture;
+  //   // console.log("texture", texture);
+  //   return texture;
 
-    // let bucket = this.cube.getBucket([12, 12, 3, 0]);
-    // let anotherBucket = this.cube.getBucket([12, 13, 3, 0]);
-    // if (bucket.hasData()) {
-    //   if (anotherBucket.hasData()) {
-    //     texture.set(anotherBucket.getData(), bucket.getData().length);
-    //   }
-    //   return texture;
-    //   console.log("hasData");
-    //   debugger;
-    //   // return [[bucketX, bucketY, bucketZ, zoomStep]];
-    // }
+  //   // let bucket = this.cube.getBucket([12, 12, 3, 0]);
+  //   // let anotherBucket = this.cube.getBucket([12, 13, 3, 0]);
+  //   // if (bucket.hasData()) {
+  //   //   if (anotherBucket.hasData()) {
+  //   //     texture.set(anotherBucket.getData(), bucket.getData().length);
+  //   //   }
+  //   //   return texture;
+  //   //   console.log("hasData");
+  //   //   debugger;
+  //   //   // return [[bucketX, bucketY, bucketZ, zoomStep]];
+  //   // }
 
-    // for (let x = 0; x < width; x++) {
-    //   for (let y = 0; y < width; y++) {
-    //     texture[y * width + x] =
-    //       (Math.floor(x / this.TEXTURE_SIZE * 70000) + Math.floor(y / this.TEXTURE_SIZE * 70000)) %
-    //       2
-    //         ? 0
-    //         : 128;
-    //     // texture[y * width + x] = y / width * 255;
+  //   // for (let x = 0; x < width; x++) {
+  //   //   for (let y = 0; y < width; y++) {
+  //   //     texture[y * width + x] =
+  //   //       (Math.floor(x / this.TEXTURE_SIZE * 70000) + Math.floor(y / this.TEXTURE_SIZE * 70000)) %
+  //   //       2
+  //   //         ? 0
+  //   //         : 128;
+  //   //     // texture[y * width + x] = y / width * 255;
 
-    //     // for (let y = 0; y < this.TEXTURE_SIZE; y++) {
-    //     // texture[counter++] = x < this.TEXTURE_SIZE / 2 ? 0.5 : 0.5;
-    //   }
-    // }
-    this.needsRedraw = false;
-    window.plane2d = this;
-    return texture;
+  //   //     // for (let y = 0; y < this.TEXTURE_SIZE; y++) {
+  //   //     // texture[counter++] = x < this.TEXTURE_SIZE / 2 ? 0.5 : 0.5;
+  //   //   }
+  //   // }
+  //   this.needsRedraw = false;
+  //   window.plane2d = this;
+  //   return texture;
 
-    // return this.getTexture(this.dataTexture, position, zoomStep, area);
-  }
+  //   // return this.getTexture(this.dataTexture, position, zoomStep, area);
+  // }
 
   getTexture(
     texture: DataTexture,
@@ -514,7 +514,7 @@ class Plane2D {
 
     const maxZoomStepOffset = Math.max(
       0,
-      Math.min(this.cube.LOOKUP_DEPTH_UP, this.cube.ZOOM_STEP_COUNT - zoomStep - 1),
+      // Math.min(this.cube.LOOKUP_DEPTH_UP, this.cube.ZOOM_STEP_COUNT - zoomStep - 1),
     );
 
     if (zoomStep < this.cube.ZOOM_STEP_COUNT) {

@@ -39,7 +39,7 @@ export default class TextureBucketManager {
   bucketPerDim: number;
   bufferCapacity: number;
   currentAnchorPoint: ?Vector4;
-  writerQueue: Array<{ bucket: Bucket, index: number }>;
+  writerQueue: Array<{ bucket: DataBucket, index: number }>;
 
   constructor(bucketPerDim: number, layer) {
     this.layer = layer;
@@ -157,7 +157,7 @@ export default class TextureBucketManager {
     const debouncedUpdateBucketData = _.debounce(updateBucketData, 16);
 
     if (!bucket.hasData()) {
-      bucket.once("bucketLoaded", updateBucketData);
+      bucket.on("bucketLoaded", updateBucketData);
     }
     bucket.on("bucketLabeled", debouncedUpdateBucketData);
   }
@@ -202,7 +202,7 @@ export default class TextureBucketManager {
     this.lookUpBuffer.fill(-1);
 
     for (const [bucket, address] of this.storedBucketToIndexMap) {
-      if (this.committedBucketSet.has(bucket) && bucket.hasData()) {
+      if (this.committedBucketSet.has(bucket)) {
         const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
         this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = address;
       }

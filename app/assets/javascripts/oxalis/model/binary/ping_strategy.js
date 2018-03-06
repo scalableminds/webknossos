@@ -75,7 +75,7 @@ export class PingStrategy extends AbstractPingStrategy {
     areas: OrthoViewMapType<Vector4>,
     activePlane: OrthoViewType,
   ): Array<PullQueueItemType> {
-    const zoomStep = Math.min(currentZoomStep, this.cube.MAX_ZOOM_STEP);
+    const zoomStep = Math.min(currentZoomStep, this.cube.MAX_UNSAMPLED_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
 
     const queueItemsForCurrentZoomStep = this.pingImpl(
@@ -88,7 +88,7 @@ export class PingStrategy extends AbstractPingStrategy {
     );
 
     let queueItemsForLargestZoomStep = [];
-    const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, currentZoomStep + 1);
+    const fallbackZoomStep = Math.min(this.cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
     if (fallbackZoomStep > zoomStep) {
       queueItemsForLargestZoomStep = this.pingImpl(
         position,
@@ -103,7 +103,6 @@ export class PingStrategy extends AbstractPingStrategy {
 
     return queueItemsForCurrentZoomStep.concat(queueItemsForLargestZoomStep);
   }
-
 
   pingImpl(
     position: Vector3,

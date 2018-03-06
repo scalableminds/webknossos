@@ -296,7 +296,7 @@ vec3 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
 
   // todo: does this make sense? what happens when there are multiple layers and we are mixing data with non-data?
   if (bucketAddress < 0.) {
-    return vec3(-0.0001, 0.0, 0.0);
+    return vec3(10.0, 0.0, 0.0);
   }
 
   float x = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, d_texture_width);
@@ -324,7 +324,7 @@ vec3 getColorWithFallbackFor(
   vec3 foffsetInBucket
 ) {
   vec3 c = getColorFor(lookUpTexture, dataTexture, bucketPosition, offsetInBucket);
-  if (c.x < 0.0) {
+  if (c.x == 10.0) {
     return getColorFor(flookUpTexture, fdataTexture, fbucketPosition, foffsetInBucket);
   }
   return c;
@@ -387,10 +387,10 @@ vec3 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 co
   vec3 b = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(1, 0, 0)));
   vec3 c = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(0, 1, 0)));
   vec3 d = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(1, 1, 0)));
-  if (a.x < 0.0 || b.x < 0.0 || c.x < 0.0 || d.x < 0.0) {
+  if (a.x == 10.0 || b.x == 10.0 || c.x == 10.0 || d.x == 10.0) {
     // We need to check all four colors for a negative parts, because there will be black
     // lines at the borders otherwise (black gets mixed with data)
-    return vec3(-0.0001, 0.0, 0.0);
+    return vec3(10.0, 0.0, 0.0);
   }
 
   vec3 ab = mix(a, b, bifilteringParams.x);
@@ -415,7 +415,7 @@ vec3 getBilinearColorOrFallback(
     color = getColorForCoords(lookUpTexture, dataTexture, coords);
   }
 
-  if (color.x >= 0.0) {
+  if (color.x < 10.0) {
     return color;
   }
 
@@ -427,8 +427,8 @@ void main() {
   float color_value  = 0.0;
 
   vec3 coords = getCoords(zoomStep);
-  vec3 bucketPosition = div(coords, bucketWidth);
-  vec3 offsetInBucket = mod(coords, bucketWidth);
+  vec3 bucketPosition = div(floor(coords), bucketWidth);
+  vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
   float fallbackZoomStep = min(<%= layers[0]%>_maxZoomStep, zoomStep + 1.0);
   vec3 fallbackCoords = floor(getCoords(fallbackZoomStep));

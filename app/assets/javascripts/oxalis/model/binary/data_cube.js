@@ -38,8 +38,6 @@ class DataCube {
   MAXIMUM_BUCKET_COUNT = 5000;
   BUCKET_LENGTH: number;
   ZOOM_STEP_COUNT: number;
-  LOOKUP_DEPTH_UP: number;
-  LOOKUP_DEPTH_DOWN: number = 1;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
@@ -78,12 +76,17 @@ class DataCube {
 
   constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;
-    this.ZOOM_STEP_COUNT = zoomStepCount;
+
+    // todo: extract this somewhere. maybe the last zoom step should always be upsampled?
+    const minimumZoomStepCount = 2;
+    this.MAX_UNSAMPLED_ZOOM_STEP = zoomStepCount - 1;
+    this.ZOOM_STEP_COUNT = Math.max(minimumZoomStepCount, zoomStepCount);
+    this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
+    this.upsampledZoomStepCount = this.ZOOM_STEP_COUNT - zoomStepCount;
+
     this.BIT_DEPTH = bitDepth;
     _.extend(this, BackboneEvents);
 
-    this.LOOKUP_DEPTH_UP = this.ZOOM_STEP_COUNT - 1;
-    this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
     this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
     this.BYTE_OFFSET = this.BIT_DEPTH >> 3;
 

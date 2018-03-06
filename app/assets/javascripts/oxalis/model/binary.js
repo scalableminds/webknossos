@@ -222,6 +222,7 @@ class Binary {
           bucketAddress[u] += x;
           bucketAddress[v] += y;
           const bucket = this.cube.getOrCreateBucket(bucketAddress);
+          // console.log("bucket", bucket);
 
           if (bucket.type !== "null") {
             requiredBucketSet.add(bucket);
@@ -229,7 +230,6 @@ class Binary {
         }
       }
     }
-
     textureBucketManager.storeBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
     return zoomedAnchorPoint.slice(0, 3);
   }

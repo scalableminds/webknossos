@@ -88,11 +88,12 @@ export class PingStrategy extends AbstractPingStrategy {
     );
 
     let queueItemsForLargestZoomStep = [];
-    if (zoomStep < this.cube.MAX_ZOOM_STEP) {
+    const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, currentZoomStep + 1);
+    if (fallbackZoomStep > zoomStep) {
       queueItemsForLargestZoomStep = this.pingImpl(
         position,
         direction,
-        this.cube.MAX_ZOOM_STEP,
+        fallbackZoomStep,
         0,
         areas,
         activePlane,

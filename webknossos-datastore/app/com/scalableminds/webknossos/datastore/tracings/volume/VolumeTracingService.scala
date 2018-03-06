@@ -103,7 +103,7 @@ class VolumeTracingService @Inject()(
     val buckets = new WKWBucketStreamSink(dataLayer)(dataLayer.bucketProvider.bucketStream(1))
 
     Enumerator.outputStream { os =>
-      ZipIO.zip(buckets.toList, os)
+      ZipIO.zip(buckets, os)
     }
   }
 

@@ -119,7 +119,7 @@ services:
       POSTGRES_PASSWORD: postgres
 
   fossildb:
-    image: scalableminds/fossildb:master__257
+    image: scalableminds/fossildb:master__272
     command:
       - fossildb
       - -c

@@ -64,6 +64,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Creation Date"
             dataIndex="created"
             key="created"
+            defaultSortOrder="descend"
             sorter={Utils.localeCompareBy("formattedCreated")}
             render={(__, dataset: DatasetType) => dataset.formattedCreated}
           />

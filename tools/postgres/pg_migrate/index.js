@@ -5,6 +5,7 @@ const fs = require("fs");
 const DEFAULT_TEAM_OWNER = "5447d5902d00001c35e1c965";
 const DEFAULT_PROJECT = "orphaned-tasks";
 const DELETED_USER = "594bb2eb640000c8bd22f6bc";
+const DEFAULT_DATASET = "DeletedDataset"
 
 function formatVector3(vec) {
   return `(${vec[0]},${vec[1]},${vec[2]})`;
@@ -230,7 +231,7 @@ function* csvWriter(name, cols) {
       ],
       async doc => ({
         _id: doc._id.toHexString(),
-        _dataSet: (doc.dataSetName != null && doc.dataSetName != "") ? (await lookupDataset(doc.dataSetName.trim()))._id.toHexString() : null,
+        _dataSet: (doc.dataSetName != null && doc.dataSetName != "") ? (await lookupDataset(doc.dataSetName.trim()))._id.toHexString() : (await lookupDataset(DEFAULT_DATASET))._id.toHexString(),
         _task: doc._task != null ? doc._task.toHexString() : null,
         _team: doc.team != null ? (await lookupTeam(doc.team))._id.toHexString() : null,
         _user: doc._user.toHexString(),

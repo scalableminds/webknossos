@@ -120,7 +120,7 @@ class ReactRouter extends React.Component<Props> {
                   isAuthenticated ? (
                     <DashboardView userId={null} isAdminView={false} />
                   ) : (
-                    <Redirect to="/spotlight" />
+                    <SpotlightView />
                   )
                 }
               />

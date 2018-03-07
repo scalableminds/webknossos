@@ -29,7 +29,7 @@ trait WKWLayer extends DataLayer {
   }
 
   def lengthOfUnderlyingCubes(resolution: Int): Int = {
-    wkwResolutions.find(_.resolution == resolution).map(_.cubeLength).getOrElse(0)
+    wkwResolutions.find(_.resolution == Left(resolution)).map(_.cubeLength).getOrElse(0)
   }
 }
 

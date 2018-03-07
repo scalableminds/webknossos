@@ -121,7 +121,10 @@ class PullQueue {
               //   higherBucket.pull();
               // }
               // console.time("downsampleFromLowerBucket");
-              higherBucket.downsampleFromLowerBucket(bucket);
+              higherBucket.downsampleFromLowerBucket(
+                bucket,
+                this.layer.category === "segmentation",
+              );
               // console.timeEnd("downsampleFromLowerBucket");
             } else {
               // console.log("higherBucket.type == null", higherBucket);

@@ -161,13 +161,13 @@ class Binary {
 
   updateFallbackDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
     const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, zoomStep + 1);
-    if (zoomStep < fallbackZoomStep) {
-      return this.updateDataTexturesForManager(
-        position,
-        fallbackZoomStep,
-        this.fallbackTextureBucketManager,
-      );
-    }
+    // if (zoomStep < fallbackZoomStep) {
+    return this.updateDataTexturesForManager(
+      position,
+      fallbackZoomStep,
+      this.fallbackTextureBucketManager,
+    );
+    // }
     return null;
   }
 

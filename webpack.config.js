@@ -15,7 +15,6 @@ module.exports = function(env = {}) {
     new webpack.DefinePlugin({
       "process.env.NODE_ENV": env.production ? '"production"' : '"development"',
     }),
-    new ExtractTextPlugin("main.css"),
     new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
     new MiniCssExtractPlugin({
       // Options similar to the same options in webpackOptions.output

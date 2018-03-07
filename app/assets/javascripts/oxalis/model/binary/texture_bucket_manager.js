@@ -78,11 +78,11 @@ export default class TextureBucketManager {
     // uniqBy removes multiple write-buckets-requests for the same index.
     // It preserves the first occurence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
-    // back (via pop). This ensures that the newest bucket is written.
+    // back (via pop). This ensures that the newest bucket is kept.
     this.writerQueue = _.uniqBy(this.writerQueue, el => el._index);
     const maxBucketCommitsPerFrame = 30;
 
-    while (processedItems++ < maxBucketCommitsPerFrame && this.writerQueue.length > 0) {
+    while (processedItems < maxBucketCommitsPerFrame && this.writerQueue.length > 0) {
       const { bucket, _index } = this.writerQueue.pop();
       this.dataTexture.update(
         bucket.getData(),
@@ -94,6 +94,11 @@ export default class TextureBucketManager {
       this.committedBucketSet.add(bucket);
       window.needsRerender = true;
       this.isRefreshBufferOutOfDate = true;
+      processedItems++;
+    }
+
+    if (processedItems > 0) {
+      // console.log(`committed ${processedItems} buckets to texture`);
     }
 
     window.requestAnimationFrame(() => {

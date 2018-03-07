@@ -176,30 +176,21 @@ export class DataBucket {
           const linearizedIndex = xyzToIdx(x + xOffset, y + yOffset, z + zOffset);
           for (let byteOffset = 0; byteOffset < this.BYTE_OFFSET; byteOffset++) {
             const targetIdx = linearizedIndex * this.BYTE_OFFSET + byteOffset;
-            const srcIdx = xyzToIdx(2 * x, 2 * y, 2 * z) * this.BYTE_OFFSET + byteOffset;
-            let a = bucket.data[srcIdx];
-            // + 0 * bucket.data[xyzToIdx(2 * x + 1, 2 * y, 2 * z) * this.BYTE_OFFSET + byteOffset];
-            // a /= 2;
+            const medianArray = [
+              bucket.data[xyzToIdx(2 * x, 2 * y, 2 * z) * this.BYTE_OFFSET + byteOffset],
+              bucket.data[xyzToIdx(2 * x + 1, 2 * y, 2 * z) * this.BYTE_OFFSET + byteOffset],
+              bucket.data[xyzToIdx(2 * x, 2 * y + 1, 2 * z) * this.BYTE_OFFSET + byteOffset],
+              bucket.data[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z) * this.BYTE_OFFSET + byteOffset],
+              bucket.data[xyzToIdx(2 * x, 2 * y, 2 * z + 1) * this.BYTE_OFFSET + byteOffset],
+              bucket.data[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1) * this.BYTE_OFFSET + byteOffset],
+              bucket.data[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1) * this.BYTE_OFFSET + byteOffset],
+              bucket.data[
+                xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1) * this.BYTE_OFFSET + byteOffset
+              ],
+            ].sort();
 
-            // let b =
-            //   bucket.data[xyzToIdx(2 * x, 2 * y + 1, 2 * z) * this.BYTE_OFFSET + byteOffset] +
-            //   bucket.data[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z) * this.BYTE_OFFSET + byteOffset];
-            // b /= 2;
-
-            // let c =
-            //   bucket.data[xyzToIdx(2 * x, 2 * y, 2 * z + 1) * this.BYTE_OFFSET + byteOffset] +
-            //   bucket.data[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1) * this.BYTE_OFFSET + byteOffset];
-            // c /= 2;
-
-            // let d =
-            //   bucket.data[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1) * this.BYTE_OFFSET + byteOffset] +
-            //   bucket.data[
-            //     xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1) * this.BYTE_OFFSET + byteOffset
-            //   ];
-            // d /= 2;
-
-            // this.data[targetIdx] = Math.round(((a + b) / 2 + (c + d) / 2) / 2);
-            this.data[targetIdx] = a;
+            // todo: use mode for segmentations
+            this.data[targetIdx] = Math.round((medianArray[3] + medianArray[4]) / 2);
 
             //  +
             //   bucket.data[(linearizedIndex + 1) * this.BYTE_OFFSET + byteOffset]) /

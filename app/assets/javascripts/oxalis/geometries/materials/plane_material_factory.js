@@ -283,7 +283,7 @@ vec2 getOffsetToBucketBoundary(vec2 v, float zoomStep) {
   return v - floor(v / zoomFactor) * zoomFactor;
 }
 
-vec3 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosition, vec3 offsetInBucket) {
+vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosition, vec3 offsetInBucket) {
   float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim);
   float bucketIdxInTexture = bucketIdx * bytesPerLookUpEntry;
   float pixelIdxInBucket = linearizeVec3ToIndex(offsetInBucket, bucketWidth);
@@ -294,14 +294,15 @@ vec3 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
     bucketIdxInTexture
   ).x;
 
-  // todo: does this make sense? what happens when there are multiple layers and we are mixing data with non-data?
   if (bucketAddress < 0.) {
-    return vec3(10.0, 0.0, 0.0);
+    return vec4(0.0, 0.0, 0.0, 0.0);
   }
 
-  float x = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, d_texture_width);
-  float pixelIdxInDataTexture = pixelIdxInBucket + bucketLength * bucketAddress;
-  float y = div(pixelIdxInDataTexture, d_texture_width);
+  float x =
+    linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, d_texture_width);
+  float y =
+    div(pixelIdxInBucket, d_texture_width) +
+    div(bucketLength * bucketAddress, d_texture_width);
 
   vec3 bucketColor = getRGBAtXYIndex(
     dataTexture,
@@ -310,10 +311,10 @@ vec3 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
     y
   );
 
-  return bucketColor;
+  return vec4(bucketColor, 1.0);
 }
 
-vec3 getColorWithFallbackFor(
+vec4 getColorWithFallbackFor(
   sampler2D lookUpTexture,
   sampler2D dataTexture,
   vec3 bucketPosition,
@@ -321,10 +322,12 @@ vec3 getColorWithFallbackFor(
   sampler2D flookUpTexture,
   sampler2D fdataTexture,
   vec3 fbucketPosition,
-  vec3 foffsetInBucket
+  vec3 foffsetInBucket,
+  bool hasFallback
 ) {
-  vec3 c = getColorFor(lookUpTexture, dataTexture, bucketPosition, offsetInBucket);
-  if (c.x == 10.0) {
+  vec4 c = getColorFor(lookUpTexture, dataTexture, bucketPosition, offsetInBucket);
+
+  if (c.a == 0.0 && hasFallback) {
     return getColorFor(flookUpTexture, fdataTexture, fbucketPosition, foffsetInBucket);
   }
   return c;
@@ -339,6 +342,10 @@ vec3 getCoords(float usedZoomStep) {
   vec2 globalPositionUV = vec2(
     globalPosition[<%= uvw[0] %>],
     globalPosition[<%= uvw[1] %>]
+  );
+  vec2 usedAnchorPointUV = vec2(
+    usedAnchorPoint[<%= uvw[0] %>],
+    usedAnchorPoint[<%= uvw[1] %>]
   );
   // Offset to bucket boundary
   vec2 unscaledOffset = getOffsetToBucketBoundary(globalPositionUV, usedZoomStep);
@@ -356,16 +363,19 @@ vec3 getCoords(float usedZoomStep) {
   float upsamplingOffset = 0.5 - 0.5 / upsamplingFactor; // 0.25 for zoomStepDiff == 1
   texture_pos = texture_pos / upsamplingFactor + upsamplingOffset;
 
+  vec2 globalPosAtTex = globalPositionUV + (texture_pos - 0.5) * r_texture_width;
+  vec2 relativeCoords = (globalPosAtTex - usedAnchorPointUV * pow(2.0, 5.0 + usedZoomStep)) / pow(2.0, usedZoomStep);
+
   vec3 coords = transDim(vec3(
-    texture_pos.x * r_texture_width,
-    texture_pos.y * r_texture_width,
+    texture_pos.x * r_texture_width, // relativeCoords.x
+    texture_pos.y * r_texture_width, // relativeCoords.y
     ((globalPosition[<%= uvw[2] %>] - usedAnchorPoint[<%= uvw[2] %>] * pow(2.0, 5.0 + usedZoomStep)) / pow(2.0, usedZoomStep))
   ));
 
   return coords;
 }
 
-vec3 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTexture, vec3 coords) {
+vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTexture, vec3 coords) {
   coords = floor(coords);
   vec3 bucketPosition = div(coords, bucketWidth);
   vec3 offsetInBucket = mod(coords, bucketWidth);
@@ -378,23 +388,23 @@ vec3 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTexture, vec3 coor
   );
 }
 
-vec3 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 coords) {
+vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 coords) {
   coords = coords + vec3(-0.5, -0.5, 0.0);
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
 
-  vec3 a = getColorForCoords(lookUpTexture, dataTexture, coords);
-  vec3 b = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(1, 0, 0)));
-  vec3 c = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(0, 1, 0)));
-  vec3 d = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(1, 1, 0)));
-  if (a.x == 10.0 || b.x == 10.0 || c.x == 10.0 || d.x == 10.0) {
+  vec4 a = getColorForCoords(lookUpTexture, dataTexture, coords);
+  vec4 b = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(1, 0, 0)));
+  vec4 c = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(0, 1, 0)));
+  vec4 d = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(1, 1, 0)));
+  if (a.a == 0.0 || b.a == 0.0 || c.a == 0.0 || d.a == 0.0) {
     // We need to check all four colors for a negative parts, because there will be black
     // lines at the borders otherwise (black gets mixed with data)
-    return vec3(10.0, 0.0, 0.0);
+    return vec4(0.0, 0.0, 0.0, 0.0);
   }
 
-  vec3 ab = mix(a, b, bifilteringParams.x);
-  vec3 cd = mix(c, d, bifilteringParams.x);
+  vec4 ab = mix(a, b, bifilteringParams.x);
+  vec4 cd = mix(c, d, bifilteringParams.x);
 
   return mix(ab, cd, bifilteringParams.y);
 }
@@ -406,20 +416,21 @@ vec3 getBilinearColorOrFallback(
   sampler2D flookUpTexture,
   sampler2D fdataTexture,
   vec3 fBucketPos,
-  vec3 fOffsetInBucket
+  vec3 fOffsetInBucket,
+  bool hasFallback
 ) {
-  vec3 color;
+  vec4 color;
   if (useBilinearFiltering) {
     color = getBilinearColorFor(lookUpTexture, dataTexture, coords);
   } else {
     color = getColorForCoords(lookUpTexture, dataTexture, coords);
   }
 
-  if (color.x < 10.0) {
-    return color;
+  if (color.a == 0.0 && hasFallback) {
+    return getColorFor(flookUpTexture, fdataTexture, fBucketPos, fOffsetInBucket).xyz;
   }
 
-  return getColorFor(flookUpTexture, fdataTexture, fBucketPos, fOffsetInBucket);
+  return color.xyz;
 }
 
 void main() {
@@ -427,10 +438,17 @@ void main() {
   float color_value  = 0.0;
 
   vec3 coords = getCoords(zoomStep);
+  if (coords.x < 0.0 || coords.x > r_texture_width + 32.0
+    || coords.y < 0.0 || coords.y > r_texture_width + 32.0
+    ) {
+    return;
+  }
+
   vec3 bucketPosition = div(floor(coords), bucketWidth);
   vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
   float fallbackZoomStep = min(<%= layers[0]%>_maxZoomStep, zoomStep + 1.0);
+  bool hasFallback = fallbackZoomStep > zoomStep;
   vec3 fallbackCoords = floor(getCoords(fallbackZoomStep));
   vec3 fbucketPosition = div(fallbackCoords, bucketWidth);
   vec3 foffsetInBucket = mod(fallbackCoords, bucketWidth);
@@ -438,7 +456,7 @@ void main() {
   <% if (hasSegmentation) { %>
     // todo: test
     // Don't use bilinear filtering for volume data
-    vec3 volume_color =
+    vec4 volume_color =
       getColorWithFallbackFor(
         <%= segmentationName %>_lookup_texture,
         <%= segmentationName %>_texture,
@@ -447,10 +465,11 @@ void main() {
         <%= segmentationName %>_lookup_fallback_texture,
         <%= segmentationName %>_fallback_texture,
         fbucketPosition,
-        foffsetInBucket
+        foffsetInBucket,
+        hasFallback
       );
 
-    float id = volume_color.x * volume_color.y * volume_color.z * pow(255.0, 3.0);
+    float id = volume_color.x * volume_color.y * volume_color.z * volume_color.a * pow(255.0, 3.0);
   <% } else { %>
     float id = 0.0;
   <% } %>
@@ -466,7 +485,8 @@ void main() {
         <%= layers[0] %>_lookup_fallback_texture,
         <%= layers[0] %>_fallback_texture,
         fbucketPosition,
-        fOffsetInBucket
+        fOffsetInBucket,
+        hasFallback
       );
 
     data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
@@ -482,7 +502,8 @@ void main() {
           <%= name %>_lookup_fallback_texture,
           <%= name %>_fallback_texture,
           fbucketPosition,
-          foffsetInBucket
+          foffsetInBucket,
+          hasFallback
         ).x;
 
       // Brightness / Contrast Transformation for <%= name %>

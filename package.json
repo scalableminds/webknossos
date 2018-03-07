@@ -100,7 +100,7 @@
     "font-awesome": "^4.5.0",
     "hammerjs": "^2.0.8",
     "history": "^4.7.2",
-    "immutability-helper": "^2.6.0",
+    "immutability-helper": "^2.6.6",
     "lodash": "^4.13.1",
     "mjs": "^1.0.0",
     "moment": "^2.21.0",

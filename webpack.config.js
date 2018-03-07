@@ -17,10 +17,8 @@ module.exports = function(env = {}) {
     }),
     new webpack.IgnorePlugin(/^\.\/locale$/, /moment$/),
     new MiniCssExtractPlugin({
-      // Options similar to the same options in webpackOptions.output
-      // both options are optional
       filename: "[name].css",
-      chunkFilename: "[id].css",
+      chunkFilename: "[name].css",
     }),
   ];
   // if (env.production) {
@@ -48,7 +46,6 @@ module.exports = function(env = {}) {
       filename: "[name].js",
       sourceMapFilename: "[file].map",
       publicPath: "/assets/bundle/",
-      // chunkFilename: env.production ? "[chunkhash].js" : "[name].js",
     },
     module: {
       rules: [
@@ -59,9 +56,6 @@ module.exports = function(env = {}) {
         },
         {
           test: /\.less$/,
-          // use: ExtractTextPlugin.extract({
-          // use: "css-loader!less-loader",
-          // }),
           use: [MiniCssExtractPlugin.loader, "css-loader", "less-loader"],
         },
         {

@@ -49,18 +49,18 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
     }
   }
 
-  def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType.TokenTypeValue)(implicit request: RequestHeader): Future[String] = {
-    dao.add(authenticator, tokenType).map { a =>
+  def init(authenticator: BearerTokenAuthenticator, tokenType: TokenType.TokenTypeValue, deleteOld: Boolean = true)(implicit request: RequestHeader): Future[String] = {
+    dao.add(authenticator, tokenType, deleteOld).map { a =>
       a.id
     }.recover {
       case e => throw new AuthenticatorInitializationException(InitError.format(ID, authenticator), e)
     }
   }
 
-  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType.TokenTypeValue)(implicit request: RequestHeader): Future[String] =
+  def createAndInit(loginInfo: LoginInfo, tokenType: TokenType.TokenTypeValue, deleteOld: Boolean = true)(implicit request: RequestHeader): Future[String] =
     for {
       tokenAuthenticator <- create(loginInfo, tokenType)
-      tokenId <- init(tokenAuthenticator, tokenType)
+      tokenId <- init(tokenAuthenticator, tokenType, deleteOld)
     } yield {
       tokenId
     }

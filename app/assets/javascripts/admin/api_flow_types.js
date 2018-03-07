@@ -264,4 +264,8 @@ export type APIBuildInfoType = {
   },
 };
 
+export type APIFeatureToggles = {
+  +discussionBoard: boolean,
+};
+
 export default {};

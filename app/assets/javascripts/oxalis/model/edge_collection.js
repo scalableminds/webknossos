@@ -21,10 +21,15 @@ export default class EdgeCollection {
   }
 
   getEdgesForNode(nodeId: number): Array<EdgeType> {
-    const outgoingEdges = this.outMap.getNullable(nodeId) || [];
-    const ingoingEdges = this.inMap.getNullable(nodeId) || [];
+    return this.getOutgoingEdgesForNode(nodeId).concat(this.getIngoingEdgesForNode(nodeId));
+  }
 
-    return outgoingEdges.concat(ingoingEdges);
+  getOutgoingEdgesForNode(nodeId: number): Array<EdgeType> {
+    return this.outMap.getNullable(nodeId) || [];
+  }
+
+  getIngoingEdgesForNode(nodeId: number): Array<EdgeType> {
+    return this.inMap.getNullable(nodeId) || [];
   }
 
   addEdges(edges: Array<EdgeType>, mutate: boolean = false): EdgeCollection {

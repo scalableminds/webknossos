@@ -1519,8 +1519,17 @@ const ColorGenerator = {
   },
 
   getNRandomColors(n: number): Array<Vector3> {
-    // Take the first n colors and shuffle these
-    return _.shuffle(rgbs.slice(0, Math.min(n, rgbs.length)));
+    let shuffledColors = [];
+    let remainingColorCount = n;
+
+    while (remainingColorCount > 0) {
+      // Take the first k colors
+      const batchSize = Math.min(remainingColorCount, rgbs.length);
+      shuffledColors = shuffledColors.concat(rgbs.slice(0, batchSize));
+      remainingColorCount -= batchSize;
+    }
+
+    return _.shuffle(shuffledColors);
   },
 };
 

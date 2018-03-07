@@ -133,7 +133,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
       : "sortByTime";
 
     return (
-      <Menu defaultSelectedKeys={[activeMenuKey]} onSelect={this.handleDropdownClick}>
+      <Menu selectedKeys={[activeMenuKey]} onClick={this.handleDropdownClick}>
         <Menu.Item key="sortByName">by name</Menu.Item>
         <Menu.Item key="sortByTime">by creation time</Menu.Item>
       </Menu>

@@ -77,12 +77,12 @@ class DataCube {
   constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;
 
-    // todo: extract this somewhere. maybe the last zoom step should always be upsampled?
+    // todo: extract this somewhere. maybe the last zoom step should always be downsampled?
     const minimumZoomStepCount = 2;
     this.MAX_UNSAMPLED_ZOOM_STEP = zoomStepCount - 1;
     this.ZOOM_STEP_COUNT = Math.max(minimumZoomStepCount, zoomStepCount);
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
-    this.upsampledZoomStepCount = this.ZOOM_STEP_COUNT - zoomStepCount;
+    this.downsampledZoomStepCount = this.ZOOM_STEP_COUNT - zoomStepCount;
 
     this.BIT_DEPTH = bitDepth;
     _.extend(this, BackboneEvents);

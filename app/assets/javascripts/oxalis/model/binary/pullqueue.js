@@ -107,7 +107,7 @@ class PullQueue {
         this.maybeWhitenEmptyBucket(bucketData);
         if (bucket.type === "data") {
           bucket.receiveData(bucketData);
-          if (this.cube.upsampledZoomStepCount > 0) {
+          if (this.cube.downsampledZoomStepCount > 0) {
             const higherAddress = bucketAddress.slice();
             higherAddress[0] = higherAddress[0] >> 1;
             higherAddress[1] = higherAddress[1] >> 1;
@@ -120,9 +120,9 @@ class PullQueue {
               // if (higherBucket.state === "UNREQUESTED") {
               //   higherBucket.pull();
               // }
-              // console.time("upsampleFromLowerBucket");
-              higherBucket.upsampleFromLowerBucket(bucket);
-              // console.timeEnd("upsampleFromLowerBucket");
+              // console.time("downsampleFromLowerBucket");
+              higherBucket.downsampleFromLowerBucket(bucket);
+              // console.timeEnd("downsampleFromLowerBucket");
             } else {
               // console.log("higherBucket.type == null", higherBucket);
             }

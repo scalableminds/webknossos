@@ -59,6 +59,9 @@ export class DataBucket {
   }
 
   shouldCollect(): boolean {
+    if (this.isDownSampled) {
+      return false;
+    }
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
     this.accessed = false;
     return collect;
@@ -155,7 +158,8 @@ export class DataBucket {
     throw new Error(`Unexpected state: ${this.state}`);
   }
 
-  upsampleFromLowerBucket(bucket: Bucket): void {
+  downsampleFromLowerBucket(bucket: Bucket): void {
+    this.isDownSampled = true;
     const xOffset = (bucket.zoomedAddress[0] % 2) * 16,
       yOffset = (bucket.zoomedAddress[1] % 2) * 16,
       zOffset = (bucket.zoomedAddress[2] % 2) * 16;

@@ -88,10 +88,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
 
   handleNmlDownload = async () => {
     await this.setState({ isDownloading: true });
-    // Wait for the Modal to render
-    await Utils.sleep(1000);
+    // Wait 1 second for the Modal to render
+    const [buildInfo] = await Promise.all([getBuildInfo(), Utils.sleep(1000)]);
     const state = Store.getState();
-    const buildInfo = await getBuildInfo();
     const nml = serializeToNml(state, this.props.skeletonTracing, buildInfo);
     this.setState({ isDownloading: false });
 

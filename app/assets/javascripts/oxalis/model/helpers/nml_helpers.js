@@ -6,17 +6,17 @@ import messages from "messages";
 import Saxophone from "@scalableminds/saxophone";
 import Store from "oxalis/store";
 import Date from "libs/date";
-import { getNodeToEdgesMap } from "oxalis/model/accessors/skeletontracing_accessor";
 import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 import type {
   OxalisState,
   SkeletonTracingType,
   NodeMapType,
-  EdgeType,
   TreeType,
   TreeMapType,
   TemporaryMutableTreeMapType,
 } from "oxalis/store";
+import type { APIBuildInfoType } from "admin/api_flow_types";
 
 // NML Defaults
 const DEFAULT_COLOR = [1, 0, 0];
@@ -64,7 +64,11 @@ export function getNmlName(state: OxalisState): string {
   return `${datasetName}__${tracingType}__${userName}__${shortAnnotationId}.nml`;
 }
 
-export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType): string {
+export function serializeToNml(
+  state: OxalisState,
+  tracing: SkeletonTracingType,
+  buildInfo: APIBuildInfoType,
+): string {
   // Only visible trees will be serialized!
   // _.filter throws flow errors here, because the type definitions are wrong and I'm not able to fix them
   const visibleTrees = Object.keys(tracing.trees)
@@ -74,6 +78,7 @@ export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType)
     "<things>",
     ...indent(
       _.concat(
+        serializeMetaInformation(state, buildInfo),
         serializeParameters(state),
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
@@ -84,50 +89,85 @@ export function serializeToNml(state: OxalisState, tracing: SkeletonTracingType)
   ].join("\n");
 }
 
+function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoType): Array<string> {
+  return _.compact([
+    serializeTag("meta", {
+      name: "writer",
+      content: "nml_helpers.js",
+    }),
+    serializeTag("meta", {
+      name: "writerGitCommit",
+      content: buildInfo.webknossos.commitHash,
+    }),
+    serializeTag("meta", {
+      name: "timestamp",
+      content: Date.now().toString(),
+    }),
+    serializeTag("meta", {
+      name: "annotationId",
+      content: state.tracing.annotationId,
+    }),
+    state.activeUser != null
+      ? serializeTag("meta", {
+          name: "username",
+          content: `${state.activeUser.firstName} ${state.activeUser.lastName}`,
+        })
+      : "",
+    state.task != null
+      ? serializeTag("meta", {
+          name: "taskId",
+          content: state.task.id,
+        })
+      : "",
+  ]);
+}
+
 function serializeParameters(state: OxalisState): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
   const userBB = state.tracing.userBoundingBox;
   return [
     "<parameters>",
-    ...indent([
-      serializeTag("experiment", {
-        name: state.dataset.name,
-        description: state.tracing.description,
-      }),
-      serializeTag("scale", {
-        x: state.dataset.scale[0],
-        y: state.dataset.scale[1],
-        z: state.dataset.scale[2],
-      }),
-      serializeTag("offset", {
-        x: 0,
-        y: 0,
-        z: 0,
-      }),
-      serializeTag("time", { ms: state.tracing.createdTimestamp }),
-      serializeTag("editPosition", {
-        x: editPosition[0],
-        y: editPosition[1],
-        z: editPosition[2],
-      }),
-      serializeTag("editRotation", {
-        xRot: editRotation[0],
-        yRot: editRotation[1],
-        zRot: editRotation[2],
-      }),
-      serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-      userBB != null
-        ? serializeTag("userBoundingBox", {
-            topLeftX: userBB.min[0],
-            topLeftY: userBB.min[1],
-            topLeftZ: userBB.min[2],
-            width: userBB.max[0] - userBB.min[0],
-            height: userBB.max[1] - userBB.min[1],
-            depth: userBB.max[2] - userBB.min[2],
-          })
-        : "",
-    ]),
+    ...indent(
+      _.compact([
+        serializeTag("experiment", {
+          name: state.dataset.name,
+          description: state.tracing.description,
+        }),
+        serializeTag("scale", {
+          x: state.dataset.scale[0],
+          y: state.dataset.scale[1],
+          z: state.dataset.scale[2],
+        }),
+        serializeTag("offset", {
+          x: 0,
+          y: 0,
+          z: 0,
+        }),
+        serializeTag("time", { ms: state.tracing.createdTimestamp }),
+        serializeTag("editPosition", {
+          x: editPosition[0],
+          y: editPosition[1],
+          z: editPosition[2],
+        }),
+        serializeTag("editRotation", {
+          xRot: editRotation[0],
+          yRot: editRotation[1],
+          zRot: editRotation[2],
+        }),
+        serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
+        userBB != null
+          ? serializeTag("userBoundingBox", {
+              topLeftX: userBB.min[0],
+              topLeftY: userBB.min[1],
+              topLeftZ: userBB.min[2],
+              width: userBB.max[0] - userBB.min[0],
+              height: userBB.max[1] - userBB.min[1],
+              depth: userBB.max[2] - userBB.min[2],
+            })
+          : "",
+      ]),
+    ),
     "</parameters>",
   ];
 }
@@ -181,7 +221,7 @@ function serializeNodes(nodes: NodeMapType): Array<string> {
   });
 }
 
-function serializeEdges(edges: Array<EdgeType>): Array<string> {
+function serializeEdges(edges: EdgeCollection): Array<string> {
   return edges.map(edge => serializeTag("edge", { source: edge.source, target: edge.target }));
 }
 
@@ -258,7 +298,6 @@ function findTreeByNodeId(trees: TreeMapType, nodeId: number): ?TreeType {
 }
 
 function isTreeConnected(tree: TreeType): boolean {
-  const nodeToEdgesMap = getNodeToEdgesMap(tree);
   const visitedNodes = new Map();
 
   if (tree.nodes.size() > 0) {
@@ -268,7 +307,7 @@ function isTreeConnected(tree: TreeType): boolean {
     while (nodeQueue.length !== 0) {
       const nodeId = nodeQueue.shift();
       visitedNodes.set(nodeId, true);
-      const edges = nodeToEdgesMap[nodeId];
+      const edges = tree.edges.getEdgesForNode(nodeId);
       // If there are no edges for a node, the tree is not connected
       if (edges == null) break;
 
@@ -316,7 +355,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               nodes: new DiffableMap(),
               branchPoints: [],
               timestamp: Date.now(),
-              edges: [],
+              edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
             };
             if (trees[currentTree.treeId] != null)
@@ -370,7 +409,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               throw new NmlParseError(
                 `${messages["nml.edge_with_same_source_target"]} ${JSON.stringify(currentEdge)}`,
               );
-            currentTree.edges.push(currentEdge);
+            currentTree.edges.addEdge(currentEdge, true);
             break;
           }
           case "comment": {

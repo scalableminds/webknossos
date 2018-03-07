@@ -30,7 +30,7 @@ trait ResultBox extends I18nSupport{
       new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
   }
 
-  private def formatChainOpt(chain: Box[Failure]): Option[String] = chain match {
+  def formatChainOpt(chain: Box[Failure]): Option[String] = chain match {
     case Full(failure) => Some(formatChain(chain))
     case _ => None
   }

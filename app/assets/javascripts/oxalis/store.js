@@ -31,6 +31,7 @@ import type {
 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
 import type {
@@ -87,7 +88,7 @@ type TreeTypeBase = {
   +timestamp: number,
   +comments: Array<CommentType>,
   +branchPoints: Array<BranchPointType>,
-  +edges: Array<EdgeType>,
+  +edges: EdgeCollection,
   +isVisible: boolean,
 };
 

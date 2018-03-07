@@ -9,6 +9,7 @@ let idCounter = 0;
 // Diffing is very fast when the given Maps are dependent, since the separate chunks
 // can be compared shallowly.
 // The insertion order of the DiffableMap is not guaranteed.
+// Stored values may be null. However, `undefined` is equal to "does not exist".
 
 class DiffableMap<K: number, V> {
   id: number;
@@ -33,6 +34,19 @@ class DiffableMap<K: number, V> {
   }
 
   get(key: K): V {
+    const value = this.getNullable(key);
+    if (value !== undefined) {
+      return value;
+    } else {
+      throw new Error("Get empty");
+    }
+  }
+
+  // The return type cannot be ?V since this would also include null.
+  // In order to allow storing null values in this data structure,
+  // the typing makes it explicit by just using undefined as a place holder for
+  // "not existing".
+  getNullable(key: K): V | typeof undefined {
     let idx = 0;
     while (this.chunks[idx] != null) {
       if (this.chunks[idx].has(key)) {
@@ -41,16 +55,11 @@ class DiffableMap<K: number, V> {
       }
       idx++;
     }
-    throw new Error("Get empty");
+    return undefined;
   }
 
   has(key: K): boolean {
-    try {
-      this.get(key);
-      return true;
-    } catch (exception) {
-      return false;
-    }
+    return this.getNullable(key) !== undefined;
   }
 
   set(key: K, value: V): DiffableMap<K, V> {
@@ -292,7 +301,7 @@ export function diffDiffableMaps<K: number, V>(
     const newOnlyA = onlyA.filter(id => !missingChangedIdSet.has(id));
     const newOnlyB = onlyB.filter(id => !missingChangedIdSet.has(id));
 
-    // Ensure that these elements are not equal before addng them to "changed"
+    // Ensure that these elements are not equal before adding them to "changed"
     const newChanged = changed.concat(
       missingChangedIds.filter(id => mapA.get(id) !== mapB.get(id)),
     );

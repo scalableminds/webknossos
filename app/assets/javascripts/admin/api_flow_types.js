@@ -122,15 +122,27 @@ export type APIScriptType = {
   +gist: string,
 };
 
-export type APIProjectType = {
-  +id: string,
+type APIProjectTypeBase = {
   +name: string,
   +team: string,
-  +owner: APIUserType,
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
   +numberOfOpenAssignments: number,
+};
+
+export type APIProjectType = APIProjectTypeBase & {
+  +id: string,
+  +owner: APIUserType,
+};
+
+export type APIProjectUpdaterType = APIProjectTypeBase & {
+  +id: string,
+  +owner: string,
+};
+
+export type APIProjectCreatorType = APIProjectTypeBase & {
+  +owner: string,
 };
 
 export type APITaskType = {
@@ -230,6 +242,30 @@ export type APIOpenTasksReportType = {
   +user: string,
   +totalAssignments: number,
   +assignmentsByProjects: { [projectName: string]: number },
+};
+
+export type APIBuildInfoType = {
+  webknossos: {
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    commitDate: string,
+  },
+  "webknossos-wrap": {
+    builtAtMillis: string,
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    builtAtString: string,
+  },
+};
+
+export type APIFeatureToggles = {
+  +discussionBoard: boolean,
 };
 
 export default {};

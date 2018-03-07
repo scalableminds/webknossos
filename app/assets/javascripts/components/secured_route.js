@@ -1,7 +1,7 @@
 // @flow
 import React from "react";
 import { Route, withRouter } from "react-router-dom";
-import LoginView from "admin/views/auth/login_view";
+import LoginView from "admin/auth/login_view";
 import type { Match, Location, ContextRouter } from "react-router-dom";
 import type { ComponentType } from "react";
 

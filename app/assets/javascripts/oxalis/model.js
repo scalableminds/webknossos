@@ -279,7 +279,7 @@ export class OxalisModel {
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
     for (const layer of layers) {
-      const maxLayerZoomStep = Math.log(Math.max(..._.flatten(layer.resolutions))) / Math.LN2;
+      const maxLayerZoomStep = Math.pow(2, layer.resolutions.length - 1);
       this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
     }
 

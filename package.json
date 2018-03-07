@@ -103,7 +103,7 @@
     "immutability-helper": "^2.6.0",
     "lodash": "^4.13.1",
     "mjs": "^1.0.0",
-    "moment": "^2.19.3",
+    "moment": "^2.21.0",
     "pako": "^0.2.8",
     "react": "^16.2.0",
     "react-dom": "^16.2.0",

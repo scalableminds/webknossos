@@ -84,15 +84,15 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
   };
 
   getDropdownMenu(annotation: APIAnnotationType) {
-    // TODO use react fragments <> instead of spans
-    let doesAnnotationBelongToActiveUser = false;
+    let doesAnnotationNotBelongToActiveUser = true;
 
     if (annotation.user && this.props.activeUser) {
-      doesAnnotationBelongToActiveUser = annotation.user.id !== this.props.activeUser.id;
+      doesAnnotationNotBelongToActiveUser = annotation.user.id !== this.props.activeUser.id;
     }
 
+    // TODO use react fragments <> instead of spans
     const label =
-      annotation.state === "Finished" || doesAnnotationBelongToActiveUser ? (
+      annotation.state === "Finished" || doesAnnotationNotBelongToActiveUser ? (
         <span>
           <Icon type="eye-o" />View
         </span>

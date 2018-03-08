@@ -17,7 +17,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
   def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(implicit report: DataSourceImportReport[Path]): Box[DataLayer] = {
     (for {
-      resolutions <- exploreResolutions(baseDir, previous.map(_.resolutions))
+      resolutions <- exploreResolutions(baseDir)
       (voxelType, wkwResolutions) <- extractHeaderParameters(resolutions)
       elementClass <- voxelTypeToElementClass(voxelType)
     } yield {
@@ -39,17 +39,39 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }
   }
 
-  private def exploreResolutions(baseDir: Path, previous: Option[List[Point3D]])(implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Either[Int, Point3D])]] = {
-    def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
-    def resolutionDirInt(path: Path): Int = path.getFileName.toString.toInt
+  private def exploreResolutions(baseDir: Path)(implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Either[Int, Point3D])]] = {
+
+    def parseResolutionName(path: Path): Option[Either[Int, Point3D]] = {
+        path.getFileName.toString.toIntOpt match {
+        case Some(resolutionInt) => Some(Left(resolutionInt))
+        case None => {
+          val pattern = """(\d+)-(\d+)-(\d+)""".r
+          try {
+            val pattern(x, y, z) = path.getFileName.toString
+            Some(Right(Point3D(x.toInt, y.toInt, z.toInt)))
+          } catch {
+            case e: Exception => None
+          }
+        }
+      }
+    }
+
+    def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
+
+    def resolutionDirSortingKey(path: Path) = {
+      parseResolutionName(path).get match {
+        case Left(int) => int
+        case Right(point) => point.maxDim
+      }
+    }
 
     PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutionDirs =>
-      val resolutionHeaders = resolutionDirs.sortBy(resolutionDirInt).map { resolutionDir =>
-        val resolutionInt = resolutionDirInt(resolutionDir)
+      val resolutionHeaders = resolutionDirs.sortBy(resolutionDirSortingKey).map { resolutionDir =>
+        val resolutionIntOrPoint3 = parseResolutionName(resolutionDir).get
         WKWHeader(resolutionDir.resolve("header.wkw").toFile).map{ header =>
-          (header, createResolution(resolutionInt, previous))
+          (header, resolutionIntOrPoint3)
         }.passFailure { f =>
-          report.error(section => s"Error processing resolution '$resolutionInt' - ${f.msg}")
+          report.error(section => s"Error processing resolution '$resolutionIntOrPoint3' - ${f.msg}")
         }
       }
 

@@ -61,6 +61,11 @@ trait DataLayerLike {
 
   def resolutions: List[Point3D]
 
+  def lookUpResolution(resolutionExponent: Int): Point3D = {
+    val resPower = Math.pow(2, resolutionExponent).toInt
+    resolutions.find(resolution => resolution.maxDim == resPower).getOrElse(Point3D(resPower, resPower, resPower))
+  }
+
   def elementClass: ElementClass.Value
 }
 
@@ -92,7 +97,7 @@ trait DataLayer extends DataLayerLike {
   /**
     * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
     */
-  def lengthOfUnderlyingCubes(resolution: Int): Int
+  def lengthOfUnderlyingCubes(resolution: Point3D): Int
 
   def bucketProvider: BucketProvider
 

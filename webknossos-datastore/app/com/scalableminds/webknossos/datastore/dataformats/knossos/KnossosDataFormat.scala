@@ -61,18 +61,13 @@ object KnossosDataFormat extends DataSourceImporter {
   }
 
   private def exploreSection(name: String, baseDir: Path, previous: Option[KnossosSection]): KnossosSection = {
-    val previousResolutions = previous.map(_.resolutions).map{_.map{
-      case Left(r) => Point3D(r, r, r)
-      case Right(r) => r
-    }}
-    val resolutions = exploreResolutions(baseDir, previousResolutions)
+    val resolutions = exploreResolutions(baseDir)
     KnossosSection(name, resolutions, previous.map(_.boundingBox).getOrElse(BoundingBox.empty))
   }
 
-  private def exploreResolutions(baseDir: Path, previous: Option[List[Point3D]]): List[Either[Int, Point3D]] = {
-    def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
+  private def exploreResolutions(baseDir: Path): List[Either[Int, Point3D]] = {
     PathUtils.listDirectories(baseDir, resolutionDirFilter).map { resolutionDirs =>
-      resolutionDirs.map(resolutionDir => createResolution(resolutionDir.getFileName.toString.toInt, previous))
+      resolutionDirs.map(parseResolutionName(_).get)
     }.getOrElse(Nil)
   }
 

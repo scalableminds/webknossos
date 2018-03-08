@@ -197,7 +197,7 @@ class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
       dataLayer <- dataSet.dataSource.toUsable.flatMap(ds => ds.getDataLayer(dataLayerName)).toFox
       accessToken <- dataStoreInfo.accessToken ?~> "ndstore.accesstoken.missing"
       thumbnail = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height)
-      resolution = (math.log(thumbnail.resolution) / math.log(2)).toInt
+      resolution = (math.log(thumbnail.resolution.maxDim) / math.log(2)).toInt
       imageParams = s"${resolution}/${thumbnail.x},${thumbnail.x + width}/${thumbnail.y},${thumbnail.y + height}/${thumbnail.z},${thumbnail.z + 1}"
       baseUrl = s"${dataStoreInfo.url}/nd/ca"
       _ = logger.error(s"$baseUrl/$accessToken/$dataLayerName/jpeg/$imageParams")

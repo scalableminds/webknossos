@@ -43,7 +43,7 @@ class FallbackLayerAdapter(primary: SegmentationLayer, fallback: SegmentationLay
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
-  def lengthOfUnderlyingCubes(resolution: Int): Int = fallback.lengthOfUnderlyingCubes(resolution)
+  def lengthOfUnderlyingCubes(resolution: Point3D): Int = fallback.lengthOfUnderlyingCubes(resolution)
 
   val largestSegmentId: Long = math.max(primary.largestSegmentId, fallback.largestSegmentId)
 

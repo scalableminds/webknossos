@@ -32,7 +32,7 @@ trait KnossosLayer extends DataLayer {
     case Right(r) => r
   }
 
-  def lengthOfUnderlyingCubes(resolution: Int) = KnossosDataFormat.cubeLength
+  def lengthOfUnderlyingCubes(resolution: Point3D) = KnossosDataFormat.cubeLength
 
   lazy val bucketProvider = new KnossosBucketProvider(this)
 }

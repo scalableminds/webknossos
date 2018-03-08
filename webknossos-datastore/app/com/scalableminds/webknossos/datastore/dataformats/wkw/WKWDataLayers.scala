@@ -7,7 +7,14 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import play.api.libs.json.Json
 
-case class WKWResolution(resolution: Either[Int, Point3D], cubeLength: Int)
+case class WKWResolution(resolution: Either[Int, Point3D], cubeLength: Int) {
+  def resolutionAsPoint3D = resolution match {
+    case Left(r) =>
+      Point3D(r, r, r)
+    case Right(r) =>
+      r
+  }
+}
 
 object WKWResolution extends ResolutionFormatHelper {
   implicit val jsonFormat = Json.format[WKWResolution]
@@ -21,15 +28,10 @@ trait WKWLayer extends DataLayer {
 
   def wkwResolutions: List[WKWResolution]
 
-  def resolutions = wkwResolutions.map(_.resolution).map {
-    case Left(r) =>
-      Point3D(r, r, r)
-    case Right(r) =>
-      r
-  }
+  def resolutions = wkwResolutions.map(_.resolutionAsPoint3D)
 
-  def lengthOfUnderlyingCubes(resolution: Int): Int = {
-    wkwResolutions.find(_.resolution == Left(resolution)).map(_.cubeLength).getOrElse(0)
+  def lengthOfUnderlyingCubes(resolution: Point3D): Int = {
+    wkwResolutions.find(_.resolutionAsPoint3D == resolution).map(_.cubeLength).getOrElse(0)
   }
 }
 

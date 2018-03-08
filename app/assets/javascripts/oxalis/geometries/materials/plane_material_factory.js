@@ -230,7 +230,7 @@ vec3 round(vec3 a) {
   return floor(a + 0.5);
 }
 
-vec3 getRGBAtIndex(sampler2D texture, float textureWidth, float idx) {
+vec4 getRgbaAtIndex(sampler2D texture, float textureWidth, float idx) {
   float finalPosX = mod(idx, textureWidth);
   float finalPosY = div(idx, textureWidth);
 
@@ -240,17 +240,17 @@ vec3 getRGBAtIndex(sampler2D texture, float textureWidth, float idx) {
         (floor(finalPosX) + 0.5) / textureWidth,
         (floor(finalPosY) + 0.5) / textureWidth
       )
-    ).rgb;
+    ).rgba;
 }
 
-vec3 getRGBAtXYIndex(sampler2D texture, float textureWidth, float x, float y) {
+vec4 getRgbaAtXYIndex(sampler2D texture, float textureWidth, float x, float y) {
   return texture2D(
       texture,
       vec2(
         (floor(x) + 0.5) / textureWidth,
         (floor(y) + 0.5) / textureWidth
       )
-    ).rgb;
+    ).rgba;
 }
 
 float linearizeVec3ToIndex(vec3 position, float base) {
@@ -288,14 +288,14 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
   float bucketIdxInTexture = bucketIdx * bytesPerLookUpEntry;
   float pixelIdxInBucket = linearizeVec3ToIndex(offsetInBucket, bucketWidth);
 
-  float bucketAddress = getRGBAtIndex(
+  float bucketAddress = getRgbaAtIndex(
     lookUpTexture,
     l_texture_width,
     bucketIdxInTexture
   ).x;
 
   if (bucketAddress < 0.) {
-    return vec4(0.0, 0.0, 0.0, 0.0);
+    return vec4(0.0, 0.0, 0.0, -1.0);
   }
 
   float x =
@@ -304,14 +304,14 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
     div(pixelIdxInBucket, d_texture_width) +
     div(bucketLength * bucketAddress, d_texture_width);
 
-  vec3 bucketColor = getRGBAtXYIndex(
+  vec4 bucketColor = getRgbaAtXYIndex(
     dataTexture,
     d_texture_width,
     x,
     y
   );
 
-  return vec4(bucketColor, 1.0);
+  return bucketColor;
 }
 
 vec4 getColorWithFallbackFor(
@@ -327,7 +327,7 @@ vec4 getColorWithFallbackFor(
 ) {
   vec4 c = getColorFor(lookUpTexture, dataTexture, bucketPosition, offsetInBucket);
 
-  if (c.a == 0.0 && hasFallback) {
+  if (c.a < 0.0 && hasFallback) {
     return getColorFor(flookUpTexture, fdataTexture, fbucketPosition, foffsetInBucket);
   }
   return c;
@@ -397,10 +397,10 @@ vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 co
   vec4 b = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(1, 0, 0)));
   vec4 c = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(0, 1, 0)));
   vec4 d = getColorForCoords(lookUpTexture, dataTexture, coords + transDim(vec3(1, 1, 0)));
-  if (a.a == 0.0 || b.a == 0.0 || c.a == 0.0 || d.a == 0.0) {
+  if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
     // We need to check all four colors for a negative parts, because there will be black
     // lines at the borders otherwise (black gets mixed with data)
-    return vec4(0.0, 0.0, 0.0, 0.0);
+    return vec4(0.0, 0.0, 0.0, -1.0);
   }
 
   vec4 ab = mix(a, b, bifilteringParams.x);
@@ -426,7 +426,7 @@ vec3 getBilinearColorOrFallback(
     color = getColorForCoords(lookUpTexture, dataTexture, coords);
   }
 
-  if (color.a == 0.0 && hasFallback) {
+  if (color.a < 0.0 && hasFallback) {
     return getColorFor(flookUpTexture, fdataTexture, fBucketPos, fOffsetInBucket).xyz;
   }
 
@@ -469,7 +469,7 @@ void main() {
         hasFallback
       );
 
-    float id = volume_color.x * volume_color.y * volume_color.z * volume_color.a * pow(255.0, 3.0);
+    float id = (volume_color.r + volume_color.g + volume_color.b + volume_color.a) * 255.0;
   <% } else { %>
     float id = 0.0;
   <% } %>
@@ -485,7 +485,7 @@ void main() {
         <%= layers[0] %>_lookup_fallback_texture,
         <%= layers[0] %>_fallback_texture,
         fbucketPosition,
-        fOffsetInBucket,
+        foffsetInBucket,
         hasFallback
       );
 

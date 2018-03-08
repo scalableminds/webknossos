@@ -78,7 +78,7 @@ export function getMaxZoomStep(state: OxalisState): number {
     Maybe.fromNullable(state.dataset)
       .map(dataset =>
         dataset.dataLayers.reduce(
-          (maxZoomStep, layer) => Math.log(Math.max(...layer.resolutions.map(r => Math.max(...r)))) / Math.LN2,
+          (maxZoomStep, layer) => Math.max(...layer.resolutions.map(r => Math.max(...r))),
           0,
         ),
       )

@@ -3,7 +3,7 @@ module.exports = function(env = {}) {
   var webpack = require("webpack");
   var fs = require("fs");
   var path = require("path");
-  // const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
+  const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
@@ -21,20 +21,21 @@ module.exports = function(env = {}) {
       chunkFilename: "[name].css",
     }),
   ];
-  // if (env.production) {
-  //   plugins.push(
-  //     new UglifyJsPlugin({
-  //       cache: true,
-  //       parallel: true,
-  //       sourceMap: true,
-  //       uglifyOptions: {
-  //         compress: {
-  //           inline: 1,
-  //         },
-  //       },
-  //     }),
-  //   );
-  // }
+
+  if (env.production) {
+    plugins.push(
+      new UglifyJsPlugin({
+        cache: true,
+        parallel: true,
+        sourceMap: true,
+        uglifyOptions: {
+          compress: {
+            inline: 1,
+          },
+        },
+      }),
+    );
+  }
 
   return {
     entry: {

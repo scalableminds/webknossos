@@ -8,6 +8,7 @@ import BackboneEvents from "backbone-events-standalone";
 import type { Vector4 } from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import Utils from "libs/utils";
+import window from "libs/window";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -111,6 +112,12 @@ export class DataBucket {
   trigger: Function;
   on: Function;
   off: Function;
+  // For downsampled buckets, "dependentBucketListenerSet" stores the
+  // buckets to which a listener is already attached
+  dependentBucketListenerSet: Set<Bucket>;
+  // For downsampled buckets, "isDirtyDueToDependent" stores the buckets
+  // due to which the current bucket is dirty and need new downsampling
+  isDirtyDueToDependent: Set<Bucket>;
 
   constructor(
     BIT_DEPTH: number,
@@ -132,6 +139,8 @@ export class DataBucket {
     this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
+    this.dependentBucketListenerSet = new Set();
+    this.isDirtyDueToDependent = new Set();
   }
 
   shouldCollect(): boolean {
@@ -156,9 +165,11 @@ export class DataBucket {
   }
 
   label(labelFunc: Uint8Array => void) {
-    labelFunc(this.getOrCreateData());
-    this.dirty = true;
-    this.trigger("bucketLabeled");
+    window.requestAnimationFrame(() => {
+      labelFunc(this.getOrCreateData());
+      this.dirty = true;
+      this.trigger("bucketLabeled");
+    });
   }
 
   hasData(): boolean {
@@ -235,7 +246,20 @@ export class DataBucket {
   }
 
   downsampleFromLowerBucket(bucket: Bucket, useMode: boolean): void {
+    if (!this.dependentBucketListenerSet.has(bucket)) {
+      bucket.on("bucketLabeled", () => {
+        this.isDirtyDueToDependent.add(bucket);
+        window.requestAnimationFrame(() => {
+          if (this.isDirtyDueToDependent.has(bucket)) {
+            this.downsampleFromLowerBucket(bucket, useMode);
+            this.isDirtyDueToDependent.delete(bucket);
+          }
+        });
+      });
+      this.dependentBucketListenerSet.add(bucket);
+    }
     this.isDownSampled = true;
+
     const xOffset = (bucket.zoomedAddress[0] % 2) * 16,
       yOffset = (bucket.zoomedAddress[1] % 2) * 16,
       zOffset = (bucket.zoomedAddress[2] % 2) * 16;

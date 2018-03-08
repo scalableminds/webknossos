@@ -4,8 +4,8 @@
     <meta name="commit-hash" content="@(webknossos.BuildInfo.commitHash)">
     <title>webKnossos</title>
     <link rel="shortcut icon" type="image/png" href="@routes.Assets.at("images/favicon.png")">
-    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
     <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/vendors~main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
+    <link rel="stylesheet" type="text/css" media="screen" href="@routes.Assets.at("bundle/main.css")?nocache=@(webknossos.BuildInfo.commitHash)">
     @Html(com.newrelic.api.agent.NewRelic.getBrowserTimingHeader)
     @if(play.api.Play.current.configuration.getBoolean("application.authentication.enableDevAutoLogin")){
       <script src="/api/auth/autoLogin"></script>

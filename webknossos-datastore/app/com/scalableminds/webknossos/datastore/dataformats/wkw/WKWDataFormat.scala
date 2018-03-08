@@ -46,11 +46,9 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
         case Some(resolutionInt) => Some(Left(resolutionInt))
         case None => {
           val pattern = """(\d+)-(\d+)-(\d+)""".r
-          try {
-            val pattern(x, y, z) = path.getFileName.toString
-            Some(Right(Point3D(x.toInt, y.toInt, z.toInt)))
-          } catch {
-            case e: Exception => None
+          path.getFileName.toString match {
+            case pattern(x, y, z) => Some(Right(Point3D(x.toInt, y.toInt, z.toInt)))
+            case _ => None
           }
         }
       }

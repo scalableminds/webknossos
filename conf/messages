@@ -165,6 +165,7 @@ project.remove.failure=Project couldn''t get removed
 project.notFound=Project {0} couldn''t be found
 project.update.failed=Project {0} update failed
 project.noAnnotations=We couldn''t find annotations for this project
+project.increaseTaskInstances.negative=Cannot increment task counts by negative number
 
 role.invalid=Invalid role
 role.removed=Removed role from {0}

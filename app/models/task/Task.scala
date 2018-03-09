@@ -185,6 +185,16 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield firstResult
   }
 
+  def countOpenInstancesForProject(projectId: ObjectId): Fox[Int] = {
+    for {
+      result <- run(sql"""select sum(openInstances)
+                          from webknossos.task_instances i join webknossos.tasks t on i._id = t._id
+                          where t._project = ${projectId.id}
+                          group by t._project""".as[Int])
+      firstResult <- result.headOption
+    } yield firstResult
+  }
+
   def countAllOpenInstancesGroupedByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
     for {
       rowsRaw <- run(
@@ -216,6 +226,13 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q.update(newTotalInstances))
+    } yield ()
+  }
+
+  def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      accessQuery <- readAccessQuery
+      _ <- run(sqlu"update webknossos.tasks set totalInstances = totalInstances + ${delta} where _project = ${projectId.id} and #${accessQuery}")
     } yield ()
   }
 
@@ -438,6 +455,12 @@ object TaskDAO {
     }
   }
 
+  def countOpenInstancesForProject(projectName: String)(implicit ctx: DBAccessContext): Fox[Int] =
+    for {
+      project <- ProjectSQLDAO.findOneByName(projectName)
+      openInstanceCount <- TaskSQLDAO.countOpenInstancesForProject(project._id)
+    } yield openInstanceCount
+
 
   def insert(task: Task)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
@@ -465,5 +488,11 @@ object TaskDAO {
       _ <- TaskSQLDAO.updateTotalInstances(ObjectId.fromBsonId(_task), instances)
       updated <- findOneById(_task.stringify)
     } yield updated
+
+  def incrementTotalInstancesOfAllWithProject(projectName: String, delta: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      project <- ProjectSQLDAO.findOneByName(projectName)
+      _ <- TaskSQLDAO.incrementTotalInstancesOfAllWithProject(project._id, delta)
+    } yield ()
 
 }

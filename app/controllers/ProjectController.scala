@@ -37,7 +37,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         allCounts <- TaskDAO.countOpenInstancesByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
-            openTaskInstances <- Fox.successful(allCounts.get(project.name).getOrElse(0))
+            openTaskInstances <- Fox.successful(allCounts.get(project._id.stringify).getOrElse(0))
             r <- Project.projectPublicWritesWithStatus(project, openTaskInstances, request.identity)
           } yield r
         }
@@ -126,12 +126,23 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
   }
 
+  def incrementEachTasksInstances(projectName: String, delta: Option[Long]) = SecuredAction.async {
+    implicit request =>
+      for {
+        _ <- (delta.getOrElse(1L) >= 0) ?~> Messages("project.increaseTaskInstances.negative")
+        _ <- TaskDAO.incrementTotalInstancesOfAllWithProject(projectName, delta.getOrElse(1L))
+        updatedProject <- ProjectDAO.findOneByName(projectName)
+        openInstanceCount <- TaskDAO.countOpenInstancesForProject(projectName)
+        js <- Project.projectPublicWritesWithStatus(updatedProject, openInstanceCount, request.identity)
+      } yield Ok(js)
+  }
+
   def usersWithOpenTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
         tasks <- TaskDAO.findAllByProject(projectName)
         annotations <- AnnotationDAO.findAllUnfinishedByTaskIds(tasks.map(_._id))
-        userIds = annotations.map(_._user).flatten
+        userIds = annotations.map(_._user)
         users <- UserDAO.findAllByIds(userIds)
       } yield {
         Ok(Json.toJson(users.map(_.email)))

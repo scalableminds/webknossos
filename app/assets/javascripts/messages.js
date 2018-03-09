@@ -1,4 +1,6 @@
 // @flow
+import _ from "lodash";
+
 export default {
   yes: "Yes",
   no: "No",
@@ -41,6 +43,10 @@ In order to restore the current window, a reload is necessary.`,
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
+  "task.request_new": "Do you really want another task?",
+  "task.peek_next": _.template(
+    "The next task will most likely be part of project <%- projectName %>",
+  ),
   "task.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",

@@ -2,23 +2,24 @@ package models.annotation
 
 import java.io.{BufferedOutputStream, FileOutputStream}
 
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
-import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.tracings._
-import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
-import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
+import com.scalableminds.webknossos.datastore.tracings._
+import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.AnnotationState._
 import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
-import models.user.{UsedAnnotationDAO, User}
+import models.user.User
 import net.liftweb.common.Box
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
@@ -27,7 +28,6 @@ import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
-import models.annotation.AnnotationState._
 
 import scala.collection.{IterableLike, TraversableLike}
 import scala.runtime.Tuple3Zipped
@@ -85,7 +85,7 @@ object AnnotationService
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
       tracing <- createTracing(dataSource)
       annotation = Annotation(
-        Some(user._id),
+        user._id,
         tracing,
         dataSet.name,
         selectSuitableTeam(user, dataSet),
@@ -97,66 +97,40 @@ object AnnotationService
     }
   }
 
-  def updateAllOfTask(
-    task: Task,
-    settings: AnnotationSettings)(implicit ctx: DBAccessContext) = {
-    for {
-      _ <- AnnotationDAO.updateSettingsForAllOfTask(task, settings)
-    } yield true
-  }
-
   def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
     // WARNING: needs to be repeatable, might be called multiple times for an annotation
-    AnnotationDAO.finish(annotation._id).map { r =>
-      UsedAnnotationDAO.removeAll(AnnotationIdentifier(annotation.typ, annotation.id))
-      r
-    }
+    AnnotationDAO.finish(annotation._id)
   }
 
-  def baseFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase).one[Annotation].toFox
+  def baseFor(task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] =
+    (for {
+      list <- AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase)
+    } yield list.headOption.toFox).flatten
 
   def annotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task).cursor[Annotation]().collect[List]()
+    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task)
 
   def countActiveAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countActiveByTaskIdsAndType(List(task._id), AnnotationType.Task)
-
-  def freeAnnotationsOfUser(user: User)(implicit ctx: DBAccessContext) = {
-    for {
-      annotations <- AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
-      _ = annotations.map(annotation => annotation.muta.cancelTask())
-      result <- AnnotationDAO.unassignAnnotationsOfUser(user._id)
-    } yield result
-  }
+    AnnotationDAO.countActiveByTaskIdAndType(task._id, AnnotationType.Task)
 
   def openTasksFor(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findOpenAnnotationsFor(user._id, AnnotationType.Task)
-
-  def countOpenTasks(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task)
+    AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
 
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countOpenAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
-
-  def hasAnOpenTask(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.hasAnOpenAnnotation(user._id, AnnotationType.Task)
+    AnnotationDAO.countActiveAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
 
   def findTasksOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Task, limit)
 
   def findExploratoryOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) = {
     val systemTypes = AnnotationType.Task :: AnnotationType.SystemTracings
-    AnnotationDAO.findForWithTypeOtherThan(user._id, isFinished, systemTypes, limit)
+    AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Explorational, limit)
   }
-
-  def countTaskOf(user: User, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countByTaskIdAndUser(user._id, _task, AnnotationType.Task)
 
   def tracingFromBase(annotationBase: Annotation)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
     for {
-      dataSet: DataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName)
-      dataSource <- dataSet.dataSource.toUsable.toFox
+      dataSet: DataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName) ?~> ("Could not find DataSet " + annotationBase.dataSetName)
+      dataSource <- dataSet.dataSource.toUsable.toFox ?~> "Could not convert to usable DataSource"
       newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(annotationBase.tracingReference)
     } yield newTracingReference
   }
@@ -166,7 +140,7 @@ object AnnotationService
       for {
         newTracing <- tracingFromBase(annotation) ?~> "Failed to create tracing from base"
         newAnnotation = annotation.copy(
-          _user = Some(user._id),
+          _user = user._id,
           tracingReference = newTracing,
           state = Active,
           typ = AnnotationType.Task,
@@ -210,7 +184,7 @@ object AnnotationService
       task <- taskFox
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
-      _ <- Annotation(Some(userId), tracingReference, dataSetName, task.team, taskType.settings,
+      _ <- Annotation(userId, tracingReference, dataSetName, task.team, taskType.settings,
           typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
@@ -232,7 +206,7 @@ object AnnotationService
                 name: Option[String],
                 description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     val annotation = Annotation(
-      Some(user._id),
+      user._id,
       tracingReference,
       dataSet.name,
       team = selectSuitableTeam(user, dataSet),

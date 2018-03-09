@@ -6,14 +6,13 @@ import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import moment from "moment";
-import {fetchWrapper} from "../enzyme/e2e-setup";
+import {defaultToken, setCurrToken} from "../enzyme/e2e-setup";
 
 let activeUser;
 let firstTeam;
 
-test.beforeEach(global.fetch = fetchWrapper);
-
 test.before("Initialize values", async () => {
+  setCurrToken(defaultToken)
   activeUser = await api.getActiveUser();
 
   const teams = _.sortBy(await api.getTeams(), team => team.name);

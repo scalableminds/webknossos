@@ -8,6 +8,9 @@ import Adapter from "enzyme-adapter-react-16";
 
 const requests = [];
 const minimumWait = 100; // ms
+var defaultToken = "1b88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21761e";
+var currToken = defaultToken;
+
 async function waitForAllRequests(el: Object) {
   let length = requests.length;
   async function tolerantWait() {
@@ -33,21 +36,24 @@ function wait(milliseconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
-function fetchWrapper(url, options) {
+function setCurrToken(obj) {
+  currToken = obj;
+}
+
+global.fetch = function fetchWrapper(url, options) {
   let newUrl = url;
   if (url.indexOf("http:") === -1) {
     newUrl = `http://localhost:9000${url}`;
   }
   options.headers.set(
     "X-Auth-Token",
-    "1b88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21761e",
+    currToken,
   );
   const promise = fetch(newUrl, options);
   requests.push(promise);
   console.log("Fetching", newUrl);
   return promise;
 };
-global.fetch = fetchWrapper;
 global.Headers = Headers;
 global.Request = Request;
 global.Response = Response;
@@ -94,21 +100,6 @@ function debugWrapper(wrapper: any, name: string) {
   );
 }
 
-function changeXAuthToken(url, options) {
-  let newUrl = url;
-  if (url.indexOf("http:") === -1) {
-    newUrl = `http://localhost:9000${url}`;
-  }
-  options.headers.set(
-    "X-Auth-Token",
-    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-  );
-  const promise = fetch(newUrl, options);
-  requests.push(promise);
-  console.log("Fetching", newUrl);
-  return promise;
-};
-
 configure({ adapter: new Adapter() });
 
-export { waitForAllRequests, createSnapshotable, wait, debugWrapper, fetchWrapper, changeXAuthToken };
+export { waitForAllRequests, createSnapshotable, wait, debugWrapper, currToken, defaultToken, setCurrToken };

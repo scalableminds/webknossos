@@ -4,9 +4,11 @@
 import "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
-import {fetchWrapper} from "../enzyme/e2e-setup";
+import {defaultToken, setCurrToken} from "../enzyme/e2e-setup";
 
-test.beforeEach(global.fetch = fetchWrapper);
+test.before("Change token", async () => {
+  setCurrToken(defaultToken)
+});
 
 test("getTaskTypes()", async t => {
   const taskTypes = await api.getTaskTypes();

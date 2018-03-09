@@ -4,14 +4,15 @@
 package com.scalableminds.webknossos.datastore.tracings.skeleton
 
 import com.google.inject.Inject
-import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
-import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
+import com.scalableminds.webknossos.datastore.tracings.UpdateAction.SkeletonUpdateAction
+import com.scalableminds.webknossos.datastore.tracings._
+import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Execution.Implicits._
-import com.scalableminds.webknossos.datastore.tracings.UpdateAction.SkeletonUpdateAction
-import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
+import play.api.libs.json.Json
 
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
@@ -123,4 +124,22 @@ class SkeletonTracingService @Inject()(
   }
 
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)
+
+  def updateLog(tracingId: String) = {
+    for {
+      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(fromJson[List[SkeletonUpdateAction]])
+    } yield (Json.toJson(updateActionGroups))
+  }
+
+  def statistics(tracingId: String) = {
+    for {
+      updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(fromJson[List[SkeletonUpdateAction]])
+      updateActions = updateActionGroups.flatten
+    } yield {
+      Json.obj(
+        "updateTracingActionCount" -> updateActions.count(updateAction => updateAction match {case a: UpdateTracingSkeletonAction => true case _ => false}),
+        "createNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: CreateNodeSkeletonAction => true case _ => false})
+      )
+    }
+  }
 }

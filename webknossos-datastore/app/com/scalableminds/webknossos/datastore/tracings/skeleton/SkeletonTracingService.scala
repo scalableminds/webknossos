@@ -125,13 +125,13 @@ class SkeletonTracingService @Inject()(
 
   def merge(tracings: Seq[SkeletonTracing]): SkeletonTracing = tracings.reduceLeft(mergeTwo)
 
-  def updateLog(tracingId: String) = {
+  def updateActionLog(tracingId: String) = {
     for {
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(fromJson[List[SkeletonUpdateAction]])
     } yield (Json.toJson(updateActionGroups))
   }
 
-  def statistics(tracingId: String) = {
+  def updateActionStatistics(tracingId: String) = {
     for {
       updateActionGroups <- tracingDataStore.skeletonUpdates.getMultipleVersions(tracingId)(fromJson[List[SkeletonUpdateAction]])
       updateActions = updateActionGroups.flatten

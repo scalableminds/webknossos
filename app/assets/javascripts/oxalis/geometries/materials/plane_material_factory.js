@@ -283,6 +283,14 @@ vec2 getOffsetToBucketBoundary(vec2 v, float zoomStep) {
   return v - floor(v / zoomFactor) * zoomFactor;
 }
 
+bool isnan(float val) {
+  // https://stackoverflow.com/questions/9446888/best-way-to-detect-nans-in-opengl-shaders
+  return !(val < 0.0 || 0.0 < val || val == 0.0);
+  // important: some nVidias failed to cope with version below.
+  // Probably wrong optimization.
+  /*return ( val <= 0.0 || 0.0 <= val ) ? false : true;*/
+}
+
 vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosition, vec3 offsetInBucket) {
   float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim);
   float bucketIdxInTexture = bucketIdx * bytesPerLookUpEntry;
@@ -294,7 +302,7 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
     bucketIdxInTexture
   ).x;
 
-  if (bucketAddress < 0.) {
+  if (bucketAddress < 0. || isnan(bucketAddress)) {
     return vec4(0.0, 0.0, 0.0, -1.0);
   }
 
@@ -454,7 +462,6 @@ void main() {
   vec3 foffsetInBucket = mod(fallbackCoords, bucketWidth);
 
   <% if (hasSegmentation) { %>
-    // todo: test
     // Don't use bilinear filtering for volume data
     vec4 volume_color =
       getColorWithFallbackFor(
@@ -476,7 +483,6 @@ void main() {
 
   // Get Color Value(s)
   <% if (isRgb) { %>
-    // todo: data texture needs to be rgb
     vec3 data_color =
       getBilinearColorOrFallback(
         <%= layers[0] %>_lookup_texture,

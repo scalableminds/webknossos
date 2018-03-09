@@ -230,7 +230,7 @@ class Binary {
         }
       }
     }
-    textureBucketManager.storeBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
+    textureBucketManager.setActiveBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
     return zoomedAnchorPoint.slice(0, 3);
   }
 

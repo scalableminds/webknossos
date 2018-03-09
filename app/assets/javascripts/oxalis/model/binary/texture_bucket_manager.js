@@ -27,19 +27,35 @@ const grayBuffer = new Uint8Array(bucketSize);
 grayBuffer.fill(100);
 const bucketHeightInTexture = 4;
 
+// A TextureBucketManager instance is responsible for making buckets of
+// avaible to the GPU.
+// setActiveBuckets can be called with an array of buckets, which will be
+// written into the dataTexture and lookUpTexture of this class instance.
+// Buckets which are already in this texture won't be written again.
+// Buckets which are not needed anymore will be replaced by other buckets.
+
+// A bucket is considered "active" if it is supposed to be in the data texture.
+// A bucket is considered "committed" if it is indeed in the data texture.
+// Active buckets will be pushed into a writerQueue which is processed by
+// writing buckets to the data texture (i.e., "committing the buckets").
+
 export default class TextureBucketManager {
   dataTexture: UpdatableTexture;
   lookUpBuffer: Float32Array;
   lookUpTexture: THREE.DataTexture;
-  storedBucketToIndexMap: Map<DataBucket, number>;
-  committedBucketSet: Set<DataBucket>;
+  // Holds the index for each active bucket, to which it should (or already
+  // has been was) written in the data texture.
+  activeBucketToIndexMap: Map<DataBucket, number> = new Map();
+  // Maintains the set of committed buckets
+  committedBucketSet: Set<DataBucket> = new Set();
+  // Maintains a set of free indices within the data texture.
   freeIndexSet: Set<number>;
-  isRefreshBufferOutOfDate: boolean;
+  isRefreshBufferOutOfDate: boolean = false;
 
   bucketPerDim: number;
   bufferCapacity: number;
-  currentAnchorPoint: ?Vector4;
-  writerQueue: Array<{ bucket: DataBucket, index: number }>;
+  currentAnchorPoint: ?Vector4 = null;
+  writerQueue: Array<{ bucket: DataBucket, index: number }> = [];
 
   constructor(bucketPerDim: number, layer) {
     this.layer = layer;
@@ -47,32 +63,59 @@ export default class TextureBucketManager {
     this.bufferCapacity = 3 * Math.pow(bucketPerDim, 2);
     // the look up buffer is bucketPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2); // Math.pow(bucketPerDim, 3) * bytesPerLookUpEntry;
+    this.bucketPerDim = bucketPerDim;
 
     this.lookUpBuffer = new Float32Array(lookUpBufferSize);
-
-    this.storedBucketToIndexMap = new Map();
     this.freeIndexSet = new Set(_.range(this.bufferCapacity));
-    this.committedBucketSet = new Set();
 
-    this.bucketPerDim = bucketPerDim;
-    this.currentAnchorPoint = null;
-
-    this.isRefreshBufferOutOfDate = false;
-    this.keepRefreshBufferUpToDate();
-
-    this.writerQueue = [];
+    this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
   }
 
-  keepRefreshBufferUpToDate() {
+  // Takes an array of buckets (relative to an anchorPoint) and ensures that these
+  // are written to the dataTexture. The lookUpTexture will be updated to reflect the
+  // new buckets.
+  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector3): void {
+    this.currentAnchorPoint = anchorPoint;
+    // Find out which buckets are not needed anymore
+    const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
+    for (const bucket of buckets) {
+      freeBucketSet.delete(bucket);
+    }
+
+    // Remove unused buckets
+    const freeBuckets = Array.from(freeBucketSet.values());
+    for (const freeBucket of freeBuckets) {
+      const unusedIndex = this.activeBucketToIndexMap.get(freeBucket);
+      this.activeBucketToIndexMap.delete(freeBucket);
+      this.committedBucketSet.delete(freeBucket);
+      this.freeIndexSet.add(unusedIndex);
+    }
+
+    const freeIndexArray = Array.from(this.freeIndexSet);
+    for (const nextBucket of buckets) {
+      if (!this.activeBucketToIndexMap.has(nextBucket)) {
+        if (freeIndexArray.length === 0) {
+          throw new Error("A new bucket should be stored but there is no space for it?");
+        }
+        const freeBucketIdx = freeIndexArray.shift();
+        this.reserveIndexForBucket(nextBucket, freeBucketIdx);
+      }
+    }
+
+    this._refreshLookUpBuffer();
+  }
+
+  keepLookUpBufferUpToDate() {
     if (this.isRefreshBufferOutOfDate) {
       this._refreshLookUpBuffer();
     }
     window.requestAnimationFrame(() => {
-      this.keepRefreshBufferUpToDate();
+      this.keepLookUpBufferUpToDate();
     });
   }
 
+  // Commit "active" buckets by writing these to the dataTexture.
   processWriterQueue() {
     let processedItems = 0;
     // uniqBy removes multiple write-buckets-requests for the same index.
@@ -84,6 +127,10 @@ export default class TextureBucketManager {
 
     while (processedItems < maxBucketCommitsPerFrame && this.writerQueue.length > 0) {
       const { bucket, _index } = this.writerQueue.pop();
+      if (!this.activeBucketToIndexMap.has(bucket)) {
+        // This bucket is not needed anymore
+        continue;
+      }
       this.dataTexture.update(
         bucket.getData(),
         0,
@@ -107,7 +154,6 @@ export default class TextureBucketManager {
   }
 
   setupDataTextures(bytes: number, binaryCategory: string): void {
-    // const bytes = this.targetBitDepth >> 3;
     const tWidth = constants.DATA_TEXTURE_WIDTH;
 
     const dataTexture = createUpdatableTexture(
@@ -134,24 +180,27 @@ export default class TextureBucketManager {
     return this.lookUpBuffer;
   }
 
-  _requestWriteBucketToBuffer(bucket: Bucket, index: number): void {
+  // Assign an index to an active bucket and enqueue the bucket-index-tuple
+  // to the writerQueue. Also, make sure that the bucket data is updated if
+  // it changes.
+  reserveIndexForBucket(bucket: Bucket, index: number): void {
     this.freeIndexSet.delete(index);
+    this.activeBucketToIndexMap.set(bucket, index);
 
-    const requestWriteBucketImpl = _index => {
+    const enqueueBucket = _index => {
       if (!bucket.hasData()) {
         return;
       }
       this.writerQueue.unshift({ bucket, _index });
     };
-    requestWriteBucketImpl(index);
+    enqueueBucket(index);
 
-    this.storedBucketToIndexMap.set(bucket, index);
     const updateBucketData = () => {
       // Check that the bucket is still in the data texture.
       // Also the index could have changed, so retrieve the index again.
-      const bucketIndex = this.storedBucketToIndexMap.get(bucket);
+      const bucketIndex = this.activeBucketToIndexMap.get(bucket);
       if (bucketIndex != null) {
-        requestWriteBucketImpl(bucketIndex);
+        enqueueBucket(bucketIndex);
       } else {
         bucket.off("bucketLabeled", debouncedUpdateBucketData);
       }
@@ -167,50 +216,16 @@ export default class TextureBucketManager {
     bucket.on("bucketLabeled", debouncedUpdateBucketData);
   }
 
-  storeBuckets(buckets: Array<DataBucket>, anchorPoint: Vector3): void {
-    this.currentAnchorPoint = anchorPoint;
-    // Find out which buckets are not needed anymore
-    const freeBucketSet = new Set(this.storedBucketToIndexMap.keys());
-    for (const bucket of buckets) {
-      freeBucketSet.delete(bucket);
-    }
-
-    // Remove unused buckets
-    const freeBuckets = Array.from(freeBucketSet.values());
-    for (const freeBucket of freeBuckets) {
-      const unusedIndex = this.storedBucketToIndexMap.get(freeBucket);
-      this.storedBucketToIndexMap.delete(freeBucket);
-      this.committedBucketSet.delete(freeBucket);
-      this.freeIndexSet.add(unusedIndex);
-    }
-
-    const freeIndexArray = Array.from(this.freeIndexSet);
-    while (buckets.length > 0) {
-      const nextBucket = buckets.shift();
-      freeBucketSet.delete(nextBucket);
-      if (!this.storedBucketToIndexMap.has(nextBucket)) {
-        if (freeIndexArray.length === 0) {
-          throw new Error("A new bucket should be stored but there is no space for it?");
-        }
-        const freeBucketIdx = freeIndexArray.shift();
-        this._requestWriteBucketToBuffer(nextBucket, freeBucketIdx);
-      }
-    }
-
+  _refreshLookUpBuffer() {
     // Completely re-write the lookup buffer. This could be smarter, but it's
     // probably not worth it.
-    this._refreshLookUpBuffer();
-  }
-
-  _refreshLookUpBuffer() {
     const anchorPoint = this.currentAnchorPoint;
     this.lookUpBuffer.fill(-1);
 
-    for (const [bucket, address] of this.storedBucketToIndexMap) {
-      if (this.committedBucketSet.has(bucket)) {
-        const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
-        this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = address;
-      }
+    for (const bucket of this.committedBucketSet) {
+      const address = this.activeBucketToIndexMap.get(bucket);
+      const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
+      this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = address;
     }
 
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);

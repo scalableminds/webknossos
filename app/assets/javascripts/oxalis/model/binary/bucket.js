@@ -73,7 +73,8 @@ function swap(arr, a, b) {
 
 function sortArray8(arr) {
   // This function sorts an array of size 8.
-  // Swap instructions were generated here: http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro
+  // Swap instructions were generated here:
+  // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro
   swap(arr, 0, 1);
   swap(arr, 2, 3);
   swap(arr, 0, 2);
@@ -215,7 +216,6 @@ export class DataBucket {
   }
 
   receiveData(data: Uint8Array): void {
-    // console.log("receiveData length", data.length);
     switch (this.state) {
       case BucketStateEnum.REQUESTED:
         if (this.dirty) {

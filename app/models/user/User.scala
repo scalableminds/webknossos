@@ -163,7 +163,7 @@ object UserDAO extends SecuredBaseDAO[User] {
       ctx.data match {
         case Some(user: User) if user.isAdmin =>
           AllowIf(Json.obj("$or" -> Json.arr(
-            Json.obj("teams.team" -> Json.obj("$in" -> user.teamManagerTeams)),
+            Json.obj("teams._id" -> Json.obj("$in" -> user.teamManagerTeamIds)),
             Json.obj("teams" -> Json.arr())
           )))
         case _ =>
@@ -177,7 +177,7 @@ object UserDAO extends SecuredBaseDAO[User] {
   def findByTeams(teams: List[BSONObjectID], includeAnonymous: Boolean, includeInactive: Boolean = true)(implicit ctx: DBAccessContext) = withExceptionCatcher {
     val anonymousFilter = if (includeAnonymous) Json.obj() else Json.obj("_isAnonymous" -> Json.obj("$ne" -> true))
     val inactiveFilter = if (includeInactive) Json.obj() else Json.obj("isActive" -> true)
-    find(Json.obj("$or" -> teams.map(team => Json.obj("teams.team" -> team))) ++ anonymousFilter ++ inactiveFilter).cursor[User]().collect[List]()
+    find(Json.obj("$or" -> teams.map(team => Json.obj("teams._id" -> team))) ++ anonymousFilter ++ inactiveFilter).cursor[User]().collect[List]()
   }
 
   def findByIdQ(id: BSONObjectID) = Json.obj("_id" -> id)

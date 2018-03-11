@@ -148,7 +148,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         case Some(user: User) =>
           AllowIf(Json.obj(
             "$or" -> Json.arr(
-              Json.obj("team" -> Json.obj("$in" -> user.teamIds)),
+              Json.obj("_team" -> Json.obj("$in" -> user.teamIds)),
               Json.obj("_user"-> user._id))
           ))
         case _ =>
@@ -161,7 +161,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
         case Some(user: User) =>
           AllowIf(Json.obj(
             "$or" -> Json.arr(
-              Json.obj("team" -> Json.obj("$in" -> user.teamManagerTeams)),
+              Json.obj("_team" -> Json.obj("$in" -> user.teamManagerTeams)),
               Json.obj("_user"-> user._id))
             ))
         case _ =>
@@ -222,7 +222,7 @@ object AnnotationDAO extends SecuredBaseDAO[Annotation]
   }
 
   def countOpenAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[BSONObjectID] = Nil)(implicit ctx: DBAccessContext) =
-    count(defaultFindForUserQ(_user, annotationType) ++ Json.obj("team" -> Json.obj("$nin" -> excludeTeams)))
+    count(defaultFindForUserQ(_user, annotationType) ++ Json.obj("_team" -> Json.obj("$nin" -> excludeTeams)))
 
   def removeAllWithTaskId(_task: BSONObjectID)(implicit ctx: DBAccessContext) =
     update(Json.obj("isActive" -> true, "_task" -> _task), Json.obj("$set" -> Json.obj("isActive" -> false)), upsert = false, multi = true)

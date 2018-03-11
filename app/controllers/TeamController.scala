@@ -47,6 +47,8 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def delete(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)
+      isOrgTeam <- team.isOrganizationTeam()
+      _ <- bool2Fox(!isOrgTeam) ?~> Messages("org.team") //TODO Frontend Changes
       _ <- team.isAdminOfOrganization(request.identity) ?~> Messages("team.noOwner") //team.owner.contains(request.identity._id)
       _ <- TeamService.remove(team)
       _ <- UserService.removeTeamFromUsers(team)

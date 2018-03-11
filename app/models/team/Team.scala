@@ -28,6 +28,13 @@ case class Team(
 
   def isAdminOfOrganization(user: User) =
     user.organization == organization && user.isAdmin
+
+  def isOrganizationTeam() =
+    for {
+      org <- OrganizationDAO.findOneByName(organization)(GlobalAccessContext)
+    } yield {
+      org._organizationTeam == _id
+    }
 }
 
 object Team extends FoxImplicits {

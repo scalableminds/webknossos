@@ -33,6 +33,8 @@ case class Project(
   def id = _id.stringify
 
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
+
+  lazy val team = _team.stringify
 }
 
 object Project {
@@ -44,7 +46,7 @@ object Project {
     } yield {
       Json.obj(
         "name" -> project.name,
-        "team" -> project._team,
+        "team" -> project.team,
         "owner" -> owner.toOption,
         "priority" -> project.priority,
         "paused" -> project.paused,
@@ -159,18 +161,18 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
   val formatter = Project.projectFormat
 
   underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
+  underlying.indexesManager.ensure(Index(Seq("_team" -> IndexType.Ascending)))
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
     findOne("name", name)
   }
 
   def findAllByTeamName(teamName: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find("team", teamName).collect[List]()
+    find("_team", teamName).collect[List]()
   }
 
   def findAllByTeamNames(teamNames: List[BSONObjectID])(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find(Json.obj("team" -> Json.obj("$in" -> teamNames))).cursor[Project]().collect[List]()
+    find(Json.obj("_team" -> Json.obj("$in" -> teamNames))).cursor[Project]().collect[List]()
   }
 
   def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
@@ -181,7 +183,7 @@ object ProjectDAO extends SecuredBaseDAO[Project] {
     findAndModify(Json.obj("_id" -> _id), Json.obj("$set" ->
       Json.obj(
         "name" -> project.name,
-        "team" -> project._team,
+        "_team" -> project._team,
         "_owner" -> project._owner,
         "priority" -> project.priority,
         "expectedTime" -> project.expectedTime,

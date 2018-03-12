@@ -16,14 +16,13 @@ test.before("Initialize values", async () => {
 
 //one of these should fail
 test.serial("test whether the test is working", async t => {
-  t.is(1,1);
+  t.is(1, 1);
 });
 
 test.serial("test whether the test is working", async t => {
-  t.is(1,0)
+  t.is(1, 0);
 });
 
- test.serial("Test Name", async t => {
+test.serial("Test Name", async t => {
   t.is(activeUser.firstName, "Boy");
 });
-

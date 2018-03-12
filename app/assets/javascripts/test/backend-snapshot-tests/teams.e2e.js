@@ -5,10 +5,10 @@ import "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
-import {defaultToken, setCurrToken} from "../enzyme/e2e-setup";
+import { defaultToken, setCurrToken } from "../enzyme/e2e-setup";
 
 test.before("Change token", async () => {
-  setCurrToken(defaultToken)
+  setCurrToken(defaultToken);
 });
 
 test("getTeams()", async t => {

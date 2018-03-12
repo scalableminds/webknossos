@@ -4,10 +4,10 @@
 import "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
-import {defaultToken, setCurrToken} from "../enzyme/e2e-setup";
+import { defaultToken, setCurrToken } from "../enzyme/e2e-setup";
 
 test.before("Change token", async () => {
-  setCurrToken(defaultToken)
+  setCurrToken(defaultToken);
 });
 
 test("Load all datastores", async t => {

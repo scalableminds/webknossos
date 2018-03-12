@@ -7,7 +7,6 @@ import java.io._
 import java.nio.file.{Path, Paths}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
 
-import com.scalableminds.util.tools.Fox
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import net.liftweb.util.Helpers.tryo
 import org.apache.commons.io.IOUtils
@@ -45,16 +44,25 @@ object ZipIO {
     `def`.setLevel(compressionLevel)
   }
 
-  def zip(sources: List[NamedStream], out: OutputStream) = {
+  def zip(sources: List[NamedStream], out: OutputStream): Unit = zip(sources.toIterator, out)
+
+  def zip(sources: Iterator[NamedStream], out: OutputStream): Unit = {
     if (sources.nonEmpty) {
       val zip = startZip(out)
-      Fox.serialSequence(sources) { s =>
-        zip.withFile(s.normalizedName)(s.writeTo)
-      }.map { _ =>
+      zipIterator(sources, zip).onComplete{ _ =>
         zip.close()
       }
     } else
       out.close()
+  }
+
+  private def zipIterator(sources: Iterator[NamedStream], zip: OpenZip): Future[Unit] = {
+    if (!sources.hasNext) {
+      Future.successful(())
+    } else {
+      val s = sources.next
+      zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
+    }
   }
 
   def startZip(out: OutputStream) = {

@@ -25,6 +25,7 @@ import type {
   APITimeTrackingType,
   APIProjectProgressReportType,
   APIOpenTasksReportType,
+  APIBuildInfoType,
   APITracingType,
   APIFeatureToggles,
 } from "admin/api_flow_types";
@@ -576,6 +577,11 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
   const openTasksData = await Request.receiveJSON(`/api/teams/${teamId}/openTasksOverview`);
   assertResponseLimit(openTasksData);
   return openTasksData;
+}
+
+// ### BuildInfo
+export function getBuildInfo(): Promise<APIBuildInfoType> {
+  return Request.receiveJSON("/api/buildinfo");
 }
 
 export async function getFeatureToggles(): Promise<APIFeatureToggles> {

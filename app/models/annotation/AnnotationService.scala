@@ -29,6 +29,10 @@ import reactivemongo.bson.BSONObjectID
 import scala.concurrent.Future
 import models.annotation.AnnotationState._
 
+import scala.collection.{IterableLike, TraversableLike}
+import scala.runtime.Tuple3Zipped
+import scala.collection.generic.Growable
+
 object AnnotationService
   extends BoxImplicits
   with FoxImplicits
@@ -248,8 +252,8 @@ object AnnotationService
     val tracingsNamesAndScalesAsTuples = getTracingsScalesAndNamesFor(annotations)
 
     for {
-      tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
-      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), "", tuple._3), tuple._2))
+      tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale, Annotation)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
+      nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._4, tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }
@@ -278,23 +282,28 @@ object AnnotationService
 
     val annotationsGrouped: Map[String, List[Annotation]] = annotations.groupBy(_.dataSetName)
     val tracings = annotationsGrouped.map {
-      case (dataSetName, annotations) => (getTracings(dataSetName, annotations.map(_.tracingReference)), getNames(annotations), getScales(annotations))
+      case (dataSetName, annotations) => (getTracings(dataSetName, annotations.map(_.tracingReference)), getNames(annotations), getScales(annotations), Fox.successful(annotations))
     }
     tracings.toList
   }
 
-  def flattenListToListMap(listToListMap: List[(Fox[List[SkeletonTracing]], Fox[List[String]], Fox[List[Scale]])]):
-  Fox[List[(SkeletonTracing, String, Scale)]] = {
+  def flattenListToListMap(listToListMap: List[(Fox[List[SkeletonTracing]], Fox[List[String]], Fox[List[Scale]], Fox[List[Annotation]])]):
+  Fox[List[(SkeletonTracing, String, Scale, Annotation)]] = {
 
-    val foxOfListsTuples: List[Fox[List[(SkeletonTracing, String, Scale)]]] =
+    def zippedFourLists[A,B,C,D](l1: List[A], l2: List[B], l3: List[C], l4: List[D]): List[(A, B, C, D)] = {
+      ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
+    }
+
+    val foxOfListsTuples: List[Fox[List[(SkeletonTracing, String, Scale, Annotation)]]] =
       listToListMap.map {
-        case (tracingListFox, nameListFox, scaleListFox) => {
+        case (tracingListFox, nameListFox, scaleListFox, annotationListFox) => {
           for {
             tracingList <- tracingListFox
             nameList <- nameListFox
             scaleList <- scaleListFox
+            annotationList <- annotationListFox
           } yield {
-            (tracingList, nameList, scaleList).zipped.toList
+            zippedFourLists(tracingList, nameList, scaleList, annotationList)
           }
         }
       }

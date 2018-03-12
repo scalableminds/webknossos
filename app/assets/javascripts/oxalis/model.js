@@ -280,7 +280,7 @@ export class OxalisModel {
     this.binary = {};
     for (const layer of layers) {
       const maxLayerZoomStep =
-        Math.log(Math.max(...layer.resolutions.map(r => r.resolution))) / Math.LN2;
+        Math.log(Math.max(...layer.resolutions.map(r => Math.max(...r)))) / Math.LN2;
       this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
     }
 
@@ -360,7 +360,7 @@ export class OxalisModel {
         height: tracing.boundingBox.height,
         depth: tracing.boundingBox.depth,
       },
-      resolutions: [{ resolution: 1, scale: [1, 1, 1] }],
+      resolutions: [[1, 1, 1]],
       elementClass: tracing.elementClass,
       mappings:
         existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],

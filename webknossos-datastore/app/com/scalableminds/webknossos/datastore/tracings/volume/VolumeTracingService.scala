@@ -6,6 +6,7 @@ package com.scalableminds.webknossos.datastore.tracings.volume
 import java.io.File
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWBucketStreamSink, WKWDataFormatHelper}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, ElementClass, SegmentationLayer}
@@ -50,7 +51,7 @@ class VolumeTracingService @Inject()(
           action match {
             case a: UpdateBucketVolumeAction =>
               val resolution = math.pow(2, a.zoomStep).toInt
-              val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, resolution)
+              val bucket = new BucketPosition(a.position.x, a.position.y, a.position.z, Point3D(resolution, resolution, resolution))
               saveBucket(volumeTracingLayer(tracingId, t), bucket, a.data).map(_ => t)
             case a: UpdateTracingVolumeAction =>
               Fox.successful(t.copy(activeSegmentId = Some(a.activeSegmentId), editPosition = a.editPosition, editRotation = a.editRotation, largestSegmentId = a.largestSegmentId, zoomLevel = a.zoomLevel, userBoundingBox = a.userBoundingBox))

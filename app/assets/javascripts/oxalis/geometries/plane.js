@@ -37,10 +37,9 @@ class Plane {
   TDViewBorders: THREE.Line;
   renderer: THREE.WebGLRenderer;
 
-  constructor(planeID: OrthoViewType, renderer: THREE.WebGLRenderer) {
+  constructor(planeID: OrthoViewType) {
     this.planeID = planeID;
     this.displayCrosshair = true;
-    this.renderer = renderer;
 
     // PLANE_WIDTH means that the plane should be that many voxels wide in the
     // dimension with the highest resolution. In all other dimensions, the plane

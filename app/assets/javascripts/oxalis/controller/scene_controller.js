@@ -123,9 +123,9 @@ class SceneController {
     }
 
     this.planes = {
-      [OrthoViews.PLANE_XY]: new Plane(OrthoViews.PLANE_XY, this.renderer),
-      [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ, this.renderer),
-      [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ, this.renderer),
+      [OrthoViews.PLANE_XY]: new Plane(OrthoViews.PLANE_XY),
+      [OrthoViews.PLANE_YZ]: new Plane(OrthoViews.PLANE_YZ),
+      [OrthoViews.PLANE_XZ]: new Plane(OrthoViews.PLANE_XZ),
     };
 
     this.planes[OrthoViews.PLANE_XY].setRotation(new THREE.Euler(Math.PI, 0, 0));

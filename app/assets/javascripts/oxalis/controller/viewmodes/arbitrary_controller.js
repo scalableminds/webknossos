@@ -277,7 +277,10 @@ class ArbitraryController extends React.PureComponent<Props> {
 
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
-      this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
+      this.listenTo(binary.cube, "bucketLoaded", () => {
+        this.arbitraryView.draw();
+        app.vent.trigger("rerender");
+      });
     }
 
     this.storePropertyUnsubscribers.push(

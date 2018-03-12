@@ -95,9 +95,9 @@ class ArbitraryPlane {
 
       const queryMatrix = M4x4.scale1(1, matrix);
       const newVertices = M4x4.transformPointsAffine(queryMatrix, this.queryVertices);
-      const newColors = Model.getColorBinaries()[0].getByVerticesSync(newVertices);
-
-      this.textureMaterial.setData("color", newColors);
+      const colorBinary = Model.getColorBinaries()[0];
+      const newColors = colorBinary.getByVerticesSync(newVertices);
+      this.textureMaterial.setData(colorBinary.name, newColors);
 
       mesh.matrix.set(
         matrix[0],

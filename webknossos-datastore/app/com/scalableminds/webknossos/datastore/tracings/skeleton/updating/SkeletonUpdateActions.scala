@@ -44,8 +44,6 @@ case class MergeTreeSkeletonAction(sourceId: Int, targetId: Int) extends UpdateA
       targetTree
         .withNodes(targetTree.nodes.union(sourceTree.nodes))
         .withEdges(targetTree.edges.union(sourceTree.edges))
-        .withBranchPoints(targetTree.branchPoints ++ sourceTree.branchPoints)
-        .withComments(targetTree.comments ++ sourceTree.comments)
     }
 
     tracing.withTrees(mapTrees(tracing, targetId, treeTransform).filter(_.treeId != sourceId))
@@ -59,13 +57,8 @@ case class MoveTreeComponentSkeletonAction(nodeIds: List[Int], sourceId: Int, ta
 
     val (movedNodes, remainingNodes) = sourceTree.nodes.partition(nodeIds contains _.id)
     val (movedEdges, remainingEdges) = sourceTree.edges.partition(e => nodeIds.contains(e.source) && nodeIds.contains(e.target))
-    val (movedBp, remainingBp) = sourceTree.branchPoints.partition(bp => nodeIds.contains(bp.nodeId))
-    val (movedC, remainingC) = sourceTree.comments.partition(c => nodeIds.contains(c.nodeId))
-    val updatedSource = sourceTree.copy(branchPoints = remainingBp, comments = remainingC,
-      nodes = remainingNodes, edges = remainingEdges)
-    val updatedTarget = targetTree.copy(branchPoints = movedBp ++ targetTree.branchPoints,
-      comments = movedC ++ targetTree.comments, nodes = targetTree.nodes.union(movedNodes),
-      edges = targetTree.edges.union(movedEdges))
+    val updatedSource = sourceTree.copy(nodes = remainingNodes, edges = remainingEdges)
+    val updatedTarget = targetTree.copy(nodes = targetTree.nodes.union(movedNodes), edges = targetTree.edges.union(movedEdges))
 
     def selectTree(tree: Tree) =
       if (tree.treeId == sourceId)
@@ -148,7 +141,6 @@ case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int) extends UpdateActi
     def treeTransform(tree: Tree) =
       tree
         .withNodes(tree.nodes.filter(_.id != nodeId))
-        .withEdges(tree.edges.filter(e => e.source != nodeId && e.target != nodeId))
 
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }

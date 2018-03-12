@@ -56,6 +56,8 @@ case class Point3D(x: Int, y: Int, z: Int) {
   def until(bottomRight: Point3D) =
     range(bottomRight, _ until _)
 
+  def maxDim = Math.max(Math.max(x, y), z)
+
   private def range(other: Point3D, func: (Int, Int) => Range) =
     for {
       x <- func(x, other.x)

@@ -93,8 +93,7 @@ CREATE TABLE webknossos.dataSet_allowedTeams(
 CREATE TABLE webknossos.dataSet_resolutions(
   _dataSet CHAR(24) NOT NULL,
   dataLayerName CHAR(24),
-  resolution INT NOT NULL,
-  scale webknossos.VECTOR3 NOT NULL,
+  resolution webknossos.VECTOR3 NOT NULL,
   PRIMARY KEY (_dataSet, dataLayerName, resolution)
 );
 

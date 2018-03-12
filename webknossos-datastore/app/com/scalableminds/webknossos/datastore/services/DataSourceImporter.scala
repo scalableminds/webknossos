@@ -5,14 +5,13 @@ package com.scalableminds.webknossos.datastore.services
 
 import java.nio.file.Path
 
-import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
-import com.scalableminds.webknossos.datastore.dataformats.knossos.KnossosSection
-import com.scalableminds.webknossos.datastore.models.datasource._
-import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
+import com.scalableminds.util.geometry.{Point3D, Scale}
 import com.scalableminds.util.io.PathUtils
+import com.scalableminds.webknossos.datastore.dataformats.MappingProvider
+import com.scalableminds.webknossos.datastore.models.datasource._
 import net.liftweb.common.Box
-import org.apache.commons.io.FilenameUtils
 import com.scalableminds.util.tools.ExtendedTypes._
+import org.apache.commons.io.FilenameUtils
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -63,6 +62,30 @@ trait DataSourceImporter {
     }
   }
 
+  protected def parseResolutionName(path: Path): Option[Either[Int, Point3D]] = {
+    path.getFileName.toString.toIntOpt match {
+      case Some(resolutionInt) => Some(Left(resolutionInt))
+      case None => {
+        val pattern = """(\d+)-(\d+)-(\d+)""".r
+        try {
+          val pattern(x, y, z) = path.getFileName.toString
+          Some(Right(Point3D(x.toInt, y.toInt, z.toInt)))
+        } catch {
+          case e: Exception => None
+        }
+      }
+    }
+  }
+
+  protected def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
+
+  protected def resolutionDirSortingKey(path: Path) = {
+    parseResolutionName(path).get match {
+      case Left(int) => int
+      case Right(point) => point.maxDim
+    }
+  }
+
   protected def exploreMappings(baseDir: Path): Set[String] = {
     PathUtils.listFiles(
       baseDir.resolve(MappingProvider.mappingsDir),
@@ -70,4 +93,5 @@ trait DataSourceImporter {
       paths => paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
     }.getOrElse(Nil).toSet
   }
+
 }

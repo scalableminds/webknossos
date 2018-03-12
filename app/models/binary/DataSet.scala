@@ -4,7 +4,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataResolution, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
 import models.configuration.DataSetConfiguration
 import models.team.{Role, TeamSQL, TeamSQLDAO}
@@ -170,15 +170,13 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 
 object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
 
-  def parseRow(row: DatasetResolutionsRow): Fox[DataResolution] = {
+  def parseRow(row: DatasetResolutionsRow): Fox[Point3D] = {
     for {
-      scale <- Point3D.fromList(parseArrayTuple(row.scale).map(_.toInt)) ?~> "could not parse scale"
-    } yield {
-      DataResolution(row.resolution, scale)
-    }
+      resolution <- Point3D.fromList(parseArrayTuple(row.resolution).map(_.toInt)) ?~> "could not parse resolution"
+    } yield resolution
   }
 
-  def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[DataResolution]] = {
+  def findDataResolutionForLayer(dataSetId: ObjectId, dataLayerName: String): Fox[List[Point3D]] = {
     for {
       rows <- run(DatasetResolutions.filter(r => r._Dataset === dataSetId.id && r.datalayername === dataLayerName).result).map(_.toList)
       rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse resolution row"
@@ -193,8 +191,8 @@ object DataSetResolutionsSQLDAO extends SimpleSQLDAO {
       case Some(dataLayers: List[DataLayer]) => {
         dataLayers.map { layer =>
           layer.resolutions.map { resolution => {
-            sqlu"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution, scale)
-                       values(${_dataSet.id}, ${layer.name}, ${resolution.resolution}, '#${writeStructTuple(resolution.scale.toList.map(_.toString))}')"""
+            sqlu"""insert into webknossos.dataSet_resolutions(_dataSet, dataLayerName, resolution)
+                       values(${_dataSet.id}, ${layer.name}, '#${writeStructTuple(resolution.toList.map(_.toString))}')"""
           }}
         }.flatten
       }

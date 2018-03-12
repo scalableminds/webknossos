@@ -9,7 +9,7 @@ export const tracing = {
       height: 131,
       depth: 384,
     },
-    resolutions: [{ resolution: 1, scale: [1, 1, 1] }],
+    resolutions: [[1, 1, 1]],
     fallbackLayer: "segmentation",
     elementClass: "uint16",
     largestSegmentId: 21890,

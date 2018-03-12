@@ -5,7 +5,7 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import java.nio.file.Path
 
-import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, DataResolution, SegmentationLayer}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataLayer, SegmentationLayer}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.ExtendedTypes._
@@ -17,7 +17,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
   def exploreLayer(name: String, baseDir: Path, previous: Option[DataLayer])(implicit report: DataSourceImportReport[Path]): Box[DataLayer] = {
     (for {
-      resolutions <- exploreResolutions(baseDir, previous.map(_.resolutions))
+      resolutions <- exploreResolutions(baseDir)
       (voxelType, wkwResolutions) <- extractHeaderParameters(resolutions)
       elementClass <- voxelTypeToElementClass(voxelType)
     } yield {
@@ -39,19 +39,37 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }
   }
 
-  private def exploreResolutions(baseDir: Path, previous: Option[List[DataResolution]])(implicit report: DataSourceImportReport[Path]): Box[List[(Int, WKWHeader, Point3D)]] = {
-    def resolutionDirFilter(path: Path): Boolean = path.getFileName.toString.toIntOpt.isDefined
+  private def exploreResolutions(baseDir: Path)(implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Either[Int, Point3D])]] = {
 
-    PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutions =>
+    def parseResolutionName(path: Path): Option[Either[Int, Point3D]] = {
+        path.getFileName.toString.toIntOpt match {
+        case Some(resolutionInt) => Some(Left(resolutionInt))
+        case None => {
+          val pattern = """(\d+)-(\d+)-(\d+)""".r
+          path.getFileName.toString match {
+            case pattern(x, y, z) => Some(Right(Point3D(x.toInt, y.toInt, z.toInt)))
+            case _ => None
+          }
+        }
+      }
+    }
 
-      val resolutionHeaders = resolutions.map { resolution =>
-        val resolutionInt = resolution.getFileName.toString.toInt
-        WKWHeader(resolution.resolve("header.wkw").toFile).map{ header =>
-          val previousResolution = previous.flatMap(_.find(_.resolution == resolutionInt))
-          val scale = previousResolution.map(_.scale).getOrElse(Point3D(resolutionInt, resolutionInt, resolutionInt))
-          (resolutionInt, header, scale)
+    def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
+
+    def resolutionDirSortingKey(path: Path) = {
+      parseResolutionName(path).get match {
+        case Left(int) => int
+        case Right(point) => point.maxDim
+      }
+    }
+
+    PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutionDirs =>
+      val resolutionHeaders = resolutionDirs.sortBy(resolutionDirSortingKey).map { resolutionDir =>
+        val resolutionIntOrPoint3 = parseResolutionName(resolutionDir).get
+        WKWHeader(resolutionDir.resolve("header.wkw").toFile).map{ header =>
+          (header, resolutionIntOrPoint3)
         }.passFailure { f =>
-          report.error(section => s"Error processing resolution '$resolution' - ${f.msg}")
+          report.error(section => s"Error processing resolution '$resolutionIntOrPoint3' - ${f.msg}")
         }
       }
 
@@ -59,12 +77,12 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
     }
   }
 
-  private def extractHeaderParameters(resolutions: List[(Int, WKWHeader, Point3D)])(implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
-    val headers = resolutions.map(_._2)
+  private def extractHeaderParameters(resolutions: List[(WKWHeader, Either[Int, Point3D])])(implicit report: DataSourceImportReport[Path]): Box[(VoxelType.Value, List[WKWResolution])] = {
+    val headers = resolutions.map(_._1)
     val voxelTypes = headers.map(_.voxelType).toSet
     val bucketLengths = headers.map(_.numVoxelsPerBlockDimension).toSet
     val wkwResolutions = resolutions.map{ resolution =>
-      WKWResolution(resolution._1, resolution._2.numVoxelsPerBlockDimension * resolution._2.numBlocksPerCubeDimension, Some(resolution._3))
+      WKWResolution(resolution._2, resolution._1.numVoxelsPerBlockDimension * resolution._1.numBlocksPerCubeDimension)
     }
 
     if (voxelTypes.size == 1 && bucketLengths == Set(32)) {
@@ -84,7 +102,9 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
 
     for {
       resolution <- resolutionOption
-      multiplier = resolution.cubeLength * resolution.resolution
+      multiplierX = resolution.cubeLength * resolution.resolution.fold(identity, _.x)
+      multiplierY = resolution.cubeLength * resolution.resolution.fold(identity, _.y)
+      multiplierZ = resolution.cubeLength * resolution.resolution.fold(identity, _.z)
 
       resolutionDirs <- PathUtils.listDirectories(baseDir, filterGen(""))
       resolutionDir <- resolveHead(baseDir, resolutionDirs)
@@ -102,7 +122,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       (yMin, yMax) = yDirs.foldRight((getIntFromFilePath(yHeadDir), 0))(minMaxValue)
       (xMin, xMax) = xFiles.foldRight((getIntFromFilePath(xFile), 0))(minMaxValue)
     } yield {
-      BoundingBox(Point3D(xMin * multiplier, yMin * multiplier, zMin * multiplier), xMax * multiplier, yMax * multiplier, zMax * multiplier)
+      BoundingBox(Point3D(xMin * multiplierX, yMin * multiplierY, zMin * multiplierZ), xMax * multiplierX, yMax * multiplierY, zMax * multiplierZ)
     }
   }
 

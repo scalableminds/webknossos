@@ -40,13 +40,25 @@ class WKWBucketProvider(layer: WKWLayer)
       readInstruction.cube,
       Some(readInstruction.dataSource.id),
       Some(readInstruction.dataLayer.name),
-      readInstruction.baseDir).toFile
+      readInstruction.baseDir,
+      resolutionAsTriple = false
+    ).toFile
 
-    // TODO: this should probably be handled in a different place
     if (wkwFile.exists()) {
       WKWFile(wkwFile).map(new WKWCube(_))
     } else {
-      Empty
+      val wkwFileAnisotropic = wkwFilePath(
+        readInstruction.cube,
+        Some(readInstruction.dataSource.id),
+        Some(readInstruction.dataLayer.name),
+        readInstruction.baseDir,
+        resolutionAsTriple = true
+      ).toFile
+      if (wkwFileAnisotropic.exists) {
+        WKWFile(wkwFileAnisotropic).map(new WKWCube(_))
+      } else {
+        Empty
+      }
     }
   }
 }

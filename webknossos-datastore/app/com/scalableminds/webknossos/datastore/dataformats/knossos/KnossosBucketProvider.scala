@@ -136,7 +136,7 @@ class KnossosBucketProvider(layer: KnossosLayer) extends BucketProvider with Fox
       .resolve(readInstruction.dataSource.id.name)
       .resolve(readInstruction.dataLayer.name)
       .resolve(section.name)
-      .resolve(readInstruction.cube.resolution.toString)
+      .resolve(readInstruction.cube.resolution.maxDim.toString)
       .resolve("x%04d".format(readInstruction.cube.x))
       .resolve("y%04d".format(readInstruction.cube.y))
       .resolve("z%04d".format(readInstruction.cube.z))

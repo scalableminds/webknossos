@@ -7,6 +7,7 @@ import java.io.{ByteArrayOutputStream, OutputStream}
 import java.util.Base64
 
 import com.google.inject.Inject
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.services.{AccessTokenService, BinaryDataService, DataSourceRepository, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.models._
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, SegmentationLayer}
@@ -39,7 +40,10 @@ class BinaryDataController @Inject()(
                           ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(validateJson[List[WebKnossosDataRequest]]) {
     implicit request =>
       AllowRemoteOrigin {
-        requestData(dataSetName, dataLayerName, request.body).map(Ok(_))
+        for {
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          data <- requestData(dataSource, dataLayer, request.body)
+        } yield Ok(data)
       }
   }
 
@@ -60,14 +64,17 @@ class BinaryDataController @Inject()(
                          ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async {
     implicit request =>
       AllowRemoteOrigin {
-        val request = DataRequest(
-          new VoxelPosition(x, y, z, math.pow(2, resolution).toInt),
-          width,
-          height,
-          depth,
-          DataServiceRequestSettings(halfByte = halfByte)
-        )
-        requestData(dataSetName, dataLayerName, request).map(Ok(_))
+        for {
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          request = DataRequest(
+            new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+            width,
+            height,
+            depth,
+            DataServiceRequestSettings(halfByte = halfByte)
+          )
+        data <- requestData(dataSource, dataLayer, request).map(Ok(_))
+        } yield data
       }
   }
 
@@ -98,15 +105,18 @@ class BinaryDataController @Inject()(
                        ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async {
     implicit request =>
       AllowRemoteOrigin {
-        val request = DataRequest(
-          new VoxelPosition(x * cubeSize * resolution,
-            y * cubeSize * resolution,
-            z * cubeSize * resolution,
-            resolution),
+        for {
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          request = DataRequest(
+                        new VoxelPosition(x * cubeSize * resolution,
+                          y * cubeSize * resolution,
+                          z * cubeSize * resolution,
+                          Point3D(resolution, resolution, resolution)),
           cubeSize,
           cubeSize,
           cubeSize)
-        requestData(dataSetName, dataLayerName, request).map(Ok(_))
+          data <- requestData(dataSource, dataLayer, request).map(Ok(_))
+        } yield data
       }
   }
 
@@ -126,15 +136,15 @@ class BinaryDataController @Inject()(
                         ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
-        val request = DataRequest(
-          new VoxelPosition(x, y, z, math.pow(2, resolution).toInt),
-          cubeSize,
-          cubeSize,
-          cubeSize,
-          DataServiceRequestSettings(halfByte = halfByte))
-
         for {
-          imageProvider <- respondWithSpriteSheet(dataSetName, dataLayerName, request, imagesPerRow, blackAndWhite = false)
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          request = DataRequest(
+            new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+            cubeSize,
+            cubeSize,
+            cubeSize,
+            DataServiceRequestSettings(halfByte = halfByte))
+          imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, request, imagesPerRow, blackAndWhite = false)
         } yield {
           Ok.stream(Enumerator.outputStream(imageProvider).andThen(Enumerator.eof)).withHeaders(
             CONTENT_TYPE -> contentTypeJpeg,
@@ -159,15 +169,15 @@ class BinaryDataController @Inject()(
                     blackAndWhite: Boolean) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
-        val request = DataRequest(
-          new VoxelPosition(x, y, z, math.pow(2, resolution).toInt),
-          width,
-          height,
-          1,
-          DataServiceRequestSettings(halfByte = halfByte))
-
         for {
-          imageProvider <- respondWithSpriteSheet(dataSetName, dataLayerName, request, 1, blackAndWhite)
+          (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+          request = DataRequest(
+            new VoxelPosition(x, y, z, dataLayer.lookUpResolution(resolution)),
+            width,
+            height,
+            1,
+            DataServiceRequestSettings(halfByte = halfByte))
+          imageProvider <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite)
         } yield {
           Ok.stream(Enumerator.outputStream(imageProvider).andThen(Enumerator.eof)).withHeaders(
             CONTENT_TYPE -> contentTypeJpeg,
@@ -253,38 +263,32 @@ class BinaryDataController @Inject()(
   }
 
   private def requestData(
-                           dataSetName: String,
-                           dataLayerName: String,
+                           dataSource: DataSource,
+                           dataLayer: DataLayer,
                            dataRequests: DataRequestCollection
                          ): Fox[Array[Byte]] = {
-    for {
-      (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid, r.settings))
-      data <- binaryDataService.handleDataRequests(requests)
-    } yield {
-      data
-    }
+    val requests = dataRequests.map(r => DataServiceDataRequest(dataSource, dataLayer, r.cuboid(dataLayer), r.settings))
+    binaryDataService.handleDataRequests(requests)
   }
 
   private def contentTypeJpeg = play.api.libs.MimeTypes.forExtension("jpeg").getOrElse(play.api.http.ContentTypes.BINARY)
 
   private def respondWithSpriteSheet(
-                                      dataSetName: String,
-                                      dataLayerName: String,
+                                      dataSource: DataSource,
+                                      dataLayer: DataLayer,
                                       request: DataRequest,
                                       imagesPerRow: Int,
                                       blackAndWhite: Boolean
                                     ): Fox[(OutputStream) => Unit] = {
+    val params = ImageCreatorParameters(
+      dataLayer.bytesPerElement,
+      request.settings.halfByte,
+      request.cuboid(dataLayer).width,
+      request.cuboid(dataLayer).height,
+      imagesPerRow,
+      blackAndWhite = blackAndWhite)
     for {
-      (_, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      params = ImageCreatorParameters(
-        dataLayer.bytesPerElement,
-        request.settings.halfByte,
-        request.cuboid.width,
-        request.cuboid.height,
-        imagesPerRow,
-        blackAndWhite = blackAndWhite)
-      data <- requestData(dataSetName, dataLayerName, request)
+      data <- requestData(dataSource, dataLayer, request)
       spriteSheet <- ImageCreator.spriteSheetFor(data, params) ?~> Messages("image.create.failed")
       firstSheet <- spriteSheet.pages.headOption ?~> Messages("image.page.failed")
     } yield {
@@ -299,10 +303,10 @@ class BinaryDataController @Inject()(
                                      height: Int
                                    ): Fox[(OutputStream) => Unit] = {
     for {
-      (_, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
+      (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
       position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height)
       request = DataRequest(position, width, height, 1)
-      image <- respondWithSpriteSheet(dataSetName, dataLayerName, request, 1, blackAndWhite = false)
+      image <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite = false)
     } yield {
       image
     }

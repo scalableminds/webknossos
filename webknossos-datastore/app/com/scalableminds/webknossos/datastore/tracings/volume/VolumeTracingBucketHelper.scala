@@ -3,6 +3,7 @@
  */
 package com.scalableminds.webknossos.datastore.tracings.volume
 
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
@@ -79,7 +80,7 @@ class BucketIterator(prefix: String, volumeDataStore: FossilDBClient) extends It
           x * resolution * DataLayer.bucketLength,
           y * resolution * DataLayer.bucketLength,
           z * resolution * DataLayer.bucketLength,
-          resolution)
+          Point3D(resolution, resolution, resolution))
         Some((name, bucket))
       case _ =>
         None

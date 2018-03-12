@@ -216,14 +216,13 @@ export default class TextureBucketManager {
     // Completely re-write the lookup buffer. This could be smarter, but it's
     // probably not worth it.
     const anchorPoint = this.currentAnchorPoint;
-    this.lookUpBuffer.fill(-1);
+    this.lookUpBuffer.fill(-2);
 
-    for (const bucket of this.committedBucketSet) {
-      const address = this.activeBucketToIndexMap.get(bucket);
+    for (const [bucket, address] of this.activeBucketToIndexMap.entries()) {
       const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
       // Since activeBucketToIndexMap is a super set of committedBucketSet,
       // address is always defined ($FlowFixMe).
-      this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = address;
+      this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = this.committedBucketSet.has(bucket) ? address : -1;
     }
 
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);

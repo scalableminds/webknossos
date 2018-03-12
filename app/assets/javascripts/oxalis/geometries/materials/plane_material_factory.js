@@ -299,7 +299,13 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
     bucketIdxInTexture
   ).x;
 
+  if (bucketAddress == -2.0) {
+    // The bucket is out of bounds. Render black
+    return vec4(0.0, 0.0, 0.0, 0.0);
+  }
+
   if (bucketAddress < 0. || isnan(bucketAddress)) {
+    // Not-yet-existing data is encoded with a = -1.0
     return vec4(0.0, 0.0, 0.0, -1.0);
   }
 
@@ -333,7 +339,11 @@ vec4 getColorWithFallbackFor(
   vec4 c = getColorFor(lookUpTexture, dataTexture, bucketPosition, offsetInBucket);
 
   if (c.a < 0.0 && hasFallback) {
-    return getColorFor(flookUpTexture, fdataTexture, fbucketPosition, foffsetInBucket);
+    c = getColorFor(flookUpTexture, fdataTexture, fbucketPosition, foffsetInBucket);
+    if (c.a < 0.0) {
+      // Render gray for not-yet-existing data
+      c = vec4(100.0, 100.0, 100.0, 255.0) / 255.0;
+    }
   }
   return c;
 }
@@ -432,7 +442,11 @@ vec3 getBilinearColorOrFallback(
   }
 
   if (color.a < 0.0 && hasFallback) {
-    return getColorFor(flookUpTexture, fdataTexture, fBucketPos, fOffsetInBucket).xyz;
+    color = getColorFor(flookUpTexture, fdataTexture, fBucketPos, fOffsetInBucket).rgba;
+    if (color.a < 0.0) {
+      // Render gray for not-yet-existing data
+      color = vec4(100.0, 100.0, 100.0, 255.0) / 255.0;
+    }
   }
 
   return color.xyz;

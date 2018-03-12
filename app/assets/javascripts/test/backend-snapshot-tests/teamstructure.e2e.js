@@ -5,12 +5,12 @@ import "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
-import { defaultToken, setCurrToken } from "../enzyme/e2e-setup";
+import { defaultToken, anotherToken, setCurrToken } from "../enzyme/e2e-setup";
 
 let activeUser;
 
 test.before("Initialize values", async () => {
-  setCurrToken("XXX");
+  setCurrToken(anotherToken);
   activeUser = await api.getActiveUser();
 });
 

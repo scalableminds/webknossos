@@ -11,20 +11,17 @@ class VoxelPosition(
                       protected val globalX: Int,
                       protected val globalY: Int,
                       protected val globalZ: Int,
-                      val resolution: Int
+                      val resolution: Point3D
                    ) extends GenericPosition {
 
-  val x: Int = globalX / resolution
+  val x: Int = globalX / resolution.x
 
-  val y: Int = globalY / resolution
+  val y: Int = globalY / resolution.y
 
-  val z: Int = globalZ / resolution
+  val z: Int = globalZ / resolution.z
 
   def toBucket: BucketPosition =
     new BucketPosition(globalX, globalY, globalZ, resolution)
-
-  def toHighestRes: VoxelPosition =
-    new VoxelPosition(globalX, globalY, globalZ, 1)
 
   def move(dx: Int, dy: Int, dz: Int) =
     new VoxelPosition(globalX + dx, globalY + dy, globalZ + dz, resolution)
@@ -55,16 +52,16 @@ class BucketPosition(
                        protected val globalX: Int,
                        protected val globalY: Int,
                        protected val globalZ: Int,
-                       val resolution: Int
+                       val resolution: Point3D
                     ) extends GenericPosition {
 
   val bucketLength = DataLayer.bucketLength
 
-  val x: Int = globalX / bucketLength / resolution
+  val x: Int = globalX / bucketLength / resolution.x
 
-  val y: Int = globalY / bucketLength / resolution
+  val y: Int = globalY / bucketLength / resolution.y
 
-  val z: Int = globalZ / bucketLength / resolution
+  val z: Int = globalZ / bucketLength / resolution.z
 
   def volume = bucketLength * bucketLength * bucketLength
 
@@ -72,53 +69,53 @@ class BucketPosition(
     new CubePosition(globalX, globalY, globalZ, resolution, cubeLength)
 
   def topLeft: VoxelPosition = {
-    val tlx: Int = globalX - globalX % (bucketLength * resolution)
-    val tly: Int = globalY - globalY % (bucketLength * resolution)
-    val tlz: Int = globalZ - globalZ % (bucketLength * resolution)
+    val tlx: Int = globalX - globalX % (bucketLength * resolution.x)
+    val tly: Int = globalY - globalY % (bucketLength * resolution.y)
+    val tlz: Int = globalZ - globalZ % (bucketLength * resolution.z)
 
     new VoxelPosition(tlx, tly, tlz, resolution)
   }
 
   def nextBucketInX: BucketPosition = {
-    new BucketPosition(globalX + (bucketLength * resolution), globalY, globalZ, resolution)
+    new BucketPosition(globalX + (bucketLength * resolution.x), globalY, globalZ, resolution)
   }
 
   def nextBucketInY: BucketPosition = {
-    new BucketPosition(globalX, globalY + (bucketLength * resolution), globalZ, resolution)
+    new BucketPosition(globalX, globalY + (bucketLength * resolution.y), globalZ, resolution)
   }
 
   def nextBucketInZ: BucketPosition = {
-    new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution), resolution)
+    new BucketPosition(globalX, globalY, globalZ + (bucketLength * resolution.z), resolution)
   }
 
   def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ), bucketLength * resolution, bucketLength * resolution, bucketLength * resolution)
+    new BoundingBox(Point3D(globalX, globalY, globalZ), bucketLength * resolution.x, bucketLength * resolution.y, bucketLength * resolution.z)
 }
 
 class CubePosition(
                      protected val globalX: Int,
                      protected val globalY: Int,
                      protected val globalZ: Int,
-                     val resolution: Int,
+                     val resolution: Point3D,
                      val cubeLength: Int
                   ) extends GenericPosition {
 
-  val x: Int = globalX / cubeLength / resolution
+  val x: Int = globalX / cubeLength / resolution.x
 
-  val y: Int = globalY / cubeLength / resolution
+  val y: Int = globalY / cubeLength / resolution.y
 
-  val z: Int = globalZ / cubeLength / resolution
+  val z: Int = globalZ / cubeLength / resolution.z
 
   def topLeft: VoxelPosition = {
-    val tlx: Int = globalX - globalX % (cubeLength * resolution)
-    val tly: Int = globalY - globalY % (cubeLength * resolution)
-    val tlz: Int = globalZ - globalZ % (cubeLength * resolution)
+    val tlx: Int = globalX - globalX % (cubeLength * resolution.x)
+    val tly: Int = globalY - globalY % (cubeLength * resolution.y)
+    val tlz: Int = globalZ - globalZ % (cubeLength * resolution.z)
 
     new VoxelPosition(tlx, tly, tlz, resolution)
   }
 
   def toHighestResBoundingBox: BoundingBox =
-    new BoundingBox(Point3D(globalX, globalY, globalZ), cubeLength * resolution, cubeLength * resolution, cubeLength * resolution)
+    new BoundingBox(Point3D(globalX, globalY, globalZ), cubeLength * resolution.x, cubeLength * resolution.y, cubeLength * resolution.z)
 
   override def toString: String = {
     s"CPos($x,$y,$z,res=$resolution)"

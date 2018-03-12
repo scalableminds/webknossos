@@ -4,7 +4,6 @@
  */
 
 import _ from "lodash";
-import * as THREE from "three";
 import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
 import type { CategoryType } from "oxalis/store";
@@ -13,23 +12,19 @@ import InterpolationCollector from "oxalis/model/binary/interpolation_collector"
 import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
-import Plane2D from "oxalis/model/binary/plane2d";
 import {
   PingStrategy,
   SkeletonPingStrategy,
   VolumePingStrategy,
 } from "oxalis/model/binary/ping_strategy";
-import SceneController from "oxalis/controller/scene_controller";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import TextureBucketManager from "./binary/texture_bucket_manager";
+import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
 import { getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
-import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
-import Constants from "oxalis/constants";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -120,33 +115,38 @@ class Binary {
       );
     }
 
-    this.cube.on({
-      newMapping: () => this.forcePlaneRedraw(),
-    });
+    // todo
+    // this.cube.on({
+    //   newMapping: () => ,
+    // });
   }
 
   setupDataTextures(): void {
     const bytes = this.layer.bitDepth >> 3;
 
-    this.textureBucketManager = new TextureBucketManager(bucketPerDim, this.layer);
+    window.managers = window.managers || [];
+
+    this.textureBucketManager = new TextureBucketManager(bucketPerDim);
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 
-    // console.log("new TextureBucketManager", this.category, this.name, bytes);
-    this.fallbackTextureBucketManager = new TextureBucketManager(bucketPerDim, this.layer);
+    this.fallbackTextureBucketManager = new TextureBucketManager(bucketPerDim);
     this.fallbackTextureBucketManager.setupDataTextures(bytes, this.category);
+
+    window.managers.push(this.textureBucketManager);
+    window.managers.push(this.fallbackTextureBucketManager);
   }
 
-  getDataTextures(): [] {
+  getDataTextures(): [*, *] {
     if (!this.textureBucketManager) {
-      // Initialize lazily since SceneController.renderer is not availble earlier
+      // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();
     }
     return [this.textureBucketManager.dataTexture, this.textureBucketManager.lookUpTexture];
   }
 
-  getFallbackDataTextures(): [] {
+  getFallbackDataTextures(): [*, *] {
     if (!this.fallbackTextureBucketManager) {
-      // Initialize lazily since SceneController.renderer is not availble earlier
+      // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();
     }
     return [
@@ -161,14 +161,11 @@ class Binary {
 
   updateFallbackDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
     const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, zoomStep + 1);
-    // if (zoomStep < fallbackZoomStep) {
     return this.updateDataTexturesForManager(
       position,
       fallbackZoomStep,
       this.fallbackTextureBucketManager,
     );
-    // }
-    return null;
   }
 
   updateDataTexturesForManager(
@@ -198,7 +195,7 @@ class Binary {
     const requiredBucketSet = new Set();
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [u, v, w] = Dimensions.getIndices(planeId);
+      const [u, v] = Dimensions.getIndices(planeId);
       let texturePosition = getTexturePosition(Store.getState(), planeId);
 
       // Making sure, position is top-left corner of some bucket
@@ -222,7 +219,6 @@ class Binary {
           bucketAddress[u] += x;
           bucketAddress[v] += y;
           const bucket = this.cube.getOrCreateBucket(bucketAddress);
-          // console.log("bucket", bucket);
 
           if (bucket.type !== "null") {
             requiredBucketSet.add(bucket);
@@ -230,15 +226,11 @@ class Binary {
         }
       }
     }
-    textureBucketManager.setActiveBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
-    return zoomedAnchorPoint.slice(0, 3);
-  }
 
-  forcePlaneRedraw(): void {
-    // todo!
-    // for (const plane of _.values(this.planes)) {
-    //   plane.forceRedraw();
-    // }
+    console.log("setActiveBuckets(Array.from(requiredBucketSet)", requiredBucketSet);
+    textureBucketManager.setActiveBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
+    // $FlowFixMe
+    return zoomedAnchorPoint.slice(0, 3);
   }
 
   setActiveMapping(mappingName: string): void {

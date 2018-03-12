@@ -11,7 +11,6 @@ import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
-import Model from "oxalis/model";
 import SceneController from "oxalis/controller/scene_controller";
 
 class PlaneView {
@@ -117,19 +116,11 @@ class PlaneView {
     TWEEN.update();
 
     // skip rendering if nothing has changed
-    // This prevents you the GPU/CPU from constantly
+    // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
 
-    let modelChanged: boolean = false;
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      for (const plane of _.values(binary.planes)) {
-        modelChanged = modelChanged || plane.hasChanged();
-      }
-    }
-
-    if (forceRender || this.needsRerender || modelChanged || window.needsRerender) {
+    if (forceRender || this.needsRerender || window.needsRerender) {
       window.needsRerender = false;
       const { renderer, scene } = SceneController;
 

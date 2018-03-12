@@ -23,24 +23,6 @@ function median8(dataArray) {
   return Math.round((dataArray[3] + dataArray[4]) / 2);
 }
 
-function mode_slow(arr) {
-  const counter = {};
-  let mode = null;
-  let max = 0;
-  for (const el of arr) {
-    if (!(el in counter)) {
-      counter[el] = 0;
-    }
-    counter[el]++;
-
-    if (counter[el] >= max) {
-      max = counter[el];
-      mode = el;
-    }
-  }
-  return mode;
-}
-
 function mode(arr) {
   let currentConsecCount = 0;
   let currentModeCount = 0;
@@ -113,12 +95,14 @@ export class DataBucket {
   trigger: Function;
   on: Function;
   off: Function;
+
   // For downsampled buckets, "dependentBucketListenerSet" stores the
   // buckets to which a listener is already attached
   dependentBucketListenerSet: Set<Bucket>;
   // For downsampled buckets, "isDirtyDueToDependent" stores the buckets
   // due to which the current bucket is dirty and need new downsampling
   isDirtyDueToDependent: Set<Bucket>;
+  isDownSampled: boolean;
 
   constructor(
     BIT_DEPTH: number,
@@ -245,7 +229,7 @@ export class DataBucket {
     throw new Error(`Unexpected state: ${this.state}`);
   }
 
-  downsampleFromLowerBucket(bucket: Bucket, useMode: boolean): void {
+  downsampleFromLowerBucket(bucket: DataBucket, useMode: boolean): void {
     if (!this.dependentBucketListenerSet.has(bucket)) {
       bucket.on("bucketLabeled", () => {
         this.isDirtyDueToDependent.add(bucket);
@@ -260,9 +244,9 @@ export class DataBucket {
     }
     this.isDownSampled = true;
 
-    const xOffset = (bucket.zoomedAddress[0] % 2) * 16,
-      yOffset = (bucket.zoomedAddress[1] % 2) * 16,
-      zOffset = (bucket.zoomedAddress[2] % 2) * 16;
+    const xOffset = (bucket.zoomedAddress[0] % 2) * 16;
+    const yOffset = (bucket.zoomedAddress[1] % 2) * 16;
+    const zOffset = (bucket.zoomedAddress[2] % 2) * 16;
 
     if (!this.data) {
       this.data = new Uint8Array(this.BUCKET_LENGTH);
@@ -279,31 +263,34 @@ export class DataBucket {
           const linearizedIndex = xyzToIdx(x + xOffset, y + yOffset, z + zOffset);
           for (let currentByteOffset = 0; currentByteOffset < byteOffset; currentByteOffset++) {
             const targetIdx = linearizedIndex * byteOffset + currentByteOffset;
+            const bucketData = bucket.getData();
 
             dataArray[0] =
-              bucket.data[xyzToIdx(2 * x, 2 * y, 2 * z) * byteOffset + currentByteOffset];
+              bucketData[xyzToIdx(2 * x, 2 * y, 2 * z) * byteOffset + currentByteOffset];
             dataArray[1] =
-              bucket.data[xyzToIdx(2 * x + 1, 2 * y, 2 * z) * byteOffset + currentByteOffset];
+              bucketData[xyzToIdx(2 * x + 1, 2 * y, 2 * z) * byteOffset + currentByteOffset];
             dataArray[2] =
-              bucket.data[xyzToIdx(2 * x, 2 * y + 1, 2 * z) * byteOffset + currentByteOffset];
+              bucketData[xyzToIdx(2 * x, 2 * y + 1, 2 * z) * byteOffset + currentByteOffset];
             dataArray[3] =
-              bucket.data[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z) * byteOffset + currentByteOffset];
+              bucketData[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z) * byteOffset + currentByteOffset];
             dataArray[4] =
-              bucket.data[xyzToIdx(2 * x, 2 * y, 2 * z + 1) * byteOffset + currentByteOffset];
+              bucketData[xyzToIdx(2 * x, 2 * y, 2 * z + 1) * byteOffset + currentByteOffset];
             dataArray[5] =
-              bucket.data[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1) * byteOffset + currentByteOffset];
+              bucketData[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1) * byteOffset + currentByteOffset];
             dataArray[6] =
-              bucket.data[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1) * byteOffset + currentByteOffset];
+              bucketData[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1) * byteOffset + currentByteOffset];
             dataArray[7] =
-              bucket.data[
+              bucketData[
                 xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1) * byteOffset + currentByteOffset
               ];
 
             sortArray8(dataArray);
 
             if (useMode) {
+              // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
               this.data[targetIdx] = mode(dataArray);
             } else {
+              // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
               this.data[targetIdx] = median8(dataArray);
             }
           }

@@ -113,21 +113,13 @@ class PullQueue {
             higherAddress[1] = higherAddress[1] >> 1;
             higherAddress[2] = higherAddress[2] >> 1;
             higherAddress[3]++;
+            // $FlowFixMe Flow does not understand that bucket will always be of length 4
             const higherBucket = this.cube.getOrCreateBucket(higherAddress);
-            // todo: instead of hasData, check whether this particular 8th subset is there
             if (higherBucket.type === "data") {
-              // && !higherBucket.hasData()) {
-              // if (higherBucket.state === "UNREQUESTED") {
-              //   higherBucket.pull();
-              // }
-              // console.time("downsampleFromLowerBucket");
               higherBucket.downsampleFromLowerBucket(
                 bucket,
                 this.layer.category === "segmentation",
               );
-              // console.timeEnd("downsampleFromLowerBucket");
-            } else {
-              // console.log("higherBucket.type == null", higherBucket);
             }
           }
         }

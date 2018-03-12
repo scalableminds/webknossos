@@ -45,6 +45,8 @@ class DataCube {
   bucketCount: number = 0;
   BIT_DEPTH: number;
   MAX_ZOOM_STEP: number;
+  MAX_UNSAMPLED_ZOOM_STEP: number;
+  downsampledZoomStepCount: number;
   BYTE_OFFSET: number;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;

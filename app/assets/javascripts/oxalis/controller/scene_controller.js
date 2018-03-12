@@ -242,7 +242,8 @@ class SceneController {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
-    let anchorPoint, fallbackAnchorPoint;
+    let anchorPoint;
+    let fallbackAnchorPoint;
 
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];

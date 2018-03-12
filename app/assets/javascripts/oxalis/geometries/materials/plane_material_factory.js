@@ -9,15 +9,12 @@ import Utils from "libs/utils";
 import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory, {
   sanitizeName,
-  createDataTexture,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { TextureMapType } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { ShaderMaterialOptionsType, TextureMapType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
-import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { zoomedAddressToPosition } from "oxalis/model/binary/texture_bucket_manager";
 import { OrthoViews } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 
@@ -27,8 +24,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   planeID: OrthoViewType;
 
   constructor(tWidth: number, textures: TextureMapType, planeID: OrthoViewType) {
-    // this.planeID = planeID;
-    super(tWidth, textures, planeID);
+    super(tWidth, textures);
+    this.planeID = planeID;
   }
 
   setupUniforms(): void {
@@ -90,7 +87,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     // create textures
     this.textures = textures;
 
-    for (let shaderName of Object.keys(this.textures)) {
+    for (const shaderName of Object.keys(this.textures)) {
       const texture = this.textures[shaderName];
       this.uniforms[`${shaderName}_texture`] = {
         type: "t",

@@ -10,15 +10,13 @@ import AbstractPlaneMaterialFactory, {
   sanitizeName,
   createDataTexture,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { TextureMapType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   getColorName(): string {
     return sanitizeName(Model.getColorBinaries()[0].name);
   }
 
-  attachTextures(textures: TextureMapType): void {
-    // todo: also extract to call side?
+  attachTextures(): void {
     this.textures = {};
     this.minFilter = THREE.LinearFilter;
     this.textures[this.getColorName()] = createDataTexture(
@@ -27,7 +25,6 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       false,
       this.minFilter,
       this.maxFilter,
-      this.renderer,
     );
 
     this.uniforms[`${this.getColorName()}_texture`] = {

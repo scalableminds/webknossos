@@ -182,7 +182,7 @@ class ArbitraryPlane {
   }
 
   createMesh() {
-    this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width).getMaterial();
+    this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width, {}).setup().getMaterial();
 
     // create mesh
     const plane = new THREE.Mesh(

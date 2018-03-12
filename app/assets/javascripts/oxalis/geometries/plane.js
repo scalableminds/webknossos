@@ -64,20 +64,23 @@ class Plane {
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
       const [dataTexture, lookUpTexture] = binary.getDataTextures();
+      console.log("createMeshes", dataTexture, lookUpTexture);
       const [fallbackDataTexture, fallbackLookUpTexture] = binary.getFallbackDataTextures();
 
       const shaderName = sanitizeName(name);
-      const lookUpBufferName = sanitizeName(name + "_lookup");
+      const lookUpBufferName = sanitizeName(`${name}_lookup`);
       textures[shaderName] = dataTexture;
       textures[lookUpBufferName] = lookUpTexture;
 
-      const fshaderName = sanitizeName(name + "_fallback");
-      const flookUpBufferName = sanitizeName(name + "_lookup" + "_fallback");
+      const fshaderName = sanitizeName(`${name}_fallback`);
+      const flookUpBufferName = sanitizeName(`${name}_lookup_fallback`);
 
       textures[fshaderName] = fallbackDataTexture;
       textures[flookUpBufferName] = fallbackLookUpTexture;
     }
-    const textureMaterial = new PlaneMaterialFactory(tWidth, textures, this.planeID).getMaterial();
+    const textureMaterial = new PlaneMaterialFactory(tWidth, textures, this.planeID)
+      .setup()
+      .getMaterial();
 
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
@@ -138,6 +141,7 @@ class Plane {
   };
 
   updateTexture(anchorPoint: ?Vector3, fallbackAnchorPoint: ?Vector3): void {
+    console.log("anchorPoint", anchorPoint);
     if (anchorPoint) {
       this.plane.material.setAnchorPoint(anchorPoint);
     }

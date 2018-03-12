@@ -27,11 +27,11 @@ function UpdatableTexture(
     encoding,
   );
 
-  var canvas = document.createElement("canvas");
+  const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
-  var ctx = canvas.getContext("2d");
-  var imageData = ctx.createImageData(width, height);
+  const ctx = canvas.getContext("2d");
+  const imageData = ctx.createImageData(width, height);
 
   this.image = imageData;
 
@@ -58,13 +58,13 @@ UpdatableTexture.prototype.setRenderer = function(renderer) {
 UpdatableTexture.prototype.setSize = function(width, height) {
   if (width === this.width && height === this.height) return;
 
-  var textureProperties = this.renderer.properties.get(this);
+  const textureProperties = this.renderer.properties.get(this);
   if (!textureProperties.__webglTexture) return;
 
   this.width = width;
   this.height = height;
 
-  var activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
+  const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
   this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
   if (!textureProperties.__webglTexture) this.width = null;
   this.gl.texImage2D(
@@ -82,10 +82,10 @@ UpdatableTexture.prototype.setSize = function(width, height) {
 };
 
 UpdatableTexture.prototype.update = function(src, x, y, width, height) {
-  var textureProperties = this.renderer.properties.get(this);
+  const textureProperties = this.renderer.properties.get(this);
   if (!textureProperties.__webglTexture) return;
 
-  var activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
+  const activeTexture = this.gl.getParameter(this.gl.TEXTURE_BINDING_2D);
   this.gl.bindTexture(this.gl.TEXTURE_2D, textureProperties.__webglTexture);
   // console.log(this.format, src.length);
   this.gl.texSubImage2D(

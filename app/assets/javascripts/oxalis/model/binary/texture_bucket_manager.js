@@ -1,6 +1,6 @@
 // @flow
-import { DataBucket, BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import { DataBucket } from "oxalis/model/binary/bucket";
+import type { Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import _ from "lodash";
 import * as THREE from "three";
@@ -8,23 +8,10 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import window from "libs/window";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import SceneController from "oxalis/controller/scene_controller";
-import type { Bucket } from "oxalis/model/binary/bucket";
 
-const bucketWidth = 32;
-const bucketSize = Math.pow(bucketWidth, 3);
 const bytesPerLookUpEntry = 1; // just the index ?
 const lookUpBufferWidth = 64; // has to be next power of two from Math.ceil(Math.sqrt(lookUpBufferSize));
 
-export function zoomedAddressToPosition([x, y, z, zoomStep]: Vector4): Vector3 {
-  return [
-    x << (BUCKET_SIZE_P + zoomStep),
-    y << (BUCKET_SIZE_P + zoomStep),
-    z << (BUCKET_SIZE_P + zoomStep),
-  ];
-}
-
-const grayBuffer = new Uint8Array(bucketSize);
-grayBuffer.fill(100);
 const bucketHeightInTexture = 4;
 
 // A TextureBucketManager instance is responsible for making buckets of
@@ -51,14 +38,14 @@ export default class TextureBucketManager {
   // Maintains a set of free indices within the data texture.
   freeIndexSet: Set<number>;
   isRefreshBufferOutOfDate: boolean = false;
+  lastZoomedAnchorPoint: Vector4;
 
   bucketPerDim: number;
   bufferCapacity: number;
-  currentAnchorPoint: ?Vector4 = null;
-  writerQueue: Array<{ bucket: DataBucket, index: number }> = [];
+  currentAnchorPoint: Vector4 = [0, 0, 0, 0];
+  writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
 
-  constructor(bucketPerDim: number, layer) {
-    this.layer = layer;
+  constructor(bucketPerDim: number) {
     // each plane gets bucketPerDim**2 buckets
     this.bufferCapacity = 3 * Math.pow(bucketPerDim, 2);
     // the look up buffer is bucketPerDim**3 so that arbitrary look ups can be made
@@ -72,10 +59,14 @@ export default class TextureBucketManager {
     this.processWriterQueue();
   }
 
+  clear() {
+    this.setActiveBuckets([], [0, 0, 0, 0]);
+  }
+
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
-  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector3): void {
+  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector4): void {
     this.currentAnchorPoint = anchorPoint;
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
@@ -89,6 +80,12 @@ export default class TextureBucketManager {
       const unusedIndex = this.activeBucketToIndexMap.get(freeBucket);
       this.activeBucketToIndexMap.delete(freeBucket);
       this.committedBucketSet.delete(freeBucket);
+      // Flow thinks that unusedIndex may be undefined.
+      // However, the freeBuckets can only contain buckets which
+      // are held by activeBucketToIndexMap since we use the map
+      // for initialization. For performance reason, we don't satisfy
+      // flow with an undefined check.
+      // $FlowFixMe
       this.freeIndexSet.add(unusedIndex);
     }
 
@@ -121,7 +118,8 @@ export default class TextureBucketManager {
     // uniqBy removes multiple write-buckets-requests for the same index.
     // It preserves the first occurence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
-    // back (via pop). This ensures that the newest bucket is kept.
+    // back (via pop). This ensures that the newest bucket "wins" if they are
+    // multiple buckets for the same index.
     this.writerQueue = _.uniqBy(this.writerQueue, el => el._index);
     const maxBucketCommitsPerFrame = 30;
 
@@ -183,7 +181,7 @@ export default class TextureBucketManager {
   // Assign an index to an active bucket and enqueue the bucket-index-tuple
   // to the writerQueue. Also, make sure that the bucket data is updated if
   // it changes.
-  reserveIndexForBucket(bucket: Bucket, index: number): void {
+  reserveIndexForBucket(bucket: DataBucket, index: number): void {
     this.freeIndexSet.delete(index);
     this.activeBucketToIndexMap.set(bucket, index);
 
@@ -195,6 +193,7 @@ export default class TextureBucketManager {
     };
     enqueueBucket(index);
 
+    let debouncedUpdateBucketData;
     const updateBucketData = () => {
       // Check that the bucket is still in the data texture.
       // Also the index could have changed, so retrieve the index again.
@@ -205,10 +204,7 @@ export default class TextureBucketManager {
         bucket.off("bucketLabeled", debouncedUpdateBucketData);
       }
     };
-
-    // todo: not necessary anymore since committing the buckets is always
-    // batched and debounced via requestAnimationFrame
-    const debouncedUpdateBucketData = _.debounce(updateBucketData, 16);
+    debouncedUpdateBucketData = _.debounce(updateBucketData, 16);
 
     if (!bucket.hasData()) {
       bucket.on("bucketLoaded", updateBucketData);
@@ -225,6 +221,8 @@ export default class TextureBucketManager {
     for (const bucket of this.committedBucketSet) {
       const address = this.activeBucketToIndexMap.get(bucket);
       const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
+      // Since activeBucketToIndexMap is a super set of committedBucketSet,
+      // address is always defined ($FlowFixMe).
       this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = address;
     }
 
@@ -233,14 +231,14 @@ export default class TextureBucketManager {
     window.needsRerender = true;
   }
 
-  _getBucketIndex(bucket: DataBucket, anchorPoint: Vector3): number {
+  _getBucketIndex(bucket: DataBucket, anchorPoint: Vector4): number {
     const bucketPosition = bucket.zoomedAddress.slice(0, 3);
     const offsetFromAnchor = [
       bucketPosition[0] - anchorPoint[0],
       bucketPosition[1] - anchorPoint[1],
       bucketPosition[2] - anchorPoint[2],
     ];
-    let [x, y, z] = offsetFromAnchor;
+    const [x, y, z] = offsetFromAnchor;
 
     const idx = Math.pow(this.bucketPerDim, 2) * z + this.bucketPerDim * y + x;
     return idx;

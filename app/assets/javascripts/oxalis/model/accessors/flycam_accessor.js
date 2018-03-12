@@ -8,7 +8,7 @@ import type {
   BoundingBoxType,
 } from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
-import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
+import constants, { OrthoViews } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
 import * as scaleInfo from "oxalis/model/scaleinfo";
@@ -179,10 +179,7 @@ export function getExtent(state: OxalisState, planeId: OrthoViewType): Vector2 {
     planeId,
   );
   const size = getTextureScalingFactor(state) * constants.PLANE_WIDTH;
-  return [
-    size * scaleArray[0],
-    size * scaleArray[1],
-  ];
+  return [size * scaleArray[0], size * scaleArray[1]];
 }
 
 export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {

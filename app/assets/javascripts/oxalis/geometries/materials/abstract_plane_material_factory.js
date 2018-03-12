@@ -7,7 +7,6 @@ import _ from "lodash";
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import app from "app";
-import Utils from "libs/utils";
 import Model from "oxalis/model";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -110,16 +109,19 @@ class AbstractPlaneMaterialFactory {
   maxFilter: THREE.NearestFilter;
   tWidth: number;
 
-  constructor(tWidth: number, textures: TextureMapType, planeID) {
-    // move planeID in PlaneMaterialFactory somehow
-    this.planeID = planeID;
-    this.setupUniforms();
-    this.makeMaterial();
+  constructor(tWidth: number, textures: TextureMapType) {
     this.tWidth = tWidth;
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
-    this.attachTextures(textures);
+    this.textures = textures;
+  }
+
+  setup() {
+    this.setupUniforms();
+    this.makeMaterial();
+    this.attachTextures(this.textures);
     this.setupChangeListeners();
+    return this;
   }
 
   setupUniforms(): void {
@@ -153,11 +155,7 @@ class AbstractPlaneMaterialFactory {
       const textureName = sanitizeName(name);
       const texture = this.textures[textureName];
       if (texture) {
-        console.time("set texture" + name);
-        // debugger;
-        // texture.image.data.set(data);
         texture.image.data = data;
-        console.timeEnd("set texture" + name);
         texture.needsUpdate = true;
       }
     };
@@ -187,14 +185,6 @@ class AbstractPlaneMaterialFactory {
     return this.material;
   }
 
-  attachTextures(textures: TextureMapType): void {
-    throw new Error("Subclass responsibility");
-  }
-
-  getFragmentShader(): string {
-    throw new Error("Subclass responsibility");
-  }
-
   getVertexShader(): string {
     return `
 varying vec4 vPos;
@@ -207,7 +197,6 @@ void main() {
   vPos2 = position.xy;
   gl_Position = vPos;
 }`;
-
   }
 }
 

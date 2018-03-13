@@ -148,23 +148,31 @@ export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
   return { min, max };
 }
 
-export function getTexturePosition(state: OxalisState, planeId: OrthoViewType): Vector3 {
+export function getTexturePosition(
+  state: OxalisState,
+  planeId: OrthoViewType,
+  resolutions: Array<Vector3>,
+): Vector3 {
   const texturePosition = _.clone(getPosition(state.flycam));
   // As the Model does not render textures for exact positions, the last 5 bits of
   // the X and Y coordinates for each texture have to be set to 0
-  const ind = Dimensions.getIndices(planeId);
-  const bitMask = -1 << (5 + getRequestLogZoomStep(state));
-  texturePosition[ind[0]] &= bitMask;
-  texturePosition[ind[1]] &= bitMask;
+  const [u, v] = Dimensions.getIndices(planeId);
+  const logZoomStep = getRequestLogZoomStep(state);
+  texturePosition[u] = texturePosition[u] - texturePosition[u] / (32 * resolutions[logZoomStep][u]);
+  texturePosition[v] = texturePosition[v] - texturePosition[v] / (32 * resolutions[logZoomStep][v]);
   return texturePosition;
 }
 
-export function getOffsets(state: OxalisState, planeId: OrthoViewType): Vector2 {
+export function getOffsets(
+  state: OxalisState,
+  planeId: OrthoViewType,
+  resolutions: Array<Vector3>,
+): Vector2 {
   // return the coordinate of the upper left corner of the viewport as texture-relative coordinate
   const buffer = calculateTextureBuffer(state, planeId);
   const position = getPosition(state.flycam);
   const requestZoomStep = Math.pow(2, getRequestLogZoomStep(state));
-  const texturePosition = getTexturePosition(state, planeId);
+  const texturePosition = getTexturePosition(state, planeId, resolutions);
   const ind = Dimensions.getIndices(planeId);
   return [
     buffer[0] / 2 + (position[ind[0]] - texturePosition[ind[0]]) / requestZoomStep,
@@ -181,13 +189,17 @@ export function getExtent(state: OxalisState, planeId: OrthoViewType): Vector2 {
   return [size * scaleArray[0], size * scaleArray[1]];
 }
 
-export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {
+export function getArea(
+  state: OxalisState,
+  planeId: OrthoViewType,
+  resolutions: Array<Vector3>,
+): Vector4 {
   // returns [left, top, right, bottom] array
   const scaleArray = Dimensions.transDim(
     scaleInfo.getBaseVoxelFactors(state.dataset.scale),
     planeId,
   );
-  const offsets = getOffsets(state, planeId);
+  const offsets = getOffsets(state, planeId, resolutions);
   const size = getTextureScalingFactor(state) * constants.PLANE_WIDTH;
   // two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
   // [offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
@@ -199,7 +211,10 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {
   ];
 }
 
-export function getAreas(state: OxalisState): OrthoViewMapType<Vector4> {
+export function getAreas(
+  state: OxalisState,
+  resolutions: Array<Vector3>,
+): OrthoViewMapType<Vector4> {
   return {
     [OrthoViews.PLANE_XY]: getArea(state, OrthoViews.PLANE_XY),
     [OrthoViews.PLANE_XZ]: getArea(state, OrthoViews.PLANE_XZ),

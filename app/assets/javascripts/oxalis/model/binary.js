@@ -85,7 +85,7 @@ class Binary {
     this.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
     this.layer.upperBoundary = this.upperBoundary;
 
-    this.cube = new DataCube(this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth);
+    this.cube = new DataCube(this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth, this.layer);
 
     const taskQueue = new AsyncTaskQueue(Infinity);
 
@@ -194,7 +194,7 @@ class Binary {
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [u, v] = Dimensions.getIndices(planeId);
-      let texturePosition = getTexturePosition(Store.getState(), planeId);
+      let texturePosition = getTexturePosition(Store.getState(), planeId, this.layer.resolutions);
 
       // Making sure, position is top-left corner of some bucket
       // Probably not necessary?

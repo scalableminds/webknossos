@@ -13,6 +13,7 @@ export function getBaseVoxel(dataSetScale: Vector3): number {
 export function getBaseVoxelFactors(dataSetScale: Vector3): Vector3 {
   // base voxel should be a cube with highest resolution
   const baseVoxel = getBaseVoxel(dataSetScale);
+  console.log("baseVoxel", baseVoxel);
 
   // scale factor to calculate the voxels in a certain
   // dimension from baseVoxels

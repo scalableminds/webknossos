@@ -334,7 +334,7 @@ class PlaneController extends React.PureComponent<Props> {
       if (SceneController.pingDataLayer(dataLayerName)) {
         Model.binary[dataLayerName].ping(getPosition(state.flycam), {
           zoomStep: getRequestLogZoomStep(state),
-          areas: getAreas(state),
+          areas: getAreas(state, Model.binary[dataLayerName].layer.resolutions),
           activePlane: activeViewport,
         });
       }

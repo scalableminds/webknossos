@@ -10,6 +10,7 @@ import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingArray } from "oxalis/model/binary/mappings";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
+import type Layer from "oxalis/model/binary/layers/layer";
 import {
   DataBucket,
   NullBucket,
@@ -76,8 +77,9 @@ class DataCube {
   // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
   // access-queue and is least recently used. It is then removed from the cube.
 
-  constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
+  constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number, layer: Layer) {
     this.upperBoundary = upperBoundary;
+    this.layer = layer;
 
     this.MAX_UNSAMPLED_ZOOM_STEP = zoomStepCount - 1;
     // Always add another layer of downsampled buckets, so that we support
@@ -328,7 +330,7 @@ class DataCube {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
     }
     if (voxelInCube) {
-      const address = this.positionToZoomedAddress(voxel);
+      const address = this.positionToBaseAddress(voxel);
       const bucket = this.getOrCreateBucket(address);
       if (bucket instanceof DataBucket) {
         const voxelIndex = this.getVoxelIndex(voxel);
@@ -351,7 +353,7 @@ class DataCube {
   }
 
   getDataValue(voxel: Vector3, mapping: ?MappingArray): number {
-    const bucket = this.getBucket(this.positionToZoomedAddress(voxel));
+    const bucket = this.getBucket(this.positionToBaseAddress(voxel));
     const voxelIndex = this.getVoxelIndex(voxel);
 
     if (bucket.hasData()) {
@@ -388,14 +390,19 @@ class DataCube {
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
 
-  positionToZoomedAddress([x, y, z]: Vector3, zoomStep: number = 0): Vector4 {
+  positionToZoomedAddress([x, y, z]: Vector3, resolutionIndex: number = 0): Vector4 {
     // return the bucket a given voxel lies in
+    const resolution = this.layer.resolutions[resolutionIndex];
     return [
-      x >> (BUCKET_SIZE_P + zoomStep),
-      y >> (BUCKET_SIZE_P + zoomStep),
-      z >> (BUCKET_SIZE_P + zoomStep),
-      zoomStep,
+      x / (32 * resolution[0]),
+      y / (32 * resolution[1]),
+      z / (32 * resolution[2]),
+      resolutionIndex,
     ];
+  }
+
+  positionToBaseAddress(position: Vector3): Vector4 {
+    return this.positionToZoomedAddress(position, 0);
   }
 }
 

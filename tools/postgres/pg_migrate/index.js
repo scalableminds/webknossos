@@ -119,7 +119,7 @@ function* csvWriter(name, cols) {
         "mappings"
       ]);
       dataSet_layers.next();
-      const dataSet_resolutions = csvWriter("dataSet_resolutions", ["_dataSet", "dataLayerName", "resolution", "scale"]);
+      const dataSet_resolutions = csvWriter("dataSet_resolutions", ["_dataSet", "dataLayerName", "resolution"]);
       dataSet_resolutions.next();
       const cursor = m.collection("dataSets").find({});
       while (await cursor.hasNext()) {
@@ -153,8 +153,7 @@ function* csvWriter(name, cols) {
                 dataSet_resolutions.next({
                   _dataSet: doc._id.toHexString(),
                   dataLayerName: doc_layer.name,
-                  resolution: doc_res.resolution,
-                  scale: formatVector3(doc_res.scale)
+                  resolution: formatVector3(doc_res)
                 });
               }
             }

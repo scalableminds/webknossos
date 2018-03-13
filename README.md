@@ -12,7 +12,7 @@ If you are installing *webKnossos* in a virtual machine, please make sure you al
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
 * [PostgreSQL 10](https://www.postgresql.org/)
-* [node.js 7+](http://nodejs.org/download/)
+* [node.js 9+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
@@ -66,7 +66,7 @@ sudo -u postgres psql -c "ALTER USER user_name WITH ENCRYPTED PASSWORD 'postgres
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
 
 ### Docker
-This is the fastest way to try webKnossos. Docker 1.13+ and Docker Compose 1.10+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
+This is the fastest way to try webKnossos. Docker CE 17+ and Docker Compose 1.18+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
 
 ```
 docker-compose up webknossos
@@ -88,7 +88,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **8+ is required**
+* node version **9+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally
@@ -122,4 +122,4 @@ These tests are run on our CI server. Running the tests manually is not encourag
 
 # License
 AGPLv3
-Copyright scalable minds 2017
+Copyright scalable minds 2018

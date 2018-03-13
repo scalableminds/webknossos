@@ -68,6 +68,8 @@ In order to restore the current window, a reload is necessary.`,
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "annotation.was_edited": "Successfully updated annotation",
   "project.delete": "Do you really want to delete this project?",
+  "project.increase_instances":
+    "Do you really want to increase the task instances of this project?",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type?",

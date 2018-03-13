@@ -10,6 +10,7 @@ import messages from "messages";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getProjectsWithOpenAssignments,
+  increaseProjectTaskInstances,
   deleteProject,
   pauseProject,
   resumeProject,
@@ -66,7 +67,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
 
     this.setState({
       isLoading: false,
-      projects: projects.filter(p => p.owner),
+      projects: projects.filter(p => p.owner != null),
     });
   }
 
@@ -98,6 +99,19 @@ class ProjectListView extends React.PureComponent<Props, State> {
     const updatedProject = await APICall(project.name);
     this.setState({
       projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
+    });
+  };
+
+  increaseProjectTaskInstances = async (project: APIProjectType) => {
+    Modal.confirm({
+      title: messages["project.increase_instances"],
+      onOk: async () => {
+        this.setState({
+          isLoading: true,
+        });
+        await increaseProjectTaskInstances(project.name);
+        this.fetchData();
+      },
     });
   };
 
@@ -221,6 +235,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
                     <Link to={`/projects/${project.name}/tasks`} title="View Tasks">
                       <Icon type="schedule" />Tasks
                     </Link>
+                    <br />
+                    <a
+                      onClick={_.partial(this.increaseProjectTaskInstances, project)}
+                      title="Increase Task instances"
+                    >
+                      <Icon type="plus-square-o" />Increase Instances
+                    </a>
                     <br />
                     <a
                       href={`/api/annotations/CompoundProject/${project.id}/download`}

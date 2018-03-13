@@ -257,6 +257,15 @@ export async function getProject(projectName: string): Promise<APIProjectType> {
   return transformProject(project);
 }
 
+export async function increaseProjectTaskInstances(
+  projectName: string,
+  delta?: number = 1,
+): Promise<void> {
+  await Request.receiveJSON(
+    `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
+  );
+}
+
 export async function deleteProject(projectName: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",

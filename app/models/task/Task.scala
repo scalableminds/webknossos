@@ -245,7 +245,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.tasks set tracingTime = tracingTime + $time where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}")
     } yield ()
 
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {

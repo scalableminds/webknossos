@@ -47,7 +47,6 @@ function assertResponseLimit(collection) {
 }
 
 // ### Do with userToken
-
 let tokenRequestPromise;
 function requestUserToken(): Promise<string> {
   if (tokenRequestPromise) {
@@ -299,6 +298,10 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
 }
 
 // ### Tasks
+export async function peekNextTasks(): Promise<Array<APITaskType>> {
+  return Request.receiveJSON("/api/user/tasks/peek");
+}
+
 export async function requestTask(): Promise<APIAnnotationType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }

@@ -97,13 +97,19 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
-        if (!event.shiftKey) {
+        const tool = getVolumeTool(Store.getState().tracing).get();
+
+        if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
       },
 
       leftMouseUp: () => {
-        Store.dispatch(finishEditingAction());
+        const tool = getVolumeTool(Store.getState().tracing).get();
+
+        if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
+          Store.dispatch(finishEditingAction());
+        }
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
@@ -114,15 +120,21 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       },
 
       rightMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
-        if (!event.shiftKey) {
+        const tool = getVolumeTool(Store.getState().tracing).get();
+
+        if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
           this.volumeTracingController.enterDeleteMode();
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
       },
 
       rightMouseUp: () => {
-        Store.dispatch(finishEditingAction());
-        this.volumeTracingController.restoreAfterDeleteMode();
+        const tool = getVolumeTool(Store.getState().tracing).get();
+
+        if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
+          Store.dispatch(finishEditingAction());
+          this.volumeTracingController.restoreAfterDeleteMode();
+        }
       },
 
       leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
@@ -130,7 +142,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
           const cellId = Model.getSegmentationBinary().cube.getDataValue(
             this.calculateGlobalPos(pos),
           );
-
           this.volumeTracingController.handleCellSelection(cellId);
         }
       },

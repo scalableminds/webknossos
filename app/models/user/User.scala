@@ -254,9 +254,11 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
     for {
       _ <- UserSQLDAO.assertUpdateAccess(userId)
       _ <- run(
-        sqlu"""update webknossos.user_dataSetConfigurations
-               set configuration = '#${sanitize(configuration.toString)}'
+        sqlu"""delete from webknossos.user_dataSetConfigurations
                where _user = ${userId.id} and _dataSet = ${dataSetId.id}""")
+      _ <- run(
+        sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
+               values(${userId.id}, ${dataSetId.id}, '#${sanitize(Json.toJson(configuration).toString)}')""")
     } yield ()
   }
 

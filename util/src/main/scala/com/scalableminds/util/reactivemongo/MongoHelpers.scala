@@ -12,8 +12,11 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 
+import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Success
+
+object MongoHelpers extends MongoHelpers
 
 trait MongoHelpers extends LazyLogging {
   /** Writes an ID in Json Extended Notation */
@@ -47,6 +50,11 @@ trait MongoHelpers extends LazyLogging {
   val removeId =
     (__ \ '_id).json.prune
 
+  def parseBsonToFox(s: String): Fox[BSONObjectID] =
+    BSONObjectID.parse(s) match {
+      case Success(id) => Fox.successful(id)
+      case _ => Fox.failure(s"Failed to parse objectId: $s")
+    }
 
   def withId[T](id: String)(f: BSONObjectID => Fox[T])(implicit ex: ExecutionContext): Fox[T] = {
     BSONObjectID.parse(id) match {

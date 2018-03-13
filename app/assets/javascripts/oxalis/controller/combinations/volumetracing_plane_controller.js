@@ -6,7 +6,7 @@
 import _ from "lodash";
 import Store from "oxalis/store";
 import Utils from "libs/utils";
-import { OrthoViews, VolumeToolEnum } from "oxalis/constants";
+import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import {
   PlaneControllerClass,
   mapStateToProps,
@@ -24,8 +24,13 @@ import {
   setBrushPositionAction,
   hideBrushAction,
   setBrushSizeAction,
+  setContourTracingMode,
 } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import {
+  getActiveCellId,
+  getVolumeTool,
+  getContourTracingMode,
+} from "oxalis/model/accessors/volumetracing_accessor";
 import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
 import { connect } from "react-redux";
 import type { OrthoViewType, Point2 } from "oxalis/constants";
@@ -60,6 +65,11 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
     );
   }
 
+  componentWillUnmount() {
+    this.volumeTracingController.keyboardNoLoop.destroy();
+    super.componentWillUnmount();
+  }
+
   simulateTracing = async (): Promise<void> => {
     Store.dispatch(setToolAction(VolumeToolEnum.TRACE));
 
@@ -87,11 +97,20 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
       leftDownMove: (delta: Point2, pos: Point2) => {
-        const tool = getVolumeTool(Store.getState().tracing).get();
+        const { tracing } = Store.getState();
+        const tool = getVolumeTool(tracing).get();
+        const contourTracingMode = getContourTracingMode(tracing).get();
+        console.log(tool, contourTracingMode);
+
         if (tool === VolumeToolEnum.MOVE) {
           const viewportScale = Store.getState().userConfiguration.scale;
           this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
-        } else {
+        }
+
+        if (
+          (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
+          contourTracingMode === ContourModeEnum.ADD_TO_VOLUME
+        ) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
       },
@@ -100,6 +119,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const tool = getVolumeTool(Store.getState().tracing).get();
 
         if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
+          Store.dispatch(setContourTracingMode(ContourModeEnum.ADD_TO_VOLUME));
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
       },
@@ -107,14 +127,22 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       leftMouseUp: () => {
         const tool = getVolumeTool(Store.getState().tracing).get();
 
+        Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
+
         if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
           Store.dispatch(finishEditingAction());
         }
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
-        const tool = getVolumeTool(Store.getState().tracing).get();
-        if (tool !== VolumeToolEnum.MOVE) {
+        const { tracing } = Store.getState();
+        const tool = getVolumeTool(tracing).get();
+        const contourTracingMode = getContourTracingMode(tracing).get();
+
+        if (
+          (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
+          contourTracingMode === ContourModeEnum.DELETE_FROM_VOLUME
+        ) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
       },
@@ -124,12 +152,15 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
         if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
           this.volumeTracingController.enterDeleteMode();
+          Store.dispatch(setContourTracingMode(ContourModeEnum.DELETE_FROM_VOLUME));
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
       },
 
       rightMouseUp: () => {
         const tool = getVolumeTool(Store.getState().tracing).get();
+
+        Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
 
         if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
           Store.dispatch(finishEditingAction());
@@ -148,6 +179,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
       mouseMove: (delta: Point2, position: Point2) => {
         const tool = getVolumeTool(Store.getState().tracing).get();
+
         if (tool === VolumeToolEnum.BRUSH) {
           Store.dispatch(setBrushPositionAction([position.x, position.y]));
         }

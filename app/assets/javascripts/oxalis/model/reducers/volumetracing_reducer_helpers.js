@@ -7,7 +7,7 @@
  */
 
 import type { OxalisState, VolumeTracingType, VolumeCellType } from "oxalis/store";
-import type { VolumeToolType, Vector3 } from "oxalis/constants";
+import type { VolumeToolType, Vector3, ContourModeType } from "oxalis/constants";
 import { VolumeToolEnum } from "oxalis/constants";
 import update from "immutability-helper";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
@@ -127,5 +127,13 @@ export function resetContourReducer(state: OxalisState) {
 export function hideBrushReducer(state: OxalisState) {
   return update(state, {
     temporaryConfiguration: { brushPosition: { $set: null } },
+  });
+}
+
+export function setContourTracingModeReducer(state: OxalisState, mode: ContourModeType) {
+  return update(state, {
+    tracing: {
+      contourTracingMode: { $set: mode },
+    },
   });
 }

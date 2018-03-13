@@ -3,8 +3,6 @@
  * @flow
  */
 
-import _ from "lodash";
-import BackboneEvents from "backbone-events-standalone";
 import { InputKeyboardNoLoop } from "libs/input";
 import Store from "oxalis/store";
 import {
@@ -23,16 +21,11 @@ class VolumeTracingController {
   // functions that can be called by the specific view mode controller.
 
   inDeleteMode: boolean;
-  mergeMode: 0;
   prevActiveCellId: number;
   keyboardNoLoop: InputKeyboardNoLoop;
 
-  MERGE_MODE_NORMAL = 0;
-
   constructor() {
     this.inDeleteMode = false;
-
-    _.extend(this, BackboneEvents);
 
     // Keyboard shortcuts
     this.keyboardNoLoop = new InputKeyboardNoLoop({
@@ -49,15 +42,11 @@ class VolumeTracingController {
         Store.dispatch(copySegmentationLayerAction(true));
       },
     });
-
-    this.mergeMode = this.MERGE_MODE_NORMAL;
   }
 
   handleCellSelection(cellId: number) {
     if (cellId > 0) {
-      if (this.mergeMode === this.MERGE_MODE_NORMAL) {
-        Store.dispatch(setActiveCellAction(cellId));
-      }
+      Store.dispatch(setActiveCellAction(cellId));
     }
   }
 

@@ -108,7 +108,7 @@ object TokenSQLDAO extends SQLDAO[TokenSQL, TokensRow, Tokens] {
                         lastUsedDateTime = ${new java.sql.Timestamp(lastUsedDateTime.getMillis)},
                         expirationDateTime = ${new java.sql.Timestamp(expirationDateTime.getMillis)},
                         idleTimeout = ${idleTimeout.map(_.toMillis)}
-                      where id = ${id.id}""")
+                      where _id = ${id.id}""")
     } yield ()
 
   def deleteOneByValue(value: String)(implicit ctx: DBAccessContext): Fox[Unit] = {

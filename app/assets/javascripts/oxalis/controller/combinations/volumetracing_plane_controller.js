@@ -4,6 +4,7 @@
  */
 
 import _ from "lodash";
+import { connect } from "react-redux";
 import Store from "oxalis/store";
 import Utils from "libs/utils";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
@@ -25,14 +26,17 @@ import {
   hideBrushAction,
   setBrushSizeAction,
   setContourTracingMode,
+  cycleToolAction,
+  copySegmentationLayerAction,
+  setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
   getActiveCellId,
   getVolumeTool,
   getContourTracingMode,
 } from "oxalis/model/accessors/volumetracing_accessor";
-import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
-import { connect } from "react-redux";
+import { InputKeyboardNoLoop } from "libs/input";
+
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 
@@ -43,11 +47,11 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   // Extends Plane controller to add controls that are specific to Volume
   // Tracing.
 
-  volumeTracingController: VolumeTracingController;
+  prevActiveCellId: number;
+  keyboardNoLoop: InputKeyboardNoLoop;
 
   componentDidMount() {
     super.componentDidMount();
-    this.volumeTracingController = new VolumeTracingController();
 
     let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
     Store.subscribe(() => {
@@ -63,10 +67,25 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
     this.listenTo(Model.getSegmentationBinary().cube, "newMapping", () =>
       SceneController.renderVolumeIsosurface(lastActiveCellId),
     );
+
+    this.keyboardNoLoop = new InputKeyboardNoLoop({
+      w: () => {
+        Store.dispatch(cycleToolAction());
+      },
+      "1": () => {
+        Store.dispatch(cycleToolAction());
+      },
+      v: () => {
+        Store.dispatch(copySegmentationLayerAction());
+      },
+      "shift + v": () => {
+        Store.dispatch(copySegmentationLayerAction(true));
+      },
+    });
   }
 
   componentWillUnmount() {
-    this.volumeTracingController.keyboardNoLoop.destroy();
+    this.keyboardNoLoop.destroy();
     super.componentWillUnmount();
   }
 
@@ -100,7 +119,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const { tracing } = Store.getState();
         const tool = getVolumeTool(tracing).get();
         const contourTracingMode = getContourTracingMode(tracing).get();
-        console.log(tool, contourTracingMode);
 
         if (tool === VolumeToolEnum.MOVE) {
           const viewportScale = Store.getState().userConfiguration.scale;
@@ -151,7 +169,11 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const tool = getVolumeTool(Store.getState().tracing).get();
 
         if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
-          this.volumeTracingController.enterDeleteMode();
+          getActiveCellId(Store.getState().tracing).map(activeCellId => {
+            this.prevActiveCellId = activeCellId;
+          });
+
+          Store.dispatch(setActiveCellAction(0));
           Store.dispatch(setContourTracingMode(ContourModeEnum.DELETE_FROM_VOLUME));
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
@@ -164,7 +186,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
         if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
           Store.dispatch(finishEditingAction());
-          this.volumeTracingController.restoreAfterDeleteMode();
+          Store.dispatch(setActiveCellAction(this.prevActiveCellId));
+          Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
         }
       },
 
@@ -173,7 +196,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
           const cellId = Model.getSegmentationBinary().cube.getDataValue(
             this.calculateGlobalPos(pos),
           );
-          this.volumeTracingController.handleCellSelection(cellId);
+          this.handleCellSelection(cellId);
         }
       },
 
@@ -206,6 +229,12 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
     return _.extend(super.getKeyboardControls(), {
       c: () => Store.dispatch(createCellAction()),
     });
+  }
+
+  handleCellSelection(cellId: number) {
+    if (cellId > 0) {
+      Store.dispatch(setActiveCellAction(cellId));
+    }
   }
 }
 

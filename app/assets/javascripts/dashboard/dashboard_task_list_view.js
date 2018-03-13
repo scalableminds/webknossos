@@ -13,10 +13,16 @@ import moment from "moment";
 import Toast from "libs/toast";
 import messages from "messages";
 import TransferTaskModal from "dashboard/transfer_task_modal";
-import { deleteAnnotation, resetAnnotation, finishTask } from "admin/admin_rest_api";
+import {
+  deleteAnnotation,
+  resetAnnotation,
+  finishTask,
+  requestTask,
+  peekNextTasks,
+} from "admin/admin_rest_api";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 import Persistence from "libs/persistence";
-import { PropTypes } from "prop-types";
+import { PropTypes } from "@scalableminds/prop-types";
 import type {
   APITaskWithAnnotationType,
   APIUserType,
@@ -245,8 +251,17 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     if (this.state.unfinishedTasks.length === 0) {
       return this.getNewTask();
     } else {
+      let modalContent = messages["task.request_new"];
+      const likelyNextTasks = await peekNextTasks();
+
+      if (likelyNextTasks.length > 0) {
+        modalContent += `\n${messages["task.peek_next"]({
+          projectName: likelyNextTasks[0].projectName,
+        })}`;
+      }
+
       return Modal.confirm({
-        content: "Do you really want another task?",
+        content: modalContent,
         onOk: () => this.getNewTask(),
       });
     }
@@ -255,7 +270,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   async getNewTask() {
     this.setState({ isLoading: true });
     try {
-      const newTaskAnnotation = await Request.receiveJSON("/api/user/tasks/request");
+      const newTaskAnnotation = await requestTask();
 
       this.setState({
         unfinishedTasks: this.state.unfinishedTasks.concat([

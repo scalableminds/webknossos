@@ -3,18 +3,16 @@
  */
 package models.binary
 
-import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Full
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
 import play.api.libs.ws.WSResponse
-import reactivemongo.api.commands.WriteResult
 
 object DataSetService extends FoxImplicits with LazyLogging {
 
@@ -61,7 +59,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def updateDataSource(
                         dataStoreInfo: DataStoreInfo,
                         dataSource: InboxDataSource
-                      )(implicit ctx: DBAccessContext): Fox[WriteResult] = {
+                      )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     DataSetDAO.findOneBySourceName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
       case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name && dataSet.owningTeam == dataSource.id.team =>
@@ -85,20 +83,8 @@ object DataSetService extends FoxImplicits with LazyLogging {
     }
   }
 
-  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
-    DataSetDAO.update(
-      Json.obj(
-        "dataStoreInfo.name" -> dataStoreName,
-        "dataSource.id.name" -> Json.obj("$nin" -> Json.arr(dataSources.map(_.id.name)))),
-      Json.obj(
-        "$set" -> Json.obj(
-          "isActive" -> false,
-          "dataSource.status" -> "No longer available on datastore."),
-        // we need this $unset, so the data source will not be considered imported during deserialization
-        "$unset" -> Json.obj("dataSource.dataLayers" -> "")
-      ),
-      multi = true)
-  }
+  def deactivateUnreportedDataSources(dataStoreName: String, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) =
+    DataSetDAO.deactivateUnreportedDataSources(dataStoreName, dataSources)
 
   def importDataSet(dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[WSResponse] = {
     dataSet.dataStore.importDataSource
@@ -118,9 +104,6 @@ object DataSetService extends FoxImplicits with LazyLogging {
     val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
     Fox.serialSequence(dataSources) { dataSource =>
       DataSetService.updateDataSource(dataStoreInfo, dataSource)
-    }.map{ _.filter(_.isEmpty).foreach{ r =>
-        logger.warn("Updating DS failed. Result: " + r)
-      }
     }
   }
 }

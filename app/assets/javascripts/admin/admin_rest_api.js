@@ -25,7 +25,9 @@ import type {
   APITimeTrackingType,
   APIProjectProgressReportType,
   APIOpenTasksReportType,
+  APIBuildInfoType,
   APITracingType,
+  APIFeatureToggles,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
@@ -45,7 +47,6 @@ function assertResponseLimit(collection) {
 }
 
 // ### Do with userToken
-
 let tokenRequestPromise;
 function requestUserToken(): Promise<string> {
   if (tokenRequestPromise) {
@@ -297,6 +298,10 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
 }
 
 // ### Tasks
+export async function peekNextTasks(): Promise<Array<APITaskType>> {
+  return Request.receiveJSON("/api/user/tasks/peek");
+}
+
 export async function requestTask(): Promise<APIAnnotationType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
@@ -575,4 +580,13 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
   const openTasksData = await Request.receiveJSON(`/api/teams/${teamId}/openTasksOverview`);
   assertResponseLimit(openTasksData);
   return openTasksData;
+}
+
+// ### BuildInfo
+export function getBuildInfo(): Promise<APIBuildInfoType> {
+  return Request.receiveJSON("/api/buildinfo");
+}
+
+export async function getFeatureToggles(): Promise<APIFeatureToggles> {
+  return Request.receiveJSON("/api/features");
 }

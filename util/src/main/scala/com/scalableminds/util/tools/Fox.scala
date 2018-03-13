@@ -74,12 +74,12 @@ object Fox{
 
   def combined[T](l: List[Fox[T]])(implicit ec: ExecutionContext): Fox[List[T]] = {
     Fox(
-      Future.sequence(l.map(_.futureBox)).map{ results =>
-       results.find(_.isEmpty) match {
-         case Some(Empty) => Empty
-         case Some(failure : Failure) => failure
-         case _ => Full(results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")))
-       }
+      Future.sequence(l.map(_.futureBox)).map { results =>
+        results.find(_.isEmpty) match {
+          case Some(Empty) => Empty
+          case Some(failure: Failure) => failure
+          case _ => Full(results.map(_.openOrThrowException("An exception should never be thrown, all boxes must be full")))
+        }
       })
   }
 
@@ -174,6 +174,18 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
 
   def foreach(f: A => _): Unit = {
     futureBox.map(_.map(f))
+  }
+
+  def toFutureOption: Future[Option[A]] = {
+    futureBox.map(box => box.toOption)
+  }
+
+  def toFutureOrThrowException(justification: String): Future[A] = {
+    for {
+      box: Box[A] <- this.futureBox
+    } yield {
+      box.openOrThrowException(justification)
+    }
   }
 
   /**

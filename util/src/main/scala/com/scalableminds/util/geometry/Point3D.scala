@@ -31,7 +31,7 @@ case class Point3D(x: Int, y: Int, z: Int) {
 
   override def toString = "(%d, %d, %d)".format(x, y, z)
 
-  def toTuple = (x, y, z)
+  def toList = List(x, y, z)
 
   def move(dx: Int, dy: Int, dz: Int) =
     Point3D(x + dx, y + dy, z + dz)
@@ -55,6 +55,8 @@ case class Point3D(x: Int, y: Int, z: Int) {
 
   def until(bottomRight: Point3D) =
     range(bottomRight, _ until _)
+
+  def maxDim = Math.max(Math.max(x, y), z)
 
   private def range(other: Point3D, func: (Int, Int) => Range) =
     for {
@@ -89,7 +91,7 @@ object Point3D {
       None
 
   def fromList(l: List[Int]) = {
-    fromArray(l.toArray) getOrElse Point3D(0, 0, 0)
+    fromArray(l.toArray)
   }
 
   implicit object Point3DReads extends Reads[Point3D] {

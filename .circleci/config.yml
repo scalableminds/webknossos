@@ -30,9 +30,9 @@ jobs:
           name: Build webknossos (sbt and webpack)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker-compose run base sbt clean compile stage
+              docker-compose run compile sbt clean compile stage
             else
-              docker-compose run base sbt compile stage
+              docker-compose run compile sbt compile stage
             fi
       - run:
           name: Build webknossos-datastore (sbt)
@@ -75,23 +75,35 @@ jobs:
               docker-compose run e2e-tests && s=0 && break || s=$?
             done
             (exit $s)
+
+      - run:
+          name: Start webknossos
+          background: true
+          command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos
       - run:
           name: Run webknossos smoke test
           command: |
-            set -x
-            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos
             sleep 10
             ./test/infrastructure/deployment.bash
-            docker-compose down --volumes --remove-orphans
+      - run:
+          name: Stop webknossos
+          command: docker-compose down --volumes --remove-orphans
 
+      - run:
+          name: Start webknossos-datastore
+          background: true
+          command: |
+            cd webknossos-datastore
+            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos-datastore
       - run:
           name: Run webknossos-datastore smoke test
           command: |
-            set -x
-            cd webknossos-datastore
-            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos-datastore
             sleep 10
             curl --retry 3 --max-time 15 -v http://localhost:9090/data/health
+      - run:
+          name: Stop webknossos-datastore
+          command: |
+            cd webknossos-datastore
             docker-compose down --volumes --remove-orphans
 
       - run:

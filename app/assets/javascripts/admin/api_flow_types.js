@@ -244,4 +244,28 @@ export type APIOpenTasksReportType = {
   +assignmentsByProjects: { [projectName: string]: number },
 };
 
+export type APIBuildInfoType = {
+  webknossos: {
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    commitDate: string,
+  },
+  "webknossos-wrap": {
+    builtAtMillis: string,
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    builtAtString: string,
+  },
+};
+
+export type APIFeatureToggles = {
+  +discussionBoard: boolean,
+};
+
 export default {};

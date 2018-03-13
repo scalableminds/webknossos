@@ -37,7 +37,7 @@ case class VolumeTracingLayer(
                                largestSegmentId: Long
                              )(implicit val volumeDataStore: FossilDBClient) extends SegmentationLayer {
 
-  def lengthOfUnderlyingCubes(resolution: Int): Int = DataLayer.bucketLength
+  def lengthOfUnderlyingCubes(resolution: Point3D): Int = DataLayer.bucketLength
 
   val dataFormat: DataFormat.Value = DataFormat.tracing
 
@@ -45,5 +45,5 @@ case class VolumeTracingLayer(
 
   val mappings: Set[String] = Set.empty
 
-  val resolutions: List[DataResolution] = List(DataResolution.fromResolution(1))
+  val resolutions: List[Point3D] = List(Point3D(1, 1, 1))
 }

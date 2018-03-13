@@ -15,7 +15,7 @@ import TemplateHelpers from "libs/template_helpers";
 import FormatUtils from "libs/format_utils";
 import TaskAnnotationView from "admin/task/task_annotation_view";
 import Persistence from "libs/persistence";
-import { PropTypes } from "prop-types";
+import { PropTypes } from "@scalableminds/prop-types";
 import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
 import type { QueryObjectType, TaskFormFieldValuesType } from "admin/task/task_search_form";
 import type { RouterHistory } from "react-router-dom";

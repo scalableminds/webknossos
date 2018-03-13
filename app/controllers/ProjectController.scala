@@ -37,7 +37,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         allCounts <- TaskDAO.countOpenInstancesByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
-            openTaskInstances <- Fox.successful(allCounts.get(project.name).getOrElse(0))
+            openTaskInstances <- Fox.successful(allCounts.get(project._id.stringify).getOrElse(0))
             r <- Project.projectPublicWritesWithStatus(project, openTaskInstances, request.identity)
           } yield r
         }
@@ -131,7 +131,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       for {
         tasks <- TaskDAO.findAllByProject(projectName)
         annotations <- AnnotationDAO.findAllUnfinishedByTaskIds(tasks.map(_._id))
-        userIds = annotations.map(_._user).flatten
+        userIds = annotations.map(_._user)
         users <- UserDAO.findAllByIds(userIds)
       } yield {
         Ok(Json.toJson(users.map(_.email)))

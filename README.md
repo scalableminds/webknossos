@@ -78,7 +78,7 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **7+ is required**
+* node version **8+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally

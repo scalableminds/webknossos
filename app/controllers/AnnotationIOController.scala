@@ -2,19 +2,20 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.AnnotationState._
 import models.annotation.nml.{NmlService, NmlWriter}
 import models.annotation.{AnnotationType, _}
 import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -22,7 +23,6 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
-import models.annotation.AnnotationState._
 
 
 class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
@@ -119,7 +119,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference)
         scale <- dataSet.dataSource.scaleOpt
       } yield {
-        (NmlWriter.toNmlStream(Left(tracing), annotation.description, scale), name + ".nml")
+        (NmlWriter.toNmlStream(Left(tracing), annotation, scale), name + ".nml")
       }
     }
 
@@ -131,7 +131,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(Right(tracing), annotation.description, scale)),
+              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(Right(tracing), annotation, scale)),
               new NamedEnumeratorStream("data.zip", data)
             ), outputStream)
         }, name + ".zip")

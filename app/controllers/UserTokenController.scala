@@ -30,7 +30,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     val context = userAwareRequestToDBAccess(request)
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        bearerTokenService.createAndInit(user.loginInfo, TokenType.DataStore).toFox
+        bearerTokenService.createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false).toFox
       case None => Fox.successful("")
     }
     for {
@@ -102,7 +102,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
     def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
-      val annotationFox = AnnotationDAO.findByTracingId(tracingId)
+      val annotationFox = AnnotationDAO.findOneByTracingId(tracingId)
       for {
         annotationBox <- annotationFox.futureBox
       } yield {

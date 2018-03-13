@@ -10,7 +10,7 @@ import { Spin, Input, Button } from "antd";
 import AdvancedDatasetView from "dashboard/advanced_dataset/advanced_dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import Persistence from "libs/persistence";
-import { PropTypes } from "prop-types";
+import { PropTypes } from "@scalableminds/prop-types";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { DataLayerType } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";

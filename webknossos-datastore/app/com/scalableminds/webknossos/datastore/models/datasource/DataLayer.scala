@@ -3,11 +3,12 @@
  */
 package com.scalableminds.webknossos.datastore.models.datasource
 
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.dataformats.knossos.{KnossosDataLayer, KnossosSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
-import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import play.api.libs.json._
 
 object DataFormat extends Enumeration {
@@ -32,6 +33,8 @@ object Category extends Enumeration {
       case ElementClass.uint64 => segmentation
     }
   }
+
+  def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
 object ElementClass extends Enumeration {
@@ -49,6 +52,8 @@ object ElementClass extends Enumeration {
   def fromBytesPerElement(bytesPerElement: Int): Option[ElementClass.Value] = values.find(_.id == bytesPerElement)
 
   def maxValue(elementClass: ElementClass.Value): Long = 1L << (elementClass.id * 8L)
+
+  def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
 trait DataLayerLike {
@@ -59,7 +64,12 @@ trait DataLayerLike {
 
   def boundingBox: BoundingBox
 
-  def resolutions: List[DataResolution]
+  def resolutions: List[Point3D]
+
+  def lookUpResolution(resolutionExponent: Int): Point3D = {
+    val resPower = Math.pow(2, resolutionExponent).toInt
+    resolutions.find(resolution => resolution.maxDim == resPower).getOrElse(Point3D(resPower, resPower, resPower))
+  }
 
   def elementClass: ElementClass.Value
 }
@@ -92,7 +102,7 @@ trait DataLayer extends DataLayerLike {
   /**
     * Defines the length of the underlying cubes making up the layer. This is the maximal size that can be loaded from a single file.
     */
-  def lengthOfUnderlyingCubes(resolution: Int): Int
+  def lengthOfUnderlyingCubes(resolution: Point3D): Int
 
   def bucketProvider: BucketProvider
 
@@ -155,7 +165,7 @@ case class AbstractDataLayer(
                               name: String,
                               category: Category.Value,
                               boundingBox: BoundingBox,
-                              resolutions: List[DataResolution],
+                              resolutions: List[Point3D],
                               elementClass: ElementClass.Value
                             ) extends DataLayerLike
 
@@ -172,7 +182,7 @@ case class AbstractSegmentationLayer(
                                       name: String,
                                       category: Category.Value,
                                       boundingBox: BoundingBox,
-                                      resolutions: List[DataResolution],
+                                      resolutions: List[Point3D],
                                       elementClass: ElementClass.Value,
                                       largestSegmentId: Long,
                                       mappings: Set[String]
@@ -185,4 +195,19 @@ object AbstractSegmentationLayer {
   }
 
   implicit val abstractSegmentationLayerFormat = Json.format[AbstractSegmentationLayer]
+}
+
+trait ResolutionFormatHelper {
+
+  implicit object resolutionFormat extends Format[Either[Int, Point3D]] {
+
+    override def reads(json: JsValue): JsResult[Either[Int, Point3D]] = {
+      json.validate[Int].map[Either[Int, Point3D]](Left(_)).orElse(json.validate[Point3D].map(Right(_)))
+    }
+
+    override def writes(resolution: Either[Int, Point3D]): JsValue = resolution match {
+      case Left(r) => JsNumber(r)
+      case Right(r) => Point3D.Point3DWrites.writes(r)
+    }
+  }
 }

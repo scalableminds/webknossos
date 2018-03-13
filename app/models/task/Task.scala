@@ -1,28 +1,273 @@
 package models.task
 
-import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
-import models.basics._
-import models.project.{Project, ProjectDAO}
+import models.project.{Project, ProjectDAO, ProjectSQLDAO}
+import models.team.{Role, TeamSQLDAO}
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
+import play.api.Play.current
+import play.api.i18n.Messages
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.iteratee.Enumerator
-import play.api.libs.json.{JsArray, JsNull, JsObject, Json}
-import reactivemongo.api.collections.bson.BSONCollection
-import reactivemongo.api.commands.WriteResult
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.{BSONObjectID, BSONString}
+import play.api.libs.json.{JsNull, JsObject, Json}
+import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import slick.jdbc.PostgresProfile.api._
+import utils.{ObjectId, SQLDAO}
 
-case class OpenInstancesResult(_id: String, openInstances: Int)
-object OpenInstancesResult { implicit val format = Json.format[OpenInstancesResult] }
+
+case class TaskSQL(
+                  _id: ObjectId,
+                  _project: ObjectId,
+                  _script: Option[ObjectId],
+                  _taskType: ObjectId,
+                  _team: ObjectId,
+                  neededExperience: Experience,
+                  totalInstances: Long,
+                  tracingTime: Option[Long],
+                  boundingBox: Option[BoundingBox],
+                  editPosition: Point3D,
+                  editRotation: Vector3D,
+                  creationInfo: Option[String],
+                  created: Long = System.currentTimeMillis(),
+                  isDeleted: Boolean = false
+                  )
+
+object TaskSQL {
+  def fromTask(t: Task)(implicit ctx: DBAccessContext): Fox[TaskSQL] = {
+    for {
+      project <- ProjectSQLDAO.findOneByName(t._project)
+      team <- TeamSQLDAO.findOneByName(t.team)
+    } yield {
+      TaskSQL(
+        ObjectId.fromBsonId(t._id),
+        project._id,
+        t._script.map(ObjectId(_)),
+        ObjectId.fromBsonId(t._taskType),
+        team._id,
+        t.neededExperience,
+        t.instances,
+        t.tracingTime,
+        t.boundingBox,
+        t.editPosition,
+        t.editRotation,
+        t.creationInfo,
+        t.created.getMillis,
+        !t.isActive
+      )
+    }
+  }
+}
+
+object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
+  val collection = Tasks
+
+  def idColumn(x: Tasks) = x._Id
+  def isDeletedColumn(x: Tasks) = x.isdeleted
+
+  def parse(r: TasksRow): Fox[TaskSQL] =
+    for {
+      editPosition <- Point3D.fromList(parseArrayTuple(r.editposition).map(_.toInt)) ?~> "could not parse edit position"
+      editRotation <- Vector3D.fromList(parseArrayTuple(r.editrotation).map(_.toDouble)) ?~> "could not parse edit rotation"
+    } yield {
+      TaskSQL(
+        ObjectId(r._Id),
+        ObjectId(r._Project),
+        r._Script.map(ObjectId(_)),
+        ObjectId(r._Tasktype),
+        ObjectId(r._Team),
+        Experience(r.neededexperienceDomain, r.neededexperienceValue),
+        r.totalinstances,
+        r.tracingtime,
+        r.boundingbox.map(b => parseArrayTuple(b).map(_.toInt)).map(BoundingBox.fromSQL).flatten,
+        editPosition,
+        editRotation,
+        r.creationinfo,
+        r.created.getTime,
+        r.isdeleted
+      )
+    }
+
+  override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"
+  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}'))"
+
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TasksRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[TasksRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
+  def findAllByTaskType(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where _taskType = ${taskTypeId.id} and #${accessQuery}".as[TasksRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def findAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}".as[TasksRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  def findAllAssignableFor(userId: ObjectId, teamIds: List[ObjectId], limit: Option[Int])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+    val q = sql"""
+           select webknossos.tasks_.*
+           from
+             (webknossos.tasks_
+             join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id)
+             join
+               (select *
+                from webknossos.user_experiences
+                where _user = ${userId.id})
+               as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
+             join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
+             left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+           where webknossos.task_instances.openInstances > 0
+                 and webknossos.tasks_._team in #${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+                 and userAnnotations._task is null
+           order by webknossos.projects_.priority
+           limit ${limit};
+      """
+    for {
+      r <- run(q.as[TasksRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
+  def findAllByPojectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+    /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
+    val projectFilterFox = projectOpt match {
+      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"(_project = '${sanitize(project._id.toString)}')"
+      case _ => Fox.successful("true")
+    }
+    val taskTypeFilter = taskTypeOpt.map(tId => s"(_taskType = '${sanitize(tId)}')").getOrElse("true")
+    val idsFilter = idsOpt.map(ids => if (ids.isEmpty) "false" else s"(_id in ${writeStructTupleWithQuotes(ids.map(sanitize(_)))})").getOrElse("true")
+
+    for {
+      projectFilter <- projectFilterFox
+      accessQuery <- readAccessQuery
+      q = sql"select * from webknossos.tasks where webknossos.tasks.isDeleted = false and #${projectFilter} and #${taskTypeFilter} and #${idsFilter} and #${accessQuery}"
+      r <- run(q.as[TasksRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
+  def countOpenInstancesForTask(taskId: ObjectId): Fox[Int] = {
+    for {
+      result <- run(sql"select openInstances from webknossos.task_instances where _id = ${taskId.toString}".as[Int])
+      firstResult <- result.headOption.toFox
+    } yield firstResult
+  }
+
+  def countAllOpenInstances(implicit ctx: DBAccessContext): Fox[Int] = {
+    for {
+      result <- run(sql"select sum(openInstances) from webknossos.task_instances".as[Int])
+      firstResult <- result.headOption
+    } yield firstResult
+  }
+
+  def countAllOpenInstancesGroupedByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
+    for {
+      rowsRaw <- run(
+        sql"""select webknossos.tasks_._project, sum(webknossos.task_instances.openInstances)
+              from webknossos.tasks_ join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id
+              group by webknossos.tasks_._project
+           """.as[(String, Int)])
+    } yield {
+      rowsRaw.toList.map(r => (ObjectId(r._1), r._2))
+    }
+  }
+
+  def insertOne(t: TaskSQL): Fox[Unit] = {
+    for {
+      _ <- run(
+        sqlu"""insert into webknossos.tasks(_id, _project, _script, _taskType, _team, neededExperience_domain, neededExperience_value,
+                                             totalInstances, tracingTime, boundingBox, editPosition, editRotation, creationInfo, created, isDeleted)
+                   values(${t._id.id}, ${t._project.id}, #${optionLiteral(t._script.map(s => sanitize(s.id)))}, ${t._taskType.id}, ${t._team.id},
+                          ${t.neededExperience.domain}, ${t.neededExperience.value},
+                          ${t.totalInstances}, ${t.tracingTime}, #${optionLiteral(t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple(_)))},
+                           '#${writeStructTuple(t.editPosition.toList.map(_.toString))}', '#${writeStructTuple(t.editRotation.toList.map(_.toString))}',
+                           #${optionLiteral(t.creationInfo.map(sanitize(_)))}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+        """)
+    } yield ()
+  }
+
+  def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for { c <- Tasks if c._Id === id.id } yield c.totalinstances
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q.update(newTotalInstances))
+    } yield ()
+  }
+
+  def removeScriptFromAllTasks(scriptId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      _ <- run(sqlu"update webknossos.tasks set _script = null where _script = ${scriptId.id}")
+    } yield ()
+  }
+
+  def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(sqlu"update webknossos.tasks set tracingTime = tracingTime + $time where _id = ${id.id}")
+    } yield ()
+
+  def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val queries = List(
+      sqlu"update webknossos.tasks set isDeleted = true where _id = ${id.id}",
+      sqlu"update webknossos.annotations set isDeleted = true where _task = (select _id from webknossos.tasks where _id = ${id.id})"
+    )
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(DBIO.sequence(queries).transactionally)
+    } yield ()
+  }
+
+  def removeAllWithTaskTypeAndItsAnnotations(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val queries = List(
+      sqlu"update webknossos.tasks set isDeleted = true where _taskType = ${taskTypeId.id}",
+      sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _id = ${taskTypeId.id})"
+    )
+    for {
+      _ <- run(DBIO.sequence(queries).transactionally)
+    } yield ()
+  }
+
+  def removeAllWithProjectAndItsAnnotations(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val queries = List(
+      sqlu"update webknossos.tasks set isDeleted = true where _project = ${projectId.id}",
+      sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _id = ${projectId.id})"
+    )
+    for {
+      _ <- run(DBIO.sequence(queries).transactionally)
+    } yield ()
+  }
+
+}
+
+
+
+
+
 
 class info(message: String) extends scala.annotation.StaticAnnotation
 
@@ -113,198 +358,112 @@ object Task extends FoxImplicits {
       )
     }
   }
+
+  def fromTaskSQL(s: TaskSQL)(implicit ctx: DBAccessContext): Fox[Task] = {
+    for {
+      taskTypeIdBson <- s._taskType.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._taskType.toString)
+      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
+      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
+      project <- ProjectSQLDAO.findOne(s._project)(GlobalAccessContext) ?~> Messages("project.notFound", s._project.toString)
+      priority = if (project.paused) -1 else project.priority
+      openInstances <- TaskSQLDAO.countOpenInstancesForTask(s._id)
+    } yield {
+      Task(
+        taskTypeIdBson,
+        team.name,
+        s.neededExperience,
+        s.totalInstances.toInt,
+        openInstances,
+        s.boundingBox,
+        s.editPosition,
+        s.editRotation,
+        s.tracingTime,
+        new DateTime(s.created),
+        !s.isDeleted,
+        project.name,
+        s._script.map(_.toString),
+        s.creationInfo,
+        priority.toInt,
+        idBson
+      )
+    }
+  }
 }
 
-object TaskDAO extends SecuredBaseDAO[Task] with FoxImplicits with QuerySupportedDAO[Task] {
+object TaskDAO {
 
-  val collectionName = "tasks"
-
-  val formatter = Task.taskFormat
-
-  underlying.indexesManager.ensure(Index(Seq("_project" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("_taskType" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("_user" -> IndexType.Ascending, "_task" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("priority" -> IndexType.Descending)))
-  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending, "neededExperience" -> IndexType.Ascending, "priority" -> IndexType.Descending)))
-
-
-  override val AccessDefinitions = new DefaultAccessDefinitions {
-
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-
-    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.adminTeamNames)))
-        case _ =>
-          DenyEveryone()
-      }
-    }
-  }
-
-  override def find(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
-    super.find(query ++ Json.obj("isActive" -> true))
-  }
-
-  override def findOne(query: JsObject = Json.obj())(implicit ctx: DBAccessContext) = {
-    super.findOne(query ++ Json.obj("isActive" -> true))
-  }
-
-  def findAllAdministratable(user: User, limit: Int)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find(Json.obj(
-      "team" -> Json.obj("$in" -> user.adminTeamNames))).cursor[Task]().collect[List](maxDocs = limit)
-  }
-
-  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) = {
-    project.tasks.map(_.map(task => {
-      removeById(task._id)
-    }))
-  }
-
-  def findAllByTaskType(_taskType: BSONObjectID)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find("_taskType", _taskType).collect[List]()
-  }
-
-  def findAllByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    find("_project", project).collect[List]()
-  }
-
-  def sumInstancesByProject(project: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    sumValues(Json.obj("_project" -> project), "instances")
-  }
-
-  def findAllByProjectReturnOnlyIds(project: String)(implicit ctx: DBAccessContext) = {
+  def findOneById(id: String)(implicit ctx: DBAccessContext) =
     for {
-      jsObjects <- findWithProjection(Json.obj("_project" -> project), Json.obj("_id" -> 1)).cursor[JsObject]().collect[List]()
+      taskSQL <- TaskSQLDAO.findOne(ObjectId(id))
+      parsed <- Task.fromTaskSQL(taskSQL)
     } yield {
-      jsObjects.map(p => (p \ "_id").asOpt[BSONObjectID]).flatten
+      parsed
+    }
+
+  def findAllByTaskType(_taskType: BSONObjectID)(implicit ctx: DBAccessContext) =
+    for {
+      tasksSQL <- TaskSQLDAO.findAllByTaskType(ObjectId.fromBsonId(_taskType))
+      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
+    } yield tasks
+
+  def findAllByProject(projectName: String)(implicit ctx: DBAccessContext) =
+    for {
+      project <- ProjectSQLDAO.findOneByName(projectName)
+      tasksSQL <- TaskSQLDAO.findAllByProject(project._id)
+      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
+    } yield tasks
+
+  def findAllAssignableFor(user: User, teamNames: List[String], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
+    for {
+      teams <- Fox.combined(teamNames.map(TeamSQLDAO.findOneByName(_)))
+      tasksSQL <- TaskSQLDAO.findAllAssignableFor(ObjectId.fromBsonId(user._id), teams.map(_._id), limit)
+      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
+    } yield tasks
+  }
+
+  def findAllByFilterByProjectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[Task]] =
+    for {
+      tasksSQL <- TaskSQLDAO.findAllByPojectAndTaskTypeAndIds(projectOpt, taskTypeOpt, idsOpt)
+      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
+    } yield tasks
+
+  def countAllOpenInstances(implicit ctx: DBAccessContext) =
+    TaskSQLDAO.countAllOpenInstances
+
+  def countOpenInstancesByProjects(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+    for {
+      byProjectIds <- TaskSQLDAO.countAllOpenInstancesGroupedByProjects
+    } yield {
+      byProjectIds.map(row => row._1.toString -> row._2).toMap
     }
   }
 
-  def findOneByProject(projectName: String)(implicit ctx: DBAccessContext) = findOne(Json.obj("_project" -> projectName))
 
-  def findAllByProjectTaskTypeIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    val projectFilter = projectOpt match {
-      case Some(project) => Json.obj(("_project") -> Json.toJson(project))
-      case None => Json.obj()
-    }
+  def insert(task: Task)(implicit ctx: DBAccessContext): Fox[Task] =
+    for {
+      taskSQL <- TaskSQL.fromTask(task)
+      _ <- TaskSQLDAO.insertOne(taskSQL)
+    } yield task
 
-    val taskTypeFilter = taskTypeOpt match {
-      case Some(taskType) => Json.obj(("_taskType") -> Json.obj("$oid" -> taskType))
-      case None => Json.obj()
-    }
+  def removeOneAndItsAnnotations(_task: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Unit] =
+    TaskSQLDAO.removeOneAndItsAnnotations(ObjectId.fromBsonId(_task))
 
-    val idsFilter = idsOpt match {
-      case Some(ids) => Json.obj(("_id") -> Json.obj("$in" -> ids.filter(BSONObjectID.parse(_).isSuccess).map(id => Json.obj("$oid" -> id))))
-      case None => Json.obj()
-    }
+  def removeAllWithTaskTypeAndItsAnnotations(taskType: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
+    TaskSQLDAO.removeAllWithTaskTypeAndItsAnnotations(ObjectId.fromBsonId(taskType._id))
 
-    find(projectFilter ++ taskTypeFilter ++ idsFilter).cursor[Task]().collect[List]()
-  }
+  def removeAllWithProjectAndItsAnnotations(project: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
+    TaskSQLDAO.removeAllWithProjectAndItsAnnotations(ObjectId.fromBsonId(project._id))
 
-  def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) = withExceptionCatcher {
-    update(Json.obj("_script" -> _script), Json.obj("$unset" -> Json.obj("_script" -> 1)), multi = true)
-  }
+  def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) =
+    TaskSQLDAO.removeScriptFromAllTasks(ObjectId(_script))
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    update(Json.obj("_id" -> _task), Json.obj("$inc" -> Json.obj("tracingTime" -> time)))
+    TaskSQLDAO.logTime(ObjectId.fromBsonId(_task), time)
 
-  def updateInstances(
-                     _task: BSONObjectID,
-                     instances: Int,
-                     openInstances: Int
-                     )(implicit ctx: DBAccessContext): Fox[Task] =
-    findAndModify(
-      Json.obj("_id" -> _task),
-      Json.obj("$set" ->
-        Json.obj(
-          "instances" -> instances,
-          "openInstances" -> openInstances)),
-    returnNew = true)
-
-
-  def updateAllOfProject(updatedProject: Project)(implicit ctx: DBAccessContext) = {
-    update(Json.obj("_project" -> updatedProject.name), Json.obj("$set" -> Json.obj(
-      "priority" -> (if(updatedProject.paused) -1 else updatedProject.priority)
-    )), multi = true)
-  }
-
-  def decrementOpenInstanceCount(id: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[WriteResult] {
-    update(
-      Json.obj("_id" -> id, "openInstances" -> Json.obj("$gt" -> 0)),
-      Json.obj("$inc" -> Json.obj("openInstances" -> -1))
-    )
-  }
-
-  def incrementOpenInstanceCount(id: BSONObjectID)(implicit ctx: DBAccessContext) = Fox[WriteResult] {
-    update(
-      Json.obj("_id" -> id),
-      Json.obj("$inc" -> Json.obj("openInstances" -> 1))
-    )
-  }
-
-  private def validPriorityQ =
-    Json.obj("priority" -> Json.obj("$gte" -> 0))
-
-  private def experienceQueryFor(user: User) =
-    JsArray(user.experiences.map {
-      case (domain, value) => Json.obj("neededExperience.domain" -> domain, "neededExperience.value" -> Json.obj("$lte" -> value))
-    }.toSeq)
-
-  private def noRequiredExperience =
-    Json.obj("neededExperience.domain" -> "", "neededExperience.value" -> 0)
-
-  def findOrderedByPriorityFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Enumerator[Task] = {
-    def byPriority =
-      Json.obj("priority" -> -1)
-
-    find(validPriorityQ ++ Json.obj(
-      "openInstances" -> Json.obj("$gt" -> 0),
-      "team" -> Json.obj("$in" -> teams),
-      "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)))
-      .sort(byPriority)
-      .cursor[Task]()
-      .enumerate(stopOnError = true)
-  }
-
-  def countOpenInstancesByProjects(implicit ctx: DBAccessContext) = {
-    countOpenInstances("$_project")
-  }
-
-  def countAllOpenInstances(implicit ctx: DBAccessContext) = {
-    countOpenInstances("all").map(_.get("all"))
-  }
-
-  def countOpenInstances(groupingField: String = "1")(implicit ctx: DBAccessContext) = {
-    val dao =  underlying.db.collection[BSONCollection]("tasks")
-    import dao.BatchCommands.AggregationFramework._
-
-    dao.aggregate(
-      Group(BSONString(groupingField))( "openInstances" -> SumField("openInstances"))
-    ).map{result => Json.toJson(result.firstBatch).as[List[OpenInstancesResult]].map( x => x._id -> x.openInstances).toMap }
-  }
-
-  def findWithOpenByUserReturnOnlyProject(user: User)(implicit ctx: DBAccessContext) = {
+  def updateInstances(_task: BSONObjectID, instances: Int)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
-      jsObjects <- findWithProjection(validPriorityQ ++ Json.obj(
-        "openInstances" -> Json.obj("$gt" -> 0),
-        "team" -> Json.obj("$in" -> user.teamNames),
-        "$or" -> (experienceQueryFor(user) :+ noRequiredExperience)), Json.obj("_project" -> 1, "_id" -> 0)).cursor[JsObject]().collect[List]()
-    } yield {
-      jsObjects.map(p => (p \ "_project").asOpt[String]).flatten
-    }
-  }
+      _ <- TaskSQLDAO.updateTotalInstances(ObjectId.fromBsonId(_task), instances)
+      updated <- findOneById(_task.stringify)
+    } yield updated
 
-  def executeUserQuery(q: JsObject, limit: Int)(implicit ctx: DBAccessContext): Fox[List[Task]] = withExceptionCatcher {
-    // Can't use local find, since it appends `isActive = true` to the query!
-    super.find(q).cursor[Task]().collect[List](maxDocs = limit)
-  }
 }

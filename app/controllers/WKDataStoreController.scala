@@ -83,7 +83,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   def handleTracingUpdateReport(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       tracingId <- (request.body \ "tracingId").asOpt[String].toFox
-      annotation: Annotation <- AnnotationDAO.findByTracingId(tracingId)(GlobalAccessContext)
+      annotation: Annotation <- AnnotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
       _ <- ensureAnnotationNotFinished(annotation)
       timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
       statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
@@ -116,7 +116,7 @@ trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport
     def invokeBlock[A](request: Request[A], block: (RequestWithDataStore[A]) => Future[Result]): Future[Result] = {
       request.getQueryString("key")
       .toFox
-      .flatMap(key => DataStoreDAO.findByKey(key)(GlobalAccessContext)) // Check if key is valid
+      .flatMap(key => DataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
       //.filter(dataStore => dataStore.name == name) // Check if correct name is provided
       .flatMap(dataStore => block(new RequestWithDataStore(dataStore, request))) // Run underlying action
       .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error

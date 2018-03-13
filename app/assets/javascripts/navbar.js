@@ -10,6 +10,7 @@ import Utils from "libs/utils";
 import LoginView from "admin/auth/login_view";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
+import features from "features";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -135,7 +136,7 @@ class Navbar extends React.PureComponent<Props> {
       </SubMenu>,
     );
 
-    if (isAdmin) {
+    if (isAdmin && features().discussionBoard) {
       menuItems.push(
         <Menu.Item key="13">
           <a href="https://discuss.webknossos.org" target="_blank" rel="noopener noreferrer">

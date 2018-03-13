@@ -14,7 +14,7 @@ import scala.concurrent.Future
 
 object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  def provideAnnotation(taskTypeId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(taskTypeId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> "taskType.notFound"
       tasks <- TaskDAO.findAllByTaskType(taskType._id)
@@ -22,8 +22,9 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"
+      user <- userOpt ?~> "user.notAuthorised"
       dataSetName = finishedAnnotations.head.dataSetName
-      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(taskType.id), persistTracing=false, user.map(_._id),
+      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(taskType.id), persistTracing=false, user._id,
         dataSetName, taskType.team, AnnotationType.CompoundTaskType, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 

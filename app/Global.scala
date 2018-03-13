@@ -19,9 +19,12 @@ import play.api.Play.current
 import play.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
-import play.api.libs.json.Json
 import play.api.mvc.Results.Ok
 import play.api.mvc._
+import utils.SQLClient
+
+import scala.concurrent.Future
+import sys.process._
 
 object Global extends GlobalSettings with LazyLogging{
 
@@ -31,21 +34,32 @@ object Global extends GlobalSettings with LazyLogging{
     logger.info("Executing Global START")
     startActors(conf.underlying, app)
 
-    if (conf.getBoolean("application.insertInitialData") getOrElse false) {
-      InitialData.insert.futureBox.map {
-        case Full(_) => ()
-        case Failure(msg, _, _) => logger.error("Error while inserting initial data: " + msg)
-        case _ => logger.error("Error while inserting initial data")
+    ensurePostgresDatabase.onComplete { _ =>
+      if (conf.getBoolean("application.insertInitialData") getOrElse false) {
+        InitialData.insert.futureBox.map {
+          case Full(_) => ()
+          case Failure(msg, _, _) => logger.error("Error while inserting initial data: " + msg)
+          case _ => logger.error("Error while inserting initial data")
+        }
       }
     }
 
     val tokenAuthenticatorService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
-    CleanUpService.register("deletion of expired dataTokens", tokenAuthenticatorService.dataStoreExpiry) {
-      tokenAuthenticatorService.removeExpiredTokens()(GlobalAccessContext).map(r => s"deleted ${r.n}")
+    CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
+      tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
     }
 
     super.onStart(app)
+  }
+
+  override def onStop(app: Application): Unit = {
+    logger.info("Executing Global END")
+
+    logger.info("Closing SQL Database handle")
+    SQLClient.db.close()
+
+    super.onStop(app)
   }
 
   def startActors(conf: Config, app: Application) {
@@ -74,12 +88,30 @@ object Global extends GlobalSettings with LazyLogging{
     NewRelic.noticeError(ex)
     super.onError(request, ex)
   }
+
+  def ensurePostgresDatabase = {
+    logger.info("Running ensure_db.sh with POSTGRES_URL " + sys.env.get("POSTGRES_URL"))
+
+    val processLogger = ProcessLogger(
+      (o: String) => logger.info(o),
+      (e: String) => logger.error(e))
+
+    // this script is copied to the stage directory in AssetCompilation
+    val result = "./tools/postgres/ensure_db.sh" ! processLogger
+
+    if (result != 0)
+      throw new Exception("Could not ensure Postgres database. Is postgres installed?")
+
+    Future.successful(())
+  }
+
 }
 
+
 /**
- * Initial set of data to be imported
- * in the sample application.
- */
+  * Initial set of data to be imported
+  * in the sample application.
+  */
 object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
 
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
@@ -121,7 +153,7 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
     TeamDAO.findOneByName(rootTeamName).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        UserService.defaultUser.flatMap(user => TeamDAO.insert(Team(rootTeamName, None, RoleService.roles, Some(user._id))))
+        UserService.defaultUser.flatMap(user => TeamDAO.insert(Team(rootTeamName, None, RoleService.roles, user._id)))
     }
   }
 
@@ -159,7 +191,7 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
   }
 
   def insertLocalDataStore: Fox[Any] = {
-    DataStoreDAO.findOne(Json.obj("name" -> "localhost")).futureBox.map { maybeStore =>
+    DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
         val url = Play.configuration.getString("http.uri").getOrElse("http://localhost:9000")
         val key = Play.configuration.getString("datastore.key").getOrElse("something-secure")

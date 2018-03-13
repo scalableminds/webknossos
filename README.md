@@ -34,9 +34,9 @@ npm install -g yarn
 brew services start postgresql
 
 # Create PostgreSQL user
-CREATE DATABASE webknossos;
-CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';
-GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;
+psql -c "CREATE DATABASE webknossos;"
+psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
+psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
 # Checkout the webKnossos git repository
 git clone git@github.com:scalableminds/webknossos.git

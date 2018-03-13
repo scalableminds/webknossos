@@ -3,9 +3,10 @@
  */
 package com.scalableminds.webknossos.datastore.models.datasource
 
-import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.dataformats.knossos.{KnossosDataLayer, KnossosSegmentationLayer}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.{WKWDataLayer, WKWSegmentationLayer}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, MappingProvider}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Point3D}
 import play.api.libs.json._
@@ -32,6 +33,8 @@ object Category extends Enumeration {
       case ElementClass.uint64 => segmentation
     }
   }
+
+  def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
 object ElementClass extends Enumeration {
@@ -49,6 +52,8 @@ object ElementClass extends Enumeration {
   def fromBytesPerElement(bytesPerElement: Int): Option[ElementClass.Value] = values.find(_.id == bytesPerElement)
 
   def maxValue(elementClass: ElementClass.Value): Long = 1L << (elementClass.id * 8L)
+
+  def fromString(s: String): Option[Value] = values.find(_.toString == s)
 }
 
 trait DataLayerLike {

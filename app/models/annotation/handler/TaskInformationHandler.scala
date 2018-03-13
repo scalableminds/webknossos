@@ -12,15 +12,16 @@ import models.annotation.AnnotationState._
 
 object TaskInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  def provideAnnotation(taskId: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(taskId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
       annotations <- task.annotations
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
+      user <- userOpt ?~> "user.notAuthorised"
       dataSetName = finishedAnnotations.head.dataSetName
-      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user.map(_._id),
+      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user._id,
         dataSetName, task.team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 

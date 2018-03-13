@@ -10,7 +10,10 @@ import Model from "oxalis/model";
 import AbstractPlaneMaterialFactory, {
   sanitizeName,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type { ShaderMaterialOptionsType, TextureMapType } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type {
+  ShaderMaterialOptionsType,
+  TextureMapType,
+} from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -20,7 +23,6 @@ import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
-
 
 function formatNumberAsGLSLFloat(aNumber: number): string {
   if (aNumber - Math.floor(aNumber) > 0) {

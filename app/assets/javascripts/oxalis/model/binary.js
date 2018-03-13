@@ -126,7 +126,9 @@ class Binary {
     this.textureBucketManager = new TextureBucketManager(constants.RENDERED_BUCKETS_PER_DIMENSION);
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 
-    this.fallbackTextureBucketManager = new TextureBucketManager(constants.RENDERED_BUCKETS_PER_DIMENSION);
+    this.fallbackTextureBucketManager = new TextureBucketManager(
+      constants.RENDERED_BUCKETS_PER_DIMENSION,
+    );
     this.fallbackTextureBucketManager.setupDataTextures(bytes, this.category);
 
     window.managers.push(this.textureBucketManager);

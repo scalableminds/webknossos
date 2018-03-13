@@ -308,6 +308,13 @@ test("SkeletonTracing should not delete an edge if the two nodes are not neighbo
   t.is(newState, newStateA);
 });
 
+test("SkeletonTracing should not delete an edge if the both nodes are identical", t => {
+  const deleteEdgeAction = SkeletonTracingActions.deleteEdgeAction(0, 0);
+  const newStateA = SkeletonTracingReducer(initialState, deleteEdgeAction);
+
+  t.is(initialState, newStateA);
+});
+
 test("SkeletonTracing should not delete any edge if the two nodes are in different trees", t => {
   const createNodeAction = SkeletonTracingActions.createNodeAction(
     position,

@@ -15,10 +15,20 @@ import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import { OrthoViews } from "oxalis/constants";
+import constants, { OrthoViews } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
+import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
+
+
+function formatNumberAsGLSLFloat(aNumber: number): string {
+  if (aNumber - Math.floor(aNumber) > 0) {
+    return aNumber.toString();
+  } else {
+    return aNumber.toFixed(1);
+  }
+}
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   planeID: OrthoViewType;
@@ -193,13 +203,13 @@ varying vec4 vPos;
 varying vec2 vUv;
 
 // todo: pass as uniform or from template
-const float bucketPerDim = 17.0;
-const float bucketWidth = 32.0;
-const float bucketLength = bucketWidth * bucketWidth * bucketWidth;
-const float r_texture_width = 512.0;
-const float d_texture_width = 8192.0;
-const float l_texture_width = 64.0;
-const float bytesPerLookUpEntry = 1.0;
+const float bucketPerDim = <%= bucketPerDim %>;
+const float bucketWidth = <%= bucketWidth %>;
+const float bucketSize = <%= bucketSize %>;
+const float r_texture_width = <%= r_texture_width %>;
+const float d_texture_width = <%= d_texture_width %>;
+const float l_texture_width = <%= l_texture_width %>;
+const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
 
 /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
 vec3 hsv_to_rgb(vec4 HSV)
@@ -290,7 +300,7 @@ bool isnan(float val) {
 
 vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosition, vec3 offsetInBucket) {
   float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim);
-  float bucketIdxInTexture = bucketIdx * bytesPerLookUpEntry;
+  float bucketIdxInTexture = bucketIdx * floatsPerLookUpEntry;
   float pixelIdxInBucket = linearizeVec3ToIndex(offsetInBucket, bucketWidth);
 
   float bucketAddress = getRgbaAtIndex(
@@ -313,7 +323,7 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTexture, vec3 bucketPosi
     linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, d_texture_width);
   float y =
     div(pixelIdxInBucket, d_texture_width) +
-    div(bucketLength * bucketAddress, d_texture_width);
+    div(bucketSize * bucketAddress, d_texture_width);
 
   vec4 bucketColor = getRgbaAtXYIndex(
     dataTexture,
@@ -556,6 +566,13 @@ void main() {
       OrthoViews,
       planeID: this.planeID,
       uvw: Dimensions.getIndices(this.planeID),
+      bucketPerDim: formatNumberAsGLSLFloat(constants.RENDERED_BUCKETS_PER_DIMENSION),
+      r_texture_width: formatNumberAsGLSLFloat(constants.TEXTURE_WIDTH),
+      d_texture_width: formatNumberAsGLSLFloat(constants.DATA_TEXTURE_WIDTH),
+      l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
+      bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
+      bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
+      floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
     });
   }
 }

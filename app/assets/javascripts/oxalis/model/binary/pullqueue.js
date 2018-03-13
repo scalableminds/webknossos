@@ -96,9 +96,7 @@ class PullQueue {
 
       let offset = 0;
       for (const bucketAddress of batch) {
-        // todo: tmp
         if (bucketAddress[3] > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
-          console.log("skipping", bucketAddress[3]);
           continue;
         }
         bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));

@@ -63,7 +63,6 @@ class Plane {
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
       const [dataTexture, lookUpTexture] = binary.getDataTextures();
-      console.log("createMeshes", dataTexture, lookUpTexture);
       const [fallbackDataTexture, fallbackLookUpTexture] = binary.getFallbackDataTextures();
 
       const shaderName = sanitizeName(name);
@@ -140,7 +139,6 @@ class Plane {
   };
 
   updateTexture(anchorPoint: ?Vector3, fallbackAnchorPoint: ?Vector3): void {
-    console.log("anchorPoint", anchorPoint);
     if (anchorPoint) {
       this.plane.material.setAnchorPoint(anchorPoint);
     }

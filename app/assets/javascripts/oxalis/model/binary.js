@@ -33,9 +33,6 @@ import type Layer from "oxalis/model/binary/layers/layer";
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
-// todo: find out how many we really need
-export const bucketPerDim = 17;
-
 type PingOptions = {
   zoomStep: number,
   areas: OrthoViewMapType<Vector4>,
@@ -126,10 +123,10 @@ class Binary {
 
     window.managers = window.managers || [];
 
-    this.textureBucketManager = new TextureBucketManager(bucketPerDim);
+    this.textureBucketManager = new TextureBucketManager(constants.RENDERED_BUCKETS_PER_DIMENSION);
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 
-    this.fallbackTextureBucketManager = new TextureBucketManager(bucketPerDim);
+    this.fallbackTextureBucketManager = new TextureBucketManager(constants.RENDERED_BUCKETS_PER_DIMENSION);
     this.fallbackTextureBucketManager.setupDataTextures(bytes, this.category);
 
     window.managers.push(this.textureBucketManager);
@@ -173,7 +170,6 @@ class Binary {
     zoomStep: number,
     textureBucketManager: TextureBucketManager,
   ): ?Vector3 {
-    // console.log("updateDataTextures");
     const anchorPoint = _.clone(position);
     // Coerce to bucket boundary
     anchorPoint[0] &= -1 << (5 + zoomStep);
@@ -213,8 +209,8 @@ class Binary {
 
       const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, zoomStep);
 
-      for (let y = 0; y < bucketPerDim; y++) {
-        for (let x = 0; x < bucketPerDim; x++) {
+      for (let y = 0; y < constants.RENDERED_BUCKETS_PER_DIMENSION; y++) {
+        for (let x = 0; x < constants.RENDERED_BUCKETS_PER_DIMENSION; x++) {
           const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
           bucketAddress[u] += x;
           bucketAddress[v] += y;
@@ -227,7 +223,6 @@ class Binary {
       }
     }
 
-    console.log("setActiveBuckets(Array.from(requiredBucketSet)", requiredBucketSet);
     textureBucketManager.setActiveBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
     // $FlowFixMe
     return zoomedAnchorPoint.slice(0, 3);

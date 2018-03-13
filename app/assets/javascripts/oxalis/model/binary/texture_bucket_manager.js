@@ -9,11 +9,6 @@ import window from "libs/window";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import SceneController from "oxalis/controller/scene_controller";
 
-const bytesPerLookUpEntry = 1; // just the index ?
-const lookUpBufferWidth = 64; // has to be next power of two from Math.ceil(Math.sqrt(lookUpBufferSize));
-
-const bucketHeightInTexture = 4;
-
 // A TextureBucketManager instance is responsible for making buckets of
 // avaible to the GPU.
 // setActiveBuckets can be called with an array of buckets, which will be
@@ -25,6 +20,15 @@ const bucketHeightInTexture = 4;
 // A bucket is considered "committed" if it is indeed in the data texture.
 // Active buckets will be pushed into a writerQueue which is processed by
 // writing buckets to the data texture (i.e., "committing the buckets").
+
+const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
+const bucketHeightInTexture = constants.BUCKET_SIZE / constants.DATA_TEXTURE_WIDTH;
+
+// At the moment, we only store one float f per bucket.
+// If f >= 0, f denotes the index in the data texture where bucket is stored.
+// If f == -1, the bucket is not yet committed
+// If f == -2, no bucket is supposed to be rendered. Out of bounds.
+export const floatsPerLookUpEntry = 1;
 
 export default class TextureBucketManager {
   dataTexture: UpdatableTexture;
@@ -40,6 +44,7 @@ export default class TextureBucketManager {
   isRefreshBufferOutOfDate: boolean = false;
   lastZoomedAnchorPoint: Vector4;
 
+  // This is passed as a parameter to allow for testing
   bucketPerDim: number;
   bufferCapacity: number;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
@@ -49,7 +54,7 @@ export default class TextureBucketManager {
     // each plane gets bucketPerDim**2 buckets
     this.bufferCapacity = 3 * Math.pow(bucketPerDim, 2);
     // the look up buffer is bucketPerDim**3 so that arbitrary look ups can be made
-    const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2); // Math.pow(bucketPerDim, 3) * bytesPerLookUpEntry;
+    const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
     this.bucketPerDim = bucketPerDim;
 
     this.lookUpBuffer = new Float32Array(lookUpBufferSize);
@@ -142,10 +147,6 @@ export default class TextureBucketManager {
       processedItems++;
     }
 
-    if (processedItems > 0) {
-      // console.log(`committed ${processedItems} buckets to texture`);
-    }
-
     window.requestAnimationFrame(() => {
       this.processWriterQueue();
     });
@@ -222,7 +223,9 @@ export default class TextureBucketManager {
       const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
       // Since activeBucketToIndexMap is a super set of committedBucketSet,
       // address is always defined ($FlowFixMe).
-      this.lookUpBuffer[bytesPerLookUpEntry * lookUpIdx] = this.committedBucketSet.has(bucket) ? address : -1;
+      this.lookUpBuffer[floatsPerLookUpEntry * lookUpIdx] = this.committedBucketSet.has(bucket)
+        ? address
+        : -1;
     }
 
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);

@@ -99,7 +99,6 @@ export class PingStrategy extends AbstractPingStrategy {
         areas,
         activePlane,
       );
-      // console.log("queueItemsForLargestZoomStep", queueItemsForLargestZoomStep.length);
     }
 
     return queueItemsForCurrentZoomStep.concat(queueItemsForLargestZoomStep);
@@ -135,7 +134,6 @@ export class PingStrategy extends AbstractPingStrategy {
       const width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff;
       const height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff;
       const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
-      // console.log("ping strategy centerBucket", centerBucket);
       const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);
 

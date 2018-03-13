@@ -209,6 +209,11 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         case "DELETE_EDGE": {
           const { timestamp, sourceNodeId, targetNodeId } = action;
+
+          if (sourceNodeId === targetNodeId) {
+            return state;
+          }
+
           const sourceTreeMaybe = getNodeAndTree(skeletonTracing, sourceNodeId);
           const targetTreeMaybe = getNodeAndTree(skeletonTracing, targetNodeId);
           return sourceTreeMaybe

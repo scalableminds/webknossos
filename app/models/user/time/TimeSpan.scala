@@ -98,7 +98,9 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
                   time = ${t.time},
                   lastUpdate = ${new java.sql.Timestamp(t.lastUpdate)},
                   numberOfUpdates = ${t.numberOfUpdates},
-                  isDeleted = ${t.isDeleted}""")
+                  isDeleted = ${t.isDeleted}
+                where _id = ${t._id.id}
+        """)
     } yield ()
   }
 }

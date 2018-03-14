@@ -5,15 +5,15 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.Annotation
 import org.joda.time.DateTime
-import play.api.i18n.Messages
-import play.api.libs.json.Json
-import play.api.libs.concurrent.Execution.Implicits._
 import play.api.Play.current
+import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
+import play.api.libs.concurrent.Execution.Implicits._
+import play.api.libs.json.{JsValue, Json}
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
-import slick.lifted.Rep
 import slick.jdbc.PostgresProfile.api._
+import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.duration._
@@ -69,10 +69,49 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllByUserWithTask(userId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
+  def findAllByUserWithTask(userId: ObjectId, start: Option[Long], end: Option[Long]): Fox[JsValue] =
     for {
-      tuple <- run(sql"""""")
-    } yield tuple
+      tuples <- run(sql"""select ts.time, ts.created, a._id, ts._id, t._id, p.name, tt._id, tt.summary
+                        from webknossos.timespans_ ts
+                        join webknossos.annotations_ a on ts._annotation = a._id
+                        join webknossos.tasks_ t on a._task = t._id
+                        join webknossos.projects_ p on t._project = p._id
+                        join webknossos.taskTypes_ tt on t._taskType = tt._id
+                        where ts._user = ${userId.id}
+                        and ts.time > 0
+                        and ts.created > ${new java.sql.Timestamp(start.getOrElse(0))}
+                        and ts.created < ${new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))}"""
+        .as[(Long, java.sql.Timestamp, String, String, String, String, String, String)])
+    } yield formatTimespanTuples(tuples)
+
+
+
+  def formatTimespanTuples(tuples: Vector[(Long, java.sql.Timestamp, String, String, String, String, String, String)]) = {
+
+    def formatTimespanTuple(tuple: (Long, java.sql.Timestamp, String, String, String, String, String, String)) = {
+      def formatDuration(millis: Long): String = {
+        // example: P3Y6M4DT12H30M5S = 3 years + 9 month + 4 days + 12 hours + 30 min + 5 sec
+        // only hours, min and sec are important in this scenario
+        val h = millis / 3600000
+        val m = (millis / 60000) % 60
+        val s = (millis.toDouble / 1000) % 60
+
+        s"PT${h}H${m}M${s}S"
+      }
+
+      Json.obj(
+        "time" -> formatDuration(tuple._1),
+        "timestamp" -> tuple._2.getTime,
+        "annotation" -> tuple._3,
+        "_id" -> tuple._4,
+        "task_id" -> tuple._5,
+        "project_name" -> tuple._6,
+        "tasktype_id" -> tuple._7,
+        "tasktype_summary" -> tuple._8
+      )
+    }
+    Json.toJson(tuples.map(formatTimespanTuple))
+  }
 
   def findAllByAnnotation(annotationId: ObjectId, start: Option[Long], end: Option[Long]): Fox[List[TimeSpanSQL]] =
     for {

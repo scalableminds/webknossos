@@ -15,11 +15,6 @@ object TimeSpanDAO {
       timeSpans <- Fox.combined(timeSpansSQL.map(TimeSpan.fromTimeSpanSQL(_)))
     } yield timeSpans
 
-  def findByUserWithTask(user: User, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) =
-    for {
-      tuple <- TimeSpanSQLDAO.findByUserWithTask(user, start, end)
-    } yield tuple
-
   def findByAnnotation(annotationId: String, start: Option[Long], end: Option[Long])(implicit ctx: DBAccessContext) =
     for {
       timeSpansSQL <-TimeSpanSQLDAO.findAllByAnnotation(ObjectId(annotationId), start, end)

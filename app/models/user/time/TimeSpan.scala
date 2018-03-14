@@ -79,7 +79,7 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
                         join webknossos.taskTypes_ tt on t._taskType = tt._id
                         where ts._user = ${userId.id}
                         and ts.time > 0
-                        and ts.created > ${new java.sql.Timestamp(start.getOrElse(0))}
+                        and ts.created >= ${new java.sql.Timestamp(start.getOrElse(0))}
                         and ts.created < ${new java.sql.Timestamp(end.getOrElse(MAX_TIMESTAMP))}"""
         .as[(Long, java.sql.Timestamp, String, String, String, String, String, String)])
     } yield formatTimespanTuples(tuples)

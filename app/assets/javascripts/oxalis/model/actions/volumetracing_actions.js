@@ -2,7 +2,13 @@
  * volumetracing_actions.js
  * @flow
  */
-import type { Vector2, Vector3, OrthoViewType, VolumeToolType } from "oxalis/constants";
+import type {
+  Vector2,
+  Vector3,
+  OrthoViewType,
+  VolumeToolType,
+  ContourModeType,
+} from "oxalis/constants";
 import type { ServerVolumeTracingType } from "oxalis/model";
 import type { APIAnnotationType } from "admin/api_flow_types";
 
@@ -27,6 +33,7 @@ type ResetContourActionType = { type: "RESET_CONTOUR" };
 type SetBrushPositionActionType = { type: "SET_BRUSH_POSITION", position: Vector2 };
 type HideBrushActionType = { type: "HIDE_BRUSH" };
 type SetBrushSizeActionType = { type: "SET_BRUSH_SIZE", brushSize: number };
+type SetContourTracingModeType = { type: "SET_CONTOUR_TRACING_MODE", mode: ContourModeType };
 
 export type VolumeTracingActionType =
   | InitializeVolumeTracingActionType
@@ -42,7 +49,8 @@ export type VolumeTracingActionType =
   | SetBrushPositionActionType
   | HideBrushActionType
   | SetBrushSizeActionType
-  | CopySegmentationLayerActionType;
+  | CopySegmentationLayerActionType
+  | SetContourTracingModeType;
 
 export const VolumeTracingSaveRelevantActions = [
   "CREATE_CELL",
@@ -124,4 +132,9 @@ export const hideBrushAction = (): HideBrushActionType => ({
 export const setBrushSizeAction = (brushSize: number): SetBrushSizeActionType => ({
   type: "SET_BRUSH_SIZE",
   brushSize,
+});
+
+export const setContourTracingMode = (mode: ContourModeType): SetContourTracingModeType => ({
+  type: "SET_CONTOUR_TRACING_MODE",
+  mode,
 });

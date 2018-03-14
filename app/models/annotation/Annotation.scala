@@ -169,7 +169,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"""select * from #${existingCollectionName}
-                     where _task in #{writeStructTupleWithQuotes(taskIds.map(_.id)} and state != '#${AnnotationState.Finished.toString}' and #${accessQuery}""".as[AnnotationsRow])
+                     where _task in #${writeStructTupleWithQuotes(taskIds.map(_.id))} and state != '#${AnnotationState.Finished.toString}' and #${accessQuery}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

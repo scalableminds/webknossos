@@ -4,6 +4,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.AnnotationState
 import models.task.{TaskDAO, TaskService}
 import models.team.TeamSQLDAO
 import models.user.{User, UserService}
@@ -102,6 +103,21 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed
+
+  def findUsersWithOpenTasks(name: String)(implicit ctx: DBAccessContext): Fox[List[String]] =
+    for {
+      accessQuery <- readAccessQuery
+      rSeq <- run(sql"""select u.email
+                         from
+                         webknossos.annotations_ a
+                         join webknossos.tasks_ t on a._task = t._id
+                         join webknossos.projects_ p on t._project = p._id
+                         join webknossos.users_ u on a._user = u._id
+                         where p.name = ${name}
+                         and a.state != '#${AnnotationState.Finished.toString}'
+                         group by u.email
+                     """.as[String])
+    } yield rSeq.toList
 
   // write operations
 

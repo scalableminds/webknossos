@@ -1,7 +1,7 @@
 #!/bin/bash
 set -Eeuo pipefail
 
-scriptdir=$(dirname "$0")
+scriptdir="$(dirname "$0")"
 
 $scriptdir/ensure_db.sh
 $scriptdir/refresh_schema.sh

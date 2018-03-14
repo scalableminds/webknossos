@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-scriptdir=$(dirname "$0")
+scriptdir="$(dirname "$0")"
 
 dbName=$($scriptdir/db_name.sh)
 dbHost=$($scriptdir/db_host.sh)

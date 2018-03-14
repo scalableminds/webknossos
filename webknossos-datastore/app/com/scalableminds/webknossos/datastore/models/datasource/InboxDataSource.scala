@@ -17,6 +17,8 @@ package object inbox {
     def isUsable: Boolean = toUsable.isDefined
 
     def scaleOpt: Option[Scale]
+
+    def statusOpt: Option[String]
   }
 
   object GenericInboxDataSource {
@@ -40,6 +42,8 @@ package object inbox {
     val toUsable: Option[GenericDataSource[T]] = None
 
     val scaleOpt: Option[Scale] = scale
+
+    val statusOpt: Option[String] = Some(status)
   }
 
   object UnusableDataSource {
@@ -65,5 +69,4 @@ package object inbox {
 
   type InboxDataSource = GenericInboxDataSource[DataLayer]
   type InboxDataSourceLike = GenericInboxDataSource[DataLayerLike]
-  type UnusableDataSourceLike = UnusableDataSource[DataLayerLike]
 }

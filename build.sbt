@@ -44,7 +44,6 @@ val protocolBufferSettings = Seq(
   ),
   ProtocPlugin.autoImport.PB.protoSources := Seq(new java.io.File("webknossos-datastore/proto")))
 
-
 lazy val util = (project in file("util"))
   .settings(Seq(
     resolvers ++= DependencyResolvers.dependencyResolvers,

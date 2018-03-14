@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.dataformats.wkw
 
 import java.nio.file.{Path, Paths}
 
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSourceId, ElementClass}
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, CubePosition}
 import com.scalableminds.webknossos.wrap.VoxelType
@@ -15,13 +16,14 @@ trait WKWDataFormatHelper {
                    cube: CubePosition,
                    dataSourceId: Option[DataSourceId] = None,
                    dataLayerName: Option[String] = None,
-                   baseDir: Path = Paths.get("")
+                   baseDir: Path = Paths.get(""),
+                   resolutionAsTriple: Boolean = false
                  ): Path = {
     baseDir
       .resolve(dataSourceId.map(_.organization).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
-      .resolve(cube.resolution.toString)
+      .resolve(if (resolutionAsTriple) s"${cube.resolution.x}-${cube.resolution.y}-${cube.resolution.z}" else cube.resolution.maxDim.toString)
       .resolve(s"z${cube.z}")
       .resolve(s"y${cube.y}")
       .resolve(s"x${cube.x}.${dataFileExtension}")
@@ -49,7 +51,7 @@ trait WKWDataFormatHelper {
           x.toInt * DataLayer.bucketLength,
           y.toInt * DataLayer.bucketLength,
           z.toInt * DataLayer.bucketLength,
-          res.toInt))
+          Point3D(res.toInt, res.toInt, res.toInt)))
       case _ =>
         None
     }

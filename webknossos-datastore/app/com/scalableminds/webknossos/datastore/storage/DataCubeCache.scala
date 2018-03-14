@@ -7,6 +7,7 @@ import com.newrelic.api.agent.NewRelic
 import com.scalableminds.webknossos.datastore.dataformats.Cube
 import com.scalableminds.webknossos.datastore.models.requests.DataReadInstruction
 import com.scalableminds.util.cache.LRUConcurrentCache
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import net.liftweb.common.{Box, Empty, Failure, Full}
 
@@ -16,7 +17,7 @@ case class CachedCube(
                        organization: String,
                        dataSourceName: String,
                        dataLayerName: String,
-                       resolution: Int,
+                       resolution: Point3D,
                        x: Int,
                        y: Int,
                        z: Int

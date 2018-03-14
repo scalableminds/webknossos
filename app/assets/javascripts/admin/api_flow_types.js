@@ -249,6 +249,26 @@ export type APIOrganizationType = {
   +organizationTeam: string,
 };
 
+export type APIBuildInfoType = {
+  webknossos: {
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    commitDate: string,
+  },
+  "webknossos-wrap": {
+    builtAtMillis: string,
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    builtAtString: string,
+  },
+};
+
 export type APIFeatureToggles = {
   +discussionBoard: boolean,
 };

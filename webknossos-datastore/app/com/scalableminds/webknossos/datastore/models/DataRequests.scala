@@ -3,14 +3,14 @@
  */
 package com.scalableminds.webknossos.datastore.models
 
-import com.scalableminds.webknossos.datastore.models.VoxelPosition
-import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
 import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceRequestSettings}
 import play.api.libs.json.Json
 
 trait AbstractDataRequest {
 
-  def cuboid: Cuboid
+  def cuboid(dataLayer: DataLayer): Cuboid
 
   def settings: DataServiceRequestSettings
 }
@@ -23,7 +23,7 @@ case class DataRequest(
                         settings: DataServiceRequestSettings = DataServiceRequestSettings.default
                       ) extends AbstractDataRequest {
 
-  def cuboid = Cuboid(position, width, height, depth)
+  def cuboid(dataLayer: DataLayer) = Cuboid(position, width, height, depth)
 }
 
 case class WebKnossosDataRequest(
@@ -33,8 +33,8 @@ case class WebKnossosDataRequest(
                                   fourBit: Option[Boolean]
                                 ) extends AbstractDataRequest {
 
-  def cuboid = Cuboid(
-    new VoxelPosition(position.x, position.y, position.z, math.pow(2, zoomStep).toInt),
+  def cuboid(dataLayer: DataLayer) = Cuboid(
+    new VoxelPosition(position.x, position.y, position.z, dataLayer.lookUpResolution(zoomStep)),
     cubeSize,
     cubeSize,
     cubeSize)

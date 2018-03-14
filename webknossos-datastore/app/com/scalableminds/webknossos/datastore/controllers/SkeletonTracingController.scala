@@ -65,4 +65,26 @@ class SkeletonTracingController @Inject()(
       }
     }
   }
+
+  def updateActionLog(tracingId: String) = TokenSecuredAction(UserAccessRequest.readTracing(tracingId)).async {
+    implicit request =>
+      AllowRemoteOrigin {
+        for {
+          updateLog <- tracingService.updateActionLog(tracingId)
+        } yield {
+          Ok(updateLog)
+        }
+      }
+  }
+
+  def updateActionStatistics(tracingId: String) = TokenSecuredAction(UserAccessRequest.readTracing(tracingId)).async {
+    implicit request =>
+      AllowRemoteOrigin {
+        for {
+          statistics <- tracingService.updateActionStatistics(tracingId)
+        } yield {
+          Ok(statistics)
+        }
+      }
+  }
 }

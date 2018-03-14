@@ -11,8 +11,8 @@ If you are installing *webKnossos* in a virtual machine, please make sure you al
 
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
-* [mongoDB 3+](http://www.mongodb.org/downloads)
-* [node.js 7+](http://nodejs.org/download/)
+* [PostgreSQL 10](https://www.postgresql.org/)
+* [node.js 9+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
@@ -26,12 +26,18 @@ Or install Java manually and run:
 # Install Homebrew package manager
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-# Install git, node.js, mongoDB, sbt, gfind
-brew install git node mongodb sbt findutils
+# Install git, node.js, mongoDB, sbt, gfind, gsed
+brew install git node postgresql sbt findutils coreutils gnu-sed
 npm install -g yarn
 
 # Start mongo
-brew services start mongodb
+brew services start postgresql
+
+# Create PostgreSQL user
+createdb
+psql -c "CREATE DATABASE webknossos;"
+psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
+psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
 # Checkout the webKnossos git repository
 git clone git@github.com:scalableminds/webknossos.git
@@ -42,21 +48,26 @@ git clone git@github.com:scalableminds/webknossos.git
 
 ```
 # Adding repositories for sbt, nodejs and yarn
-echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt.list
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
-curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
+echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
+curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 # Installing everything
 sudo apt-get update
-sudo apt-get install -y git mongodb-server nodejs scala sbt openjdk-8-jdk yarn
+sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn
+
+# Assign a password to PostgreSQL user
+sudo -u postgres psql -c "ALTER USER user_name WITH ENCRYPTED PASSWORD 'postgres';"
 ```
 
-On older Ubuntu distributions: Please make sure to have the correct versions of node, mongoDB and java installed.
+On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
 
 ### Docker
-This is the fastest way to try webKnossos. Docker 1.13+ and Docker Compose 1.10+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
+This is the fastest way to try webKnossos. Docker CE 17+ and Docker Compose 1.18+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
 
 ```
 docker-compose up webknossos
@@ -72,13 +83,13 @@ docker-compose up webknossos
 ##### sbt
 See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-##### mongoDB
-* Install mongoDB from http://www.mongodb.org/downloads
-* mongoDB version **3+ is required**
+##### PostgreSQL
+* Install PostgreSQL from https://www.postgresql.org/download/
+* PostgreSQL version **10+ is required**
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **8+ is required**
+* node version **9+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally
@@ -112,4 +123,4 @@ These tests are run on our CI server. Running the tests manually is not encourag
 
 # License
 AGPLv3
-Copyright scalable minds 2017
+Copyright scalable minds 2018

@@ -4,9 +4,10 @@
  */
 
 import _ from "lodash";
+import { connect } from "react-redux";
 import Store from "oxalis/store";
 import Utils from "libs/utils";
-import { OrthoViews, VolumeToolEnum } from "oxalis/constants";
+import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import {
   PlaneControllerClass,
   mapStateToProps,
@@ -24,10 +25,18 @@ import {
   setBrushPositionAction,
   hideBrushAction,
   setBrushSizeAction,
+  setContourTracingMode,
+  cycleToolAction,
+  copySegmentationLayerAction,
+  setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
-import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
-import VolumeTracingController from "oxalis/controller/annotations/volumetracing_controller";
-import { connect } from "react-redux";
+import {
+  getActiveCellId,
+  getVolumeTool,
+  getContourTracingMode,
+} from "oxalis/model/accessors/volumetracing_accessor";
+import { InputKeyboardNoLoop } from "libs/input";
+
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 
@@ -38,11 +47,11 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   // Extends Plane controller to add controls that are specific to Volume
   // Tracing.
 
-  volumeTracingController: VolumeTracingController;
+  prevActiveCellId: number;
+  keyboardNoLoop: InputKeyboardNoLoop;
 
   componentDidMount() {
     super.componentDidMount();
-    this.volumeTracingController = new VolumeTracingController();
 
     let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
     Store.subscribe(() => {
@@ -58,6 +67,26 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
     this.listenTo(Model.getSegmentationBinary().cube, "newMapping", () =>
       SceneController.renderVolumeIsosurface(lastActiveCellId),
     );
+
+    this.keyboardNoLoop = new InputKeyboardNoLoop({
+      w: () => {
+        Store.dispatch(cycleToolAction());
+      },
+      "1": () => {
+        Store.dispatch(cycleToolAction());
+      },
+      v: () => {
+        Store.dispatch(copySegmentationLayerAction());
+      },
+      "shift + v": () => {
+        Store.dispatch(copySegmentationLayerAction(true));
+      },
+    });
+  }
+
+  componentWillUnmount() {
+    this.keyboardNoLoop.destroy();
+    super.componentWillUnmount();
   }
 
   simulateTracing = async (): Promise<void> => {
@@ -87,42 +116,79 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return _.extend(super.getPlaneMouseControls(planeId), {
       leftDownMove: (delta: Point2, pos: Point2) => {
-        const tool = getVolumeTool(Store.getState().tracing).get();
+        const { tracing } = Store.getState();
+        const tool = getVolumeTool(tracing).get();
+        const contourTracingMode = getContourTracingMode(tracing).get();
+
         if (tool === VolumeToolEnum.MOVE) {
           const viewportScale = Store.getState().userConfiguration.scale;
           this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
-        } else {
+        }
+
+        if (
+          (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
+          contourTracingMode === ContourModeEnum.ADD_TO_VOLUME
+        ) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
       },
 
       leftMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
-        if (!event.shiftKey) {
+        const tool = getVolumeTool(Store.getState().tracing).get();
+
+        if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
+          Store.dispatch(setContourTracingMode(ContourModeEnum.ADD_TO_VOLUME));
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
       },
 
       leftMouseUp: () => {
-        Store.dispatch(finishEditingAction());
+        const tool = getVolumeTool(Store.getState().tracing).get();
+
+        Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
+
+        if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
+          Store.dispatch(finishEditingAction());
+        }
       },
 
       rightDownMove: (delta: Point2, pos: Point2) => {
-        const tool = getVolumeTool(Store.getState().tracing).get();
-        if (tool !== VolumeToolEnum.MOVE) {
+        const { tracing } = Store.getState();
+        const tool = getVolumeTool(tracing).get();
+        const contourTracingMode = getContourTracingMode(tracing).get();
+
+        if (
+          (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
+          contourTracingMode === ContourModeEnum.DELETE_FROM_VOLUME
+        ) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
       },
 
       rightMouseDown: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
-        if (!event.shiftKey) {
-          this.volumeTracingController.enterDeleteMode();
+        const tool = getVolumeTool(Store.getState().tracing).get();
+
+        if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
+          getActiveCellId(Store.getState().tracing).map(activeCellId => {
+            this.prevActiveCellId = activeCellId;
+          });
+
+          Store.dispatch(setActiveCellAction(0));
+          Store.dispatch(setContourTracingMode(ContourModeEnum.DELETE_FROM_VOLUME));
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
       },
 
       rightMouseUp: () => {
-        Store.dispatch(finishEditingAction());
-        this.volumeTracingController.restoreAfterDeleteMode();
+        const tool = getVolumeTool(Store.getState().tracing).get();
+
+        Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
+
+        if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
+          Store.dispatch(finishEditingAction());
+          Store.dispatch(setActiveCellAction(this.prevActiveCellId));
+          Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
+        }
       },
 
       leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
@@ -130,13 +196,13 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
           const cellId = Model.getSegmentationBinary().cube.getDataValue(
             this.calculateGlobalPos(pos),
           );
-
-          this.volumeTracingController.handleCellSelection(cellId);
+          this.handleCellSelection(cellId);
         }
       },
 
       mouseMove: (delta: Point2, position: Point2) => {
         const tool = getVolumeTool(Store.getState().tracing).get();
+
         if (tool === VolumeToolEnum.BRUSH) {
           Store.dispatch(setBrushPositionAction([position.x, position.y]));
         }
@@ -163,6 +229,12 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
     return _.extend(super.getKeyboardControls(), {
       c: () => Store.dispatch(createCellAction()),
     });
+  }
+
+  handleCellSelection(cellId: number) {
+    if (cellId > 0) {
+      Store.dispatch(setActiveCellAction(cellId));
+    }
   }
 }
 

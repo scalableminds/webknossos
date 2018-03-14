@@ -6,10 +6,8 @@ import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
-import models.annotation.AnnotationDAO
-import models.project.{Project, ProjectDAO, ProjectService}
+import models.project.{Project, ProjectDAO, ProjectSQLDAO, ProjectService}
 import models.task._
-import models.user.UserDAO
 import net.liftweb.common.Empty
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
@@ -140,12 +138,9 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def usersWithOpenTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        tasks <- TaskDAO.findAllByProject(projectName)
-        annotations <- AnnotationDAO.findAllUnfinishedByTaskIds(tasks.map(_._id))
-        userIds = annotations.map(_._user)
-        users <- UserDAO.findAllByIds(userIds)
+        emails <- ProjectSQLDAO.findUsersWithOpenTasks(projectName)
       } yield {
-        Ok(Json.toJson(users.map(_.email)))
+        Ok(Json.toJson(emails))
       }
   }
 }

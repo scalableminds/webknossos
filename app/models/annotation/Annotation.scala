@@ -165,14 +165,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllUnfinishedByTaskIds(taskIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
-                     where _task in #${writeStructTupleWithQuotes(taskIds.map(_.id))} and state != '#${AnnotationState.Finished.toString}' and #${accessQuery}""".as[AnnotationsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
-
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
     for {
       rList <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
@@ -473,13 +465,6 @@ object AnnotationDAO extends FoxImplicits {
       }
     }
   }
-
-  def findAllUnfinishedByTaskIds(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) =
-    for {
-      annotationsSQL <- AnnotationSQLDAO.findAllUnfinishedByTaskIds(taskIds.map(ObjectId.fromBsonId(_)))
-      annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
-    } yield annotations
-
 
   def findOneByTracingId(tracingId: String)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {

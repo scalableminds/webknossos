@@ -26,8 +26,8 @@ Or install Java manually and run:
 # Install Homebrew package manager
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-# Install git, node.js, mongoDB, sbt, gfind
-brew install git node postgresql sbt findutils coreutils
+# Install git, node.js, mongoDB, sbt, gfind, gsed
+brew install git node postgresql sbt findutils coreutils gnu-sed
 npm install -g yarn
 
 # Start mongo

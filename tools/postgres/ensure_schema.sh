@@ -3,8 +3,8 @@ set -Eeuo pipefail
 
 scriptdir="$(dirname "$0")"
 
-dbName=$($scriptdir/db_name.sh)
-dbHost=$($scriptdir/db_host.sh)
+dbName="$($scriptdir/db_name.sh)"
+dbHost="$($scriptdir/db_host.sh)"
 
 schemaPath="$scriptdir/schema.sql"
 

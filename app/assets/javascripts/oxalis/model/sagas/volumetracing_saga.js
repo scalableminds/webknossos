@@ -19,13 +19,11 @@ import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
-import Constants, { VolumeToolEnum } from "oxalis/constants";
+import Constants, { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoViewType, VolumeToolType } from "oxalis/constants";
+import type { OrthoViewType, VolumeToolType, ContourModeType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 import api from "oxalis/api/internal_api";
-import type { ContourModeType } from "../../constants";
-import { ContourModeEnum } from "../../constants";
 
 export function* updateIsosurface(): Generator<*, *, *> {
   const shouldDisplayIsosurface = yield select(state => state.userConfiguration.isosurfaceDisplay);

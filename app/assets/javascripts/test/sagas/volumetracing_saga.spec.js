@@ -5,11 +5,10 @@
 
 /* eslint-disable import/no-extraneous-dependencies, import/first */
 import test from "ava";
-import { ContourModeEnum } from "../../oxalis/constants";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
-import { OrthoViews, VolumeToolEnum } from "oxalis/constants";
+import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import update from "immutability-helper";
 import { take, put, race, call } from "redux-saga/effects";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";

@@ -5,6 +5,7 @@
 
 /* eslint-disable import/no-extraneous-dependencies, import/first */
 import test from "ava";
+import { ContourModeEnum } from "../../oxalis/constants";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
@@ -108,6 +109,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
+  saga.next(ContourModeEnum.ADD_TO_VOLUME);
   const startEditingSaga = execCall(t, saga.next(false));
   startEditingSaga.next();
   const layer = startEditingSaga.next([1, 1, 1]).value;
@@ -120,6 +122,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
+  saga.next(ContourModeEnum.ADD_TO_VOLUME);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -137,6 +140,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
+  saga.next(ContourModeEnum.ADD_TO_VOLUME);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -146,7 +150,27 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   expectValueDeepEqual(
     t,
     saga.next({ finishEditingAction }),
-    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE),
+    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE, ContourModeEnum.ADD_TO_VOLUME),
+  );
+});
+
+test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)", t => {
+  const saga = editVolumeLayerAsync();
+  saga.next();
+  saga.next();
+  expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
+  saga.next(startEditingAction);
+  saga.next(ContourModeEnum.DELETE_FROM_VOLUME);
+  saga.next(false);
+  const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
+  saga.next(volumeLayer);
+  saga.next(VolumeToolEnum.TRACE);
+  saga.next({ addToLayerAction: addToLayerActionFn([1, 2, 3]) });
+  // Validate that finishLayer was called
+  expectValueDeepEqual(
+    t,
+    saga.next({ finishEditingAction }),
+    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE, ContourModeEnum.DELETE_FROM_VOLUME),
   );
 });
 

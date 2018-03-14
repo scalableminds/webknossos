@@ -47,7 +47,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   // Extends Plane controller to add controls that are specific to Volume
   // Tracing.
 
-  prevActiveCellId: number;
   keyboardNoLoop: InputKeyboardNoLoop;
 
   componentDidMount() {
@@ -169,11 +168,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const tool = getVolumeTool(Store.getState().tracing).get();
 
         if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
-          getActiveCellId(Store.getState().tracing).map(activeCellId => {
-            this.prevActiveCellId = activeCellId;
-          });
-
-          Store.dispatch(setActiveCellAction(0));
           Store.dispatch(setContourTracingMode(ContourModeEnum.DELETE_FROM_VOLUME));
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
@@ -186,7 +180,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
         if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
           Store.dispatch(finishEditingAction());
-          Store.dispatch(setActiveCellAction(this.prevActiveCellId));
           Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
         }
       },

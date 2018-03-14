@@ -28,7 +28,6 @@ class ContourGeometry {
         getVolumeTracing(Store.getState().tracing).map(tracing => {
           if (tracing.activeTool === VolumeToolEnum.TRACE) {
             const contourList = tracing.contourList;
-            console.log(tracing.contourList.length);
             if (contourList && lastContourList.length !== contourList.length) {
               // Update meshes according to the new contourList
               this.reset();

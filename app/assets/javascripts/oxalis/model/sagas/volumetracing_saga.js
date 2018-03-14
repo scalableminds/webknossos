@@ -115,9 +115,12 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
 
 function* labelWithIterator(iterator, contourTracingMode): Generator<*, *, *> {
   const activeCellId = yield select(state => state.tracing.activeCellId);
-  const labelValue = contourTracingMode === ContourModeEnum.DELETE_FROM_VOLUME ? 0 : activeCellId;
   const binary = yield call([Model, Model.getSegmentationBinary]);
-  yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue, activeCellId);
+  if (contourTracingMode === ContourModeEnum.DELETE_FROM_VOLUME) {
+    yield call([binary.cube, binary.cube.labelVoxels], iterator, 0, activeCellId);
+  } else {
+    yield call([binary.cube, binary.cube.labelVoxels], iterator, activeCellId);
+  }
 }
 
 function* copySegmentationLayer(action: CopySegmentationLayerActionType): Generator<*, *, *> {

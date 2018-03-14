@@ -124,6 +124,17 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
   }
 
+  def incrementEachTasksInstances(projectName: String, delta: Option[Long]) = SecuredAction.async {
+    implicit request =>
+      for {
+        _ <- (delta.getOrElse(1L) >= 0) ?~> Messages("project.increaseTaskInstances.negative")
+        _ <- TaskDAO.incrementTotalInstancesOfAllWithProject(projectName, delta.getOrElse(1L))
+        updatedProject <- ProjectDAO.findOneByName(projectName)
+        openInstanceCount <- TaskDAO.countOpenInstancesForProject(projectName)
+        js <- Project.projectPublicWritesWithStatus(updatedProject, openInstanceCount, request.identity)
+      } yield Ok(js)
+  }
+
   def usersWithOpenTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {

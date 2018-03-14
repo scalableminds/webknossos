@@ -34,6 +34,7 @@ npm install -g yarn
 brew services start postgresql
 
 # Create PostgreSQL user
+createdb
 psql -c "CREATE DATABASE webknossos;"
 psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"

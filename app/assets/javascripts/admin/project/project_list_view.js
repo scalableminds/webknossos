@@ -109,8 +109,11 @@ class ProjectListView extends React.PureComponent<Props, State> {
         this.setState({
           isLoading: true,
         });
-        await increaseProjectTaskInstances(project.name);
-        this.fetchData();
+        const updatedProject = await increaseProjectTaskInstances(project.name);
+        this.setState({
+          projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
+          isLoading: false,
+        });
       },
     });
   };

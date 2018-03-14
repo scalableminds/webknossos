@@ -261,9 +261,10 @@ export async function increaseProjectTaskInstances(
   projectName: string,
   delta?: number = 1,
 ): Promise<APIProjectType> {
-  return Request.receiveJSON(
+  const project = await Request.receiveJSON(
     `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
   );
+  return transformProject(project);
 }
 
 export async function deleteProject(projectName: string): Promise<void> {

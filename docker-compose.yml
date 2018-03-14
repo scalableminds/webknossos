@@ -93,8 +93,8 @@ services:
           -Dhttp.address=0.0.0.0
           -Ddatastore.fossildb.address=fossildb
           -Dmongodb.uri=$${MONGO_URI}
-          -Dpostgres.url=$${POSTGRES_URL}"
-          -Dapplication.insertInitialData=false
+          -Dpostgres.url=$${POSTGRES_URL}
+          -Dapplication.insertInitialData=false"
     environment:
       - MONGO_URI=mongodb://mongo:27017/webknossos-testing
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing

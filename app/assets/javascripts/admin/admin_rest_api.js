@@ -260,8 +260,8 @@ export async function getProject(projectName: string): Promise<APIProjectType> {
 export async function increaseProjectTaskInstances(
   projectName: string,
   delta?: number = 1,
-): Promise<void> {
-  await Request.receiveJSON(
+): Promise<APIProjectType> {
+  return Request.receiveJSON(
     `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
   );
 }

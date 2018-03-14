@@ -69,7 +69,7 @@ In order to restore the current window, a reload is necessary.`,
   "annotation.was_edited": "Successfully updated annotation",
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
-    "Do you really want to increase the task instances of this project?",
+    "Do you really want to add one additional instance to all tasks of this project?",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type?",

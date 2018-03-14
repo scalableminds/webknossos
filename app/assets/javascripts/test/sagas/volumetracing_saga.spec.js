@@ -108,7 +108,7 @@ test("VolumeTracingSaga should create a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.ADD_TO_VOLUME);
+  saga.next(ContourModeEnum.DRAW_OVERWRITE);
   const startEditingSaga = execCall(t, saga.next(false));
   startEditingSaga.next();
   const layer = startEditingSaga.next([1, 1, 1]).value;
@@ -121,7 +121,7 @@ test("VolumeTracingSaga should add values to volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.ADD_TO_VOLUME);
+  saga.next(ContourModeEnum.DRAW_OVERWRITE);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -139,7 +139,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.ADD_TO_VOLUME);
+  saga.next(ContourModeEnum.DRAW_OVERWRITE);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -149,7 +149,7 @@ test("VolumeTracingSaga should finish a volume layer (saga test)", t => {
   expectValueDeepEqual(
     t,
     saga.next({ finishEditingAction }),
-    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE, ContourModeEnum.ADD_TO_VOLUME),
+    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE, ContourModeEnum.DRAW_OVERWRITE),
   );
 });
 
@@ -159,7 +159,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   saga.next();
   expectValueDeepEqual(t, saga.next(true), take("START_EDITING"));
   saga.next(startEditingAction);
-  saga.next(ContourModeEnum.DELETE_FROM_VOLUME);
+  saga.next(ContourModeEnum.DELETE_FROM_ACTIVE_CELL);
   saga.next(false);
   const volumeLayer = new VolumeLayer(OrthoViews.PLANE_XY, 10);
   saga.next(volumeLayer);
@@ -169,7 +169,7 @@ test("VolumeTracingSaga should finish a volume layer in delete mode (saga test)"
   expectValueDeepEqual(
     t,
     saga.next({ finishEditingAction }),
-    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE, ContourModeEnum.DELETE_FROM_VOLUME),
+    call(finishLayer, volumeLayer, VolumeToolEnum.TRACE, ContourModeEnum.DELETE_FROM_ACTIVE_CELL),
   );
 });
 

@@ -116,10 +116,21 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
 function* labelWithIterator(iterator, contourTracingMode): Generator<*, *, *> {
   const activeCellId = yield select(state => state.tracing.activeCellId);
   const binary = yield call([Model, Model.getSegmentationBinary]);
-  if (contourTracingMode === ContourModeEnum.DELETE_FROM_VOLUME) {
-    yield call([binary.cube, binary.cube.labelVoxels], iterator, 0, activeCellId);
-  } else {
-    yield call([binary.cube, binary.cube.labelVoxels], iterator, activeCellId);
+  switch (contourTracingMode) {
+    case ContourModeEnum.DRAW_OVERWRITE:
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, activeCellId);
+      break;
+    case ContourModeEnum.DRAW:
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, activeCellId, 0);
+      break;
+    case ContourModeEnum.DELETE_FROM_ACTIVE_CELL:
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, 0, activeCellId);
+      break;
+    case ContourModeEnum.DELETE_FROM_ANY_CELL:
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, 0);
+      break;
+    default:
+      throw new Error("Invalid volume tracing mode.");
   }
 }
 

@@ -329,7 +329,7 @@ class DataCube {
         const voxelIndex = this.getVoxelIndex(voxel);
 
         let shouldUpdateVoxel = true;
-        if (label === 0 && activeCellId != null) {
+        if (activeCellId != null) {
           const voxelValue = this.getMappedDataValue(voxel);
           shouldUpdateVoxel = activeCellId === voxelValue;
         }

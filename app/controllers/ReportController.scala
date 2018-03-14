@@ -108,7 +108,7 @@ object ReportSQLDAO extends SimpleSQLDAO {
         left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationTypeSQL.Task}') as userAnnotations ON t._id = userAnnotations._task
         where ti.openInstances > 0
         and userAnnotations._task is null
-        and not webknossos.projects_.paused
+        and not p.paused
         group by p._id, p.name, t.neededExperience_domain, t.neededExperience_value
       """.as[(String, String, String, Int, Int)])
     } yield {

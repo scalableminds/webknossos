@@ -144,6 +144,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
            where webknossos.task_instances.openInstances > 0
                  and webknossos.tasks_._team in #${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
+                 and not webknossos.projects_.paused
            order by webknossos.projects_.priority
            limit ${limit};
       """

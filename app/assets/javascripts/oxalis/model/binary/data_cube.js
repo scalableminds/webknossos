@@ -390,12 +390,8 @@ class DataCube {
 
   positionToZoomedAddress([x, y, z]: Vector3, zoomStep: number = 0): Vector4 {
     // return the bucket a given voxel lies in
-    return [
-      x >> (BUCKET_SIZE_P + zoomStep),
-      y >> (BUCKET_SIZE_P + zoomStep),
-      z >> (BUCKET_SIZE_P + zoomStep),
-      zoomStep,
-    ];
+    const divisor = Math.pow(2, BUCKET_SIZE_P + zoomStep);
+    return [Math.floor(x / divisor), Math.floor(y / divisor), Math.floor(z / divisor), zoomStep];
   }
 }
 

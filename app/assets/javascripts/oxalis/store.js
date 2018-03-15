@@ -219,7 +219,7 @@ export type DatasetConfigurationType = {
   +layers: {
     [name: string]: DatasetLayerConfigurationType,
   },
-  +quality: number,
+  +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
 };
 

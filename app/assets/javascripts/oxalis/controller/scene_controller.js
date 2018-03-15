@@ -254,7 +254,7 @@ class SceneController {
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const currentPlane = this.planes[planeId];
-      currentPlane.updateTexture(anchorPoint, fallbackAnchorPoint);
+      currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
       // Update plane position
       currentPlane.setPosition(globalPosVec);
       // Update plane scale

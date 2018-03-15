@@ -44,14 +44,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     super.setupUniforms();
 
     this.uniforms = _.extend(this.uniforms, {
-      repeat: {
-        type: "v2",
-        value: new THREE.Vector2(1, 1),
-      },
-      buffer: {
-        type: "v2",
-        value: new THREE.Vector2(1, 1),
-      },
       alpha: {
         type: "f",
         value: 0,
@@ -69,6 +61,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: new THREE.Vector3(0, 0, 0),
       },
       zoomStep: {
+        type: "f",
+        value: 1,
+      },
+      zoomValue: {
         type: "f",
         value: 1,
       },
@@ -122,12 +118,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   makeMaterial(options?: ShaderMaterialOptionsType): void {
     super.makeMaterial(options);
 
-    this.material.setScaleParams = ({ buffer, repeat }) => {
-      this.uniforms.repeat.value.set(repeat.x, repeat.y);
-
-      this.uniforms.buffer.value.set(...buffer);
-    };
-
     this.material.setGlobalPosition = ([x, y, z]) => {
       this.uniforms.globalPosition.value.set(x, y, z);
     };
@@ -154,6 +144,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       storeState => getRequestLogZoomStep(storeState),
       zoomStep => {
         this.uniforms.zoomStep.value = zoomStep;
+      },
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.flycam.zoomStep,
+      zoomStep => {
+        this.uniforms.zoomValue.value = zoomStep;
       },
     );
   }
@@ -191,24 +188,20 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   uniform sampler2D <%= segmentationName %>_fallback_texture;
   uniform sampler2D <%= segmentationName %>_lookup_fallback_texture;
 <% } %>
-uniform vec2 repeat, buffer;
 uniform float alpha;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
 uniform vec3 fallbackAnchorPoint;
 uniform float zoomStep;
+uniform float zoomValue;
 uniform vec3 uvw;
 uniform bool useBilinearFiltering;
 
-varying vec2 vPos2;
-varying vec4 vPos;
-varying vec2 vUv;
+varying vec4 worldCoord;
 
-// todo: pass as uniform or from template
 const float bucketPerDim = <%= bucketPerDim %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
-const float r_texture_width = <%= r_texture_width %>;
 const float d_texture_width = <%= d_texture_width %>;
 const float l_texture_width = <%= l_texture_width %>;
 const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
@@ -286,12 +279,6 @@ vec3 transDim(vec3 array) {
   %>
 }
 
-
-vec2 getOffsetToBucketBoundary(vec2 v, float zoomStep) {
-  float zoomFactor = pow(2.0, 5.0 + zoomStep);
-  return v - floor(v / zoomFactor) * zoomFactor;
-}
-
 bool isnan(float val) {
   // https://stackoverflow.com/questions/9446888/best-way-to-detect-nans-in-opengl-shaders
   return !(val < 0.0 || 0.0 < val || val == 0.0);
@@ -364,38 +351,34 @@ vec3 getCoords(float usedZoomStep) {
   float zoomStepDiff = usedZoomStep - zoomStep;
   bool useFallback = zoomStepDiff > 0.0;
   vec3 usedAnchorPoint = useFallback ? fallbackAnchorPoint : anchorPoint;
-  float zoomFactor = pow(2.0, zoomStep + 5.0 + zoomStepDiff);
 
-  vec2 globalPositionUV = vec2(
-    globalPosition[<%= uvw[0] %>],
-    globalPosition[<%= uvw[1] %>]
-  );
-  vec2 usedAnchorPointUV = vec2(
+  vec3 usedAnchorPointUVW = vec3(
     usedAnchorPoint[<%= uvw[0] %>],
-    usedAnchorPoint[<%= uvw[1] %>]
+    usedAnchorPoint[<%= uvw[1] %>],
+    usedAnchorPoint[<%= uvw[2] %>]
   );
-  // Offset to bucket boundary
-  vec2 unscaledOffset = getOffsetToBucketBoundary(globalPositionUV, usedZoomStep);
 
-  vec2 offset = buffer / 2.0 + unscaledOffset / pow(2.0, zoomStep);
-  offset.y = offset.y + repeat.y * r_texture_width;
-  offset = offset / r_texture_width;
-  offset.y = 1.0 - offset.y;
+  vec3 datasetScale = vec3(22.0, 22.0, 44.599998474121094);
+  vec3 datasetScaleUVW = vec3(
+    datasetScale[<%= uvw[0] %>],
+    datasetScale[<%= uvw[1] %>],
+    datasetScale[<%= uvw[2] %>]
+  );
 
-  vec2 texture_pos = vUv * repeat + offset;
-  // Mirror y since (0, 0) refers to the lower-left corner in WebGL instead of the upper-left corner
-  texture_pos = vec2(texture_pos.x, 1.0 - texture_pos.y);
+  vec3 worldCoordUVW = vec3(
+    worldCoord[<%= uvw[0] %>],
+    worldCoord[<%= uvw[1] %>],
+    worldCoord[<%= uvw[2] %>]
+  );
 
-  float upsamplingFactor = pow(2.0, zoomStepDiff);
-  float upsamplingOffset = 0.5 - 0.5 / upsamplingFactor; // 0.25 for zoomStepDiff == 1
-  texture_pos = texture_pos / upsamplingFactor + upsamplingOffset;
-
-  vec2 globalPosAtTex = globalPositionUV + (texture_pos - 0.5) * r_texture_width;
-  vec2 relativeCoords = (globalPosAtTex - usedAnchorPointUV * pow(2.0, 5.0 + usedZoomStep)) / pow(2.0, usedZoomStep);
+  vec3 globalPosAtTex = worldCoordUVW / datasetScaleUVW;
+  vec3 relativeCoords = (globalPosAtTex - usedAnchorPointUVW * pow(2.0, 5.0 + usedZoomStep)) / pow(2.0, usedZoomStep);
 
   vec3 coords = transDim(vec3(
-    texture_pos.x * r_texture_width, // relativeCoords.x
-    texture_pos.y * r_texture_width, // relativeCoords.y
+    relativeCoords.x,
+    relativeCoords.y,
+    // Theoretically, relativeCoords.z could be used here. However, the plane is offsetted in 3D space to allow skeletons to be
+    // rendered before the plane. That's why we use globalPosition.z here to calculate coords.z
     ((globalPosition[<%= uvw[2] %>] - usedAnchorPoint[<%= uvw[2] %>] * pow(2.0, 5.0 + usedZoomStep)) / pow(2.0, usedZoomStep))
   ));
 
@@ -469,11 +452,6 @@ void main() {
   float color_value  = 0.0;
 
   vec3 coords = getCoords(zoomStep);
-  if (coords.x < 0.0 || coords.x > r_texture_width + 32.0
-    || coords.y < 0.0 || coords.y > r_texture_width + 32.0
-    ) {
-    return;
-  }
 
   vec3 bucketPosition = div(floor(coords), bucketWidth);
   vec3 offsetInBucket = mod(floor(coords), bucketWidth);
@@ -569,7 +547,6 @@ void main() {
       planeID: this.planeID,
       uvw: Dimensions.getIndices(this.planeID),
       bucketPerDim: formatNumberAsGLSLFloat(constants.RENDERED_BUCKETS_PER_DIMENSION),
-      r_texture_width: formatNumberAsGLSLFloat(constants.TEXTURE_WIDTH),
       d_texture_width: formatNumberAsGLSLFloat(constants.DATA_TEXTURE_WIDTH),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
       bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),

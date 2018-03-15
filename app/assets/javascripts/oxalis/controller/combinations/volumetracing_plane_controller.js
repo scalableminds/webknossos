@@ -47,7 +47,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   // Extends Plane controller to add controls that are specific to Volume
   // Tracing.
 
-  prevActiveCellId: number;
   keyboardNoLoop: InputKeyboardNoLoop;
 
   componentDidMount() {
@@ -127,7 +126,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
         if (
           (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
-          contourTracingMode === ContourModeEnum.ADD_TO_VOLUME
+          (contourTracingMode === ContourModeEnum.DRAW ||
+            contourTracingMode === ContourModeEnum.DRAW_OVERWRITE)
         ) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
@@ -137,7 +137,11 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const tool = getVolumeTool(Store.getState().tracing).get();
 
         if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
-          Store.dispatch(setContourTracingMode(ContourModeEnum.ADD_TO_VOLUME));
+          if (event.ctrlKey) {
+            Store.dispatch(setContourTracingMode(ContourModeEnum.DRAW));
+          } else {
+            Store.dispatch(setContourTracingMode(ContourModeEnum.DRAW_OVERWRITE));
+          }
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
       },
@@ -159,7 +163,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
         if (
           (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) &&
-          contourTracingMode === ContourModeEnum.DELETE_FROM_VOLUME
+          (contourTracingMode === ContourModeEnum.DELETE_FROM_ACTIVE_CELL ||
+            contourTracingMode === ContourModeEnum.DELETE_FROM_ANY_CELL)
         ) {
           Store.dispatch(addToLayerAction(this.calculateGlobalPos(pos)));
         }
@@ -169,12 +174,11 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const tool = getVolumeTool(Store.getState().tracing).get();
 
         if (!event.shiftKey && (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH)) {
-          getActiveCellId(Store.getState().tracing).map(activeCellId => {
-            this.prevActiveCellId = activeCellId;
-          });
-
-          Store.dispatch(setActiveCellAction(0));
-          Store.dispatch(setContourTracingMode(ContourModeEnum.DELETE_FROM_VOLUME));
+          if (event.ctrlKey) {
+            Store.dispatch(setContourTracingMode(ContourModeEnum.DELETE_FROM_ANY_CELL));
+          } else {
+            Store.dispatch(setContourTracingMode(ContourModeEnum.DELETE_FROM_ACTIVE_CELL));
+          }
           Store.dispatch(startEditingAction(this.calculateGlobalPos(pos), plane));
         }
       },
@@ -186,7 +190,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
         if (tool === VolumeToolEnum.TRACE || tool === VolumeToolEnum.BRUSH) {
           Store.dispatch(finishEditingAction());
-          Store.dispatch(setActiveCellAction(this.prevActiveCellId));
           Store.dispatch(setContourTracingMode(ContourModeEnum.IDLE));
         }
       },

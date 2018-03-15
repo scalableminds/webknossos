@@ -73,8 +73,8 @@ object DataSetDAO extends SecuredBaseDAO[DataSet] {
           AllowIf(
             Json.obj("$or" -> Json.arr(
               Json.obj("isPublic" -> true),
-              Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamIds)), //TODO
-              Json.obj("owningTeam" -> Json.obj("$in" -> user.teamManagerTeams))
+              Json.obj("allowedTeams" -> Json.obj("$in" -> user.teamIds)),
+              Json.obj("owningTeam" -> Json.obj("$in" -> user.teamManagerTeamIds))
             )))
         case _ =>
           AllowIf(

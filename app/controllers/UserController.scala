@@ -207,11 +207,11 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   }
 
   def ensureOrganizationTeamIsPresent(user: User, updatedTeams: List[TeamMembership]) = {
-    for{
+    for {
       organization <- OrganizationDAO.findOneByName(user.organization)(GlobalAccessContext)
       orgTeam = organization._organizationTeam
     } yield {
-      if(updatedTeams.exists(t => t._id == orgTeam))
+      if (updatedTeams.exists(t => t._id == orgTeam))
         updatedTeams
       else
         user.teams.find(t => t._id == orgTeam) match {

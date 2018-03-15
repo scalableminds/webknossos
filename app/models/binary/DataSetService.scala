@@ -51,14 +51,17 @@ object DataSetService extends FoxImplicits with LazyLogging {
                      owningOrganization: String,
                      dataSource: InboxDataSource,
                      isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
-
-    DataSetDAO.insert(DataSet(
-      dataStore,
-      dataSource,
-      owningOrganization,
-      List(),
-      isActive = isActive,
-      isPublic = false))(GlobalAccessContext)
+    OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
+      case Full(organization) =>
+      DataSetDAO.insert(DataSet(
+        dataStore,
+        dataSource,
+        owningOrganization,
+        List(organization._organizationTeam),
+        isActive = isActive,
+        isPublic = false))(GlobalAccessContext)
+      case _ => Fox.failure("org.notExist")
+    }
   }
 
   def updateDataSource(
@@ -79,12 +82,12 @@ object DataSetService extends FoxImplicits with LazyLogging {
         // this should be somehow populated to the user to inform him that he needs to rename the datasource
         Fox.failure("dataset.name.alreadyInUse").futureBox
       case _ =>
-          createDataSet(
-            dataSource.id.name,
-            dataStoreInfo,
-            dataSource.id.organization, //TODO
-            dataSource,
-            isActive = dataSource.isUsable).futureBox
+        createDataSet(
+          dataSource.id.name,
+          dataStoreInfo,
+          dataSource.id.organization,
+          dataSource,
+          isActive = dataSource.isUsable).futureBox
     }
   }
 

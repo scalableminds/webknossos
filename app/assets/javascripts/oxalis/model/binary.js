@@ -23,7 +23,7 @@ import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
-import { getTexturePosition } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
@@ -154,12 +154,12 @@ class Binary {
     ];
   }
 
-  updateDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
-    return this.updateDataTexturesForManager(position, zoomStep, this.textureBucketManager);
+  updateDataTextures(position: Vector3, logZoomStep: number): ?Vector3 {
+    return this.updateDataTexturesForManager(position, logZoomStep, this.textureBucketManager);
   }
 
-  updateFallbackDataTextures(position: Vector3, zoomStep: number): ?Vector3 {
-    const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, zoomStep + 1);
+  updateFallbackDataTextures(position: Vector3, logZoomStep: number): ?Vector3 {
+    const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, logZoomStep + 1);
     return this.updateDataTexturesForManager(
       position,
       fallbackZoomStep,
@@ -169,24 +169,21 @@ class Binary {
 
   updateDataTexturesForManager(
     position: Vector3,
-    zoomStep: number,
+    logZoomStep: number,
     textureBucketManager: TextureBucketManager,
   ): ?Vector3 {
     const anchorPoint = _.clone(position);
-    // Coerce to bucket boundary
-    anchorPoint[0] &= -1 << (5 + zoomStep);
-    anchorPoint[1] &= -1 << (5 + zoomStep);
-    anchorPoint[2] &= -1 << (5 + zoomStep);
-
+    const zoomStep = Store.getState().flycam.zoomStep;
     // Hit texture top-left coordinate
-    anchorPoint[0] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
-    anchorPoint[1] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
-    anchorPoint[2] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+    anchorPoint[0] = Math.floor(anchorPoint[0] - constants.PLANE_WIDTH / 2 * zoomStep);
+    anchorPoint[1] = Math.floor(anchorPoint[1] - constants.PLANE_WIDTH / 2 * zoomStep);
+    anchorPoint[2] = Math.floor(anchorPoint[2] - constants.PLANE_WIDTH / 2 * zoomStep);
 
-    const zoomedAnchorPoint = this.cube.positionToZoomedAddress(anchorPoint, zoomStep);
+    const zoomedAnchorPoint = this.cube.positionToZoomedAddress(anchorPoint, logZoomStep);
     if (_.isEqual(zoomedAnchorPoint, textureBucketManager.lastZoomedAnchorPoint)) {
       return null;
     }
+
     textureBucketManager.lastZoomedAnchorPoint = zoomedAnchorPoint;
 
     // find out which buckets we need for each plane
@@ -194,22 +191,17 @@ class Binary {
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [u, v] = Dimensions.getIndices(planeId);
-      let texturePosition = getTexturePosition(Store.getState(), planeId, this.layer.resolutions);
-
-      // Making sure, position is top-left corner of some bucket
-      // Probably not necessary?
-      texturePosition = [
-        texturePosition[0] & ~0b11111,
-        texturePosition[1] & ~0b11111,
-        texturePosition[2] & ~0b11111,
-      ];
+      const texturePosition = getPosition(Store.getState().flycam);
 
       // Calculating the coordinates of the textures top-left corner
       const topLeftPosition = _.clone(texturePosition);
-      topLeftPosition[u] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
-      topLeftPosition[v] -= 1 << (constants.TEXTURE_SIZE_P - 1 + zoomStep);
+      topLeftPosition[u] -= constants.PLANE_WIDTH / 2 * zoomStep;
+      topLeftPosition[v] -= constants.PLANE_WIDTH / 2 * zoomStep;
 
-      const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, zoomStep);
+      topLeftPosition[u] = Math.floor(topLeftPosition[u]);
+      topLeftPosition[v] = Math.floor(topLeftPosition[v]);
+
+      const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, logZoomStep);
 
       for (let y = 0; y < constants.RENDERED_BUCKETS_PER_DIMENSION; y++) {
         for (let x = 0; x < constants.RENDERED_BUCKETS_PER_DIMENSION; x++) {

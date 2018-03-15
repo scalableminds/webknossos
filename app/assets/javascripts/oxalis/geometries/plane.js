@@ -7,11 +7,7 @@ import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import {
-  calculateTextureBuffer,
-  getExtent,
-  getPosition,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
 import { sanitizeName } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
@@ -138,7 +134,7 @@ class Plane {
     });
   };
 
-  updateTexture(anchorPoint: ?Vector3, fallbackAnchorPoint: ?Vector3): void {
+  updateAnchorPoints(anchorPoint: ?Vector3, fallbackAnchorPoint: ?Vector3): void {
     if (anchorPoint) {
       this.plane.material.setAnchorPoint(anchorPoint);
     }
@@ -146,17 +142,6 @@ class Plane {
     if (fallbackAnchorPoint) {
       this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }
-
-    const buffer = calculateTextureBuffer(Store.getState(), this.planeID);
-    const extent = getExtent(Store.getState(), this.planeID);
-
-    this.plane.material.setScaleParams({
-      repeat: {
-        x: extent[0] / constants.TEXTURE_WIDTH,
-        y: extent[1] / constants.TEXTURE_WIDTH,
-      },
-      buffer,
-    });
   }
 
   setScale = (factor: number): void => {

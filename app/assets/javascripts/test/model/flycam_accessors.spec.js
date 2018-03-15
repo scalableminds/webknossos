@@ -77,13 +77,6 @@ test("Flycam Accessors should calculate the viewport bounding box", t => {
   t.deepEqual(viewportBoundingBox.max, [1467.4, 3462.4, 640.2]);
 });
 
-test("Flycam Accessors should calculate the texture buffer", t => {
-  const textureBuffer = accessors.calculateTextureBuffer(initialState);
-  t.deepEqual(textureBuffer[OrthoViews.PLANE_XY], [267.6, 267.6]);
-  t.deepEqual(textureBuffer[OrthoViews.PLANE_XZ], [267.6, 389.8]);
-  t.deepEqual(textureBuffer[OrthoViews.PLANE_YZ], [389.8, 267.6]);
-});
-
 test("Flycam Accessors should calculate the offsets", t => {
   t.deepEqual(accessors.getOffsets(initialState, OrthoViews.PLANE_XY), [137.3, 142.8]);
   t.deepEqual(accessors.getOffsets(initialState, OrthoViews.PLANE_XZ), [137.3, 197.9]);

@@ -125,7 +125,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
     private def logTimeToAnnotation(
       duration: Long,
-      annotation: Option[Annotation]) = {
+      annotation: Option[Annotation]): Fox[Unit] = {
       // Log time to annotation
       annotation match {
         case Some(a: Annotation) =>
@@ -188,7 +188,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
       val updateResult = for {
         annotation <- getAnnotation(updated.annotation)
-        _ <- TimeSpanDAO.update(updated._id, updated)(ctx)
+        _ <- TimeSpanDAO.update(updated)(ctx)
         _ <- logTimeToAnnotation(duration, annotation)
         _ <- logTimeToTask(duration, annotation)
       } yield {}
@@ -204,7 +204,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     def receive = {
       case TrackTime(timestamps, _user, _annotation, ctx) =>
         // Only if the annotation belongs to the user, we are going to log the time on the annotation
-        val annotation = if (_annotation._user.contains(_user)) Some(_annotation) else None
+        val annotation = if (_annotation._user == _user) Some(_annotation) else None
         val start = timestamps.head
 
         var current = lastUserActivity.get(_user).flatMap(last => {

@@ -67,6 +67,15 @@ export const VolumeToolEnum = {
 };
 export type VolumeToolType = $Keys<typeof VolumeToolEnum>;
 
+export const ContourModeEnum = {
+  IDLE: "IDLE",
+  DRAW: "DRAW",
+  DRAW_OVERWRITE: "DRAW_OVERWRITE",
+  DELETE_FROM_ACTIVE_CELL: "DELETE_FROM_ACTIVE_CELL",
+  DELETE_FROM_ANY_CELL: "DELETE_FROM_ANY_CELL",
+};
+export type ContourModeType = $Keys<typeof ContourModeEnum>;
+
 const Constants = {
   ARBITRARY_VIEW: 4,
 

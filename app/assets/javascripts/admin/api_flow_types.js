@@ -40,7 +40,7 @@ export type APIDatasetType = {
 export type APITeamMembershipType = {
   +id: string,
   +name: string,
-  +isSuperVisor: boolean,
+  +isTeamManager: boolean,
 };
 
 export type ExperienceMapType = { +[string]: number };

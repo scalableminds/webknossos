@@ -18,7 +18,6 @@ import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
@@ -42,15 +41,8 @@ object UserService extends FoxImplicits with IdentityService[User] {
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
 
-  def findAllNonAnonymous()(implicit ctx: DBAccessContext) =
-    UserDAO.findAllNonAnonymous
-
-  def findByTeams(teams: List[BSONObjectID], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = {
-    UserDAO.findByTeams(teams, includeAnonymous)
-  }
-
-  def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {
-    UserDAO.countNonAnonymousUsers
+  def findByTeams(teams: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
+    UserDAO.findByTeams(teams)
   }
 
   def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
@@ -102,20 +94,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
   }
 
-  def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
-    if (user.teamIds.diff(issuingUser.teamManagerTeamIds).isEmpty) {
-      // if a user doesn't belong to any team any more he gets deleted
-      UserDAO.removeById(user._id).flatMap {
-        _ =>
-          UserCache.invalidateUser(user.id)
-          AnnotationService.freeAnnotationsOfUser(user)
-      }
-    } else {
-      // the issuing user is not able to remove the user from all teams, therefore the account is not getting deleted
-      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.teamManagerTeams.contains(t._id)))
-    }
-  }
-
   def findOneByEmail(email: String): Fox[User] = {
     UserDAO.findOneByEmail(email)(GlobalAccessContext)
   }
@@ -136,9 +114,8 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
   }
 
-  def retrieve(loginInfo: LoginInfo): Future[Option[User]] = UserDAO.find(loginInfo)(GlobalAccessContext)
-
-  def find(id: BSONObjectID) = UserDAO.findByIdQ(id)
+  def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
+    UserDAO.findOneByEmail(loginInfo.providerKey)(GlobalAccessContext).futureBox.map(_.toOption)
 
   def createLoginInfo(email: String): LoginInfo = {
     LoginInfo(CredentialsProvider.ID, email)

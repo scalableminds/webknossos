@@ -11,7 +11,7 @@ const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
 const ROLES = {
-  supervisor: "supervisor",
+  teammanager: "teammanager",
   user: "user",
 };
 
@@ -81,11 +81,11 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
     );
   };
 
-  handleSelectTeamRole(teamName: string, isSuperVisor: boolean) {
+  handleSelectTeamRole(teamName: string, isTeamManager: boolean) {
     const team = this.state.teams.find(t => t.name === teamName);
 
     if (team) {
-      const selectedTeam = { id: team.id, name: teamName, isSuperVisor };
+      const selectedTeam = { id: team.id, name: teamName, isTeamManager };
       const newSelectedTeams = update(this.state.selectedTeams, {
         [teamName]: { $set: selectedTeam },
       });
@@ -124,7 +124,7 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
     const selectedTeam = this.state.selectedTeams[team.name];
     let selectedValue = null;
     if (selectedTeam) {
-      selectedValue = selectedTeam.isSuperVisor ? ROLES.supervisor : ROLES.user;
+      selectedValue = selectedTeam.isTeamManager ? ROLES.teammanager : ROLES.user;
     }
 
     return (
@@ -134,10 +134,10 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
         value={selectedValue}
         disabled={!_.has(this.state.selectedTeams, team.name)}
         onChange={({ target: { value } }) =>
-          this.handleSelectTeamRole(team.name, value === ROLES.supervisor)
+          this.handleSelectTeamRole(team.name, value === ROLES.teammanager)
         }
       >
-        <RadioButton value={ROLES.supervisor}>Supervisor</RadioButton>
+        <RadioButton value={ROLES.teammanager}>Team Manager</RadioButton>
         <RadioButton value={ROLES.user}>User</RadioButton>
       </RadioGroup>
     );

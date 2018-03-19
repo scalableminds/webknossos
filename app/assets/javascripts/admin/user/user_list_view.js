@@ -270,7 +270,7 @@ class UserListView extends React.PureComponent<Props, State> {
                   // eslint-disable-next-line no-nested-ternary
                   const roleName = user.isAdmin
                     ? "Admin"
-                    : teams.isSuperVisor ? "Supervisor" : "User";
+                    : teams.isTeamManager ? "Team Manager" : "User";
                   return (
                     <Tag
                       key={`team_role_${user.id}_${team.id}`}

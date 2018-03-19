@@ -3,17 +3,16 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 import models.team._
 import models.user.UserService
 import net.liftweb.common.{Empty, Full}
+import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
-import play.twirl.api.Html
-import play.api.mvc.{Action, _}
+import play.api.mvc.Action
 
 import scala.concurrent.Future
 
@@ -47,9 +46,6 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def delete(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)
-      isOrgTeam <- team.isOrganizationTeam()
-      _ <- bool2Fox(!isOrgTeam) ?~> Messages("org.team") //TODO Frontend Changes
-      _ <- team.isAdminOfOrganization(request.identity) ?~> Messages("team.noOwner") //team.owner.contains(request.identity._id)
       _ <- TeamService.remove(team)
       _ <- UserService.removeTeamFromUsers(team)
     } yield {

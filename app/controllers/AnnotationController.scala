@@ -10,7 +10,7 @@ import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
 import models.task.TaskDAO
 import models.user.time._
-import models.user.{UsedAnnotationDAO, User, UserDAO}
+import models.user.{User, UserDAO}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
@@ -43,7 +43,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         js <- annotation.toJson(request.identity, Some(restrictions), Some(readOnly))
       } yield {
         request.identity.foreach { user =>
-          UsedAnnotationDAO.use(user, annotationId)
           TimeSpanService.logUserInteraction(user, annotation)            // log time when a user starts working
         }
         Ok(js)
@@ -116,7 +115,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     // Reopening an annotation is allowed if either the user owns the annotation or the user is allowed to administrate
     // the team the annotation belongs to
     def isReopenAllowed(user: User, annotation: Annotation) = {
-       annotation._user.contains(user._id) || user.teamManagerTeams.exists(_._id == annotation._team) //TODO
+       annotation._user == user._id || user.isTeamManagerOf(annotation._team)
     }
 
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
@@ -145,13 +144,6 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         JsonOk(json)
       }
     }
-
-  def isUpdateable(Annotation: Annotation) = {
-    Annotation match {
-      case a: Annotation => Some(a)
-      case _             => None
-    }
-  }
 
   private def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     for {
@@ -228,10 +220,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       for {
         _ <- ensureTeamAdministration(request.identity, annotation._team)
         result <- tryToCancel(annotation)
-      } yield {
-        UsedAnnotationDAO.removeAll(AnnotationIdentifier(typ, id))
-        result
-      }
+      } yield result
     }(securedRequestToUserAwareRequest)
   }
 

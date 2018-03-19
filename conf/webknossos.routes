@@ -96,7 +96,6 @@ GET           /api/annotations/:typ/:id/download                                
 GET           /api/annotations/:typ/:id/loggedTime                              controllers.AnnotationController.loggedTime(typ: String, id: String)
 
 # Tasks
-GET           /api/tasks                                                        controllers.TaskController.list
 POST          /api/tasks                                                        controllers.TaskController.create
 POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFile
 POST          /api/tasks/list                                                   controllers.TaskController.listTasks
@@ -128,6 +127,7 @@ GET           /api/projects/:name                                               
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)
 PUT           /api/projects/:name                                               controllers.ProjectController.update(name: String)
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
+GET           /api/projects/:name/incrementEachTasksInstances                   controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
 GET           /api/projects/:name/usersWithOpenTasks                            controllers.ProjectController.usersWithOpenTasks(name:String)

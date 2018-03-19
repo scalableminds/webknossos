@@ -39,13 +39,13 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
     persistTracing: Boolean
     )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[Annotation] = {
     val newId = BSONObjectID.generate()
-    mergeN(newId, persistTracing, Some(request.identity._id), annotationB.dataSetName, annotationB._team, AnnotationType.Explorational, List(annotationA, annotationB))
+    mergeN(newId, persistTracing, request.identity._id, annotationB.dataSetName, annotationB._team, AnnotationType.Explorational, List(annotationA, annotationB))
   }
 
   def mergeN(
     newId: BSONObjectID,
     persistTracing: Boolean,
-    _user: Option[BSONObjectID],
+    _user: BSONObjectID,
     dataSetName: String,
     team: BSONObjectID,
     typ: AnnotationType,

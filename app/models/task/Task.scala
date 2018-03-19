@@ -413,10 +413,8 @@ object TaskDAO {
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     for {
       taskSQL <- TaskSQLDAO.findOne(ObjectId(id))
-      parsed <- Task.fromTaskSQL(taskSQL)
-    } yield {
-      parsed
-    }
+      task <- Task.fromTaskSQL(taskSQL)
+    } yield task
 
   def findAllByTaskType(_taskType: BSONObjectID)(implicit ctx: DBAccessContext) =
     for {

@@ -483,7 +483,7 @@ object UserDAO {
       users <- Fox.combined(usersSQL.map(User.fromUserSQL(_)))
     } yield users
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, isAdmin: Boolean, activated: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
     for {
       teamMembershipsSQL <- Fox.combined(teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       id = ObjectId.fromBsonId(_user)

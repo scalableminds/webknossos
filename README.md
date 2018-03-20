@@ -37,6 +37,7 @@ brew services start postgresql
 createdb
 psql -c "CREATE DATABASE webknossos;"
 psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
+psql -c "ALTER USER postgres WITH SUPERUSER;"
 psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
 # Checkout the webKnossos git repository
@@ -61,7 +62,7 @@ sudo apt-get update
 sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn
 
 # Assign a password to PostgreSQL user
-sudo -u postgres psql -c "ALTER USER user_name WITH ENCRYPTED PASSWORD 'postgres';"
+sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 ```
 
 On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.

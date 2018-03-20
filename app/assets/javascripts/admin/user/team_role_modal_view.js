@@ -66,7 +66,10 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
         const newUser = Object.assign({}, user, { teams: newTeams });
 
         // server-side validation can reject a user's new teams
-        return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(user));
+        return updateUser(newUser).then(
+          serverUser => Promise.resolve(serverUser),
+          () => Promise.reject(user),
+        );
       }
       return Promise.resolve(user);
     });

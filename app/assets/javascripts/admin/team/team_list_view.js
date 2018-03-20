@@ -74,11 +74,19 @@ class TeamListView extends React.PureComponent<Props, State> {
           isLoading: true,
         });
 
-        await deleteTeam(team.id);
-        this.setState({
-          isLoading: false,
-          teams: this.state.teams.filter(t => t.id !== team.id),
-        });
+        deleteTeam(team.id).then(
+          () => {
+            this.setState({
+              isLoading: false,
+              teams: this.state.teams.filter(t => t.id !== team.id),
+            });
+          },
+          () => {
+            this.setState({
+              isLoading: false,
+            });
+          },
+        );
       },
     });
   };

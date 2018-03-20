@@ -80,7 +80,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
 
           <Column
             title="Allowed Teams"
-            dataIndex="allowedTeams.name"
+            dataIndex="allowedTeams"
             key="allowedTeams"
             width={150}
             render={(teams: Array<string>, dataset: DatasetType) =>

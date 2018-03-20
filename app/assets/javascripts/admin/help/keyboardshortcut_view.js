@@ -168,7 +168,11 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "Left Mouse Drag",
-      action: "Move (move Mode) / Add To Current Cell (Trace / Brush Mode)",
+      action: "Move (Move Mode) / Add To Current Cell (Trace / Brush Mode)",
+    },
+    {
+      keybinding: "Ctrl + Left Mouse Drag",
+      action: "Add Empty Voxels To Current Cell (in Trace / Brush Mode)",
     },
     {
       keybinding: "Arrow Keys",
@@ -176,7 +180,11 @@ const KeyboardShortcutView = () => {
     },
     {
       keybinding: "Right Mouse Drag",
-      action: "Remove Voxels From Cell",
+      action: "Remove Voxels From Current Cell",
+    },
+    {
+      keybinding: "Ctrl + Right Mouse Drag",
+      action: "Remove Voxels From Any Cell",
     },
     {
       keybinding: "C",

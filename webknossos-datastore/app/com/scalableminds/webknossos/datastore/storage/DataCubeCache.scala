@@ -27,7 +27,7 @@ object CachedCube {
 
   def from(loadInstruction: DataReadInstruction): CachedCube =
     CachedCube(
-      loadInstruction.dataSource.id.organization,
+      loadInstruction.dataSource.id.team,
       loadInstruction.dataSource.id.name,
       loadInstruction.dataLayer.name,
       loadInstruction.cube.resolution,

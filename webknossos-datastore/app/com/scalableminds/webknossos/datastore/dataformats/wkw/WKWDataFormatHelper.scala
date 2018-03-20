@@ -20,7 +20,7 @@ trait WKWDataFormatHelper {
                    resolutionAsTriple: Boolean = false
                  ): Path = {
     baseDir
-      .resolve(dataSourceId.map(_.organization).getOrElse(""))
+      .resolve(dataSourceId.map(_.team).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
       .resolve(if (resolutionAsTriple) s"${cube.resolution.x}-${cube.resolution.y}-${cube.resolution.z}" else cube.resolution.maxDim.toString)
@@ -36,7 +36,7 @@ trait WKWDataFormatHelper {
                          baseDir: Path = Paths.get("")
                        ): Path = {
     baseDir
-      .resolve(dataSourceId.map(_.organization).getOrElse(""))
+      .resolve(dataSourceId.map(_.team).getOrElse(""))
       .resolve(dataSourceId.map(_.name).getOrElse(""))
       .resolve(dataLayerName.getOrElse(""))
       .resolve(resolution.toString)

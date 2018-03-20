@@ -46,7 +46,7 @@ case class DataSetSQL(
 object DataSetSQL {
   def fromDataSetWithId(d: DataSet, newId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      organization <- OrganizationSQLDAO.findOneByName(d.dataSource.id.organization)
+      organization <- OrganizationSQLDAO.findOneByName(d.dataSource.id.team)
     } yield {
       DataSetSQL(
         newId,
@@ -155,7 +155,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 
     for {
       old <- findOneByName(name)
-      organization <- OrganizationSQLDAO.findOneByName(source.id.organization)
+      organization <- OrganizationSQLDAO.findOneByName(source.id.team)
       q = sqlu"""update webknossos.dataSets
                     set _dataStore = ${dataStoreName},
                         _organization = ${organization._id.id},

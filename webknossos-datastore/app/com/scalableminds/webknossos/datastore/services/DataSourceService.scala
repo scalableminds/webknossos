@@ -53,7 +53,7 @@ class DataSourceService @Inject()(
         case Full(dirs) =>
           val foundInboxSources = dirs.flatMap(teamAwareInboxSources)
           val dataSourceString = foundInboxSources.map { ds =>
-            s"'${ds.id.organization}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
+            s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
           }.mkString(", ")
           logger.info(s"Finished scanning inbox: $dataSourceString")
           dataSourceRepository.updateDataSources(foundInboxSources)
@@ -67,14 +67,14 @@ class DataSourceService @Inject()(
   }
 
   def handleUpload(id: DataSourceId, dataSetZip: File): Box[Unit] = {
-    val dataSourceDir = dataBaseDir.resolve(id.organization).resolve(id.name)
+    val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
     PathUtils.ensureDirectory(dataSourceDir)
 
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
 
     ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true) match {
       case Full(_) =>
-        dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.organization))
+        dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
         Full(())
       case e =>
         val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
@@ -84,7 +84,7 @@ class DataSourceService @Inject()(
   }
 
   def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {
-    val path = dataBaseDir.resolve(id.organization).resolve(id.name)
+    val path = dataBaseDir.resolve(id.team).resolve(id.name)
     val report = DataSourceImportReport[Path](dataBaseDir.relativize(path))
     for {
       dataFormat <- guessDataFormat(path)
@@ -124,7 +124,7 @@ class DataSourceService @Inject()(
 
   def updateDataSource(dataSource: DataSource): Box[Unit] = {
     validateDataSource(dataSource).flatMap { _ =>
-      val propertiesFile = dataBaseDir.resolve(dataSource.id.organization).resolve(dataSource.id.name).resolve(propertiesFileName)
+      val propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
       JsonHelper.jsonToFile(propertiesFile, dataSource).map { _ =>
         dataSourceRepository.updateDataSource(dataSource)
       }

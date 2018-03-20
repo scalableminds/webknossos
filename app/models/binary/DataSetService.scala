@@ -83,7 +83,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
         createDataSet(
           dataSource.id.name,
           dataStoreInfo,
-          dataSource.id.organization,
+          dataSource.id.team,
           dataSource,
           isActive = dataSource.isUsable).futureBox
     }

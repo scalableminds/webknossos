@@ -70,9 +70,13 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       Filter("isActive", (value: Boolean, el: DataSet) =>
         el.isActive == value)
     ) { filter =>
-      DataSetDAO.findAll.map {
+      DataSetDAO.findAll.flatMap {
         dataSets =>
-          Ok(Writes.list(DataSet.dataSetPublicWrites(request.identity)).writes(filter.applyOn(dataSets)))
+          for {
+            js <- Fox.serialCombined(filter.applyOn(dataSets))(d => DataSet.dataSetPublicWrites(d, request.identity))
+          } yield {
+            Ok(Json.toJson(js))
+          }
       }
     }
   }
@@ -89,8 +93,9 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def read(dataSetName: String) = UserAwareAction.async { implicit request =>
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      js <- DataSet.dataSetPublicWrites(dataSet, request.identity)
     } yield {
-      Ok(DataSet.dataSetPublicWrites(request.identity).writes(dataSet))
+      Ok(Json.toJson(js))
     }
   }
 
@@ -101,8 +106,9 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- allowedToAdministrate(request.identity, dataSet)
         updatedDataSet <- DataSetService.update(dataSet, description, isPublic)
+        js <- DataSet.dataSetPublicWrites(updatedDataSet, Some(request.identity))
       } yield {
-        Ok(DataSet.dataSetPublicWrites(Some(request.identity)).writes(updatedDataSet))
+        Ok(Json.toJson(js))
       }
     }
   }

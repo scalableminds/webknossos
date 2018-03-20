@@ -49,14 +49,13 @@ object TaskSQL {
   def fromTask(t: Task)(implicit ctx: DBAccessContext): Fox[TaskSQL] = {
     for {
       project <- ProjectSQLDAO.findOneByName(t._project)
-      team <- TeamSQLDAO.findOneByName(t.team)
     } yield {
       TaskSQL(
         ObjectId.fromBsonId(t._id),
         project._id,
         t._script.map(ObjectId(_)),
         ObjectId.fromBsonId(t._taskType),
-        team._id,
+        ObjectId.fromBsonId(t._team),
         t.neededExperience,
         t.instances,
         t.tracingTime,

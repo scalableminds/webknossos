@@ -1,7 +1,5 @@
 package models.user
 
-import javax.management.relation.Role
-
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider

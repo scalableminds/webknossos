@@ -29,19 +29,15 @@ case class TaskTypeSQL(
 
 object TaskTypeSQL {
   def fromTaskType(t: TaskType)(implicit ctx: DBAccessContext) =
-    for {
-      team <- TeamSQLDAO.findOneByName(t.team)
-    } yield {
-      TaskTypeSQL(
+    Fox.successful(TaskTypeSQL(
         ObjectId.fromBsonId(t._id),
-        team._id,
+        ObjectId.fromBsonId(t._team),
         t.summary,
         t.description,
         t.settings,
         System.currentTimeMillis(),
         !t.isActive
-      )
-    }
+      ))
 }
 
 object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with SecuredSQLDAO {

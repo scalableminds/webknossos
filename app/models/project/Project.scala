@@ -41,20 +41,16 @@ case class ProjectSQL(
 
 object ProjectSQL {
   def fromProject(p: Project)(implicit ctx: DBAccessContext) = {
-    for {
-      team <- TeamSQLDAO.findOneByName(p.team)
-    } yield {
-      ProjectSQL(
-        ObjectId.fromBsonId(p._id),
-        team._id,
-        ObjectId.fromBsonId(p._owner),
-        p.name,
-        p.priority,
-        p.paused,
-        p.expectedTime.map(_.toLong),
-        System.currentTimeMillis(),
-        false)
-    }
+    Fox.successful(ProjectSQL(
+      ObjectId.fromBsonId(p._id),
+      ObjectId.fromBsonId(p._team),
+      ObjectId.fromBsonId(p._owner),
+      p.name,
+      p.priority,
+      p.paused,
+      p.expectedTime.map(_.toLong),
+      System.currentTimeMillis(),
+      false))
   }
 }
 

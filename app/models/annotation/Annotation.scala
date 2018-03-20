@@ -4,7 +4,6 @@
 package models.annotation
 
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
@@ -14,7 +13,7 @@ import models.annotation.AnnotationType.AnnotationType
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.task.{TaskDAO, TaskSQLDAO, TaskTypeSQLDAO, _}
-import models.team.{Role, TeamSQLDAO}
+import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import org.joda.time.format.DateTimeFormat
@@ -61,14 +60,13 @@ object AnnotationSQL extends FoxImplicits {
   def fromAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
     for {
       dataSet <- DataSetSQLDAO.findOneByName(a.dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
-      team <- TeamSQLDAO.findOneByName(a.team)(GlobalAccessContext) ?~> Messages("team.notFound")
       typ <- AnnotationTypeSQL.fromString(a.typ)
     } yield {
       AnnotationSQL(
         ObjectId.fromBsonId(a._id),
         dataSet._id,
         a._task.map(ObjectId.fromBsonId),
-        team._id,
+        ObjectId.fromBsonId(a._team),
         ObjectId.fromBsonId(a._user),
         a.tracingReference,
         a.description,
@@ -122,7 +120,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   override def anonymousReadAccessQ = s"isPublic"
   override def readAccessQ(requestingUserId: ObjectId) = s"isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'"
-  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}"
+  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}" //TODO: or admin of the organization
 
   // read operations
 

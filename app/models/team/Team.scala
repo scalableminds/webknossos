@@ -64,7 +64,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     s"(_id in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"
 
   override def deleteAccessQ(requestingUserId: ObjectId) =
-    s"""((_id not in (select _organizationTeam from webknossos.organizations_)
+    s"""(_id not in (select _organizationTeam from webknossos.organizations_)
           and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TeamSQL] =

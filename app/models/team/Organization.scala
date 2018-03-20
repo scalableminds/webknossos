@@ -55,7 +55,7 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   }
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"(_id in (select _organization from webknossos._users where _id = ${requestingUserId.id}))"
+    s"(_id in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"
 
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[OrganizationSQL] =
     for {

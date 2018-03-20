@@ -495,7 +495,7 @@ object UserDAO {
 
   def addTeam(_user: BSONObjectID, team: TeamMembership)(implicit ctx: DBAccessContext) =
     for {
-      teamMembershipSQL <- TeamMembershipSQL.fromTeamMembership(team)
+      teamMembershipSQL <- TeamMembershipSQL.fromTeamMembership(team)(GlobalAccessContext)
       _ <- UserTeamRolesSQLDAO.insertTeamMembership(ObjectId.fromBsonId(_user), teamMembershipSQL)
     } yield ()
 

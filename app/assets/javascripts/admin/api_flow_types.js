@@ -33,7 +33,7 @@ export type APIDatasetType = {
   +isEditable: boolean,
   +isPublic: boolean,
   +name: string,
-  +owningTeam: "Connectomics department",
+  +owningOrganization: string,
   +sourceType: "wkw" | "knossos",
 };
 

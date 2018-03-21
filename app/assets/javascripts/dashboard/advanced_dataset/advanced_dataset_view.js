@@ -35,7 +35,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
         <Table
           dataSource={Utils.filterWithSearchQueryOR(
             this.props.datasets,
-            ["name", "owningTeam", "description"],
+            ["name", "owningOrganization", "description"],
             this.props.searchQuery,
           )}
           rowKey="name"
@@ -95,7 +95,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                     })
                   }
                 >
-                  {team === dataset.owningTeam ? <Icon type="lock" /> : null}
+                  {team === dataset.owningOrganization ? <Icon type="lock" /> : null}
                   {team}
                 </Tag>
               ))

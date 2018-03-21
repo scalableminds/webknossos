@@ -7,7 +7,9 @@ import _ from "lodash";
 import * as THREE from "three";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
+import Store from "oxalis/store";
 import AbstractPlaneMaterialFactory, {
+  createDataTexture,
   sanitizeName,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type {
@@ -51,6 +53,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       globalPosition: {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
+      },
+      datasetScale: {
+        type: "v3",
+        value: Store.getState().dataset.scale,
       },
       anchorPoint: {
         type: "v3",
@@ -113,6 +119,37 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         };
       }
     }
+
+    this.attachResolutionsTexture();
+  }
+
+  attachResolutionsTexture(): void {
+    const resolutions = _.first(Model.getColorBinaries()).layer.resolutions;
+    const data = new Float32Array(_.flatten(resolutions));
+
+    const dimensionCount = 3;
+    const width = Math.ceil(Math.sqrt(data.length / dimensionCount));
+
+    const texture = createDataTexture(
+      width,
+      dimensionCount,
+      true,
+      THREE.NearestFilter,
+      THREE.NearestFilter,
+    );
+
+    texture.image.data.set(data);
+    texture.needsUpdate = true;
+
+    this.uniforms.resolutionsTexture = {
+      type: "t",
+      value: texture,
+    };
+
+    this.uniforms.resolutionsTextureWidth = {
+      type: "f",
+      value: width,
+    };
   }
 
   makeMaterial(options?: ShaderMaterialOptionsType): void {
@@ -196,6 +233,9 @@ uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
 uniform bool useBilinearFiltering;
+uniform vec3 datasetScale;
+uniform sampler2D resolutionsTexture;
+uniform float resolutionsTextureWidth;
 
 varying vec4 worldCoord;
 
@@ -351,36 +391,31 @@ vec3 getCoords(float usedZoomStep) {
   float zoomStepDiff = usedZoomStep - zoomStep;
   bool useFallback = zoomStepDiff > 0.0;
   vec3 usedAnchorPoint = useFallback ? fallbackAnchorPoint : anchorPoint;
+  vec3 usedAnchorPointUVW = transDim(usedAnchorPoint);
 
-  vec3 usedAnchorPointUVW = vec3(
-    usedAnchorPoint[<%= uvw[0] %>],
-    usedAnchorPoint[<%= uvw[1] %>],
-    usedAnchorPoint[<%= uvw[2] %>]
-  );
+  vec3 resolution = getRgbaAtIndex(resolutionsTexture, resolutionsTextureWidth, usedZoomStep).xyz;
+  float zoomValue = pow(2.0, usedZoomStep);
 
-  vec3 datasetScale = vec3(22.0, 22.0, 44.599998474121094);
-  vec3 datasetScaleUVW = vec3(
-    datasetScale[<%= uvw[0] %>],
-    datasetScale[<%= uvw[1] %>],
-    datasetScale[<%= uvw[2] %>]
-  );
+  vec3 datasetScaleUVW = transDim(datasetScale);
 
   vec3 worldCoordUVW = vec3(
-    worldCoord[<%= uvw[0] %>],
-    worldCoord[<%= uvw[1] %>],
-    worldCoord[<%= uvw[2] %>]
+    // For u and w we need to divide by datasetScale because the threejs scene is scaled
+    worldCoord[<%= uvw[0] %>] / datasetScaleUVW.x,
+    worldCoord[<%= uvw[1] %>] / datasetScaleUVW.y,
+
+    // globalPosition, however, gives us the coordinates we need
+    // Theoretically, worldCoord[<%= uvw[2] %>] could be used here. However, the plane is offset
+    // in 3D space to allow skeletons to be rendered before the plane. Since w (e.g., z for xy plane) is
+    // the same for all texels computed in this shader, we simply use globalPosition[w] instead
+    globalPosition[<%= uvw[2] %>]
   );
 
-  vec3 globalPosAtTex = worldCoordUVW / datasetScaleUVW;
-  vec3 relativeCoords = (globalPosAtTex - usedAnchorPointUVW * pow(2.0, 5.0 + usedZoomStep)) / pow(2.0, usedZoomStep);
+  vec3 resolutionUVW = transDim(resolution);
+  vec3 anchorPointAsGlobalPositionUVW =
+    usedAnchorPointUVW * resolutionUVW * bucketWidth;
+  vec3 relativeCoords = (worldCoordUVW - anchorPointAsGlobalPositionUVW) / resolutionUVW;
 
-  vec3 coords = transDim(vec3(
-    relativeCoords.x,
-    relativeCoords.y,
-    // Theoretically, relativeCoords.z could be used here. However, the plane is offsetted in 3D space to allow skeletons to be
-    // rendered before the plane. That's why we use globalPosition.z here to calculate coords.z
-    ((globalPosition[<%= uvw[2] %>] - usedAnchorPoint[<%= uvw[2] %>] * pow(2.0, 5.0 + usedZoomStep)) / pow(2.0, usedZoomStep))
-  ));
+  vec3 coords = transDim(relativeCoords);
 
   return coords;
 }

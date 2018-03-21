@@ -25,6 +25,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -121,8 +122,6 @@ class Binary {
   setupDataTextures(): void {
     const bytes = this.layer.bitDepth >> 3;
 
-    window.managers = window.managers || [];
-
     this.textureBucketManager = new TextureBucketManager(constants.RENDERED_BUCKETS_PER_DIMENSION);
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 
@@ -131,8 +130,7 @@ class Binary {
     );
     this.fallbackTextureBucketManager.setupDataTextures(bytes, this.category);
 
-    window.managers.push(this.textureBucketManager);
-    window.managers.push(this.fallbackTextureBucketManager);
+    shaderEditor.addBucketManagers(this.textureBucketManager, this.fallbackTextureBucketManager);
   }
 
   getDataTextures(): [*, *] {
@@ -188,7 +186,6 @@ class Binary {
 
     // find out which buckets we need for each plane
     const requiredBucketSet = new Set();
-
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [u, v] = Dimensions.getIndices(planeId);
       const texturePosition = getPosition(Store.getState().flycam);
@@ -208,6 +205,7 @@ class Binary {
           const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
           bucketAddress[u] += x;
           bucketAddress[v] += y;
+
           const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
           if (bucket.type !== "null") {

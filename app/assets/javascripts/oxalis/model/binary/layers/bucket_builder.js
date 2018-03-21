@@ -6,7 +6,9 @@
 import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import Store from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import constants from "oxalis/constants";
 import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
+import PositionConverter from "oxalis/model/helpers/position_converter";
 
 export type BucketInfo = {
   position: Vector3,
@@ -19,16 +21,19 @@ export type BucketInfo = {
 
 // Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
 // object as expected by the server on bucket request
-class BucketBuilder {
-  fromZoomedAddress([x, y, z, zoomStep]: Vector4, options: ?BucketRequestOptions): BucketInfo {
+export default {
+  fromZoomedAddress(
+    zoomedAddress: Vector4,
+    resolutions: Array<Vector3>,
+    options: ?BucketRequestOptions,
+  ): BucketInfo {
+    const position = PositionConverter.bucketPositionToGlobalAddress(zoomedAddress, resolutions);
+    const zoomStep = zoomedAddress[3];
+
     const bucket = {
-      position: [
-        x << (zoomStep + BUCKET_SIZE_P),
-        y << (zoomStep + BUCKET_SIZE_P),
-        z << (zoomStep + BUCKET_SIZE_P),
-      ],
+      position,
       zoomStep,
-      cubeSize: 1 << BUCKET_SIZE_P,
+      cubeSize: constants.BUCKET_WIDTH,
       fourBit: undefined,
     };
 
@@ -37,18 +42,5 @@ class BucketBuilder {
     } else {
       return Object.assign(bucket, { fourBit: Store.getState().datasetConfiguration.fourBit });
     }
-  }
-
-  bucketToZoomedAddress(bucket: BucketInfo): Vector4 {
-    const [x, y, z] = bucket.position;
-    const { zoomStep } = bucket;
-    return [
-      x >> (zoomStep + BUCKET_SIZE_P),
-      y >> (zoomStep + BUCKET_SIZE_P),
-      z >> (zoomStep + BUCKET_SIZE_P),
-      zoomStep,
-    ];
-  }
-}
-
-export default new BucketBuilder();
+  },
+};

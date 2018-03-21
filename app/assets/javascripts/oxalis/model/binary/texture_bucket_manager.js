@@ -25,9 +25,9 @@ const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
 const bucketHeightInTexture = constants.BUCKET_SIZE / constants.DATA_TEXTURE_WIDTH;
 
 // At the moment, we only store one float f per bucket.
-// If f >= 0, f denotes the index in the data texture where bucket is stored.
+// If f >= 0, f denotes the index in the data texture where the bucket is stored.
 // If f == -1, the bucket is not yet committed
-// If f == -2, no bucket is supposed to be rendered. Out of bounds.
+// If f == -2, the bucket is not supposed to be rendered. Out of bounds.
 export const floatsPerLookUpEntry = 1;
 
 export default class TextureBucketManager {
@@ -218,11 +218,15 @@ export default class TextureBucketManager {
     // probably not worth it.
     const anchorPoint = this.currentAnchorPoint;
     this.lookUpBuffer.fill(-2);
-
+    let committed = 0;
     for (const [bucket, address] of this.activeBucketToIndexMap.entries()) {
       const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
       // Since activeBucketToIndexMap is a super set of committedBucketSet,
       // address is always defined ($FlowFixMe).
+
+      if (this.committedBucketSet.has(bucket)) {
+        committed++;
+      }
 
       this.lookUpBuffer[floatsPerLookUpEntry * lookUpIdx] = this.committedBucketSet.has(bucket)
         ? address

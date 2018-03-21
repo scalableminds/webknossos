@@ -105,7 +105,8 @@ class PullQueue {
         this.maybeWhitenEmptyBucket(bucketData);
         if (bucket.type === "data") {
           bucket.receiveData(bucketData);
-          if (this.cube.downsampledZoomStepCount > 0) {
+          // todo:
+          if (false && this.cube.downsampledZoomStepCount > 0) {
             const higherAddress = bucketAddress.slice();
             higherAddress[0] = higherAddress[0] >> 1;
             higherAddress[1] = higherAddress[1] >> 1;

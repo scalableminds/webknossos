@@ -6,6 +6,7 @@
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import constants from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingArray } from "oxalis/model/binary/mappings";
@@ -24,6 +25,7 @@ import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
 import Store from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import PositionConverter from "oxalis/model/helpers/position_converter";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -101,22 +103,22 @@ class DataCube {
     this.currentMapping = null;
 
     // Initializing the cube-arrays with boundaries
-    let cubeBoundary = [
-      Math.ceil(this.upperBoundary[0] / (1 << BUCKET_SIZE_P)),
-      Math.ceil(this.upperBoundary[1] / (1 << BUCKET_SIZE_P)),
-      Math.ceil(this.upperBoundary[2] / (1 << BUCKET_SIZE_P)),
+    const cubeBoundary = [
+      Math.ceil(this.upperBoundary[0] / constants.BUCKET_WIDTH),
+      Math.ceil(this.upperBoundary[1] / constants.BUCKET_WIDTH),
+      Math.ceil(this.upperBoundary[2] / constants.BUCKET_WIDTH),
     ];
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
-    for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
-      this.cubes[i] = new CubeEntry(_.clone(cubeBoundary));
-
-      cubeBoundary = [
-        (cubeBoundary[0] + 1) >> 1,
-        (cubeBoundary[1] + 1) >> 1,
-        (cubeBoundary[2] + 1) >> 1,
+    for (let i = 0; i < this.MAX_UNSAMPLED_ZOOM_STEP; i++) {
+      const resolution = this.layer.resolutions[i];
+      const zoomedCubeBoundary = [
+        Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
+        Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
+        Math.ceil(cubeBoundary[2] / resolution[2]) + 1,
       ];
+      this.cubes[i] = new CubeEntry(zoomedCubeBoundary);
     }
 
     this.boundingBox = new BoundingBox(Store.getState().tracing.boundingBox, this);
@@ -201,6 +203,9 @@ class DataCube {
     const cube = this.cubes[zoomStep];
     if (cube != null) {
       const { boundary } = cube;
+      if (x >= boundary[0] || y >= boundary[1] || z >= boundary[2] || x < 0 || y < 0 || z < 0) {
+        return -1;
+      }
       return x * boundary[2] * boundary[1] + y * boundary[2] + z;
     }
     return null;
@@ -390,15 +395,25 @@ class DataCube {
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }
 
-  positionToZoomedAddress([x, y, z]: Vector3, resolutionIndex: number = 0): Vector4 {
+  positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
     // return the bucket a given voxel lies in
     const resolution = this.layer.resolutions[resolutionIndex];
-    return [
-      x / (32 * resolution[0]),
-      y / (32 * resolution[1]),
-      z / (32 * resolution[2]),
+    if (resolution == null) {
+      console.log("constructing virtual resolution");
+      const lastResolution = _.last(this.layer.resolutions);
+      const missingZoomStepCount = resolutionIndex - this.layer.resolutions.length;
+      this.layer.resolutions.push([
+        Math.pow(2, missingZoomStepCount) * lastResolution[0],
+        Math.pow(2, missingZoomStepCount) * lastResolution[1],
+        Math.pow(2, missingZoomStepCount) * lastResolution[2],
+      ]);
+    }
+
+    return PositionConverter.globalPositionToBucketPosition(
+      position,
+      this.layer.resolutions,
       resolutionIndex,
-    ];
+    );
   }
 
   positionToBaseAddress(position: Vector3): Vector4 {

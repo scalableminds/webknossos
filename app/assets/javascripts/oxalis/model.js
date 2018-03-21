@@ -238,6 +238,11 @@ export class OxalisModel {
       error = `${messages["dataset.not_imported"]} '${datasetName}'`;
     }
 
+    // todo: the back-end should deliver the resolutions numerically sorted
+    for (const dataLayer of dataset.dataSource.dataLayers) {
+      dataLayer.resolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
+    }
+
     if (error) {
       Toast.error(error);
       throw this.HANDLED_ERROR;

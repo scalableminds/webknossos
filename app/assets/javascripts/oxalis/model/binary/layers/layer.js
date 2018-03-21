@@ -64,7 +64,9 @@ class Layer {
   }
 
   buildBuckets(batch: Array<Vector4>, options: ?BucketRequestOptions): Array<BucketInfo> {
-    return batch.map(bucketAddress => BucketBuilder.fromZoomedAddress(bucketAddress, options));
+    return batch.map(bucketAddress =>
+      BucketBuilder.fromZoomedAddress(bucketAddress, this.resolutions, options),
+    );
   }
 
   // Requests the data, ensures it has the right tokens and resolves with

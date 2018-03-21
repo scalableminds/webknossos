@@ -23,10 +23,10 @@ import * as THREE from "three";
 // If VIEWPORT_WIDTH, which is a little bigger, is used instead, we end up with a data texture
 // that is shrinked a little bit, which leads to the texture not being in sync with the THREEjs scene.
 
-// Historically, this width decided when which zoom step was.
+// Historically, this width decided at which point which zoom step was picked.
 // There is no specific reason why this exact size has to be chosen. As long as enough buckets are sent
 // to the GPU (RENDERED_BUCKETS_PER_DIMENSION) this width can be increased or decreased.
-const MAX_RENDING_TARGET_WIDTH = 512 - 32 - 1;
+const MAX_RENDING_TARGET_WIDTH = 512 - constants.BUCKET_WIDTH - 1;
 
 // maximum difference between requested coordinate and actual texture position
 const MAX_ZOOM_STEP_DIFF = MAX_RENDING_TARGET_WIDTH / constants.PLANE_WIDTH;
@@ -139,8 +139,12 @@ export function getTexturePosition(
   // the X and Y coordinates for each texture have to be set to 0
   const [u, v] = Dimensions.getIndices(planeId);
   const logZoomStep = getRequestLogZoomStep(state);
-  texturePosition[u] = texturePosition[u] - texturePosition[u] / (32 * resolutions[logZoomStep][u]);
-  texturePosition[v] = texturePosition[v] - texturePosition[v] / (32 * resolutions[logZoomStep][v]);
+  const resolution = resolutions[logZoomStep];
+  const uMultiplier = constants.BUCKET_WIDTH * resolution[u];
+  const vMultiplier = constants.BUCKET_WIDTH * resolution[v];
+  texturePosition[u] = Math.floor(texturePosition[u] / uMultiplier) * uMultiplier;
+  texturePosition[v] = Math.floor(texturePosition[v] / vMultiplier) * vMultiplier;
+
   return texturePosition;
 }
 
@@ -196,8 +200,8 @@ export function getAreas(
   resolutions: Array<Vector3>,
 ): OrthoViewMapType<Vector4> {
   return {
-    [OrthoViews.PLANE_XY]: getArea(state, OrthoViews.PLANE_XY),
-    [OrthoViews.PLANE_XZ]: getArea(state, OrthoViews.PLANE_XZ),
-    [OrthoViews.PLANE_YZ]: getArea(state, OrthoViews.PLANE_YZ),
+    [OrthoViews.PLANE_XY]: getArea(state, OrthoViews.PLANE_XY, resolutions),
+    [OrthoViews.PLANE_XZ]: getArea(state, OrthoViews.PLANE_XZ, resolutions),
+    [OrthoViews.PLANE_YZ]: getArea(state, OrthoViews.PLANE_YZ, resolutions),
   };
 }

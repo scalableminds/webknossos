@@ -3,7 +3,6 @@
  * @flow
  */
 
-import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import Store from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";

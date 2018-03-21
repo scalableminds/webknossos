@@ -10,6 +10,7 @@ import app from "app";
 import Model from "oxalis/model";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import shaderEditor from "oxalis/model/helpers/shader_editor";
 
 export type TextureMapType = {
   [key: string]: THREE.DataTexture,
@@ -146,7 +147,7 @@ class AbstractPlaneMaterialFactory {
       }),
     );
 
-    window.materials = (window.materials || []).concat(this.material);
+    shaderEditor.addMaterial(this.material);
 
     this.material.setData = (name, data) => {
       const textureName = sanitizeName(name);

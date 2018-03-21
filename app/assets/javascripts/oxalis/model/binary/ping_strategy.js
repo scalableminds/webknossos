@@ -5,7 +5,6 @@
 
 import _ from "lodash";
 import Dimensions from "oxalis/model/dimensions";
-import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type DataCube from "oxalis/model/binary/data_cube";
@@ -126,16 +125,16 @@ export class PingStrategy extends AbstractPingStrategy {
       this.w = indices[2];
 
       // Converting area from voxels to buckets
-      const bucketArea = [
-        areas[plane][0] / constants.BUCKET_WIDTH,
-        areas[plane][1] / constants.BUCKET_WIDTH,
-        (areas[plane][2] - 1) / constants.BUCKET_WIDTH,
-        (areas[plane][3] - 1) / constants.BUCKET_WIDTH,
-      ];
+      // const bucketArea = [
+      //   areas[plane][0] / constants.BUCKET_WIDTH,
+      //   areas[plane][1] / constants.BUCKET_WIDTH,
+      //   (areas[plane][2] - 1) / constants.BUCKET_WIDTH,
+      //   (areas[plane][3] - 1) / constants.BUCKET_WIDTH,
+      // ];
       // const width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff;
       // const height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff;
-      const width = 17;
-      const height = 17;
+      const width = constants.RENDERED_BUCKETS_PER_DIMENSION;
+      const height = constants.RENDERED_BUCKETS_PER_DIMENSION;
       const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
       const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);

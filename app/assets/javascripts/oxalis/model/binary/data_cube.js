@@ -56,6 +56,7 @@ class DataCube {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
+  layer: Layer;
   // If the mapping is enabled, this.currentMapping === this.mapping
   // Otherwise, it's null
   currentMapping: ?MappingArray;

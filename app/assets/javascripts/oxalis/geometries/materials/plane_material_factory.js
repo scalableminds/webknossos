@@ -125,6 +125,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
   attachResolutionsTexture(): void {
     const resolutions = _.first(Model.getColorBinaries()).layer.resolutions;
+    // $FlowFixMe
     const data = new Float32Array(_.flatten(resolutions));
 
     const dimensionCount = 3;

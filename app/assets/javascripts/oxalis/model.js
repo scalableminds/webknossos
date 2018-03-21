@@ -240,6 +240,7 @@ export class OxalisModel {
 
     // todo: the back-end should deliver the resolutions numerically sorted
     for (const dataLayer of dataset.dataSource.dataLayers) {
+      // $FlowFixMe
       dataLayer.resolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
     }
 

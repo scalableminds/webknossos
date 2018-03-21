@@ -122,6 +122,8 @@ class AbstractPlaneMaterialFactory {
     return this;
   }
 
+  attachTextures(): void {}
+
   setupUniforms(): void {
     this.uniforms = {};
 
@@ -182,6 +184,8 @@ class AbstractPlaneMaterialFactory {
   getMaterial(): THREE.ShaderMaterial {
     return this.material;
   }
+
+  getFragmentShader(): string {}
 
   getVertexShader(): string {
     return `

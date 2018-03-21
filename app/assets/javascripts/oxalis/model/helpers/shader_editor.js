@@ -8,49 +8,48 @@ export default {
   addMaterial(material) {
     window.materials = (window.materials || []).concat(material);
   },
+};
 
-  setupShaderEditor() {
-    const outer = document.createElement("div");
-    const input = document.createElement("textarea");
-    const viewport = 0;
-    input.value = window.materials[viewport].fragmentShader;
-    const button = document.createElement("button");
-    const buttonContainer = document.createElement("div");
-    function overrideShader() {
-      window.materials[viewport].fragmentShader = input.value;
-      window.materials[viewport].needsUpdate = true;
-      window.needsRerender = true;
-    }
-    button.addEventListener("click", () => overrideShader());
-    button.innerHTML = "run";
-    buttonContainer.appendChild(button);
+window._setupShaderEditor = viewport => {
+  const outer = document.createElement("div");
+  const input = document.createElement("textarea");
+  input.value = window.materials[viewport].fragmentShader;
+  const button = document.createElement("button");
+  const buttonContainer = document.createElement("div");
+  function overrideShader() {
+    window.materials[viewport].fragmentShader = input.value;
+    window.materials[viewport].needsUpdate = true;
+    window.needsRerender = true;
+  }
+  button.addEventListener("click", () => overrideShader());
+  button.innerHTML = "run";
+  buttonContainer.appendChild(button);
 
-    input.cols = "80";
-    input.rows = "20";
-    input.setAttribute(
-      "style",
-      `position: absolute;
+  input.cols = "80";
+  input.rows = "20";
+  input.setAttribute(
+    "style",
+    `position: absolute;
         top: 0;
         left: 500px;
         z-index: 10000;
         background: white;`,
-    );
-    input.addEventListener("keydown", evt => {
-      if ((evt.keyCode === 10 || evt.keyCode === 13) && evt.ctrlKey) {
-        evt.preventDefault();
-        overrideShader();
-      }
-    });
-    outer.appendChild(buttonContainer);
-    buttonContainer.setAttribute(
-      "style",
-      `position: absolute;
+  );
+  input.addEventListener("keydown", evt => {
+    if ((evt.keyCode === 10 || evt.keyCode === 13) && evt.ctrlKey) {
+      evt.preventDefault();
+      overrideShader();
+    }
+  });
+  outer.appendChild(buttonContainer);
+  buttonContainer.setAttribute(
+    "style",
+    `position: absolute;
         top: 0;
         left: 300px;
         z-index: 10000000;`,
-    );
-    outer.appendChild(input);
+  );
+  outer.appendChild(input);
 
-    document.body.appendChild(outer);
-  },
+  document.body.appendChild(outer);
 };

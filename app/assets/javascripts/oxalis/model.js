@@ -442,6 +442,20 @@ export class OxalisModel {
     }
   }
 
+  getResolutions(): Array<Vector3> {
+    // Different layers can have different resolutions. At the moment,
+    // unequal resolutions will result in undefined behavior.
+    // However, if resolutions are subset of each other, everything should be fine.
+    // For that case, return the longest resolutions array should suffice
+
+    return _.last(
+      _.sortBy(
+        Object.values(this.binary).map(b => b.layer.resolutions),
+        resolutions => resolutions.length,
+      ),
+    );
+  }
+
   stateSaved() {
     const state = Store.getState();
     const storeStateSaved = !state.save.isBusy && state.save.queue.length === 0;

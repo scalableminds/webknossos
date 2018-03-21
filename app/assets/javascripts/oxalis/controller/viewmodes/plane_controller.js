@@ -20,7 +20,6 @@ import SceneController from "oxalis/controller/scene_controller";
 import {
   getPosition,
   getRequestLogZoomStep,
-  getIntegerZoomStep,
   getAreas,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
@@ -364,12 +363,13 @@ class PlaneController extends React.PureComponent<Props> {
     }
 
     if (oneSlide) {
+      const logZoomStep = getRequestLogZoomStep(Store.getState());
+      const w = Dimensions.getIndices(activeViewport)[2];
+      const zStep = Model.getResolutions()[logZoomStep][w];
+
       Store.dispatch(
         moveFlycamOrthoAction(
-          Dimensions.transDim(
-            [0, 0, (z < 0 ? -1 : 1) * Math.max(1, getIntegerZoomStep(Store.getState()))],
-            activeViewport,
-          ),
+          Dimensions.transDim([0, 0, (z < 0 ? -1 : 1) * Math.max(1, zStep)], activeViewport),
           activeViewport,
         ),
       );

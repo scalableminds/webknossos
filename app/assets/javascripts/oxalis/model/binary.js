@@ -190,19 +190,19 @@ class Binary {
       const [u, v] = Dimensions.getIndices(planeId);
       const texturePosition = getPosition(Store.getState().flycam);
 
-      // Calculating the coordinates of the textures top-left corner
-      const topLeftPosition = _.clone(texturePosition);
-      topLeftPosition[u] -= constants.PLANE_WIDTH / 2 * zoomStep;
-      topLeftPosition[v] -= constants.PLANE_WIDTH / 2 * zoomStep;
+      const centerBucket = this.cube.positionToZoomedAddress(texturePosition, logZoomStep);
 
-      topLeftPosition[u] = Math.floor(topLeftPosition[u]);
-      topLeftPosition[v] = Math.floor(topLeftPosition[v]);
+      // E.g., for 17 buckets per dimension, we want to have an offset of -7 buckets so that the
+      // right/lower half of the center bucket has one bucket more than the left/upper half.
+      // This is necessary for the case in which the camera position is not exactly on a bucket boundary.
+      // The top/left bucket is not completely shown and the part that is not necessary for rendering is
+      // necessary on the bottom/right which is why the lower/right half gets one bucket more.
+      const startingOffset = Math.floor(constants.RENDERED_BUCKETS_PER_DIMENSION / 2) - 1;
+      const endOffset = constants.RENDERED_BUCKETS_PER_DIMENSION - startingOffset;
 
-      const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, logZoomStep);
-
-      for (let y = 0; y < constants.RENDERED_BUCKETS_PER_DIMENSION; y++) {
-        for (let x = 0; x < constants.RENDERED_BUCKETS_PER_DIMENSION; x++) {
-          const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
+      for (let y = -startingOffset; y < endOffset; y++) {
+        for (let x = -startingOffset; x < endOffset; x++) {
+          const bucketAddress = ((centerBucket.slice(): any): Vector4);
           bucketAddress[u] += x;
           bucketAddress[v] += y;
 

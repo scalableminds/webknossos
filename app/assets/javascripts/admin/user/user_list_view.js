@@ -274,7 +274,6 @@ class UserListView extends React.PureComponent<Props, State> {
                   );
                 } else {
                   return teams.map(team => {
-                    // eslint-disable-next-line no-nested-ternary
                     const roleName = team.isTeamManager ? "Team Manager" : "User";
                     return (
                       <Tag
@@ -315,15 +314,18 @@ class UserListView extends React.PureComponent<Props, State> {
                     <Icon type="user" />Show Tracings
                   </Link>
                   <br />
-                  {user.isActive ? (
-                    <a href="#" onClick={() => this.deactivateUser(user)}>
-                      <Icon type="user-delete" />Deactivate User
-                    </a>
-                  ) : (
-                    <a href="#" onClick={() => this.activateUser(user)}>
-                      <Icon type="user-add" />Activate User
-                    </a>
-                  )}
+                  {// eslint-disable-next-line no-nested-ternary
+                  this.props.activeUser.isAdmin ? (
+                    user.isActive ? (
+                      <a href="#" onClick={() => this.deactivateUser(user)}>
+                        <Icon type="user-delete" />Deactivate User
+                      </a>
+                    ) : (
+                      <a href="#" onClick={() => this.activateUser(user)}>
+                        <Icon type="user-add" />Activate User
+                      </a>
+                    )
+                  ) : null}
                 </span>
               )}
             />

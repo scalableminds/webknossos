@@ -71,9 +71,11 @@ export function getMaxZoomStep(state: OxalisState): number {
   const minimumZoomStepCount = 1;
   return Maybe.fromNullable(state.dataset)
     .map(dataset =>
-      dataset.dataLayers.reduce(
-        (maxZoomStep, layer) => Math.max(...layer.resolutions.map(r => Math.max(...r))),
+      Math.max(
         minimumZoomStepCount,
+        ...dataset.dataLayers.map(layer =>
+          Math.max(0, ...layer.resolutions.map(r => Math.max(r[0], r[1], r[2]))),
+        ),
       ),
     )
     .getOrElse(minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT);

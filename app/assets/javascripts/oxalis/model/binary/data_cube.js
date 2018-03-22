@@ -324,17 +324,17 @@ class DataCube {
     this.trigger("volumeLabeled");
   }
 
-  labelVoxels(iterator: VoxelIterator, label: number): void {
+  labelVoxels(iterator: VoxelIterator, label: number, activeCellId?: ?number = null): void {
     while (iterator.hasNext) {
       const voxel = iterator.getNext();
-      this.labelVoxel(voxel, label);
+      this.labelVoxel(voxel, label, activeCellId);
     }
 
     this.pushQueue.push();
     this.trigger("volumeLabeled");
   }
 
-  labelVoxel(voxel: Vector3, label: number): void {
+  labelVoxel(voxel: Vector3, label: number, activeCellId: ?number): void {
     let voxelInCube = true;
     for (let i = 0; i <= 2; i++) {
       voxelInCube = voxelInCube && voxel[i] >= 0 && voxel[i] < this.upperBoundary[i];
@@ -345,18 +345,26 @@ class DataCube {
       if (bucket instanceof DataBucket) {
         const voxelIndex = this.getVoxelIndex(voxel);
 
-        const labelFunc = (data: Uint8Array): void => {
-          // Write label in little endian order
-          for (let i = 0; i < this.BYTE_OFFSET; i++) {
-            data[voxelIndex + i] = (label >> (i * 8)) & 0xff;
-          }
-        };
-        bucket.label(labelFunc);
+        let shouldUpdateVoxel = true;
+        if (activeCellId != null) {
+          const voxelValue = this.getMappedDataValue(voxel);
+          shouldUpdateVoxel = activeCellId === voxelValue;
+        }
 
-        // Push bucket if it's loaded, otherwise, TemporalBucketManager will push
-        // it once it is.
-        if (bucket.isLoaded()) {
-          this.pushQueue.insert(bucket);
+        if (shouldUpdateVoxel) {
+          const labelFunc = (data: Uint8Array): void => {
+            // Write label in little endian order
+            for (let i = 0; i < this.BYTE_OFFSET; i++) {
+              data[voxelIndex + i] = (label >> (i * 8)) & 0xff;
+            }
+          };
+          bucket.label(labelFunc);
+
+          // Push bucket if it's loaded, otherwise, TemporalBucketManager will push
+          // it once it is.
+          if (bucket.isLoaded()) {
+            this.pushQueue.insert(bucket);
+          }
         }
       }
     }

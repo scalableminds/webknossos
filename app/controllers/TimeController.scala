@@ -6,15 +6,15 @@ import javax.inject.Inject
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationDAO
-import models.project.ProjectDAO
-import models.task.{Task, TaskService, TaskTypeDAO}
-import models.user.time.{TimeSpan, TimeSpanDAO}
+import models.task.{Task, TaskService}
+import models.user.time.{TimeSpan, TimeSpanSQLDAO}
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.AnyContent
+import utils.ObjectId
 
 class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
@@ -91,14 +91,11 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   def getUserHours(user: User, startDate: Calendar, endDate: Calendar)(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {
     for {
-      timeList <- TimeSpanDAO.findByUser(user, Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
-      timeListWithTask <- getOnlyTimeSpansWithTask(timeList)
-      timeListGreaterZero = timeListWithTask.filter(tuple => tuple._1.time > 0)
-      js <- Fox.combined(timeListGreaterZero.map(t => timeWrites(t)))
+      js <- TimeSpanSQLDAO.findAllByUserWithTask(ObjectId.fromBsonId(user._id),  Some(startDate.getTimeInMillis), Some(endDate.getTimeInMillis))
     } yield {
       Json.obj(
         "user" -> Json.toJson(user)(User.userCompactWrites),
-        "timelogs" -> Json.toJson(js))
+        "timelogs" -> js)
     }
   }
 
@@ -115,32 +112,5 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     } yield {
       (t, task)
     }
-  }
-
-  def timeWrites(tuple:(TimeSpan,Task))(implicit request: SecuredRequest[AnyContent]): Fox[JsObject] = {
-    for {
-      tasktype <- TaskTypeDAO.findOneById(tuple._2._taskType)
-      project <- ProjectDAO.findOneByName(tuple._2._project)
-    } yield {
-      Json.obj(
-        "time" -> formatDuration(tuple._1.time),
-        "timestamp" -> tuple._1.timestamp,
-        "annotation" -> tuple._1.annotation,
-        "_id" -> tuple._1._id.stringify,
-        "task_id" -> tuple._2.id,
-        "project_name" -> project.name,
-        "tasktype_id" -> tasktype.id,
-        "tasktype_summary" -> tasktype.summary)
-    }
-  }
-
-  def formatDuration(millis: Long): String = {
-    // example: P3Y6M4DT12H30M5S = 3 years + 9 month + 4 days + 12 hours + 30 min + 5 sec
-    // only hours, min and sec are important in this scenario
-    val h = millis / 3600000
-    val m = (millis / 60000) % 60
-    val s = (millis.toDouble / 1000) % 60
-
-    s"PT${h}H${m}M${s}S"
   }
 }

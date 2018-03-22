@@ -12,6 +12,9 @@ const initialState = {
       {
         resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16]],
       },
+      {
+        resolutions: [[1, 1, 1]],
+      },
     ],
   },
   datasetConfiguration: {

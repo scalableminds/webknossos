@@ -19,9 +19,9 @@ import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import Model from "oxalis/model";
-import Constants, { VolumeToolEnum } from "oxalis/constants";
+import Constants, { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
-import type { OrthoViewType, VolumeToolType } from "oxalis/constants";
+import type { OrthoViewType, VolumeToolType, ContourModeType } from "oxalis/constants";
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
@@ -69,6 +69,7 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
 
   while (allowUpdate) {
     const startEditingAction = yield take("START_EDITING");
+    const contourTracingMode = yield select(state => state.tracing.contourTracingMode);
 
     // Volume tracing for higher zoomsteps is currently not allowed
     if (yield select(state => isVolumeTracingDisallowed(state))) {
@@ -78,7 +79,10 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
     const activeTool = yield select(state => state.tracing.activeTool);
 
     if (activeTool === VolumeToolEnum.BRUSH) {
-      yield labelWithIterator(currentLayer.getCircleVoxelIterator(startEditingAction.position));
+      yield labelWithIterator(
+        currentLayer.getCircleVoxelIterator(startEditingAction.position),
+        contourTracingMode,
+      );
     }
 
     while (true) {
@@ -92,11 +96,14 @@ export function* editVolumeLayerAsync(): Generator<any, any, any> {
       if (activeTool === VolumeToolEnum.TRACE) {
         currentLayer.addContour(addToLayerAction.position);
       } else if (activeTool === VolumeToolEnum.BRUSH) {
-        yield labelWithIterator(currentLayer.getCircleVoxelIterator(addToLayerAction.position));
+        yield labelWithIterator(
+          currentLayer.getCircleVoxelIterator(addToLayerAction.position),
+          contourTracingMode,
+        );
       }
     }
 
-    yield call(finishLayer, currentLayer, activeTool);
+    yield call(finishLayer, currentLayer, activeTool, contourTracingMode);
   }
 }
 
@@ -106,10 +113,25 @@ function* createVolumeLayer(planeId: OrthoViewType): Generator<*, *, *> {
   return new VolumeLayer(planeId, thirdDimValue);
 }
 
-function* labelWithIterator(iterator): Generator<*, *, *> {
-  const labelValue = yield select(state => state.tracing.activeCellId);
+function* labelWithIterator(iterator, contourTracingMode): Generator<*, *, *> {
+  const activeCellId = yield select(state => state.tracing.activeCellId);
   const binary = yield call([Model, Model.getSegmentationBinary]);
-  yield call([binary.cube, binary.cube.labelVoxels], iterator, labelValue);
+  switch (contourTracingMode) {
+    case ContourModeEnum.DRAW_OVERWRITE:
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, activeCellId);
+      break;
+    case ContourModeEnum.DRAW:
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, activeCellId, 0);
+      break;
+    case ContourModeEnum.DELETE_FROM_ACTIVE_CELL:
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, 0, activeCellId);
+      break;
+    case ContourModeEnum.DELETE_FROM_ANY_CELL:
+      yield call([binary.cube, binary.cube.labelVoxels], iterator, 0);
+      break;
+    default:
+      throw new Error("Invalid volume tracing mode.");
+  }
 }
 
 function* copySegmentationLayer(action: CopySegmentationLayerActionType): Generator<*, *, *> {
@@ -125,7 +147,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
   const halfViewportWidth = Math.round(Constants.PLANE_WIDTH / 2 * zoom);
   const activeCellId = yield select(state => state.tracing.activeCellId);
 
-  const copyVoxelLabel = function(voxelTemplateAddress, voxelTargetAddress) {
+  function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {
     const templateLabelValue = binary.cube.getDataValue(voxelTemplateAddress);
 
     // Only copy voxels from the previous layer which belong to the current cell
@@ -137,7 +159,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
         api.data.labelVoxels([voxelTargetAddress], templateLabelValue);
       }
     }
-  };
+  }
 
   const directionInverter = action.source === "nextLayer" ? 1 : -1;
   const spaceDirectionOrtho = yield select(state => state.flycam.spaceDirectionOrtho);
@@ -156,7 +178,11 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
   }
 }
 
-export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Generator<*, *, *> {
+export function* finishLayer(
+  layer: VolumeLayer,
+  activeTool: VolumeToolType,
+  contourTracingMode: ContourModeType,
+): Generator<*, *, *> {
   if (layer == null || layer.isEmpty()) {
     return;
   }
@@ -165,7 +191,7 @@ export function* finishLayer(layer: VolumeLayer, activeTool: VolumeToolType): Ge
     const start = Date.now();
 
     layer.finish();
-    yield labelWithIterator(layer.getVoxelIterator());
+    yield labelWithIterator(layer.getVoxelIterator(), contourTracingMode);
 
     console.log("Labeling time:", Date.now() - start);
   }

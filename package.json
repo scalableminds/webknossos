@@ -44,7 +44,7 @@
     "isomorphic-fetch": "^2.2.0",
     "jsdom": "^11.5.1",
     "less": "^3.0.1",
-    "less-loader": "^4.0.6",
+    "less-loader": "^4.1.0",
     "mock-require": "^1.2.1",
     "node-fetch": "^1.7.2",
     "prettier": "^1.11.1",
@@ -54,7 +54,7 @@
     "style-loader": "^0.20.2",
     "uglifyjs-webpack-plugin": "^1.2.2",
     "url-loader": "^1.0.1",
-    "webpack": "^4.1.0",
+    "webpack": "^4.1.1",
     "webpack-cli": "^2.0.10"
   },
   "scripts": {

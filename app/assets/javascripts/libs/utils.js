@@ -183,17 +183,8 @@ const Utils = {
     );
   },
 
-  // this is insecure and must not be used for security related functionality
-  isUserModelAdmin(user: any): boolean {
-    if (user == null) {
-      return false;
-    } else {
-      return _.findIndex(user.get("teams"), team => team.role.name === "admin") >= 0;
-    }
-  },
-
   isUserAdmin(user: APIUserType): boolean {
-    return _.findIndex(user.teams, team => team.isTeamManager) >= 0;
+    return user.isAdmin || _.findIndex(user.teams, team => team.isTeamManager) >= 0;
   },
 
   getUrlParamsObject(): { [key: string]: string | boolean } {

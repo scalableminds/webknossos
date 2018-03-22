@@ -3,7 +3,12 @@ import React from "react";
 import _ from "lodash";
 import { withRouter } from "react-router-dom";
 import { Form, Checkbox, Input, Select, Card, Button } from "antd";
-import { getTeams, createTaskType, updateTaskType, getTaskType } from "admin/admin_rest_api";
+import {
+  getEditableTeams,
+  createTaskType,
+  updateTaskType,
+  getTaskType,
+} from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
@@ -46,7 +51,7 @@ class TaskTypeCreateView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    this.setState({ teams: await getTeams() });
+    this.setState({ teams: await getEditableTeams() });
   }
 
   handleSubmit = e => {

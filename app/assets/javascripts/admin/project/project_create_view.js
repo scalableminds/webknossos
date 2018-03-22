@@ -3,7 +3,13 @@ import React from "react";
 import { withRouter } from "react-router-dom";
 import { connect } from "react-redux";
 import { Form, Input, Select, Button, Card, InputNumber } from "antd";
-import { getUsers, getTeams, createProject, getProject, updateProject } from "admin/admin_rest_api";
+import {
+  getUsers,
+  getEditableTeams,
+  createProject,
+  getProject,
+  updateProject,
+} from "admin/admin_rest_api";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { APIUserType, APITeamType } from "admin/api_flow_types";
@@ -41,7 +47,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 
   async fetchData() {
     const users = await getUsers();
-    const teams = await getTeams();
+    const teams = await getEditableTeams();
 
     this.setState({
       users: users.filter(user => user.isActive),

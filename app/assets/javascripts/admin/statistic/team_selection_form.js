@@ -1,7 +1,7 @@
 // @flow
 import * as React from "react";
 import { Row, Col, Form, Select, Button } from "antd";
-import { getTeams } from "admin/admin_rest_api";
+import { getEditableTeams } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
@@ -26,7 +26,7 @@ class TeamSelectionView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const teams = await getTeams();
+    const teams = await getEditableTeams();
     this.setState({ teams });
   }
 

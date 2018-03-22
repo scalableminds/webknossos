@@ -2,7 +2,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Modal, Spin, Select } from "antd";
-import { updateDatasetTeams, getTeams } from "admin/admin_rest_api";
+import { updateDatasetTeams, getEditableTeams } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
 import type { DatasetType } from "dashboard/dataset_view";
 
@@ -33,7 +33,7 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const teams = await getTeams();
+    const teams = await getEditableTeams();
     this.setState({
       isLoading: false,
       selectedTeams: this.props.dataset ? this.props.dataset.allowedTeams : [],

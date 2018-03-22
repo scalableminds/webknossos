@@ -7,7 +7,7 @@ import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import window from "libs/window";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import SceneController from "oxalis/controller/scene_controller";
+import renderer from "oxalis/controller/renderer";
 
 // A TextureBucketManager instance is responsible for making buckets of
 // avaible to the GPU.
@@ -155,21 +155,11 @@ export default class TextureBucketManager {
   setupDataTextures(bytes: number, binaryCategory: string): void {
     const tWidth = constants.DATA_TEXTURE_WIDTH;
 
-    const dataTexture = createUpdatableTexture(
-      tWidth,
-      bytes,
-      THREE.UnsignedByteType,
-      SceneController.renderer,
-    );
+    const dataTexture = createUpdatableTexture(tWidth, bytes, THREE.UnsignedByteType, renderer);
 
     dataTexture.binaryCategory = binaryCategory;
 
-    const lookUpTexture = createUpdatableTexture(
-      lookUpBufferWidth,
-      1,
-      THREE.FloatType,
-      SceneController.renderer,
-    );
+    const lookUpTexture = createUpdatableTexture(lookUpBufferWidth, 1, THREE.FloatType, renderer);
 
     this.dataTexture = dataTexture;
     this.lookUpTexture = lookUpTexture;

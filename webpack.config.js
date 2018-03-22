@@ -3,6 +3,7 @@ module.exports = function(env = {}) {
   var webpack = require("webpack");
   var fs = require("fs");
   var path = require("path");
+  const CircularDependencyPlugin = require("circular-dependency-plugin");
   const UglifyJsPlugin = require("uglifyjs-webpack-plugin");
   const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
@@ -19,6 +20,14 @@ module.exports = function(env = {}) {
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
+    }),
+    new CircularDependencyPlugin({
+      // exclude detection of files based on a RegExp
+      exclude: /a\.js|node_modules/,
+      // add errors to webpack instead of warnings
+      failOnError: true,
+      // set the current working directory for displaying module paths
+      cwd: process.cwd(),
     }),
   ];
 

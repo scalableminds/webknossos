@@ -238,25 +238,29 @@ export class OxalisModel {
       error = `${messages["dataset.not_imported"]} '${datasetName}'`;
     }
 
-    for (const dataLayer of dataset.dataSource.dataLayers) {
-      // Todo: the back-end should deliver the resolutions numerically sorted
-      // $FlowFixMe
-      dataLayer.resolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
-
-      _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
-        // We add another level of resolutions to allow zooming out even further
-        const lastResolution = _.last(dataLayer.resolutions);
-        dataLayer.resolutions.push([
-          2 * lastResolution[0],
-          2 * lastResolution[1],
-          2 * lastResolution[2],
-        ]);
-      });
-    }
-
     if (error) {
       Toast.error(error);
       throw this.HANDLED_ERROR;
+    }
+
+    for (let dataLayer of dataset.dataSource.dataLayers) {
+      // Todo: the back-end should deliver the resolutions numerically sorted
+      // $FlowFixMe
+      try {
+        dataLayer.resolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
+
+        _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
+          // We add another level of resolutions to allow zooming out even further
+          const lastResolution = _.last(dataLayer.resolutions);
+          dataLayer.resolutions.push([
+            2 * lastResolution[0],
+            2 * lastResolution[1],
+            2 * lastResolution[2],
+          ]);
+        });
+      } catch (ex) {
+        console.log(ex);
+      }
     }
 
     // Make sure subsequent fetch calls are always for the same dataset

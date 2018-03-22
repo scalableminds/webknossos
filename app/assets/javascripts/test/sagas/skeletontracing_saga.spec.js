@@ -13,7 +13,6 @@ const DateMock = {
   now: () => TIMESTAMP,
 };
 
-mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {

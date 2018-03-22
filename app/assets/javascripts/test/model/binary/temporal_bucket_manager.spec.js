@@ -8,7 +8,6 @@ import runAsync from "test/helpers/run-async";
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
-mockRequire("libs/window", {});
 mockRequire("libs/request", null);
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/binary/bucket");

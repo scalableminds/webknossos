@@ -66,10 +66,7 @@ class SceneController {
   }
 
   initialize() {
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: document.getElementById("render-canvas"),
-      antialias: true,
-    });
+    this.renderer = renderer;
 
     this.createMeshes();
     this.bindToEvents();

@@ -20,7 +20,6 @@ import SceneController from "oxalis/controller/scene_controller";
 import {
   getPosition,
   getRequestLogZoomStep,
-  getAreas,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -333,7 +332,6 @@ class PlaneController extends React.PureComponent<Props> {
       if (SceneController.pingDataLayer(dataLayerName)) {
         Model.binary[dataLayerName].ping(getPosition(state.flycam), {
           zoomStep: getRequestLogZoomStep(state),
-          areas: getAreas(state, Model.binary[dataLayerName].layer.resolutions),
           activePlane: activeViewport,
         });
       }

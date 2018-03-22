@@ -15,7 +15,13 @@ const DateMock = {
   now: () => TIMESTAMP,
 };
 mockRequire("libs/date", DateMock);
-mockRequire("libs/window", { alert: console.log.bind(console), location: { reload: _.noop } });
+
+const window = require("libs/window");
+window.location = {
+  reload: _.noop,
+};
+mockRequire("libs/window", window);
+
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });

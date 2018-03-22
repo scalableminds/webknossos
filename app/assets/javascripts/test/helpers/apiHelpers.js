@@ -24,13 +24,6 @@ const ErrorHandling = {
   assertExists: _.noop,
   assert: _.noop,
 };
-const window = {
-  location: {
-    pathname: "annotationUrl",
-  },
-  alert: console.log.bind(console),
-  open: sinon.spy(),
-};
 const app = {
   vent: Object.assign({}, BackboneEvents),
 };
@@ -41,7 +34,13 @@ export const KeyboardJS = {
 };
 mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop });
-mockRequire("libs/window", window);
+
+const window = require("libs/window");
+window.location = {
+  pathname: "annotationUrl",
+};
+window.open = sinon.spy();
+
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);

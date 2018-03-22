@@ -170,12 +170,10 @@ class Binary {
     logZoomStep: number,
     textureBucketManager: TextureBucketManager,
   ): ?Vector3 {
-    const anchorPoint = _.clone(position);
-    const zoomStep = Store.getState().flycam.zoomStep;
-
     const resolution = this.layer.resolutions[logZoomStep];
 
     // Hit texture top-left coordinate
+    const anchorPoint = _.clone(position);
     anchorPoint[0] = Math.floor(anchorPoint[0] - constants.PLANE_WIDTH / 2 * resolution[0]);
     anchorPoint[1] = Math.floor(anchorPoint[1] - constants.PLANE_WIDTH / 2 * resolution[1]);
     anchorPoint[2] = Math.floor(anchorPoint[2] - constants.PLANE_WIDTH / 2 * resolution[2]);

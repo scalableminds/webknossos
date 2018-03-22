@@ -122,6 +122,7 @@ class AbstractPlaneMaterialFactory {
     return this;
   }
 
+  /* eslint-disable no-unused-vars */
   attachTextures(textures: TextureMapType): void {}
 
   setupUniforms(): void {

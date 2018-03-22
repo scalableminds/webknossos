@@ -172,10 +172,13 @@ class Binary {
   ): ?Vector3 {
     const anchorPoint = _.clone(position);
     const zoomStep = Store.getState().flycam.zoomStep;
+
+    const resolution = this.layer.resolutions[logZoomStep];
+
     // Hit texture top-left coordinate
-    anchorPoint[0] = Math.floor(anchorPoint[0] - constants.PLANE_WIDTH / 2 * zoomStep);
-    anchorPoint[1] = Math.floor(anchorPoint[1] - constants.PLANE_WIDTH / 2 * zoomStep);
-    anchorPoint[2] = Math.floor(anchorPoint[2] - constants.PLANE_WIDTH / 2 * zoomStep);
+    anchorPoint[0] = Math.floor(anchorPoint[0] - constants.PLANE_WIDTH / 2 * resolution[0]);
+    anchorPoint[1] = Math.floor(anchorPoint[1] - constants.PLANE_WIDTH / 2 * resolution[1]);
+    anchorPoint[2] = Math.floor(anchorPoint[2] - constants.PLANE_WIDTH / 2 * resolution[2]);
 
     const zoomedAnchorPoint = this.cube.positionToZoomedAddress(anchorPoint, logZoomStep);
     if (_.isEqual(zoomedAnchorPoint, textureBucketManager.lastZoomedAnchorPoint)) {
@@ -196,7 +199,7 @@ class Binary {
       // right/lower half of the center bucket has one bucket more than the left/upper half.
       // This is necessary for the case in which the camera position is not exactly on a bucket boundary.
       // The top/left bucket is not completely shown and the part that is not necessary for rendering is
-      // necessary on the bottom/right which is why the lower/right half gets one bucket more.
+      // necessary on the bottom/right instead which is why the lower/right half gets one bucket more.
       const startingOffset = Math.floor(constants.RENDERED_BUCKETS_PER_DIMENSION / 2) - 1;
       const endOffset = constants.RENDERED_BUCKETS_PER_DIMENSION - startingOffset;
 

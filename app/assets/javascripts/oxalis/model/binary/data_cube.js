@@ -402,8 +402,6 @@ class DataCube {
 
   positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
     // return the bucket a given voxel lies in
-    const resolution = this.layer.resolutions[resolutionIndex];
-
     return PositionConverter.globalPositionToBucketPosition(
       position,
       this.layer.resolutions,

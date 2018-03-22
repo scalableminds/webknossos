@@ -2,7 +2,7 @@
 import _ from "lodash";
 import React from "react";
 import { Form, Row, Col, Button, Input, Select } from "antd";
-import { getUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
+import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import { withRouter } from "react-router-dom";
@@ -86,7 +86,7 @@ class TaskSearchForm extends React.Component<Props, State> {
 
   async fetchData() {
     this.setState({
-      users: await getUsers(),
+      users: await getEditableUsers(),
       projects: await getProjects(),
       taskTypes: await getTaskTypes(),
     });

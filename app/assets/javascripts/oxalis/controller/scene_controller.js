@@ -28,6 +28,7 @@ import { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxali
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getRenderer } from "oxalis/controller/renderer";
 
 const CUBE_COLOR = 0x999999;
 
@@ -66,7 +67,7 @@ class SceneController {
   }
 
   initialize() {
-    this.renderer = renderer;
+    this.renderer = getRenderer();
 
     this.createMeshes();
     this.bindToEvents();

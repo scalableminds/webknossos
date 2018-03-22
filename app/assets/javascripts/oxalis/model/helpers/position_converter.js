@@ -29,4 +29,20 @@ export default {
       z * constants.BUCKET_WIDTH * resolution[2],
     ];
   },
+
+  zoomedAddressToAnotherZoomStep(
+    [x, y, z, resolutionIndex]: Vector4,
+    resolutions: Array<Vector3>,
+    targetResolutionIndex: number,
+  ): Vector4 {
+    const currentResolution = resolutions[resolutionIndex];
+    const targetResolution = resolutions[targetResolutionIndex];
+
+    return [
+      Math.floor(x * (currentResolution[0] / targetResolution[0])),
+      Math.floor(y * (currentResolution[1] / targetResolution[1])),
+      Math.floor(z * (currentResolution[2] / targetResolution[2])),
+      targetResolutionIndex,
+    ];
+  },
 };

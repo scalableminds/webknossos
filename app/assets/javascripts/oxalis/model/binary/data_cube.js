@@ -49,7 +49,6 @@ class DataCube {
   BIT_DEPTH: number;
   MAX_ZOOM_STEP: number;
   MAX_UNSAMPLED_ZOOM_STEP: number;
-  downsampledZoomStepCount: number;
   BYTE_OFFSET: number;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
@@ -80,16 +79,21 @@ class DataCube {
   // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
   // access-queue and is least recently used. It is then removed from the cube.
 
-  constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number, layer: Layer) {
+  constructor(
+    upperBoundary: Vector3,
+    extendedZoomStepCount: number,
+    bitDepth: number,
+    layer: Layer,
+  ) {
     this.upperBoundary = upperBoundary;
     this.layer = layer;
 
-    this.MAX_UNSAMPLED_ZOOM_STEP = zoomStepCount - 1;
+    this.MAX_UNSAMPLED_ZOOM_STEP =
+      extendedZoomStepCount - constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1;
     // Always add another layer of downsampled buckets, so that we support
     // zooming out to maxZoomStep + 1
-    this.ZOOM_STEP_COUNT = zoomStepCount + 1;
+    this.ZOOM_STEP_COUNT = extendedZoomStepCount;
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
-    this.downsampledZoomStepCount = this.ZOOM_STEP_COUNT - zoomStepCount;
 
     this.BIT_DEPTH = bitDepth;
     _.extend(this, BackboneEvents);
@@ -112,7 +116,7 @@ class DataCube {
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
-    for (let i = 0; i < this.MAX_UNSAMPLED_ZOOM_STEP; i++) {
+    for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
       const resolution = this.layer.resolutions[i];
       const zoomedCubeBoundary = [
         Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
@@ -399,16 +403,6 @@ class DataCube {
   positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
     // return the bucket a given voxel lies in
     const resolution = this.layer.resolutions[resolutionIndex];
-    if (resolution == null) {
-      console.log("constructing virtual resolution");
-      const lastResolution = _.last(this.layer.resolutions);
-      const missingZoomStepCount = resolutionIndex - this.layer.resolutions.length;
-      this.layer.resolutions.push([
-        Math.pow(2, missingZoomStepCount) * lastResolution[0],
-        Math.pow(2, missingZoomStepCount) * lastResolution[1],
-        Math.pow(2, missingZoomStepCount) * lastResolution[2],
-      ]);
-    }
 
     return PositionConverter.globalPositionToBucketPosition(
       position,

@@ -238,10 +238,20 @@ export class OxalisModel {
       error = `${messages["dataset.not_imported"]} '${datasetName}'`;
     }
 
-    // todo: the back-end should deliver the resolutions numerically sorted
     for (const dataLayer of dataset.dataSource.dataLayers) {
+      // Todo: the back-end should deliver the resolutions numerically sorted
       // $FlowFixMe
       dataLayer.resolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
+
+      _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
+        // We add another level of resolutions to allow zooming out even further
+        const lastResolution = _.last(dataLayer.resolutions);
+        dataLayer.resolutions.push([
+          2 * lastResolution[0],
+          2 * lastResolution[1],
+          2 * lastResolution[2],
+        ]);
+      });
     }
 
     if (error) {

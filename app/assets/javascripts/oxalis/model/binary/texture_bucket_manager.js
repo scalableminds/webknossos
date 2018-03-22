@@ -233,8 +233,6 @@ export default class TextureBucketManager {
         : -1;
     }
 
-    console.log("committed", committed);
-
     this.lookUpTexture.update(this.lookUpBuffer, 0, 0, lookUpBufferWidth, lookUpBufferWidth);
     this.isRefreshBufferOutOfDate = false;
     window.needsRerender = true;

@@ -9,6 +9,7 @@ import type Layer from "oxalis/model/binary/layers/layer";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector4 } from "oxalis/constants";
 import type { DataStoreInfoType } from "oxalis/store";
+import PositionConverter from "oxalis/model/helpers/position_converter";
 
 export type PullQueueItemType = {
   priority: number,
@@ -96,7 +97,8 @@ class PullQueue {
 
       let offset = 0;
       for (const bucketAddress of batch) {
-        if (bucketAddress[3] > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+        const zoomStep = bucketAddress[3];
+        if (zoomStep > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
           continue;
         }
         bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
@@ -105,14 +107,13 @@ class PullQueue {
         this.maybeWhitenEmptyBucket(bucketData);
         if (bucket.type === "data") {
           bucket.receiveData(bucketData);
-          // todo:
-          if (false && this.cube.downsampledZoomStepCount > 0) {
-            const higherAddress = bucketAddress.slice();
-            higherAddress[0] = higherAddress[0] >> 1;
-            higherAddress[1] = higherAddress[1] >> 1;
-            higherAddress[2] = higherAddress[2] >> 1;
-            higherAddress[3]++;
-            // $FlowFixMe Flow does not understand that bucket will always be of length 4
+          if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+            const higherAddress = PositionConverter.zoomedAddressToAnotherZoomStep(
+              bucketAddress,
+              this.layer.resolutions,
+              zoomStep + 1,
+            );
+
             const higherBucket = this.cube.getOrCreateBucket(higherAddress);
             if (higherBucket.type === "data") {
               higherBucket.downsampleFromLowerBucket(

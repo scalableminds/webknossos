@@ -6,6 +6,7 @@
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
 import type { Vector4 } from "oxalis/constants";
+import constants from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import Utils from "libs/utils";
 import window from "libs/window";
@@ -243,9 +244,10 @@ export class DataBucket {
     }
     this.isDownSampled = true;
 
-    const xOffset = (bucket.zoomedAddress[0] % 2) * 16;
-    const yOffset = (bucket.zoomedAddress[1] % 2) * 16;
-    const zOffset = (bucket.zoomedAddress[2] % 2) * 16;
+    const halfBucketWidth = constants.BUCKET_WIDTH / 2;
+    const xOffset = (bucket.zoomedAddress[0] % 2) * halfBucketWidth;
+    const yOffset = (bucket.zoomedAddress[1] % 2) * halfBucketWidth;
+    const zOffset = (bucket.zoomedAddress[2] % 2) * halfBucketWidth;
 
     if (!this.data) {
       this.data = new Uint8Array(this.BUCKET_LENGTH);
@@ -256,9 +258,9 @@ export class DataBucket {
     const dataArray = [0, 0, 0, 0, 0, 0, 0, 0];
     const byteOffset = this.BYTE_OFFSET;
 
-    for (let z = 0; z < 16; z++) {
-      for (let y = 0; y < 16; y++) {
-        for (let x = 0; x < 16; x++) {
+    for (let z = 0; z < halfBucketWidth; z++) {
+      for (let y = 0; y < halfBucketWidth; y++) {
+        for (let x = 0; x < halfBucketWidth; x++) {
           const linearizedIndex = xyzToIdx(x + xOffset, y + yOffset, z + zOffset);
           for (let currentByteOffset = 0; currentByteOffset < byteOffset; currentByteOffset++) {
             const targetIdx = linearizedIndex * byteOffset + currentByteOffset;

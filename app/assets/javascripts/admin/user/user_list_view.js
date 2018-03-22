@@ -265,22 +265,28 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="teams"
               key="teams_"
               width={300}
-              render={(teams: Array<APITeamMembershipType>, user: APIUserType) =>
-                teams.map(team => {
-                  // eslint-disable-next-line no-nested-ternary
-                  const roleName = user.isAdmin
-                    ? "Admin"
-                    : team.isTeamManager ? "Team Manager" : "User";
+              render={(teams: Array<APITeamMembershipType>, user: APIUserType) => {
+                if (user.isAdmin) {
                   return (
-                    <Tag
-                      key={`team_role_${user.id}_${team.id}`}
-                      color={TemplateHelpers.stringToColor(roleName)}
-                    >
-                      {team.name}: {roleName}
+                    <Tag key={`team_role_${user.id}`} color="red">
+                      Admin - Access to all Teams
                     </Tag>
                   );
-                })
-              }
+                } else {
+                  return teams.map(team => {
+                    // eslint-disable-next-line no-nested-ternary
+                    const roleName = team.isTeamManager ? "Team Manager" : "User";
+                    return (
+                      <Tag
+                        key={`team_role_${user.id}_${team.id}`}
+                        color={TemplateHelpers.stringToColor(roleName)}
+                      >
+                        {team.name}: {roleName}
+                      </Tag>
+                    );
+                  });
+                }
+              }}
             />
             <Column
               title="Status"

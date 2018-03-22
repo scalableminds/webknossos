@@ -183,8 +183,12 @@ const Utils = {
     );
   },
 
+  isUserTeamManager(user: APIUserType): boolean {
+    return _.findIndex(user.teams, team => team.isTeamManager) >= 0;
+  },
+
   isUserAdmin(user: APIUserType): boolean {
-    return user.isAdmin || _.findIndex(user.teams, team => team.isTeamManager) >= 0;
+    return user.isAdmin || this.isUserTeamManager(user);
   },
 
   getUrlParamsObject(): { [key: string]: string | boolean } {

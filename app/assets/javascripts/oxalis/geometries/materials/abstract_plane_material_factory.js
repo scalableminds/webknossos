@@ -122,7 +122,7 @@ class AbstractPlaneMaterialFactory {
     return this;
   }
 
-  attachTextures(): void {}
+  attachTextures(textures: TextureMapType): void {}
 
   setupUniforms(): void {
     this.uniforms = {};
@@ -185,7 +185,9 @@ class AbstractPlaneMaterialFactory {
     return this.material;
   }
 
-  getFragmentShader(): string {}
+  getFragmentShader(): string {
+    return "";
+  }
 
   getVertexShader(): string {
     return `

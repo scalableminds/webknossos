@@ -449,12 +449,11 @@ export class OxalisModel {
     // However, if resolutions are subset of each other, everything should be fine.
     // For that case, return the longest resolutions array should suffice
 
-    return _.last(
-      _.sortBy(
-        Object.values(this.binary).map(b => b.layer.resolutions),
-        resolutions => resolutions.length,
-      ),
-    );
+    return _.chain(this.binary)
+      .map(b => b.layer.resolutions)
+      .sortBy(resolutions => resolutions.length)
+      .last()
+      .valueOf();
   }
 
   stateSaved() {

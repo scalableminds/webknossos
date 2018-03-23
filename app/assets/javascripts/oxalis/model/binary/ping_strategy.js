@@ -73,7 +73,6 @@ export class PingStrategy extends AbstractPingStrategy {
     position: Vector3,
     direction: Vector3,
     currentZoomStep: number,
-    areas: OrthoViewMapType<Vector4>,
     activePlane: OrthoViewType,
   ): Array<PullQueueItemType> {
     const zoomStep = Math.min(currentZoomStep, this.cube.MAX_UNSAMPLED_ZOOM_STEP);
@@ -84,7 +83,6 @@ export class PingStrategy extends AbstractPingStrategy {
       direction,
       zoomStep,
       zoomStepDiff,
-      areas,
       activePlane,
     );
 
@@ -97,7 +95,6 @@ export class PingStrategy extends AbstractPingStrategy {
         direction,
         fallbackZoomStep,
         0,
-        areas,
         activePlane,
       );
     }
@@ -110,7 +107,6 @@ export class PingStrategy extends AbstractPingStrategy {
     direction: Vector3,
     zoomStep: number,
     zoomStepDiff: number,
-    areas: OrthoViewMapType<Vector4>,
     activePlane: OrthoViewType,
   ): Array<PullQueueItemType> {
     const pullQueue = [];

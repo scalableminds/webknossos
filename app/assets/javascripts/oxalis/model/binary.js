@@ -36,7 +36,6 @@ const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
 type PingOptions = {
   zoomStep: number,
-  areas: OrthoViewMapType<Vector4>,
   activePlane: OrthoViewType,
 };
 
@@ -60,7 +59,6 @@ class Binary {
   activeMapping: ?string;
   lastPosition: ?Vector3;
   lastZoomStep: ?number;
-  lastAreas: ?OrthoViewMapType<Vector4>;
   textureBucketManager: TextureBucketManager;
   // This object is responsible for managing the buckets of the highest zoomStep
   // which can be used as a fallback in the shader, when better data is not available
@@ -241,7 +239,7 @@ class Binary {
 
   ping = _.throttle(this.pingImpl, PING_THROTTLE_TIME);
 
-  pingImpl(position: Vector3, { zoomStep, areas, activePlane }: PingOptions): void {
+  pingImpl(position: Vector3, { zoomStep, activePlane }: PingOptions): void {
     if (this.lastPosition != null) {
       this.direction = [
         (1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[0] +
@@ -253,14 +251,9 @@ class Binary {
       ];
     }
 
-    if (
-      !_.isEqual(position, this.lastPosition) ||
-      zoomStep !== this.lastZoomStep ||
-      !_.isEqual(areas, this.lastAreas)
-    ) {
+    if (!_.isEqual(position, this.lastPosition) || zoomStep !== this.lastZoomStep) {
       this.lastPosition = _.clone(position);
       this.lastZoomStep = zoomStep;
-      this.lastAreas = Object.assign({}, areas);
 
       for (const strategy of this.pingStrategies) {
         if (
@@ -268,11 +261,9 @@ class Binary {
           strategy.inVelocityRange(this.connectionInfo.bandwidth) &&
           strategy.inRoundTripTimeRange(this.connectionInfo.roundTripTime)
         ) {
-          if (zoomStep != null && areas != null && activePlane != null) {
+          if (zoomStep != null && activePlane != null) {
             this.pullQueue.clearNormalPriorities();
-            this.pullQueue.addAll(
-              strategy.ping(position, this.direction, zoomStep, areas, activePlane),
-            );
+            this.pullQueue.addAll(strategy.ping(position, this.direction, zoomStep, activePlane));
           }
           break;
         }

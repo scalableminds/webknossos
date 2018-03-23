@@ -5,13 +5,13 @@ export const document = typeof window === "undefined" ? {} : window.document;
 export const location =
   typeof window === "undefined" ? { reload: () => {} /* noop */ } : window.location;
 
-export default (typeof window === "undefined"
-  ? {
-      requestAnimationFrame(fn) {
-        fn();
-      },
-      alert: console.log.bind(console),
-      requestAnimationFrame: resolve => resolve(),
-      app: null,
-    }
-  : window);
+const _window =
+  typeof window === "undefined"
+    ? {
+        alert: console.log.bind(console),
+        requestAnimationFrame: resolve => resolve(),
+        app: null,
+      }
+    : window;
+
+export default _window;

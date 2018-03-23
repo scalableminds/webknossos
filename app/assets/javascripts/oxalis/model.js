@@ -229,7 +229,7 @@ export class OxalisModel {
   }
 
   async initializeDataset(datasetName: string) {
-    const dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
+    let dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
 
     let error;
     if (!dataset) {
@@ -243,25 +243,7 @@ export class OxalisModel {
       throw this.HANDLED_ERROR;
     }
 
-    for (let dataLayer of dataset.dataSource.dataLayers) {
-      // Todo: the back-end should deliver the resolutions numerically sorted
-      // $FlowFixMe
-      try {
-        dataLayer.resolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
-
-        _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
-          // We add another level of resolutions to allow zooming out even further
-          const lastResolution = _.last(dataLayer.resolutions);
-          dataLayer.resolutions.push([
-            2 * lastResolution[0],
-            2 * lastResolution[1],
-            2 * lastResolution[2],
-          ]);
-        });
-      } catch (ex) {
-        console.log(ex);
-      }
-    }
+    dataset = adaptResolutions(dataset);
 
     // Make sure subsequent fetch calls are always for the same dataset
     if (!_.isEmpty(this.binary)) {
@@ -490,6 +472,36 @@ export class OxalisModel {
       // eslint-disable-next-line no-await-in-loop
       await Utils.sleep(500);
     }
+  };
+}
+
+function adaptResolutions(dataset: APIDatasetType): APIDatasetType {
+  const adaptedLayers = dataset.dataSource.dataLayers.map(dataLayer => {
+    // Todo: the back-end should deliver the resolutions numerically sorted
+    let adaptedResolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
+
+    _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
+      // We add another level of resolutions to allow zooming out even further
+      const lastResolution = _.last(adaptedResolutions);
+      adaptedResolutions.push([
+        2 * lastResolution[0],
+        2 * lastResolution[1],
+        2 * lastResolution[2],
+      ]);
+    });
+
+    return {
+      ...dataLayer,
+      resolutions: adaptedResolutions,
+    };
+  });
+
+  return {
+    ...dataset,
+    dataSource: {
+      ...dataset.dataSource,
+      dataLayers: adaptedLayers,
+    },
   };
 }
 

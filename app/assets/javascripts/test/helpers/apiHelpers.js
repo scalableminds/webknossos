@@ -36,10 +36,16 @@ mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop });
 
 const window = require("libs/window");
-window.location = {
-  pathname: "annotationUrl",
-};
-window.open = sinon.spy();
+mockRequire(
+  "libs/window",
+  Object.assign({}, window, {
+    location: {
+      pathname: "annotationUrl",
+    },
+    requestAnimationFrame: resolve => resolve(),
+    open: sinon.spy(),
+  }),
+);
 
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);

@@ -61,7 +61,6 @@ test("Data API: getVolumeTracingLayerName should return the name of the volume t
 test("Data API: downloadRawDataCuboid should open a popup with the correct URL", async t => {
   const { api } = t.context;
   const window = require("libs/window");
-  window.open = sinon.spy();
 
   await api.data.downloadRawDataCuboid("color", [1, 2, 3], [9, 8, 7]);
 

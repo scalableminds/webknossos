@@ -116,7 +116,7 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
   const { layer } = t.context;
   const { batch } = prepare();
   layer.setFourBit(true);
-  debugger;
+
   const expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token2";
   const expectedOptions = {
     data: [

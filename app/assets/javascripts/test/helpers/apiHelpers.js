@@ -36,6 +36,7 @@ mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop });
 
 const window = require("libs/window");
+
 mockRequire(
   "libs/window",
   Object.assign({}, window, {

@@ -17,6 +17,7 @@ const DateMock = {
 mockRequire("libs/date", DateMock);
 
 const window = require("libs/window");
+
 window.location = {
   reload: _.noop,
 };

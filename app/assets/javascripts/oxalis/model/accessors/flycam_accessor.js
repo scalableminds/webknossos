@@ -1,12 +1,5 @@
 // @flow
-import type {
-  Vector2,
-  Vector3,
-  Vector4,
-  OrthoViewType,
-  OrthoViewMapType,
-  BoundingBoxType,
-} from "oxalis/constants";
+import type { Vector3, OrthoViewType, BoundingBoxType } from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews } from "oxalis/constants";
 import Maybe from "data.maybe";

@@ -8,7 +8,7 @@ import Dimensions from "oxalis/model/dimensions";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import type DataCube from "oxalis/model/binary/data_cube";
-import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, OrthoViewType } from "oxalis/constants";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 

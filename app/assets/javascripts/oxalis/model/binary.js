@@ -27,7 +27,7 @@ import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 
-import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
+import type { Vector3, Vector4, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type Layer from "oxalis/model/binary/layers/layer";
 

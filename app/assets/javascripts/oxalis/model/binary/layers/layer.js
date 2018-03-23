@@ -64,7 +64,6 @@ class Layer {
   }
 
   buildBuckets(batch: Array<Vector4>, options: ?BucketRequestOptions): Array<BucketInfo> {
-    
     return batch.map(bucketAddress =>
       BucketBuilder.fromZoomedAddress(bucketAddress, this.resolutions, options),
     );

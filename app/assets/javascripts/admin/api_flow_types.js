@@ -33,15 +33,14 @@ export type APIDatasetType = {
   +isEditable: boolean,
   +isPublic: boolean,
   +name: string,
-  +owningTeam: "Connectomics department",
+  +owningOrganization: string,
   +sourceType: "wkw" | "knossos",
 };
 
-export type APIRoleType = { +name: string };
-
-export type APITeamRoleType = {
-  +team: string,
-  +role: APIRoleType,
+export type APITeamMembershipType = {
+  +id: string,
+  +name: string,
+  +isTeamManager: boolean,
 };
 
 export type ExperienceMapType = { +[string]: number };
@@ -52,11 +51,12 @@ export type APIUserType = {
   +firstName: string,
   +lastName: string,
   +id: string,
+  +isAdmin: boolean,
   +isActive: boolean,
   +isAnonymous: boolean,
   +isEditable: boolean,
   +lastActivity: number,
-  +teams: Array<APITeamRoleType>,
+  +teams: Array<APITeamMembershipType>,
 };
 
 export type APITimeIntervalType = {
@@ -73,9 +73,7 @@ export type APIUserLoggedTimeType = {
 export type APITeamType = {
   +id: string,
   +name: string,
-  +owner: APIUserType,
-  +parent: string,
-  +roles: Array<APIRoleType>,
+  +organization: string,
 };
 
 export type APIRestrictionsType = {
@@ -242,6 +240,13 @@ export type APIOpenTasksReportType = {
   +user: string,
   +totalAssignments: number,
   +assignmentsByProjects: { [projectName: string]: number },
+};
+
+export type APIOrganizationType = {
+  +id: string,
+  +name: string,
+  +teams: Array<string>,
+  +organizationTeam: string,
 };
 
 export type APIBuildInfoType = {

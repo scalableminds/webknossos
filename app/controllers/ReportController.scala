@@ -7,18 +7,16 @@ import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationDAO, AnnotationType}
-import models.project.{Project, ProjectDAO}
-import models.task._
+import models.annotation.AnnotationTypeSQL
+import models.project.ProjectDAO
 import models.team.TeamDAO
-import models.user.{Experience, User, UserDAO}
+import models.user.{User, UserDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.MessagesApi
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
-import reactivemongo.bson.BSONObjectID
-
-import scala.concurrent.duration._
+import slick.jdbc.PostgresProfile.api._
+import utils.{ObjectId, SimpleSQLDAO}
 
 
 case class OpenTasksEntry(id: String, user: String, totalAssignments: Int, assignmentsByProjects: Map[String, Int])
@@ -28,93 +26,121 @@ case class ProjectProgressEntry(projectName: String, paused: Boolean, totalTasks
                                 finishedInstances: Int, activeInstances: Int)
 object ProjectProgressEntry { implicit val jsonFormat = Json.format[ProjectProgressEntry] }
 
+object ReportSQLDAO extends SimpleSQLDAO {
+
+  def projectProgress(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ProjectProgressEntry]] = {
+    for {
+      r <- run(
+        sql"""
+          with teamMembers as (select _user from webknossos.user_team_roles ut where ut._team = ${teamId.id})
+
+          ,experiences as (select ue.domain, ue.value
+          from
+            teamMembers u
+            JOIN webknossos.user_experiences ue on ue._user = u._user
+          )
+
+          ,filteredProjects as (select p._id, p.name, p.paused
+          from
+            webknossos.projects_ p
+            JOIN webknossos.tasks_ t ON t._project = p._id
+            CROSS JOIN experiences ue
+          where p._team = ${teamId.id} and
+          t.neededExperience_domain = ue.domain and
+          t.neededExperience_value <= ue.value
+          group by p._id, p.name, p.paused)
+
+          ,projectModifiedTimes as (select p._id, MAX(a.modified) as modified
+          from
+            filteredProjects p
+            JOIN webknossos.tasks_ t ON t._project = p._id
+            LEFT JOIN webknossos.annotations_ a ON t._id = a._task
+            group by p._id
+          )
+
+          ,s1 as (select
+               p._id,
+               p.name projectName,
+               p.paused paused,
+               count(t._id) totalTasks,
+               sum(t.totalInstances) totalInstances,
+               sum(ti.openInstances) openInstances
+          from
+            filteredProjects p
+            join webknossos.tasks_ t on p._id = t._project
+            join webknossos.task_instances ti on t._id = ti._id
+          group by p._id, p.name, p.paused)
+
+          ,s2 as (select p._id,
+             count(a) activeInstances
+           FROM
+             filteredProjects p
+             join webknossos.tasks_ t on p._id = t._project
+             left join (select * from webknossos.annotations_ a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
+           group by p._id
+           )
+
+
+          select s1.projectName, s1.paused, s1.totalTasks, s1.totalInstances, s1.openInstances, (s1.totalInstances - s1.openInstances - s2.activeInstances) finishedInstances, s2.activeInstances
+          from s1
+            join s2 on s1._id = s2._id
+            join projectModifiedTimes pmt on s1._id = pmt._id
+          where (not (paused and s1.totalInstances = s1.openInstances)) and (s1.openInstances > 0 or s2.activeInstances > 0 or pmt.modified > NOW() - INTERVAL '30 days')
+        """.as[(String, Boolean, Int, Int, Int, Int, Int)])
+    } yield {
+      r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7))
+    }
+  }
+
+
+  def getAssignmentsByProjectsFor(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
+    for {
+      r <- run(sql"""
+        select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
+        from
+        webknossos.tasks_ t
+          join webknossos.task_instances ti on t._id = ti._id
+        join
+        (select *
+          from webknossos.user_experiences
+        where _user = ${userId.id})
+        as ue on t.neededExperience_domain = ue.domain and t.neededExperience_value <= ue.value
+        join webknossos.projects_ p on t._project = p._id
+        left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationTypeSQL.Task}') as userAnnotations ON t._id = userAnnotations._task
+        where ti.openInstances > 0
+        and userAnnotations._task is null
+        and not p.paused
+        group by p._id, p.name, t.neededExperience_domain, t.neededExperience_value
+      """.as[(String, String, String, Int, Int)])
+    } yield {
+      val formattedList = r.toList.map(row => (row._2 + "/" + row._3 + ": " + row._4, row._5))
+      formattedList.toMap.filter(_ match { case (title: String, openTaskCount: Int) => openTaskCount > 0 })
+    }
+  }
+
+}
+
 class ReportController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
 
   def projectProgressOverview(teamId: String) = SecuredAction.async { implicit request =>
     for {
-      team <- TeamDAO.findOneById(teamId)(GlobalAccessContext) ?~> "team.notFound"
-      teamWithParent = List(Some(team.name), team.parent).flatten
-      users <- UserDAO.findByTeams(teamWithParent, false)
-      projects <- ProjectDAO.findAllByTeamNames(teamWithParent)(GlobalAccessContext)
-      entryBoxes <- Fox.sequence(projects.map(p => progressOfProject(p, users)(GlobalAccessContext)))
-    } yield {
-      Ok(Json.toJson(entryBoxes.flatten))
-    }
+      entries <- ReportSQLDAO.projectProgress(ObjectId(teamId))(GlobalAccessContext)
+    } yield Ok(Json.toJson(entries))
   }
 
-  private def progressOfProject(project: Project, users: List[User])(implicit ctx: DBAccessContext): Fox[ProjectProgressEntry] = {
-    for {
-      taskIds <- TaskDAO.findAllByProjectReturnOnlyIds(project.name)
-      totalTasks = taskIds.length
-      firstTask <- TaskDAO.findOneByProject(project.name)
-      totalInstances <- TaskDAO.sumInstancesByProject(project.name)
-      finishedInstances <- AnnotationDAO.countFinishedByTaskIdsAndType(taskIds, AnnotationType.Task)
-      activeInstances <- AnnotationDAO.countActiveByTaskIdsAndType(taskIds, AnnotationType.Task)
-      openInstances = totalInstances - finishedInstances - activeInstances
-      _ <- assertNotPaused(project, finishedInstances, activeInstances)
-      _ <- assertExpDomain(firstTask, activeInstances, users)
-      _ <- assertAge(project, taskIds, activeInstances, openInstances)
-    } yield {
-      ProjectProgressEntry(project.name, project.paused, totalTasks, totalInstances, openInstances, finishedInstances, activeInstances)
-    }
-  }
-
-  private def assertNotPaused(project: Project, finishedInstances: Int, activeInstances: Int) = {
-    if (project.paused && finishedInstances == 0 && activeInstances == 0) {
-      Fox.failure("")
-    } else Fox.successful(())
-  }
-
-  private def assertExpDomain(firstTask: Task, activeInstances: Int, users: List[User])(implicit ctx: DBAccessContext) = {
-    if (activeInstances > 0) Fox.successful(())
-    else assertMatchesAnyUserOfTeam(firstTask.neededExperience, users)
-  }
-
-  private def assertMatchesAnyUserOfTeam(experience: Experience, users: List[User])(implicit ctx: DBAccessContext) = {
-    for {
-      _ <- users.exists(user => user.experiences.contains(experience.domain) && user.experiences(experience.domain) >= experience.value)
-    } yield {
-      ()
-    }
-  }
-
-  private def assertAge(project: Project, taskIds: List[BSONObjectID], activeInstances: Int, openInstances: Int)(implicit ctx: DBAccessContext) = {
-    if (activeInstances > 0 || (!project.paused && openInstances > 0)) Fox.successful(())
-    else {
-      assertRecentlyModified(taskIds)
-    }
-  }
-
-  private def assertRecentlyModified(taskIds: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
-    for {
-      count <- AnnotationDAO.countRecentlyModifiedByTaskIdsAndType(taskIds, AnnotationType.Task, System.currentTimeMillis - (30 days).toMillis)
-      _ <- count > 0
-    } yield {
-      ()
-    }
-  }
-
-
-  /**
-    * assumes that all tasks of a project have the same required experience
-    */
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
-      users <- UserDAO.findByTeams(List(team.name), includeAnonymous = true, includeInactive = false)(GlobalAccessContext)
-      nonAdminUsers = users.filterNot(_.isAdminOf(team.name))
+      users <- UserDAO.findByTeams(List(team._id), includeInactive = false)(GlobalAccessContext)
+      nonAdminUsers = users.filterNot(_.isTeamManagerOf(team._id))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
-    } yield {
-      Ok(Json.toJson(entries))
-    }
+    } yield Ok(Json.toJson(entries))
   }
-
 
   private def getAllAvailableTaskCountsAndProjects(users: Seq[User])(implicit ctx: DBAccessContext): Fox[List[OpenTasksEntry]] = {
     val foxes = users.map { user =>
       for {
-        projects <- TaskDAO.findWithOpenByUserReturnOnlyProject(user).toFox
-        assignmentCountsByProject <- getAssignmentsByProjectsFor(projects, user)
+        assignmentCountsByProject <- ReportSQLDAO.getAssignmentsByProjectsFor(ObjectId(user.id))
       } yield {
         OpenTasksEntry(user.id, user.name, assignmentCountsByProject.values.sum, assignmentCountsByProject)
       }
@@ -122,23 +148,5 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     Fox.combined(foxes.toList)
   }
 
-  private def getAssignmentsByProjectsFor(projects: Seq[String], user: User)(implicit ctx: DBAccessContext): Fox[Map[String, Int]] = {
-    val projectsGrouped = projects.groupBy(identity).mapValues(_.size)
-    val foxes: Iterable[Fox[(String, Int)]] = projectsGrouped.keys.map {
-      project =>
-        Fox(for {
-          tasksIds <- TaskDAO.findAllByProjectReturnOnlyIds(project)
-          doneTasks <- AnnotationDAO.countFinishedByTaskIdsAndUserIdAndType(tasksIds, user._id, AnnotationType.Task)
-          firstTask <- TaskDAO.findOneByProject(project)
-        } yield {
-          (project + "/" + firstTask.neededExperience.toString, projectsGrouped(project) - doneTasks)
-        })
-    }
-    for {
-      list <- Fox.combined(foxes.toList)
-    } yield {
-      list.toMap.filter(_ match { case (title: String, openTaskCount: Int) => openTaskCount > 0 })
-    }
-  }
 
 }

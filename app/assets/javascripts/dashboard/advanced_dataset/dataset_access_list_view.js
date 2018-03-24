@@ -47,8 +47,8 @@ export default class DatasetAccessListView extends React.PureComponent<Props, St
                 {user.firstName} {user.lastName}
               </div>
               {user.teams.map(team => (
-                <Tag color={TemplateHelpers.stringToColor(team.team)} key={team.team}>
-                  {team.team}
+                <Tag color={TemplateHelpers.stringToColor(team.name)} key={`${user.id}-${team.id}`}>
+                  {team.name}
                 </Tag>
               ))}
             </li>

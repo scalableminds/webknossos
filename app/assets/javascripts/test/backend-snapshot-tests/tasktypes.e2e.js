@@ -27,7 +27,7 @@ test("createTaskType and deleteTaskType", async t => {
     id: null,
     summary: "summary",
     description: "description",
-    team: aTeam.team,
+    team: aTeam.id,
     settings: {
       somaClickingAllowed: true,
       branchPointsAllowed: true,

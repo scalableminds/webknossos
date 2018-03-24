@@ -2,19 +2,20 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.AnnotationState._
 import models.annotation.nml.{NmlService, NmlWriter}
 import models.annotation.{AnnotationType, _}
 import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -22,7 +23,6 @@ import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
-import models.annotation.AnnotationState._
 
 
 class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
@@ -173,7 +173,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       project <- ProjectDAO.findOneById(projectId) ?~> Messages("project.notFound", projectId)
-      _ <- user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
+      _ <- user.teamManagerTeamIds.contains(project._team) ?~> Messages("notAllowed")
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)
@@ -188,7 +188,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       task <- TaskDAO.findOneById(taskId).toFox ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(user, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(user, task._team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }
@@ -203,7 +203,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       tasktype <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(user, tasktype.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(user, tasktype._team) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
   }

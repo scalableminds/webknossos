@@ -77,8 +77,8 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       for {
         dataset <- DataSetDAO.findOneBySourceName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
-        owningTeam = dataset.owningTeam
-        isAllowed <- ensureTeamAdministration(user, owningTeam).futureBox
+        owningOrg = dataset.owningOrganization
+        isAllowed <- user.isAdminOf(owningOrg).futureBox
       } yield {
         Full(UserAccessAnswer(isAllowed.isDefined))
       }
@@ -102,7 +102,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
     def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
-      val annotationFox = AnnotationDAO.findByTracingId(tracingId)
+      val annotationFox = AnnotationDAO.findOneByTracingId(tracingId)
       for {
         annotationBox <- annotationFox.futureBox
       } yield {

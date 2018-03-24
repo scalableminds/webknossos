@@ -2,7 +2,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Modal, Spin, Select } from "antd";
-import Request from "libs/request";
+import { updateDatasetTeams, getEditableTeams } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
 import type { DatasetType } from "dashboard/dataset_view";
 
@@ -33,8 +33,7 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const url = "/api/teams";
-    const teams = await Request.receiveJSON(url);
+    const teams = await getEditableTeams();
     this.setState({
       isLoading: false,
       selectedTeams: this.props.dataset ? this.props.dataset.allowedTeams : [],
@@ -44,7 +43,7 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
 
   selectTeams = (selectedTeams: Array<string>) => {
     // make sure the owningTeam is always selected
-    const allowedTeams = _.uniq([this.props.dataset.owningTeam, ...selectedTeams]);
+    const allowedTeams = _.uniq([this.props.dataset.owningOrganization, ...selectedTeams]);
     this.setState({
       selectedTeams: allowedTeams,
     });
@@ -55,10 +54,7 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
       allowedTeams: this.state.selectedTeams,
     });
 
-    const url = `/api/datasets/${this.props.dataset.name}/teams`;
-    Request.sendJSONReceiveJSON(url, {
-      data: updatedDataset.allowedTeams,
-    }).then(() => {
+    updateDatasetTeams(updatedDataset.name, updatedDataset.allowedTeams).then(() => {
       this.props.onOk(updatedDataset);
     });
   };
@@ -85,7 +81,7 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
             }
           >
             {this.state.teams.map(team => (
-              <Option key={team.name} value={team.name}>
+              <Option key={team.name} value={team.id}>
                 {team.name}
               </Option>
             ))}

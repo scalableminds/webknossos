@@ -18,13 +18,13 @@ import type {
   APIDatastoreType,
   NDStoreConfigType,
   DatasetConfigType,
-  APIRoleType,
   APIDatasetType,
   APITimeIntervalType,
   APIUserLoggedTimeType,
   APITimeTrackingType,
   APIProjectProgressReportType,
   APIOpenTasksReportType,
+  APIOrganizationType,
   APIBuildInfoType,
   APITracingType,
   APIFeatureToggles,
@@ -36,8 +36,6 @@ const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
 type NewTeamType = {
   +name: string,
-  +parent: string,
-  +roles: Array<APIRoleType>,
 };
 
 function assertResponseLimit(collection) {
@@ -47,7 +45,6 @@ function assertResponseLimit(collection) {
 }
 
 // ### Do with userToken
-
 let tokenRequestPromise;
 function requestUserToken(): Promise<string> {
   if (tokenRequestPromise) {
@@ -206,20 +203,6 @@ export async function getEditableTeams(): Promise<Array<APITeamType>> {
   return teams;
 }
 
-export async function getRootTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?isRoot=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
-export async function getAdminTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?amIAnAdmin=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
 export async function createTeam(newTeam: NewTeamType): Promise<APITeamType> {
   return Request.sendJSONReceiveJSON("/api/teams", {
     data: newTeam,
@@ -255,6 +238,16 @@ export async function getProjectsWithOpenAssignments(): Promise<Array<APIProject
 
 export async function getProject(projectName: string): Promise<APIProjectType> {
   const project = await Request.receiveJSON(`/api/projects/${projectName}`);
+  return transformProject(project);
+}
+
+export async function increaseProjectTaskInstances(
+  projectName: string,
+  delta?: number = 1,
+): Promise<APIProjectType> {
+  const project = await Request.receiveJSON(
+    `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
+  );
   return transformProject(project);
 }
 
@@ -299,6 +292,10 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
 }
 
 // ### Tasks
+export async function peekNextTasks(): Promise<Array<APITaskType>> {
+  return Request.receiveJSON("/api/user/tasks/peek");
+}
+
 export async function requestTask(): Promise<APIAnnotationType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
@@ -515,6 +512,15 @@ export async function addDataset(datatsetConfig: DatasetConfigType): Promise<API
   );
 }
 
+export async function updateDatasetTeams(
+  datasetName: string,
+  newTeams: $ElementType<APIDatasetType, "allowedTeams">,
+): Promise<APIDatasetType> {
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}/teams`, {
+    data: newTeams,
+  });
+}
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDatastoreType>> {
   const datastores = await Request.receiveJSON("/api/datastores");
@@ -579,11 +585,17 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
   return openTasksData;
 }
 
+// ### Organizations
+export async function getOrganizations(): Promise<Array<APIOrganizationType>> {
+  return Request.receiveJSON("/api/organizations");
+}
+
 // ### BuildInfo
 export function getBuildInfo(): Promise<APIBuildInfoType> {
   return Request.receiveJSON("/api/buildinfo");
 }
 
+// ### Feature Selection
 export async function getFeatureToggles(): Promise<APIFeatureToggles> {
   return Request.receiveJSON("/api/features");
 }

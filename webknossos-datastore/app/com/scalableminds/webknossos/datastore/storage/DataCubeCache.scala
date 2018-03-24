@@ -14,7 +14,7 @@ import net.liftweb.common.{Box, Empty, Failure, Full}
 import scala.concurrent.ExecutionContext.Implicits.global
 
 case class CachedCube(
-                       team: String,
+                       organization: String,
                        dataSourceName: String,
                        dataLayerName: String,
                        resolution: Point3D,

@@ -13,6 +13,7 @@ import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.libs.json.Reads._
 import play.api.libs.json.Writes._
+import scala.concurrent.ExecutionContext.Implicits._
 
 import scala.concurrent.duration._
 import scala.io.{BufferedSource, Source}
@@ -113,6 +114,15 @@ object JsonHelper extends BoxImplicits with LazyLogging {
         Full(parsed)
       case errors: JsError =>
         Failure("Validating Json Failed: " + JsError.toJson(errors).toString())
+    }
+  }
+
+  def jsResultToFox[T](result: JsResult[T]): Fox[T] = {
+    result match {
+      case JsSuccess(parsed, _) =>
+        Fox.successful(parsed)
+      case errors: JsError =>
+        Fox.failure("Validating Json Failed: " + JsError.toJson(errors).toString())
     }
   }
 }

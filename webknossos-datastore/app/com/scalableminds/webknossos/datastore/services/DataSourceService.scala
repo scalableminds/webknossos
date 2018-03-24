@@ -23,6 +23,7 @@ import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json}
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -131,7 +132,7 @@ class DataSourceService @Inject()(
   }
 
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
-    val team = path.getFileName.toString
+    val team = path.getFileName.toString //TODO
 
     PathUtils.listDirectories(path) match {
       case Full(Nil) =>
@@ -147,8 +148,8 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def dataSourceFromFolder(path: Path, team: String): InboxDataSource = {
-    val id = DataSourceId(path.getFileName.toString, team)
+  private def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
+    val id = DataSourceId(path.getFileName.toString, organization)
     val propertiesFile = path.resolve(propertiesFileName)
 
     if (new File(propertiesFile.toString).exists()) {

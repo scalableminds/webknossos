@@ -44,7 +44,7 @@
     "isomorphic-fetch": "^2.2.0",
     "jsdom": "^11.5.1",
     "less": "^3.0.1",
-    "less-loader": "^4.0.6",
+    "less-loader": "^4.1.0",
     "mock-require": "^1.2.1",
     "node-fetch": "^1.7.2",
     "prettier": "^1.11.1",
@@ -54,7 +54,7 @@
     "style-loader": "^0.20.2",
     "uglifyjs-webpack-plugin": "^1.2.2",
     "url-loader": "^1.0.1",
-    "webpack": "^4.1.0",
+    "webpack": "^4.1.1",
     "webpack-cli": "^2.0.10"
   },
   "scripts": {
@@ -67,7 +67,7 @@
     "test-debug": "tools/test.sh test --debug",
     "test-prepare": "tools/test.sh prepare",
     "test-prepare-watch": "tools/test.sh prepare -w",
-    "test-e2e": "tools/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
+    "test-e2e": "tools/postgres/prepareTestDB.sh && tools/test.sh test-e2e --timeout=60s --verbose",
     "test-help": "echo For development it is recommended to run yarn test-prepare-watch in one terminal and yarn test-watch in another. This is the fastest way to perform incremental testing. If you are only interested in running test once, use yarn test.",
     "remove-snapshots": "rm -r app/assets/javascripts/test/snapshots/public",
     "create-snapshots": "rm -r app/assets/javascripts/test/snapshots/public && docker-compose up e2e-tests",

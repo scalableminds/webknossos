@@ -18,7 +18,6 @@ import play.api.Play
 import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 
@@ -36,21 +35,14 @@ object UserService extends FoxImplicits with IdentityService[User] {
   }
 
   def removeTeamFromUsers(team: Team)(implicit ctx: DBAccessContext) = {
-    UserDAO.removeTeamFromUsers(team.name)
+    UserDAO.removeTeamFromUsers(team._id)
   }
 
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
 
-  def findAllNonAnonymous()(implicit ctx: DBAccessContext) =
-    UserDAO.findAllNonAnonymous
-
-  def findByTeams(teams: List[String], includeAnonymous: Boolean)(implicit ctx: DBAccessContext) = {
-    UserDAO.findByTeams(teams, includeAnonymous)
-  }
-
-  def countNonAnonymousUsers(implicit ctx: DBAccessContext) = {
-    UserDAO.countNonAnonymousUsers
+  def findByTeams(teams: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
+    UserDAO.findByTeams(teams)
   }
 
   def findOneById(id: String, useCache: Boolean)(implicit ctx: DBAccessContext): Fox[User] = {
@@ -64,12 +56,13 @@ object UserService extends FoxImplicits with IdentityService[User] {
     UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(teamName: String, email: String, firstName: String,
-             lastName: String, password: String, isActive: Boolean, teamRole: Role = Role.User, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
+  def insert(organization: String, email: String, firstName: String,
+             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
     for {
-      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
-      teamMemberships = teamOpt.map(t => TeamMembership(t.name, teamRole)).toList
-      user = User(email, firstName, lastName, isActive = isActive, md5(password), teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
+      organizationTeamId <- OrganizationDAO.findOneByName(organization)(GlobalAccessContext).map(_._organizationTeam)
+      orgTeam <- TeamDAO.findOneById(organizationTeamId)(GlobalAccessContext)
+      teamMemberships = List(TeamMembership(orgTeam._id, orgTeam.name, teamRole))
+      user = User(email, firstName, lastName, isActive = isActive, md5(password), organization, teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo) //TODO
       _ <- UserDAO.insert(user)(GlobalAccessContext)
     } yield user
 
@@ -78,13 +71,14 @@ object UserService extends FoxImplicits with IdentityService[User] {
               firstName: String,
               lastName: String,
               activated: Boolean,
+              isAdmin: Boolean,
               teams: List[TeamMembership],
               experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (!user.isActive && activated) {
       Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
     }
-    UserDAO.update(user._id, firstName, lastName, activated, teams, experiences).map {
+    UserDAO.update(user._id, firstName, lastName, activated, isAdmin, teams, experiences).map {
       result =>
         UserCache.invalidateUser(user.id)
         result
@@ -97,20 +91,6 @@ object UserService extends FoxImplicits with IdentityService[User] {
       _ <- UserDAO.changePasswordInfo(user._id, passwordInfo)(GlobalAccessContext)
     } yield {
       passwordInfo
-    }
-  }
-
-  def removeFromAllPossibleTeams(user: User, issuingUser: User)(implicit ctx: DBAccessContext) = {
-    if (user.teamNames.diff(issuingUser.adminTeamNames).isEmpty) {
-      // if a user doesn't belong to any team any more he gets deleted
-      UserDAO.removeById(user._id).flatMap {
-        _ =>
-          UserCache.invalidateUser(user.id)
-          AnnotationService.freeAnnotationsOfUser(user)
-      }
-    } else {
-      // the issuing user is not able to remove the user from all teams, therefore the account is not getting deleted
-      UserDAO.updateTeams(user._id, user.teams.filterNot(t => issuingUser.adminTeams.contains(t.team)))
     }
   }
 
@@ -134,9 +114,8 @@ object UserService extends FoxImplicits with IdentityService[User] {
     }
   }
 
-  def retrieve(loginInfo: LoginInfo): Future[Option[User]] = UserDAO.find(loginInfo)(GlobalAccessContext)
-
-  def find(id: BSONObjectID) = UserDAO.findByIdQ(id)
+  def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
+    UserDAO.findOneByEmail(loginInfo.providerKey)(GlobalAccessContext).futureBox.map(_.toOption)
 
   def createLoginInfo(email: String): LoginInfo = {
     LoginInfo(CredentialsProvider.ID, email)

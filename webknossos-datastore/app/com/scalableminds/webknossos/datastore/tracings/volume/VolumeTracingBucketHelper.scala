@@ -22,7 +22,7 @@ trait VolumeTracingBucketHelper extends WKWMortonHelper with KeyValueStoreImplic
 
   private def buildBucketKey(dataLayerName: String, bucket: BucketPosition): String = {
     val mortonIndex = mortonEncode(bucket.x, bucket.y, bucket.z)
-    s"$dataLayerName/${bucket.resolution}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
+    s"$dataLayerName/${bucket.resolution.maxDim}/$mortonIndex-[${bucket.x},${bucket.y},${bucket.z}]"
   }
 
   def loadBucket(dataLayer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {

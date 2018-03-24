@@ -7,7 +7,7 @@ import javax.inject.Inject
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
-import models.project.{Project, ProjectDAO, ProjectService}
+import models.project.{Project, ProjectDAO, ProjectSQLDAO, ProjectService}
 import models.task._
 import models.user.UserDAO
 import net.liftweb.common.Empty
@@ -37,7 +37,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         allCounts <- TaskDAO.countOpenInstancesByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
-            openTaskInstances <- Fox.successful(allCounts.get(project.name).getOrElse(0))
+            openTaskInstances <- Fox.successful(allCounts.get(project._id.stringify).getOrElse(0))
             r <- Project.projectPublicWritesWithStatus(project, openTaskInstances, request.identity)
           } yield r
         }
@@ -70,7 +70,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
-        case Empty if request.identity.isAdminOf(project.team) =>
+        case Empty if request.identity.isTeamManagerOf(project._team) =>
           for {
             _ <- ProjectDAO.insert(project)
             js <- Project.projectPublicWrites(project, request.identity)
@@ -87,7 +87,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for{
         project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
-        _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("team.notAllowed")
+        _ <- request.identity.teamManagerTeamIds.contains(project._team) ?~> Messages("team.notAllowed")
         updatedProject <- ProjectService.update(project._id, project, updateRequest) ?~> Messages("project.update.failed", projectName)
         js <- Project.projectPublicWrites(updatedProject, request.identity)
       } yield Ok(js)
@@ -118,7 +118,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
+        _ <- request.identity.teamManagerTeamIds.contains(project._team) ?~> Messages("notAllowed")
         tasks <- project.tasks
         js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
       } yield {
@@ -126,15 +126,23 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
   }
 
+  def incrementEachTasksInstances(projectName: String, delta: Option[Long]) = SecuredAction.async {
+    implicit request =>
+      for {
+        _ <- (delta.getOrElse(1L) >= 0) ?~> Messages("project.increaseTaskInstances.negative")
+        _ <- TaskDAO.incrementTotalInstancesOfAllWithProject(projectName, delta.getOrElse(1L))
+        updatedProject <- ProjectDAO.findOneByName(projectName)
+        openInstanceCount <- TaskDAO.countOpenInstancesForProject(projectName)
+        js <- Project.projectPublicWritesWithStatus(updatedProject, openInstanceCount, request.identity)
+      } yield Ok(js)
+  }
+
   def usersWithOpenTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        tasks <- TaskDAO.findAllByProject(projectName)
-        annotations <- AnnotationDAO.findAllUnfinishedByTaskIds(tasks.map(_._id))
-        userIds = annotations.map(_._user).flatten
-        users <- UserDAO.findAllByIds(userIds)
+        emails <- ProjectSQLDAO.findUsersWithOpenTasks(projectName)
       } yield {
-        Ok(Json.toJson(users.map(_.email)))
+        Ok(Json.toJson(emails))
       }
   }
 }

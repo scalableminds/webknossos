@@ -1,4 +1,6 @@
 // @flow
+import _ from "lodash";
+
 export default {
   yes: "Yes",
   no: "No",
@@ -41,6 +43,10 @@ In order to restore the current window, a reload is necessary.`,
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
   "task.delete": "Do you really want to delete this task?",
+  "task.request_new": "Do you really want another task?",
+  "task.peek_next": _.template(
+    "The next task will most likely be part of project <%- projectName %>",
+  ),
   "task.reset_success": "Annotation was successfully reset.",
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
@@ -62,6 +68,8 @@ In order to restore the current window, a reload is necessary.`,
     "Public tracings require the respective dataset to be public too. Please, make sure to add public access rights to the dataset as well.",
   "annotation.was_edited": "Successfully updated annotation",
   "project.delete": "Do you really want to delete this project?",
+  "project.increase_instances":
+    "Do you really want to add one additional instance to all tasks of this project?",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type?",
@@ -73,7 +81,7 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_password_length": "Passwords needs min. 8 characters.",
   "auth.registration_firstName_input": "Please input your first name!",
   "auth.registration_lastName_input": "Please input your last name!",
-  "auth.registration_team_input": "Please select a team!",
+  "auth.registration_org_input": "Please select an organization!",
   "auth.reset_logout": "You will be logged out, after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",
@@ -107,4 +115,10 @@ In order to restore the current window, a reload is necessary.`,
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",
   "nml.different_dataset": "Imported NML was originally for a different dataset.",
+  "users.is_admin":
+    "At least one of the selected users is an admin of this organization and already has access to all teams. No team assignments are necessary for this user.",
+  "users.grant_admin_rights_title": "Do you really want to grant admin rights?",
+  "users.grant_admin_rights": _.template(
+    "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
+  ),
 };

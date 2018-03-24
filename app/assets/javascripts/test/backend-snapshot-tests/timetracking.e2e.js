@@ -1,18 +1,17 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import "../enzyme/e2e-setup";
+import { userTokenA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import moment from "moment";
-import { defaultToken, setCurrToken } from "../enzyme/e2e-setup";
 
 let activeUser;
 let firstTeam;
 
 test.before("Initialize values", async () => {
-  setCurrToken(defaultToken);
+  setCurrToken(userTokenA);
   activeUser = await api.getActiveUser();
 
   const teams = _.sortBy(await api.getTeams(), team => team.name);

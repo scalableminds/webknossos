@@ -1,15 +1,15 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import "../enzyme/e2e-setup";
+import { userTokenA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
-import { defaultToken, setCurrToken } from "../enzyme/e2e-setup";
+
 
 test.before("Change token", async () => {
-  setCurrToken(defaultToken);
+  setCurrToken(userTokenA);
 });
 
 test.serial("getProjects()", async t => {

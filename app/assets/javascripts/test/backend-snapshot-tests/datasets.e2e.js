@@ -1,14 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import "../enzyme/e2e-setup";
+import { userTokenA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
-import { defaultToken, setCurrToken } from "../enzyme/e2e-setup";
 
 test.before("Change token", async () => {
-  setCurrToken(defaultToken);
+  setCurrToken(userTokenA);
 });
 
 test.serial("Load datasets", async t => {

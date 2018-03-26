@@ -44,7 +44,7 @@ team.notAllowed=You are not part of this team. Project can''t be created.
 team.nonExistentRole=Team {0} doesn''t contain role {1}.
 team.admin.notPossibleBy=User {1} can''t be assigned administrative rights in team {0} because he doesn't belong to the teams parent team.
 team.noOwner=This action is restricted to the creator of the team.
-team.admin.notAllowed=You are not authorized to administrate team {0}.
+team.admin.notAllowed=You are not authorized to administrate this team.
 team.notFound=Team could not be found.
 
 user.automaticUserActivation=User was activated automatically

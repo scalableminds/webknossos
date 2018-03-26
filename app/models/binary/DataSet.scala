@@ -350,12 +350,13 @@ object DataSet extends FoxImplicits {
   def dataSetPublicWrites(d: DataSet, user: Option[User]): Fox[JsObject] =
     for {
       teams <- Fox.combined(d.allowedTeams.map(TeamDAO.findOneById(_)(GlobalAccessContext)))
+      teamsJs <- Future.traverse(teams)(Team.teamPublicWrites(_)(GlobalAccessContext))
     } yield {
       Json.obj("name" -> d.name,
         "dataSource" -> d.dataSource,
         "dataStore" -> d.dataStoreInfo,
         "owningOrganization" -> d.owningOrganization,
-        "allowedTeams" -> teams.map(_.name),
+        "allowedTeams" -> teamsJs,
         "isActive" -> d.isActive,
         "isPublic" -> d.isPublic,
         "description" -> d.description,

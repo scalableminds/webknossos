@@ -56,8 +56,11 @@ object NmlTaskParameters {
   implicit val nmlTaskParametersFormat: Format[NmlTaskParameters] = Json.format[NmlTaskParameters]
 }
 
-// class TaskController @Inject()(val messagesApi: MessagesApi) extends Controller with ProtoGeometryImplicits with FoxImplicits {
-class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ResultBox with ProtoGeometryImplicits with FoxImplicits {
+class TaskController @Inject() (val messagesApi: MessagesApi)
+  extends Controller
+    with ResultBox
+    with ProtoGeometryImplicits
+    with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 

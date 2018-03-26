@@ -24,7 +24,7 @@ export type APIDataStoreType = {
 };
 
 export type APIDatasetType = {
-  +allowedTeams: Array<string>,
+  +allowedTeams: Array<APITeamType>,
   +created: number,
   +dataSource: APIDataSourceType,
   +dataStore: APIDataStoreType,

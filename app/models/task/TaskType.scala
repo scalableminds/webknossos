@@ -144,7 +144,7 @@ object TaskType extends FoxImplicits {
       summary,
       description,
       BSONObjectID(team),
-      settings) //TODO Frontend
+      settings)
   }
 
   def toForm(tt: TaskType) =

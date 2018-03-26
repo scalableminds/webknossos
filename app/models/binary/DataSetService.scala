@@ -68,7 +68,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     DataSetDAO.findOneBySourceName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
-      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name => //TODO: && dataSet.owningTeam == dataSource.id.team =>
+      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name =>
         DataSetDAO.updateDataSource(
           dataSource.id.name,
           dataStoreInfo,

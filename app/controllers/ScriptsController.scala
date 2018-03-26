@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
+import com.scalableminds.util.reactivemongo.JsonFormatHelper
 import com.scalableminds.util.tools.FoxImplicits
 import models.task.{Script, _}
 import play.api.i18n.{Messages, MessagesApi}
@@ -10,7 +11,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.twirl.api.Html
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 
 import scala.concurrent.Future
 
@@ -20,7 +21,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
-      (__ \ 'owner).read[String]) (Script.fromForm _)
+      (__ \ 'owner).read[String] (JsonFormatHelper.StringObjectIdReads("team"))) (Script.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
@@ -56,7 +57,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
         oldScript <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
-        _ <- (oldScript._owner == request.identity.id) ?~> Messages("script.notOwner")
+        _ <- (oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
         _ <- ScriptDAO.update(oldScript._id, script.copy(_id = oldScript._id))
         js <- Script.scriptPublicWrites(script)
       } yield {

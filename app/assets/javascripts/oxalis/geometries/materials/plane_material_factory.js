@@ -59,11 +59,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: Store.getState().dataset.scale,
       },
       anchorPoint: {
-        type: "v3",
+        type: "v4",
         value: new THREE.Vector3(0, 0, 0),
       },
       fallbackAnchorPoint: {
-        type: "v3",
+        type: "v4",
         value: new THREE.Vector3(0, 0, 0),
       },
       zoomStep: {

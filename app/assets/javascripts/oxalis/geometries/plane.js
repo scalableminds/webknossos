@@ -18,7 +18,7 @@ import constants, {
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
 } from "oxalis/constants";
-import type { OrthoViewType, Vector3 } from "oxalis/constants";
+import type { OrthoViewType, Vector3, Vector4 } from "oxalis/constants";
 import _ from "lodash";
 
 class Plane {
@@ -113,7 +113,7 @@ class Plane {
     });
   };
 
-  updateAnchorPoints(anchorPoint: ?Vector3, fallbackAnchorPoint: ?Vector3): void {
+  updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
     if (anchorPoint) {
       this.plane.material.setAnchorPoint(anchorPoint);
     }

@@ -41,12 +41,12 @@ export default class TextureBucketManager {
   // Maintains a set of free indices within the data texture.
   freeIndexSet: Set<number>;
   isRefreshBufferOutOfDate: boolean = false;
-  lastZoomedAnchorPoint: Vector4;
 
   // This is passed as a parameter to allow for testing
   bucketPerDim: number;
   bufferCapacity: number;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
+  fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
   textureWidth: number;
   textureCount: number;
@@ -70,14 +70,20 @@ export default class TextureBucketManager {
   }
 
   clear() {
-    this.setActiveBuckets([], [0, 0, 0, 0]);
+    this.setActiveBuckets([], [0, 0, 0, 0], [0, 0, 0, 0]);
   }
 
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
-  setActiveBuckets(buckets: Array<DataBucket>, anchorPoint: Vector4): void {
+  setActiveBuckets(
+    buckets: Array<DataBucket>,
+    anchorPoint: Vector4,
+    fallbackAnchorPoint: Vector4,
+  ): void {
+    console.time("setting active buckets");
     this.currentAnchorPoint = anchorPoint;
+    this.fallbackAnchorPoint = fallbackAnchorPoint;
     // Find out which buckets are not needed anymore
     const freeBucketSet = new Set(this.activeBucketToIndexMap.keys());
     for (const bucket of buckets) {
@@ -109,8 +115,11 @@ export default class TextureBucketManager {
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
       }
     }
+    console.timeEnd("setting active buckets");
 
+    console.time("setting active buckets refresh");
     this._refreshLookUpBuffer();
+    console.timeEnd("setting active buckets refresh");
   }
 
   keepLookUpBufferUpToDate() {
@@ -232,10 +241,9 @@ export default class TextureBucketManager {
   _refreshLookUpBuffer() {
     // Completely re-write the lookup buffer. This could be smarter, but it's
     // probably not worth it.
-    const anchorPoint = this.currentAnchorPoint;
     this.lookUpBuffer.fill(-2);
     for (const [bucket, address] of this.activeBucketToIndexMap.entries()) {
-      const lookUpIdx = this._getBucketIndex(bucket, anchorPoint);
+      const lookUpIdx = this._getBucketIndex(bucket);
       // Since activeBucketToIndexMap is a super set of committedBucketSet,
       // address is always defined ($FlowFixMe).
 
@@ -249,16 +257,22 @@ export default class TextureBucketManager {
     window.needsRerender = true;
   }
 
-  _getBucketIndex(bucket: DataBucket, anchorPoint: Vector4): number {
-    const bucketPosition = bucket.zoomedAddress.slice(0, 3);
-    const offsetFromAnchor = [
-      bucketPosition[0] - anchorPoint[0],
-      bucketPosition[1] - anchorPoint[1],
-      bucketPosition[2] - anchorPoint[2],
-    ];
-    const [x, y, z] = offsetFromAnchor;
+  _getBucketIndex(bucket: DataBucket): number {
+    const bucketPosition = bucket.zoomedAddress;
+    const zoomDiff = bucketPosition[3] - this.currentAnchorPoint[3];
+    const isFallbackBucket = zoomDiff > 0;
 
-    const idx = Math.pow(this.bucketPerDim, 2) * z + this.bucketPerDim * y + x;
-    return idx;
+    const anchorPoint = isFallbackBucket ? this.fallbackAnchorPoint : this.currentAnchorPoint;
+
+    const x = bucketPosition[0] - anchorPoint[0];
+    const y = bucketPosition[1] - anchorPoint[1];
+    const z = bucketPosition[2] - anchorPoint[2];
+
+    return (
+      Math.pow(this.bucketPerDim, 3) * zoomDiff +
+      Math.pow(this.bucketPerDim, 2) * z +
+      this.bucketPerDim * y +
+      x
+    );
   }
 }

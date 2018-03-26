@@ -27,6 +27,7 @@ import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { getRenderer } from "oxalis/controller/renderer";
+import { DataBucket } from "oxalis/model/binary/bucket";
 
 import type { Vector3, Vector4, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -61,6 +62,14 @@ class Binary {
   lastPosition: ?Vector3;
   lastZoomStep: ?number;
   textureBucketManager: TextureBucketManager;
+
+  anchorPointCache: {
+    anchorPoint: Vector4,
+    fallbackAnchorPoint: Vector4,
+  } = {
+    anchorPoint: [0, 0, 0, 0],
+    fallbackAnchorPoint: [0, 0, 0, 0],
+  };
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -152,26 +161,55 @@ class Binary {
     return this.textureBucketManager.getTextures();
   }
 
-  updateDataTextures(position: Vector3, logZoomStep: number): [?Vector3, ?Vector3] {
-    return [
-      this.updateDataTexturesForManager(position, logZoomStep, this.textureBucketManager),
-      null,
-    ];
+  // Returns the new anchorPoints if they are new
+  updateDataTextures(position: Vector3, logZoomStep: number): [?Vector4, ?Vector4] {
+    const isAnchorPointNew = this.isAnchorPointNew(position, logZoomStep, "anchorPoint");
+    const fallbackAnchorPoint = Math.min(this.cube.MAX_ZOOM_STEP, logZoomStep + 1);
+    const isFallbackAnchorPointNew = this.isAnchorPointNew(
+      position,
+      fallbackAnchorPoint,
+      "fallbackAnchorPoint",
+    );
 
-    // todo: update fallback buckets
-    // const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, logZoomStep + 1);
-    // return this.updateDataTexturesForManager(
-    //   position,
-    //   fallbackZoomStep,
-    //   this.fallbackTextureBucketManager,
-    // );
+    if (isAnchorPointNew || isFallbackAnchorPointNew) {
+      const buckets = this.calculateBucketsForTexturesForManager(
+        position,
+        logZoomStep,
+        this.anchorPointCache.anchorPoint,
+      );
+      const fallbackBuckets = this.calculateBucketsForTexturesForManager(
+        position,
+        logZoomStep + 1,
+        this.anchorPointCache.fallbackAnchorPoint,
+      );
+
+      this.textureBucketManager.setActiveBuckets(
+        buckets.concat(fallbackBuckets),
+        this.anchorPointCache.anchorPoint,
+        this.anchorPointCache.fallbackAnchorPoint,
+      );
+    }
+
+    return [
+      isAnchorPointNew ? this.anchorPointCache.anchorPoint : null,
+      isFallbackAnchorPointNew ? this.anchorPointCache.fallbackAnchorPoint : null,
+    ];
   }
 
-  updateDataTexturesForManager(
+  isAnchorPointNew(
     position: Vector3,
     logZoomStep: number,
-    textureBucketManager: TextureBucketManager,
-  ): ?Vector3 {
+    key: "fallbackAnchorPoint" | "anchorPoint",
+  ): boolean {
+    const zoomedAnchorPoint = this.calculateAnchorPoint(position, logZoomStep);
+    if (_.isEqual(zoomedAnchorPoint, this.anchorPointCache[key])) {
+      return false;
+    }
+    this.anchorPointCache[key] = zoomedAnchorPoint;
+    return true;
+  }
+
+  calculateAnchorPoint(position: Vector3, logZoomStep: number): Vector4 {
     const resolution = this.layer.resolutions[logZoomStep];
 
     // Hit texture top-left coordinate
@@ -180,13 +218,14 @@ class Binary {
     anchorPoint[1] = Math.floor(anchorPoint[1] - constants.PLANE_WIDTH / 2 * resolution[1]);
     anchorPoint[2] = Math.floor(anchorPoint[2] - constants.PLANE_WIDTH / 2 * resolution[2]);
 
-    const zoomedAnchorPoint = this.cube.positionToZoomedAddress(anchorPoint, logZoomStep);
-    if (_.isEqual(zoomedAnchorPoint, textureBucketManager.lastZoomedAnchorPoint)) {
-      return null;
-    }
+    return this.cube.positionToZoomedAddress(anchorPoint, logZoomStep);
+  }
 
-    textureBucketManager.lastZoomedAnchorPoint = zoomedAnchorPoint;
-
+  calculateBucketsForTexturesForManager(
+    position: Vector3,
+    logZoomStep: number,
+    zoomedAnchorPoint: Vector4,
+  ): Array<DataBucket> {
     // find out which buckets we need for each plane
     const requiredBucketSet = new Set();
     for (const planeId of OrthoViewValuesWithoutTDView) {
@@ -218,9 +257,7 @@ class Binary {
       }
     }
 
-    textureBucketManager.setActiveBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
-    // $FlowFixMe
-    return zoomedAnchorPoint.slice(0, 3);
+    return Array.from(requiredBucketSet);
   }
 
   setActiveMapping(mappingName: string): void {

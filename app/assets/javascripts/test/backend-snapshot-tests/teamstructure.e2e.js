@@ -27,31 +27,14 @@ default (UserAAA), User AAB, User AAC, User ABA, User BAA
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
 || Connectomics department (Team AA) | 		Team AB				        | 		test1				          | 		test2				          ||  TeamBA 								              ||
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
-|| scmboy (userAAA)	(teamMng)		     | 		userABA (admin)		    | 		scmboy	(teamMng.)	  | 		scmboy (teamMng.)	    ||  userBAA	(teamMng.)			         		||
+|| scmboy (userAAA)	(teamMng)		     | 		userABA (teamMng.)    | 		scmboy	(teamMng.)	  | 		scmboy (teamMng.)	    ||  userBAA	(teamMng.)			         		||
 || userAAB (teamMng.)		   		       | 						            	| 					              	| 						            	||  							                  		||
 || userAAC					   		           | 						            	| 					            		| 						            	||  							                  		||
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
-
  */
-/*
-test.before("Initialize values", async () => {
-  setCurrToken(tokenUserDefault);
-  activeUser = await api.getActiveUser();
-});
 
-test.serial("Test Name", async t => {
-  t.is(activeUser.firstName, "SCM");
-});
-*/
 
 // Teams
-/*
-test("team count", async t => {
-  setCurrToken(defaultToken); // change this later
-  const teams = await api.getTeams();
-  t.is(teams.length, 3)
-});
-*/
 test("teams_userDefault", async t => {
   await setCurrToken(tokenUserDefault);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
@@ -90,21 +73,30 @@ test("taskTypes_userBAA", async t => {
 });
 
 // Tasks
-test("tasks_userAAB", async t => {
-  await setCurrToken(tokenUserAAB);
+test("tasks_userABA", async t => {
+  await setCurrToken(tokenUserABA);
   try {
-    const test = 3;//await api.getTask("TODO: taskID");
+    await api.getTask("58135c192faeb34c0081c058");
     t.fail();
   } catch (err) { // the test is supposed to fail => catch is the desired case
     t.true(true); // not pretty, but "t.ok" seems to not exist
   }
 });
 
+test("tasks_userBAA", async t => {
+  await setCurrToken(tokenUserBAA);
+  try {
+    await api.getTask("58135c192faeb34c0081c058");
+    t.fail();
+  } catch (err) { // the test is supposed to fail => catch is the desired case
+    t.true(true); // not pretty, but "t.ok" seems to not exist
+  }
+});
 
 test("tasks_userAAC", async t => {
   await setCurrToken(tokenUserAAC);
   try { // the test is NOT supposed to fail
-    const test = 3;//await api.getTask("TODO: taskID");
+    await api.getTask("58135c192faeb34c0081c058");
     t.true(true); // not pretty
   } catch (err) {
     t.fail(); // not pretty, but "t.ok" seems to not exist

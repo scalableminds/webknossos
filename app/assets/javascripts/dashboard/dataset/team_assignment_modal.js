@@ -18,7 +18,7 @@ type Props = {
 type State = {
   teams: Array<APITeamType>,
   isLoading: boolean,
-  selectedTeams: Array<string>,
+  selectedTeams: Array<APITeamType>,
 };
 
 class TeamAssignmentModal extends React.PureComponent<Props, State> {
@@ -41,9 +41,9 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
     });
   }
 
-  selectTeams = (selectedTeams: Array<string>) => {
-    // make sure the owningTeam is always selected
-    const allowedTeams = _.uniq([this.props.dataset.owningOrganization, ...selectedTeams]);
+  selectTeams = (selectedTeamIds: Array<string>) => {
+    const uniqueIds = _.uniq([...selectedTeamIds]);
+    const allowedTeams = this.state.teams.filter(team => uniqueIds.includes(team.id));
     this.setState({
       selectedTeams: allowedTeams,
     });
@@ -54,7 +54,8 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
       allowedTeams: this.state.selectedTeams,
     });
 
-    updateDatasetTeams(updatedDataset.name, updatedDataset.allowedTeams).then(() => {
+    const teamIds = updatedDataset.allowedTeams.map(t => t.id);
+    updateDatasetTeams(updatedDataset.name, teamIds).then(() => {
       this.props.onOk(updatedDataset);
     });
   };
@@ -75,7 +76,7 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
             placeholder="Select a Team"
             optionFilterProp="children"
             onChange={this.selectTeams}
-            value={this.state.selectedTeams}
+            value={this.state.selectedTeams.map(t => t.id)}
             filterOption={(input, option) =>
               option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }

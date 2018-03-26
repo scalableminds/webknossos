@@ -27,7 +27,7 @@ default (UserAAA), User AAB, User AAC, User ABA, User BAA
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
 || Connectomics department (Team AA) | 		Team AB				        | 		test1				          | 		test2				          ||  TeamBA 								              ||
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
-|| scmboy (userAAA)	(teamMng)		     | 		userABA (teamMng.)    | 		scmboy	(teamMng.)	  | 		scmboy (teamMng.)	    ||  userBAA	(teamMng.)			         		||
+|| scmboy (userAAA)	(teamMng)		     | 		userABA (teamMng.)    | 		scmboy            	  | 		scmboy (teamMng.)	    ||  userBAA	(teamMng.)			         		||
 || userAAB (teamMng.)		   		       | 						            	| 					              	| 						            	||  							                  		||
 || userAAC					   		           | 						            	| 					            		| 						            	||  							                  		||
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
@@ -51,6 +51,16 @@ test("teams_userBAA", async t => {
   await setCurrToken(tokenUserBAA);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
   t.snapshot(teams[0], { id: "teams_userBAA" });
+});
+
+test("teams_delete_userABA", async t => { // the teamManager is not allowed to delete the team
+  await setCurrToken(tokenUserABA);
+  try {
+    await api.deleteTeam("69882b370d889b84020efd4f");
+    t.fail();
+  } catch (err) { // the test is supposed to fail => catch is the desired case
+    t.true(true); // not pretty, but "t.ok" seems to not exist
+  }
 });
 
 // TaskTypes
@@ -79,7 +89,7 @@ test("tasks_userABA", async t => {
     await api.getTask("58135c192faeb34c0081c058");
     t.fail();
   } catch (err) { // the test is supposed to fail => catch is the desired case
-    t.true(true); // not pretty, but "t.ok" seems to not exist
+    t.true(true);
   }
 });
 
@@ -89,7 +99,7 @@ test("tasks_userBAA", async t => {
     await api.getTask("58135c192faeb34c0081c058");
     t.fail();
   } catch (err) { // the test is supposed to fail => catch is the desired case
-    t.true(true); // not pretty, but "t.ok" seems to not exist
+    t.true(true);
   }
 });
 
@@ -97,8 +107,8 @@ test("tasks_userAAC", async t => {
   await setCurrToken(tokenUserAAC);
   try { // the test is NOT supposed to fail
     await api.getTask("58135c192faeb34c0081c058");
-    t.true(true); // not pretty
+    t.true(true);
   } catch (err) {
-    t.fail(); // not pretty, but "t.ok" seems to not exist
+    t.fail();
   }
 });

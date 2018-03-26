@@ -172,7 +172,7 @@ CREATE TABLE webknossos.teams(
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (_organization, name)
+  UNIQUE (name, _organization)
 );
 
 CREATE TABLE webknossos.timespans(

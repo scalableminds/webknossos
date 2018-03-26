@@ -29,7 +29,7 @@ webKnossos: efficient online 3D data annotation for connectomics.
 
 ## Development setup
 ### Docker
-This is the fastest way to try webKnossos. Docker CE 17+ and Docker Compose 1.18+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
+This is the fastest way to try webKnossos. Docker CE 17+ and Docker Compose 1.18+ is required. This is only recommended for testing. [For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
 
 ```bash
 docker-compose up webknossos

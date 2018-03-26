@@ -381,10 +381,13 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.isTeamManagerOf(this) || teams.isEmpty
+    other.isTeamManagerOrAdminOf(this) || teams.isEmpty
 
-  def isTeamManagerOf(user: User): Boolean =
-    user.teamIds.intersect(teamManagerTeamIds).nonEmpty || organization == user.organization && isAdmin
+  def isTeamManagerOrAdminOf(user: User): Boolean =
+    user.teamIds.intersect(teamManagerTeamIds).nonEmpty || this.isAdminOf(user)
+
+  def isAdminOf(user: User): Boolean =
+    this.organization == user.organization && this.isAdmin
 }
 
 object User extends FoxImplicits {

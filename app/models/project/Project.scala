@@ -159,7 +159,7 @@ case class Project(
 
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
-  def isOwnedBy(user: User) = user._id == _owner
+  def isDeletableBy(user: User) = user._id == _owner || user.isAdmin
 
   def id = _id.stringify
 

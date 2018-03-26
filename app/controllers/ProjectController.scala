@@ -60,7 +60,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- project.isOwnedBy(request.identity) ?~> Messages("project.remove.notAllowed")
+        _ <- project.isDeletableBy(request.identity) ?~> Messages("project.remove.notAllowed")
         _ <- ProjectService.remove(project) ?~> Messages("project.remove.failure")
       } yield {
         JsonOk(Messages("project.remove.success"))

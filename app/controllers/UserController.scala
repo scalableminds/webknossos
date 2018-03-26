@@ -2,13 +2,13 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.team._
 import models.user._
 import models.user.time._
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import play.api.data.Forms._
 import play.api.data._
 import play.api.i18n.{Messages, MessagesApi}
@@ -184,6 +184,11 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     })
   }
 
+  private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean)(issuingUser: User): Boolean = {
+    if (user.isActive == isActive && user.isAdmin == isAdmin) true
+    else issuingUser.isAdminOf(user)
+  }
+
   def update(userId: String) = SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
@@ -191,6 +196,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
+          _ <- checkAdminOnlyUpdates(user, isActive, isAdmin)(issuingUser) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneById(t._id)(GlobalAccessContext) ?~> Messages("team.notFound")))
           allTeams <- Fox.serialSequence(user.teams)(t => TeamDAO.findOneById(t._id)(GlobalAccessContext)).map(_.flatten)
           teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isTeamManagerOf(t._id))

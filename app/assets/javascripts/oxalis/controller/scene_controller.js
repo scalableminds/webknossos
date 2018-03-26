@@ -247,8 +247,7 @@ class SceneController {
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
       const zoomStep = getRequestLogZoomStep(Store.getState());
-      anchorPoint = binary.updateDataTextures(gPos, zoomStep);
-      fallbackAnchorPoint = binary.updateFallbackDataTextures(gPos, zoomStep);
+      [anchorPoint, fallbackAnchorPoint] = binary.updateDataTextures(gPos, zoomStep);
     }
 
     for (const planeId of OrthoViewValuesWithoutTDView) {

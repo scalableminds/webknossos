@@ -1,8 +1,7 @@
 export default {
-  addBucketManagers(textureBucketManager, fallbackTextureBucketManager) {
+  addBucketManagers(textureBucketManager) {
     window.managers = window.managers || [];
     window.managers.push(textureBucketManager);
-    window.managers.push(fallbackTextureBucketManager);
   },
 
   addMaterial(material) {

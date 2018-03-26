@@ -95,7 +95,6 @@ const Constants = {
   VIEWPORT_WIDTH: 384,
   // The size of the gap between the 4 viewports in the orthogonal mode
   VIEWPORT_GAP_WIDTH: 20,
-  DATA_TEXTURE_WIDTH: 8192,
   LOOK_UP_TEXTURE_WIDTH: 128,
   RENDERED_BUCKETS_PER_DIMENSION: 17,
   DISTANCE_3D: 140,

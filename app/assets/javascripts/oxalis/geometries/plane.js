@@ -50,31 +50,10 @@ class Plane {
 
   createMeshes(): void {
     const pWidth = constants.PLANE_WIDTH;
-    const tWidth = constants.DATA_TEXTURE_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
-    // Gather data textures from binary
-    const textures = {};
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      const [dataTexture, lookUpTexture] = binary.getDataTextures();
-      const [fallbackDataTexture, fallbackLookUpTexture] = binary.getFallbackDataTextures();
-
-      const shaderName = sanitizeName(name);
-      const lookUpBufferName = sanitizeName(`${name}_lookup`);
-      textures[shaderName] = dataTexture;
-      textures[lookUpBufferName] = lookUpTexture;
-
-      const fshaderName = sanitizeName(`${name}_fallback`);
-      const flookUpBufferName = sanitizeName(`${name}_lookup_fallback`);
-
-      textures[fshaderName] = fallbackDataTexture;
-      textures[flookUpBufferName] = fallbackLookUpTexture;
-    }
-    const textureMaterial = new PlaneMaterialFactory(tWidth, textures, this.planeID)
-      .setup()
-      .getMaterial();
+    const textureMaterial = new PlaneMaterialFactory(0, {}, this.planeID).setup().getMaterial();
 
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
@@ -138,7 +117,6 @@ class Plane {
     if (anchorPoint) {
       this.plane.material.setAnchorPoint(anchorPoint);
     }
-
     if (fallbackAnchorPoint) {
       this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
     }

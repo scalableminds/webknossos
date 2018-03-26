@@ -26,6 +26,7 @@ import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import { getRenderer } from "oxalis/controller/renderer";
 
 import type { Vector3, Vector4, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -60,9 +61,6 @@ class Binary {
   lastPosition: ?Vector3;
   lastZoomStep: ?number;
   textureBucketManager: TextureBucketManager;
-  // This object is responsible for managing the buckets of the highest zoomStep
-  // which can be used as a fallback in the shader, when better data is not available
-  fallbackTextureBucketManager: TextureBucketManager;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -117,50 +115,56 @@ class Binary {
     // });
   }
 
+  getTextureSize(): number {
+    // return 4096;
+    const gl = getRenderer().getContext();
+    return gl.getParameter(gl.MAX_TEXTURE_SIZE);
+
+    // return gl.MAX_TEXTURE_SIZE;
+  }
+
   setupDataTextures(): void {
     const bytes = this.layer.bitDepth >> 3;
 
-    this.textureBucketManager = new TextureBucketManager(constants.RENDERED_BUCKETS_PER_DIMENSION);
+    const textureWidth = this.getTextureSize();
+    const gl = getRenderer().getContext();
+    const maxTextureCount = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+    const textureCount = textureWidth < 8192 ? 2 : 1;
+    if (textureCount > maxTextureCount) {
+      throw new Error("Cannot allocate enough textures");
+    }
+
+    this.textureBucketManager = new TextureBucketManager(
+      constants.RENDERED_BUCKETS_PER_DIMENSION,
+      textureWidth,
+      textureCount,
+    );
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 
-    this.fallbackTextureBucketManager = new TextureBucketManager(
-      constants.RENDERED_BUCKETS_PER_DIMENSION,
-    );
-    this.fallbackTextureBucketManager.setupDataTextures(bytes, this.category);
-
-    shaderEditor.addBucketManagers(this.textureBucketManager, this.fallbackTextureBucketManager);
+    shaderEditor.addBucketManagers(this.textureBucketManager);
   }
 
-  getDataTextures(): [*, *] {
+  getDataTextures(): Array<*> {
     if (!this.textureBucketManager) {
       // Initialize lazily since SceneController.renderer is not available earlier
       this.setupDataTextures();
     }
-    return [this.textureBucketManager.dataTexture, this.textureBucketManager.lookUpTexture];
+    return this.textureBucketManager.getTextures();
   }
 
-  getFallbackDataTextures(): [*, *] {
-    if (!this.fallbackTextureBucketManager) {
-      // Initialize lazily since SceneController.renderer is not available earlier
-      this.setupDataTextures();
-    }
+  updateDataTextures(position: Vector3, logZoomStep: number): [?Vector3, ?Vector3] {
     return [
-      this.fallbackTextureBucketManager.dataTexture,
-      this.fallbackTextureBucketManager.lookUpTexture,
+      this.updateDataTexturesForManager(position, logZoomStep, this.textureBucketManager),
+      null,
     ];
-  }
 
-  updateDataTextures(position: Vector3, logZoomStep: number): ?Vector3 {
-    return this.updateDataTexturesForManager(position, logZoomStep, this.textureBucketManager);
-  }
-
-  updateFallbackDataTextures(position: Vector3, logZoomStep: number): ?Vector3 {
-    const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, logZoomStep + 1);
-    return this.updateDataTexturesForManager(
-      position,
-      fallbackZoomStep,
-      this.fallbackTextureBucketManager,
-    );
+    // todo: update fallback buckets
+    // const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, logZoomStep + 1);
+    // return this.updateDataTexturesForManager(
+    //   position,
+    //   fallbackZoomStep,
+    //   this.fallbackTextureBucketManager,
+    // );
   }
 
   updateDataTexturesForManager(

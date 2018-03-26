@@ -22,7 +22,6 @@ import { getRenderer } from "oxalis/controller/renderer";
 // writing buckets to the data texture (i.e., "committing the buckets").
 
 const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
-const bucketHeightInTexture = constants.BUCKET_SIZE / constants.DATA_TEXTURE_WIDTH;
 
 // At the moment, we only store one float f per bucket.
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
@@ -31,7 +30,7 @@ const bucketHeightInTexture = constants.BUCKET_SIZE / constants.DATA_TEXTURE_WID
 export const floatsPerLookUpEntry = 1;
 
 export default class TextureBucketManager {
-  dataTexture: UpdatableTexture;
+  dataTextures: Array<UpdatableTexture>;
   lookUpBuffer: Float32Array;
   lookUpTexture: THREE.DataTexture;
   // Holds the index for each active bucket, to which it should (or already
@@ -49,16 +48,22 @@ export default class TextureBucketManager {
   bufferCapacity: number;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
+  textureWidth: number;
+  textureCount: number;
 
-  constructor(bucketPerDim: number) {
+  constructor(bucketPerDim: number, textureWidth: number, textureCount: number) {
     // each plane gets bucketPerDim**2 buckets
     this.bufferCapacity = 3 * Math.pow(bucketPerDim, 2);
     // the look up buffer is bucketPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
     this.bucketPerDim = bucketPerDim;
+    this.textureWidth = textureWidth;
+    this.textureCount = textureCount;
 
     this.lookUpBuffer = new Float32Array(lookUpBufferSize);
     this.freeIndexSet = new Set(_.range(this.bufferCapacity));
+
+    this.dataTextures = [];
 
     this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
@@ -128,17 +133,24 @@ export default class TextureBucketManager {
     this.writerQueue = _.uniqBy(this.writerQueue, el => el._index);
     const maxBucketCommitsPerFrame = 30;
 
+    const bucketHeightInTexture = constants.BUCKET_SIZE / this.textureWidth;
+    const bucketsPerTexture = this.textureWidth * this.textureWidth / constants.BUCKET_SIZE;
+
     while (processedItems < maxBucketCommitsPerFrame && this.writerQueue.length > 0) {
       const { bucket, _index } = this.writerQueue.pop();
       if (!this.activeBucketToIndexMap.has(bucket)) {
         // This bucket is not needed anymore
         continue;
       }
-      this.dataTexture.update(
+
+      const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
+      const indexInDataTeture = _index % bucketsPerTexture;
+
+      this.dataTextures[dataTextureIndex].update(
         bucket.getData(),
         0,
-        bucketHeightInTexture * _index,
-        constants.DATA_TEXTURE_WIDTH,
+        bucketHeightInTexture * indexInDataTeture,
+        this.textureWidth,
         bucketHeightInTexture,
       );
       this.committedBucketSet.add(bucket);
@@ -152,17 +164,23 @@ export default class TextureBucketManager {
     });
   }
 
+  getTextures(): Array<THREE.DataTexture | UpdatableTexture> {
+    return [this.lookUpTexture].concat(this.dataTextures);
+  }
+
   setupDataTextures(bytes: number, binaryCategory: string): void {
-    const tWidth = constants.DATA_TEXTURE_WIDTH;
+    for (let i = 0; i < this.textureCount; i++) {
+      const dataTexture = createUpdatableTexture(
+        this.textureWidth,
+        bytes,
+        THREE.UnsignedByteType,
+        getRenderer(),
+      );
 
-    const dataTexture = createUpdatableTexture(
-      tWidth,
-      bytes,
-      THREE.UnsignedByteType,
-      getRenderer(),
-    );
+      dataTexture.binaryCategory = binaryCategory;
 
-    dataTexture.binaryCategory = binaryCategory;
+      this.dataTextures.push(dataTexture);
+    }
 
     const lookUpTexture = createUpdatableTexture(
       lookUpBufferWidth,
@@ -170,8 +188,6 @@ export default class TextureBucketManager {
       THREE.FloatType,
       getRenderer(),
     );
-
-    this.dataTexture = dataTexture;
     this.lookUpTexture = lookUpTexture;
   }
 

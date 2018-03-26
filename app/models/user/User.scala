@@ -128,15 +128,18 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       parsed
     }
 
-  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(implicit ctx: DBAccessContext) =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(sql"""select u.*
-                       from (select * from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
-                       where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
-                             and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})""".as[UsersRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
+  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(implicit ctx: DBAccessContext) = {
+    if (teams.isEmpty) Fox.successful(List())
+    else
+      for {
+        accessQuery <- readAccessQuery
+        r <- run(sql"""select u.*
+                         from (select * from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
+                         where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
+                               and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})""".as[UsersRow])
+        parsed <- Fox.combined(r.toList.map(parse))
+      } yield parsed
+  }
 
   def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[UserSQL]] =
     for {

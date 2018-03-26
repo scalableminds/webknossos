@@ -35,7 +35,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
       _ <- DataSetService.isProperDataSetName(uploadInfo.name) ?~> Messages("dataSet.name.invalid")
       _ <- DataSetService.checkIfNewDataSetName(uploadInfo.name)(GlobalAccessContext) ?~> Messages("dataSet.name.alreadyTaken")
-      _ <- uploadInfo.team.nonEmpty ?~> Messages("team.invalid") //TODO
+      _ <- uploadInfo.team.nonEmpty ?~> Messages("team.invalid")
     } yield Ok
   }
 

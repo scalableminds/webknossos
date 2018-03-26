@@ -128,15 +128,18 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       parsed
     }
 
-  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(implicit ctx: DBAccessContext) =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(sql"""select u.*
-                       from (select * from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
-                       where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
-                             and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})""".as[UsersRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
+  def findAllByTeams(teams: List[ObjectId], includeDeactivated: Boolean = true)(implicit ctx: DBAccessContext) = {
+    if (teams.isEmpty) Fox.successful(List())
+    else
+      for {
+        accessQuery <- readAccessQuery
+        r <- run(sql"""select u.*
+                         from (select * from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
+                         where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
+                               and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})""".as[UsersRow])
+        parsed <- Fox.combined(r.toList.map(parse))
+      } yield parsed
+  }
 
   def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[UserSQL]] =
     for {
@@ -381,10 +384,13 @@ case class User(
     (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
-    other.isTeamManagerOf(this) || teams.isEmpty
+    other.isTeamManagerOrAdminOf(this) || teams.isEmpty
 
-  def isTeamManagerOf(user: User): Boolean =
-    user.teamIds.intersect(teamManagerTeamIds).nonEmpty || organization == user.organization && isAdmin
+  def isTeamManagerOrAdminOf(user: User): Boolean =
+    user.teamIds.intersect(teamManagerTeamIds).nonEmpty || this.isAdminOf(user)
+
+  def isAdminOf(user: User): Boolean =
+    this.organization == user.organization && this.isAdmin
 }
 
 object User extends FoxImplicits {

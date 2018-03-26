@@ -23,6 +23,12 @@ export type APIDataStoreType = {
   +accessToken?: string,
 };
 
+export type APITeamType = {
+  +id: string,
+  +name: string,
+  +organization: string,
+};
+
 export type APIDatasetType = {
   +allowedTeams: Array<APITeamType>,
   +created: number,
@@ -68,12 +74,6 @@ export type APITimeIntervalType = {
 };
 export type APIUserLoggedTimeType = {
   loggedTime: Array<APITimeIntervalType>,
-};
-
-export type APITeamType = {
-  +id: string,
-  +name: string,
-  +organization: string,
 };
 
 export type APIRestrictionsType = {

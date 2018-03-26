@@ -514,7 +514,7 @@ export async function addDataset(datatsetConfig: DatasetConfigType): Promise<API
 
 export async function updateDatasetTeams(
   datasetName: string,
-  newTeams: $ElementType<APIDatasetType, "allowedTeams">,
+  newTeams: Array<string>,
 ): Promise<APIDatasetType> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}/teams`, {
     data: newTeams,

@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, MongoHelpers}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Fox
 import models.binary._
@@ -125,13 +125,14 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   }
 
   def updateTeams(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyAs[List[BSONObjectID]] { teams =>
+    withJsonBodyAs[List[String]] { teams =>
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- allowedToAdministrate(request.identity, dataSet)
+        teamsBson <- Fox.combined(teams.map(MongoHelpers.parseBsonToFox))
         userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.identity)))
         teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_._id == t))
-        teamsWithUpdate = teams.filter(t => userTeams.exists(_._id == t))
+        teamsWithUpdate = teamsBson.filter(t => userTeams.exists(_._id == t))
         _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
       } yield
       Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))

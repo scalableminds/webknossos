@@ -160,7 +160,7 @@ docker-compose run e2e-tests
 
 
 ## Contact and support
-Contact us at [mailto:hello@scalableminds.com](hello@scalableminds.com).
+Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
 
 [scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for webKnossos.
 

@@ -132,18 +132,18 @@ class DataSourceService @Inject()(
   }
 
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
-    val team = path.getFileName.toString //TODO
+    val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path) match {
       case Full(Nil) =>
-        logger.error(s"Failed to read datasets for team $team. Empty path: $path")
+        logger.error(s"Failed to read datasets for organization $organization. Empty path: $path")
         Nil
       case Full(dirs) =>
-        val dataSources = dirs.map(path => dataSourceFromFolder(path, team))
-        logger.debug(s"Datasets for team $team: ${dataSources.map(_.id.name).mkString(", ") }")
+        val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
+        logger.debug(s"Datasets for organization $organization: ${dataSources.map(_.id.name).mkString(", ") }")
         dataSources
       case _ =>
-        logger.error(s"Failed to list directories for team $team at path $path")
+        logger.error(s"Failed to list directories for organization $organization at path $path")
         Nil
     }
   }

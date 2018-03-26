@@ -164,13 +164,14 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
   }
 
   def insertTeams = {
-    TeamDAO.findOneByName(defaultOrganization.name)(GlobalAccessContext).futureBox.flatMap {
-      case Full(_) => Fox.successful(())
-      case _ =>
-        TeamDAO.insert(organizationTeam)(GlobalAccessContext)
+    TeamDAO.findAll(GlobalAccessContext).flatMap {
+      teams =>
+        if (teams.isEmpty)
+          TeamDAO.insert(organizationTeam)(GlobalAccessContext)
+        else
+          Fox.successful(())
     }.toFox
   }
-
 
   def insertTaskType = {
     TaskTypeDAO.findAll(GlobalAccessContext).flatMap {

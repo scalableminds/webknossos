@@ -91,17 +91,6 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     } yield parsed
   }
 
-  //TODO able to remove this?
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
-    for {
-      accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[TeamsRow])
-      r <- rList.headOption.toFox
-      parsed <- parse(r)
-    } yield {
-      parsed
-    }
-
   def insertOne(t: TeamSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
@@ -176,13 +165,6 @@ object TeamService {
 }
 
 object TeamDAO {
-
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Team] =
-    for {
-      teamSQL <- TeamSQLDAO.findOneByName(name)
-      team <- Team.fromTeamSQL(teamSQL)
-    } yield team
-
 
   def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[Team] =
     for {

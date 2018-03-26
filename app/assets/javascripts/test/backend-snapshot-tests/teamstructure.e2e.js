@@ -6,8 +6,6 @@ import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 
-let activeUser;
-
 /*
 TEAM STRUCTURE USED FOR TESTING:
 
@@ -111,4 +109,25 @@ test("tasks_userAAC", async t => {
   } catch (err) {
     t.fail();
   }
+});
+
+// User
+
+test("user_userAAB", async t => { // teamMng are not allowed to de-/activate a user (if they are not an admin)
+  await setCurrToken(tokenUserDefault);
+  try {
+    //const user = await api.getUser("870b9f4d2a7c0e4d008da6ef");
+    //const newUser = Object.assign({}, user, { isActive: false });
+    //const updatedUser = await api.updateUser(newUser);
+    t.fail();
+  } catch (err) { // the test is supposed to fail => catch is the desired case
+    t.true(true);
+  }
+});
+
+test("test_removeMe", async t => {
+  const user = await api.getUser("870b9f4d2a7c0e4d008da6ef");
+  //const newUser = Object.assign({}, user, { isActive: false });
+  //const updatedUser = await api.updateUser(newUser);
+  t.is(1,1);
 });

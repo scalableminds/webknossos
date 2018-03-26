@@ -1,5 +1,8 @@
 # webKnossos
-Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos**.
+Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. 
+Current solutions require an efficient integration of automated image analysis with massive manual data annotation. 
+To scale such annotation efforts it is decisive to be able to crowd source data analysis online. 
+Here we present **webKnossos**.
 
 > Boergens Berning Bocklisch Bräunlein Drawitsch Frohnhofen Herold Otto Rzepka Werkmeister Werner Wiese Wissler & Helmstaedter  
 webKnossos: efficient online 3D data annotation for connectomics.  
@@ -29,7 +32,10 @@ webKnossos: efficient online 3D data annotation for connectomics.
 
 ## Development setup
 ### Docker
-This is the fastest way to try webKnossos. Docker CE 17+ and Docker Compose 1.18+ is required. This is only recommended for testing. [For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
+This is the fastest way to try webKnossos. 
+Docker CE 17+ and Docker Compose 1.18+ is required. 
+This is only recommended for testing. 
+[For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
 
 ```bash
 docker-compose up webknossos
@@ -117,15 +123,19 @@ See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 ```bash
 sbt run
 ```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000. Make sure that the mongoDB service is running before you start sbt.
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000. 
+Make sure that the PostgreSQL service is running before you start sbt.
 
 ### Run on a remote machine
 ```bash
 sbt "run -Dhttp.uri=http://<remote address>:9000"
 ```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000. Make sure that the mongoDB service is running before you start sbt.
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000. 
+Make sure that the PostgreSQL service is running before you start sbt.
 
-Make sure to open port `9000` in our firewall. This is only recommended for development purposes. See below for a recommended production setup.
+Make sure to open port `9000` in our firewall. 
+This is only recommended for development purposes. 
+See below for a recommended production setup.
 
 ## Production setup
 [See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.

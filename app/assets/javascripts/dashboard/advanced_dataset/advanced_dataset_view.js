@@ -96,7 +96,6 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                     })
                   }
                 >
-                  {team.name === dataset.owningOrganization ? <Icon type="lock" /> : null}
                   {team.name}
                 </Tag>
               ))

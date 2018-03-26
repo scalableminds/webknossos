@@ -170,4 +170,3 @@ Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
 
 # License
 AGPLv3
-Copyright scalable minds 2018

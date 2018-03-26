@@ -111,23 +111,33 @@ test("tasks_userAAC", async t => {
   }
 });
 
-// User
+// these 2 o not work yet
 
+// User
 test("user_userAAB", async t => { // teamMng are not allowed to de-/activate a user (if they are not an admin)
-  await setCurrToken(tokenUserDefault);
+  await setCurrToken(tokenUserAAB);
   try {
-    //const user = await api.getUser("870b9f4d2a7c0e4d008da6ef");
-    //const newUser = Object.assign({}, user, { isActive: false });
-    //const updatedUser = await api.updateUser(newUser);
+    const userIdABA = "870b9f4d2a7c0e4d008da6ef";
+    const user = await api.getUser(userIdABA);
+    const newUser = Object.assign({}, user, { isActive: false });
+    const updatedUser = await api.updateUser(newUser);
     t.fail();
   } catch (err) { // the test is supposed to fail => catch is the desired case
     t.true(true);
   }
 });
 
-test("test_removeMe", async t => {
-  const user = await api.getUser("870b9f4d2a7c0e4d008da6ef");
-  //const newUser = Object.assign({}, user, { isActive: false });
-  //const updatedUser = await api.updateUser(newUser);
-  t.is(1,1);
+
+
+// Project
+test("project_userAAB", async t => { // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
+  await setCurrToken(tokenUserBAA);
+  try {
+    const projectName = "Test_Project";
+    const returnValue = api.deleteProject(projectName);
+    t.is(returnValue, 1);
+    t.fail();
+  } catch (err) { // the test is supposed to fail => catch is the desired case
+    t.true(true);
+  }
 });

@@ -125,14 +125,14 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   }
 
   def updateTeams(dataSetName: String) = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyAs[List[BSONObjectID]] { teams => //TODO
+    withJsonBodyAs[List[BSONObjectID]] { teams =>
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- allowedToAdministrate(request.identity, dataSet)
         userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.identity)))
-        teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_.name == t))
-        teamsWithUpdate = teams.filter(t => userTeams.exists(_.name == t))
-        _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate) //TODO
+        teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_._id == t))
+        teamsWithUpdate = teams.filter(t => userTeams.exists(_._id == t))
+        _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
       } yield
       Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))
     }

@@ -4,7 +4,7 @@ Current solutions require an efficient integration of automated image analysis w
 To scale such annotation efforts it is decisive to be able to crowd source data analysis online. 
 Here we present **webKnossos**.
 
-> Boergens Berning Bocklisch Bräunlein Drawitsch Frohnhofen Herold Otto Rzepka Werkmeister Werner Wiese Wissler & Helmstaedter  
+> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter  
 webKnossos: efficient online 3D data annotation for connectomics.  
 [Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
@@ -133,7 +133,7 @@ sbt "run -Dhttp.uri=http://<remote address>:9000"
 Will fetch all Scala, Java and node dependencies and run the application on Port 9000. 
 Make sure that the PostgreSQL service is running before you start sbt.
 
-Make sure to open port `9000` in our firewall. 
+Make sure to open port `9000` in your firewall. 
 This is only recommended for development purposes. 
 See below for a recommended production setup.
 
@@ -158,6 +158,11 @@ yarn test-verbose
 docker-compose run e2e-tests
 ```
 
+
+## Contact and support
+Contact us at [mailto:hello@scalableminds.com](hello@scalableminds.com).
+
+[scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for webKnossos.
 
 ## Credits
 * scalable minds - https://scalableminds.com/

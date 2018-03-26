@@ -11,7 +11,7 @@ import reactivemongo.play.json.BSONObjectIDFormat
 
 package object datasource {
 
-  case class DataSourceId(name: String, team: String)
+  case class DataSourceId(name: String, team: String) // here team is not (yet) renamed to organization to avoid migrating all jsons
 
   object DataSourceId {
     implicit val dataSourceIdFormat: Format[DataSourceId] = Json.format[DataSourceId]

@@ -104,7 +104,7 @@ test("Users", async t => {
   const userListView = mount(
     <Provider store={Store}>
       <Router history={browserHistory}>
-        <ProjectListView />
+        <UserListView />
       </Router>
     </Provider>,
   );

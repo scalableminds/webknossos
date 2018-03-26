@@ -1,30 +1,48 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { userTokenA, userTokenB, userTokenC, userTokenD, userTokenE, setCurrToken } from "../enzyme/e2e-setup";
+import { tokenUserDefault, tokenUserAAB, tokenUserAAC, tokenUserABA, tokenUserBAA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 
 let activeUser;
 
+/*
+TEAM STRUCTURE USED FOR TESTING:
+
+Organizations:
+Connectomics department (Organization A), OrganizationB
+
+Teams:
+Connectomics department (Team AA), Team AB, Team BA, test1, test2
+(the teams test1 and test2 existed before)
+
+User:
+default (UserAAA), User AAB, User AAC, User ABA, User BAA
+
+++----------------------------------------------------------------------------------------------------------------------++--------------------------------------++
+||	Connectomics department (Organization A)																			                                      ||	Organization B 						          ||
+||  Admin: scmboy																										                                                    ||  Admin: userBAA					          	||
+++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
+|| Connectomics department (Team AA) | 		Team AB				        | 		test1				          | 		test2				          ||  TeamBA 								              ||
+++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
+|| scmboy (userAAA)	(teamMng)		     | 		userABA (admin)		    | 		scmboy	(teamMng.)	  | 		scmboy (teamMng.)	    ||  userBAA	(teamMng.)			         		||
+|| userAAB (teamMng.)		   		       | 						            	| 					              	| 						            	||  							                  		||
+|| userAAC					   		           | 						            	| 					            		| 						            	||  							                  		||
+++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
+
+ */
+/*
 test.before("Initialize values", async () => {
-  setCurrToken(userTokenA);
+  setCurrToken(tokenUserDefault);
   activeUser = await api.getActiveUser();
-});
-
-// one of these should fail (just for testing)
-test.serial("test whether the test is working", async t => {
-  t.is(1, 1);
-});
-
-test.serial("test whether the test is working", async t => {
-  t.is(1, 0);
 });
 
 test.serial("Test Name", async t => {
   t.is(activeUser.firstName, "SCM");
 });
+*/
 
 // Teams
 /*
@@ -34,46 +52,46 @@ test("team count", async t => {
   t.is(teams.length, 3)
 });
 */
-test("teamsA", async t => {
-  setCurrToken(userTokenA); // change this later to userTokenA
+test("teams_userDefault", async t => {
+  await setCurrToken(tokenUserDefault);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.snapshot(teams[0], { id: "teamsA" }); // maybe take all teams and not only the first one. (does apply to a lot of tests)
+  t.snapshot(teams[0], { id: "teams_userDefault" });
 });
 
-test("teamsD", async t => {
-  setCurrToken(userTokenA); // change this later to userTokenD
+test("teams_userABA", async t => {
+  await setCurrToken(tokenUserABA);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.snapshot(teams[0], { id: "teamsD" });
+  t.snapshot(teams[0], { id: "teamsABA" });
 });
 
-test("teamsE", async t => {
-  setCurrToken(userTokenA); // change this later to userTokenE
+test("teams_userBAA", async t => {
+  await setCurrToken(tokenUserBAA);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.snapshot(teams[0], { id: "teamsE" });
+  t.snapshot(teams[0], { id: "teams_userBAA" });
 });
 
 // TaskTypes
-test("taskTypesA", async t => {
-  setCurrToken(userTokenA); // change this later to userTokenA
+test("taskTypes_userDefault", async t => {
+  await setCurrToken(tokenUserDefault);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType._id);
-  t.snapshot(taskTypes, { id: "taskTypesA" });
+  t.snapshot(taskTypes, { id: "taskTypes_userDefault" });
 });
 
-test("taskTypesD", async t => {
-  setCurrToken(userTokenA); // change this later to userTokenD
+test("taskTypes_userABA", async t => {
+  await setCurrToken(tokenUserABA);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType._id);
-  t.snapshot(taskTypes, { id: "taskTypesD" });
+  t.snapshot(taskTypes, { id: "taskTypes_userABA" });
 });
 
-test("taskTypesE", async t => {
-  setCurrToken(userTokenA); // change this later to userTokenE
+test("taskTypes_userBAA", async t => {
+  await setCurrToken(tokenUserBAA);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType._id);
-  t.snapshot(taskTypes, { id: "taskTypesE" });
+  t.snapshot(taskTypes, { id: "taskTypes_userBAA" });
 });
 
 // Tasks
-test("tasksD", async t => {
- setCurrToken(userTokenA); // change this later to userTokenB
+test("tasks_userAAB", async t => {
+  await setCurrToken(tokenUserAAB);
   try {
     const test = 3;//await api.getTask("TODO: taskID");
     t.fail();
@@ -83,8 +101,8 @@ test("tasksD", async t => {
 });
 
 
-test("tasksE", async t => {
-  setCurrToken(userTokenA); // change this later to userTokenC
+test("tasks_userAAC", async t => {
+  await setCurrToken(tokenUserAAC);
   try { // the test is NOT supposed to fail
     const test = 3;//await api.getTask("TODO: taskID");
     t.true(true); // not pretty

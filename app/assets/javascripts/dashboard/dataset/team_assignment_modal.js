@@ -42,7 +42,13 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
   }
 
   selectTeams = (selectedTeamIds: Array<string>) => {
+    // make sure the owningTeam is always selected
     const uniqueIds = _.uniq([...selectedTeamIds]);
+    const owningTeam = this.state.teams.find(
+      team => team.name === this.props.dataset.owningOrganization,
+    );
+    if (owningTeam) uniqueIds.push(owningTeam.id);
+
     const allowedTeams = this.state.teams.filter(team => uniqueIds.includes(team.id));
     this.setState({
       selectedTeams: allowedTeams,

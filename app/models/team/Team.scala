@@ -61,7 +61,8 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   }
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"(_id in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"
+    s"""(_id in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
+       or _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(_id not in (select _organizationTeam from webknossos.organizations_)
@@ -157,7 +158,6 @@ object TeamService {
   def create(team: Team, user: User)(implicit ctx: DBAccessContext) =
     for {
       _ <- TeamDAO.insert(team)
-      _ <- UserDAO.addTeam(user._id, TeamMembership(team._id, team.name, isTeamManager = true))
     } yield ()
 
   def remove(team: Team)(implicit ctx: DBAccessContext) =

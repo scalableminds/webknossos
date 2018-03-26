@@ -4,6 +4,21 @@ Cellular-resolution connectomics is currently substantially limited by the throu
 ![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
 [![CircleCI](https://circleci.com/gh/scalableminds/webknossos.svg?style=svg)](https://circleci.com/gh/scalableminds/webknossos)
 
+## Features
+* Exploration of large 3D image datasets
+* Fully browser-based user experience with efficient data streaming
+* Creation/editing of skeleton and volume annotations
+* Innovative flight mode for fast skeleton tracing
+* Optimized performance for large tracings (e.g., 1M skeleton nodes)
+* User and task management for high-throughput crowdsourcing
+* [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
+* [Supported dataset formats: WKW (Optimized), KNOSSOS](https://github.com/scalableminds/webknossos/wiki/Datasets)
+* Several supported data formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
+* [Documented frontend API for user scripts](https://demo.webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
+* Open-source development with automated test suite
+* Docker-based deployment for production and development
+
+
 ## Development setup
 If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5 GB.
 

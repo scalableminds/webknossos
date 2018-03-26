@@ -81,7 +81,6 @@ export default class TextureBucketManager {
     anchorPoint: Vector4,
     fallbackAnchorPoint: Vector4,
   ): void {
-    console.time("setting active buckets");
     this.currentAnchorPoint = anchorPoint;
     this.fallbackAnchorPoint = fallbackAnchorPoint;
     // Find out which buckets are not needed anymore
@@ -115,11 +114,8 @@ export default class TextureBucketManager {
         this.reserveIndexForBucket(nextBucket, freeBucketIdx);
       }
     }
-    console.timeEnd("setting active buckets");
 
-    console.time("setting active buckets refresh");
     this._refreshLookUpBuffer();
-    console.timeEnd("setting active buckets refresh");
   }
 
   keepLookUpBufferUpToDate() {

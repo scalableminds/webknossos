@@ -280,9 +280,7 @@ vec3 round(vec3 a) {
 vec4 getRgbaAtXYIndex(sampler2D textures[2], float textureIdx, float textureWidth, float x, float y) {
   vec2 accessPoint = (floor(vec2(x, y)) + 0.5) / textureWidth;
 
-  if (false) {
-    return vec4(0.5, 0.0, 0.0, 0.0);
-  } else if (textureIdx == 0.0) {
+  if (textureIdx == 0.0) {
     return texture2D(textures[0], accessPoint).rgba;
   } else if (textureIdx == 1.0) {
     return texture2D(textures[1], accessPoint).rgba;
@@ -346,9 +344,15 @@ bool isnan(float val) {
   /*return ( val <= 0.0 || 0.0 <= val ) ? false : true;*/
 }
 
-vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 bucketPosition, vec3 offsetInBucket) {
+vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 bucketPosition, vec3 offsetInBucket, float isFallback) {
   float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim);
-  float bucketIdxInTexture = bucketIdx * floatsPerLookUpEntry;
+
+  // If we are making a fallback lookup, the lookup area we are interested in starts at
+  // bucketPerDim**3. if isFallback is true, we use that offset. Otherwise, the offset is 0.
+  float fallbackOffset = isFallback * bucketPerDim * bucketPerDim * bucketPerDim;
+  float bucketIdxInTexture =
+    bucketIdx * floatsPerLookUpEntry
+    + fallbackOffset;
   float pixelIdxInBucket = linearizeVec3ToIndex(offsetInBucket, bucketWidth);
 
   float bucketAddress = getRgbaAtIndex(
@@ -447,7 +451,7 @@ vec3 getCoords(float usedZoomStep) {
   return coords;
 }
 
-vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 coords) {
+vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 coords, float isFallback) {
   coords = floor(coords);
   vec3 bucketPosition = div(coords, bucketWidth);
   vec3 offsetInBucket = mod(coords, bucketWidth);
@@ -456,7 +460,8 @@ vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 
     lookUpTexture,
     dataTextures,
     bucketPosition,
-    offsetInBucket
+    offsetInBucket,
+    isFallback
   );
 }
 
@@ -465,10 +470,10 @@ vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[2], vec
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
 
-  vec4 a = getColorForCoords(lookUpTexture, dataTextures, coords);
-  vec4 b = getColorForCoords(lookUpTexture, dataTextures, coords + transDim(vec3(1, 0, 0)));
-  vec4 c = getColorForCoords(lookUpTexture, dataTextures, coords + transDim(vec3(0, 1, 0)));
-  vec4 d = getColorForCoords(lookUpTexture, dataTextures, coords + transDim(vec3(1, 1, 0)));
+  vec4 a = getColorForCoords(lookUpTexture, dataTextures, coords, 0.0);
+  vec4 b = getColorForCoords(lookUpTexture, dataTextures, coords + transDim(vec3(1, 0, 0)), 0.0);
+  vec4 c = getColorForCoords(lookUpTexture, dataTextures, coords + transDim(vec3(0, 1, 0)), 0.0);
+  vec4 d = getColorForCoords(lookUpTexture, dataTextures, coords + transDim(vec3(1, 1, 0)), 0.0);
   if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
     // We need to check all four colors for a negative parts, because there will be black
     // lines at the borders otherwise (black gets mixed with data)
@@ -482,44 +487,38 @@ vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[2], vec
 }
 
 
-vec3 getMaybeFilteredColor(
-  sampler2D lookUpTexture,
-  sampler2D dataTextures[2],
-  vec3 coords
-) {
-  vec4 color;
-  if (useBilinearFiltering) {
-    color = getBilinearColorFor(lookUpTexture, dataTextures, coords);
-  } else {
-    color = getColorForCoords(lookUpTexture, dataTextures, coords);
-  }
-  return color.xyz;
-}
-
-vec3 getBilinearColorOrFallback(
+vec4 getMaybeFilteredColor(
   sampler2D lookUpTexture,
   sampler2D dataTextures[2],
   vec3 coords,
-  sampler2D flookUpTexture,
-  sampler2D fdataTexture,
-  vec3 fBucketPos,
-  vec3 fOffsetInBucket,
-  bool hasFallback
+  bool suppressBilinearFiltering
 ) {
   vec4 color;
-  if (useBilinearFiltering) {
+  if (!suppressBilinearFiltering && useBilinearFiltering) {
     color = getBilinearColorFor(lookUpTexture, dataTextures, coords);
   } else {
-    color = getColorForCoords(lookUpTexture, dataTextures, coords);
+    color = getColorForCoords(lookUpTexture, dataTextures, coords, 0.0);
   }
+  return color;
+}
 
-  // if (false && color.a < 0.0 && hasFallback) {
-  //   color = getColorFor(flookUpTexture, fdataTexture, fBucketPos, fOffsetInBucket).rgba;
-  //   if (color.a < 0.0) {
-  //     // Render gray for not-yet-existing data
-  //     color = vec4(100.0, 100.0, 100.0, 255.0) / 255.0;
-  //   }
-  // }
+vec3 getMaybeFilteredColorOrFallback(
+  sampler2D lookUpTexture,
+  sampler2D dataTextures[2],
+  vec3 coords,
+  vec3 fallbackCoords,
+  bool hasFallback,
+  bool suppressBilinearFiltering
+) {
+  vec4 color = getMaybeFilteredColor(lookUpTexture, dataTextures, coords, suppressBilinearFiltering);
+
+  if (color.a < 0.0 && hasFallback) {
+    color = getColorForCoords(lookUpTexture, dataTextures, fallbackCoords, 1.0).rgba;
+    if (color.a < 0.0) {
+      // Render gray for not-yet-existing data
+      color = vec4(100.0, 100.0, 100.0, 255.0) / 255.0;
+    }
+  }
 
   return color.xyz;
 }
@@ -536,29 +535,18 @@ void main() {
   float fallbackZoomStep = min(<%= layers[0]%>_maxZoomStep, zoomStep + 1.0);
   bool hasFallback = fallbackZoomStep > zoomStep;
   vec3 fallbackCoords = floor(getCoords(fallbackZoomStep));
-  vec3 fbucketPosition = div(fallbackCoords, bucketWidth);
-  vec3 foffsetInBucket = mod(fallbackCoords, bucketWidth);
 
   <% if (hasSegmentation) { %>
-    // Don't use bilinear filtering for volume data
     vec4 volume_color =
-      getColorFor(
+      getMaybeFilteredColorOrFallback(
         <%= segmentationName %>_lookup_texture,
         <%= segmentationName %>_textures[0],
-        bucketPosition,
-        offsetInBucket
+        coords,
+        fallbackCoords,
+        hasFallback,
+        // Don't use bilinear filtering for volume data
+        true
       );
-      // getColorWithFallbackFor(
-      //   <%= segmentationName %>_lookup_texture,
-      //   <%= segmentationName %>_texture,
-      //   bucketPosition,
-      //   offsetInBucket,
-      //   <%= segmentationName %>_lookup_fallback_texture,
-      //   <%= segmentationName %>_fallback_texture,
-      //   fbucketPosition,
-      //   foffsetInBucket,
-      //   hasFallback
-      // );
 
     float id = (volume_color.r + volume_color.g + volume_color.b + volume_color.a) * 255.0;
   <% } else { %>
@@ -567,45 +555,29 @@ void main() {
 
   // Get Color Value(s)
   <% if (isRgb) { %>
-    // vec3 data_color =
-    //   getBilinearColorOrFallback(
-    //     <%= layers[0] %>_lookup_texture,
-    //     <%= layers[0] %>_texture,
-    //     coords,
-    //     <%= layers[0] %>_lookup_fallback_texture,
-    //     <%= layers[0] %>_fallback_texture,
-    //     fbucketPosition,
-    //     foffsetInBucket,
-    //     hasFallback
-    //   );
     vec3 data_color =
-      getMaybeFilteredColor(
+      getMaybeFilteredColorOrFallback(
         <%= layers[0] %>_lookup_texture,
         <%= layers[0] %>_textures,
-        coords
-      );
+        coords,
+        fallbackCoords,
+        hasFallback,
+        false
+      ).xyz;
 
     data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
   <% } else { %>
     vec3 data_color = vec3(0.0, 0.0, 0.0);
     <% _.each(layers, function(name){ %>
       // Get grayscale value for <%= name %>
-      // color_value =
-      //   getBilinearColorOrFallback(
-      //     <%= name %>_lookup_texture,
-      //     <%= name %>_texture,
-      //     coords,
-      //     <%= name %>_lookup_fallback_texture,
-      //     <%= name %>_fallback_texture,
-      //     fbucketPosition,
-      //     foffsetInBucket,
-      //     hasFallback
-      //   ).x;
       color_value =
-        getMaybeFilteredColor(
+        getMaybeFilteredColorOrFallback(
           <%= name %>_lookup_texture,
           <%= name %>_textures,
-          coords
+          coords,
+          fallbackCoords,
+          hasFallback,
+          false
         ).x;
 
       // Brightness / Contrast Transformation for <%= name %>
@@ -624,10 +596,6 @@ void main() {
   } else {
     gl_FragColor = vec4(data_color, 1.0);
   }
-
-  // gl_FragColor = vec4(bucketAddress / pow(12.0, 2.0), 0.0, 0.0, 1.0);
-  // gl_FragColor = vec4(pixelIdxInBucket / pow(32.0, 2.0), 0.0, 0.0, 1.0);
-  // gl_FragColor = vec4(texture_pos.x, texture_pos.y, 0.0, 1.0);
 }
 
 

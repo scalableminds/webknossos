@@ -58,6 +58,7 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
       val team = Team(teamName, request.identity.organization)
       for {
         _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
+        _ <- TeamService.create(team, request.identity)
         js <- Team.teamPublicWrites(team)
       } yield {
         JsonOk(js, Messages("team.created"))

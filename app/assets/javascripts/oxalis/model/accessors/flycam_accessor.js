@@ -62,7 +62,7 @@ export function getZoomedMatrix(flycam: FlycamType): Matrix4x4 {
 
 export function getMaxZoomStep(state: OxalisState): number {
   const minimumZoomStepCount = 1;
-  return Maybe.fromNullable(state.dataset)
+  const maxZoomstep = Maybe.fromNullable(state.dataset)
     .map(dataset =>
       Math.max(
         minimumZoomStepCount,
@@ -71,7 +71,8 @@ export function getMaxZoomStep(state: OxalisState): number {
         ),
       ),
     )
-    .getOrElse(minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT);
+    .getOrElse(2 ** (minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1));
+  return maxZoomstep;
 }
 
 export function getIntegerZoomStep(state: OxalisState): number {

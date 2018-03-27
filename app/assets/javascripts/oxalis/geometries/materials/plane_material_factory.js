@@ -27,9 +27,11 @@ import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
 function formatNumberAsGLSLFloat(aNumber: number): string {
-  if (aNumber - Math.floor(aNumber) > 0) {
+  if (aNumber % 1 > 0) {
+    // If it is already a floating point number, we can use toString
     return aNumber.toString();
   } else {
+    // Otherwise, append ".0" via toFixed
     return aNumber.toFixed(1);
   }
 }
@@ -219,8 +221,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     return _.template(
       `\
+const int textureCountPerLayer = <%= textureCountPerLayer %>;
+
 <% _.each(layers, function(name) { %>
-  uniform sampler2D <%= name %>_textures[2];
+  uniform sampler2D <%= name %>_textures[textureCountPerLayer];
   uniform sampler2D <%= name %>_lookup_texture;
   uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_brightness;
@@ -228,6 +232,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   uniform vec3 <%= name %>_color;
   uniform float <%= name %>_weight;
 <% }) %>
+
+<% if (hasSegmentation) { %>
+uniform sampler2D <%= segmentationName %>_lookup_texture;
+uniform sampler2D <%= segmentationName %>_textures[textureCountPerLayer];
+uniform float <%= segmentationName %>_maxZoomStep;
+<% } %>
 
 uniform float alpha;
 uniform vec3 globalPosition;
@@ -249,6 +259,8 @@ const float bucketSize = <%= bucketSize %>;
 const float d_texture_width = <%= d_texture_width %>;
 const float l_texture_width = <%= l_texture_width %>;
 const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
+
+const vec4 fallbackGray = vec4(100.0, 100.0, 100.0, 255.0) / 255.0;
 
 /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
 vec3 hsv_to_rgb(vec4 HSV)
@@ -277,14 +289,21 @@ vec3 round(vec3 a) {
 }
 
 
-vec4 getRgbaAtXYIndex(sampler2D textures[2], float textureIdx, float textureWidth, float x, float y) {
+vec4 getRgbaAtXYIndex(sampler2D textures[textureCountPerLayer], float textureIdx, float textureWidth, float x, float y) {
   vec2 accessPoint = (floor(vec2(x, y)) + 0.5) / textureWidth;
+
+  // Since WebGL doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
+  // here which checks for each case individually. The else-if-branches are constructed via
+  // lodash templates.
 
   if (textureIdx == 0.0) {
     return texture2D(textures[0], accessPoint).rgba;
-  } else if (textureIdx == 1.0) {
-    return texture2D(textures[1], accessPoint).rgba;
-  } else {
+  } <% _.range(1, textureCountPerLayer).forEach(textureIndex => { %>
+  else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
+    return texture2D(textures[<%= textureIndex %>], accessPoint).rgba;
+  }
+  <% }) %>
+  else {
     return vec4(0.5, 0.0, 0.0, 0.0);
   }
 }
@@ -344,7 +363,7 @@ bool isnan(float val) {
   /*return ( val <= 0.0 || 0.0 <= val ) ? false : true;*/
 }
 
-vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 bucketPosition, vec3 offsetInBucket, float isFallback) {
+vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 bucketPosition, vec3 offsetInBucket, float isFallback) {
   float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim);
 
   // If we are making a fallback lookup, the lookup area we are interested in starts at
@@ -395,29 +414,6 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 bucket
   return bucketColor;
 }
 
-// vec4 getColorWithFallbackFor(
-//   sampler2D lookUpTexture,
-//   sampler2D dataTexture,
-//   vec3 bucketPosition,
-//   vec3 offsetInBucket,
-//   sampler2D flookUpTexture,
-//   sampler2D fdataTexture,
-//   vec3 fbucketPosition,
-//   vec3 foffsetInBucket,
-//   bool hasFallback
-// ) {
-//   vec4 c = getColorFor(lookUpTexture, dataTexture, bucketPosition, offsetInBucket);
-
-//   if (false && c.a < 0.0 && hasFallback) {
-//     c = getColorFor(flookUpTexture, fdataTexture, fbucketPosition, foffsetInBucket);
-//     if (c.a < 0.0) {
-//       // Render gray for not-yet-existing data
-//       c = vec4(100.0, 100.0, 100.0, 255.0) / 255.0;
-//     }
-//   }
-//   return c;
-// }
-
 vec3 getCoords(float usedZoomStep) {
   float zoomStepDiff = usedZoomStep - zoomStep;
   bool useFallback = zoomStepDiff > 0.0;
@@ -451,7 +447,7 @@ vec3 getCoords(float usedZoomStep) {
   return coords;
 }
 
-vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 coords, float isFallback) {
+vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 coords, float isFallback) {
   coords = floor(coords);
   vec3 bucketPosition = div(coords, bucketWidth);
   vec3 offsetInBucket = mod(coords, bucketWidth);
@@ -465,7 +461,7 @@ vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 
   );
 }
 
-vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[2], vec3 coords) {
+vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 coords) {
   coords = coords + vec3(-0.5, -0.5, 0.0);
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
@@ -489,7 +485,7 @@ vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[2], vec
 
 vec4 getMaybeFilteredColor(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[2],
+  sampler2D dataTextures[textureCountPerLayer],
   vec3 coords,
   bool suppressBilinearFiltering
 ) {
@@ -502,13 +498,14 @@ vec4 getMaybeFilteredColor(
   return color;
 }
 
-vec3 getMaybeFilteredColorOrFallback(
+vec4 getMaybeFilteredColorOrFallback(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[2],
+  sampler2D dataTextures[textureCountPerLayer],
   vec3 coords,
   vec3 fallbackCoords,
   bool hasFallback,
-  bool suppressBilinearFiltering
+  bool suppressBilinearFiltering,
+  vec4 fallbackColor
 ) {
   vec4 color = getMaybeFilteredColor(lookUpTexture, dataTextures, coords, suppressBilinearFiltering);
 
@@ -516,11 +513,11 @@ vec3 getMaybeFilteredColorOrFallback(
     color = getColorForCoords(lookUpTexture, dataTextures, fallbackCoords, 1.0).rgba;
     if (color.a < 0.0) {
       // Render gray for not-yet-existing data
-      color = vec4(100.0, 100.0, 100.0, 255.0) / 255.0;
+      color = fallbackColor;
     }
   }
 
-  return color.xyz;
+  return color;
 }
 
 void main() {
@@ -540,12 +537,13 @@ void main() {
     vec4 volume_color =
       getMaybeFilteredColorOrFallback(
         <%= segmentationName %>_lookup_texture,
-        <%= segmentationName %>_textures[0],
+        <%= segmentationName %>_textures,
         coords,
         fallbackCoords,
         hasFallback,
         // Don't use bilinear filtering for volume data
-        true
+        true,
+        vec4(0.0, 0.0, 0.0, 0.0)
       );
 
     float id = (volume_color.r + volume_color.g + volume_color.b + volume_color.a) * 255.0;
@@ -562,7 +560,8 @@ void main() {
         coords,
         fallbackCoords,
         hasFallback,
-        false
+        false,
+        fallbackGray
       ).xyz;
 
     data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
@@ -577,7 +576,8 @@ void main() {
           coords,
           fallbackCoords,
           hasFallback,
-          false
+          false,
+          fallbackGray
         ).x;
 
       // Brightness / Contrast Transformation for <%= name %>
@@ -615,6 +615,8 @@ void main() {
       bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
       bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
       floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
+      textureCountPerLayer: constants.MAX_TEXTURE_COUNT_PER_LAYER,
+      formatNumberAsGLSLFloat,
     });
   }
 }

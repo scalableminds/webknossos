@@ -125,10 +125,9 @@ class Binary {
   }
 
   getTextureSize(): number {
-    return 4096;
-    // const gl = getRenderer().getContext();
-    // return gl.getParameter(gl.MAX_TEXTURE_SIZE);
-    // return gl.MAX_TEXTURE_SIZE;
+    // return 4096;
+    const gl = getRenderer().getContext();
+    return gl.getParameter(gl.MAX_TEXTURE_SIZE);
   }
 
   setupDataTextures(): void {
@@ -163,12 +162,11 @@ class Binary {
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): [?Vector4, ?Vector4] {
     const isAnchorPointNew = this.isAnchorPointNew(position, logZoomStep, "anchorPoint");
-    const fallbackAnchorPoint = Math.min(this.cube.MAX_ZOOM_STEP, logZoomStep + 1);
-    const isFallbackAnchorPointNew = this.isAnchorPointNew(
-      position,
-      fallbackAnchorPoint,
-      "fallbackAnchorPoint",
-    );
+    const fallbackZoomStep = logZoomStep + 1;
+    const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
+    const isFallbackAnchorPointNew = isFallbackAvailable
+      ? this.isAnchorPointNew(position, fallbackZoomStep, "fallbackAnchorPoint")
+      : false;
 
     if (isAnchorPointNew || isFallbackAnchorPointNew) {
       const buckets = this.calculateBucketsForTexturesForManager(
@@ -177,12 +175,14 @@ class Binary {
         this.anchorPointCache.anchorPoint,
         false,
       );
-      const fallbackBuckets = this.calculateBucketsForTexturesForManager(
-        position,
-        logZoomStep + 1,
-        this.anchorPointCache.fallbackAnchorPoint,
-        true,
-      );
+      const fallbackBuckets = isFallbackAvailable
+        ? this.calculateBucketsForTexturesForManager(
+            position,
+            logZoomStep + 1,
+            this.anchorPointCache.fallbackAnchorPoint,
+            true,
+          )
+        : [];
 
       this.textureBucketManager.setActiveBuckets(
         buckets.concat(fallbackBuckets),
@@ -241,8 +241,9 @@ class Binary {
       // This is necessary for the case in which the camera position is not exactly on a bucket boundary.
       // The top/left bucket is not completely shown and the part that is not necessary for rendering is
       // necessary on the bottom/right instead which is why the lower/right half gets one bucket more.
-      const renderedBucketsPerDimension =
-        constants.RENDERED_BUCKETS_PER_DIMENSION / (isFallback ? 2 : 1);
+      const renderedBucketsPerDimension = Math.floor(
+        constants.RENDERED_BUCKETS_PER_DIMENSION / (isFallback ? 2 : 1),
+      );
       const startingOffset = Math.floor(renderedBucketsPerDimension / 2) - 1;
       const endOffset = renderedBucketsPerDimension - startingOffset;
 

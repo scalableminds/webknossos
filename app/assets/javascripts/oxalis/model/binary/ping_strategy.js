@@ -86,20 +86,20 @@ export class PingStrategy extends AbstractPingStrategy {
       activePlane,
     );
 
-    let queueItemsForLargestZoomStep = [];
+    let queueItemsForFallbackZoomStep = [];
     const fallbackZoomStep = Math.min(this.cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
     // todo
-    if (false && fallbackZoomStep > zoomStep) {
-      queueItemsForLargestZoomStep = this.pingImpl(
+    if (fallbackZoomStep > zoomStep) {
+      queueItemsForFallbackZoomStep = this.pingImpl(
         position,
         direction,
         fallbackZoomStep,
-        0,
+        zoomStepDiff - 1,
         activePlane,
       );
     }
 
-    return queueItemsForCurrentZoomStep.concat(queueItemsForLargestZoomStep);
+    return queueItemsForCurrentZoomStep.concat(queueItemsForFallbackZoomStep);
   }
 
   pingImpl(
@@ -121,17 +121,9 @@ export class PingStrategy extends AbstractPingStrategy {
       this.v = indices[1];
       this.w = indices[2];
 
-      // Converting area from voxels to buckets
-      // const bucketArea = [
-      //   areas[plane][0] / constants.BUCKET_WIDTH,
-      //   areas[plane][1] / constants.BUCKET_WIDTH,
-      //   (areas[plane][2] - 1) / constants.BUCKET_WIDTH,
-      //   (areas[plane][3] - 1) / constants.BUCKET_WIDTH,
-      // ];
-      // const width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff;
-      // const height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff;
-      const width = constants.RENDERED_BUCKETS_PER_DIMENSION;
-      const height = constants.RENDERED_BUCKETS_PER_DIMENSION;
+      // todo: use resolutions
+      const width = constants.RENDERED_BUCKETS_PER_DIMENSION * Math.pow(2, zoomStepDiff);
+      const height = constants.RENDERED_BUCKETS_PER_DIMENSION * Math.pow(2, zoomStepDiff);
       const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
       const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);

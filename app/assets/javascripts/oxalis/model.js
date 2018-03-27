@@ -143,7 +143,7 @@ export class OxalisModel {
       datasetName = annotationId;
     }
 
-    await this.initializeDataset(datasetName);
+    const highestResolutions = await this.initializeDataset(datasetName);
 
     // Fetch the actual tracing from the datastore, if there is an annotation
     let tracing: ?ServerTracingType;
@@ -163,7 +163,7 @@ export class OxalisModel {
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
     if (initialFetch) {
-      this.initializeModel(tracing);
+      this.initializeModel(tracing, highestResolutions);
       if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
     }
     // There is no need to initialize the tracing if there is no tracing (View mode).
@@ -228,13 +228,13 @@ export class OxalisModel {
     }
   }
 
-  async initializeDataset(datasetName: string) {
-    let dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
+  async initializeDataset(datasetName: string): Promise<Array<Vector3>> {
+    const rawDataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
 
     let error;
-    if (!dataset) {
+    if (!rawDataset) {
       error = messages["dataset.does_not_exist"];
-    } else if (!dataset.dataSource.dataLayers) {
+    } else if (!rawDataset.dataSource.dataLayers) {
       error = `${messages["dataset.not_imported"]} '${datasetName}'`;
     }
 
@@ -243,7 +243,7 @@ export class OxalisModel {
       throw this.HANDLED_ERROR;
     }
 
-    dataset = adaptResolutions(dataset);
+    const [dataset, highestResolutions] = adaptResolutions(rawDataset);
 
     // Make sure subsequent fetch calls are always for the same dataset
     if (!_.isEmpty(this.binary)) {
@@ -258,9 +258,11 @@ export class OxalisModel {
     });
 
     Store.dispatch(setDatasetAction(dataset));
+
+    return highestResolutions;
   }
 
-  initializeModel(tracing: ?ServerTracingType) {
+  initializeModel(tracing: ?ServerTracingType, resolutions: Array<Vector3>) {
     const { dataStore } = Store.getState().dataset;
 
     const LayerClass = (() => {
@@ -274,15 +276,18 @@ export class OxalisModel {
       }
     })();
 
-    const layers = this.getLayerInfos(tracing).map(
+    const layers = this.getLayerInfos(tracing, resolutions).map(
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
     for (const layer of layers) {
-      const maxLayerZoomStep =
+      let maxLayerZoomStep =
         Math.log(Math.max(...layer.resolutions.map(r => Math.max(...r)))) / Math.LN2;
+      if (layer.category === "segmentation") {
+        maxLayerZoomStep = 1;
+      }
       this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
     }
 
@@ -327,7 +332,7 @@ export class OxalisModel {
     return this.binary[name];
   }
 
-  getLayerInfos(tracing: ?ServerTracingType) {
+  getLayerInfos(tracing: ?ServerTracingType, resolutions: Array<Vector3>) {
     // Overwrite or extend layers with volumeTracingLayer
     let layers = _.clone(Store.getState().dataset.dataLayers);
     // $FlowFixMe TODO Why does Flow complain about this check
@@ -362,7 +367,7 @@ export class OxalisModel {
         height: tracing.boundingBox.height,
         depth: tracing.boundingBox.depth,
       },
-      resolutions: [[1, 1, 1]],
+      resolutions,
       elementClass: tracing.elementClass,
       mappings:
         existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],
@@ -475,11 +480,10 @@ export class OxalisModel {
   };
 }
 
-function adaptResolutions(dataset: APIDatasetType): APIDatasetType {
+function adaptResolutions(dataset: APIDatasetType): [APIDatasetType, Array<Vector3>] {
   const adaptedLayers = dataset.dataSource.dataLayers.map(dataLayer => {
     // Todo: the back-end should deliver the resolutions numerically sorted
     const adaptedResolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
-
     _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
       // We add another level of resolutions to allow zooming out even further
       const lastResolution = _.last(adaptedResolutions);
@@ -496,13 +500,19 @@ function adaptResolutions(dataset: APIDatasetType): APIDatasetType {
     };
   });
 
-  return {
+  const highestResolutions = _.last(
+    _.sortBy(adaptedLayers.map(layer => layer.resolutions), resolutions => resolutions.length),
+  );
+
+  const adaptedDataset = {
     ...dataset,
     dataSource: {
       ...dataset.dataSource,
       dataLayers: adaptedLayers,
     },
   };
+
+  return [adaptedDataset, highestResolutions];
 }
 
 // export the model as a singleton

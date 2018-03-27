@@ -52,8 +52,12 @@ export default class TextureBucketManager {
   textureCount: number;
 
   constructor(bucketPerDim: number, textureWidth: number, textureCount: number) {
-    // each plane gets bucketPerDim**2 buckets
-    this.bufferCapacity = 3 * Math.pow(bucketPerDim, 2);
+    // Each plane gets bucketPerDim**2 buckets. Additionally, the fallback zoomstep
+    // requires bucketPerDim/2 buckets per plane.
+    const normalCapacity = 3 * Math.pow(bucketPerDim, 2);
+    const fallbackCapacity = 3 * Math.pow(Math.floor(bucketPerDim / 2), 2);
+
+    this.bufferCapacity = normalCapacity + fallbackCapacity;
     // the look up buffer is bucketPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
     this.bucketPerDim = bucketPerDim;

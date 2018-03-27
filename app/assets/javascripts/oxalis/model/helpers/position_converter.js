@@ -1,5 +1,6 @@
 // @flow
 
+import _ from "lodash";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 
@@ -9,12 +10,28 @@ export default {
     resolutions: Array<Vector3>,
     resolutionIndex: number,
   ): Vector4 {
-    const resolution = resolutions[resolutionIndex];
+    const resolution =
+      resolutionIndex < resolutions.length
+        ? resolutions[resolutionIndex]
+        : this.upsampleResolution(resolutions, resolutionIndex);
+
     return [
       Math.floor(x / (constants.BUCKET_WIDTH * resolution[0])),
       Math.floor(y / (constants.BUCKET_WIDTH * resolution[1])),
       Math.floor(z / (constants.BUCKET_WIDTH * resolution[2])),
       resolutionIndex,
+    ];
+  },
+
+  upsampleResolution(resolutions: Array<Vector3>, resolutionIndex: number): Vector3 {
+    const lastResolutionIndex = resolutions.length - 1;
+    const lastResolution = resolutions[lastResolutionIndex];
+    const multiplier = Math.pow(2, resolutionIndex - lastResolutionIndex);
+
+    return [
+      lastResolution[0] * multiplier,
+      lastResolution[1] * multiplier,
+      lastResolution[2] * multiplier,
     ];
   },
 

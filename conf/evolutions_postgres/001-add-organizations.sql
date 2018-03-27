@@ -1,6 +1,12 @@
 -- https://github.com/scalableminds/webknossos/pull/2427
 
--- Note: _organizationTeam needs to be the ID of the previous root team
+-- Note on hard-coded IDs below:
+--   organization id (new random) 5ab8b6be85000085008301c6
+--   organization team id (previously root team) 5301a808ee7d7aab4053980f
+--   new admins as noted
+--   new default owner in DOWN: hw
+-- Assumes that there is only one root team (now organization)
+
 
 -- UP:
 
@@ -44,6 +50,7 @@ CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT 
 ALTER TABLE webknossos.user_team_roles ADD COLUMN isTeamManager BOOLEAN NOT NULL DEFAULT false;
 UPDATE webknossos.user_team_roles SET isTeamManager = true where role = 'admin';
 ALTER TABLE webknossos.user_team_roles DROP COLUMN role;
+DROP TYPE webknossos.TEAM_ROLES;
 
 
 DROP VIEW webknossos.users_;
@@ -93,6 +100,7 @@ ALTER TABLE webknossos.dataSets ALTER COLUMN _team SET NOT NULL;
 ALTER TABLE webknossos.dataSets ADD CONSTRAINT datasets_name__team_key UNIQUE (name, _team);
 CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
 
+CREATE TYPE webknossos.TEAM_ROLES AS ENUM ('user', 'admin');
 ALTER TABLE webknossos.user_team_roles ADD COLUMN role webknossos.TEAM_ROLES;
 UPDATE webknossos.user_team_roles SET role = 'admin' where isTeamManager;
 UPDATE webknossos.user_team_roles SET role = 'user' where not isTeamManager;

@@ -161,11 +161,11 @@ class Binary {
 
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): [?Vector4, ?Vector4] {
-    const isAnchorPointNew = this.isAnchorPointNew(position, logZoomStep, "anchorPoint");
+    const isAnchorPointNew = this.yieldsNewAnchorPoint(position, logZoomStep, "anchorPoint");
     const fallbackZoomStep = logZoomStep + 1;
     const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
     const isFallbackAnchorPointNew = isFallbackAvailable
-      ? this.isAnchorPointNew(position, fallbackZoomStep, "fallbackAnchorPoint")
+      ? this.yieldsNewAnchorPoint(position, fallbackZoomStep, "fallbackAnchorPoint")
       : false;
 
     if (isAnchorPointNew || isFallbackAnchorPointNew) {
@@ -197,7 +197,7 @@ class Binary {
     ];
   }
 
-  isAnchorPointNew(
+  yieldsNewAnchorPoint(
     position: Vector3,
     logZoomStep: number,
     key: "fallbackAnchorPoint" | "anchorPoint",
@@ -214,10 +214,11 @@ class Binary {
     const resolution = this.layer.resolutions[logZoomStep];
 
     // Hit texture top-left coordinate
-    const anchorPoint = _.clone(position);
-    anchorPoint[0] = Math.floor(anchorPoint[0] - constants.PLANE_WIDTH / 2 * resolution[0]);
-    anchorPoint[1] = Math.floor(anchorPoint[1] - constants.PLANE_WIDTH / 2 * resolution[1]);
-    anchorPoint[2] = Math.floor(anchorPoint[2] - constants.PLANE_WIDTH / 2 * resolution[2]);
+    const anchorPoint = [
+      Math.floor(position[0] - 512 / 2 * resolution[0]),
+      Math.floor(position[1] - 512 / 2 * resolution[1]),
+      Math.floor(position[2] - 512 / 2 * resolution[2]),
+    ];
 
     return this.cube.positionToZoomedAddress(anchorPoint, logZoomStep);
   }
@@ -230,11 +231,11 @@ class Binary {
   ): Array<DataBucket> {
     // find out which buckets we need for each plane
     const requiredBucketSet = new Set();
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [u, v] = Dimensions.getIndices(planeId);
-      const texturePosition = getPosition(Store.getState().flycam);
+    const texturePosition = getPosition(Store.getState().flycam);
+    const centerBucket = this.cube.positionToZoomedAddress(texturePosition, logZoomStep);
 
-      const centerBucket = this.cube.positionToZoomedAddress(texturePosition, logZoomStep);
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const [u, v, w] = Dimensions.getIndices(planeId);
 
       // E.g., for 17 buckets per dimension, we want to have an offset of -7 buckets so that the
       // right/lower half of the center bucket has one bucket more than the left/upper half.

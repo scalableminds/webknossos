@@ -16,7 +16,7 @@ function getRenderer() {
           getContext: () => ({
             MAX_TEXTURE_SIZE: 0,
             MAX_COMBINED_TEXTURE_IMAGE_UNITS: 8,
-            getParameter: (param: number) => 0,
+            getParameter: (param: number) => param,
           }),
         };
 

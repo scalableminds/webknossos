@@ -1,6 +1,5 @@
 // @flow
 
-import _ from "lodash";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 

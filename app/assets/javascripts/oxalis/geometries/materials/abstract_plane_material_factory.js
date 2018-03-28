@@ -18,7 +18,7 @@ export type TextureMapType = {
 
 export type UniformsType = {
   [key: string]: {
-    type: "f" | "i" | "t" | "v2" | "v3",
+    type: "f" | "i" | "t" | "v2" | "v3" | "tv",
     value: any,
   },
 };

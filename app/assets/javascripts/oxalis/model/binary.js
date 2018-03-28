@@ -235,7 +235,7 @@ class Binary {
     const centerBucket = this.cube.positionToZoomedAddress(texturePosition, logZoomStep);
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [u, v, w] = Dimensions.getIndices(planeId);
+      const [u, v] = Dimensions.getIndices(planeId);
 
       // E.g., for 17 buckets per dimension, we want to have an offset of -7 buckets so that the
       // right/lower half of the center bucket has one bucket more than the left/upper half.

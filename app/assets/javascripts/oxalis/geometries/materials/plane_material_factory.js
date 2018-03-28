@@ -217,7 +217,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   getFragmentShader(): string {
     const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
     const segmentationBinary = Model.getSegmentationBinary();
-    const dataTextureWidth = Object.values(Model.binary)[0].getTextureSize();
+    const dataTextureWidth = _.values(Model.binary)[0].getTextureSize();
 
     return _.template(
       `\

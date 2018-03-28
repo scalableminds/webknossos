@@ -212,12 +212,13 @@ class Binary {
 
   calculateAnchorPoint(position: Vector3, logZoomStep: number): Vector4 {
     const resolution = this.layer.resolutions[logZoomStep];
-
+    const maximumRenderedBucketsHalf =
+      constants.RENDERED_BUCKETS_PER_DIMENSION * constants.BUCKET_WIDTH / 2;
     // Hit texture top-left coordinate
     const anchorPoint = [
-      Math.floor(position[0] - 512 / 2 * resolution[0]),
-      Math.floor(position[1] - 512 / 2 * resolution[1]),
-      Math.floor(position[2] - 512 / 2 * resolution[2]),
+      Math.floor(position[0] - maximumRenderedBucketsHalf * resolution[0]),
+      Math.floor(position[1] - maximumRenderedBucketsHalf * resolution[1]),
+      Math.floor(position[2] - maximumRenderedBucketsHalf * resolution[2]),
     ];
 
     return this.cube.positionToZoomedAddress(anchorPoint, logZoomStep);
@@ -237,7 +238,7 @@ class Binary {
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [u, v] = Dimensions.getIndices(planeId);
 
-      // E.g., for 17 buckets per dimension, we want to have an offset of -7 buckets so that the
+      // E.g., for 16 buckets per dimension, we want to have an offset of -8 buckets so that the
       // right/lower half of the center bucket has one bucket more than the left/upper half.
       // This is necessary for the case in which the camera position is not exactly on a bucket boundary.
       // The top/left bucket is not completely shown and the part that is not necessary for rendering is
@@ -245,7 +246,7 @@ class Binary {
       const renderedBucketsPerDimension = Math.floor(
         constants.RENDERED_BUCKETS_PER_DIMENSION / (isFallback ? 2 : 1),
       );
-      const startingOffset = Math.floor(renderedBucketsPerDimension / 2) - 1;
+      const startingOffset = Math.floor(renderedBucketsPerDimension / 2);
       const endOffset = renderedBucketsPerDimension - startingOffset;
 
       for (let y = -startingOffset; y < endOffset; y++) {

@@ -16,13 +16,8 @@ import * as THREE from "three";
 // If VIEWPORT_WIDTH, which is a little bigger, is used instead, we end up with a data texture
 // that is shrinked a little bit, which leads to the texture not being in sync with the THREEjs scene.
 
-// Historically, this width decided at which point which zoom step was picked.
-// There is no specific reason why this exact size has to be chosen. As long as enough buckets are sent
-// to the GPU (RENDERED_BUCKETS_PER_DIMENSION) this width can be increased or decreased.
-const MAX_RENDING_TARGET_WIDTH = 512 - constants.BUCKET_WIDTH - 1;
-
 // maximum difference between requested coordinate and actual texture position
-const MAX_ZOOM_STEP_DIFF = MAX_RENDING_TARGET_WIDTH / constants.PLANE_WIDTH;
+const MAX_ZOOM_STEP_DIFF = constants.MAX_RENDING_TARGET_WIDTH / constants.PLANE_WIDTH;
 
 export function getUp(flycam: FlycamType): Vector3 {
   const matrix = flycam.currentMatrix;

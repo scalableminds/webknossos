@@ -529,7 +529,7 @@ export async function addDataset(datatsetConfig: DatasetConfigType): Promise<API
 }
 
 export async function triggerDatasetCheck(datatstoreHost: string): Promise<void> {
-  return doWithToken(token =>
+  doWithToken(token =>
     Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
       host: datatstoreHost,
     }),

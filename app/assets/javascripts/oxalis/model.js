@@ -45,8 +45,10 @@ import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
 import { doWithToken, getAnnotationInformation } from "admin/admin_rest_api";
 import messages from "messages";
-import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
+import type Layer from "oxalis/model/binary/layers/layer";
+import type { DataLayerType } from "oxalis/store";
+import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 export type ServerNodeType = {
   id: number,
   position: Vector3,
@@ -166,12 +168,58 @@ export class OxalisModel {
       this.initializeModel(tracing, highestResolutions);
       if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
     }
+
     // There is no need to initialize the tracing if there is no tracing (View mode).
     if (annotation != null && tracing != null) {
       this.initializeTracing(annotation, tracing);
     }
 
     this.applyState(UrlManager.initialState, tracing);
+  }
+
+  validateSpecsForLayers(layers: Array<Layer>): void {
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl");
+
+    if (!gl) {
+      throw new Error("WebGL context could not be constructed.");
+    }
+
+    const supportedTextureSize = 4096; // gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    const maxTextureCount = 8; // gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+
+    if (supportedTextureSize < 4096 || maxTextureCount < 8) {
+      throw new Error(
+        "Minimum spec is not met. GPU should support at least a texture size of 4096 and 8 textures.",
+      );
+    }
+
+    const usedTextureSize = supportedTextureSize >= 8192 ? 8192 : 4096;
+    const textureCountPerLayer = (() => {
+      const bucketCountPerPlane =
+        constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION ** 2 + // buckets in current zoomStep
+        Math.ceil(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / 2) ** 2; // buckets in fallback zoomstep;
+      const necessaryVoxelCount = 3 * bucketCountPerPlane * constants.BUCKET_SIZE;
+      const availableVoxelCount = usedTextureSize ** 2;
+      const lookUpTextureCountPerLayer = 1;
+      const dataTextureCountPerLayer = Math.ceil(necessaryVoxelCount / availableVoxelCount);
+      return lookUpTextureCountPerLayer + dataTextureCountPerLayer;
+    })();
+
+    const textureCountForResolutions = 1;
+    // todo: adapt this number when adding mappings support
+    const textureCountForCellMappings = 0;
+
+    const necessaryTextureCount =
+      textureCountForResolutions +
+      textureCountForCellMappings +
+      layers.length * textureCountPerLayer;
+
+    if (necessaryTextureCount > maxTextureCount) {
+      const message = `Not enough textures available for rendering ${layers.length} layers`;
+      Toast.error(message);
+      throw new Error(message);
+    }
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -280,6 +328,8 @@ export class OxalisModel {
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
+    this.validateSpecsForLayers(layers);
+
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
     for (const layer of layers) {
@@ -332,7 +382,7 @@ export class OxalisModel {
     return this.binary[name];
   }
 
-  getLayerInfos(tracing: ?ServerTracingType, resolutions: Array<Vector3>) {
+  getLayerInfos(tracing: ?ServerTracingType, resolutions: Array<Vector3>): Array<DataLayerType> {
     // Overwrite or extend layers with volumeTracingLayer
     let layers = _.clone(Store.getState().dataset.dataLayers);
     // $FlowFixMe TODO Why does Flow complain about this check
@@ -340,7 +390,7 @@ export class OxalisModel {
       return layers;
     }
 
-    // Flow doesn't check that as the tracing has the elementClass property it has to be a volumeTracing
+    // Flow doesn't understand that as the tracing has the elementClass property it has to be a volumeTracing
     tracing = ((tracing: any): ServerVolumeTracingType);
 
     // This code will only be executed for volume tracings as only those have a dataLayer.

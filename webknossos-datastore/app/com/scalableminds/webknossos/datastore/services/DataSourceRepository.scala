@@ -9,7 +9,7 @@ import com.google.inject.name.Named
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.InboxDataSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 class DataSourceRepository @Inject()(
                                       webKnossosServer: WebKnossosServer,
@@ -29,9 +29,11 @@ class DataSourceRepository @Inject()(
     webKnossosServer.reportDataSource(dataSource)
   }
 
-  def updateDataSources(dataSources: List[InboxDataSource]): Unit = {
-    removeAll
-    dataSources.foreach(dataSource => insert(dataSource.id.name, dataSource))
-    webKnossosServer.reportDataSources(dataSources)
-  }
+  def updateDataSources(dataSources: List[InboxDataSource]): Fox[Unit] =
+    for {
+      _ <- Fox.successful(())
+      _ = removeAll
+      _ = dataSources.foreach(dataSource => insert(dataSource.id.name, dataSource))
+      _ <- webKnossosServer.reportDataSources(dataSources)
+    } yield ()
 }

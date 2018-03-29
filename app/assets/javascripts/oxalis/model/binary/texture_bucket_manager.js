@@ -137,7 +137,7 @@ export default class TextureBucketManager {
     // uniqBy removes multiple write-buckets-requests for the same index.
     // It preserves the first occurence of each duplicate, which is why
     // this queue has to be filled from the front (via unshift) und read from the
-    // back (via pop). This ensures that the newest bucket "wins" if they are
+    // back (via pop). This ensures that the newest bucket "wins" if there are
     // multiple buckets for the same index.
     this.writerQueue = _.uniqBy(this.writerQueue, el => el._index);
     const maxBucketCommitsPerFrame = 30;

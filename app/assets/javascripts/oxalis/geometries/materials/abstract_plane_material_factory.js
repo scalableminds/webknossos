@@ -63,12 +63,14 @@ export function createUpdatableTexture(
   let format;
   if (channelCount === 1) {
     format = THREE.LuminanceFormat;
+  } else if (channelCount === 2) {
+    format = THREE.LuminanceAlphaFormat;
   } else if (channelCount === 3) {
     format = THREE.RGBFormat;
   } else if (channelCount === 4) {
     format = THREE.RGBAFormat;
   } else {
-    throw new Error("Unhandled byte count");
+    throw new Error(`Unhandled byte count: ${channelCount}`);
   }
 
   const newTexture = new UpdatableTexture(

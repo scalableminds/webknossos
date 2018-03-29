@@ -89,17 +89,22 @@ const Constants = {
 
   DEFAULT_SEG_ALPHA: 20,
 
+  BUCKET_WIDTH: 32,
+  BUCKET_SIZE: 32 ** 3,
   // The plane in orthogonal mode is a little smaller than the viewport
   // as there are two borders with width 2px each => 8px
   PLANE_WIDTH: 376,
   VIEWPORT_WIDTH: 384,
   // The size of the gap between the 4 viewports in the orthogonal mode
   VIEWPORT_GAP_WIDTH: 20,
+
   LOOK_UP_TEXTURE_WIDTH: 128,
-  RENDERED_BUCKETS_PER_DIMENSION: 17,
+  MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION: 17,
+  // Historically, this width decided at which point which zoom step was picked.
+  // There is no specific reason why this exact size has to be chosen. As long as enough buckets are sent
+  // to the GPU (MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION) this width can be increased or decreased.
+  MAX_RENDERING_TARGET_WIDTH: 512 - 32 - 1,
   DISTANCE_3D: 140,
-  BUCKET_WIDTH: 32,
-  BUCKET_SIZE: 32 ** 3,
   MAX_TEXTURE_COUNT_PER_LAYER: 1,
 
   TDView_MOVE_SPEED: 150,

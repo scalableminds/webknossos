@@ -253,14 +253,14 @@ uniform float resolutionsTextureWidth;
 
 varying vec4 worldCoord;
 
-const float bucketPerDim = <%= bucketPerDim %>;
+const float bucketsPerDim = <%= bucketsPerDim %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float d_texture_width = <%= d_texture_width %>;
 const float l_texture_width = <%= l_texture_width %>;
 const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
 
-const vec4 fallbackGray = vec4(100.0, 100.0, 100.0, 255.0) / 255.0;
+const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 
 /* Inspired from: http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl */
 vec3 hsv_to_rgb(vec4 HSV)
@@ -331,14 +331,18 @@ vec4 getRgbaAtXYIndex(sampler2D texture, float textureWidth, float x, float y) {
     ).rgba;
 }
 
+// E.g., the vector [9, 5, 2]  will be linearized to the scalar index 900 + 50 + 2, when base == 10
 float linearizeVec3ToIndex(vec3 position, float base) {
   return position.z * base * base + position.y * base + position.x;
 }
 
+// Same as linearizeVec3ToIndex. However, a mod parameter m can be passed when the final index
+// is going to be modded, anyway. This circumvents floating overflows by modding the intermediary results.
 float linearizeVec3ToIndexWithMod(vec3 position, float base, float m) {
   return mod(mod(position.z * base * base, m) + mod(position.y * base, m) + position.x, m);
 }
 
+// Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.
 vec3 transDim(vec3 array) {
   <%= (function () {
       switch (planeID) {
@@ -355,7 +359,7 @@ vec3 transDim(vec3 array) {
   %>
 }
 
-bool isnan(float val) {
+bool isNan(float val) {
   // https://stackoverflow.com/questions/9446888/best-way-to-detect-nans-in-opengl-shaders
   return !(val < 0.0 || 0.0 < val || val == 0.0);
   // important: some nVidias failed to cope with version below.
@@ -364,11 +368,11 @@ bool isnan(float val) {
 }
 
 vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 bucketPosition, vec3 offsetInBucket, float isFallback) {
-  float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketPerDim);
+  float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketsPerDim);
 
   // If we are making a fallback lookup, the lookup area we are interested in starts at
-  // bucketPerDim**3. if isFallback is true, we use that offset. Otherwise, the offset is 0.
-  float fallbackOffset = isFallback * bucketPerDim * bucketPerDim * bucketPerDim;
+  // bucketsPerDim**3. if isFallback is true, we use that offset. Otherwise, the offset is 0.
+  float fallbackOffset = isFallback * bucketsPerDim * bucketsPerDim * bucketsPerDim;
   float bucketIdxInTexture =
     bucketIdx * floatsPerLookUpEntry
     + fallbackOffset;
@@ -385,7 +389,7 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPer
     return vec4(0.0, 0.0, 0.0, 0.0);
   }
 
-  if (bucketAddress < 0. || isnan(bucketAddress)) {
+  if (bucketAddress < 0. || isNan(bucketAddress)) {
     // Not-yet-existing data is encoded with a = -1.0
     return vec4(0.0, 0.0, 0.0, -1.0);
   }
@@ -609,7 +613,7 @@ void main() {
       OrthoViews,
       planeID: this.planeID,
       uvw: Dimensions.getIndices(this.planeID),
-      bucketPerDim: formatNumberAsGLSLFloat(constants.RENDERED_BUCKETS_PER_DIMENSION),
+      bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
       d_texture_width: formatNumberAsGLSLFloat(dataTextureWidth),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
       bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),

@@ -82,7 +82,6 @@ class SceneController {
     this.rootGroup.add(this.getRootNode());
 
     // The dimension(s) with the highest resolution will not be distorted
-    console.log("Store.getState().dataset.scale", Store.getState().dataset.scale);
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
@@ -241,7 +240,14 @@ class SceneController {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
+
+    // The anchor point refers to the top-left-front bucket of the bounding box
+    // which covers all three rendered planes. Relative to this anchor point,
+    // all buckets necessary for rendering are addressed. The anchorPoint is
+    // defined with bucket indices for the coordinate system of the current zoomStep.
     let anchorPoint;
+    // The fallbackAnchorPoint is similar to the anchorPoint, but refers to the
+    // coordinate system of the next zoomStep which is used for fallback rendering.
     let fallbackAnchorPoint;
 
     for (const name of Object.keys(Model.binary)) {
@@ -250,8 +256,7 @@ class SceneController {
       [anchorPoint, fallbackAnchorPoint] = binary.updateDataTextures(gPos, zoomStep);
     }
 
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const currentPlane = this.planes[planeId];
+    for (const currentPlane of _.values(this.planes)) {
       currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
       // Update plane position
       currentPlane.setPosition(globalPosVec);
@@ -334,29 +339,36 @@ class SceneController {
   }
 
   bindToEvents(): void {
-    // TODO: check whether setting is necessary as this might be performance hogs
-    Store.subscribe(() => {
-      const {
-        clippingDistance,
-        displayCrosshair,
-        tdViewDisplayPlanes,
-      } = Store.getState().userConfiguration;
-      const { segmentationOpacity } = Store.getState().datasetConfiguration;
-      this.setSegmentationAlpha(segmentationOpacity);
-      this.setClippingDistance(clippingDistance);
-      this.setDisplayCrosshair(displayCrosshair);
-      this.setDisplayPlanes(tdViewDisplayPlanes);
-    });
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.clippingDistance,
+      clippingDistance => this.setClippingDistance(clippingDistance),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.displayCrosshair,
+      displayCrosshair => this.setDisplayCrosshair(displayCrosshair),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.tdViewDisplayPlanes,
+      tdViewDisplayPlanes => this.setDisplayPlanes(tdViewDisplayPlanes),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.segmentationOpacity,
+      segmentationOpacity => this.setSegmentationAlpha(segmentationOpacity),
+    );
+
     listenToStoreProperty(
       storeState => storeState.datasetConfiguration.interpolation,
-      // Setting interpolation is expensive as THREE will re-render everything and also re-upload
-      // textures
       interpolation => this.setInterpolation(interpolation),
     );
+
     listenToStoreProperty(
       storeState => storeState.tracing.userBoundingBox,
       bb => this.setUserBoundingBox(bb),
     );
+
     listenToStoreProperty(
       storeState => storeState.tracing.boundingBox,
       bb => this.buildTaskingBoundingBox(bb),

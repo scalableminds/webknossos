@@ -11,6 +11,7 @@ import type {
   CommentType,
   TracingTypeTracingType,
   ElementClassType,
+  DataLayerType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -47,8 +48,8 @@ import { doWithToken, getAnnotationInformation } from "admin/admin_rest_api";
 import messages from "messages";
 
 import type Layer from "oxalis/model/binary/layers/layer";
-import type { DataLayerType } from "oxalis/store";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
+
 export type ServerNodeType = {
   id: number,
   position: Vector3,
@@ -177,7 +178,7 @@ export class OxalisModel {
     this.applyState(UrlManager.initialState, tracing);
   }
 
-  validateSpecsForLayers(layers: Array<Layer>): void {
+  validateSpecsForLayers(layers: Array<Layer>): [number, number] {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl");
 
@@ -185,8 +186,8 @@ export class OxalisModel {
       throw new Error("WebGL context could not be constructed.");
     }
 
-    const supportedTextureSize = 4096; // gl.getParameter(gl.MAX_TEXTURE_SIZE);
-    const maxTextureCount = 8; // gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+    const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    const maxTextureCount = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 
     if (supportedTextureSize < 4096 || maxTextureCount < 8) {
       throw new Error(
@@ -206,20 +207,19 @@ export class OxalisModel {
       return lookUpTextureCountPerLayer + dataTextureCountPerLayer;
     })();
 
-    const textureCountForResolutions = 1;
     // todo: adapt this number when adding mappings support
     const textureCountForCellMappings = 0;
 
     const necessaryTextureCount =
-      textureCountForResolutions +
-      textureCountForCellMappings +
-      layers.length * textureCountPerLayer;
+      textureCountForCellMappings + layers.length * textureCountPerLayer;
 
     if (necessaryTextureCount > maxTextureCount) {
       const message = `Not enough textures available for rendering ${layers.length} layers`;
       Toast.error(message);
       throw new Error(message);
     }
+
+    return [usedTextureSize, textureCountPerLayer];
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -328,7 +328,7 @@ export class OxalisModel {
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
-    this.validateSpecsForLayers(layers);
+    const [textureWidth, textureCountPerLayer] = this.validateSpecsForLayers(layers);
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
@@ -338,7 +338,13 @@ export class OxalisModel {
       if (layer.category === "segmentation") {
         maxLayerZoomStep = 1;
       }
-      this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
+      this.binary[layer.name] = new Binary(
+        layer,
+        maxLayerZoomStep,
+        this.connectionInfo,
+        textureWidth,
+        textureCountPerLayer,
+      );
     }
 
     this.buildMappingsObject();

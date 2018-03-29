@@ -9,7 +9,6 @@ import Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import AbstractPlaneMaterialFactory, {
-  createDataTexture,
   sanitizeName,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type {
@@ -131,38 +130,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: DEFAULT_COLOR,
       };
     }
-
-    this.attachResolutionsTexture();
   }
 
-  attachResolutionsTexture(): void {
-    const resolutions = _.first(Model.getColorBinaries()).layer.resolutions;
-    // $FlowFixMe
-    const data = new Float32Array(_.flatten(resolutions));
-
-    const dimensionCount = 3;
-    const width = Math.ceil(Math.sqrt(data.length / dimensionCount));
-
-    const texture = createDataTexture(
-      width,
-      dimensionCount,
-      true,
-      THREE.NearestFilter,
-      THREE.NearestFilter,
-    );
-
-    texture.image.data.set(data);
-    texture.needsUpdate = true;
-
-    this.uniforms.resolutionsTexture = {
-      type: "t",
-      value: texture,
-    };
-
-    this.uniforms.resolutionsTextureWidth = {
-      type: "f",
-      value: width,
-    };
+  getResolutions(): Array<Vector3> {
+    return _.first(Model.getColorBinaries()).layer.resolutions;
   }
 
   makeMaterial(options?: ShaderMaterialOptionsType): void {
@@ -217,7 +188,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   getFragmentShader(): string {
     const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
     const segmentationBinary = Model.getSegmentationBinary();
-    const dataTextureWidth = _.values(Model.binary)[0].getTextureSize();
+    const dataTextureWidth = _.values(Model.binary)[0].textureWidth;
 
     return _.template(
       `\
@@ -248,8 +219,6 @@ uniform float zoomValue;
 uniform vec3 uvw;
 uniform bool useBilinearFiltering;
 uniform vec3 datasetScale;
-uniform sampler2D resolutionsTexture;
-uniform float resolutionsTextureWidth;
 
 varying vec4 worldCoord;
 
@@ -292,7 +261,7 @@ vec3 round(vec3 a) {
 vec4 getRgbaAtXYIndex(sampler2D textures[textureCountPerLayer], float textureIdx, float textureWidth, float x, float y) {
   vec2 accessPoint = (floor(vec2(x, y)) + 0.5) / textureWidth;
 
-  // Since WebGL doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
+  // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
   // here which checks for each case individually. The else-if-branches are constructed via
   // lodash templates.
 
@@ -395,7 +364,7 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPer
   }
 
   // bucketAddress can span multiple data textures. If the address is higher
-  // than the capacity of one texture, we mod the value and use the overflow as the
+  // than the capacity of one texture, we mod the value and use the div (floored division) as the
   // texture index
   float bucketCapacityPerTexture = d_texture_width * d_texture_width / bucketSize;
   float textureIndex = floor(bucketAddress / bucketCapacityPerTexture);
@@ -418,13 +387,26 @@ vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPer
   return bucketColor;
 }
 
+vec3 getResolution(float zoomStep) {
+  if (zoomStep == 0.0) {
+    return <%= formatVector3AsVec3(resolutions[0]) %>;
+  } <% _.range(1, resolutions.length).forEach(resolutionIdx => { %>
+  else if (zoomStep == <%= formatNumberAsGLSLFloat(resolutionIdx) %>) {
+    return <%= formatVector3AsVec3(resolutions[resolutionIdx]) %>;
+  }
+  <% }) %>
+  else {
+    return vec3(0.0, 0.0, 0.0);
+  }
+}
+
 vec3 getCoords(float usedZoomStep) {
   float zoomStepDiff = usedZoomStep - zoomStep;
   bool useFallback = zoomStepDiff > 0.0;
   vec3 usedAnchorPoint = useFallback ? fallbackAnchorPoint : anchorPoint;
   vec3 usedAnchorPointUVW = transDim(usedAnchorPoint);
 
-  vec3 resolution = getRgbaAtIndex(resolutionsTexture, resolutionsTextureWidth, usedZoomStep).xyz;
+  vec3 resolution = getResolution(usedZoomStep);
   float zoomValue = pow(2.0, usedZoomStep);
 
   vec3 datasetScaleUVW = transDim(datasetScale);
@@ -621,6 +603,8 @@ void main() {
       floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
       textureCountPerLayer: constants.MAX_TEXTURE_COUNT_PER_LAYER,
       formatNumberAsGLSLFloat,
+      formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
+      resolutions: this.getResolutions(),
     });
   }
 }

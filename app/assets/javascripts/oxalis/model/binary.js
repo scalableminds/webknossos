@@ -25,7 +25,6 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
 import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import { getRenderer } from "oxalis/controller/renderer";
 import { DataBucket } from "oxalis/model/binary/bucket";
 
 import type { Vector3, Vector4, OrthoViewType } from "oxalis/constants";
@@ -61,6 +60,8 @@ class Binary {
   lastPosition: ?Vector3;
   lastZoomStep: ?number;
   textureBucketManager: TextureBucketManager;
+  textureWidth: number;
+  textureCount: number;
 
   anchorPointCache: {
     anchorPoint: Vector4,
@@ -73,11 +74,20 @@ class Binary {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
 
-  constructor(layer: Layer, maxZoomStep: number, connectionInfo: ConnectionInfo) {
+  constructor(
+    layer: Layer,
+    maxZoomStep: number,
+    connectionInfo: ConnectionInfo,
+    textureWidth: number,
+    textureCount: number,
+  ) {
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
     _.extend(this, BackboneEvents);
+
+    this.textureWidth = textureWidth;
+    this.textureCount = textureCount;
 
     this.category = this.layer.category;
     this.name = this.layer.name;
@@ -123,28 +133,13 @@ class Binary {
     // });
   }
 
-  getTextureSize(): number {
-    const gl = getRenderer().getContext();
-    const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-
-    return supportedTextureSize >= 8192 ? 8192 : 4096;
-  }
-
   setupDataTextures(): void {
     const bytes = this.layer.bitDepth >> 3;
 
-    const textureWidth = this.getTextureSize();
-    const gl = getRenderer().getContext();
-    const maxTextureCount = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-    const textureCount = textureWidth < 8192 ? 2 : 1;
-    if (textureCount > maxTextureCount) {
-      throw new Error("Cannot allocate enough textures");
-    }
-
     this.textureBucketManager = new TextureBucketManager(
       constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,
-      textureWidth,
-      textureCount,
+      this.textureWidth,
+      this.textureCount,
     );
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 

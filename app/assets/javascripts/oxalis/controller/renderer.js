@@ -12,13 +12,7 @@ function getRenderer() {
           canvas: document.getElementById("render-canvas"),
           antialias: true,
         })
-      : {
-          getContext: () => ({
-            MAX_TEXTURE_SIZE: 0,
-            MAX_COMBINED_TEXTURE_IMAGE_UNITS: 8,
-            getParameter: (param: number) => param,
-          }),
-        };
+      : {};
 
   return renderer;
 }

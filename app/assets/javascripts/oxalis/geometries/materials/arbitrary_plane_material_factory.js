@@ -44,7 +44,8 @@ void main()
 {
   float color_value = 0.0;
 
-  // Need to mirror y for some reason.
+  // Need to mirror y since WebGL origin (0, 0) is at the bottom left corner. However, we
+  // want it to refer to the top left corner
   vec2 texture_pos = vec2(vUv.x, 1.0 - vUv.y);
 
   /* Get grayscale value */

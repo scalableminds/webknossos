@@ -88,7 +88,6 @@ export class PingStrategy extends AbstractPingStrategy {
 
     let queueItemsForFallbackZoomStep = [];
     const fallbackZoomStep = Math.min(this.cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
-    // todo
     if (fallbackZoomStep > zoomStep) {
       queueItemsForFallbackZoomStep = this.pingImpl(
         position,

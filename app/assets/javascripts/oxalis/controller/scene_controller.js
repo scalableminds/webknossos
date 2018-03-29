@@ -82,7 +82,6 @@ class SceneController {
     this.rootGroup.add(this.getRootNode());
 
     // The dimension(s) with the highest resolution will not be distorted
-    console.log("Store.getState().dataset.scale", Store.getState().dataset.scale);
     this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
@@ -355,8 +354,6 @@ class SceneController {
     });
     listenToStoreProperty(
       storeState => storeState.datasetConfiguration.interpolation,
-      // Setting interpolation is expensive as THREE will re-render everything and also re-upload
-      // textures
       interpolation => this.setInterpolation(interpolation),
     );
     listenToStoreProperty(

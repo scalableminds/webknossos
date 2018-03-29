@@ -9,8 +9,8 @@ import window from "libs/window";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
 
-// A TextureBucketManager instance is responsible for making buckets of
-// avaible to the GPU.
+// A TextureBucketManager instance is responsible for making buckets available
+// to the GPU.
 // setActiveBuckets can be called with an array of buckets, which will be
 // written into the dataTexture and lookUpTexture of this class instance.
 // Buckets which are already in this texture won't be written again.

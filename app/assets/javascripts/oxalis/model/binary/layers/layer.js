@@ -38,7 +38,7 @@ class Layer {
   elementClass: ElementClassType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  mappings: ?Array<MappingType>;
+  mappings: Array<MappingType>;
   boundingBox: BoundingBoxObjectType;
   resolutions: Array<Vector3>;
 
@@ -48,7 +48,7 @@ class Layer {
     this.name = layerInfo.name;
     this.category = layerInfo.category;
     this.elementClass = layerInfo.elementClass;
-    this.mappings = layerInfo.mappings;
+    this.mappings = layerInfo.mappings || [];
     this.boundingBox = layerInfo.boundingBox;
     this.resolutions = layerInfo.resolutions;
 

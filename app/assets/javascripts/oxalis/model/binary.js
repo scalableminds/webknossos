@@ -117,14 +117,13 @@ class Binary {
       );
     }
 
-    // todo
+    // todo: re-enable mappings
     // this.cube.on({
     //   newMapping: () => ,
     // });
   }
 
   getTextureSize(): number {
-    // return 4096;
     const gl = getRenderer().getContext();
     const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
 

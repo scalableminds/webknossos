@@ -339,27 +339,36 @@ class SceneController {
   }
 
   bindToEvents(): void {
-    // TODO: check whether setting is necessary as this might be performance hogs
-    Store.subscribe(() => {
-      const {
-        clippingDistance,
-        displayCrosshair,
-        tdViewDisplayPlanes,
-      } = Store.getState().userConfiguration;
-      const { segmentationOpacity } = Store.getState().datasetConfiguration;
-      this.setSegmentationAlpha(segmentationOpacity);
-      this.setClippingDistance(clippingDistance);
-      this.setDisplayCrosshair(displayCrosshair);
-      this.setDisplayPlanes(tdViewDisplayPlanes);
-    });
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.clippingDistance,
+      clippingDistance => this.setClippingDistance(clippingDistance),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.displayCrosshair,
+      displayCrosshair => this.setDisplayCrosshair(displayCrosshair),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.tdViewDisplayPlanes,
+      tdViewDisplayPlanes => this.setDisplayPlanes(tdViewDisplayPlanes),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.segmentationOpacity,
+      segmentationOpacity => this.setSegmentationAlpha(segmentationOpacity),
+    );
+
     listenToStoreProperty(
       storeState => storeState.datasetConfiguration.interpolation,
       interpolation => this.setInterpolation(interpolation),
     );
+
     listenToStoreProperty(
       storeState => storeState.tracing.userBoundingBox,
       bb => this.setUserBoundingBox(bb),
     );
+
     listenToStoreProperty(
       storeState => storeState.tracing.boundingBox,
       bb => this.buildTaskingBoundingBox(bb),

@@ -23,7 +23,6 @@ import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { getRenderer } from "oxalis/controller/renderer";
@@ -127,7 +126,9 @@ class Binary {
   getTextureSize(): number {
     // return 4096;
     const gl = getRenderer().getContext();
-    return gl.getParameter(gl.MAX_TEXTURE_SIZE);
+    const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+
+    return supportedTextureSize >= 8192 ? 8192 : 4096;
   }
 
   setupDataTextures(): void {
@@ -142,7 +143,7 @@ class Binary {
     }
 
     this.textureBucketManager = new TextureBucketManager(
-      constants.RENDERED_BUCKETS_PER_DIMENSION,
+      constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,
       textureWidth,
       textureCount,
     );
@@ -161,23 +162,32 @@ class Binary {
 
   // Returns the new anchorPoints if they are new
   updateDataTextures(position: Vector3, logZoomStep: number): [?Vector4, ?Vector4] {
-    const isAnchorPointNew = this.yieldsNewAnchorPoint(position, logZoomStep, "anchorPoint");
+    const unzoomedAnchorPoint = this.calculateUnzoomedAnchorPoint(position, logZoomStep);
+
+    const isAnchorPointNew = this.yieldsNewZoomedAnchorPoint(
+      unzoomedAnchorPoint,
+      logZoomStep,
+      "anchorPoint",
+    );
     const fallbackZoomStep = logZoomStep + 1;
     const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
     const isFallbackAnchorPointNew = isFallbackAvailable
-      ? this.yieldsNewAnchorPoint(position, fallbackZoomStep, "fallbackAnchorPoint")
+      ? this.yieldsNewZoomedAnchorPoint(
+          unzoomedAnchorPoint,
+          fallbackZoomStep,
+          "fallbackAnchorPoint",
+        )
       : false;
 
     if (isAnchorPointNew || isFallbackAnchorPointNew) {
       const buckets = this.calculateBucketsForTexturesForManager(
-        position,
         logZoomStep,
         this.anchorPointCache.anchorPoint,
         false,
       );
+
       const fallbackBuckets = isFallbackAvailable
         ? this.calculateBucketsForTexturesForManager(
-            position,
             logZoomStep + 1,
             this.anchorPointCache.fallbackAnchorPoint,
             true,
@@ -197,12 +207,12 @@ class Binary {
     ];
   }
 
-  yieldsNewAnchorPoint(
-    position: Vector3,
+  yieldsNewZoomedAnchorPoint(
+    unzoomedAnchorPoint: Vector3,
     logZoomStep: number,
     key: "fallbackAnchorPoint" | "anchorPoint",
   ): boolean {
-    const zoomedAnchorPoint = this.calculateAnchorPoint(position, logZoomStep);
+    const zoomedAnchorPoint = this.cube.positionToZoomedAddress(unzoomedAnchorPoint, logZoomStep);
     if (_.isEqual(zoomedAnchorPoint, this.anchorPointCache[key])) {
       return false;
     }
@@ -210,48 +220,51 @@ class Binary {
     return true;
   }
 
-  calculateAnchorPoint(position: Vector3, logZoomStep: number): Vector4 {
+  calculateUnzoomedAnchorPoint(position: Vector3, logZoomStep: number): Vector3 {
     const resolution = this.layer.resolutions[logZoomStep];
     const maximumRenderedBucketsHalf =
-      constants.RENDERED_BUCKETS_PER_DIMENSION * constants.BUCKET_WIDTH / 2;
+      (constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION - 1) * constants.BUCKET_WIDTH / 2;
+
     // Hit texture top-left coordinate
     const anchorPoint = [
       Math.floor(position[0] - maximumRenderedBucketsHalf * resolution[0]),
       Math.floor(position[1] - maximumRenderedBucketsHalf * resolution[1]),
       Math.floor(position[2] - maximumRenderedBucketsHalf * resolution[2]),
     ];
-
-    return this.cube.positionToZoomedAddress(anchorPoint, logZoomStep);
+    return anchorPoint;
   }
 
   calculateBucketsForTexturesForManager(
-    position: Vector3,
     logZoomStep: number,
     zoomedAnchorPoint: Vector4,
     isFallback: boolean,
   ): Array<DataBucket> {
     // find out which buckets we need for each plane
     const requiredBucketSet = new Set();
-    const texturePosition = getPosition(Store.getState().flycam);
-    const centerBucket = this.cube.positionToZoomedAddress(texturePosition, logZoomStep);
+    const resolution = this.layer.resolutions[logZoomStep];
+
+    let resolutionChangeRatio = [1, 1, 1];
+    if (isFallback) {
+      const previousResolution = this.layer.resolutions[logZoomStep - 1];
+      resolutionChangeRatio = [
+        resolution[0] / previousResolution[0],
+        resolution[1] / previousResolution[1],
+        resolution[2] / previousResolution[2],
+      ];
+    }
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [u, v] = Dimensions.getIndices(planeId);
+      const [u, v, w] = Dimensions.getIndices(planeId);
 
-      // E.g., for 16 buckets per dimension, we want to have an offset of -8 buckets so that the
-      // right/lower half of the center bucket has one bucket more than the left/upper half.
-      // This is necessary for the case in which the camera position is not exactly on a bucket boundary.
-      // The top/left bucket is not completely shown and the part that is not necessary for rendering is
-      // necessary on the bottom/right instead which is why the lower/right half gets one bucket more.
-      const renderedBucketsPerDimension = Math.floor(
-        constants.RENDERED_BUCKETS_PER_DIMENSION / (isFallback ? 2 : 1),
+      const renderedBucketsPerDimension = Math.ceil(
+        constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / resolutionChangeRatio[w],
       );
-      const startingOffset = Math.floor(renderedBucketsPerDimension / 2);
-      const endOffset = renderedBucketsPerDimension - startingOffset;
+      const topLeftBucket = zoomedAnchorPoint.slice();
+      topLeftBucket[w] += Math.floor((renderedBucketsPerDimension - 1) / 2);
 
-      for (let y = -startingOffset; y < endOffset; y++) {
-        for (let x = -startingOffset; x < endOffset; x++) {
-          const bucketAddress = ((centerBucket.slice(): any): Vector4);
+      for (let y = 0; y < renderedBucketsPerDimension; y++) {
+        for (let x = 0; x < renderedBucketsPerDimension; x++) {
+          const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
           bucketAddress[u] += x;
           bucketAddress[v] += y;
 
@@ -263,7 +276,6 @@ class Binary {
         }
       }
     }
-
     return Array.from(requiredBucketSet);
   }
 

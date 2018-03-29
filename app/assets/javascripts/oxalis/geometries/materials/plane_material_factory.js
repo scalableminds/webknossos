@@ -609,7 +609,7 @@ void main() {
       OrthoViews,
       planeID: this.planeID,
       uvw: Dimensions.getIndices(this.planeID),
-      bucketPerDim: formatNumberAsGLSLFloat(constants.RENDERED_BUCKETS_PER_DIMENSION),
+      bucketPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
       d_texture_width: formatNumberAsGLSLFloat(dataTextureWidth),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
       bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),

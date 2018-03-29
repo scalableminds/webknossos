@@ -17,7 +17,7 @@ import * as THREE from "three";
 // that is shrinked a little bit, which leads to the texture not being in sync with the THREEjs scene.
 
 // maximum difference between requested coordinate and actual texture position
-const MAX_ZOOM_STEP_DIFF = constants.MAX_RENDING_TARGET_WIDTH / constants.PLANE_WIDTH;
+const MAX_ZOOM_STEP_DIFF = constants.MAX_RENDERING_TARGET_WIDTH / constants.PLANE_WIDTH;
 
 export function getUp(flycam: FlycamType): Vector3 {
   const matrix = flycam.currentMatrix;

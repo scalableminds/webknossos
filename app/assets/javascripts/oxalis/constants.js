@@ -99,11 +99,11 @@ const Constants = {
   VIEWPORT_GAP_WIDTH: 20,
 
   LOOK_UP_TEXTURE_WIDTH: 128,
-  RENDERED_BUCKETS_PER_DIMENSION: 16,
+  MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION: 17,
   // Historically, this width decided at which point which zoom step was picked.
   // There is no specific reason why this exact size has to be chosen. As long as enough buckets are sent
-  // to the GPU (RENDERED_BUCKETS_PER_DIMENSION) this width can be increased or decreased.
-  MAX_RENDING_TARGET_WIDTH: 512 - 32 - 1,
+  // to the GPU (MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION) this width can be increased or decreased.
+  MAX_RENDERING_TARGET_WIDTH: 512 - 32 - 1,
   DISTANCE_3D: 140,
   MAX_TEXTURE_COUNT_PER_LAYER: 1,
 

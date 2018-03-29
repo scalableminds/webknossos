@@ -122,8 +122,8 @@ export class PingStrategy extends AbstractPingStrategy {
       this.w = indices[2];
 
       // todo: use resolutions
-      const width = constants.RENDERED_BUCKETS_PER_DIMENSION * Math.pow(2, zoomStepDiff);
-      const height = constants.RENDERED_BUCKETS_PER_DIMENSION * Math.pow(2, zoomStepDiff);
+      const width = constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION * Math.pow(2, zoomStepDiff);
+      const height = constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION * Math.pow(2, zoomStepDiff);
       const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
       const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);

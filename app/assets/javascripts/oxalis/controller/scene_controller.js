@@ -241,7 +241,14 @@ class SceneController {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
+
+    // The anchor point refers to the top-left-front bucket of the bounding box
+    // which covers all three rendered planes. Relative to this anchor point,
+    // all buckets necessary for rendering are addressed. The anchorPoint is
+    // defined with bucket indices for the coordinate system of the current zoomStep.
     let anchorPoint;
+    // The fallbackAnchorPoint is similar to the anchorPoint, but refers to the
+    // coordinate system of the next zoomStep which is used for fallback rendering.
     let fallbackAnchorPoint;
 
     for (const name of Object.keys(Model.binary)) {
@@ -250,8 +257,7 @@ class SceneController {
       [anchorPoint, fallbackAnchorPoint] = binary.updateDataTextures(gPos, zoomStep);
     }
 
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const currentPlane = this.planes[planeId];
+    for (const currentPlane of _.values(this.planes)) {
       currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
       // Update plane position
       currentPlane.setPosition(globalPosVec);

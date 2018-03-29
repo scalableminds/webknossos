@@ -43,7 +43,7 @@ export default class TextureBucketManager {
   isRefreshBufferOutOfDate: boolean = false;
 
   // This is passed as a parameter to allow for testing
-  bucketPerDim: number;
+  bucketsPerDim: number;
   bufferCapacity: number;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
   fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
@@ -51,16 +51,16 @@ export default class TextureBucketManager {
   textureWidth: number;
   textureCount: number;
 
-  constructor(bucketPerDim: number, textureWidth: number, textureCount: number) {
-    // Each plane gets bucketPerDim**2 buckets. Additionally, the fallback zoomstep
-    // requires bucketPerDim/2 buckets per plane.
-    const normalCapacity = 3 * Math.pow(bucketPerDim, 2);
-    const fallbackCapacity = 3 * Math.pow(Math.floor(bucketPerDim / 2), 2);
+  constructor(bucketsPerDim: number, textureWidth: number, textureCount: number) {
+    // Each plane gets bucketsPerDim**2 buckets. Additionally, the fallback zoomstep
+    // requires bucketsPerDim/2 buckets per plane.
+    const normalCapacity = 3 * Math.pow(bucketsPerDim, 2);
+    const fallbackCapacity = 3 * Math.pow(Math.floor(bucketsPerDim / 2), 2);
 
     this.bufferCapacity = normalCapacity + fallbackCapacity;
-    // the look up buffer is bucketPerDim**3 so that arbitrary look ups can be made
+    // the look up buffer is bucketsPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
-    this.bucketPerDim = bucketPerDim;
+    this.bucketsPerDim = bucketsPerDim;
     this.textureWidth = textureWidth;
     this.textureCount = textureCount;
 
@@ -269,9 +269,9 @@ export default class TextureBucketManager {
     const z = bucketPosition[2] - anchorPoint[2];
 
     return (
-      Math.pow(this.bucketPerDim, 3) * zoomDiff +
-      Math.pow(this.bucketPerDim, 2) * z +
-      this.bucketPerDim * y +
+      Math.pow(this.bucketsPerDim, 3) * zoomDiff +
+      Math.pow(this.bucketsPerDim, 2) * z +
+      this.bucketsPerDim * y +
       x
     );
   }

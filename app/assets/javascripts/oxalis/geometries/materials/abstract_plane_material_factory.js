@@ -42,7 +42,7 @@ export function createDataTexture(
     new (optUseFloat ? Float32Array : Uint8Array)(bytes * width * width),
     width,
     width,
-    format, // optUseFloat ? THREE.RGBAFormat :
+    format,
     optUseFloat ? THREE.FloatType : THREE.UnsignedByteType,
     THREE.UVMapping,
     THREE.ClampToEdgeWrapping,

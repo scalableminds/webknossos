@@ -189,14 +189,6 @@ object AnnotationService
     } yield true
   }
 
-  def updateAnnotationBase(task: Task, newTracingRefernce: TracingReference)(implicit ctx: DBAccessContext) = {
-    for {
-      annotationBase <- task.annotationBase
-    } yield {
-      AnnotationDAO.updateTracingRefernce(annotationBase._id, newTracingRefernce)
-    }
-  }
-
   def createFrom(
                 user: User,
                 dataSet: DataSet,

@@ -253,7 +253,6 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
   def updateDatasetConfigurationForUserAndDataset(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       _ <- UserSQLDAO.assertUpdateAccess(userId)
-      _ <- Fox.successful(println("delete"))
       deleteQuery = sqlu"""delete from webknossos.user_dataSetConfigurations
                where _user = ${userId.id} and _dataSet = ${dataSetId.id}"""
       insertQuery  = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)

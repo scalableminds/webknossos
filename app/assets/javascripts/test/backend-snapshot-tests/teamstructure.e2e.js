@@ -31,7 +31,6 @@ default (UserAAA), User AAB, User AAC, User ABA, User BAA
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
  */
 
-
 // Teams
 test("teams_userDefault", async t => {
   await setCurrToken(tokenUserDefault);
@@ -58,6 +57,21 @@ test("teams_delete_userABA", async t => { // the teamManager is not allowed to d
     t.fail();
   } catch (err) { // the test is supposed to fail => catch is the desired case
     t.true(true); // not pretty, but "t.ok" seems to not exist
+  }
+});
+
+test("teams_create_userABA", async t => { // the teamManager is not allowed to create a new team
+  await setCurrToken(tokenUserABA);
+  try {
+    const organizations = await api.getOrganizations();
+    const newTeam = {
+      name: "test-team-name",
+      organization: organizations[0].name
+    };
+    await api.createTeam(newTeam);
+    t.fail();
+  } catch (err) { // the test is supposed to fail => catch is the desired case
+    t.true(true);
   }
 });
 
@@ -111,8 +125,6 @@ test("tasks_userAAC", async t => {
   }
 });
 
-// these 2 o not work yet
-
 // User
 test("user_userAAB", async t => { // teamMng are not allowed to de-/activate a user (if they are not an admin)
   await setCurrToken(tokenUserAAB);
@@ -120,22 +132,19 @@ test("user_userAAB", async t => { // teamMng are not allowed to de-/activate a u
     const userIdABA = "870b9f4d2a7c0e4d008da6ef";
     const user = await api.getUser(userIdABA);
     const newUser = Object.assign({}, user, { isActive: false });
-    const updatedUser = await api.updateUser(newUser);
+    await api.updateUser(newUser);
     t.fail();
   } catch (err) { // the test is supposed to fail => catch is the desired case
     t.true(true);
   }
 });
 
-
-
 // Project
 test("project_userAAB", async t => { // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
   await setCurrToken(tokenUserBAA);
   try {
     const projectName = "Test_Project";
-    const returnValue = api.deleteProject(projectName);
-    t.is(returnValue, 1);
+    await api.deleteProject(projectName);
     t.fail();
   } catch (err) { // the test is supposed to fail => catch is the desired case
     t.true(true);

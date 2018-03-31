@@ -1,7 +1,14 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserDefault, tokenUserAAB, tokenUserAAC, tokenUserABA, tokenUserBAA, setCurrToken } from "../enzyme/e2e-setup";
+import {
+  tokenUserDefault,
+  tokenUserAAB,
+  tokenUserAAC,
+  tokenUserABA,
+  tokenUserBAA,
+  setCurrToken,
+} from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
@@ -50,27 +57,31 @@ test("teams_userBAA", async t => {
   t.snapshot(teams[0], { id: "teams_userBAA" });
 });
 
-test("teams_delete_userABA", async t => { // the teamManager is not allowed to delete the team
+test("teams_delete_userABA", async t => {
+  // the teamManager is not allowed to delete the team
   await setCurrToken(tokenUserABA);
   try {
     await api.deleteTeam("69882b370d889b84020efd4f");
     t.fail();
-  } catch (err) { // the test is supposed to fail => catch is the desired case
+  } catch (err) {
+    // the test is supposed to fail => catch is the desired case
     t.true(true); // not pretty, but "t.ok" seems to not exist
   }
 });
 
-test("teams_create_userABA", async t => { // the teamManager is not allowed to create a new team
+test("teams_create_userABA", async t => {
+  // the teamManager is not allowed to create a new team
   await setCurrToken(tokenUserABA);
   try {
     const organizations = await api.getOrganizations();
     const newTeam = {
       name: "test-team-name",
-      organization: organizations[0].name
+      organization: organizations[0].name,
     };
     await api.createTeam(newTeam);
     t.fail();
-  } catch (err) { // the test is supposed to fail => catch is the desired case
+  } catch (err) {
+    // the test is supposed to fail => catch is the desired case
     t.true(true);
   }
 });
@@ -100,7 +111,8 @@ test("tasks_userABA", async t => {
   try {
     await api.getTask("58135c192faeb34c0081c058");
     t.fail();
-  } catch (err) { // the test is supposed to fail => catch is the desired case
+  } catch (err) {
+    // the test is supposed to fail => catch is the desired case
     t.true(true);
   }
 });
@@ -110,14 +122,16 @@ test("tasks_userBAA", async t => {
   try {
     await api.getTask("58135c192faeb34c0081c058");
     t.fail();
-  } catch (err) { // the test is supposed to fail => catch is the desired case
+  } catch (err) {
+    // the test is supposed to fail => catch is the desired case
     t.true(true);
   }
 });
 
 test("tasks_userAAC", async t => {
   await setCurrToken(tokenUserAAC);
-  try { // the test is NOT supposed to fail
+  try {
+    // the test is NOT supposed to fail
     await api.getTask("58135c192faeb34c0081c058");
     t.true(true);
   } catch (err) {
@@ -126,7 +140,8 @@ test("tasks_userAAC", async t => {
 });
 
 // User
-test("user_userAAB", async t => { // teamMng are not allowed to de-/activate a user (if they are not an admin)
+test("user_userAAB", async t => {
+  // teamMng are not allowed to de-/activate a user (if they are not an admin)
   await setCurrToken(tokenUserAAB);
   try {
     const userIdABA = "870b9f4d2a7c0e4d008da6ef";
@@ -134,19 +149,22 @@ test("user_userAAB", async t => { // teamMng are not allowed to de-/activate a u
     const newUser = Object.assign({}, user, { isActive: false });
     await api.updateUser(newUser);
     t.fail();
-  } catch (err) { // the test is supposed to fail => catch is the desired case
+  } catch (err) {
+    // the test is supposed to fail => catch is the desired case
     t.true(true);
   }
 });
 
 // Project
-test("project_userAAB", async t => { // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
+test("project_userAAB", async t => {
+  // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
   await setCurrToken(tokenUserBAA);
   try {
     const projectName = "Test_Project";
     await api.deleteProject(projectName);
     t.fail();
-  } catch (err) { // the test is supposed to fail => catch is the desired case
+  } catch (err) {
+    // the test is supposed to fail => catch is the desired case
     t.true(true);
   }
 });

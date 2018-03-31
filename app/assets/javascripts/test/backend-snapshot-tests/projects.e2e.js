@@ -7,7 +7,6 @@ import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
 
-
 test.before("Change token", async () => {
   setCurrToken(tokenUserDefault);
 });

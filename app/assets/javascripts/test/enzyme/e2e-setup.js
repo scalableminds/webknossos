@@ -113,7 +113,6 @@ export {
   createSnapshotable,
   wait,
   debugWrapper,
-  currToken,
   tokenUserDefault,
   tokenUserAAB,
   tokenUserAAC,

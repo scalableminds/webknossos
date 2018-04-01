@@ -89,19 +89,19 @@ test("teams_create_userABA", async t => {
 // TaskTypes
 test("taskTypes_userDefault", async t => {
   await setCurrToken(tokenUserDefault);
-  const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType._id);
+  const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.snapshot(taskTypes, { id: "taskTypes_userDefault" });
 });
 
 test("taskTypes_userABA", async t => {
   await setCurrToken(tokenUserABA);
-  const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType._id);
+  const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.snapshot(taskTypes, { id: "taskTypes_userABA" });
 });
 
 test("taskTypes_userBAA", async t => {
   await setCurrToken(tokenUserBAA);
-  const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType._id);
+  const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.snapshot(taskTypes, { id: "taskTypes_userBAA" });
 });
 

@@ -45,8 +45,8 @@ function wait(milliseconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
-function setCurrToken(obj) {
-  currToken = obj;
+function setCurrToken(token: string) {
+  currToken = token;
 }
 
 global.fetch = function fetchWrapper(url, options) {

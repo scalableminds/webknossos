@@ -46,22 +46,23 @@ class DataSourceService @Inject()(
   def tick: Unit = checkInbox()
 
   def checkInbox(): Fox[Unit] = {
-    Future {
-      logger.info(s"Scanning inbox at: $dataBaseDir")
-      PathUtils.listDirectories(dataBaseDir) match {
-        case Full(dirs) =>
-          val foundInboxSources = dirs.flatMap(teamAwareInboxSources)
-          val dataSourceString = foundInboxSources.map { ds =>
+    logger.info(s"Scanning inbox at: $dataBaseDir")
+    PathUtils.listDirectories(dataBaseDir) match {
+      case Full(dirs) =>
+        for {
+          _ <- Fox.successful(())
+          foundInboxSources = dirs.flatMap(teamAwareInboxSources)
+          dataSourceString = foundInboxSources.map { ds =>
             s"'${ds.id.team}/${ds.id.name}' (${if (ds.isUsable) "active" else "inactive"})"
           }.mkString(", ")
-          logger.info(s"Finished scanning inbox: $dataSourceString")
-          dataSourceRepository.updateDataSources(foundInboxSources)
-          Full(())
-        case e =>
-          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
-          logger.error(errorMsg)
-          Failure(errorMsg)
-      }
+
+          _ = logger.info(s"Finished scanning inbox: $dataSourceString")
+          _ <- dataSourceRepository.updateDataSources(foundInboxSources)
+        } yield ()
+      case e =>
+        val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir': $e"
+        logger.error(errorMsg)
+        Fox.failure(errorMsg)
     }
   }
 

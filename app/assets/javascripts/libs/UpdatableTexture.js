@@ -31,7 +31,7 @@ function UpdatableTexture(
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d");
-  const imageData = ctx.createImageData(width, height);
+  const imageData = ctx.createImageData(1, 1);
 
   this.image = imageData;
 
@@ -82,6 +82,7 @@ UpdatableTexture.prototype.setSize = function(width, height) {
 };
 
 UpdatableTexture.prototype.update = function(src, x, y, width, height) {
+  this.setSize(width, width);
   const textureProperties = this.renderer.properties.get(this);
   if (!textureProperties.__webglTexture) return;
 

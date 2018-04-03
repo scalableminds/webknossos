@@ -61,7 +61,7 @@ class Binary {
   lastZoomStep: ?number;
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
-  textureCount: number;
+  dataTextureCount: number;
 
   anchorPointCache: {
     anchorPoint: Vector4,
@@ -79,7 +79,7 @@ class Binary {
     maxZoomStep: number,
     connectionInfo: ConnectionInfo,
     textureWidth: number,
-    textureCount: number,
+    dataTextureCount: number,
   ) {
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
@@ -87,7 +87,7 @@ class Binary {
     _.extend(this, BackboneEvents);
 
     this.textureWidth = textureWidth;
-    this.textureCount = textureCount;
+    this.dataTextureCount = dataTextureCount;
 
     this.category = this.layer.category;
     this.name = this.layer.name;
@@ -139,7 +139,7 @@ class Binary {
     this.textureBucketManager = new TextureBucketManager(
       constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,
       this.textureWidth,
-      this.textureCount,
+      this.dataTextureCount,
     );
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 

@@ -49,9 +49,9 @@ export default class TextureBucketManager {
   fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
   textureWidth: number;
-  textureCount: number;
+  dataTextureCount: number;
 
-  constructor(bucketsPerDim: number, textureWidth: number, textureCount: number) {
+  constructor(bucketsPerDim: number, textureWidth: number, dataTextureCount: number) {
     // Each plane gets bucketsPerDim**2 buckets. Additionally, the fallback zoomstep
     // requires bucketsPerDim/2 buckets per plane.
     const normalCapacity = 3 * Math.pow(bucketsPerDim, 2);
@@ -62,7 +62,7 @@ export default class TextureBucketManager {
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
     this.bucketsPerDim = bucketsPerDim;
     this.textureWidth = textureWidth;
-    this.textureCount = textureCount;
+    this.dataTextureCount = dataTextureCount;
 
     this.lookUpBuffer = new Float32Array(lookUpBufferSize);
     this.freeIndexSet = new Set(_.range(this.bufferCapacity));
@@ -178,7 +178,7 @@ export default class TextureBucketManager {
   }
 
   setupDataTextures(bytes: number, binaryCategory: string): void {
-    for (let i = 0; i < this.textureCount; i++) {
+    for (let i = 0; i < this.dataTextureCount; i++) {
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
         bytes,

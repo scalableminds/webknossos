@@ -114,13 +114,14 @@ class PullQueue {
               zoomStep + 1,
             );
 
-            const higherBucket = this.cube.getOrCreateBucket(higherAddress);
-            if (higherBucket.type === "data") {
-              higherBucket.downsampleFromLowerBucket(
-                bucket,
-                this.layer.category === "segmentation",
-              );
-            }
+            // TODO: Downsampling deactivated for now as it causes a memory leak
+            // const higherBucket = this.cube.getOrCreateBucket(higherAddress);
+            // if (higherBucket.type === "data") {
+            //   higherBucket.downsampleFromLowerBucket(
+            //     bucket,
+            //     this.layer.category === "segmentation",
+            //   );
+            // }
           }
         }
       }

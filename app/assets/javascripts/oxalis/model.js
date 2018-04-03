@@ -196,22 +196,22 @@ export class OxalisModel {
     }
 
     const usedTextureSize = supportedTextureSize >= 8192 ? 8192 : 4096;
-    const textureCountPerLayer = (() => {
+    const dataTextureCountPerLayer = (() => {
       const bucketCountPerPlane =
         constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION ** 2 + // buckets in current zoomStep
         Math.ceil(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / 2) ** 2; // buckets in fallback zoomstep;
       const necessaryVoxelCount = 3 * bucketCountPerPlane * constants.BUCKET_SIZE;
       const availableVoxelCount = usedTextureSize ** 2;
-      const lookUpTextureCountPerLayer = 1;
-      const dataTextureCountPerLayer = Math.ceil(necessaryVoxelCount / availableVoxelCount);
-      return lookUpTextureCountPerLayer + dataTextureCountPerLayer;
+      return Math.ceil(necessaryVoxelCount / availableVoxelCount);
     })();
 
     // todo: adapt this number when adding mappings support
     const textureCountForCellMappings = 0;
 
+    const lookupTextureCountPerLayer = 1;
     const necessaryTextureCount =
-      textureCountForCellMappings + layers.length * textureCountPerLayer;
+      textureCountForCellMappings +
+      layers.length * (dataTextureCountPerLayer + lookupTextureCountPerLayer);
 
     if (necessaryTextureCount > maxTextureCount) {
       const message = `Not enough textures available for rendering ${layers.length} layers`;
@@ -219,7 +219,7 @@ export class OxalisModel {
       throw new Error(message);
     }
 
-    return [usedTextureSize, textureCountPerLayer];
+    return [usedTextureSize, dataTextureCountPerLayer];
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -328,7 +328,7 @@ export class OxalisModel {
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
-    const [textureWidth, textureCountPerLayer] = this.validateSpecsForLayers(layers);
+    const [textureWidth, dataTextureCountPerLayer] = this.validateSpecsForLayers(layers);
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
@@ -343,7 +343,7 @@ export class OxalisModel {
         maxLayerZoomStep,
         this.connectionInfo,
         textureWidth,
-        textureCountPerLayer,
+        dataTextureCountPerLayer,
       );
     }
 

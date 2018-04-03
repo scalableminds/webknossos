@@ -11,7 +11,6 @@ import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
-import Model from "oxalis/model";
 import SceneController from "oxalis/controller/scene_controller";
 
 class PlaneView {
@@ -104,7 +103,7 @@ class PlaneView {
     const renderTarget = new THREE.WebGLRenderTarget(this.curWidth, this.curWidth);
     const buffer = new Uint8Array(this.curWidth * this.curWidth * 4);
 
-    this.trigger("renderCam", plane);
+    SceneController.updateSceneForCam(plane);
     renderer.render(scene, this.cameras[plane], renderTarget);
     renderer.readRenderTargetPixels(renderTarget, 0, 0, this.curWidth, this.curWidth, buffer);
     return buffer;
@@ -117,31 +116,24 @@ class PlaneView {
     TWEEN.update();
 
     // skip rendering if nothing has changed
-    // This prevents you the GPU/CPU from constantly
+    // This prevents the GPU/CPU from constantly
     // working and keeps your lap cool
     // ATTENTION: this limits the FPS to 60 FPS (depending on the keypress update frequence)
 
-    let modelChanged: boolean = false;
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      for (const plane of _.values(binary.planes)) {
-        modelChanged = modelChanged || plane.hasChanged();
-      }
-    }
-
-    if (forceRender || this.needsRerender || modelChanged) {
+    if (forceRender || this.needsRerender || window.needsRerender) {
+      window.needsRerender = false;
       const { renderer, scene } = SceneController;
 
       this.trigger("render");
 
       const viewport: OrthoViewMapType<Vector2> = {
-        [OrthoViews.PLANE_XY]: [0, this.curWidth + Constants.VIEWPORT_GAP_WIDTH],
-        [OrthoViews.PLANE_YZ]: [
+        [OrthoViews.PLANE_XY]: [0, 0],
+        [OrthoViews.PLANE_YZ]: [this.curWidth + Constants.VIEWPORT_GAP_WIDTH, 0],
+        [OrthoViews.PLANE_XZ]: [0, this.curWidth + Constants.VIEWPORT_GAP_WIDTH],
+        [OrthoViews.TDView]: [
           this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
           this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
         ],
-        [OrthoViews.PLANE_XZ]: [0, 0],
-        [OrthoViews.TDView]: [this.curWidth + Constants.VIEWPORT_GAP_WIDTH, 0],
       };
       renderer.autoClear = true;
 
@@ -156,7 +148,8 @@ class PlaneView {
       renderer.clear();
 
       for (const plane of OrthoViewValues) {
-        this.trigger("renderCam", plane);
+        SceneController.updateSceneForCam(plane);
+
         setupRenderArea(
           viewport[plane][0],
           viewport[plane][1],

@@ -13,6 +13,7 @@ import {
   getPosition,
   getPlaneScalingFactor,
   getViewportBoundingBox,
+  getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
@@ -65,13 +66,13 @@ class SceneController {
   }
 
   initialize() {
-    this.createMeshes();
-    this.bindToEvents();
-
     this.renderer = new THREE.WebGLRenderer({
       canvas: document.getElementById("render-canvas"),
       antialias: true,
     });
+
+    this.createMeshes();
+    this.bindToEvents();
     this.scene = new THREE.Scene();
 
     // Because the voxel coordinates do not have a cube shape but are distorted,
@@ -241,12 +242,23 @@ class SceneController {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
+    let anchorPoint;
+    let fallbackAnchorPoint;
+
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
+      const zoomStep = getRequestLogZoomStep(Store.getState());
+      anchorPoint = binary.updateDataTextures(gPos, zoomStep);
+      fallbackAnchorPoint = binary.updateFallbackDataTextures(gPos, zoomStep);
+    }
+
     for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.planes[planeId].updateTexture();
+      const currentPlane = this.planes[planeId];
+      currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
       // Update plane position
-      this.planes[planeId].setPosition(globalPosVec);
+      currentPlane.setPosition(globalPosVec);
       // Update plane scale
-      this.planes[planeId].setScale(planeScale);
+      currentPlane.setScale(planeScale);
     }
   };
 
@@ -324,6 +336,7 @@ class SceneController {
   }
 
   bindToEvents(): void {
+    // TODO: check whether setting is necessary as this might be performance hogs
     Store.subscribe(() => {
       const {
         clippingDistance,
@@ -335,8 +348,13 @@ class SceneController {
       this.setClippingDistance(clippingDistance);
       this.setDisplayCrosshair(displayCrosshair);
       this.setDisplayPlanes(tdViewDisplayPlanes);
-      this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
     });
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.interpolation,
+      // Setting interpolation is expensive as THREE will re-render everything and also re-upload
+      // textures
+      interpolation => this.setInterpolation(interpolation),
+    );
     listenToStoreProperty(
       storeState => storeState.tracing.userBoundingBox,
       bb => this.setUserBoundingBox(bb),

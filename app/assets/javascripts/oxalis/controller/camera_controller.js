@@ -55,10 +55,10 @@ class CameraController extends React.PureComponent<Props> {
     const clippingDistance = state.userConfiguration.clippingDistance;
     const scaleFactor = getBaseVoxel(state.dataset.scale);
     const zoom = state.flycam.zoomStep;
-    const boundary = constants.VIEWPORT_WIDTH / 2 * zoom;
+    const halfBoundary = constants.VIEWPORT_WIDTH / 2 * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
       this.props.cameras[planeId].near = -clippingDistance;
-      const scaledBoundary = boundary * scaleFactor;
+      const scaledBoundary = halfBoundary * scaleFactor;
       this.props.cameras[planeId].left = -scaledBoundary;
       this.props.cameras[planeId].bottom = -scaledBoundary;
       this.props.cameras[planeId].right = scaledBoundary;

@@ -38,8 +38,6 @@ class DataCube {
   MAXIMUM_BUCKET_COUNT = 5000;
   BUCKET_LENGTH: number;
   ZOOM_STEP_COUNT: number;
-  LOOKUP_DEPTH_UP: number;
-  LOOKUP_DEPTH_DOWN: number = 1;
   arbitraryCube: ArbitraryCubeAdapter;
   upperBoundary: Vector3;
   buckets: Array<DataBucket>;
@@ -47,6 +45,8 @@ class DataCube {
   bucketCount: number = 0;
   BIT_DEPTH: number;
   MAX_ZOOM_STEP: number;
+  MAX_UNSAMPLED_ZOOM_STEP: number;
+  downsampledZoomStepCount: number;
   BYTE_OFFSET: number;
   cubes: Array<CubeEntry>;
   boundingBox: BoundingBox;
@@ -71,19 +71,24 @@ class DataCube {
   // Each bucket consists of an access-value, the zoomStep and the actual data.
   // The access-values are used for garbage collection. When a bucket is accessed, its
   // access-flag is set to true.
-  // When buckets have to be collected, an iterator will loop through the the buckets at the beginning of the queue will be removed
-  // from the queue and the access-value will be decreased. If the access-value of a
-  // bucket becomes 0, itsis no longer in the access-queue and is least resently used.
-  // It is then removed from the cube.
+  // When buckets have to be collected, an iterator will loop through the the buckets at
+  // the beginning of the queue will be removed from the queue and the access-value will
+  // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
+  // access-queue and is least recently used. It is then removed from the cube.
 
   constructor(upperBoundary: Vector3, zoomStepCount: number, bitDepth: number) {
     this.upperBoundary = upperBoundary;
-    this.ZOOM_STEP_COUNT = zoomStepCount;
+
+    this.MAX_UNSAMPLED_ZOOM_STEP = zoomStepCount - 1;
+    // Always add another layer of downsampled buckets, so that we support
+    // zooming out to maxZoomStep + 1
+    this.ZOOM_STEP_COUNT = zoomStepCount + 1;
+    this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
+    this.downsampledZoomStepCount = this.ZOOM_STEP_COUNT - zoomStepCount;
+
     this.BIT_DEPTH = bitDepth;
     _.extend(this, BackboneEvents);
 
-    this.LOOKUP_DEPTH_UP = this.ZOOM_STEP_COUNT - 1;
-    this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
     this.BUCKET_LENGTH = (1 << (BUCKET_SIZE_P * 3)) * (this.BIT_DEPTH >> 3);
     this.BYTE_OFFSET = this.BIT_DEPTH >> 3;
 
@@ -393,12 +398,8 @@ class DataCube {
 
   positionToZoomedAddress([x, y, z]: Vector3, zoomStep: number = 0): Vector4 {
     // return the bucket a given voxel lies in
-    return [
-      x >> (BUCKET_SIZE_P + zoomStep),
-      y >> (BUCKET_SIZE_P + zoomStep),
-      z >> (BUCKET_SIZE_P + zoomStep),
-      zoomStep,
-    ];
+    const divisor = Math.pow(2, BUCKET_SIZE_P + zoomStep);
+    return [Math.floor(x / divisor), Math.floor(y / divisor), Math.floor(z / divisor), zoomStep];
   }
 }
 

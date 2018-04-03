@@ -12,7 +12,6 @@ import InterpolationCollector from "oxalis/model/binary/interpolation_collector"
 import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
-import Plane2D from "oxalis/model/binary/plane2d";
 import {
   PingStrategy,
   SkeletonPingStrategy,
@@ -20,9 +19,12 @@ import {
 } from "oxalis/model/binary/ping_strategy";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import Dimensions from "oxalis/model/dimensions";
 
 import type { Vector3, Vector4, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -53,12 +55,15 @@ class Binary {
   mappings: Mappings;
   pingStrategies: Array<PingStrategy>;
   pingStrategies3d: Array<PingStrategy3d>;
-  planes: OrthoViewMapType<Plane2D>;
   direction: Vector3;
   activeMapping: ?string;
   lastPosition: ?Vector3;
   lastZoomStep: ?number;
   lastAreas: ?OrthoViewMapType<Vector4>;
+  textureBucketManager: TextureBucketManager;
+  // This object is responsible for managing the buckets of the highest zoomStep
+  // which can be used as a fallback in the shader, when better data is not available
+  fallbackTextureBucketManager: TextureBucketManager;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -99,18 +104,6 @@ class Binary {
     this.pingStrategies = [new SkeletonPingStrategy(this.cube), new VolumePingStrategy(this.cube)];
     this.pingStrategies3d = [new DslSlowPingStrategy3d(this.cube)];
 
-    this.planes = {};
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.planes[planeId] = new Plane2D(
-        planeId,
-        this.cube,
-        this.layer.bitDepth,
-        this.targetBitDepth,
-        32,
-        this.category === "segmentation",
-      );
-    }
-
     if (this.layer.dataStoreInfo.typ === "webknossos-store") {
       listenToStoreProperty(
         state => state.datasetConfiguration.fourBit,
@@ -119,15 +112,114 @@ class Binary {
       );
     }
 
-    this.cube.on({
-      newMapping: () => this.forcePlaneRedraw(),
-    });
+    // todo
+    // this.cube.on({
+    //   newMapping: () => ,
+    // });
   }
 
-  forcePlaneRedraw(): void {
-    for (const plane of _.values(this.planes)) {
-      plane.forceRedraw();
+  setupDataTextures(): void {
+    const bytes = this.layer.bitDepth >> 3;
+
+    window.managers = window.managers || [];
+
+    this.textureBucketManager = new TextureBucketManager(constants.RENDERED_BUCKETS_PER_DIMENSION);
+    this.textureBucketManager.setupDataTextures(bytes, this.category);
+
+    this.fallbackTextureBucketManager = new TextureBucketManager(
+      constants.RENDERED_BUCKETS_PER_DIMENSION,
+    );
+    this.fallbackTextureBucketManager.setupDataTextures(bytes, this.category);
+
+    window.managers.push(this.textureBucketManager);
+    window.managers.push(this.fallbackTextureBucketManager);
+  }
+
+  getDataTextures(): [*, *] {
+    if (!this.textureBucketManager) {
+      // Initialize lazily since SceneController.renderer is not available earlier
+      this.setupDataTextures();
     }
+    return [this.textureBucketManager.dataTexture, this.textureBucketManager.lookUpTexture];
+  }
+
+  getFallbackDataTextures(): [*, *] {
+    if (!this.fallbackTextureBucketManager) {
+      // Initialize lazily since SceneController.renderer is not available earlier
+      this.setupDataTextures();
+    }
+    return [
+      this.fallbackTextureBucketManager.dataTexture,
+      this.fallbackTextureBucketManager.lookUpTexture,
+    ];
+  }
+
+  updateDataTextures(position: Vector3, logZoomStep: number): ?Vector3 {
+    return this.updateDataTexturesForManager(position, logZoomStep, this.textureBucketManager);
+  }
+
+  updateFallbackDataTextures(position: Vector3, logZoomStep: number): ?Vector3 {
+    const fallbackZoomStep = Math.min(this.cube.MAX_ZOOM_STEP, logZoomStep + 1);
+    return this.updateDataTexturesForManager(
+      position,
+      fallbackZoomStep,
+      this.fallbackTextureBucketManager,
+    );
+  }
+
+  updateDataTexturesForManager(
+    position: Vector3,
+    logZoomStep: number,
+    textureBucketManager: TextureBucketManager,
+  ): ?Vector3 {
+    const anchorPoint = _.clone(position);
+    const zoomStep = Store.getState().flycam.zoomStep;
+    // Hit texture top-left coordinate
+    anchorPoint[0] = Math.floor(anchorPoint[0] - constants.PLANE_WIDTH / 2 * zoomStep);
+    anchorPoint[1] = Math.floor(anchorPoint[1] - constants.PLANE_WIDTH / 2 * zoomStep);
+    anchorPoint[2] = Math.floor(anchorPoint[2] - constants.PLANE_WIDTH / 2 * zoomStep);
+
+    const zoomedAnchorPoint = this.cube.positionToZoomedAddress(anchorPoint, logZoomStep);
+    if (_.isEqual(zoomedAnchorPoint, textureBucketManager.lastZoomedAnchorPoint)) {
+      return null;
+    }
+
+    textureBucketManager.lastZoomedAnchorPoint = zoomedAnchorPoint;
+
+    // find out which buckets we need for each plane
+    const requiredBucketSet = new Set();
+
+    for (const planeId of OrthoViewValuesWithoutTDView) {
+      const [u, v] = Dimensions.getIndices(planeId);
+      const texturePosition = getPosition(Store.getState().flycam);
+
+      // Calculating the coordinates of the textures top-left corner
+      const topLeftPosition = _.clone(texturePosition);
+      topLeftPosition[u] -= constants.PLANE_WIDTH / 2 * zoomStep;
+      topLeftPosition[v] -= constants.PLANE_WIDTH / 2 * zoomStep;
+
+      topLeftPosition[u] = Math.floor(topLeftPosition[u]);
+      topLeftPosition[v] = Math.floor(topLeftPosition[v]);
+
+      const topLeftBucket = this.cube.positionToZoomedAddress(topLeftPosition, logZoomStep);
+
+      for (let y = 0; y < constants.RENDERED_BUCKETS_PER_DIMENSION; y++) {
+        for (let x = 0; x < constants.RENDERED_BUCKETS_PER_DIMENSION; x++) {
+          const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
+          bucketAddress[u] += x;
+          bucketAddress[v] += y;
+          const bucket = this.cube.getOrCreateBucket(bucketAddress);
+
+          if (bucket.type !== "null") {
+            requiredBucketSet.add(bucket);
+          }
+        }
+      }
+    }
+
+    textureBucketManager.setActiveBuckets(Array.from(requiredBucketSet), zoomedAnchorPoint);
+    // $FlowFixMe
+    return zoomedAnchorPoint.slice(0, 3);
   }
 
   setActiveMapping(mappingName: string): void {

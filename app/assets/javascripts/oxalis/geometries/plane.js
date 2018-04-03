@@ -7,15 +7,12 @@ import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import {
-  getArea,
-  getRequestLogZoomStep,
-  getTexturePosition,
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import Store from "oxalis/store";
+import { sanitizeName } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 import Dimensions from "oxalis/model/dimensions";
-import Constants, {
+import constants, {
   OrthoViews,
   OrthoViewColors,
   OrthoViewCrosshairColors,
@@ -34,6 +31,7 @@ class Plane {
   scaleVector: THREE.Vector3;
   crosshair: Array<THREE.LineSegments>;
   TDViewBorders: THREE.Line;
+  renderer: THREE.WebGLRenderer;
 
   constructor(planeID: OrthoViewType) {
     this.planeID = planeID;
@@ -51,11 +49,33 @@ class Plane {
   }
 
   createMeshes(): void {
-    const pWidth = Constants.PLANE_WIDTH;
-    const tWidth = Constants.TEXTURE_WIDTH;
+    const pWidth = constants.PLANE_WIDTH;
+    const tWidth = constants.DATA_TEXTURE_WIDTH;
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
-    const textureMaterial = new PlaneMaterialFactory(tWidth).getMaterial();
+
+    // Gather data textures from binary
+    const textures = {};
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
+      const [dataTexture, lookUpTexture] = binary.getDataTextures();
+      const [fallbackDataTexture, fallbackLookUpTexture] = binary.getFallbackDataTextures();
+
+      const shaderName = sanitizeName(name);
+      const lookUpBufferName = sanitizeName(`${name}_lookup`);
+      textures[shaderName] = dataTexture;
+      textures[lookUpBufferName] = lookUpTexture;
+
+      const fshaderName = sanitizeName(`${name}_fallback`);
+      const flookUpBufferName = sanitizeName(`${name}_lookup_fallback`);
+
+      textures[fshaderName] = fallbackDataTexture;
+      textures[flookUpBufferName] = fallbackLookUpTexture;
+    }
+    const textureMaterial = new PlaneMaterialFactory(tWidth, textures, this.planeID)
+      .setup()
+      .getMaterial();
+
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
     // create crosshair
@@ -114,32 +134,14 @@ class Plane {
     });
   };
 
-  updateTexture(): void {
-    const area = getArea(Store.getState(), this.planeID);
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      const dataBuffer = binary.planes[this.planeID].get({
-        position: getTexturePosition(Store.getState(), this.planeID),
-        zoomStep: getRequestLogZoomStep(Store.getState()),
-        area,
-      });
-
-      if (dataBuffer) {
-        this.plane.material.setData(name, dataBuffer);
-        app.vent.trigger("rerender");
-      }
+  updateAnchorPoints(anchorPoint: ?Vector3, fallbackAnchorPoint: ?Vector3): void {
+    if (anchorPoint) {
+      this.plane.material.setAnchorPoint(anchorPoint);
     }
 
-    this.plane.material.setScaleParams({
-      repeat: {
-        x: (area[2] - area[0]) / Constants.TEXTURE_WIDTH,
-        y: (area[3] - area[1]) / Constants.TEXTURE_WIDTH,
-      },
-      offset: {
-        x: area[0] / Constants.TEXTURE_WIDTH,
-        y: 1 - area[3] / Constants.TEXTURE_WIDTH,
-      },
-    });
+    if (fallbackAnchorPoint) {
+      this.plane.material.setFallbackAnchorPoint(fallbackAnchorPoint);
+    }
   }
 
   setScale = (factor: number): void => {
@@ -173,6 +175,9 @@ class Plane {
       offset.y = -1;
     }
     this.plane.position.copy(offset.addVectors(posVec, offset));
+
+    const globalPosition = getPosition(Store.getState().flycam);
+    this.plane.material.setGlobalPosition(globalPosition);
   };
 
   setVisible = (visible: boolean): void => {
@@ -190,7 +195,7 @@ class Plane {
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];
 
   setLinearInterpolationEnabled = (enabled: boolean) => {
-    this.plane.material.setColorInterpolation(enabled ? THREE.LinearFilter : THREE.NearestFilter);
+    this.plane.material.setUseBilinearFiltering(enabled);
   };
 }
 

@@ -325,7 +325,6 @@ class PlaneController extends React.PureComponent<Props> {
 
   bindToEvents(): void {
     this.listenTo(this.planeView, "render", this.onPlaneViewRender);
-    this.listenTo(this.planeView, "renderCam", SceneController.updateSceneForCam);
   }
 
   onPlaneViewRender(): void {

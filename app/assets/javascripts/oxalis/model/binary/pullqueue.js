@@ -96,12 +96,30 @@ class PullQueue {
 
       let offset = 0;
       for (const bucketAddress of batch) {
+        if (bucketAddress[3] > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+          continue;
+        }
         bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
         const bucket = this.cube.getBucket(bucketAddress);
         this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
         this.maybeWhitenEmptyBucket(bucketData);
         if (bucket.type === "data") {
           bucket.receiveData(bucketData);
+          if (this.cube.downsampledZoomStepCount > 0) {
+            const higherAddress = bucketAddress.slice();
+            higherAddress[0] = higherAddress[0] >> 1;
+            higherAddress[1] = higherAddress[1] >> 1;
+            higherAddress[2] = higherAddress[2] >> 1;
+            higherAddress[3]++;
+            // $FlowFixMe Flow does not understand that bucket will always be of length 4
+            const higherBucket = this.cube.getOrCreateBucket(higherAddress);
+            if (higherBucket.type === "data") {
+              higherBucket.downsampleFromLowerBucket(
+                bucket,
+                this.layer.category === "segmentation",
+              );
+            }
+          }
         }
       }
     } catch (error) {

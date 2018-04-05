@@ -229,7 +229,7 @@ export class OxalisModel {
   }
 
   async initializeDataset(datasetName: string) {
-    const dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
+    const dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}?sharingToken=sampleSharingToken`);
 
     let error;
     if (!dataset) {

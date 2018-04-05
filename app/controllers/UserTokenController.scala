@@ -47,7 +47,8 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     } else {
       for {
         userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
-        ctx = DBAccessContext(userBox)
+        ctxFromUserBox = DBAccessContext(userBox)
+        ctx = DBAccessContext.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)

@@ -96,7 +96,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     }
   }
 
-  override def anonymousReadAccessQ = s"isPublic"
+  override def anonymousReadAccessQ(sharingToken: Option[String]) = s"isPublic" + sharingToken.map(t => s" or sharingToken = '$t'").getOrElse("")
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}'))
           or _id in (select _dataSet

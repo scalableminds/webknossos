@@ -119,7 +119,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       )
     }
 
-  override def anonymousReadAccessQ = s"isPublic"
+  override def anonymousReadAccessQ(sharingToken: Option[String]) = s"isPublic"
   override def readAccessQ(requestingUserId: ObjectId) = s"isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'"
   override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}"
 

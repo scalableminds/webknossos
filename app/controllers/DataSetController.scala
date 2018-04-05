@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, SharingTokenContainer}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Fox
 import models.binary._
@@ -84,9 +84,10 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     }
   }
 
-  def read(dataSetName: String) = UserAwareAction.async { implicit request =>
+  def read(dataSetName: String, sharingToken: Option[String]) = UserAwareAction.async { implicit request =>
+    val ctx = DBAccessContext.fallbackTokenAccessContext(sharingToken)
     for {
-      dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
     } yield {
       Ok(DataSet.dataSetPublicWrites(request.identity).writes(dataSet))
     }

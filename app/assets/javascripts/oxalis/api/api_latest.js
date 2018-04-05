@@ -75,8 +75,8 @@ function assertVolume(tracing: TracingType) {
   }
 }
 /**
- * All tracing related API methods. This is the newest version of the API (version 2).
- * @version 2
+ * All tracing related API methods. This is the newest version of the API (version 3).
+ * @version 3
  * @class
  */
 class TracingApi {

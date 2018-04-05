@@ -252,7 +252,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def updateTracingReference(id: ObjectId, tracing: TracingReference)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set tracingId = ${tracing.id}, tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set tracing_id = ${tracing.id}, tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =

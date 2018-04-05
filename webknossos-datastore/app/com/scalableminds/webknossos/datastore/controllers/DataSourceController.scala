@@ -45,6 +45,15 @@ class DataSourceController @Inject()(
       }
   }
 
+  def triggerInboxCheckBlocking() = TokenSecuredAction(UserAccessRequest.administrateDataSources).async {
+    implicit request =>
+      AllowRemoteOrigin {
+        for {
+          _ <- dataSourceService.checkInbox()
+        } yield Ok
+      }
+  }
+
   def upload = TokenSecuredAction(UserAccessRequest.administrateDataSources).async(parse.multipartFormData) {
     implicit request =>
 

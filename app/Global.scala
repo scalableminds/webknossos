@@ -150,7 +150,8 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
           isAdmin = true,
           loginInfo = UserService.createLoginInfo(email),
           passwordInfo = UserService.createPasswordInfo(password),
-          experiences = Map("sampleExp" -> 10))
+          experiences = Map("sampleExp" -> 10),
+          _isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser"))
         )(GlobalAccessContext)
     }.toFox
   }

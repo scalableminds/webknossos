@@ -84,6 +84,11 @@ class TracingApi {
   /**
    * @private
    */
+  isFinishing: boolean = false;
+
+  /**
+   * @private
+   */
   constructor(model: OxalisModel) {
     this.model = model;
   }
@@ -271,6 +276,9 @@ class TracingApi {
    * await api.tracing.finishAndGetNextTask();
    */
   async finishAndGetNextTask() {
+    if (this.isFinishing) return;
+
+    this.isFinishing = true;
     const state = Store.getState();
     const { tracingType, annotationId } = state.tracing;
     const task = state.task;
@@ -300,6 +308,8 @@ class TracingApi {
       console.error(err);
       await Utils.sleep(2000);
       location.href = "/dashboard";
+    } finally {
+      this.isFinishing = false;
     }
   }
 

@@ -4,11 +4,12 @@
 package utils
 
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, SharingTokenContainer}
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import net.liftweb.common.Full
+import oxalis.security.SharingTokenContainer
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json

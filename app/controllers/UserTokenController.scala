@@ -13,7 +13,7 @@ import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
 import models.user.User
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
-import oxalis.security.{TokenType, WebknossosSilhouette}
+import oxalis.security.{URLSharing, TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
@@ -48,7 +48,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       for {
         userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
         ctxFromUserBox = DBAccessContext(userBox)
-        ctx = DBAccessContext.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
+        ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)

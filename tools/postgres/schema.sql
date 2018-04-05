@@ -66,8 +66,8 @@ CREATE TABLE webknossos.dataSets(
   name VARCHAR(256) NOT NULL UNIQUE,
   scale webknossos.VECTOR3,
   status VARCHAR(1024) NOT NULL DEFAULT '',
+  sharingToken CHAR(256),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  sharingToken CHAR(256) NOT NULL DEFAULT '',
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _team)
 );

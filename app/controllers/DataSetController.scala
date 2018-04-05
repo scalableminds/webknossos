@@ -2,19 +2,22 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, SharingTokenContainer}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.Fox
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
+import net.liftweb.common.Full
 import oxalis.ndstore.{ND2WK, NDServerConnection}
+import oxalis.security.{URLSharing, WebknossosSilhouette}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
+import play.api.mvc.Result
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
@@ -85,7 +88,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   }
 
   def read(dataSetName: String, sharingToken: Option[String]) = UserAwareAction.async { implicit request =>
-    val ctx = DBAccessContext.fallbackTokenAccessContext(sharingToken)
+    val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName)(ctx) ?~> Messages("dataSet.notFound", dataSetName)
     } yield {
@@ -129,6 +132,18 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       } yield
       Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))
     }
+  }
+
+  def getSharingToken(dataSetName: String) = SecuredAction.async { implicit request =>
+    for {
+      token <- DataSetService.getSharingToken(dataSetName)
+    } yield Ok(Json.obj("sharingToken" -> token))
+  }
+
+  def deleteSharingToken(dataSetName: String) = SecuredAction.async { implicit request =>
+    for {
+      _ <- DataSetSQLDAO.updateSharingTokenByName(dataSetName, None)
+    } yield Ok
   }
 
   val externalDataSetFormReads =

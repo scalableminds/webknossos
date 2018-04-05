@@ -11,8 +11,6 @@ trait DBAccessContext {
   def globalAccess: Boolean = false
 }
 
-case class SharingTokenContainer(sharingToken: String) extends DBAccessContextPayload
-
 case class AuthorizedAccessContext(t: DBAccessContextPayload) extends DBAccessContext {
   override def data = Some(t)
 }
@@ -28,13 +26,6 @@ object DBAccessContext{
     payload match{
       case Some(p) => AuthorizedAccessContext(p)
       case _ => UnAuthorizedAccessContext
-    }
-  }
-
-  def fallbackTokenAccessContext(sharingToken: Option[String])(implicit ctx: DBAccessContext) = {
-    ctx.data match {
-      //case Some(user: User) => ctx
-      case _ => DBAccessContext(sharingToken.map(SharingTokenContainer(_)))
     }
   }
 

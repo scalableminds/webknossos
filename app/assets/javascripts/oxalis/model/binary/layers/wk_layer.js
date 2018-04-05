@@ -53,7 +53,7 @@ class WkLayer extends Layer {
     const responseBuffer = await Request.sendJSONReceiveArraybuffer(
       `${this.dataStoreInfo.url}/data/datasets/${datasetName}/layers/${
         this.name
-      }/data?token=sampleSharingToken`,
+      }/data?token=${token}`,
       {
         data: batch,
         timeout: REQUEST_TIMEOUT,

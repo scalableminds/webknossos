@@ -32,6 +32,7 @@ case class DataSetSQL(
                        isUsable: Boolean,
                        name: String,
                        scale: Option[Scale],
+                       sharingToken: Option[String],
                        status: String,
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false
@@ -52,6 +53,7 @@ object DataSetSQL {
         d.isActive,
         d.dataSource.id.name,
         d.dataSource.scaleOpt,
+        d.sharingToken,
         d.dataSource.statusOpt.getOrElse(""),
         d.created,
         false
@@ -89,6 +91,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
         r.isusable,
         r.name,
         scale,
+        r.sharingtoken,
         r.status,
         r.created.getTime,
         r.isdeleted
@@ -128,6 +131,23 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
       parsed
     }
 
+  def getSharingTokenByName(name: String)(implicit ctx: DBAccessContext): Fox[Option[String]] = {
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select sharingToken from webknossos.datasets_ where name = ${name} and #${accessQuery}".as[Option[String]])
+      r <- rList.headOption.toFox
+    } yield {
+      r
+    }
+  }
+
+  def updateSharingTokenByName(name: String, sharingToken: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      accessQuery <- readAccessQuery
+      _ <- run(sqlu"update webknossos.datasets_ set sharingToken = ${sharingToken} where name = ${name} and #${accessQuery}")
+    } yield ()
+  }
+
   def updateFieldsByName(name: String, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val q = for {row <- Datasets if (notdel(row) && row.name === name)} yield (row.description, row.ispublic)
     for {
@@ -137,9 +157,9 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
 
   def insertOne(d: DataSetSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert into webknossos.dataSets(_id, _dataStore, _team, defaultConfiguration, description, isPublic, isUsable, name, scale, status, created, isDeleted)
+      _ <- run(sqlu"""insert into webknossos.dataSets(_id, _dataStore, _team, defaultConfiguration, description, isPublic, isUsable, name, scale, status, sharingToken, created, isDeleted)
                values(${d._id.id}, ${d._dataStore}, ${d._team.id}, #${optionLiteral(d.defaultConfiguration.map(_.toString).map(sanitize))}, ${d.description}, ${d.isPublic}, ${d.isUsable},
-                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
+                      ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
   }
@@ -325,6 +345,7 @@ case class DataSet(
   isPublic: Boolean = false,
   description: Option[String] = None,
   defaultConfiguration: Option[DataSetConfiguration] = None,
+  sharingToken: Option[String] = None,
   created: Long = System.currentTimeMillis()) {
 
   def name = dataSource.id.name
@@ -353,9 +374,10 @@ object DataSet extends FoxImplicits {
       (__ \ 'isActive).write[Boolean] and
       (__ \ 'isPublic).write[Boolean] and
       (__ \ 'description).write[Option[String]] and
+      (__ \ 'sharingToken).write[Option[String]] and
       (__ \ 'created).write[Long] and
       (__ \ "isEditable").write[Boolean]) (d =>
-      (d.name, d.dataSource, d.dataStoreInfo, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.created, d.isEditableBy(user)))
+      (d.name, d.dataSource, d.dataStoreInfo, d.owningTeam, d.allowedTeams, d.isActive, d.isPublic, d.description, d.sharingToken, d.created, d.isEditableBy(user)))
 
 
   private def parseDefaultConfiguration(jsValueOpt: Option[JsValue]): Fox[Option[DataSetConfiguration]] = jsValueOpt match {
@@ -397,6 +419,7 @@ object DataSet extends FoxImplicits {
         s.isPublic,
         s.description,
         defaultConfiguration,
+        s.sharingToken,
         s.created
       )
     }

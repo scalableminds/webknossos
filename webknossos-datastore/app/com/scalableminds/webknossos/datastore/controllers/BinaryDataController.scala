@@ -193,11 +193,15 @@ class BinaryDataController @Inject()(
                                  dataSetName: String,
                                  dataLayerName: String,
                                  width: Int,
-                                 height: Int) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
+                                 height: Int,
+                                 centerX: Option[Int],
+                                 centerY: Option[Int],
+                                 centerZ: Option[Int],
+                                 zoom: Option[Int]) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height)
+          thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
         } yield {
           Ok.stream(Enumerator.outputStream(thumbnailProvider).andThen(Enumerator.eof)).withHeaders(
             CONTENT_TYPE -> contentTypeJpeg,
@@ -213,12 +217,16 @@ class BinaryDataController @Inject()(
                                  dataSetName: String,
                                  dataLayerName: String,
                                  width: Int,
-                                 height: Int
+                                 height: Int,
+                                 centerX: Option[Int],
+                                 centerY: Option[Int],
+                                 centerZ: Option[Int],
+                                 zoom: Option[Int]
                                ) = TokenSecuredAction(UserAccessRequest.readDataSources(dataSetName)).async(parse.raw) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height)
+          thumbnailProvider <- respondWithImageThumbnail(dataSetName, dataLayerName, width, height, centerX, centerY, centerZ, zoom)
         } yield {
           val os = new ByteArrayOutputStream()
           thumbnailProvider(Base64.getEncoder.wrap(os))
@@ -300,11 +308,15 @@ class BinaryDataController @Inject()(
                                      dataSetName: String,
                                      dataLayerName: String,
                                      width: Int,
-                                     height: Int
+                                     height: Int,
+                                     centerX: Option[Int],
+                                     centerY: Option[Int],
+                                     centerZ: Option[Int],
+                                     zoom: Option[Int]
                                    ): Fox[(OutputStream) => Unit] = {
     for {
       (dataSource, dataLayer) <- getDataSourceAndDataLayer(dataSetName, dataLayerName)
-      position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height)
+      position = ImageThumbnail.goodThumbnailParameters(dataLayer, width, height, centerX, centerY, centerZ, zoom)
       request = DataRequest(position, width, height, 1)
       image <- respondWithSpriteSheet(dataSource, dataLayer, request, 1, blackAndWhite = false)
     } yield {

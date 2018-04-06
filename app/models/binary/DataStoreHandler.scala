@@ -7,6 +7,7 @@ import java.io.File
 import java.math.BigInteger
 import java.security.SecureRandom
 
+import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.ImageThumbnail
@@ -53,7 +54,7 @@ trait DataStoreHandlingStrategy {
   def getVolumeTracing(reference: TracingReference): Fox[(VolumeTracing, Enumerator[Array[Byte]])] =
     Fox.failure("DataStore doesn't support getting VolumeTracings")
 
-  def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] =
+  def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int, zoom: Option[Int], center: Option[Point3D]): Fox[Array[Byte]] =
     Fox.failure("DataStore doesn't support thumbnail creation.")
 
   def importDataSource: Fox[WSResponse] =
@@ -159,11 +160,15 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
     }
   }
 
-  override def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int): Fox[Array[Byte]] = {
+  override def requestDataLayerThumbnail(dataLayerName: String, width: Int, height: Int, zoom: Option[Int], center: Option[Point3D]): Fox[Array[Byte]] = {
     logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
     RPC(s"${dataStoreInfo.url}/data/datasets/${dataSet.urlEncodedName}/layers/$dataLayerName/thumbnail.json")
       .withQueryString("token" -> DataStoreHandlingStrategy.webKnossosToken)
       .withQueryString( "width" -> width.toString, "height" -> height.toString)
+      .withQueryStringOptional("zoom", zoom.map(_.toString))
+      .withQueryStringOptional("centerX", center.map(_.x.toString))
+      .withQueryStringOptional("centerY", center.map(_.y.toString))
+      .withQueryStringOptional("centerZ", center.map(_.z.toString))
       .getWithJsonResponse[ImageThumbnail].map(thumbnail => Base64.decodeBase64(thumbnail.value))
   }
 
@@ -180,7 +185,9 @@ class NDStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
   override def requestDataLayerThumbnail(
     dataLayerName: String,
     width: Int,
-    height: Int): Fox[Array[Byte]] = {
+    height: Int,
+    zoom: Option[Int],
+    center: Option[Point3D]): Fox[Array[Byte]] = {
 
     logger.debug("Thumbnail called for: " + dataSet.name + " Layer: " + dataLayerName)
 

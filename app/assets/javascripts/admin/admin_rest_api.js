@@ -528,6 +528,14 @@ export async function addDataset(datatsetConfig: DatasetConfigType): Promise<API
   );
 }
 
+export async function triggerDatasetCheck(datatstoreHost: string): Promise<void> {
+  doWithToken(token =>
+    Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
+      host: datatstoreHost,
+    }),
+  );
+}
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDatastoreType>> {
   const datastores = await Request.receiveJSON("/api/datastores");

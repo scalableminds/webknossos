@@ -282,6 +282,9 @@ class DataCube {
     }
 
     this.bucketCount++;
+    if (this.buckets[this.bucketIterator]) {
+      this.buckets[this.bucketIterator].trigger("bucketCollected");
+    }
     this.buckets[this.bucketIterator] = bucket;
     this.bucketIterator = ++this.bucketIterator % this.MAXIMUM_BUCKET_COUNT;
   }

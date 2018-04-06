@@ -37,7 +37,7 @@ export default class TextureBucketManager {
   // has been was) written in the data texture.
   activeBucketToIndexMap: Map<DataBucket, number> = new Map();
   // Maintains the set of committed buckets
-  committedBucketSet: Set<DataBucket> = new Set();
+  committedBucketSet: WeakSet<DataBucket> = new WeakSet();
   // Maintains a set of free indices within the data texture.
   freeIndexSet: Set<number>;
   isRefreshBufferOutOfDate: boolean = false;
@@ -77,6 +77,16 @@ export default class TextureBucketManager {
     this.setActiveBuckets([], [0, 0, 0, 0], [0, 0, 0, 0]);
   }
 
+  freeBucket(bucket: DataBucket): void {
+    const unusedIndex = this.activeBucketToIndexMap.get(bucket);
+    if (unusedIndex == null) {
+      return;
+    }
+    this.activeBucketToIndexMap.delete(bucket);
+    this.committedBucketSet.delete(bucket);
+    this.freeIndexSet.add(unusedIndex);
+  }
+
   // Takes an array of buckets (relative to an anchorPoint) and ensures that these
   // are written to the dataTexture. The lookUpTexture will be updated to reflect the
   // new buckets.
@@ -96,16 +106,7 @@ export default class TextureBucketManager {
     // Remove unused buckets
     const freeBuckets = Array.from(freeBucketSet.values());
     for (const freeBucket of freeBuckets) {
-      const unusedIndex = this.activeBucketToIndexMap.get(freeBucket);
-      this.activeBucketToIndexMap.delete(freeBucket);
-      this.committedBucketSet.delete(freeBucket);
-      // Flow thinks that unusedIndex may be undefined.
-      // However, the freeBuckets can only contain buckets which
-      // are held by activeBucketToIndexMap since we use the map
-      // for initialization. For performance reason, we don't satisfy
-      // flow with an undefined check.
-      // $FlowFixMe
-      this.freeIndexSet.add(unusedIndex);
+      this.freeBucket(freeBucket);
     }
 
     const freeIndexArray = Array.from(this.freeIndexSet);
@@ -236,6 +237,11 @@ export default class TextureBucketManager {
       bucket.on("bucketLoaded", updateBucketData);
     }
     bucket.on("bucketLabeled", debouncedUpdateBucketData);
+    bucket.once("bucketCollected", () => {
+      bucket.off("bucketLabeled", debouncedUpdateBucketData);
+      bucket.off("bucketLoaded", updateBucketData);
+      this.freeBucket(bucket);
+    });
   }
 
   _refreshLookUpBuffer() {

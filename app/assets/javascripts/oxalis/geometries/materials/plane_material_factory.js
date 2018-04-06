@@ -448,7 +448,7 @@ vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[textureCo
 }
 
 vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 coords) {
-  coords = coords + vec3(-0.5, -0.5, 0.0);
+  coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
 

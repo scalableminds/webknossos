@@ -56,15 +56,6 @@ test("Flycam Accessors should calculate the request log zoom step (3/3)", t => {
   t.is(accessors.getRequestLogZoomStep(state), 4);
 });
 
-test("Flycam Accessors should calculate the texture position", t => {
-  const texturePosition = accessors.getTexturePosition(
-    initialState,
-    OrthoViews.PLANE_XZ,
-    resolutions,
-  );
-  t.deepEqual(texturePosition, [1216, 3218, 512]);
-});
-
 test("Flycam Accessors should calculate the texture scaling factor (1/2)", t => {
   const texturePosition = accessors.getTextureScalingFactor(initialState);
   t.deepEqual(texturePosition, 0.65);

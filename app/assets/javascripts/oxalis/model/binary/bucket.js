@@ -230,14 +230,6 @@ export class DataBucket {
     throw new Error(`Unexpected state: ${this.state}`);
   }
 
-  // zoomedAddressToQuadrantIndex(zoomedAddress: Vector4): number {
-  //   const x = bucket.zoomedAddress[0] % 2;
-  //   const y = bucket.zoomedAddress[1] % 2;
-  //   const z = bucket.zoomedAddress[2] % 2;
-
-  //   return 4 * z + 2 * y + x;
-  // }
-
   downsampleFromLowerBucket(bucket: DataBucket, useMode: boolean): void {
     if (!this.dependentBucketListenerSet.has(bucket)) {
       const bucketLabeledHandler = () => {

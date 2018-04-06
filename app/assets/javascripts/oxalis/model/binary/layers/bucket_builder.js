@@ -7,7 +7,7 @@ import Store from "oxalis/store";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import type { BucketRequestOptions } from "oxalis/model/binary/layers/layer";
-import PositionConverter from "oxalis/model/helpers/position_converter";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 
 export type BucketInfo = {
   position: Vector3,
@@ -26,7 +26,7 @@ export default {
     resolutions: Array<Vector3>,
     options: ?BucketRequestOptions,
   ): BucketInfo {
-    const position = PositionConverter.bucketPositionToGlobalAddress(zoomedAddress, resolutions);
+    const position = bucketPositionToGlobalAddress(zoomedAddress, resolutions);
     const zoomStep = zoomedAddress[3];
 
     const bucket = {

@@ -9,7 +9,7 @@ import type Layer from "oxalis/model/binary/layers/layer";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector4 } from "oxalis/constants";
 import type { DataStoreInfoType } from "oxalis/store";
-import PositionConverter from "oxalis/model/helpers/position_converter";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 
 export type PullQueueItemType = {
   priority: number,
@@ -108,7 +108,7 @@ class PullQueue {
         if (bucket.type === "data") {
           bucket.receiveData(bucketData);
           if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
-            const higherAddress = PositionConverter.zoomedAddressToAnotherZoomStep(
+            const higherAddress = zoomedAddressToAnotherZoomStep(
               bucketAddress,
               this.layer.resolutions,
               zoomStep + 1,

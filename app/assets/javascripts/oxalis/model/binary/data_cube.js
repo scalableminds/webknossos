@@ -25,7 +25,7 @@ import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
 import Store from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import PositionConverter from "oxalis/model/helpers/position_converter";
+import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -413,11 +413,7 @@ class DataCube {
 
   positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
     // return the bucket a given voxel lies in
-    return PositionConverter.globalPositionToBucketPosition(
-      position,
-      this.layer.resolutions,
-      resolutionIndex,
-    );
+    return globalPositionToBucketPosition(position, this.layer.resolutions, resolutionIndex);
   }
 
   positionToBaseAddress(position: Vector3): Vector4 {

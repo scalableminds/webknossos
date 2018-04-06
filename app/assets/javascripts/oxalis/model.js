@@ -183,12 +183,12 @@ export class OxalisModel {
   validateSpecsForLayers(layers: Array<Layer>): [number, number] {
     const canvas = document.createElement("canvas");
     const contextProvider = canvas.getContext
-      ? canvas.getContext.bind(canvas)
-      : () => ({
+      ? x => canvas.getContext(x)
+      : ctxName => ({
           MAX_TEXTURE_SIZE: 0,
           MAX_COMBINED_TEXTURE_IMAGE_UNITS: 1,
           getParameter(param) {
-            return param === 0 ? 4096 : 8192;
+            return ctxName === "webgl" && param === 0 ? 4096 : 8192;
           },
         });
 

@@ -10,6 +10,7 @@ import {
   doWithToken,
   getDatasetSharingToken,
   revokeDatasetSharingToken,
+  getDataset,
 } from "admin/admin_rest_api";
 import type { APIDatasetType } from "admin/api_flow_types";
 
@@ -59,9 +60,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   async fetchData(): Promise<void> {
     this.setState({ isLoading: true });
     const sharingToken = await getDatasetSharingToken(this.props.datasetName);
-
-    const datasetUrl = `/api/datasets/${this.props.datasetName}`;
-    const dataset = await Request.receiveJSON(datasetUrl);
+    const dataset = await getDataset(this.props.datasetName);
 
     const datasetJson = await doWithToken(token =>
       Request.receiveJSON(

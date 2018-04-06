@@ -43,7 +43,7 @@ import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
-import { doWithToken, getAnnotationInformation } from "admin/admin_rest_api";
+import { doWithToken, getAnnotationInformation, getDataset } from "admin/admin_rest_api";
 import messages from "messages";
 import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
@@ -229,7 +229,7 @@ export class OxalisModel {
   }
 
   async initializeDataset(datasetName: string) {
-    const dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
+    const dataset: APIDatasetType = await doWithToken(token => getDataset(datasetName, token));
 
     let error;
     if (!dataset) {

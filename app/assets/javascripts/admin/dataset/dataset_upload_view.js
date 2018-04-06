@@ -13,7 +13,7 @@ import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 
 type StateProps = {
   activeUser: APIUserType,

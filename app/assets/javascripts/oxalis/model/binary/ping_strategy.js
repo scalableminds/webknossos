@@ -6,7 +6,7 @@
 import _ from "lodash";
 import Dimensions from "oxalis/model/dimensions";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
-import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";

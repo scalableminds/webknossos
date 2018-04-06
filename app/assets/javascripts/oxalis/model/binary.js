@@ -27,11 +27,10 @@ import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { DataBucket } from "oxalis/model/binary/bucket";
 import { getAreas } from "oxalis/model/accessors/flycam_accessor";
-import type { OrthoViewMapType } from "oxalis/constants";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 
-import type { Vector3, Vector4, OrthoViewType } from "oxalis/constants";
+import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type Layer from "oxalis/model/binary/layers/layer";
 

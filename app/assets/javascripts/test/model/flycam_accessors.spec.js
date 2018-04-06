@@ -1,9 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
 import _ from "lodash";
-import { OrthoViews } from "oxalis/constants";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
-import resolutions from "test/fixtures/resolutions";
 
 const initialState = {
   dataset: {

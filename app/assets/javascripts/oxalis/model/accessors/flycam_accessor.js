@@ -1,17 +1,14 @@
 // @flow
-import type { Vector3, OrthoViewType, BoundingBoxType } from "oxalis/constants";
+import type { Vector3, OrthoViewType, BoundingBoxType, OrthoViewMapType } from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
 import * as scaleInfo from "oxalis/model/scaleinfo";
-import _ from "lodash";
 import Utils from "libs/utils";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as THREE from "three";
-import { globalPositionToBaseBucket } from "oxalis/model/helpers/position_converter";
-import type { OrthoViewMapType } from "oxalis/constants";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.

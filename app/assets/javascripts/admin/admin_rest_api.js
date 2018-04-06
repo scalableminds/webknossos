@@ -536,6 +536,15 @@ export async function triggerDatasetCheck(datatstoreHost: string): Promise<void>
   );
 }
 
+export async function getDatasetSharingToken(datasetName: string): Promise<string> {
+  const { sharingToken } = await Request.receiveJSON(`/api/datasets/${datasetName}/sharingToken`);
+  return sharingToken;
+}
+
+export async function revokeDatasetSharingToken(datasetName: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetName}/sharingToken`, { method: "DELETE" });
+}
+
 // #### Datastores
 export async function getDatastores(): Promise<Array<APIDatastoreType>> {
   const datastores = await Request.receiveJSON("/api/datastores");

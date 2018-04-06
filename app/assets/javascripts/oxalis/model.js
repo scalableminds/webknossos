@@ -180,7 +180,17 @@ export class OxalisModel {
 
   validateSpecsForLayers(layers: Array<Layer>): [number, number] {
     const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl");
+    const contextProvider =
+      canvas.getContext ||
+      (() => ({
+        MAX_TEXTURE_SIZE: 0,
+        MAX_COMBINED_TEXTURE_IMAGE_UNITS: 1,
+        getParameter(param) {
+          return param === 0 ? 4096 : 8192;
+        },
+      }));
+
+    const gl = contextProvider("webgl");
 
     if (!gl) {
       throw new Error("WebGL context could not be constructed.");

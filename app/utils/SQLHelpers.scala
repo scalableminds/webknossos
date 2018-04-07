@@ -48,7 +48,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
         }
         case Failure(e: Throwable) => {
           logError(e, query)
-          reportErrorNewrelic(e, query)
+          reportErrorToNewrelic(e, query)
           Fox.failure("SQL Failure: " + e.getMessage)
         }
       }
@@ -61,7 +61,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
     logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
   }
 
-  private def reportErrorNewrelic[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
+  private def reportErrorToNewrelic[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
     NewRelic.noticeError(ex, Map("Causing query: " -> query.getDumpInfo.mainInfo).asJava)
   }
 

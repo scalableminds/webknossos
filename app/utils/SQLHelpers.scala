@@ -4,6 +4,7 @@
 package utils
 
 
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -17,6 +18,7 @@ import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
+import scala.collection.JavaConverters._
 
 import scala.util.{Failure, Success, Try}
 
@@ -46,6 +48,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
         }
         case Failure(e: Throwable) => {
           logError(e, query)
+          reportErrorToNewrelic(e, query)
           Fox.failure("SQL Failure: " + e.getMessage)
         }
       }
@@ -56,6 +59,10 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
   private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
     logger.error("SQL Error: " + ex)
     logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
+  }
+
+  private def reportErrorToNewrelic[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
+    NewRelic.noticeError(ex, Map("Causing query: " -> query.getDumpInfo.mainInfo).asJava)
   }
 
 

@@ -17,6 +17,7 @@ import {
   setDatasetAction,
   setViewModeAction,
   setControlModeAction,
+  initializeSettingsAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
@@ -144,6 +145,7 @@ export class OxalisModel {
     }
 
     await this.initializeDataset(datasetName);
+    await this.initializeSettings(datasetName);
 
     // Fetch the actual tracing from the datastore, if there is an annotation
     let tracing: ?ServerTracingType;
@@ -256,6 +258,14 @@ export class OxalisModel {
     });
 
     Store.dispatch(setDatasetAction(dataset));
+  }
+
+  async initializeSettings(datasetName: string) {
+    const initialUserSettings = await Request.receiveJSON("/api/user/userConfiguration");
+    const initialDatasetSettings = await Request.receiveJSON(
+      `/api/dataSetConfigurations/${datasetName}`,
+    );
+    Store.dispatch(initializeSettingsAction(initialUserSettings, initialDatasetSettings));
   }
 
   initializeModel(tracing: ?ServerTracingType) {
@@ -416,24 +426,46 @@ export class OxalisModel {
     ];
   }
 
-  applyState(state: UrlManagerState, tracing: ?ServerTracingType) {
-    // If there is no editPosition (e.g. when viewing a dataset), compute the center of the dataset
-    const editPosition = tracing != null ? tracing.editPosition : this.getDatasetCenter();
-    const position = state.position || editPosition;
+  applyState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
+    // If there is no editPosition (e.g. when viewing a dataset) and
+    // no default position, compute the center of the dataset
+    const defaultPosition = Store.getState().datasetConfiguration.position;
+    let position = this.getDatasetCenter();
+    if (defaultPosition != null) {
+      position = defaultPosition;
+    }
+    if (tracing != null) {
+      position = tracing.editPosition;
+    }
+    if (urlState.position != null) {
+      position = urlState.position;
+    }
     Store.dispatch(setPositionAction(position));
 
-    if (state.zoomStep != null) {
-      Store.dispatch(setZoomStepAction(state.zoomStep));
+    const defaultZoomStep = Store.getState().datasetConfiguration.zoom;
+    if (urlState.zoomStep != null) {
+      Store.dispatch(setZoomStepAction(urlState.zoomStep));
+    } else if (defaultZoomStep != null) {
+      Store.dispatch(setZoomStepAction(defaultZoomStep));
     }
 
-    const editRotation = tracing != null ? tracing.editRotation : null;
-    const rotation = state.rotation || editRotation;
+    const defaultRotation = Store.getState().datasetConfiguration.rotation;
+    let rotation = null;
+    if (defaultRotation != null) {
+      rotation = defaultRotation;
+    }
+    if (tracing != null) {
+      rotation = tracing.editRotation;
+    }
+    if (urlState.rotation != null) {
+      rotation = urlState.rotation;
+    }
     if (rotation != null) {
       Store.dispatch(setRotationAction(rotation));
     }
 
-    if (state.activeNode != null) {
-      Store.dispatch(setActiveNodeAction(state.activeNode));
+    if (urlState.activeNode != null) {
+      Store.dispatch(setActiveNodeAction(urlState.activeNode));
     }
   }
 

@@ -75,12 +75,17 @@ function assertVolume(tracing: TracingType) {
   }
 }
 /**
- * All tracing related API methods. This is the newest version of the API (version 2).
- * @version 2
+ * All tracing related API methods. This is the newest version of the API (version 3).
+ * @version 3
  * @class
  */
 class TracingApi {
   model: OxalisModel;
+  /**
+   * @private
+   */
+  isFinishing: boolean = false;
+
   /**
    * @private
    */
@@ -271,6 +276,9 @@ class TracingApi {
    * await api.tracing.finishAndGetNextTask();
    */
   async finishAndGetNextTask() {
+    if (this.isFinishing) return;
+
+    this.isFinishing = true;
     const state = Store.getState();
     const { tracingType, annotationId } = state.tracing;
     const task = state.task;
@@ -300,6 +308,8 @@ class TracingApi {
       console.error(err);
       await Utils.sleep(2000);
       location.href = "/dashboard";
+    } finally {
+      this.isFinishing = false;
     }
   }
 

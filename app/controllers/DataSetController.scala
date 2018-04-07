@@ -2,22 +2,21 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.Point3D
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
 import models.team.TeamDAO
 import models.user.{User, UserService}
-import net.liftweb.common.Full
 import oxalis.ndstore.{ND2WK, NDServerConnection}
-import oxalis.security.{URLSharing, WebknossosSilhouette}
+import oxalis.security.URLSharing
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import play.api.Play.current
 import play.api.cache.Cache
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.Result
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
@@ -42,14 +41,17 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       Cache.get(s"thumbnail-$dataSetName*$dataLayerName") match {
         case Some(a: Array[Byte]) =>
           Fox.successful(a)
-        case _ =>
-          dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, ThumbnailWidth, ThumbnailHeight).map{
+        case _ => {
+          val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c => JsonHelper.jsResultToOpt(c.configuration("position").validate[Point3D]))
+          val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c => JsonHelper.jsResultToOpt(c.configuration("zoom").validate[Int]))
+          dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, ThumbnailWidth, ThumbnailHeight, defaultZoomOpt, defaultCenterOpt).map {
             result =>
               Cache.set(s"thumbnail-$dataSetName*$dataLayerName",
                 result,
                 (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt)
               result
           }
+        }
       }
 
     for {

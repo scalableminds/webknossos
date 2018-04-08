@@ -8,17 +8,17 @@ import Adapter from "enzyme-adapter-react-16";
 
 const requests = [];
 const minimumWait = 100; // ms
-const tokenUserDefault = // defaultUser = userAAA
+const tokenUser_A = // defaultUser = userAAA
   "1b88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21761e";
-const tokenUserAAB =
+const tokenUser_B =
   "2c88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21762e";
-const tokenUserAAC =
+const tokenUser_C =
   "3d88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21763e";
-const tokenUserABA =
+const tokenUser_D =
   "4e88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21764e";
-const tokenUserBAA =
+const tokenUser_E =
   "5f88db86331a38c21a0b235794b9e459856490d70408bcffb767f64ade0f83d2bdb4c4e181b9a9a30cdece7cb7c65208cc43b6c1bb5987f5ece00d348b1a905502a266f8fc64f0371cd6559393d72e031d0c2d0cabad58cccf957bb258bc86f05b5dc3d4fff3d5e3d9c0389a6027d861a21e78e3222fb6c5b7944520ef21765e";
-let currToken = tokenUserDefault;
+let currToken = tokenUser_A;
 
 async function waitForAllRequests(el: Object) {
   let length = requests.length;
@@ -113,10 +113,10 @@ export {
   createSnapshotable,
   wait,
   debugWrapper,
-  tokenUserDefault,
-  tokenUserAAB,
-  tokenUserAAC,
-  tokenUserABA,
-  tokenUserBAA,
+  tokenUser_A,
+  tokenUser_B,
+  tokenUser_C,
+  tokenUser_D,
+  tokenUser_E,
   setCurrToken,
 };

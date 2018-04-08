@@ -2,11 +2,11 @@
 /* eslint-disable import/first */
 // @flow
 import {
-  tokenUserDefault,
-  tokenUserAAB,
-  tokenUserAAC,
-  tokenUserABA,
-  tokenUserBAA,
+  tokenUser_A,
+  tokenUser_B,
+  tokenUser_C,
+  tokenUser_D,
+  tokenUser_E,
   setCurrToken,
 } from "../enzyme/e2e-setup";
 import test from "ava";
@@ -17,55 +17,54 @@ import * as api from "admin/admin_rest_api";
 TEAM STRUCTURE USED FOR TESTING:
 
 Organizations:
-Connectomics department (Organization A), OrganizationB
+Organization X, Organization Y
 
 Teams:
-Connectomics department (Team AA), Team AB, Team BA, test1, test2
-(the teams test1 and test2 existed before)
+team_X1, team_X2, team_X3, team_X4, team_Y1
 
 User:
-default (UserAAA), User AAB, User AAC, User ABA, User BAA
+user_A, user_B, user_C, user_D, user_E
 
 ++----------------------------------------------------------------------------------------------------------------------++--------------------------------------++
-||	Connectomics department (Organization A)																			                                      ||	Organization B 						          ||
-||  Admin: scmboy																										                                                    ||  Admin: userBAA					          	||
+||	Otganization X																		                                      ||	Organization Y 						          ||
+||  Admin: user_A																										                                                    ||  Admin: user_E					          	||
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
-|| Connectomics department (Team AA) | 		Team AB				        | 		test1				          | 		test2				          ||  TeamBA 								              ||
+|| team_X1 | 		team_X2				        | 		team_X3				          | 		team_X4				          ||  team_Y1 								              ||
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
-|| scmboy (userAAA)	(teamMng)		     | 		userABA (teamMng.)    | 		scmboy            	  | 		scmboy (teamMng.)	    ||  userBAA	(teamMng.)			         		||
-|| userAAB (teamMng.)		   		       | 						            	| 					              	| 						            	||  							                  		||
-|| userAAC					   		           | 						            	| 					            		| 						            	||  							                  		||
+|| user_A	(teamMng)		     | 		user_D (teamMng.)    | 		user_A            	  | 		user_A (teamMng.)	    ||  user_E	(teamMng.)			         		||
+|| user_B (teamMng.)		   		       | 						            	| 					              	| 						            	||  							                  		||
+|| user_C					   		           | 						            	| 					            		| 						            	||  							                  		||
 ++-----------------------------------+--------------------------+---------------------------+---------------------------++--------------------------------------++
  */
 
 // Teams
 test("teams_userDefault", async t => {
-  await setCurrToken(tokenUserDefault);
+  await setCurrToken(tokenUser_A);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.is(teams[0].name, "Connectomics department");
-  t.is(teams[1].name, "team_AB");
-  t.is(teams[2].name, "test1");
-  t.is(teams[3].name, "test2");
+  t.is(teams[0].name, "team_X1");
+  t.is(teams[1].name, "team_X2");
+  t.is(teams[2].name, "team_X3");
+  t.is(teams[3].name, "team_X4");
   t.is(teams.length, 4);
 });
 
-test("teams_userABA", async t => {
-  await setCurrToken(tokenUserABA);
+test("teams_user_D", async t => {
+  await setCurrToken(tokenUser_D);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.is(teams[0].name, "team_AB");
+  t.is(teams[0].name, "team_X2");
   t.is(teams.length, 1);
 });
 
-test("teams_userBAA", async t => {
-  await setCurrToken(tokenUserBAA);
+test("teams_user_E", async t => {
+  await setCurrToken(tokenUser_E);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.is(teams[0].name, "team_BA");
+  t.is(teams[0].name, "team_Y1");
   t.is(teams.length, 1);
 });
 
-test("teams_delete_userABA", async t => {
+test("teams_delete_user_D", async t => {
   // the teamManager is not allowed to delete the team
-  await setCurrToken(tokenUserABA);
+  await setCurrToken(tokenUser_D);
   try {
     await api.deleteTeam("69882b370d889b84020efd4f");
     t.fail();
@@ -75,9 +74,9 @@ test("teams_delete_userABA", async t => {
   }
 });
 
-test("teams_create_userABA", async t => {
+test("teams_create_user_D", async t => {
   // the teamManager is not allowed to create a new team
-  await setCurrToken(tokenUserABA);
+  await setCurrToken(tokenUser_D);
   try {
     const organizations = await api.getOrganizations();
     const newTeam = {
@@ -94,27 +93,27 @@ test("teams_create_userABA", async t => {
 
 // TaskTypes
 test("taskTypes_userDefault", async t => {
-  await setCurrToken(tokenUserDefault);
+  await setCurrToken(tokenUser_A);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.is(taskTypes[0].description, "Check those cells out!");
   t.is(taskTypes.length, 1);
 });
 
-test("taskTypes_userABA", async t => {
-  await setCurrToken(tokenUserABA);
+test("taskTypes_user_D", async t => {
+  await setCurrToken(tokenUser_D);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.is(taskTypes.length, 0);
 });
 
-test("taskTypes_userBAA", async t => {
-  await setCurrToken(tokenUserBAA);
+test("taskTypes_user_E", async t => {
+  await setCurrToken(tokenUser_E);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.is(taskTypes.length, 0);
 });
 
 // Tasks
-test("tasks_userABA", async t => {
-  await setCurrToken(tokenUserABA);
+test("tasks_user_D", async t => {
+  await setCurrToken(tokenUser_D);
   try {
     await api.getTask("58135c192faeb34c0081c058");
     t.fail();
@@ -124,8 +123,8 @@ test("tasks_userABA", async t => {
   }
 });
 
-test("tasks_userBAA", async t => {
-  await setCurrToken(tokenUserBAA);
+test("tasks_user_E", async t => {
+  await setCurrToken(tokenUser_E);
   try {
     await api.getTask("58135c192faeb34c0081c058");
     t.fail();
@@ -135,8 +134,8 @@ test("tasks_userBAA", async t => {
   }
 });
 
-test("tasks_userAAC", async t => {
-  await setCurrToken(tokenUserAAC);
+test("tasks_user_C", async t => {
+  await setCurrToken(tokenUser_C);
   try {
     // the test is NOT supposed to fail
     await api.getTask("58135c192faeb34c0081c058");
@@ -147,9 +146,9 @@ test("tasks_userAAC", async t => {
 });
 
 // User
-test("user_userAAB", async t => {
+test("user_user_B", async t => {
   // teamMng are not allowed to de-/activate a user (if they are not an admin)
-  await setCurrToken(tokenUserAAB);
+  await setCurrToken(tokenUser_B);
   try {
     const userIdABA = "870b9f4d2a7c0e4d008da6ef";
     const user = await api.getUser(userIdABA);
@@ -163,9 +162,9 @@ test("user_userAAB", async t => {
 });
 
 // Project
-test("project_userAAB", async t => {
+test("project_user_B", async t => {
   // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
-  await setCurrToken(tokenUserBAA);
+  await setCurrToken(tokenUser_E);
   try {
     const projectName = "Test_Project";
     await api.deleteProject(projectName);

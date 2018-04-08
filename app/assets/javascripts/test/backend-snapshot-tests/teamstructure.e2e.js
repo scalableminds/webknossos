@@ -42,19 +42,25 @@ default (UserAAA), User AAB, User AAC, User ABA, User BAA
 test("teams_userDefault", async t => {
   await setCurrToken(tokenUserDefault);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.snapshot(teams[0], { id: "teams_userDefault" });
+  t.is(teams[0].name, "Connectomics department");
+  t.is(teams[1].name, "team_AB");
+  t.is(teams[2].name, "test1");
+  t.is(teams[3].name, "test2");
+  t.is(teams.length, 4);
 });
 
 test("teams_userABA", async t => {
   await setCurrToken(tokenUserABA);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.snapshot(teams[0], { id: "teamsABA" });
+  t.is(teams[0].name, "team_AB");
+  t.is(teams.length, 1);
 });
 
 test("teams_userBAA", async t => {
   await setCurrToken(tokenUserBAA);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
-  t.snapshot(teams[0], { id: "teams_userBAA" });
+  t.is(teams[0].name, "team_BA");
+  t.is(teams.length, 1);
 });
 
 test("teams_delete_userABA", async t => {
@@ -90,19 +96,20 @@ test("teams_create_userABA", async t => {
 test("taskTypes_userDefault", async t => {
   await setCurrToken(tokenUserDefault);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
-  t.snapshot(taskTypes, { id: "taskTypes_userDefault" });
+  t.is(taskTypes[0].description, "Check those cells out!");
+  t.is(taskTypes.length, 1);
 });
 
 test("taskTypes_userABA", async t => {
   await setCurrToken(tokenUserABA);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
-  t.snapshot(taskTypes, { id: "taskTypes_userABA" });
+  t.is(taskTypes.length, 0);
 });
 
 test("taskTypes_userBAA", async t => {
   await setCurrToken(tokenUserBAA);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
-  t.snapshot(taskTypes, { id: "taskTypes_userBAA" });
+  t.is(taskTypes.length, 0);
 });
 
 // Tasks

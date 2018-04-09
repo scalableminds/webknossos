@@ -95,9 +95,11 @@ export class DataBucket {
     window.requestAnimationFrame(() => {
       labelFunc(this.getOrCreateData());
       this.dirty = true;
-      this.trigger("bucketLabeled");
+      this.throttledTriggerLabeled();
     });
   }
+
+  throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
 
   hasData(): boolean {
     return this.data != null;

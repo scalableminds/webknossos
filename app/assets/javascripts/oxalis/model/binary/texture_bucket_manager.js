@@ -231,14 +231,13 @@ export default class TextureBucketManager {
         bucket.off("bucketLabeled", debouncedUpdateBucketData);
       }
     };
-    debouncedUpdateBucketData = _.debounce(updateBucketData, 16);
 
     if (!bucket.hasData()) {
       bucket.on("bucketLoaded", updateBucketData);
     }
-    bucket.on("bucketLabeled", debouncedUpdateBucketData);
+    bucket.on("bucketLabeled", updateBucketData);
     bucket.once("bucketCollected", () => {
-      bucket.off("bucketLabeled", debouncedUpdateBucketData);
+      bucket.off("bucketLabeled", updateBucketData);
       bucket.off("bucketLoaded", updateBucketData);
       this.freeBucket(bucket);
     });

@@ -138,8 +138,8 @@ test("user_user_B", async t => {
   await setCurrToken(tokenUserB);
   t.plan(2);
 
-  const userId_C = "770b9f4d2a7c0e4d008da6ef";
-  const user = await api.getUser(userId_C);
+  const userIdC = "770b9f4d2a7c0e4d008da6ef";
+  const user = await api.getUser(userIdC);
   t.is(user.firstName, "user_C");
   const newUser = Object.assign({}, user, { isActive: false });
   await api.updateUser(newUser).catch(err => {

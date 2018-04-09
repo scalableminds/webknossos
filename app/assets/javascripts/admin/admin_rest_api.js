@@ -61,12 +61,21 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
+export function getSharingToken(): ?string {
+  if (window.location != null) {
+    const params = Utils.getUrlParamsObject();
+    if (params != null && Object.prototype.hasOwnProperty.call(params, "token")) {
+      return ((params.token: any): string);
+    }
+  }
+  return null;
+}
+
 let tokenPromise;
 export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
-  if (window.location.search.match(/\?token=(.+)$/) != null) {
-    const match = window.location.search.match(/\?token=(.+)$/);
-    const token = match[1];
-    return fn(token);
+  const sharingToken = getSharingToken();
+  if (sharingToken != null) {
+    return fn(sharingToken);
   }
   if (!tokenPromise) tokenPromise = requestUserToken();
   return tokenPromise.then(fn).catch(error => {

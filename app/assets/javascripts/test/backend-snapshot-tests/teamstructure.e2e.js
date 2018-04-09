@@ -2,11 +2,11 @@
 /* eslint-disable import/first */
 // @flow
 import {
-  tokenUser_A,
-  tokenUser_B,
-  tokenUser_C,
-  tokenUser_D,
-  tokenUser_E,
+  tokenUserA,
+  tokenUserB,
+  tokenUserC,
+  tokenUserD,
+  tokenUserE,
   setCurrToken,
 } from "../enzyme/e2e-setup";
 import test from "ava";
@@ -39,7 +39,7 @@ user_A, user_B, user_C, user_D, user_E
 
 // Teams
 test("teams_userDefault", async t => {
-  await setCurrToken(tokenUser_A);
+  await setCurrToken(tokenUserA);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
   t.is(teams[0].name, "team_X1");
   t.is(teams[1].name, "team_X2");
@@ -49,14 +49,14 @@ test("teams_userDefault", async t => {
 });
 
 test("teams_user_D", async t => {
-  await setCurrToken(tokenUser_D);
+  await setCurrToken(tokenUserD);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
   t.is(teams[0].name, "team_X2");
   t.is(teams.length, 1);
 });
 
 test("teams_user_E", async t => {
-  await setCurrToken(tokenUser_E);
+  await setCurrToken(tokenUserE);
   const teams = _.sortBy(await api.getTeams(), team => team.name);
   t.is(teams[0].name, "team_Y1");
   t.is(teams.length, 1);
@@ -64,7 +64,7 @@ test("teams_user_E", async t => {
 
 test("teams_delete_user_D", async t => {
   // the teamManager is not allowed to delete the team
-  await setCurrToken(tokenUser_D);
+  await setCurrToken(tokenUserD);
   t.plan(1);
 
   await api.deleteTeam("69882b370d889b84020efd4f").catch(err => {
@@ -74,7 +74,7 @@ test("teams_delete_user_D", async t => {
 
 test("teams_create_user_D", async t => {
   // the teamManager is not allowed to create a new team
-  await setCurrToken(tokenUser_D);
+  await setCurrToken(tokenUserD);
   t.plan(1);
 
   const organizations = await api.getOrganizations();
@@ -89,27 +89,27 @@ test("teams_create_user_D", async t => {
 
 // TaskTypes
 test("taskTypes_userDefault", async t => {
-  await setCurrToken(tokenUser_A);
+  await setCurrToken(tokenUserA);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.is(taskTypes[0].description, "Check those cells out!");
   t.is(taskTypes.length, 1);
 });
 
 test("taskTypes_user_D", async t => {
-  await setCurrToken(tokenUser_D);
+  await setCurrToken(tokenUserD);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.is(taskTypes.length, 0);
 });
 
 test("taskTypes_user_E", async t => {
-  await setCurrToken(tokenUser_E);
+  await setCurrToken(tokenUserE);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.is(taskTypes.length, 0);
 });
 
 // Tasks
 test("tasks_user_D", async t => {
-  await setCurrToken(tokenUser_D);
+  await setCurrToken(tokenUserD);
   t.plan(1);
 
   await api.getTask("58135c192faeb34c0081c058").catch(err => {
@@ -118,7 +118,7 @@ test("tasks_user_D", async t => {
 });
 
 test("tasks_user_E", async t => {
-  await setCurrToken(tokenUser_E);
+  await setCurrToken(tokenUserE);
   t.plan(1);
 
   await api.getTask("58135c192faeb34c0081c058").catch(err => {
@@ -127,7 +127,7 @@ test("tasks_user_E", async t => {
 });
 
 test("tasks_user_C", async t => {
-  await setCurrToken(tokenUser_C);
+  await setCurrToken(tokenUserC);
   const task = await api.getTask("58135c192faeb34c0081c058");
   t.is(task.id, "58135c192faeb34c0081c058");
 });
@@ -135,7 +135,7 @@ test("tasks_user_C", async t => {
 // User
 test("user_user_B", async t => {
   // teamMng are not allowed to de-/activate a user (if they are not an admin)
-  await setCurrToken(tokenUser_B);
+  await setCurrToken(tokenUserB);
   t.plan(2);
 
   const userId_C = "770b9f4d2a7c0e4d008da6ef";
@@ -150,7 +150,7 @@ test("user_user_B", async t => {
 // Project
 test("project_user_B", async t => {
   // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
-  await setCurrToken(tokenUser_E);
+  await setCurrToken(tokenUserE);
   t.plan(1);
 
   const projectName = "Test_Project";

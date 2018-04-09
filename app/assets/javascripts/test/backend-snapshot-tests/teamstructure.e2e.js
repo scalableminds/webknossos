@@ -62,33 +62,29 @@ test("teams_user_E", async t => {
   t.is(teams.length, 1);
 });
 
-test("teams_delete_user_D", async t => {
-  // the teamManager is not allowed to delete the team
+test("teams_delete_user_D", async t => { // the teamManager is not allowed to delete the team
   await setCurrToken(tokenUser_D);
-  try {
-    await api.deleteTeam("69882b370d889b84020efd4f");
-    t.fail();
-  } catch (err) {
-    // the test is supposed to fail => catch is the desired case
-    t.true(true); // not pretty, but "t.ok" seems to not exist
-  }
+  t.plan(1);
+
+  await api.deleteTeam("69882b370d889b84020efd4f")
+    .catch(err => {
+      t.is(err.messages[0].error, 'Access denied.');
+    });
 });
 
-test("teams_create_user_D", async t => {
-  // the teamManager is not allowed to create a new team
+test("teams_create_user_D", async t => { // the teamManager is not allowed to create a new team
   await setCurrToken(tokenUser_D);
-  try {
-    const organizations = await api.getOrganizations();
-    const newTeam = {
-      name: "test-team-name",
-      organization: organizations[0].name,
-    };
-    await api.createTeam(newTeam);
-    t.fail();
-  } catch (err) {
-    // the test is supposed to fail => catch is the desired case
-    t.true(true);
-  }
+  t.plan(1);
+
+  const organizations = await api.getOrganizations();
+  const newTeam = {
+    name: "test-team-name",
+    organization: organizations[0].name,
+  };
+  await api.createTeam(newTeam)
+    .catch(err => {
+      t.is(err.messages[0].error, 'Access denied. Only admin users can execute this operation.');
+    });
 });
 
 // TaskTypes
@@ -114,63 +110,53 @@ test("taskTypes_user_E", async t => {
 // Tasks
 test("tasks_user_D", async t => {
   await setCurrToken(tokenUser_D);
-  try {
-    await api.getTask("58135c192faeb34c0081c058");
-    t.fail();
-  } catch (err) {
-    // the test is supposed to fail => catch is the desired case
-    t.true(true);
-  }
+  t.plan(1);
+
+  await api.getTask("58135c192faeb34c0081c058")
+    .catch(err => {
+      t.is(err.messages[0].error, 'Task couldn\'t be found');
+    });
 });
 
 test("tasks_user_E", async t => {
   await setCurrToken(tokenUser_E);
-  try {
-    await api.getTask("58135c192faeb34c0081c058");
-    t.fail();
-  } catch (err) {
-    // the test is supposed to fail => catch is the desired case
-    t.true(true);
-  }
+  t.plan(1);
+
+  await api.getTask("58135c192faeb34c0081c058")
+    .catch(err => {
+      t.is(err.messages[0].error, 'Task couldn\'t be found');
+    });
 });
 
 test("tasks_user_C", async t => {
   await setCurrToken(tokenUser_C);
-  try {
-    // the test is NOT supposed to fail
-    await api.getTask("58135c192faeb34c0081c058");
-    t.true(true);
-  } catch (err) {
-    t.fail();
-  }
+  const task = await api.getTask("58135c192faeb34c0081c058");
+  t.is(task.id, "58135c192faeb34c0081c058");
 });
 
 // User
-test("user_user_B", async t => {
-  // teamMng are not allowed to de-/activate a user (if they are not an admin)
+test("user_user_B", async t => { // teamMng are not allowed to de-/activate a user (if they are not an admin)
   await setCurrToken(tokenUser_B);
-  try {
-    const userIdABA = "870b9f4d2a7c0e4d008da6ef";
-    const user = await api.getUser(userIdABA);
-    const newUser = Object.assign({}, user, { isActive: false });
-    await api.updateUser(newUser);
-    t.fail();
-  } catch (err) {
-    // the test is supposed to fail => catch is the desired case
-    t.true(true);
-  }
+  t.plan(2);
+
+  const userId_C = "770b9f4d2a7c0e4d008da6ef";
+  const user = await api.getUser(userId_C);
+  t.is(user.firstName, "user_C");
+  const newUser = Object.assign({}, user, { isActive: false });
+  await api.updateUser(newUser)
+    .catch(err => {
+      t.is(err.messages[0].error, 'You are not authorized to view or edit this resource');
+    });
 });
 
 // Project
-test("project_user_B", async t => {
-  // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
+test("project_user_B", async t => { // teamMng are not allowed to delete a project (if they are not an admin and they are not the owner)
   await setCurrToken(tokenUser_E);
-  try {
-    const projectName = "Test_Project";
-    await api.deleteProject(projectName);
-    t.fail();
-  } catch (err) {
-    // the test is supposed to fail => catch is the desired case
-    t.true(true);
-  }
+  t.plan(1);
+
+  const projectName = "Test_Project";
+  await api.deleteProject(projectName)
+    .catch(err => {
+      t.is(err.messages[0].error, 'Project Test_Project couldn\'t be found');
+    });
 });

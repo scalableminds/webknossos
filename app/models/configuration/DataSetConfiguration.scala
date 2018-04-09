@@ -15,6 +15,8 @@ object DataSetConfiguration extends BasicSettings {
 
   implicit val dataSetConfigurationFormat = Json.format[DataSetConfiguration]
 
+  def initialDefault = default
+
   val default = DataSetConfiguration(
     Map(
       "fourBit" -> JsBoolean(false),

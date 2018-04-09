@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.basics.SecuredBaseDAO
 import models.configuration.DataSetConfiguration
 import models.team._
-import models.user.User
+import models.user.{User, UserSQLDAO}
 import net.liftweb.common.Full
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -144,6 +144,14 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     val q = for {row <- Datasets if (notdel(row) && row.name === name)} yield (row.description, row.ispublic)
     for {
       _ <- run(q.update(description, isPublic))
+    } yield ()
+  }
+
+  def updateDefaultConfigurationByName(name: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    for {
+      _ <- run(sqlu"""update webknossos.dataSets
+                      set defaultConfiguration = '#${sanitize(Json.toJson(configuration).toString)}'
+                      where name = ${name}""")
     } yield ()
   }
 

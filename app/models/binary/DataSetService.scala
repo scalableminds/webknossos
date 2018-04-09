@@ -32,17 +32,6 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     findDataSource(name)(GlobalAccessContext).reverse
 
-  def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
-    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map { dataSetBox =>
-      (for {
-        dataSet <- dataSetBox
-        dataSource <- dataSet.dataSource.toUsable
-      } yield {
-        dataSource.center
-      }).getOrElse(Point3D(0, 0, 0))
-    }
-  }
-
   def createDataSet(
                      name: String,
                      dataStore: DataStoreInfo,

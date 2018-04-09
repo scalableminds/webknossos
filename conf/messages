@@ -103,6 +103,7 @@ dataSet.import.failedWithoutError=Import of dataset {0} failed
 dataSet.import.failedWithError=Import of the dataset failed with error: {0}
 dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
 dataSet.import.noLayers=Import failed because no data layers could be found
+dataSet.defaultconfiguration.updated=Dataset default configuration updated
 
 dataSource.notFound=Datasource not found on datastore server
 

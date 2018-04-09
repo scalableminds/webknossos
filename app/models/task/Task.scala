@@ -252,7 +252,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val queries = List(
       sqlu"update webknossos.tasks set isDeleted = true where _id = ${id.id}",
-      sqlu"update webknossos.annotations set isDeleted = true where _task = (select _id from webknossos.tasks where _id = ${id.id})"
+      sqlu"update webknossos.annotations set isDeleted = true where _task = ${id.id}"
     )
     for {
       _ <- assertUpdateAccess(id)
@@ -263,7 +263,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def removeAllWithTaskTypeAndItsAnnotations(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val queries = List(
       sqlu"update webknossos.tasks set isDeleted = true where _taskType = ${taskTypeId.id}",
-      sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _id = ${taskTypeId.id})"
+      sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _taskType = ${taskTypeId.id})"
     )
     for {
       _ <- run(DBIO.sequence(queries).transactionally)
@@ -273,7 +273,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def removeAllWithProjectAndItsAnnotations(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val queries = List(
       sqlu"update webknossos.tasks set isDeleted = true where _project = ${projectId.id}",
-      sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _id = ${projectId.id})"
+      sqlu"update webknossos.annotations set isDeleted = true where _task in (select _id from webknossos.tasks where _project = ${projectId.id})"
     )
     for {
       _ <- run(DBIO.sequence(queries).transactionally)

@@ -253,7 +253,7 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
                                   row.name,
                                   category,
                                   boundingBox,
-                                  resolutions,
+                                  resolutions.sortBy(_.maxDim),
                                   elementClass,
                                   segmentId,
                                   parseArrayTuple(mappings).toSet
@@ -262,7 +262,7 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
                                   row.name,
                                   category,
                                   boundingBox,
-                                  resolutions,
+                                  resolutions.sortBy(_.maxDim),
                                   elementClass
                                 ))
         case _ => Fox.failure("Could not match Dataset Layer")

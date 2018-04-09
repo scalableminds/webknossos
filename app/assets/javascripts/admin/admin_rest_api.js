@@ -62,7 +62,7 @@ function requestUserToken(): Promise<string> {
 }
 
 export function getSharingToken(): ?string {
-  if (window.location != null) {
+  if (location != null) {
     const params = Utils.getUrlParamsObject();
     if (params != null && Object.prototype.hasOwnProperty.call(params, "token")) {
       return ((params.token: any): string);

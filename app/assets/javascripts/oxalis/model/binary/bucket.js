@@ -20,65 +20,6 @@ export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 
 export const BUCKET_SIZE_P = 5;
 
-function median8(dataArray) {
-  return Math.round((dataArray[3] + dataArray[4]) / 2);
-}
-
-function mode(arr) {
-  let currentConsecCount = 0;
-  let currentModeCount = 0;
-  let currentMode = null;
-  let lastEl = null;
-  for (let i = 0; i < 8; i++) {
-    const el = arr[i];
-    if (lastEl === el) {
-      currentConsecCount++;
-      if (currentConsecCount > currentModeCount) {
-        currentModeCount = currentConsecCount;
-        currentMode = el;
-      }
-    } else {
-      currentConsecCount = 1;
-    }
-    lastEl = el;
-  }
-  return currentMode;
-}
-
-let tmp;
-function swap(arr, a, b) {
-  if (arr[a] > arr[b]) {
-    tmp = arr[b];
-    arr[b] = arr[a];
-    arr[a] = tmp;
-  }
-}
-
-function sortArray8(arr) {
-  // This function sorts an array of size 8.
-  // Swap instructions were generated here:
-  // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro
-  swap(arr, 0, 1);
-  swap(arr, 2, 3);
-  swap(arr, 0, 2);
-  swap(arr, 1, 3);
-  swap(arr, 1, 2);
-  swap(arr, 4, 5);
-  swap(arr, 6, 7);
-  swap(arr, 4, 6);
-  swap(arr, 5, 7);
-  swap(arr, 5, 6);
-  swap(arr, 0, 4);
-  swap(arr, 1, 5);
-  swap(arr, 1, 4);
-  swap(arr, 2, 6);
-  swap(arr, 3, 7);
-  swap(arr, 3, 6);
-  swap(arr, 2, 4);
-  swap(arr, 3, 5);
-  swap(arr, 3, 4);
-}
-
 export class DataBucket {
   type: "data" = "data";
   BIT_DEPTH: number;
@@ -293,14 +234,14 @@ export class DataBucket {
                 xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1) * byteOffset + currentByteOffset
               ];
 
-            sortArray8(dataArray);
+            Utils.sortArray8(dataArray);
 
             if (useMode) {
               // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
-              this.data[targetIdx] = mode(dataArray);
+              this.data[targetIdx] = Utils.mode8(dataArray);
             } else {
               // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
-              this.data[targetIdx] = median8(dataArray);
+              this.data[targetIdx] = Utils.median8(dataArray);
             }
           }
         }

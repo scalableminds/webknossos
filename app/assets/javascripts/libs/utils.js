@@ -12,6 +12,15 @@ import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
 
+function swap(arr, a, b) {
+  let tmp;
+  if (arr[a] > arr[b]) {
+    tmp = arr[b];
+    arr[b] = arr[a];
+    arr[a] = tmp;
+  }
+}
+
 const Utils = {
   clamp(a: number, x: number, b: number): number {
     return Math.max(a, Math.min(b, x));
@@ -414,6 +423,58 @@ const Utils = {
       await Utils.sleep(1);
     }
     return deflator.result;
+  },
+
+  median8(dataArray) {
+    // Returns the median of an already *sorted* array of size 8 (e.g., with sortArray8)
+    return Math.round((dataArray[3] + dataArray[4]) / 2);
+  },
+
+  mode8(arr) {
+    // Returns the mode of an already *sorted* array of size 8 (e.g., with sortArray8)
+    let currentConsecCount = 0;
+    let currentModeCount = 0;
+    let currentMode = null;
+    let lastEl = null;
+    for (let i = 0; i < 8; i++) {
+      const el = arr[i];
+      if (lastEl === el) {
+        currentConsecCount++;
+        if (currentConsecCount >= currentModeCount) {
+          currentModeCount = currentConsecCount;
+          currentMode = el;
+        }
+      } else {
+        currentConsecCount = 1;
+      }
+      lastEl = el;
+    }
+    return currentMode;
+  },
+
+  sortArray8(arr) {
+    // This function sorts an array of size 8.
+    // Swap instructions were generated here:
+    // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro
+    swap(arr, 0, 1);
+    swap(arr, 2, 3);
+    swap(arr, 0, 2);
+    swap(arr, 1, 3);
+    swap(arr, 1, 2);
+    swap(arr, 4, 5);
+    swap(arr, 6, 7);
+    swap(arr, 4, 6);
+    swap(arr, 5, 7);
+    swap(arr, 5, 6);
+    swap(arr, 0, 4);
+    swap(arr, 1, 5);
+    swap(arr, 1, 4);
+    swap(arr, 2, 6);
+    swap(arr, 3, 7);
+    swap(arr, 3, 6);
+    swap(arr, 2, 4);
+    swap(arr, 3, 5);
+    swap(arr, 3, 4);
   },
 };
 

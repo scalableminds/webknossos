@@ -1,14 +1,18 @@
 package models.task
 
+import javax.management.relation.Role
+
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
+import models.basics.SecuredBaseDAO
 import models.project.{Project, ProjectDAO, ProjectSQLDAO}
-import models.team.{Role, TeamSQLDAO}
+import models.team.TeamSQLDAO
 import models.user.{Experience, User}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
@@ -17,6 +21,7 @@ import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
+import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
@@ -44,14 +49,13 @@ object TaskSQL {
   def fromTask(t: Task)(implicit ctx: DBAccessContext): Fox[TaskSQL] = {
     for {
       project <- ProjectSQLDAO.findOneByName(t._project)
-      team <- TeamSQLDAO.findOneByName(t.team)
     } yield {
       TaskSQL(
         ObjectId.fromBsonId(t._id),
         project._id,
         t._script.map(ObjectId(_)),
         ObjectId.fromBsonId(t._taskType),
-        team._id,
+        ObjectId.fromBsonId(t._team),
         t.neededExperience,
         t.instances,
         t.tracingTime,
@@ -95,8 +99,14 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
       )
     }
 
-  override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}'))"
-  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}'))"
+  override def readAccessQ(requestingUserId: ObjectId) =
+    s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
+      or ((select _organization from webknossos.teams where webknossos.teams._id = _team)
+        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
+  override def deleteAccessQ(requestingUserId: ObjectId) =
+    s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
+      or ((select _organization from webknossos.teams where webknossos.teams._id = _team)
+        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskSQL] =
     for {
@@ -291,7 +301,7 @@ class info(message: String) extends scala.annotation.StaticAnnotation
 
 case class Task(
                  @info("Reference to task type") _taskType: BSONObjectID,
-                 @info("Assigned name") team: String,
+                 @info("Assigned team ObjectID") _team: BSONObjectID,
                  @info("Required experience") neededExperience: Experience = Experience.empty,
                  @info("Number of total instances") instances: Int = 1,
                  @info("Number of open (=remaining) instances") openInstances: Int = 1,
@@ -309,6 +319,7 @@ case class Task(
                ) extends FoxImplicits {
 
   lazy val id = _id.stringify
+  lazy val team = _team.stringify
 
   def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
@@ -381,14 +392,14 @@ object Task extends FoxImplicits {
     for {
       taskTypeIdBson <- s._taskType.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._taskType.toString)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
+      teamIdBson <- s._team.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
       project <- ProjectSQLDAO.findOne(s._project)(GlobalAccessContext) ?~> Messages("project.notFound", s._project.toString)
       priority = if (project.paused) -1 else project.priority
       openInstances <- TaskSQLDAO.countOpenInstancesForTask(s._id)
     } yield {
       Task(
         taskTypeIdBson,
-        team.name,
+        teamIdBson,
         s.neededExperience,
         s.totalInstances.toInt,
         openInstances,
@@ -413,10 +424,8 @@ object TaskDAO {
   def findOneById(id: String)(implicit ctx: DBAccessContext) =
     for {
       taskSQL <- TaskSQLDAO.findOne(ObjectId(id))
-      parsed <- Task.fromTaskSQL(taskSQL)
-    } yield {
-      parsed
-    }
+      task <- Task.fromTaskSQL(taskSQL)
+    } yield task
 
   def findAllByTaskType(_taskType: BSONObjectID)(implicit ctx: DBAccessContext) =
     for {
@@ -431,10 +440,9 @@ object TaskDAO {
       tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
     } yield tasks
 
-  def findAllAssignableFor(user: User, teamNames: List[String], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
+  def findAllAssignableFor(user: User, teamIds: List[BSONObjectID], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
     for {
-      teams <- Fox.combined(teamNames.map(TeamSQLDAO.findOneByName(_)))
-      tasksSQL <- TaskSQLDAO.findAllAssignableFor(ObjectId.fromBsonId(user._id), teams.map(_._id), limit)
+      tasksSQL <- TaskSQLDAO.findAllAssignableFor(ObjectId.fromBsonId(user._id), teamIds.map(ObjectId.fromBsonId(_)), limit)
       tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
     } yield tasks
   }

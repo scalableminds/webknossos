@@ -1,21 +1,23 @@
 package models.project
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, JsonFormatHelper}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState
+import models.basics.SecuredBaseDAO
 import models.task.{TaskDAO, TaskService}
 import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import play.api.Play.current
-import play.api.data.validation.ValidationError
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
+import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
@@ -39,20 +41,16 @@ case class ProjectSQL(
 
 object ProjectSQL {
   def fromProject(p: Project)(implicit ctx: DBAccessContext) = {
-    for {
-      team <- TeamSQLDAO.findOneByName(p.team)
-    } yield {
-      ProjectSQL(
-        ObjectId.fromBsonId(p._id),
-        team._id,
-        ObjectId.fromBsonId(p._owner),
-        p.name,
-        p.priority,
-        p.paused,
-        p.expectedTime.map(_.toLong),
-        System.currentTimeMillis(),
-        false)
-    }
+    Fox.successful(ProjectSQL(
+      ObjectId.fromBsonId(p._id),
+      ObjectId.fromBsonId(p._team),
+      ObjectId.fromBsonId(p._owner),
+      p.name,
+      p.priority,
+      p.paused,
+      p.expectedTime.map(_.toLong),
+      System.currentTimeMillis(),
+      false))
   }
 }
 
@@ -152,7 +150,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
 
 case class Project(
                     name: String,
-                    team: String,
+                    _team: BSONObjectID,
                     _owner: BSONObjectID,
                     priority: Int,
                     paused: Boolean,
@@ -161,18 +159,17 @@ case class Project(
 
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
-  def isOwnedBy(user: User) = user._id == _owner
+  def isDeletableBy(user: User) = user._id == _owner || user.isAdmin
 
   def id = _id.stringify
 
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
+
+  lazy val team = _team.stringify
 }
 
 object Project extends FoxImplicits {
   implicit val projectFormat = Json.format[Project]
-
-  def StringObjectIdReads(key: String) =
-    Reads.filter[String](ValidationError("objectid.invalid", key))(BSONObjectID.parse(_).isSuccess)
 
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
     for {
@@ -205,23 +202,24 @@ object Project extends FoxImplicits {
 
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[String] and
+      (__ \ 'team).read[String](JsonFormatHelper.StringObjectIdReads("team")) and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Int] and
-      (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
+      (__ \ 'owner).read[String](JsonFormatHelper.StringObjectIdReads("owner"))) (
       (name, team, priority, paused, expectedTime, owner) =>
-        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
+        Project(name, BSONObjectID(team), BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
 
   def fromProjectSQL(s: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Project] = {
     for {
       team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
       ownerBSON <- s._owner.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id)
+      teamIdBson <- team._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
     } yield {
       Project(
         s.name,
-        team.name,
+        teamIdBson,
         ownerBSON,
         s.priority.toInt,
         s.paused,
@@ -233,6 +231,7 @@ object Project extends FoxImplicits {
 }
 
 object ProjectService extends FoxImplicits with LazyLogging {
+
   def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
     val futureFox: Future[Fox[Boolean]] = for {
       removalSuccessBox <- ProjectDAO.remove(project._id).futureBox

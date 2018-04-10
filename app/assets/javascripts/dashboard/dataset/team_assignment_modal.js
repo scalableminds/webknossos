@@ -2,7 +2,7 @@
 import _ from "lodash";
 import * as React from "react";
 import { Modal, Spin, Select } from "antd";
-import Request from "libs/request";
+import { updateDatasetTeams, getEditableTeams } from "admin/admin_rest_api";
 import type { APITeamType } from "admin/api_flow_types";
 import type { DatasetType } from "dashboard/dataset_view";
 
@@ -18,7 +18,7 @@ type Props = {
 type State = {
   teams: Array<APITeamType>,
   isLoading: boolean,
-  selectedTeams: Array<string>,
+  selectedTeams: Array<APITeamType>,
 };
 
 class TeamAssignmentModal extends React.PureComponent<Props, State> {
@@ -33,8 +33,7 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const url = "/api/teams";
-    const teams = await Request.receiveJSON(url);
+    const teams = await getEditableTeams();
     this.setState({
       isLoading: false,
       selectedTeams: this.props.dataset ? this.props.dataset.allowedTeams : [],
@@ -42,9 +41,15 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
     });
   }
 
-  selectTeams = (selectedTeams: Array<string>) => {
+  selectTeams = (selectedTeamIds: Array<string>) => {
     // make sure the owningTeam is always selected
-    const allowedTeams = _.uniq([this.props.dataset.owningTeam, ...selectedTeams]);
+    const uniqueIds = _.uniq([...selectedTeamIds]);
+    const owningTeam = this.state.teams.find(
+      team => team.name === this.props.dataset.owningOrganization,
+    );
+    if (owningTeam) uniqueIds.push(owningTeam.id);
+
+    const allowedTeams = this.state.teams.filter(team => uniqueIds.includes(team.id));
     this.setState({
       selectedTeams: allowedTeams,
     });
@@ -55,10 +60,8 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
       allowedTeams: this.state.selectedTeams,
     });
 
-    const url = `/api/datasets/${this.props.dataset.name}/teams`;
-    Request.sendJSONReceiveJSON(url, {
-      data: updatedDataset.allowedTeams,
-    }).then(() => {
+    const teamIds = updatedDataset.allowedTeams.map(t => t.id);
+    updateDatasetTeams(updatedDataset.name, teamIds).then(() => {
       this.props.onOk(updatedDataset);
     });
   };
@@ -79,13 +82,13 @@ class TeamAssignmentModal extends React.PureComponent<Props, State> {
             placeholder="Select a Team"
             optionFilterProp="children"
             onChange={this.selectTeams}
-            value={this.state.selectedTeams}
+            value={this.state.selectedTeams.map(t => t.id)}
             filterOption={(input, option) =>
               option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
             }
           >
             {this.state.teams.map(team => (
-              <Option key={team.name} value={team.name}>
+              <Option key={team.name} value={team.id}>
                 {team.name}
               </Option>
             ))}

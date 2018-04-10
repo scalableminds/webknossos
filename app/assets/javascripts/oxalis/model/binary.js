@@ -286,6 +286,12 @@ class Binary {
       const topLeftBucket = zoomedAnchorPoint.slice();
       topLeftBucket[w] += Math.floor((renderedBucketsPerDimension - 1) / 2);
 
+      // Todo: By subtracting and adding 1 to the bounds of y and x, we move
+      // one additional bucket on each edge of the viewport to the GPU. This decreases the
+      // chance of showing gray data, when moving the viewport. However, this code does not
+      // check whether we exceed MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION. A priority queue might
+      // be the most elegant way to do this here.
+
       for (let y = scaledTopLeftVector[v] - 1; y <= scaledBottomRightVector[v] + 1; y++) {
         for (let x = scaledTopLeftVector[u] - 1; x <= scaledBottomRightVector[u] + 1; x++) {
           const bucketAddress = ((topLeftBucket.slice(): any): Vector4);

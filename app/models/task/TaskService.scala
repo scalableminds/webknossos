@@ -53,7 +53,7 @@ object TaskService
     .flatMap { users =>
       Fox.serialSequence(users){ user =>
         for{
-          tasks <- TaskAssignmentService.findAllAssignableFor(user, user.teamNames).getOrElse(Nil)
+          tasks <- TaskAssignmentService.findAllAssignableFor(user, user.teamIds).getOrElse(Nil)
           taskCount = tasks.size
           projects <- TaskService.getProjectsFor(tasks)
         } yield (user, (taskCount, projects))

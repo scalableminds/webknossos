@@ -1,21 +1,18 @@
 // @flow
+import _ from "lodash";
 import * as React from "react";
 import { Modal, Button, Radio, Col, Row, Checkbox } from "antd";
 import update from "immutability-helper";
-import { updateUser, getAdminTeams } from "admin/admin_rest_api";
-import type { APIUserType, APIRoleType, APITeamRoleType } from "admin/api_flow_types";
+import { updateUser, getEditableTeams } from "admin/admin_rest_api";
+import messages from "messages";
+import type { APIUserType, APITeamType, APITeamMembershipType } from "admin/api_flow_types";
 
 const RadioButton = Radio.Button;
 const RadioGroup = Radio.Group;
 
 const ROLES = {
-  admin: "admin",
+  teammanager: "teammanager",
   user: "user",
-};
-
-type TeamOptionalRoleType = {
-  +team: string,
-  +role: ?APIRoleType,
 };
 
 type TeamRoleModalPropType = {
@@ -27,19 +24,14 @@ type TeamRoleModalPropType = {
 };
 
 type State = {
-  selectedTeams: Array<TeamOptionalRoleType>,
+  teams: Array<APITeamType>,
+  selectedTeams: { [key: string]: APITeamMembershipType },
 };
-
-/**
- * All team selection in this modal is based on whether their is a role
- * associated with the respective team. In other words, 'selectedTeams' contains
- * all globally available teams, but only those with an attached role are
- * significant. See <APITeamRoleType>
- */
 
 class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State> {
   state = {
-    selectedTeams: [],
+    selectedTeams: {},
+    teams: [],
   };
 
   componentDidMount() {
@@ -48,50 +40,36 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
 
   componentWillReceiveProps(newProps: TeamRoleModalPropType) {
     // If a single user is selected, pre-select his teams
-    // otherwise unselect all teams
-    const newSelectedTeams = this.state.selectedTeams.map(selectedTeam => {
-      let newRole = null;
-
-      if (newProps.selectedUserIds.length === 1) {
-        const user = this.props.users.find(_user => _user.id === newProps.selectedUserIds[0]);
-        if (user) {
-          const userTeam = user.teams.find(_userTeam => selectedTeam.team === _userTeam.team);
-
-          if (userTeam) {
-            newRole = { name: userTeam.role.name };
-          }
-        }
+    if (newProps.selectedUserIds.length === 1) {
+      const user = this.props.users.find(_user => _user.id === newProps.selectedUserIds[0]);
+      if (user) {
+        const newSelectedTeams = _.keyBy(user.teams, "name");
+        this.setState({ selectedTeams: newSelectedTeams });
       }
-
-      return Object.assign({}, selectedTeam, { role: newRole });
-    });
-
-    this.setState({ selectedTeams: newSelectedTeams });
+    }
   }
 
   async fetchData() {
-    const teams = await getAdminTeams();
-    const selectedTeams = teams.map(team => ({
-      team: team.name,
-      role: null,
-    }));
+    const teams = await getEditableTeams();
 
     this.setState({
-      selectedTeams,
+      teams,
     });
   }
 
   setTeams = () => {
-    const newTeams = this.state.selectedTeams.filter(team => team.role != null);
-    // flow does not understand the purpose of .filter()
-    const newerTeams = ((newTeams: any): Array<APITeamRoleType>);
-
     const newUserPromises = this.props.users.map(user => {
       if (this.props.selectedUserIds.includes(user.id)) {
-        const newUser = Object.assign({}, user, { teams: newerTeams });
+        const newTeams = ((Object.values(this.state.selectedTeams): any): Array<
+          APITeamMembershipType,
+        >);
+        const newUser = Object.assign({}, user, { teams: newTeams });
 
         // server-side validation can reject a user's new teams
-        return updateUser(newUser).then(() => Promise.resolve(newUser), () => Promise.reject(user));
+        return updateUser(newUser).then(
+          serverUser => Promise.resolve(serverUser),
+          () => Promise.reject(user),
+        );
       }
       return Promise.resolve(user);
     });
@@ -106,64 +84,74 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
     );
   };
 
-  handleSelectTeamRole(teamName: string, roleName: $Keys<typeof ROLES>) {
-    const newSelectedTeams = this.state.selectedTeams.map(selectedTeam => {
-      if (selectedTeam.team === teamName) {
-        return update(selectedTeam, { role: { $set: { name: roleName } } });
-      }
-      return selectedTeam;
-    });
+  handleSelectTeamRole(teamName: string, isTeamManager: boolean) {
+    const team = this.state.teams.find(t => t.name === teamName);
 
-    this.setState({ selectedTeams: newSelectedTeams });
+    if (team) {
+      const selectedTeam = { id: team.id, name: teamName, isTeamManager };
+      const newSelectedTeams = update(this.state.selectedTeams, {
+        [teamName]: { $set: selectedTeam },
+      });
+
+      this.setState({ selectedTeams: newSelectedTeams });
+    }
   }
 
   handleUnselectTeam(teamName: string) {
-    const newSelectedTeams = this.state.selectedTeams.map(selectedTeam => {
-      if (selectedTeam.team === teamName) {
-        return update(selectedTeam, { role: { $set: null } });
-      }
-      return selectedTeam;
+    const newSelectedTeams = update(this.state.selectedTeams, {
+      $unset: [teamName],
     });
 
     this.setState({ selectedTeams: newSelectedTeams });
   }
 
-  getTeamComponent(team: TeamOptionalRoleType) {
+  getTeamComponent(team: APITeamType) {
     return (
       <Checkbox
-        value={team.team}
-        checked={team.role !== null}
+        value={team.name}
+        checked={_.has(this.state.selectedTeams, team.name)}
         onChange={(event: SyntheticInputEvent<>) => {
           if (event.target.checked) {
-            this.handleSelectTeamRole(team.team, ROLES.user);
+            this.handleSelectTeamRole(team.name, false);
           } else {
-            this.handleUnselectTeam(team.team);
+            this.handleUnselectTeam(team.name);
           }
         }}
       >
-        {team.team}
+        {team.name}
       </Checkbox>
     );
   }
 
-  getRoleComponent(team: TeamOptionalRoleType) {
+  getRoleComponent(team: APITeamType) {
+    const selectedTeam = this.state.selectedTeams[team.name];
+    let selectedValue = null;
+    if (selectedTeam) {
+      selectedValue = selectedTeam.isTeamManager ? ROLES.teammanager : ROLES.user;
+    }
+
     return (
       <RadioGroup
         size="small"
-        value={team.role == null ? null : team.role.name}
         style={{ width: "100%" }}
-        disabled={team.role == null}
-        onChange={({ target: { value } }) => this.handleSelectTeamRole(team.team, value)}
+        value={selectedValue}
+        disabled={!_.has(this.state.selectedTeams, team.name)}
+        onChange={({ target: { value } }) =>
+          this.handleSelectTeamRole(team.name, value === ROLES.teammanager)
+        }
       >
-        <RadioButton value={ROLES.admin}>Admin</RadioButton>
+        <RadioButton value={ROLES.teammanager}>Team Manager</RadioButton>
         <RadioButton value={ROLES.user}>User</RadioButton>
       </RadioGroup>
     );
   }
 
   render() {
-    const teamsRoleComponents = this.state.selectedTeams.map(team => (
-      <Row key={team.team}>
+    const isAdmin = this.props.selectedUserIds.some(userId =>
+      this.props.users.some(u => u.id === userId && u.isAdmin),
+    );
+    const teamsRoleComponents = this.state.teams.map(team => (
+      <Row key={team.id}>
         <Col span={12}>{this.getTeamComponent(team)}</Col>
         <Col span={12}>{this.getRoleComponent(team)}</Col>
       </Row>
@@ -176,22 +164,30 @@ class TeamRoleModalView extends React.PureComponent<TeamRoleModalPropType, State
         onCancel={this.props.onCancel}
         footer={
           <div>
-            <Button onClick={this.setTeams} type="primary">
-              Set Teams
-            </Button>
+            {isAdmin ? null : (
+              <Button onClick={this.setTeams} type="primary">
+                Set Teams
+              </Button>
+            )}
             <Button onClick={() => this.props.onCancel()}>Cancel</Button>
           </div>
         }
       >
-        <Row>
-          <Col span={12}>
-            <h4>Teams</h4>
-          </Col>
-          <Col span={12}>
-            <h4>Role</h4>
-          </Col>
-        </Row>
-        {teamsRoleComponents}
+        {isAdmin ? (
+          <p>{messages["users.is_admin"]}</p>
+        ) : (
+          <div>
+            <Row>
+              <Col span={12}>
+                <h4>Teams</h4>
+              </Col>
+              <Col span={12}>
+                <h4>Role</h4>
+              </Col>
+            </Row>
+            {teamsRoleComponents}
+          </div>
+        )}
       </Modal>
     );
   }

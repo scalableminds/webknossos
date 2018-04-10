@@ -16,6 +16,7 @@
 <PROJECT_ROOT>/node_modules/draft-js/
 <PROJECT_ROOT>/node_modules/documentation/
 <PROJECT_ROOT>/node_modules/immutable/
+<PROJECT_ROOT>/node_modules/webpack-cli/
 
 [options]
 module.ignore_non_literal_requires=true

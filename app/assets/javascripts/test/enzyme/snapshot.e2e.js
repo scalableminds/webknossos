@@ -102,9 +102,11 @@ test("Dashboard", async t => {
 
 test("Users", async t => {
   const userListView = mount(
-    <Router history={browserHistory}>
-      <UserListView />
-    </Router>,
+    <Provider store={Store}>
+      <Router history={browserHistory}>
+        <UserListView />
+      </Router>
+    </Provider>,
   );
   await waitForAllRequests(userListView);
 

@@ -18,7 +18,7 @@ import {
 import {
   getActiveDatasets,
   getProjects,
-  getAdminTeams,
+  getEditableTeams,
   getScripts,
   getTaskTypes,
   getTask,
@@ -121,7 +121,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
     const [datasets, projects, teams, scripts, taskTypes] = await Promise.all([
       getActiveDatasets(),
       getProjects(),
-      getAdminTeams(),
+      getEditableTeams(),
       getScripts(),
       getTaskTypes(),
     ]);
@@ -258,7 +258,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     disabled={isEditingMode}
                   >
                     {this.state.teams.map((team: APITeamType) => (
-                      <Option key={team.id} value={team.name}>
+                      <Option key={team.id} value={team.id}>
                         {team.name}
                       </Option>
                     ))}

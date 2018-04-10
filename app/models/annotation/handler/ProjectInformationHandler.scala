@@ -5,7 +5,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.project.ProjectDAO
 import models.task.TaskDAO
-import models.team.Role
 import models.user.User
 import reactivemongo.bson.BSONObjectID
 
@@ -26,7 +25,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       user <- userOpt ?~> "user.notAuthorised"
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.id), persistTracing=false, user._id,
-        dataSetName, project.team, AnnotationType.CompoundProject, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+        dataSetName, project._team, AnnotationType.CompoundProject, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
   }
 
@@ -36,7 +35,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.flatMap(_.roleInTeam(project.team)).contains(Role.Admin)
+          user.exists(_.isTeamManagerOf(project._team))
       }
     }
 }

@@ -102,7 +102,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def reset(typ: String, id: String) = SecuredAction.async { implicit request =>
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        _ <- ensureTeamAdministration(request.identity, annotation.team)
+        _ <- ensureTeamAdministration(request.identity, annotation._team)
         reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
         json <- reset.toJson(Some(request.identity))
       } yield {
@@ -115,7 +115,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     // Reopening an annotation is allowed if either the user owns the annotation or the user is allowed to administrate
     // the team the annotation belongs to
     def isReopenAllowed(user: User, annotation: Annotation) = {
-       annotation._user == user._id || user.adminTeams.exists(_.team == annotation.team)
+       annotation._user == user._id || user.isTeamManagerOf(annotation._team)
     }
 
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
@@ -195,7 +195,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def annotationsForTask(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.identity, task.team)
+      _ <- ensureTeamAdministration(request.identity, task._team)
       annotations <- task.annotations
       jsons <- Fox.serialSequence(annotations)(_.toJson(Some(request.identity)))
     } yield {
@@ -218,7 +218,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        _ <- ensureTeamAdministration(request.identity, annotation.team)
+        _ <- ensureTeamAdministration(request.identity, annotation._team)
         result <- tryToCancel(annotation)
       } yield result
     }(securedRequestToUserAwareRequest)

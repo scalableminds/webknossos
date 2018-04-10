@@ -24,7 +24,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       users <- UserDAO.findAll
-      filteredUsers = users.filter(user => request.identity.isAdminOf(user))
+      filteredUsers = users.filter(user => request.identity.isTeamManagerOrAdminOf(user)) //rather Admin than TeamManager
       js <- loggedTimeForUserListByMonth(filteredUsers, year, month, startDay, endDay)
     } yield {
       Ok(js)
@@ -35,7 +35,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       users <- Fox.combined(userString.split(",").toList.map(email => UserService.findOneByEmail(email))) ?~> Messages("user.email.invalid")
-      _ <- users.forall(u => request.identity.isAdminOf(u)) ?~> Messages("user.notAuthorised")
+      _ <- users.forall(user => request.identity.isTeamManagerOrAdminOf(user)) ?~> Messages("user.notAuthorised") //rather Admin than TeamManager
       js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
     } yield {
       Ok(js)
@@ -45,8 +45,8 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long) = SecuredAction.async { implicit request =>
     for {
       user <- UserService.findOneById(userId, false) ?~> Messages("user.notFound")
-      _ <- request.identity.isAdminOfOrSelf(user) ?~> Messages("user.notAuthorised")
-      js <- loggedTimeForUserListByTimestamp(user, startDate, endDate)
+      _ <- request.identity.isTeamManagerOrAdminOf(user) ?~> Messages("user.notAuthorised") //rather Admin than TeamManager
+      js <- loggedTimeForUserListByTimestamp(user,startDate, endDate)
     } yield {
       Ok(js)
     }

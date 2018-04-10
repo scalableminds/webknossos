@@ -9,6 +9,7 @@ import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
 import TeamAssignmentModal from "dashboard/dataset/team_assignment_modal";
 import type { DatasetType } from "dashboard/dataset_view";
+import type { APITeamType } from "admin/api_flow_types";
 
 const { Column } = Table;
 
@@ -35,7 +36,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
         <Table
           dataSource={Utils.filterWithSearchQueryOR(
             this.props.datasets,
-            ["name", "owningTeam", "description"],
+            ["name", "owningOrganization", "description"],
             this.props.searchQuery,
           )}
           rowKey="name"
@@ -83,11 +84,11 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             dataIndex="allowedTeams"
             key="allowedTeams"
             width={150}
-            render={(teams: Array<string>, dataset: DatasetType) =>
+            render={(teams: Array<APITeamType>, dataset: DatasetType) =>
               teams.map(team => (
                 <Tag
-                  color={TemplateHelpers.stringToColor(team)}
-                  key={`allowed_teams_${dataset.name}_${team}`}
+                  color={TemplateHelpers.stringToColor(team.name)}
+                  key={`allowed_teams_${dataset.name}_${team.name}`}
                   onClick={() =>
                     this.setState({
                       selectedDataset: dataset,
@@ -95,8 +96,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                     })
                   }
                 >
-                  {team === dataset.owningTeam ? <Icon type="lock" /> : null}
-                  {team}
+                  {team.name}
                 </Tag>
               ))
             }

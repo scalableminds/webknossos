@@ -10,6 +10,7 @@ import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
+import _ from "lodash";
 
 type Props = {
   position: Vector3,

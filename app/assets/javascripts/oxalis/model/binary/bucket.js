@@ -211,7 +211,7 @@ export class DataBucket {
       arr: Uint8Array,
       bytesPerEntry: number,
     ): Uint8Array | Uint16Array | Uint32Array {
-      const uintArrayType = (() => {
+      const UintArrayType = (() => {
         switch (bytesPerEntry) {
           case 1:
             return Uint8Array;
@@ -224,7 +224,7 @@ export class DataBucket {
         }
       })();
 
-      return new uintArrayType(arr.buffer, arr.byteOffset, arr.byteLength / bytesPerEntry);
+      return new UintArrayType(arr.buffer, arr.byteOffset, arr.byteLength / bytesPerEntry);
     }
 
     const thisDataView = reviewUint8Array(this.data, byteOffset);

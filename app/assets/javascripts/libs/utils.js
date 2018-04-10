@@ -425,16 +425,16 @@ const Utils = {
     return deflator.result;
   },
 
-  median8(dataArray) {
+  median8(dataArray: Array<number>): number {
     // Returns the median of an already *sorted* array of size 8 (e.g., with sortArray8)
     return Math.round((dataArray[3] + dataArray[4]) / 2);
   },
 
-  mode8(arr) {
+  mode8(arr: Array<number>): number {
     // Returns the mode of an already *sorted* array of size 8 (e.g., with sortArray8)
     let currentConsecCount = 0;
     let currentModeCount = 0;
-    let currentMode = null;
+    let currentMode = -1;
     let lastEl = null;
     for (let i = 0; i < 8; i++) {
       const el = arr[i];
@@ -452,7 +452,7 @@ const Utils = {
     return currentMode;
   },
 
-  sortArray8(arr) {
+  sortArray8(arr: Array<number>): void {
     // This function sorts an array of size 8.
     // Swap instructions were generated here:
     // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro

@@ -20,65 +20,6 @@ export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 
 export const BUCKET_SIZE_P = 5;
 
-function median8(dataArray) {
-  return Math.round((dataArray[3] + dataArray[4]) / 2);
-}
-
-function mode(arr) {
-  let currentConsecCount = 0;
-  let currentModeCount = 0;
-  let currentMode = null;
-  let lastEl = null;
-  for (let i = 0; i < 8; i++) {
-    const el = arr[i];
-    if (lastEl === el) {
-      currentConsecCount++;
-      if (currentConsecCount > currentModeCount) {
-        currentModeCount = currentConsecCount;
-        currentMode = el;
-      }
-    } else {
-      currentConsecCount = 1;
-    }
-    lastEl = el;
-  }
-  return currentMode;
-}
-
-let tmp;
-function swap(arr, a, b) {
-  if (arr[a] > arr[b]) {
-    tmp = arr[b];
-    arr[b] = arr[a];
-    arr[a] = tmp;
-  }
-}
-
-function sortArray8(arr) {
-  // This function sorts an array of size 8.
-  // Swap instructions were generated here:
-  // http://jgamble.ripco.net/cgi-bin/nw.cgi?inputs=8&algorithm=best&output=macro
-  swap(arr, 0, 1);
-  swap(arr, 2, 3);
-  swap(arr, 0, 2);
-  swap(arr, 1, 3);
-  swap(arr, 1, 2);
-  swap(arr, 4, 5);
-  swap(arr, 6, 7);
-  swap(arr, 4, 6);
-  swap(arr, 5, 7);
-  swap(arr, 5, 6);
-  swap(arr, 0, 4);
-  swap(arr, 1, 5);
-  swap(arr, 1, 4);
-  swap(arr, 2, 6);
-  swap(arr, 3, 7);
-  swap(arr, 3, 6);
-  swap(arr, 2, 4);
-  swap(arr, 3, 5);
-  swap(arr, 3, 4);
-}
-
 export class DataBucket {
   type: "data" = "data";
   BIT_DEPTH: number;
@@ -154,9 +95,11 @@ export class DataBucket {
     window.requestAnimationFrame(() => {
       labelFunc(this.getOrCreateData());
       this.dirty = true;
-      this.trigger("bucketLabeled");
+      this.throttledTriggerLabeled();
     });
   }
+
+  throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);
 
   hasData(): boolean {
     return this.data != null;
@@ -262,46 +205,56 @@ export class DataBucket {
     }
 
     const xyzToIdx = (x, y, z) => 32 * 32 * z + 32 * y + x;
+    const byteOffset = this.BYTE_OFFSET;
+
+    function reviewUint8Array(
+      arr: Uint8Array,
+      bytesPerEntry: number,
+    ): Uint8Array | Uint16Array | Uint32Array {
+      const UintArrayType = (() => {
+        switch (bytesPerEntry) {
+          case 1:
+            return Uint8Array;
+          case 2:
+            return Uint16Array;
+          case 4:
+            return Uint32Array;
+          default:
+            throw new Error("Unhandled byte count");
+        }
+      })();
+
+      return new UintArrayType(arr.buffer, arr.byteOffset, arr.byteLength / bytesPerEntry);
+    }
+
+    const thisDataView = reviewUint8Array(this.data, byteOffset);
+    const bucketDataView = reviewUint8Array(bucket.getData(), byteOffset);
 
     const dataArray = [0, 0, 0, 0, 0, 0, 0, 0];
-    const byteOffset = this.BYTE_OFFSET;
 
     for (let z = 0; z < halfBucketWidth; z++) {
       for (let y = 0; y < halfBucketWidth; y++) {
         for (let x = 0; x < halfBucketWidth; x++) {
           const linearizedIndex = xyzToIdx(x + xOffset, y + yOffset, z + zOffset);
-          for (let currentByteOffset = 0; currentByteOffset < byteOffset; currentByteOffset++) {
-            const targetIdx = linearizedIndex * byteOffset + currentByteOffset;
-            const bucketData = bucket.getData();
+          const targetIdx = linearizedIndex;
 
-            dataArray[0] =
-              bucketData[xyzToIdx(2 * x, 2 * y, 2 * z) * byteOffset + currentByteOffset];
-            dataArray[1] =
-              bucketData[xyzToIdx(2 * x + 1, 2 * y, 2 * z) * byteOffset + currentByteOffset];
-            dataArray[2] =
-              bucketData[xyzToIdx(2 * x, 2 * y + 1, 2 * z) * byteOffset + currentByteOffset];
-            dataArray[3] =
-              bucketData[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z) * byteOffset + currentByteOffset];
-            dataArray[4] =
-              bucketData[xyzToIdx(2 * x, 2 * y, 2 * z + 1) * byteOffset + currentByteOffset];
-            dataArray[5] =
-              bucketData[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1) * byteOffset + currentByteOffset];
-            dataArray[6] =
-              bucketData[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1) * byteOffset + currentByteOffset];
-            dataArray[7] =
-              bucketData[
-                xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1) * byteOffset + currentByteOffset
-              ];
+          dataArray[0] = bucketDataView[xyzToIdx(2 * x, 2 * y, 2 * z)];
+          dataArray[1] = bucketDataView[xyzToIdx(2 * x + 1, 2 * y, 2 * z)];
+          dataArray[2] = bucketDataView[xyzToIdx(2 * x, 2 * y + 1, 2 * z)];
+          dataArray[3] = bucketDataView[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z)];
+          dataArray[4] = bucketDataView[xyzToIdx(2 * x, 2 * y, 2 * z + 1)];
+          dataArray[5] = bucketDataView[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1)];
+          dataArray[6] = bucketDataView[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1)];
+          dataArray[7] = bucketDataView[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1)];
 
-            sortArray8(dataArray);
+          Utils.sortArray8(dataArray);
 
-            if (useMode) {
-              // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
-              this.data[targetIdx] = mode(dataArray);
-            } else {
-              // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
-              this.data[targetIdx] = median8(dataArray);
-            }
+          if (useMode) {
+            // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
+            thisDataView[targetIdx] = Utils.mode8(dataArray);
+          } else {
+            // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
+            thisDataView[targetIdx] = Utils.median8(dataArray);
           }
         }
       }

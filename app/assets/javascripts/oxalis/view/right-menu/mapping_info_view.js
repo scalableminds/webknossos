@@ -30,9 +30,9 @@ class MappingInfoView extends Component<Props> {
     cube.off("newMapping", this._forceUpdate);
   }
 
-  _forceUpdate = () => {
+  _forceUpdate = _.throttle(() => {
     this.forceUpdate();
-  };
+  }, 100);
 
   getCube(): Cube {
     return Model.getSegmentationBinary().cube;

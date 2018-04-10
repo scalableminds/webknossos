@@ -205,46 +205,56 @@ export class DataBucket {
     }
 
     const xyzToIdx = (x, y, z) => 32 * 32 * z + 32 * y + x;
+    const byteOffset = this.BYTE_OFFSET;
+
+    function reviewUint8Array(
+      arr: Uint8Array,
+      bytesPerEntry: number,
+    ): Uint8Array | Uint16Array | Uint32Array {
+      const uintArrayType = (() => {
+        switch (bytesPerEntry) {
+          case 1:
+            return Uint8Array;
+          case 2:
+            return Uint16Array;
+          case 4:
+            return Uint32Array;
+          default:
+            throw new Error("Unhandled byte count");
+        }
+      })();
+
+      return new uintArrayType(arr.buffer, arr.byteOffset, arr.byteLength / bytesPerEntry);
+    }
+
+    const thisDataView = reviewUint8Array(this.data, byteOffset);
+    const bucketDataView = reviewUint8Array(bucket.getData(), byteOffset);
 
     const dataArray = [0, 0, 0, 0, 0, 0, 0, 0];
-    const byteOffset = this.BYTE_OFFSET;
 
     for (let z = 0; z < halfBucketWidth; z++) {
       for (let y = 0; y < halfBucketWidth; y++) {
         for (let x = 0; x < halfBucketWidth; x++) {
           const linearizedIndex = xyzToIdx(x + xOffset, y + yOffset, z + zOffset);
-          for (let currentByteOffset = 0; currentByteOffset < byteOffset; currentByteOffset++) {
-            const targetIdx = linearizedIndex * byteOffset + currentByteOffset;
-            const bucketData = bucket.getData();
+          const targetIdx = linearizedIndex;
 
-            dataArray[0] =
-              bucketData[xyzToIdx(2 * x, 2 * y, 2 * z) * byteOffset + currentByteOffset];
-            dataArray[1] =
-              bucketData[xyzToIdx(2 * x + 1, 2 * y, 2 * z) * byteOffset + currentByteOffset];
-            dataArray[2] =
-              bucketData[xyzToIdx(2 * x, 2 * y + 1, 2 * z) * byteOffset + currentByteOffset];
-            dataArray[3] =
-              bucketData[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z) * byteOffset + currentByteOffset];
-            dataArray[4] =
-              bucketData[xyzToIdx(2 * x, 2 * y, 2 * z + 1) * byteOffset + currentByteOffset];
-            dataArray[5] =
-              bucketData[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1) * byteOffset + currentByteOffset];
-            dataArray[6] =
-              bucketData[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1) * byteOffset + currentByteOffset];
-            dataArray[7] =
-              bucketData[
-                xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1) * byteOffset + currentByteOffset
-              ];
+          dataArray[0] = bucketDataView[xyzToIdx(2 * x, 2 * y, 2 * z)];
+          dataArray[1] = bucketDataView[xyzToIdx(2 * x + 1, 2 * y, 2 * z)];
+          dataArray[2] = bucketDataView[xyzToIdx(2 * x, 2 * y + 1, 2 * z)];
+          dataArray[3] = bucketDataView[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z)];
+          dataArray[4] = bucketDataView[xyzToIdx(2 * x, 2 * y, 2 * z + 1)];
+          dataArray[5] = bucketDataView[xyzToIdx(2 * x + 1, 2 * y, 2 * z + 1)];
+          dataArray[6] = bucketDataView[xyzToIdx(2 * x, 2 * y + 1, 2 * z + 1)];
+          dataArray[7] = bucketDataView[xyzToIdx(2 * x + 1, 2 * y + 1, 2 * z + 1)];
 
-            Utils.sortArray8(dataArray);
+          Utils.sortArray8(dataArray);
 
-            if (useMode) {
-              // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
-              this.data[targetIdx] = Utils.mode8(dataArray);
-            } else {
-              // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
-              this.data[targetIdx] = Utils.median8(dataArray);
-            }
+          if (useMode) {
+            // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
+            thisDataView[targetIdx] = Utils.mode8(dataArray);
+          } else {
+            // $FlowFixMe Despite having ensured that this.data is initialized properly, flow is pessimistic.
+            thisDataView[targetIdx] = Utils.median8(dataArray);
           }
         }
       }

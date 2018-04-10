@@ -47,6 +47,7 @@ type SetDatasetAction = { type: "SET_DATASET", dataset: APIDatasetType };
 type SetViewModeActionType = { type: "SET_VIEW_MODE", viewMode: ModeType };
 type SetFlightmodeRecordingActionType = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeActionType = { type: "SET_CONTROL_MODE", controlMode: ControlModeType };
+type SetMappingEnabledActionType = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
 export type SettingActionType =
   | UpdateUserSettingActionType
   | UpdateDatasetSettingActionType
@@ -57,7 +58,8 @@ export type SettingActionType =
   | SetDatasetAction
   | SetViewModeActionType
   | SetFlightmodeRecordingActionType
-  | SetControlModeActionType;
+  | SetControlModeActionType
+  | SetMappingEnabledActionType;
 
 export const updateUserSettingAction = (
   propertyName: $Keys<UserConfigurationType>,
@@ -131,4 +133,11 @@ export const setFlightmodeRecordingAction = (value: boolean): SetFlightmodeRecor
 export const setControlModeAction = (controlMode: ControlModeType): SetControlModeActionType => ({
   type: "SET_CONTROL_MODE",
   controlMode,
+});
+
+export const setMappingEnabledAction = (
+  isMappingEnabled: boolean,
+): SetMappingEnabledActionType => ({
+  type: "SET_MAPPING_ENABLED",
+  isMappingEnabled,
 });

@@ -14,8 +14,8 @@ import type {
   ElementClassType,
   BoundingBoxObjectType,
   DataLayerType,
-  MappingType,
 } from "oxalis/store";
+import type { APIMappingType } from "admin/api_flow_types";
 import type { DataBucket } from "oxalis/model/binary/bucket";
 
 export type BucketRequestOptions = {
@@ -38,7 +38,7 @@ class Layer {
   elementClass: ElementClassType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  mappings: Array<MappingType>;
+  mappings: Array<APIMappingType>;
   boundingBox: BoundingBoxObjectType;
   resolutions: Array<Vector3>;
 

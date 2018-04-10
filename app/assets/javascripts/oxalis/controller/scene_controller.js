@@ -310,6 +310,13 @@ class SceneController {
     this.pingBinarySeg = alpha !== 0;
   }
 
+  setIsMappingEnabled(isMappingEnabled: boolean): void {
+    for (const plane of _.values(this.planes)) {
+      plane.setIsMappingEnabled(isMappingEnabled);
+    }
+    app.vent.trigger("rerender");
+  }
+
   pingDataLayer(dataLayerName: string): boolean {
     if (Model.binary[dataLayerName].category === "color") {
       return this.pingBinary;
@@ -372,6 +379,11 @@ class SceneController {
     listenToStoreProperty(
       storeState => storeState.tracing.boundingBox,
       bb => this.buildTaskingBoundingBox(bb),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.isMappingEnabled,
+      isMappingEnabled => this.setIsMappingEnabled(isMappingEnabled),
     );
   }
 }

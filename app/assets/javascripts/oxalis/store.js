@@ -44,6 +44,7 @@ import type {
   APIScriptType,
   APITaskType,
   APIUserType,
+  APIMappingType,
 } from "admin/api_flow_types";
 
 export type CommentType = {
@@ -97,12 +98,6 @@ export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
-export type MappingType = {
-  +parent?: string,
-  +name: string,
-  +classes?: Array<Array<number>>,
-};
-
 export type VolumeCellType = {
   +id: number,
 };
@@ -118,7 +113,7 @@ export type DataLayerType = {
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<Vector3>,
   +elementClass: ElementClassType,
-  +mappings?: Array<MappingType>,
+  +mappings?: Array<APIMappingType>,
 };
 
 export type SegmentationDataLayerType = DataLayerType & {
@@ -257,6 +252,7 @@ export type TemporaryConfigurationType = {
   +controlMode: ControlModeType,
   +brushPosition: ?Vector2,
   +brushSize: number,
+  +isMappingEnabled: boolean,
 };
 
 export type ScriptType = APIScriptType;
@@ -373,6 +369,7 @@ export const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     brushPosition: null,
     brushSize: 50,
+    isMappingEnabled: false,
   },
   task: null,
   dataset: {

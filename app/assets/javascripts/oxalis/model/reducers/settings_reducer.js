@@ -104,6 +104,11 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
         temporaryConfiguration: { isMappingEnabled: { $set: action.isMappingEnabled } },
       });
     }
+    case "SET_MAPPING_SIZE": {
+      return update(state, {
+        temporaryConfiguration: { mappingSize: { $set: action.mappingSize } },
+      });
+    }
     default:
     // pass;
   }

@@ -87,6 +87,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "b",
         value: false,
       },
+      mappingSize: {
+        type: "f",
+        value: 0,
+      },
     });
 
     for (const name of Object.keys(Model.binary)) {
@@ -196,6 +200,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         this.uniforms.zoomValue.value = zoomStep;
       },
     );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.mappingSize,
+      mappingSize => {
+        this.uniforms.mappingSize.value = mappingSize;
+      },
+    );
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
@@ -232,6 +243,7 @@ uniform sampler2D <%= segmentationName %>_textures[textureCountPerLayer];
 uniform float <%= segmentationName %>_maxZoomStep;
 
 uniform bool isMappingEnabled;
+uniform float mappingSize;
 uniform sampler2D <%= segmentationName %>_mapping_texture;
 uniform sampler2D <%= segmentationName %>_mapping_lookup_texture;
 <% } %>
@@ -541,9 +553,10 @@ float vec4ToFloat(vec4 v) {
   return v.r + v.g * pow(2.0, 8.0) + v.b * pow(2.0, 16.0) + v.a * pow(2.0, 24.0);
 }
 
-float binarySearchIndex(sampler2D texture, float value) {
+float binarySearchIndex(sampler2D texture, float maxIndex, float value) {
   float low = 0.0;
-  float high = 16777216.0 - 1.0;
+  float high = maxIndex - 1.0;
+  // maxIndex is at most 2**24, requiring a maximum of 25 loop passes
   for (float i = 0.0; i < 25.0; i++) {
     float mid = floor((low + high) / 2.0);
     float cur = vec4ToFloat(getRgbaAtIndex(texture, 4096.0, mid).rgba);
@@ -589,7 +602,7 @@ void main() {
     float id = vec4ToFloat(volume_color);
 
     if (isMappingEnabled) {
-      float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, id);
+      float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
       if (index != -1.0) {
         id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, 4096.0, index).rgba);
       }

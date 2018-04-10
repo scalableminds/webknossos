@@ -256,6 +256,7 @@ export type TemporaryConfigurationType = {
   +brushPosition: ?Vector2,
   +brushSize: number,
   +isMappingEnabled: boolean,
+  +mappingSize: number,
 };
 
 export type ScriptType = APIScriptType;
@@ -373,6 +374,7 @@ export const defaultState: OxalisState = {
     brushPosition: null,
     brushSize: 50,
     isMappingEnabled: false,
+    mappingSize: 0,
   },
   task: null,
   dataset: {

@@ -30,9 +30,13 @@ import { DataBucket } from "oxalis/model/binary/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
 import UpdatableTexture from "libs/UpdatableTexture";
-import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
+import {
+  setMappingEnabledAction,
+  setMappingSizeAction,
+} from "oxalis/model/actions/settings_actions";
 import { getAreas } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import messages from "messages";
 
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -191,6 +195,11 @@ class Binary {
     console.timeEnd("Time to convert to Uint8Arrays");
     console.timeEnd("Time to create mapping texture");
 
+    const mappingSize = keys.length;
+    if (mappingSize > MAPPING_TEXTURE_WIDTH * MAPPING_TEXTURE_WIDTH) {
+      throw new Error(messages["mapping.too_big"]);
+    }
+
     this.mappingLookupTexture.update(
       uint8KeysPadded,
       0,
@@ -207,6 +216,7 @@ class Binary {
     );
 
     Store.dispatch(setMappingEnabledAction(true));
+    Store.dispatch(setMappingSizeAction(mappingSize));
   }
 
   getMappingTextures() {

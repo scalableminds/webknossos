@@ -342,7 +342,7 @@ case class User(
   lazy val teamManagerTeamIds = teamManagerTeams.map(_._id)
 
   def isTeamManagerOf(_team: BSONObjectID) = {
-    val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 50 millis).openOrThrowException("Keep the teamManager Query synchronous")
+    val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 500 millis).openOrThrowException("Keep the teamManager Query synchronous")
     teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
   }
 

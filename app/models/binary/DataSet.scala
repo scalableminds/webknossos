@@ -244,22 +244,22 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
-          Fox.successful(AbstractSegmentationLayer(
-            row.name,
-            category,
-            boundingBox,
-            resolutions,
-            elementClass,
-            segmentId,
-            parseArrayTuple(mappings).toSet
-          ))
+                                  Fox.successful(AbstractSegmentationLayer(
+                                  row.name,
+                                  category,
+                                  boundingBox,
+                                  resolutions.sortBy(_.maxDim),
+                                  elementClass,
+                                  segmentId,
+                                  parseArrayTuple(mappings).toSet
+                                ))
         case (None, None) => Fox.successful(AbstractDataLayer(
-          row.name,
-          category,
-          boundingBox,
-          resolutions,
-          elementClass
-        ))
+                                  row.name,
+                                  category,
+                                  boundingBox,
+                                  resolutions.sortBy(_.maxDim),
+                                  elementClass
+                                ))
         case _ => Fox.failure("Could not match Dataset Layer")
       }
     }

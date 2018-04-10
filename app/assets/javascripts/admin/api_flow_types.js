@@ -35,7 +35,6 @@ export type APIDatasetType = {
   +name: string,
   +owningTeam: "Connectomics department",
   +sourceType: "wkw" | "knossos",
-  +sharingLink: string,
 };
 
 export type APIRoleType = { +name: string };

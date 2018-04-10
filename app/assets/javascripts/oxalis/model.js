@@ -474,8 +474,12 @@ export class OxalisModel {
     return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;
   }
 
-  canDisplaySegmentationData(): boolean {
-    return getIntegerZoomStep(Store.getState()) <= 1;
+  cantDisplaySegmentationData(): boolean {
+    return getIntegerZoomStep(Store.getState()) > 1;
+  }
+
+  displaysUnsampledVolumeData(): boolean {
+    return getIntegerZoomStep(Store.getState()) === 1;
   }
 
   computeBoundaries() {

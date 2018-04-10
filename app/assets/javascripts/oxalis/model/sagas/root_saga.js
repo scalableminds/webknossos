@@ -54,16 +54,24 @@ ${err} ${err.stack}`);
 
 function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
   const warnMaybe = function* warnMaybe() {
-    const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
-    if (shouldWarn) {
+    const shouldWarn = Model.shouldDisplaySegmentationData();
+
+    if (shouldWarn && Model.cantDisplaySegmentationData()) {
       const isVolumeTracing = yield select(state => state.tracing.type === "volume");
-      if (isVolumeTracing) {
-        Toast.message("error", messages["tracing.segmentation_zoom_warning"], true);
-      } else {
-        Toast.message("info", messages["tracing.segmentation_zoom_warning"], false, 3000);
-      }
-    } else if (!shouldWarn) {
+      Toast.message(
+        "error",
+        messages["tracing.segmentation_zoom_warning"],
+        isVolumeTracing,
+        isVolumeTracing ? 6000 : 3000,
+      );
+    } else {
       Toast.close(messages["tracing.segmentation_zoom_warning"]);
+    }
+
+    if (shouldWarn && Model.displaysUnsampledVolumeData()) {
+      Toast.message("warning", messages["tracing.segmentation_downsampled_data_warning"], true);
+    } else {
+      Toast.close(messages["tracing.segmentation_downsampled_data_warning"]);
     }
   };
 

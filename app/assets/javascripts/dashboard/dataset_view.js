@@ -14,6 +14,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { DataLayerType } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
 
 const { Search } = Input;
 
@@ -99,6 +100,14 @@ class DatasetView extends React.PureComponent<Props, State> {
     this.setState({ searchQuery: event.target.value });
   };
 
+  handleCheckDatasets = async (): Promise<void> => {
+    if (this.state.isLoading) return;
+    this.setState({ isLoading: true });
+    const datastores = await getDatastores();
+    await Promise.all(datastores.map(datastore => triggerDatasetCheck(datastore.url)));
+    await this.fetchData();
+  };
+
   updateDataset = (newDataset: DatasetType) => {
     const newDatasets = this.state.datasets.map((dataset: DatasetType) => {
       if (dataset.name === newDataset.name) {
@@ -142,6 +151,13 @@ class DatasetView extends React.PureComponent<Props, State> {
 
     const adminHeader = Utils.isUserAdmin(this.props.user) ? (
       <div className="pull-right">
+        <Button
+          icon={this.state.isLoading ? "loading" : "reload"}
+          style={margin}
+          onClick={this.handleCheckDatasets}
+        >
+          Refresh
+        </Button>
         <Link to="/datasets/upload" style={margin}>
           <Button type="primary" icon="plus">
             Upload Dataset

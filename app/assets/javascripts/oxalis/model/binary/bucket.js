@@ -96,13 +96,16 @@ export class DataBucket {
   trigger: Function;
   on: Function;
   off: Function;
+  once: Function;
 
   // For downsampled buckets, "dependentBucketListenerSet" stores the
   // buckets to which a listener is already attached
-  dependentBucketListenerSet: Set<Bucket>;
+  dependentBucketListenerSet: WeakSet<Bucket> = new WeakSet();
+  // We cannot use dependentBucketListenerSet.length for that, since WeakSets don't hold that information
+  dependentCounter: number = 0;
   // For downsampled buckets, "isDirtyDueToDependent" stores the buckets
   // due to which the current bucket is dirty and need new downsampling
-  isDirtyDueToDependent: Set<Bucket>;
+  isDirtyDueToDependent: WeakSet<Bucket> = new WeakSet();
   isDownSampled: boolean;
 
   constructor(
@@ -124,12 +127,10 @@ export class DataBucket {
     this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
-    this.dependentBucketListenerSet = new Set();
-    this.isDirtyDueToDependent = new Set();
   }
 
   shouldCollect(): boolean {
-    if (this.isDownSampled) {
+    if (this.dependentCounter > 0) {
       return false;
     }
     const collect = !this.accessed && !this.dirty && this.state !== BucketStateEnum.REQUESTED;
@@ -231,7 +232,7 @@ export class DataBucket {
 
   downsampleFromLowerBucket(bucket: DataBucket, useMode: boolean): void {
     if (!this.dependentBucketListenerSet.has(bucket)) {
-      bucket.on("bucketLabeled", () => {
+      const bucketLabeledHandler = () => {
         this.isDirtyDueToDependent.add(bucket);
         window.requestAnimationFrame(() => {
           if (this.isDirtyDueToDependent.has(bucket)) {
@@ -239,8 +240,15 @@ export class DataBucket {
             this.isDirtyDueToDependent.delete(bucket);
           }
         });
+      };
+      bucket.on("bucketLabeled", bucketLabeledHandler);
+      bucket.once("bucketCollected", () => {
+        bucket.off("bucketLabeled", bucketLabeledHandler);
+        this.dependentBucketListenerSet.delete(bucket);
+        this.dependentCounter--;
       });
       this.dependentBucketListenerSet.add(bucket);
+      this.dependentCounter++;
     }
     this.isDownSampled = true;
 

@@ -6,9 +6,11 @@
 import _ from "lodash";
 import Dimensions from "oxalis/model/dimensions";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
-import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import type DataCube from "oxalis/model/binary/data_cube";
-import type { Vector3, OrthoViewType } from "oxalis/constants";
+import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
@@ -74,6 +76,7 @@ export class PingStrategy extends AbstractPingStrategy {
     direction: Vector3,
     currentZoomStep: number,
     activePlane: OrthoViewType,
+    areas: OrthoViewMapType<AreaType>,
   ): Array<PullQueueItemType> {
     const zoomStep = Math.min(currentZoomStep, this.cube.MAX_UNSAMPLED_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
@@ -84,6 +87,7 @@ export class PingStrategy extends AbstractPingStrategy {
       zoomStep,
       zoomStepDiff,
       activePlane,
+      areas,
     );
 
     let queueItemsForFallbackZoomStep = [];
@@ -95,6 +99,7 @@ export class PingStrategy extends AbstractPingStrategy {
         fallbackZoomStep,
         zoomStepDiff - 1,
         activePlane,
+        areas,
       );
     }
 
@@ -107,6 +112,7 @@ export class PingStrategy extends AbstractPingStrategy {
     zoomStep: number,
     zoomStepDiff: number,
     activePlane: OrthoViewType,
+    areas: OrthoViewMapType<AreaType>,
   ): Array<PullQueueItemType> {
     const pullQueue = [];
 
@@ -114,17 +120,30 @@ export class PingStrategy extends AbstractPingStrategy {
       return pullQueue;
     }
 
-    for (const plane of OrthoViewValuesWithoutTDView) {
-      const indices = Dimensions.getIndices(plane);
-      this.u = indices[0];
-      this.v = indices[1];
-      this.w = indices[2];
+    const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
+    const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
 
-      // todo: use resolutions
-      const width = constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION * Math.pow(2, zoomStepDiff);
-      const height = constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION * Math.pow(2, zoomStepDiff);
-      const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
-      const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
+    for (const plane of OrthoViewValuesWithoutTDView) {
+      const [u, v, w] = Dimensions.getIndices(plane);
+      this.u = u;
+      this.v = v;
+      this.w = w;
+
+      // areas holds bucket indices for zoomStep = 0, which we want to
+      // convert to the desired zoomStep
+      const widthHeightVector = [0, 0, 0, 0];
+      widthHeightVector[u] = areas[plane].right - areas[plane].left;
+      widthHeightVector[v] = areas[plane].bottom - areas[plane].top;
+
+      const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
+        widthHeightVector,
+        this.cube.layer.resolutions,
+        zoomStep,
+      );
+
+      const width = scaledWidthHeightVector[u];
+      const height = scaledWidthHeightVector[v];
+
       const bucketPositions = this.getBucketPositions(centerBucket3, width, height);
 
       for (const bucket of bucketPositions) {

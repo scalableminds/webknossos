@@ -1,11 +1,10 @@
 // @flow
-import type { Vector3, OrthoViewType, BoundingBoxType } from "oxalis/constants";
+import type { Vector3, OrthoViewType, BoundingBoxType, OrthoViewMapType } from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
 import * as scaleInfo from "oxalis/model/scaleinfo";
-import _ from "lodash";
 import Utils from "libs/utils";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
@@ -118,21 +117,35 @@ export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
   return { min, max };
 }
 
-export function getTexturePosition(
-  state: OxalisState,
-  planeId: OrthoViewType,
-  resolutions: Array<Vector3>,
-): Vector3 {
-  const texturePosition = _.clone(getPosition(state.flycam));
-  // As the Model does not render textures for exact positions, the last 5 bits of
-  // the X and Y coordinates for each texture have to be set to 0
-  const [u, v] = Dimensions.getIndices(planeId);
-  const logZoomStep = getRequestLogZoomStep(state);
-  const resolution = resolutions[logZoomStep];
-  const uMultiplier = constants.BUCKET_WIDTH * resolution[u];
-  const vMultiplier = constants.BUCKET_WIDTH * resolution[v];
-  texturePosition[u] = Math.floor(texturePosition[u] / uMultiplier) * uMultiplier;
-  texturePosition[v] = Math.floor(texturePosition[v] / vMultiplier) * vMultiplier;
+export type AreaType = { left: number, top: number, right: number, bottom: number };
 
-  return texturePosition;
+export function getArea(state: OxalisState, planeId: OrthoViewType): AreaType {
+  const [u, v] = Dimensions.getIndices(planeId);
+
+  const position = getPosition(state.flycam);
+  const viewportWidthHalf = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
+
+  const uWidthHalf = viewportWidthHalf * baseVoxelFactors[u];
+  const vWidthhalf = viewportWidthHalf * baseVoxelFactors[v];
+
+  const left = Math.floor((position[u] - uWidthHalf) / 32); // globalPositionToBaseBucket(
+  const top = Math.floor((position[v] - vWidthhalf) / 32); // globalPositionToBaseBucket(
+  const right = Math.floor((position[u] + uWidthHalf) / 32); // globalPositionToBaseBucket(
+  const bottom = Math.floor((position[v] + vWidthhalf) / 32); // globalPositionToBaseBucket(
+
+  return {
+    left,
+    top,
+    right,
+    bottom,
+  };
+}
+
+export function getAreas(state: OxalisState): OrthoViewMapType<AreaType> {
+  return {
+    [OrthoViews.PLANE_XY]: getArea(state, OrthoViews.PLANE_XY),
+    [OrthoViews.PLANE_XZ]: getArea(state, OrthoViews.PLANE_XZ),
+    [OrthoViews.PLANE_YZ]: getArea(state, OrthoViews.PLANE_YZ),
+  };
 }

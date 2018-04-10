@@ -1,9 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
 import _ from "lodash";
-import { OrthoViews } from "oxalis/constants";
 import * as accessors from "oxalis/model/accessors/flycam_accessor";
-import resolutions from "test/fixtures/resolutions";
 
 const initialState = {
   dataset: {
@@ -54,15 +52,6 @@ test("Flycam Accessors should calculate the request log zoom step (3/3)", t => {
   state.datasetConfiguration.quality = 1;
   state.flycam.zoomStep = 8;
   t.is(accessors.getRequestLogZoomStep(state), 4);
-});
-
-test("Flycam Accessors should calculate the texture position", t => {
-  const texturePosition = accessors.getTexturePosition(
-    initialState,
-    OrthoViews.PLANE_XZ,
-    resolutions,
-  );
-  t.deepEqual(texturePosition, [1216, 3218, 512]);
 });
 
 test("Flycam Accessors should calculate the texture scaling factor (1/2)", t => {

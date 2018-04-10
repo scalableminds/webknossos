@@ -218,6 +218,9 @@ export type DatasetConfigurationType = {
   },
   +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
+  +position?: Vector3,
+  +zoom?: number,
+  +rotation?: Vector3,
 };
 
 export type UserConfigurationType = {

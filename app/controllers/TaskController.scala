@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, MongoHelpers}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
@@ -47,7 +47,7 @@ case class NmlTaskParameters(
                               taskTypeId: String,
                               neededExperience: Experience,
                               openInstances: Int,
-                              team: BSONObjectID,
+                              team: String,
                               projectName: String,
                               scriptId: Option[String],
                               boundingBox: Option[BoundingBox])
@@ -90,8 +90,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- ensureTeamAdministration(request.identity, params.team)
-
+      teamBSON <- MongoHelpers.parseBsonToFox(params.team)
+      _ <- ensureTeamAdministration(request.identity, teamBSON)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       tracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
       tracings <- Fox.combined(tracingFoxes) ?~> Messages("task.create.failed")
@@ -115,7 +115,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       nmlParams.taskTypeId,
       nmlParams.neededExperience,
       nmlParams.openInstances,
-      nmlParams.team.stringify,
+      nmlParams.team,
       nmlParams.projectName,
       nmlParams.scriptId,
       nmlParams.boundingBox,

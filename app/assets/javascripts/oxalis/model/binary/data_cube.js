@@ -9,7 +9,7 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
-import type { MappingArray } from "oxalis/model/binary/mappings";
+import type { MappingType } from "oxalis/model/binary/mappings";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import type Layer from "oxalis/model/binary/layers/layer";
 import {
@@ -25,6 +25,7 @@ import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
 import Store from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 
 class CubeEntry {
@@ -58,8 +59,8 @@ class DataCube {
   layer: Layer;
   // If the mapping is enabled, this.currentMapping === this.mapping
   // Otherwise, it's null
-  currentMapping: ?MappingArray;
-  mapping: ?MappingArray;
+  currentMapping: ?MappingType;
+  mapping: ?MappingType;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -156,20 +157,14 @@ class DataCube {
 
   setMappingEnabled(isEnabled: boolean): void {
     this.currentMapping = isEnabled ? this.mapping : null;
-    this.trigger("newMapping");
+    Store.dispatch(setMappingEnabledAction(isEnabled));
   }
 
   hasMapping(): boolean {
     return this.mapping != null;
   }
 
-  setMapping(newMapping: MappingArray): void {
-    // Generate fake mapping
-    // if not newMapping.length
-    //  newMapping = new newMapping.constructor(1 << @BIT_DEPTH)
-    //  for i in [0...(1 << @BIT_DEPTH)]
-    //    newMapping[i] = if i == 0 then 0 else i + 1
-
+  setMapping(newMapping: MappingType): void {
     if (this.currentMapping === this.mapping) {
       this.currentMapping = newMapping;
     }
@@ -373,7 +368,7 @@ class DataCube {
     }
   }
 
-  getDataValue(voxel: Vector3, mapping: ?MappingArray): number {
+  getDataValue(voxel: Vector3, mapping: ?MappingType): number {
     const bucket = this.getBucket(this.positionToBaseAddress(voxel));
     const voxelIndex = this.getVoxelIndex(voxel);
 

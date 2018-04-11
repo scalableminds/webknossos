@@ -83,6 +83,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "b",
         value: true,
       },
+      isMappingEnabled: {
+        type: "b",
+        value: false,
+      },
+      mappingSize: {
+        type: "f",
+        value: 0,
+      },
     });
 
     for (const name of Object.keys(Model.binary)) {
@@ -117,6 +125,20 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: lookUpTexture,
       };
     }
+
+    // Add mapping
+    const [
+      mappingTexture,
+      mappingLookupTexture,
+    ] = Model.getSegmentationBinary().getMappingTextures();
+    this.uniforms[sanitizeName(`${Model.getSegmentationBinary().name}_mapping_texture`)] = {
+      type: "t",
+      value: mappingTexture,
+    };
+    this.uniforms[sanitizeName(`${Model.getSegmentationBinary().name}_mapping_lookup_texture`)] = {
+      type: "t",
+      value: mappingLookupTexture,
+    };
 
     // Add weight/color uniforms
     const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
@@ -159,6 +181,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms.useBilinearFiltering.value = isEnabled;
     };
 
+    this.material.setIsMappingEnabled = isMappingEnabled => {
+      this.uniforms.isMappingEnabled.value = isMappingEnabled;
+    };
+
     this.material.side = THREE.DoubleSide;
 
     listenToStoreProperty(
@@ -172,6 +198,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       storeState => storeState.flycam.zoomStep,
       zoomStep => {
         this.uniforms.zoomValue.value = zoomStep;
+      },
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.mappingSize,
+      mappingSize => {
+        this.uniforms.mappingSize.value = mappingSize;
       },
     );
   }
@@ -208,6 +241,11 @@ const int textureCountPerLayer = <%= textureCountPerLayer %>;
 uniform sampler2D <%= segmentationName %>_lookup_texture;
 uniform sampler2D <%= segmentationName %>_textures[textureCountPerLayer];
 uniform float <%= segmentationName %>_maxZoomStep;
+
+uniform bool isMappingEnabled;
+uniform float mappingSize;
+uniform sampler2D <%= segmentationName %>_mapping_texture;
+uniform sampler2D <%= segmentationName %>_mapping_lookup_texture;
 <% } %>
 
 uniform float alpha;
@@ -254,6 +292,10 @@ float round(float a) {
 }
 
 vec3 round(vec3 a) {
+  return floor(a + 0.5);
+}
+
+vec4 round(vec4 a) {
   return floor(a + 0.5);
 }
 
@@ -506,6 +548,31 @@ vec4 getMaybeFilteredColorOrFallback(
   return color;
 }
 
+float vec4ToFloat(vec4 v) {
+  v *= 255.0;
+  return v.r + v.g * pow(2.0, 8.0) + v.b * pow(2.0, 16.0) + v.a * pow(2.0, 24.0);
+}
+
+float binarySearchIndex(sampler2D texture, float maxIndex, float value) {
+  float low = 0.0;
+  float high = maxIndex - 1.0;
+  // maxIndex is at most 2**24, requiring a maximum of 25 loop passes
+  for (float i = 0.0; i < 25.0; i++) {
+    float mid = floor((low + high) / 2.0);
+    float cur = vec4ToFloat(getRgbaAtIndex(texture, 4096.0, mid).rgba);
+    if (cur == value) {
+      return mid;
+    } else if (cur == 0.0 || cur > value) {
+      // Uninitialized values in the texture are 0.0, so if we encounter a 0.0 and it is not the searched value
+      // we are too far to the end of the texture
+      high = mid - 1.0;
+    } else if (cur < value) {
+      low = mid + 1.0;
+    }
+  }
+  return -1.0;
+}
+
 void main() {
   float golden_ratio = 0.618033988749895;
   float color_value  = 0.0;
@@ -532,7 +599,15 @@ void main() {
         vec4(0.0, 0.0, 0.0, 0.0)
       );
 
-    float id = (volume_color.r + volume_color.g + volume_color.b + volume_color.a) * 255.0;
+    float id = vec4ToFloat(volume_color);
+
+    if (isMappingEnabled) {
+      float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
+      if (index != -1.0) {
+        id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, 4096.0, index).rgba);
+      }
+    }
+
   <% } else { %>
     float id = 0.0;
   <% } %>
@@ -577,7 +652,9 @@ void main() {
 
   // Color map (<= to fight rounding mistakes)
   if ( id > 0.1 ) {
-    vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
+    // To fight float imprecision, extract the smallest 8-bit first (mod with 256.0), then multiply with the golden golden_ratio
+    // and finally get a value between 0.0 and 1.0
+    vec4 HSV = vec4( mod( mod(id, 256.0) * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
     gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
   } else {
     gl_FragColor = vec4(data_color, 1.0);

@@ -99,6 +99,16 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
         temporaryConfiguration: { controlMode: { $set: action.controlMode } },
       });
     }
+    case "SET_MAPPING_ENABLED": {
+      return update(state, {
+        temporaryConfiguration: { isMappingEnabled: { $set: action.isMappingEnabled } },
+      });
+    }
+    case "SET_MAPPING_SIZE": {
+      return update(state, {
+        temporaryConfiguration: { mappingSize: { $set: action.mappingSize } },
+      });
+    }
     default:
     // pass;
   }

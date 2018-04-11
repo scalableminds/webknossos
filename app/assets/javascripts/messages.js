@@ -28,7 +28,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.segmentation_zoom_warning":
     "Segmentation data and volume tracing is only fully supported at a smaller zoom level.",
   "tracing.segmentation_downsampled_data_warning":
-    "Segmentation data is downsampled at this zoom step. This may lead to missleading data rendering. Please zoom in further to see unsampled data.",
+    "Segmentation data is downsampled at this zoom step. This may lead to misleading data rendering. Please zoom in further to see unsampled data.",
   "tracing.no_access": "You are not allowed to access this tracing.",
   "tracing.no_allowed_mode": "There was no valid allowed tracing mode specified.",
   "tracing.volume_missing_segmentation": "Volume is allowed, but segmentation does not exist.",
@@ -123,4 +123,6 @@ In order to restore the current window, a reload is necessary.`,
   "users.grant_admin_rights": _.template(
     "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
   ),
+  "mapping.too_big":
+    "The mapping contains too many values, currently only up to 2^24 values are supported.",
 };

@@ -4,6 +4,7 @@
  */
 
 import _ from "lodash";
+import * as THREE from "three";
 import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
 import type { CategoryType } from "oxalis/store";
@@ -26,17 +27,26 @@ import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
 import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { DataBucket } from "oxalis/model/binary/bucket";
+import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import { getRenderer } from "oxalis/controller/renderer";
+import UpdatableTexture from "libs/UpdatableTexture";
+import {
+  setMappingEnabledAction,
+  setMappingSizeAction,
+} from "oxalis/model/actions/settings_actions";
 import { getAreas } from "oxalis/model/accessors/flycam_accessor";
-import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import PriorityQueue from "js-priority-queue";
+import messages from "messages";
 
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type Layer from "oxalis/model/binary/layers/layer";
+import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
+const MAPPING_TEXTURE_WIDTH = 4096;
 
 type PingOptions = {
   zoomStep: number,
@@ -68,6 +78,8 @@ class Binary {
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
   dataTextureCount: number;
+  mappingTexture: UpdatableTexture;
+  mappingLookupTexture: UpdatableTexture;
 
   anchorPointCache: {
     anchorPoint: Vector4,
@@ -132,11 +144,87 @@ class Binary {
         true,
       );
     }
+  }
 
-    // todo: re-enable mappings
-    // this.cube.on({
-    //   newMapping: () => ,
-    // });
+  setupMappingTextures() {
+    this.mappingTexture = createUpdatableTexture(
+      MAPPING_TEXTURE_WIDTH,
+      4,
+      THREE.UnsignedByteType,
+      getRenderer(),
+    );
+    this.mappingLookupTexture = createUpdatableTexture(
+      MAPPING_TEXTURE_WIDTH,
+      4,
+      THREE.UnsignedByteType,
+      getRenderer(),
+    );
+
+    this.cube.on({
+      newMapping: () => this.updateMappingTextures(),
+    });
+  }
+
+  updateMappingTextures(): void {
+    const { currentMapping } = this.cube;
+    if (currentMapping == null) return;
+
+    // TODO: Remove timing code
+    console.time("Time to create mapping texture");
+    console.time("Time to create keys array");
+    // $FlowFixMe Flow chooses the wrong library definition, because it doesn't seem to know that Object.keys always returns strings and throws an error
+    const keys = Uint32Array.from(Object.keys(currentMapping), x => parseInt(x, 10));
+    console.timeEnd("Time to create keys array");
+    console.time("Time to sort keys array");
+    keys.sort();
+    console.timeEnd("Time to sort keys array");
+    console.time("Time to create values array");
+    const values = Uint32Array.from(keys, key => currentMapping[key]);
+    console.timeEnd("Time to create values array");
+    console.time("Time to convert to Uint8Arrays");
+    // Instantiate the Uint8Arrays with the array buffer from the Uint32Arrays, so that each 32-bit value is converted
+    // to four 8-bit values correctly
+    const uint8Keys = new Uint8Array(keys.buffer);
+    const uint8Values = new Uint8Array(values.buffer);
+    // The typed arrays need to be padded with 0s so that their length is a multiple of MAPPING_TEXTURE_WIDTH
+    const paddedLength = keys.length + MAPPING_TEXTURE_WIDTH - keys.length % MAPPING_TEXTURE_WIDTH;
+    // The length of typed arrays cannot be changed, so we need to create new ones with the correct length
+    const uint8KeysPadded = new Uint8Array(paddedLength * 4);
+    uint8KeysPadded.set(uint8Keys);
+    const uint8ValuesPadded = new Uint8Array(paddedLength * 4);
+    uint8ValuesPadded.set(uint8Values);
+    console.timeEnd("Time to convert to Uint8Arrays");
+    console.timeEnd("Time to create mapping texture");
+
+    const mappingSize = keys.length;
+    if (mappingSize > MAPPING_TEXTURE_WIDTH * MAPPING_TEXTURE_WIDTH) {
+      throw new Error(messages["mapping.too_big"]);
+    }
+
+    this.mappingLookupTexture.update(
+      uint8KeysPadded,
+      0,
+      0,
+      MAPPING_TEXTURE_WIDTH,
+      uint8KeysPadded.length / MAPPING_TEXTURE_WIDTH / 4,
+    );
+    this.mappingTexture.update(
+      uint8ValuesPadded,
+      0,
+      0,
+      MAPPING_TEXTURE_WIDTH,
+      uint8ValuesPadded.length / MAPPING_TEXTURE_WIDTH / 4,
+    );
+
+    Store.dispatch(setMappingEnabledAction(true));
+    Store.dispatch(setMappingSizeAction(mappingSize));
+  }
+
+  getMappingTextures() {
+    if (this.mappingTexture == null) {
+      this.setupMappingTextures();
+    }
+    return [this.mappingTexture, this.mappingLookupTexture];
   }
 
   setupDataTextures(): void {
@@ -342,9 +430,9 @@ class Binary {
     };
 
     if (mappingName != null) {
-      this.mappings.getMappingArrayAsync(mappingName).then(setMapping);
+      this.mappings.getMappingAsync(mappingName).then(setMapping);
     } else {
-      setMapping([]);
+      setMapping({});
     }
   }
 

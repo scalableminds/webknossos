@@ -31,7 +31,7 @@ import {
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeToolType, ControlModeType } from "oxalis/constants";
-import type { MappingArray } from "oxalis/model/binary/mappings";
+import type { MappingType } from "oxalis/model/binary/mappings";
 import type {
   NodeType,
   UserConfigurationType,
@@ -559,7 +559,7 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: MappingArray) {
+  setMapping(layerName: string, mapping: MappingType) {
     const layer = this.__getLayer(layerName);
 
     layer.cube.setMapping(mapping);

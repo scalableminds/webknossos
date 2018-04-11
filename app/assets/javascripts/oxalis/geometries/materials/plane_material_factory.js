@@ -607,6 +607,7 @@ void main() {
         id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, 4096.0, index).rgba);
       }
     }
+
   <% } else { %>
     float id = 0.0;
   <% } %>
@@ -651,7 +652,9 @@ void main() {
 
   // Color map (<= to fight rounding mistakes)
   if ( id > 0.1 ) {
-    vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
+    // To fight float imprecision, extract the smallest 8-bit first (mod with 256.0), then multiply with the golden golden_ratio
+    // and finally get a value between 0.0 and 1.0
+    vec4 HSV = vec4( mod( mod(id, 256.0) * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
     gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
   } else {
     gl_FragColor = vec4(data_color, 1.0);

@@ -127,18 +127,23 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     }
 
     // Add mapping
-    const [
-      mappingTexture,
-      mappingLookupTexture,
-    ] = Model.getSegmentationBinary().getMappingTextures();
-    this.uniforms[sanitizeName(`${Model.getSegmentationBinary().name}_mapping_texture`)] = {
-      type: "t",
-      value: mappingTexture,
-    };
-    this.uniforms[sanitizeName(`${Model.getSegmentationBinary().name}_mapping_lookup_texture`)] = {
-      type: "t",
-      value: mappingLookupTexture,
-    };
+    const segmentationBinary = Model.getSegmentationBinary();
+    if (segmentationBinary != null) {
+      const [
+        mappingTexture,
+        mappingLookupTexture,
+      ] = Model.getSegmentationBinary().getMappingTextures();
+      this.uniforms[sanitizeName(`${Model.getSegmentationBinary().name}_mapping_texture`)] = {
+        type: "t",
+        value: mappingTexture,
+      };
+      this.uniforms[
+        sanitizeName(`${Model.getSegmentationBinary().name}_mapping_lookup_texture`)
+      ] = {
+        type: "t",
+        value: mappingLookupTexture,
+      };
+    }
 
     // Add weight/color uniforms
     const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));

@@ -217,18 +217,24 @@ export class OxalisModel {
       return Math.ceil(necessaryVoxelCount / availableVoxelCount);
     })();
 
-    // todo: adapt this number when adding mappings support
-    const textureCountForCellMappings = 0;
-
     const lookupTextureCountPerLayer = 1;
     const necessaryTextureCount =
-      textureCountForCellMappings +
       layers.length * (dataTextureCountPerLayer + lookupTextureCountPerLayer);
+
+    // Count textures needed for mappings separately, because they are not strictly necessary
+    let textureCountForCellMappings = 0;
+    if (_.find(layers, layer => layer.category === "segmentation") != null) {
+      // One lookup and one data texture for mappings
+      textureCountForCellMappings = 2;
+    }
 
     if (necessaryTextureCount > maxTextureCount) {
       const message = `Not enough textures available for rendering ${layers.length} layers`;
       Toast.error(message);
       throw new Error(message);
+    } else if (necessaryTextureCount + textureCountForCellMappings > maxTextureCount) {
+      const message = messages["mapping.too_few_textures"];
+      Toast.info(message);
     }
 
     return [usedTextureSize, dataTextureCountPerLayer];

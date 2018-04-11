@@ -119,4 +119,6 @@ In order to restore the current window, a reload is necessary.`,
   "nml.different_dataset": "Imported NML was originally for a different dataset.",
   "mapping.too_big":
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
+  "mapping.too_few_textures":
+    "Not enough textures available to support mappings. Mappings are disabled.",
 };

@@ -129,10 +129,10 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): AreaType {
   const uWidthHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vWidthhalf = viewportWidthHalf * baseVoxelFactors[v];
 
-  const left = Math.floor((position[u] - uWidthHalf) / 32); // globalPositionToBaseBucket(
-  const top = Math.floor((position[v] - vWidthhalf) / 32); // globalPositionToBaseBucket(
-  const right = Math.floor((position[u] + uWidthHalf) / 32); // globalPositionToBaseBucket(
-  const bottom = Math.floor((position[v] + vWidthhalf) / 32); // globalPositionToBaseBucket(
+  const left = Math.floor((position[u] - uWidthHalf) / constants.BUCKET_WIDTH);
+  const top = Math.floor((position[v] - vWidthhalf) / constants.BUCKET_WIDTH);
+  const right = Math.floor((position[u] + uWidthHalf) / constants.BUCKET_WIDTH);
+  const bottom = Math.floor((position[v] + vWidthhalf) / constants.BUCKET_WIDTH);
 
   return {
     left,

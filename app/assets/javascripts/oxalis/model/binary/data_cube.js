@@ -75,7 +75,7 @@ class DataCube {
   // Each bucket consists of an access-value, the zoomStep and the actual data.
   // The access-values are used for garbage collection. When a bucket is accessed, its
   // access-flag is set to true.
-  // When buckets have to be collected, an iterator will loop through the the buckets at
+  // When buckets have to be collected, an iterator will loop through the queue and the buckets at
   // the beginning of the queue will be removed from the queue and the access-value will
   // be decreased. If the access-value of a bucket becomes 0, it is no longer in the
   // access-queue and is least recently used. It is then removed from the cube.
@@ -203,9 +203,6 @@ class DataCube {
     const cube = this.cubes[zoomStep];
     if (cube != null) {
       const { boundary } = cube;
-      if (x >= boundary[0] || y >= boundary[1] || z >= boundary[2] || x < 0 || y < 0 || z < 0) {
-        return -1;
-      }
       return x * boundary[2] * boundary[1] + y * boundary[2] + z;
     }
     return null;

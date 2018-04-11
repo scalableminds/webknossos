@@ -589,8 +589,7 @@ export class OxalisModel {
 
 function adaptResolutions(dataset: APIDatasetType): [APIDatasetType, Array<Vector3>] {
   const adaptedLayers = dataset.dataSource.dataLayers.map(dataLayer => {
-    // Todo: the back-end should deliver the resolutions numerically sorted
-    const adaptedResolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
+    const adaptedResolutions = dataLayer.resolutions.slice();
     _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
       // We add another level of resolutions to allow zooming out even further
       const lastResolution = _.last(adaptedResolutions);

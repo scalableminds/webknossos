@@ -6,8 +6,10 @@ import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
+import models.annotation.AnnotationDAO
 import models.project.{Project, ProjectDAO, ProjectSQLDAO, ProjectService}
 import models.task._
+import models.user.UserDAO
 import net.liftweb.common.Empty
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
@@ -58,7 +60,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- project.isOwnedBy(request.identity) ?~> Messages("project.remove.notAllowed")
+        _ <- project.isDeletableBy(request.identity) ?~> Messages("project.remove.notAllowed")
         _ <- ProjectService.remove(project) ?~> Messages("project.remove.failure")
       } yield {
         JsonOk(Messages("project.remove.success"))
@@ -68,7 +70,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
-        case Empty if request.identity.isAdminOf(project.team) =>
+        case Empty if request.identity.isTeamManagerOf(project._team) =>
           for {
             _ <- ProjectDAO.insert(project)
             js <- Project.projectPublicWrites(project, request.identity)
@@ -85,7 +87,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for{
         project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
-        _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("team.notAllowed")
+        _ <- request.identity.teamManagerTeamIds.contains(project._team) ?~> Messages("team.notAllowed")
         updatedProject <- ProjectService.update(project._id, project, updateRequest) ?~> Messages("project.update.failed", projectName)
         js <- Project.projectPublicWrites(updatedProject, request.identity)
       } yield Ok(js)
@@ -116,7 +118,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
+        _ <- request.identity.teamManagerTeamIds.contains(project._team) ?~> Messages("notAllowed")
         tasks <- project.tasks
         js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
       } yield {

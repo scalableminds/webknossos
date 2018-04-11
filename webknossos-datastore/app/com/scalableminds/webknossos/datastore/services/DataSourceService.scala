@@ -23,6 +23,7 @@ import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsValue, Json}
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -132,24 +133,24 @@ class DataSourceService @Inject()(
   }
 
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {
-    val team = path.getFileName.toString
+    val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path) match {
       case Full(Nil) =>
-        logger.error(s"Failed to read datasets for team $team. Empty path: $path")
+        logger.error(s"Failed to read datasets for organization $organization. Empty path: $path")
         Nil
       case Full(dirs) =>
-        val dataSources = dirs.map(path => dataSourceFromFolder(path, team))
-        logger.debug(s"Datasets for team $team: ${dataSources.map(_.id.name).mkString(", ") }")
+        val dataSources = dirs.map(path => dataSourceFromFolder(path, organization))
+        logger.debug(s"Datasets for organization $organization: ${dataSources.map(_.id.name).mkString(", ") }")
         dataSources
       case _ =>
-        logger.error(s"Failed to list directories for team $team at path $path")
+        logger.error(s"Failed to list directories for organization $organization at path $path")
         Nil
     }
   }
 
-  private def dataSourceFromFolder(path: Path, team: String): InboxDataSource = {
-    val id = DataSourceId(path.getFileName.toString, team)
+  private def dataSourceFromFolder(path: Path, organization: String): InboxDataSource = {
+    val id = DataSourceId(path.getFileName.toString, organization)
     val propertiesFile = path.resolve(propertiesFileName)
 
     if (new File(propertiesFile.toString).exists()) {

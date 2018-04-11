@@ -3,8 +3,10 @@
  */
 package models.annotation
 
+import javax.management.relation.Role
+
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.webknossos.schema.Tables._
@@ -13,7 +15,7 @@ import models.annotation.AnnotationType.AnnotationType
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.task.{TaskDAO, TaskSQLDAO, TaskTypeSQLDAO, _}
-import models.team.{Role, TeamSQLDAO}
+import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import org.joda.time.format.DateTimeFormat
@@ -60,14 +62,13 @@ object AnnotationSQL extends FoxImplicits {
   def fromAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
     for {
       dataSet <- DataSetSQLDAO.findOneByName(a.dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
-      team <- TeamSQLDAO.findOneByName(a.team)(GlobalAccessContext) ?~> Messages("team.notFound")
       typ <- AnnotationTypeSQL.fromString(a.typ)
     } yield {
       AnnotationSQL(
         ObjectId.fromBsonId(a._id),
         dataSet._id,
         a._task.map(ObjectId.fromBsonId),
-        team._id,
+        ObjectId.fromBsonId(a._team),
         ObjectId.fromBsonId(a._user),
         a.tracingReference,
         a.description,
@@ -120,8 +121,14 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     }
 
   override def anonymousReadAccessQ(sharingToken: Option[String]) = s"isPublic"
-  override def readAccessQ(requestingUserId: ObjectId) = s"isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'"
-  override def deleteAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')) or _user = '${requestingUserId.id}"
+  override def readAccessQ(requestingUserId: ObjectId) =
+    s"""(isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'
+       or (select _organization from webknossos.teams where webknossos.teams._id = _team)
+        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+  override def deleteAccessQ(requestingUserId: ObjectId) =
+    s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}
+       or (select _organization from webknossos.teams where webknossos.teams._id = _team)
+        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   // read operations
 
@@ -178,10 +185,10 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   // count operations
 
-  def countActiveAnnotationsFor(userId: ObjectId, typ: AnnotationTypeSQL, excludedTeamNames: List[String])(implicit ctx: DBAccessContext): Fox[Int] =
+  def countActiveAnnotationsFor(userId: ObjectId, typ: AnnotationTypeSQL, excludedTeamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
-      excludeTeamsQ = if (excludedTeamNames.isEmpty) "true" else s"(not t.name in ${writeStructTupleWithQuotes(excludedTeamNames.map(sanitize))})"
+      excludeTeamsQ = if (excludedTeamIds.isEmpty) "true" else s"(not t._id in ${writeStructTupleWithQuotes(excludedTeamIds.map(t => sanitize(t.id)))})"
       countList <- run(sql"""select count(*)
                          from (select a._id from
                                   (select *
@@ -267,7 +274,7 @@ case class Annotation(
                        _user: BSONObjectID,
                        tracingReference: TracingReference,
                        dataSetName: String,
-                       team: String,
+                       _team: BSONObjectID,
                        settings: AnnotationSettings,
                        statistics: Option[JsObject] = None,
                        typ: String = AnnotationType.Explorational,
@@ -294,6 +301,7 @@ case class Annotation(
   val name = _name getOrElse ""
 
   lazy val id = _id.stringify
+  lazy val team = _team.stringify
 
   def user: Fox[User] =
     UserService.findOneById(_user.stringify, useCache = true)(GlobalAccessContext)
@@ -370,21 +378,20 @@ object Annotation extends FoxImplicits {
   def fromAnnotationsSQL(s: Seq[AnnotationSQL])(implicit ctx: DBAccessContext): Fox[List[Annotation]] =
     Fox.combined(s.map(Annotation.fromAnnotationSQL(_)).toList)
 
-
   def fromAnnotationSQL(s: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
       dataset <- DataSetSQLDAO.findOne(s._dataset)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
-      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
       settings <- findSettingsFor(s)(GlobalAccessContext)
       name: Option[String] = if (s.name.isEmpty) None else Some(s.name)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
       userIdBson <- s._user.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._user.toString)
+      teamIdBson <- s._team.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._team.toString)
     } yield {
       Annotation(
         userIdBson,
         s.tracing,
         dataset.name,
-        team.name,
+        teamIdBson,
         settings,
         Some(s.statistics),
         s.typ.toString,
@@ -442,10 +449,10 @@ object AnnotationDAO extends FoxImplicits {
       annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
     } yield annotations
 
-  def countActiveAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[String] = Nil)(implicit ctx: DBAccessContext) =
+  def countActiveAnnotations(_user: BSONObjectID, annotationType: AnnotationType, excludeTeams: List[BSONObjectID] = Nil)(implicit ctx: DBAccessContext) =
     for {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
-      count <- AnnotationSQLDAO.countActiveAnnotationsFor(ObjectId.fromBsonId(_user), typ, excludeTeams)
+      count <- AnnotationSQLDAO.countActiveAnnotationsFor(ObjectId.fromBsonId(_user), typ, excludeTeams.map(ObjectId.fromBsonId(_)))
     } yield count
 
   def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = {

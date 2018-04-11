@@ -6,6 +6,7 @@ package com.scalableminds.util.reactivemongo
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.Failure
+import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json.Reads._

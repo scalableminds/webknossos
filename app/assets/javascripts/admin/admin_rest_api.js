@@ -18,13 +18,13 @@ import type {
   APIDatastoreType,
   NDStoreConfigType,
   DatasetConfigType,
-  APIRoleType,
   APIDatasetType,
   APITimeIntervalType,
   APIUserLoggedTimeType,
   APITimeTrackingType,
   APIProjectProgressReportType,
   APIOpenTasksReportType,
+  APIOrganizationType,
   APIBuildInfoType,
   APITracingType,
   APIFeatureToggles,
@@ -36,8 +36,6 @@ const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
 type NewTeamType = {
   +name: string,
-  +parent: string,
-  +roles: Array<APIRoleType>,
 };
 
 function assertResponseLimit(collection) {
@@ -214,20 +212,6 @@ export async function getTeams(): Promise<Array<APITeamType>> {
 
 export async function getEditableTeams(): Promise<Array<APITeamType>> {
   const teams = await Request.receiveJSON("/api/teams?isEditable=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
-export async function getRootTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?isRoot=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
-export async function getAdminTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?amIAnAdmin=true");
   assertResponseLimit(teams);
 
   return teams;
@@ -551,6 +535,15 @@ export async function addDataset(datatsetConfig: DatasetConfigType): Promise<API
   );
 }
 
+export async function updateDatasetTeams(
+  datasetName: string,
+  newTeams: Array<string>,
+): Promise<APIDatasetType> {
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}/teams`, {
+    data: newTeams,
+  });
+}
+
 export async function triggerDatasetCheck(datatstoreHost: string): Promise<void> {
   doWithToken(token =>
     Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
@@ -632,11 +625,17 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
   return openTasksData;
 }
 
+// ### Organizations
+export async function getOrganizations(): Promise<Array<APIOrganizationType>> {
+  return Request.receiveJSON("/api/organizations");
+}
+
 // ### BuildInfo
 export function getBuildInfo(): Promise<APIBuildInfoType> {
   return Request.receiveJSON("/api/buildinfo");
 }
 
+// ### Feature Selection
 export async function getFeatureToggles(): Promise<APIFeatureToggles> {
   return Request.receiveJSON("/api/features");
 }

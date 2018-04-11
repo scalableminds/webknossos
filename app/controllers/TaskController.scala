@@ -2,10 +2,11 @@ package controllers
 
 import javax.inject.Inject
 
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, MongoHelpers}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import models.annotation.nml.NmlService
@@ -14,13 +15,15 @@ import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.task._
 import models.user._
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
+import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
@@ -37,7 +40,7 @@ case class TaskParameters(
                            editRotation: Vector3D)
 
 object TaskParameters {
-  implicit val taskParametersFormat = Json.format[TaskParameters]
+  implicit val taskParametersFormat: Format[TaskParameters] = Json.format[TaskParameters]
 }
 
 case class NmlTaskParameters(
@@ -50,10 +53,14 @@ case class NmlTaskParameters(
                               boundingBox: Option[BoundingBox])
 
 object NmlTaskParameters {
-  implicit val nmlTaskParametersFormat = Json.format[NmlTaskParameters]
+  implicit val nmlTaskParametersFormat: Format[NmlTaskParameters] = Json.format[NmlTaskParameters]
 }
 
-class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller with ResultBox with ProtoGeometryImplicits with FoxImplicits {
+class TaskController @Inject() (val messagesApi: MessagesApi)
+  extends Controller
+    with ResultBox
+    with ProtoGeometryImplicits
+    with FoxImplicits {
 
   val MAX_OPEN_TASKS = current.configuration.getInt("oxalis.tasks.maxOpenPerUser") getOrElse 2
 
@@ -74,7 +81,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     })
   }
 
-  def createFromFile = SecuredAction.async {implicit request =>
+  def createFromFile = SecuredAction.async { implicit request =>
 
     for {
       body <- request.body.asMultipartFormData ?~> Messages("invalid")
@@ -83,8 +90,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- ensureTeamAdministration(request.identity, params.team)
-
+      teamBSON <- MongoHelpers.parseBsonToFox(params.team)
+      _ <- ensureTeamAdministration(request.identity, teamBSON)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       tracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
       tracings <- Fox.combined(tracingFoxes) ?~> Messages("task.create.failed")
@@ -170,10 +177,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId)
-      _ <- ensureTeamAdministration(request.identity, params.team)
+      _ <- ensureTeamAdministration(request.identity, BSONObjectID(params.team))
       task = Task(
         taskType._id,
-        params.team,
+        BSONObjectID(params.team),
         params.neededExperience,
         params.openInstances,
         params.openInstances,
@@ -191,7 +198,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
     val params = request.body
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, task._team) ?~> Messages("notAllowed")
       updatedTask <- TaskDAO.updateInstances(task._id, task.instances + params.openInstances - task.openInstances)
       json <- Task.transformToJson(updatedTask)
     } yield {
@@ -202,7 +209,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def delete(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.identity, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(request.identity, task._team) ?~> Messages("notAllowed")
       _ <- TaskService.removeOne(task._id)
     } yield {
       JsonOk(Messages("task.removed"))
@@ -269,19 +276,19 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   }
 
 
-  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[String]] = {
+  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[BSONObjectID]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
       if (numberOfOpen < MAX_OPEN_TASKS) {
-        Fox.successful(user.teamNames)
-      } else if (user.hasAdminAccess) {
-        Fox.successful(user.adminTeamNames)
+        Fox.successful(user.teamIds)
+      } else if (user.teamManagerTeamIds.nonEmpty) {
+        Fox.successful(user.teamManagerTeamIds)
       } else {
         Fox.failure(Messages("task.tooManyOpenOnes"))
       }
     }
   }
 
-  private def tryToGetNextAssignmentFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Task] =
+  private def tryToGetNextAssignmentFor(user: User, teams: List[BSONObjectID])(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       task <- TaskAssignmentService.findOneAssignableFor(user, teams) ?~> Messages("task.unavailable")
     } yield task
@@ -289,7 +296,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi) extends Controller
   def peekNext(limit: Int) = SecuredAction.async { implicit request =>
     val user = request.identity
     for {
-      tasks <- TaskAssignmentService.findAllAssignableFor(user, user.teamNames, Some(limit))
+      tasks <- TaskAssignmentService.findAllAssignableFor(user, user.teamIds, Some(limit))
       tasksJson <- Fox.combined(tasks.map(t => Task.transformToJson(t)(GlobalAccessContext)))
     } yield Ok(Json.toJson(tasksJson))
   }

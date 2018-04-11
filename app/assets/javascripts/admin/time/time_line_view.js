@@ -7,7 +7,7 @@ import { Chart } from "react-google-charts";
 import Toast from "libs/toast";
 import messages from "messages";
 import FormatUtils from "libs/format_utils";
-import { getUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
+import { getEditableUsers, getTimeTrackingForUser } from "admin/admin_rest_api";
 
 import type { APIUserType, APITimeTrackingType } from "admin/api_flow_types";
 
@@ -49,7 +49,7 @@ class TimeLineView extends React.PureComponent<*, State> {
   }
 
   async fetchData() {
-    const users = await getUsers();
+    const users = await getEditableUsers();
     this.setState({ users });
   }
 

@@ -9,17 +9,19 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.typesafe.scalalogging.LazyLogging
+import models.team.OrganizationDAO
 import net.liftweb.common.Full
 import oxalis.security.{URLSharing, WebknossosSilhouette}
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.ws.WSResponse
+import reactivemongo.bson.BSONObjectID
 
 object DataSetService extends FoxImplicits with LazyLogging {
 
   val system = Akka.system(play.api.Play.current)
 
-  def updateTeams(dataSet: DataSet, teams: List[String])(implicit ctx: DBAccessContext) =
+  def updateTeams(dataSet: DataSet, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
     DataSetDAO.updateTeams(dataSet.name, teams)
 
   def update(dataSet: DataSet, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =
@@ -43,18 +45,22 @@ object DataSetService extends FoxImplicits with LazyLogging {
   }
 
   def createDataSet(
-    name: String,
-    dataStore: DataStoreInfo,
-    owningTeam: String,
-    dataSource: InboxDataSource,
-    isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
-
-    DataSetDAO.insert(DataSet(
-      dataStore,
-      dataSource,
-      List(owningTeam),
-      isActive = isActive,
-      isPublic = false))(GlobalAccessContext)
+                     name: String,
+                     dataStore: DataStoreInfo,
+                     owningOrganization: String,
+                     dataSource: InboxDataSource,
+                     isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
+    OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
+      case Full(organization) =>
+      DataSetDAO.insert(DataSet(
+        dataStore,
+        dataSource,
+        owningOrganization,
+        List(organization._organizationTeam),
+        isActive = isActive,
+        isPublic = false))(GlobalAccessContext)
+      case _ => Fox.failure("org.notExist")
+    }
   }
 
   def updateDataSource(
@@ -63,18 +69,18 @@ object DataSetService extends FoxImplicits with LazyLogging {
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     DataSetDAO.findOneBySourceName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
-      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name && dataSet.owningTeam == dataSource.id.team =>
+      case Full(dataSet) if dataSet.dataStoreInfo.name == dataStoreInfo.name =>
         DataSetDAO.updateDataSource(
           dataSource.id.name,
           dataStoreInfo,
           dataSource,
           isActive = dataSource.isUsable)(GlobalAccessContext).futureBox
-      case Full(_)                                                           =>
+      case Full(_) =>
         // TODO: There is a problem: The dataset name is already in use by some (potentially different) team.
         // We are not going to update that datasource.
         // this should be somehow populated to the user to inform him that he needs to rename the datasource
         Fox.failure("dataset.name.alreadyInUse").futureBox
-      case _                                                                 =>
+      case _ =>
         createDataSet(
           dataSource.id.name,
           dataStoreInfo,

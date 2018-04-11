@@ -7,15 +7,16 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits.{defaultContext => dec}
+import reactivemongo.bson.BSONObjectID
 
 object TaskAssignmentService extends FoxImplicits {
 
-  def findOneAssignableFor(user: User, teams: List[String])(implicit ctx: DBAccessContext): Fox[Task] =
+  def findOneAssignableFor(user: User, teams: List[BSONObjectID])(implicit ctx: DBAccessContext): Fox[Task] =
     (for {
       list <- findAllAssignableFor(user, teams, Some(1))
     } yield list.headOption.toFox).flatten
 
-  def findAllAssignableFor(user: User, teams: List[String], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
+  def findAllAssignableFor(user: User, teams: List[BSONObjectID], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
     TaskDAO.findAllAssignableFor(user, teams, limit)
   }
 

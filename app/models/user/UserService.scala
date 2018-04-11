@@ -124,4 +124,13 @@ object UserService extends FoxImplicits with IdentityService[User] {
   def createPasswordInfo(pw: String): PasswordInfo = {
     PasswordInfo("SCrypt", SCrypt.hashPassword(pw))
   }
+
+  def changeEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext) = {
+    for {
+      user <- UserDAO.updateEmail(oldEmail, newEmail)
+      //change emails from tokens
+    } yield {
+      user
+    }
+  }
 }

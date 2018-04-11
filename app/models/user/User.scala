@@ -194,6 +194,16 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     } yield ()
   }
 
+  def updateEmail(userId: ObjectId, newEmail: String)(implicit ctx: DBAccessContext) = {
+    for {
+      _ <- assertUpdateAccess(userId)
+      _ <- run(
+        sqlu"""update webknossos.users
+               set email = ${newEmail}
+               where _id = ${userId.id}""")
+    } yield ()
+  }
+
 }
 
 
@@ -569,4 +579,12 @@ object UserDAO {
       _ <- UserSQLDAO.deleteOne(ObjectId.fromBsonId(id))
     } yield ()
 
+  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext) = {
+    for {
+      user <- findOneByEmail(oldEmail)
+      id = ObjectId.fromBsonId(user._id)
+      _ <- UserSQLDAO.updateEmail(id, newEmail)
+      updated <- findOneByEmail(newEmail)
+    } yield updated
+  }
 }

@@ -22,6 +22,7 @@ import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
@@ -272,12 +273,11 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
   def updateDatasetConfigurationForUserAndDataset(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       _ <- UserSQLDAO.assertUpdateAccess(userId)
-      _ <- run(
-        sqlu"""delete from webknossos.user_dataSetConfigurations
-               where _user = ${userId.id} and _dataSet = ${dataSetId.id}""")
-      _ <- run(
-        sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
-               values(${userId.id}, ${dataSetId.id}, '#${sanitize(Json.toJson(configuration).toString)}')""")
+      deleteQuery = sqlu"""delete from webknossos.user_dataSetConfigurations
+               where _user = ${userId.id} and _dataSet = ${dataSetId.id}"""
+      insertQuery  = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
+               values(${userId.id}, ${dataSetId.id}, '#${sanitize(Json.toJson(configuration).toString)}')"""
+      _ <- run(DBIO.sequence(List(deleteQuery, insertQuery)).withTransactionIsolation(Serializable))
     } yield ()
   }
 
@@ -343,7 +343,7 @@ case class User(
   lazy val teamManagerTeamIds = teamManagerTeams.map(_._id)
 
   def isTeamManagerOf(_team: BSONObjectID) = {
-    val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 50 millis).openOrThrowException("Keep the teamManager Query synchronous")
+    val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 500 millis).openOrThrowException("Keep the teamManager Query synchronous")
     teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
   }
 

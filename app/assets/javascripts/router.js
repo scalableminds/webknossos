@@ -124,7 +124,7 @@ class ReactRouter extends React.Component<Props> {
                   )
                 }
               />
-              <Route
+              <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/dashboard"
                 render={() => <DashboardView userId={null} isAdminView={false} />}

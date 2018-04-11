@@ -176,9 +176,21 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   }
 
   def deactivateUnreported(names: List[String], dataStoreName: String): Fox[Unit] = {
-    val q = for {row <- Datasets if (notdel(row) && row.name.inSetBind(names) && row._Datastore === dataStoreName)} yield (row.isusable, row.status)
-    for {_ <- run(q.update(false, "No longer available on datastore."))} yield ()
+    val deleteResolutionsQuery = sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
+              (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
+               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))})"""
+    val deleteLayersQuery = sqlu"""delete from webknossos.dataSet_layers where _dataSet in
+              (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
+               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))})"""
+    val setToUnusableQuery = sqlu"""update webknossos.datasets
+               set isUsable = false, status = 'No longer available on datastore.', scale = NULL
+               where _dataStore = ${dataStoreName}
+               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))}"""
+    for {
+      _ <-run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
+    } yield ()
   }
+
 }
 
 
@@ -232,22 +244,22 @@ object DataSetDataLayerSQLDAO extends SimpleSQLDAO {
     } yield {
       (row.largestsegmentid, row.mappings) match {
         case (Some(segmentId), Some(mappings)) =>
-          Fox.successful(AbstractSegmentationLayer(
-            row.name,
-            category,
-            boundingBox,
-            resolutions,
-            elementClass,
-            segmentId,
-            parseArrayTuple(mappings).toSet
-          ))
+                                  Fox.successful(AbstractSegmentationLayer(
+                                  row.name,
+                                  category,
+                                  boundingBox,
+                                  resolutions.sortBy(_.maxDim),
+                                  elementClass,
+                                  segmentId,
+                                  parseArrayTuple(mappings).toSet
+                                ))
         case (None, None) => Fox.successful(AbstractDataLayer(
-          row.name,
-          category,
-          boundingBox,
-          resolutions,
-          elementClass
-        ))
+                                  row.name,
+                                  category,
+                                  boundingBox,
+                                  resolutions.sortBy(_.maxDim),
+                                  elementClass
+                                ))
         case _ => Fox.failure("Could not match Dataset Layer")
       }
     }

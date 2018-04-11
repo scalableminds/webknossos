@@ -58,7 +58,7 @@ CREATE TABLE webknossos.annotations(
 CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _dataStore CHAR(256) NOT NULL ,
-  _organization CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
   defaultConfiguration JSONB,
   description TEXT,
   isPublic BOOLEAN NOT NULL DEFAULT false,
@@ -68,7 +68,7 @@ CREATE TABLE webknossos.dataSets(
   status VARCHAR(1024) NOT NULL DEFAULT '',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (name, _organization)
+  UNIQUE (name, _team)
 );
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
@@ -168,11 +168,12 @@ CREATE VIEW webknossos.task_instances AS
 
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organization CHAR(24) NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
+  _owner CHAR(24) NOT NULL,
+  _parent CHAR(24),
+  name VARCHAR(256) NOT NULL UNIQUE CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
+  behavesLikeRootTeam BOOLEAN,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (_organization, name)
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.timespans(
@@ -186,19 +187,10 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE webknossos.organizations(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organizationTeam CHAR(24) NOT NULL UNIQUE,
-  name VARCHAR(256) NOT NULL,
-  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
-);
-
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organization CHAR(24) NOT NULL,
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
@@ -210,16 +202,16 @@ CREATE TABLE webknossos.users(
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
-  isAdmin BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TYPE webknossos.TEAM_ROLES AS ENUM ('user', 'admin');
 CREATE TABLE webknossos.user_team_roles(
   _user CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
-  isTeamManager BOOLEAN NOT NULL DEFAULT false,
+  role webknossos.TEAM_ROLES NOT NULL,
   PRIMARY KEY (_user, _team)
 );
 
@@ -263,7 +255,6 @@ CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NO
 CREATE VIEW webknossos.tasks_ AS SELECT * FROM webknossos.tasks WHERE NOT isDeleted;
 CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
 CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NOT isDeleted;
-CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 
@@ -327,3 +318,62 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.user_experiences
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
+
+
+
+
+
+
+
+
+-- EVOLUTION 001 add organizations (schema only, for slick code generation)
+
+
+
+
+START TRANSACTION;
+
+CREATE TABLE webknossos.organizations(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _organizationTeam CHAR(24) NOT NULL UNIQUE,
+  name VARCHAR(256) NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
+
+
+DROP VIEW webknossos.teams_;
+ALTER TABLE webknossos.teams ADD COLUMN _organization CHAR(24);
+ALTER TABLE webknossos.teams ALTER COLUMN _organization SET NOT NULL;
+ALTER TABLE webknossos.teams DROP COLUMN _owner;
+ALTER TABLE webknossos.teams DROP COLUMN _parent;
+ALTER TABLE webknossos.teams DROP COLUMN behavesLikeRootTeam;
+ALTER TABLE webknossos.teams DROP CONSTRAINT teams_name_key;
+ALTER TABLE webknossos.teams ADD CONSTRAINT teams_name__organization_key UNIQUE(name, _organization);
+CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
+
+DROP VIEW webknossos.dataSets_;
+ALTER TABLE webknossos.dataSets ADD COLUMN _organization CHAR(24);
+ALTER TABLE webknossos.dataSets ALTER COLUMN _organization SET NOT NULL;
+ALTER TABLE webknossos.dataSets DROP CONSTRAINT datasets_name__team_key;
+ALTER TABLE webknossos.dataSets DROP COLUMN _team;
+ALTER TABLE webknossos.dataSets ADD CONSTRAINT datasets_name__organization_key UNIQUE(name, _organization);
+CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
+
+
+ALTER TABLE webknossos.user_team_roles ADD COLUMN isTeamManager BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE webknossos.user_team_roles DROP COLUMN role;
+DROP TYPE webknossos.TEAM_ROLES;
+
+
+DROP VIEW webknossos.users_;
+ALTER TABLE webknossos.users ADD COLUMN isAdmin BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE webknossos.users ADD COLUMN _organization CHAR(24);
+ALTER TABLE webknossos.users ALTER COLUMN _organization SET NOT NULL;
+CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
+
+
+
+COMMIT TRANSACTION;

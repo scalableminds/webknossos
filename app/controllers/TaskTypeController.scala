@@ -2,6 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
+import com.scalableminds.util.reactivemongo.JsonFormatHelper
 import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.AnnotationSettings
 import models.task._
@@ -17,13 +18,13 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   val taskTypePublicReads =
     ((__ \ 'summary).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'description).read[String] and
-      (__ \ 'team).read[String] and
+      (__ \ 'team).read[String] (JsonFormatHelper.StringObjectIdReads("team")) and
       (__ \ 'settings).read[AnnotationSettings]) (TaskType.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- ensureTeamAdministration(request.identity, taskType.team)
+        _ <- ensureTeamAdministration(request.identity, taskType._team)
         _ <- TaskTypeDAO.insert(taskType)
       } yield {
         JsonOk(TaskType.transformToJson(taskType))
@@ -34,7 +35,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def get(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.identity, taskType.team)
+      _ <- ensureTeamAdministration(request.identity, taskType._team)
     } yield {
       JsonOk(TaskType.transformToJson(taskType))
     }
@@ -54,8 +55,8 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
       for {
         taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
         updatedTaskType = tt.copy(_id = taskType._id)
-        _ <- ensureTeamAdministration(request.identity, taskType.team)
-        _ <- ensureTeamAdministration(request.identity, updatedTaskType.team)
+        _ <- ensureTeamAdministration(request.identity, taskType._team)
+        _ <- ensureTeamAdministration(request.identity, updatedTaskType._team)
         _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
       } yield {
@@ -67,7 +68,7 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
   def delete(taskTypeId: String) = SecuredAction.async { implicit request =>
     for {
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(request.identity, taskType.team)
+      _ <- ensureTeamAdministration(request.identity, taskType._team)
       _ <- TaskTypeDAO.removeById(taskType._id) ?~> Messages("taskType.deleteFailure")
     } yield {
       TaskService.removeAllWithTaskType(taskType)

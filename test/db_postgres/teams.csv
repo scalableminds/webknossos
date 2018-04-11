@@ -1,4 +1,4 @@
-_id,_owner,_parent,name,behavesLikeRootTeam,created,isDeleted
-'570b9f4b2a7c0e3b008da6ec','5447d5902d00001c35e1c965',,'Connectomics department',f,'2016-04-11T12:57:47.000Z',f
-'59882b370d889b84020efd3f','570b9f4d2a7c0e4d008da6ef','570b9f4b2a7c0e3b008da6ec','test1',f,'2017-08-07T08:56:23.000Z',f
-'59882b370d889b84020efd6f','570b9f4d2a7c0e4d008da6ef','570b9f4b2a7c0e3b008da6ec','test2',f,'2017-08-07T08:56:23.000Z',f
+_id,name,created,isDeleted,_organization
+'570b9f4b2a7c0e3b008da6ec','Connectomics department','2016-04-11T12:57:47.000Z',f,'5ab0c6a674d0af7b003b23ac'
+'59882b370d889b84020efd3f','test1','2017-08-07T08:56:23.000Z',f,'5ab0c6a674d0af7b003b23ac'
+'59882b370d889b84020efd6f','test2','2017-08-07T08:56:23.000Z',f,'5ab0c6a674d0af7b003b23ac'

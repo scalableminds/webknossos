@@ -3,8 +3,9 @@
 
 import _ from "lodash";
 import * as React from "react";
+import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Tag, Icon, Spin, Button, Input } from "antd";
+import { Table, Tag, Icon, Spin, Button, Input, Modal } from "antd";
 import TeamRoleModalView from "admin/user/team_role_modal_view";
 import ExperienceModalView from "admin/user/experience_modal_view";
 import TemplateHelpers from "libs/template_helpers";
@@ -12,15 +13,23 @@ import Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import type { APIUserType, APITeamRoleType, ExperienceMapType } from "admin/api_flow_types";
+import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import messages from "messages";
+
+import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import type { OxalisState } from "oxalis/store";
 
 const { Column } = Table;
 const { Search } = Input;
 
+type StateProps = {
+  activeUser: APIUserType,
+};
+
 type Props = {
   history: RouterHistory,
-};
+} & StateProps;
 
 type State = {
   isLoading: boolean,
@@ -113,6 +122,24 @@ class UserListView extends React.PureComponent<Props, State> {
     });
   };
 
+  grantAdminRights = async () => {
+    if (this.props.activeUser.isAdmin) {
+      const newUserPromises = this.state.users.map(user => {
+        if (this.state.selectedUserIds.includes(user.id)) {
+          const newUser = Object.assign({}, user, { isAdmin: true });
+
+          return updateUser(newUser);
+        }
+
+        return Promise.resolve(user);
+      });
+
+      this.setState({
+        users: await Promise.all(newUserPromises),
+      });
+    }
+  };
+
   render() {
     const hasRowsSelected = this.state.selectedUserIds.length > 0;
     const rowSelection = {
@@ -155,6 +182,24 @@ class UserListView extends React.PureComponent<Props, State> {
         >
           Change Experience
         </Button>
+        {this.props.activeUser.isAdmin ? (
+          <Button
+            onClick={() =>
+              Modal.confirm({
+                title: messages["users.grant_admin_rights_title"],
+                content: messages["users.grant_admin_rights"]({
+                  numUsers: this.state.selectedUserIds.length,
+                }),
+                onOk: this.grantAdminRights,
+              })
+            }
+            icon="rocket"
+            disabled={!hasRowsSelected}
+            style={marginRight}
+          >
+            Grant Admin Rights
+          </Button>
+        ) : null}
         {activationFilterWarning}
         <Search
           style={{ width: 200, float: "right" }}
@@ -220,16 +265,27 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="teams"
               key="teams_"
               width={300}
-              render={(teams: Array<APITeamRoleType>, user: APIUserType) =>
-                teams.map(team => (
-                  <Tag
-                    key={`team_role_${user.id}_${team.team}`}
-                    color={TemplateHelpers.stringToColor(team.role.name)}
-                  >
-                    {team.team}: {team.role.name}
-                  </Tag>
-                ))
-              }
+              render={(teams: Array<APITeamMembershipType>, user: APIUserType) => {
+                if (user.isAdmin) {
+                  return (
+                    <Tag key={`team_role_${user.id}`} color="red">
+                      Admin - Access to all Teams
+                    </Tag>
+                  );
+                } else {
+                  return teams.map(team => {
+                    const roleName = team.isTeamManager ? "Team Manager" : "User";
+                    return (
+                      <Tag
+                        key={`team_role_${user.id}_${team.id}`}
+                        color={TemplateHelpers.stringToColor(roleName)}
+                      >
+                        {team.name}: {roleName}
+                      </Tag>
+                    );
+                  });
+                }
+              }}
             />
             <Column
               title="Status"
@@ -258,15 +314,18 @@ class UserListView extends React.PureComponent<Props, State> {
                     <Icon type="user" />Show Tracings
                   </Link>
                   <br />
-                  {user.isActive ? (
-                    <a href="#" onClick={() => this.deactivateUser(user)}>
-                      <Icon type="user-delete" />Deactivate User
-                    </a>
-                  ) : (
-                    <a href="#" onClick={() => this.activateUser(user)}>
-                      <Icon type="user-add" />Activate User
-                    </a>
-                  )}
+                  {// eslint-disable-next-line no-nested-ternary
+                  this.props.activeUser.isAdmin ? (
+                    user.isActive ? (
+                      <a href="#" onClick={() => this.deactivateUser(user)}>
+                        <Icon type="user-delete" />Deactivate User
+                      </a>
+                    ) : (
+                      <a href="#" onClick={() => this.activateUser(user)}>
+                        <Icon type="user-add" />Activate User
+                      </a>
+                    )
+                  ) : null}
                 </span>
               )}
             />
@@ -291,4 +350,8 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(UserListView);
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: getActiveUser(state.activeUser),
+});
+
+export default connect(mapStateToProps)(withRouter(UserListView));

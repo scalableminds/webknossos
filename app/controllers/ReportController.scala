@@ -8,6 +8,7 @@ import javax.inject.Inject
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationTypeSQL
+import models.project.ProjectDAO
 import models.team.TeamDAO
 import models.user.{User, UserDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction
@@ -130,8 +131,8 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
   def openTasksOverview(id: String) = SecuredAction.async { implicit request =>
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
-      users <- UserDAO.findByTeams(List(team.name), includeInactive = false)(GlobalAccessContext)
-      nonAdminUsers = users.filterNot(_.isAdminOf(team.name))
+      users <- UserDAO.findByTeams(List(team._id), includeInactive = false)(GlobalAccessContext)
+      nonAdminUsers = users.filterNot(_.isTeamManagerOf(team._id))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }

@@ -415,11 +415,16 @@ export class OxalisModel {
   }
 
   getLayerInfos(tracing: ?ServerTracingType, resolutions: Array<Vector3>): Array<DataLayerType> {
+    // This method adds/merges the layers of the tracing into the dataset layers
     // Overwrite or extend layers with volumeTracingLayer
+
     let layers = _.clone(Store.getState().dataset.dataLayers);
     // $FlowFixMe TODO Why does Flow complain about this check
     if (tracing == null || tracing.elementClass == null) {
-      return layers;
+      return layers.map(l => ({
+        ...l,
+        resolutions,
+      }));
     }
 
     // Flow doesn't understand that as the tracing has the elementClass property it has to be a volumeTracing
@@ -432,9 +437,9 @@ export class OxalisModel {
     // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer.
     // 2) Segmentation exists: In that case layers already contains dataLayer and the fallbackLayer
     //    property specifies its name, to be able to merge the two layers
-    const fallbackLayer = tracing.fallbackLayer != null ? tracing.fallbackLayer : null;
-    const existingLayerIndex = _.findIndex(layers, layer => layer.name === fallbackLayer);
-    const existingLayer = layers[existingLayerIndex];
+    const fallbackLayerName = tracing.fallbackLayer;
+    const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === fallbackLayerName);
+    const fallbackLayer = layers[fallbackLayerIndex];
 
     const tracingLayer = {
       name: tracing.id,
@@ -452,12 +457,12 @@ export class OxalisModel {
       resolutions,
       elementClass: tracing.elementClass,
       mappings:
-        existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],
+        fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
       largestSegmentId: tracing.largestSegmentId,
     };
 
-    if (existingLayer != null) {
-      layers[existingLayerIndex] = tracingLayer;
+    if (fallbackLayer != null) {
+      layers[fallbackLayerIndex] = tracingLayer;
     } else {
       // Remove other segmentation layers, since we are adding a new one.
       // This is a temporary workaround. In the long term we want to support
@@ -590,8 +595,7 @@ export class OxalisModel {
 
 function adaptResolutions(dataset: APIDatasetType): [APIDatasetType, Array<Vector3>] {
   const adaptedLayers = dataset.dataSource.dataLayers.map(dataLayer => {
-    // Todo: the back-end should deliver the resolutions numerically sorted
-    const adaptedResolutions = _.sortBy(dataLayer.resolutions, resolution => resolution[0]);
+    const adaptedResolutions = dataLayer.resolutions.slice();
     _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
       // We add another level of resolutions to allow zooming out even further
       const lastResolution = _.last(adaptedResolutions);

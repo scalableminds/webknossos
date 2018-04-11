@@ -5,7 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationSettings
-import models.team.{Role, TeamSQLDAO}
+import models.team.TeamSQLDAO
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -29,19 +29,15 @@ case class TaskTypeSQL(
 
 object TaskTypeSQL {
   def fromTaskType(t: TaskType)(implicit ctx: DBAccessContext) =
-    for {
-      team <- TeamSQLDAO.findOneByName(t.team)
-    } yield {
-      TaskTypeSQL(
+    Fox.successful(TaskTypeSQL(
         ObjectId.fromBsonId(t._id),
-        team._id,
+        ObjectId.fromBsonId(t._team),
         t.summary,
         t.description,
         t.settings,
         System.currentTimeMillis(),
         !t.isActive
-      )
-    }
+      ))
 }
 
 object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with SecuredSQLDAO {
@@ -67,7 +63,10 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with 
     ))
 
   override def readAccessQ(requestingUserId: ObjectId) = s"_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')"
-  override def updateAccessQ(requestingUserId: ObjectId) = s"_team in (select _team from webknossos.user_team_roles where role = '${Role.Admin.name}' and _user = '${requestingUserId.id}')"
+  override def updateAccessQ(requestingUserId: ObjectId) =
+    s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
+      or (select _organization from webknossos.teams where webknossos.teams._id = _team)
+        in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskTypeSQL] =
     for {
@@ -122,12 +121,13 @@ object TaskTypeSQLDAO extends SQLDAO[TaskTypeSQL, TasktypesRow, Tasktypes] with 
 case class TaskType(
                      summary: String,
                      description: String,
-                     team: String,
+                     _team: BSONObjectID,
                      settings: AnnotationSettings = AnnotationSettings.defaultFor(TracingType.skeleton),
                      isActive: Boolean = true,
                      _id: BSONObjectID = BSONObjectID.generate) {
 
   val id = _id.stringify
+  val team = _team.stringify
 }
 
 object TaskType extends FoxImplicits {
@@ -143,7 +143,7 @@ object TaskType extends FoxImplicits {
     TaskType(
       summary,
       description,
-      team,
+      BSONObjectID(team),
       settings)
   }
 
@@ -170,12 +170,12 @@ object TaskType extends FoxImplicits {
   def fromTaskTypeSQL(s: TaskTypeSQL)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext)
+      teamIdBson <- s._team.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
     } yield {
       TaskType(
         s.summary,
         s.description,
-        team.name,
+        teamIdBson,
         s.settings,
         !s.isDeleted,
         idBson
@@ -198,7 +198,6 @@ object TaskTypeDAO {
       taskTypeSQL <- TaskTypeSQL.fromTaskType(taskType)
       _ <- TaskTypeSQLDAO.insertOne(taskTypeSQL)
     } yield taskType
-
 
   def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
     for {

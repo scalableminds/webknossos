@@ -40,9 +40,8 @@ object AnnotationService
   with ProtoGeometryImplicits
   with LazyLogging {
 
-  private def selectSuitableTeam(user: User, dataSet: DataSet): String = {
-    val dataSetTeams = dataSet.owningTeam +: dataSet.allowedTeams
-    dataSetTeams.intersect(user.teamNames).head
+  private def selectSuitableTeam(user: User, dataSet: DataSet): BSONObjectID = {
+      dataSet.allowedTeams.intersect(user.teamIds).head
   }
 
   private def createVolumeTracing(dataSource: DataSource, withFallback: Boolean): VolumeTracing = {
@@ -117,7 +116,7 @@ object AnnotationService
     AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
 
   def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countActiveAnnotations(user._id, AnnotationType.Task, user.adminTeamNames)
+    AnnotationDAO.countActiveAnnotations(user._id, AnnotationType.Task, user.teamManagerTeamIds)
 
   def findTasksOf(user: User, isFinished: Option[Boolean], limit: Int)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Task, limit)
@@ -184,7 +183,7 @@ object AnnotationService
       task <- taskFox
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
-      _ <- Annotation(userId, tracingReference, dataSetName, task.team, taskType.settings,
+      _ <- Annotation(userId, tracingReference, dataSetName, task._team, taskType.settings,
           typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
@@ -201,7 +200,7 @@ object AnnotationService
       user._id,
       tracingReference,
       dataSet.name,
-      team = selectSuitableTeam(user, dataSet),
+      _team = selectSuitableTeam(user, dataSet),
       settings = settings,
       _name = name,
       description = description,

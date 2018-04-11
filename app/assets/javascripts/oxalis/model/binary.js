@@ -29,6 +29,7 @@ import { DataBucket } from "oxalis/model/binary/bucket";
 import { getAreas } from "oxalis/model/accessors/flycam_accessor";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import PriorityQueue from "js-priority-queue";
 
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -170,13 +171,9 @@ class Binary {
     );
     const fallbackZoomStep = logZoomStep + 1;
     const isFallbackAvailable = fallbackZoomStep <= this.cube.MAX_ZOOM_STEP;
-    const isFallbackAnchorPointNew = isFallbackAvailable
-      ? this.yieldsNewZoomedAnchorPoint(
-          unzoomedAnchorPoint,
-          fallbackZoomStep,
-          "fallbackAnchorPoint",
-        )
-      : false;
+    const isFallbackAnchorPointNew =
+      isFallbackAvailable &&
+      this.yieldsNewZoomedAnchorPoint(unzoomedAnchorPoint, fallbackZoomStep, "fallbackAnchorPoint");
 
     const areas = getAreas(Store.getState());
 
@@ -286,12 +283,25 @@ class Binary {
       const topLeftBucket = zoomedAnchorPoint.slice();
       topLeftBucket[w] += Math.floor((renderedBucketsPerDimension - 1) / 2);
 
-      // Todo: By subtracting and adding 1 to the bounds of y and x, we move
-      // one additional bucket on each edge of the viewport to the GPU. This decreases the
-      // chance of showing gray data, when moving the viewport. However, this code does not
-      // check whether we exceed MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION. A priority queue might
-      // be the most elegant way to do this here.
+      const centerBucketUV = [
+        scaledTopLeftVector[u] + (scaledBottomRightVector[u] - scaledTopLeftVector[u]) / 2,
+        scaledTopLeftVector[v] + (scaledBottomRightVector[v] - scaledTopLeftVector[v]) / 2,
+      ];
 
+      // By subtracting and adding 1 to the bounds of y and x, we move
+      // one additional bucket on each edge of the viewport to the GPU. This decreases the
+      // chance of showing gray data, when moving the viewport. However, it might happen that
+      // we do not have enough capacity to move these additional buckets to the GPU.
+      // That's why, we are using a priority queue which orders buckets by manhattan distance to
+      // the center bucket. We only consume that many items from the PQ, which we can handle on the
+      // GPU.
+
+      const bucketPQForCurrentPlane = new PriorityQueue({
+        // small priorities take precedence
+        comparator: (b, a) => b.priority - a.priority,
+      });
+
+      // Build up priority queue
       for (let y = scaledTopLeftVector[v] - 1; y <= scaledBottomRightVector[v] + 1; y++) {
         for (let x = scaledTopLeftVector[u] - 1; x <= scaledBottomRightVector[u] + 1; x++) {
           const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
@@ -301,9 +311,24 @@ class Binary {
           const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
           if (bucket.type !== "null") {
-            requiredBucketSet.add(bucket);
+            const priority = Math.abs(x - centerBucketUV[0]) + Math.abs(y - centerBucketUV[1]);
+            bucketPQForCurrentPlane.queue({
+              priority,
+              bucket,
+            });
           }
         }
+      }
+
+      // Consume priority queue until we maxed out the bucket capacity
+      let addedBucketCount = 0;
+      while (addedBucketCount < constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION ** 2) {
+        if (bucketPQForCurrentPlane.length === 0) {
+          break;
+        }
+        const bucketWithPriority = bucketPQForCurrentPlane.dequeue();
+        requiredBucketSet.add(bucketWithPriority.bucket);
+        addedBucketCount++;
       }
     }
     return Array.from(requiredBucketSet);

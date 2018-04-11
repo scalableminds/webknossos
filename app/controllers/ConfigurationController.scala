@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import models.binary.{DataSetDAO, DataSetSQLDAO}
+import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO}
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.user.UserService
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
@@ -43,7 +43,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
       .flatMap(_.dataSetConfigurations.get(dataSetName))
     }
     .orElse(DataSetDAO.findOneBySourceName(dataSetName).flatMap(_.defaultConfiguration))
-    .getOrElse(DataSetConfiguration.default)
+    .getOrElse(DataSetConfiguration.constructInitialDefault(List()))
     .map(configuration => Ok(toJson(configuration.configurationOrDefaults)))
   }
 
@@ -59,9 +59,9 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
 
   def readDataSetDefault(dataSetName: String) = SecuredAction.async { implicit request =>
     for {
-      dataset <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataset.notFound")
+      dataset: DataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataset.notFound")
     } yield {
-      Ok(toJson(dataset.defaultConfiguration.getOrElse(DataSetConfiguration.initialDefault).configurationOrDefaults))
+      Ok(toJson(dataset.defaultConfiguration.getOrElse(DataSetConfiguration.constructInitialDefault(dataset)).configurationOrDefaults))
     }
   }
 

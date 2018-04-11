@@ -1,6 +1,5 @@
 package models.configuration
 
-import models.basics.BasicSettings
 import play.api.libs.json.{JsBoolean, JsValue, _}
 
 case class UserConfiguration(configuration: Map[String, JsValue]) {
@@ -11,7 +10,7 @@ case class UserConfiguration(configuration: Map[String, JsValue]) {
 
 }
 
-object UserConfiguration extends BasicSettings {
+object UserConfiguration {
 
   implicit val userConfigurationFormat = Json.format[UserConfiguration]
 

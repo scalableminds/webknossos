@@ -22,6 +22,7 @@ import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
@@ -276,7 +277,7 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
                where _user = ${userId.id} and _dataSet = ${dataSetId.id}"""
       insertQuery  = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
                values(${userId.id}, ${dataSetId.id}, '#${sanitize(Json.toJson(configuration).toString)}')"""
-      _ <- run(DBIO.sequence(List(deleteQuery, insertQuery)).transactionally)
+      _ <- run(DBIO.sequence(List(deleteQuery, insertQuery)).withTransactionIsolation(Serializable))
     } yield ()
   }
 

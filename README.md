@@ -38,6 +38,7 @@ This is only recommended for testing.
 [For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
 
 ```bash
+docker-compose pull webknossos
 docker-compose up webknossos
 ```
 

@@ -59,8 +59,22 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
+export function getSharingToken(): ?string {
+  if (location != null) {
+    const params = Utils.getUrlParamsObject();
+    if (params != null && params.token != null) {
+      return ((params.token: any): string);
+    }
+  }
+  return null;
+}
+
 let tokenPromise;
 export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  const sharingToken = getSharingToken();
+  if (sharingToken != null) {
+    return fn(sharingToken);
+  }
   if (!tokenPromise) tokenPromise = requestUserToken();
   return tokenPromise.then(fn).catch(error => {
     if (error.status === 403) {
@@ -491,6 +505,15 @@ export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
+export async function getDataset(
+  datasetName: string,
+  sharingToken?: string,
+): Promise<APIDatasetType> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
+  const dataset = await Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
+  return dataset;
+}
+
 export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
   return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
@@ -527,6 +550,15 @@ export async function triggerDatasetCheck(datatstoreHost: string): Promise<void>
       host: datatstoreHost,
     }),
   );
+}
+
+export async function getDatasetSharingToken(datasetName: string): Promise<string> {
+  const { sharingToken } = await Request.receiveJSON(`/api/datasets/${datasetName}/sharingToken`);
+  return sharingToken;
+}
+
+export async function revokeDatasetSharingToken(datasetName: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetName}/sharingToken`, { method: "DELETE" });
 }
 
 // #### Datastores

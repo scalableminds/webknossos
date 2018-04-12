@@ -10,6 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import net.liftweb.common.Full
+import oxalis.security.SharingTokenContainer
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -102,7 +103,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
   def collectionName: String
   def existingCollectionName = collectionName + "_"
 
-  def anonymousReadAccessQ: String = "false"
+  def anonymousReadAccessQ(sharingToken: Option[String]): String = "false"
   def readAccessQ(requestingUserId: ObjectId): String = "true"
   def updateAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
   def deleteAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
@@ -115,7 +116,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
       } yield {
         userIdBox match {
           case Full(userId) => "(" + readAccessQ(userId) + ")"
-          case _ => "(" + anonymousReadAccessQ + ")"
+          case _ => "(" + anonymousReadAccessQ(sharingTokenFromCtx) + ")"
         }
       }
     }
@@ -148,6 +149,13 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
     ctx.data match {
       case Some(user: User) => Fox.successful(ObjectId.fromBsonId(user._id))
       case _ => Fox.failure("Access denied.")
+    }
+  }
+
+  private def sharingTokenFromCtx(implicit ctx: DBAccessContext): Option[String] = {
+    ctx.data match {
+      case Some(sharingTokenContainer: SharingTokenContainer) => Some(sanitize(sharingTokenContainer.sharingToken))
+      case _ => None
     }
   }
 

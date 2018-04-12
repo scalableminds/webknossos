@@ -12,13 +12,6 @@ import { Provider } from "react-redux";
 import { Router } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
 
-mockRequire("app", {
-  currentUser: {
-    email: "scmboy@scalableminds.com",
-    teams: [{ role: { name: "admin" } }],
-  },
-});
-
 // Those wrappers interfere with global.window and global.document otherwise
 mockRequire("libs/hammerjs_wrapper", {});
 mockRequire("libs/keyboardjs_wrapper", {});

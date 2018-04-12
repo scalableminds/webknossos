@@ -209,7 +209,7 @@ export type NDStoreConfigType = {
 
 export type DatasetConfigType = {
   +name: string,
-  +team: string,
+  +organization: string,
   +datastore: string,
   +zipFile: File,
 };

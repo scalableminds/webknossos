@@ -1,18 +1,25 @@
 // @flow
 import React from "react";
+import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import { Form, Input, Select, Button, Card, Spin, Upload, Icon } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import Utils from "libs/utils";
 import { getDatastores, addDataset } from "admin/admin_rest_api";
-import type { APIDatastoreType } from "admin/api_flow_types";
+
+import type { APIDatastoreType, APIUserType, DatasetConfigType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
 const Option = Select.Option;
 
-type Props = {
+type StateProps = {
+  activeUser: ?APIUserType,
+};
+
+type Props = StateProps & {
   form: Object,
   history: RouterHistory,
 };
@@ -51,13 +58,22 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
     evt.preventDefault();
 
     this.props.form.validateFields(async (err, formValues) => {
-      if (!err) {
+      const activeUser = this.props.activeUser;
+
+      if (!err && activeUser != null) {
         Toast.info("Uploading datasets");
         this.setState({
           isUploading: true,
         });
 
-        addDataset(formValues).then(
+        const datasetConfig: DatasetConfigType = Object.assign(
+          {
+            organization: activeUser.organization,
+          },
+          formValues,
+        );
+
+        addDataset(datasetConfig).then(
           async () => {
             Toast.success(messages["dataset.upload_success"]);
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
@@ -139,4 +155,8 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(DatasetUploadView));
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(withRouter(Form.create()(DatasetUploadView)));

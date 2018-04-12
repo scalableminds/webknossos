@@ -63,6 +63,7 @@ export type APIUserType = {
   +isEditable: boolean,
   +lastActivity: number,
   +teams: Array<APITeamMembershipType>,
+  +organization: string,
 };
 
 export type APITimeIntervalType = {

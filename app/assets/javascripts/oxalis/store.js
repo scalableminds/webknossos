@@ -214,7 +214,7 @@ export type DatasetLayerConfigurationType = {
 };
 
 export type DatasetConfigurationType = {
-  +datasetName: string,
+  +name: string,
   +fourBit: boolean,
   +interpolation: boolean,
   +keyboardDelay: number,
@@ -337,7 +337,7 @@ export type OxalisState = {
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
-    datasetName: "",
+    name: "",
     fourBit: true,
     interpolation: false,
     keyboardDelay: 342,

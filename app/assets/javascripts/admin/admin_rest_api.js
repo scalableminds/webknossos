@@ -31,6 +31,7 @@ import type {
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
+import type { DatasetConfigurationType } from "oxalis/store";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -512,6 +513,30 @@ export async function getDataset(
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
   const dataset = await Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
   return dataset;
+}
+
+export async function updateDataset(datasetName: string, dataset: APIDatasetType): Promise<void> {
+  await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, { data: dataset });
+}
+
+export async function getDatasetDefaultConfiguration(
+  datasetName: string,
+): Promise<DatasetConfigurationType> {
+  const datasetDefaultConfiguration = await Request.receiveJSON(
+    `/api/dataSetConfigurations/default/${datasetName}`,
+  );
+  return datasetDefaultConfiguration;
+}
+
+export async function updateDatasetDefaultConfiguration(
+  datasetName: string,
+  datasetConfiguration: DatasetConfigurationType,
+): Promise<{}> {
+  const datasetDefaultConfiguration = await Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/default/${datasetName}`,
+    { data: datasetConfiguration },
+  );
+  return datasetDefaultConfiguration;
 }
 
 export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {

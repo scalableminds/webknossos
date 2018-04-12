@@ -10,6 +10,7 @@ import constants from "oxalis/constants";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import Utils from "libs/utils";
 import window from "libs/window";
+import Toast from "libs/toast";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -19,6 +20,10 @@ export const BucketStateEnum = {
 export type BucketStateEnumType = $Keys<typeof BucketStateEnum>;
 
 export const BUCKET_SIZE_P = 5;
+
+const warnAboutDownsamplingRGB = _.once(() =>
+  Toast.warning("Zooming out for RGB data is limited. Zoom further in if data is not shown."),
+);
 
 export class DataBucket {
   type: "data" = "data";
@@ -206,6 +211,14 @@ export class DataBucket {
 
     const xyzToIdx = (x, y, z) => 32 * 32 * z + 32 * y + x;
     const byteOffset = this.BYTE_OFFSET;
+
+    if (byteOffset === 3) {
+      // Since JS doesn't offer Uint24Arrays, we don't downsample buckets
+      // for 24 byte data. This should only affect RGB data, which is only rarely
+      // used anyway.
+      warnAboutDownsamplingRGB();
+      return;
+    }
 
     function reviewUint8Array(
       arr: Uint8Array,

@@ -63,18 +63,20 @@ class Mappings {
   fetchMapping(mappingName: string): Promise<APIMappingType> {
     const cachedMapping = this.mappings[mappingName];
     if (cachedMapping != null && cachedMapping.classes != null) {
+      console.log("Activating:", mappingName);
       return Promise.resolve(cachedMapping);
     }
-    return doWithToken((token: string) =>
-      Request.receiveJSON(`${this.baseUrl + mappingName}?token=${token}`).then(
+    return doWithToken((token: string) => {
+      console.log("Start downloading:", mappingName);
+      return Request.receiveJSON(`${this.baseUrl + mappingName}?token=${token}`).then(
         (mapping: APIMappingType) => {
           this.mappings[mappingName] = mapping;
           console.log("Done downloading:", mappingName);
           return mapping;
         },
         error => console.error("Error downloading:", mappingName, error),
-      ),
-    );
+      );
+    });
   }
 
   buildMappingObject(mappingName: string): MappingType {

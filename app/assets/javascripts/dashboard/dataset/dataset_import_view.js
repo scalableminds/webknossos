@@ -1,6 +1,7 @@
 // @flow
 
 import * as React from "react";
+import _ from "lodash";
 import {
   Button,
   Spin,
@@ -127,7 +128,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
         await updateDatasetDefaultConfiguration(
           this.props.datasetName,
-          Object.assign({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
+          _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
             layers: JSON.parse(formValues.defaultConfigurationLayersJson),
           }),
         );

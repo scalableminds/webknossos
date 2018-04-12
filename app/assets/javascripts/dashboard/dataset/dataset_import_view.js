@@ -1,7 +1,19 @@
 // @flow
 
 import * as React from "react";
-import { Button, Spin, Input, Checkbox, Alert, Form, Card, InputNumber, Collapse } from "antd";
+import {
+  Button,
+  Spin,
+  Input,
+  Checkbox,
+  Alert,
+  Form,
+  Card,
+  InputNumber,
+  Collapse,
+  Col,
+  Row,
+} from "antd";
 import Clipboard from "clipboard-js";
 import Request from "libs/request";
 import update from "immutability-helper";
@@ -129,7 +141,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             },
           ),
         );
-        Toast.success(`Successfully imported ${this.props.datasetName}`);
+        const verb = this.props.isEditingMode ? "updated" : "imported";
+        Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
         // window.history.back();
       }
     });
@@ -212,29 +225,43 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             <Checkbox>Make dataset publicly accessible</Checkbox>,
           )}
         </FormItem>
-        <Collapse defaultActiveKey={["1"]} bordered={false}>
+        <Collapse defaultActiveKey={["1"]} bordered={false} style={{ marginBottom: 10 }}>
           <CollapsePanel header="Default Settings" key="1" style={{ borderBottom: "none" }}>
-            <FormItem label="Position">
-              {getFieldDecorator("defaultConfiguration.position", {
-                rules: [
-                  {
-                    pattern: /\d+\w*,\w*\d+\w*,\w*\d+/,
-                    message: "Please provide a valid position (e.g., 123,456,789)",
-                  },
-                ],
-              })(<Input />)}
-            </FormItem>
-            <FormItem label="Zoom">
-              {getFieldDecorator("defaultConfiguration.zoom")(<InputNumber />)}
-            </FormItem>
-            <FormItem label="Segmentation Opacity">
-              {getFieldDecorator("defaultConfiguration.segmentationOpacity")(<InputNumber />)}
-            </FormItem>
-            <FormItem>
-              {getFieldDecorator("defaultConfiguration.interpolation", {
-                valuePropName: "checked",
-              })(<Checkbox>Interpolation</Checkbox>)}
-            </FormItem>
+            <Row gutter={24}>
+              <Col span={6}>
+                <FormItem label="Position">
+                  {getFieldDecorator("defaultConfiguration.position", {
+                    rules: [
+                      {
+                        pattern: /\d+\w*,\w*\d+\w*,\w*\d+/,
+                        message: "Please provide a valid position (e.g., 123,456,789)",
+                      },
+                    ],
+                  })(<Input />)}
+                </FormItem>
+              </Col>
+              <Col span={6}>
+                <FormItem label="Zoom">
+                  {getFieldDecorator("defaultConfiguration.zoom")(
+                    <InputNumber style={{ width: "100%" }} />,
+                  )}
+                </FormItem>
+              </Col>
+              <Col span={6}>
+                <FormItem label="Segmentation Opacity">
+                  {getFieldDecorator("defaultConfiguration.segmentationOpacity")(
+                    <InputNumber style={{ width: "100%" }} />,
+                  )}
+                </FormItem>
+              </Col>
+              <Col span={6}>
+                <FormItem label=" " colon={false}>
+                  {getFieldDecorator("defaultConfiguration.interpolation", {
+                    valuePropName: "checked",
+                  })(<Checkbox>Interpolation</Checkbox>)}
+                </FormItem>
+              </Col>
+            </Row>
             <FormItem label="Layer Configuration">
               {getFieldDecorator("defaultConfigurationLayersJson", {
                 rules: [

@@ -22,6 +22,8 @@ import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { OrthoViews } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
+import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
+import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -88,6 +90,18 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: false,
       },
       mappingSize: {
+        type: "f",
+        value: 0,
+      },
+      globalMousePosition: {
+        type: "v3",
+        value: new THREE.Vector3(0, 0, 0),
+      },
+      brushSizeInPixel: {
+        type: "f",
+        value: 0,
+      },
+      pixelToVoxelFactor: {
         type: "f",
         value: 0,
       },
@@ -212,6 +226,38 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         this.uniforms.mappingSize.value = mappingSize;
       },
     );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.brushPosition,
+      globalMousePosition => {
+        if (!globalMousePosition) {
+          return;
+        }
+        if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+          return;
+        }
+
+        const [x, y, z] = calculateGlobalPos({
+          x: globalMousePosition[0],
+          y: globalMousePosition[1],
+        });
+        this.uniforms.globalMousePosition.value.set(x, y, z);
+      },
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.brushSize,
+      brushSize => {
+        this.uniforms.brushSizeInPixel.value = brushSize;
+      },
+    );
+
+    listenToStoreProperty(
+      storeState => getPlaneScalingFactor(storeState.flycam) / storeState.userConfiguration.scale,
+      pixelToVoxelFactor => {
+        this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
+      },
+    );
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
@@ -262,6 +308,9 @@ uniform float zoomValue;
 uniform vec3 uvw;
 uniform bool useBilinearFiltering;
 uniform vec3 datasetScale;
+uniform vec3 globalMousePosition;
+uniform float brushSizeInPixel;
+uniform float pixelToVoxelFactor;
 
 varying vec4 worldCoord;
 
@@ -447,7 +496,7 @@ vec3 getResolution(float zoomStep) {
   }
 }
 
-vec3 getCoords(float usedZoomStep) {
+vec3 getRelativeCoords(vec3 worldCoordUVW, float usedZoomStep) {
   float zoomStepDiff = usedZoomStep - zoomStep;
   bool useFallback = zoomStepDiff > 0.0;
   vec3 usedAnchorPoint = useFallback ? fallbackAnchorPoint : anchorPoint;
@@ -456,6 +505,17 @@ vec3 getCoords(float usedZoomStep) {
   vec3 resolution = getResolution(usedZoomStep);
   float zoomValue = pow(2.0, usedZoomStep);
 
+  vec3 resolutionUVW = transDim(resolution);
+  vec3 anchorPointAsGlobalPositionUVW =
+    usedAnchorPointUVW * resolutionUVW * bucketWidth;
+  vec3 relativeCoords = (worldCoordUVW - anchorPointAsGlobalPositionUVW) / resolutionUVW;
+
+  vec3 coords = transDim(relativeCoords);
+
+  return coords;
+}
+
+vec3 getWorldCoordUVW() {
   vec3 datasetScaleUVW = transDim(datasetScale);
 
   vec3 worldCoordUVW = vec3(
@@ -470,14 +530,7 @@ vec3 getCoords(float usedZoomStep) {
     globalPosition[<%= uvw[2] %>]
   );
 
-  vec3 resolutionUVW = transDim(resolution);
-  vec3 anchorPointAsGlobalPositionUVW =
-    usedAnchorPointUVW * resolutionUVW * bucketWidth;
-  vec3 relativeCoords = (worldCoordUVW - anchorPointAsGlobalPositionUVW) / resolutionUVW;
-
-  vec3 coords = transDim(relativeCoords);
-
-  return coords;
+  return worldCoordUVW;
 }
 
 vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 coords, float isFallback) {
@@ -578,18 +631,35 @@ float binarySearchIndex(sampler2D texture, float maxIndex, float value) {
   return -1.0;
 }
 
+vec4 getBrushOverlay(vec3 worldCoordUVW) {
+  vec3 flooredMousePos = floor(globalMousePosition);
+  float dist = length(floor(worldCoordUVW.xy) - flooredMousePos.xy);
+
+  vec4 brushOverlayColor = vec4(0.0);
+
+  float radius = round(brushSizeInPixel * pixelToVoxelFactor / 2.0);
+  float brushBorderWidthInPixel = 7.0;
+  float brushBorderWidth = ceil(brushBorderWidthInPixel * pixelToVoxelFactor);
+  if (radius > dist - brushBorderWidth && radius <= dist) {
+    brushOverlayColor = vec4(vec3(1.0), 0.5);
+  }
+
+  return brushOverlayColor;
+}
+
 void main() {
   float golden_ratio = 0.618033988749895;
   float color_value  = 0.0;
 
-  vec3 coords = getCoords(zoomStep);
+  vec3 worldCoordUVW = getWorldCoordUVW();
+  vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
 
   vec3 bucketPosition = div(floor(coords), bucketWidth);
   vec3 offsetInBucket = mod(floor(coords), bucketWidth);
 
   float fallbackZoomStep = min(<%= layers[0]%>_maxZoomStep, zoomStep + 1.0);
   bool hasFallback = fallbackZoomStep > zoomStep;
-  vec3 fallbackCoords = floor(getCoords(fallbackZoomStep));
+  vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
 
   <% if (hasSegmentation) { %>
     vec4 volume_color =
@@ -664,6 +734,9 @@ void main() {
   } else {
     gl_FragColor = vec4(data_color, 1.0);
   }
+
+  vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
+  gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);
 }
 
 

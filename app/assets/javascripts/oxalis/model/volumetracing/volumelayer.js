@@ -178,7 +178,7 @@ class VolumeLayer {
     const radius = Math.round(
       this.pixelsToVoxels(Store.getState().temporaryConfiguration.brushSize) / 2,
     );
-    const width = 2 * radius + 1;
+    const width = 2 * radius;
     const height = width;
 
     const map = new Array(width);
@@ -188,8 +188,9 @@ class VolumeLayer {
         map[x][y] = false;
       }
     }
-    const coord2d = this.get2DCoordinate(position);
-    const minCoord2d = [Math.floor(coord2d[0] - radius), Math.floor(coord2d[1] - radius)];
+    const floatingCoord2d = this.get2DCoordinate(position);
+    const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
+    const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
 
     const setMap = function(x: number, y: number, value = true): void {
       x = Math.floor(x);

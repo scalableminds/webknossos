@@ -505,7 +505,7 @@ function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   };
 }
 
-function calculateGlobalPos(clickPos: Point2) {
+export function calculateGlobalPos(clickPos: Point2): Vector3 {
   let position;
   const state = Store.getState();
   const activeViewport = state.viewModeData.plane.activeViewport;
@@ -513,56 +513,39 @@ function calculateGlobalPos(clickPos: Point2) {
   const zoomFactor = getPlaneScalingFactor(state.flycam);
   const viewportScale = state.userConfiguration.scale;
   const planeRatio = getBaseVoxelFactors(state.dataset.scale);
+
+  const diffX =
+    (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) / viewportScale * zoomFactor;
+  const diffY =
+    (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) / viewportScale * zoomFactor;
+
   switch (activeViewport) {
     case OrthoViews.PLANE_XY:
       position = [
-        curGlobalPos[0] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) /
-            viewportScale *
-            planeRatio[0] *
-            zoomFactor,
-        curGlobalPos[1] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) /
-            viewportScale *
-            planeRatio[1] *
-            zoomFactor,
+        curGlobalPos[0] - diffX * planeRatio[0],
+        curGlobalPos[1] - diffY * planeRatio[1],
         curGlobalPos[2],
       ];
       break;
     case OrthoViews.PLANE_YZ:
       position = [
         curGlobalPos[0],
-        curGlobalPos[1] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) /
-            viewportScale *
-            planeRatio[1] *
-            zoomFactor,
-        curGlobalPos[2] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) /
-            viewportScale *
-            planeRatio[2] *
-            zoomFactor,
+        curGlobalPos[1] - diffY * planeRatio[1],
+        curGlobalPos[2] - diffX * planeRatio[2],
       ];
       break;
     case OrthoViews.PLANE_XZ:
       position = [
-        curGlobalPos[0] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) /
-            viewportScale *
-            planeRatio[0] *
-            zoomFactor,
+        curGlobalPos[0] - diffX * planeRatio[0],
         curGlobalPos[1],
-        curGlobalPos[2] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) /
-            viewportScale *
-            planeRatio[2] *
-            zoomFactor,
+        curGlobalPos[2] - diffY * planeRatio[2],
       ];
       break;
     default:
-      throw new Error(
+      console.error(
         `Trying to calculate the global position, but no viewport is active: ${activeViewport}`,
       );
+      return [0, 0, 0];
   }
 
   return position;

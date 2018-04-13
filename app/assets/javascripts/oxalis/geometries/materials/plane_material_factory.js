@@ -19,11 +19,12 @@ import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
-import constants, { OrthoViews } from "oxalis/constants";
+import constants, { OrthoViews, VolumeToolEnum, volumeToolEnumToIndex } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
+import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -102,6 +103,18 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: 0,
       },
       pixelToVoxelFactor: {
+        type: "f",
+        value: 0,
+      },
+      activeCellId: {
+        type: "f",
+        value: 0,
+      },
+      isMouseInActiveViewport: {
+        type: "b",
+        value: false,
+      },
+      activeVolumeToolIndex: {
         type: "f",
         value: 0,
       },
@@ -228,36 +241,62 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     );
 
     listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.brushPosition,
-      globalMousePosition => {
-        if (!globalMousePosition) {
-          return;
-        }
-        if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
-          return;
-        }
-
-        const [x, y, z] = calculateGlobalPos({
-          x: globalMousePosition[0],
-          y: globalMousePosition[1],
-        });
-        this.uniforms.globalMousePosition.value.set(x, y, z);
-      },
-    );
-
-    listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.brushSize,
-      brushSize => {
-        this.uniforms.brushSizeInPixel.value = brushSize;
-      },
-    );
-
-    listenToStoreProperty(
       storeState => getPlaneScalingFactor(storeState.flycam) / storeState.userConfiguration.scale,
       pixelToVoxelFactor => {
         this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
       },
     );
+
+    listenToStoreProperty(
+      storeState => storeState.viewModeData.plane.activeViewport === this.planeID,
+      isMouseInActiveViewport => {
+        this.uniforms.isMouseInActiveViewport.value = isMouseInActiveViewport;
+      },
+    );
+
+    const segmentationBinary = Model.getSegmentationBinary();
+    const hasSegmentation = segmentationBinary != null;
+
+    if (hasSegmentation) {
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.brushPosition,
+        globalMousePosition => {
+          if (!globalMousePosition) {
+            return;
+          }
+          if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+            return;
+          }
+
+          const [x, y, z] = calculateGlobalPos({
+            x: globalMousePosition[0],
+            y: globalMousePosition[1],
+          });
+          this.uniforms.globalMousePosition.value.set(x, y, z);
+        },
+      );
+
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.brushSize,
+        brushSize => {
+          this.uniforms.brushSizeInPixel.value = brushSize;
+        },
+      );
+
+      listenToStoreProperty(
+        storeState => getActiveCellId(storeState.tracing).getOrElse(0),
+        activeCellId => {
+          this.uniforms.activeCellId.value = activeCellId;
+        },
+      );
+
+      listenToStoreProperty(
+        storeState => volumeToolEnumToIndex(getVolumeTool(storeState.tracing).get()),
+        volumeTool => {
+          this.uniforms.activeVolumeToolIndex.value = volumeTool;
+        },
+      );
+    }
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
@@ -274,8 +313,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     const segmentationBinary = Model.getSegmentationBinary();
     const dataTextureWidth = _.values(Model.binary)[0].textureWidth;
 
+    const datasetScale = Store.getState().dataset.scale;
+
     return _.template(
       `\
+precision highp float;
+
 const int textureCountPerLayer = <%= textureCountPerLayer %>;
 
 <% _.each(layers, function(name) { %>
@@ -297,6 +340,9 @@ uniform bool isMappingEnabled;
 uniform float mappingSize;
 uniform sampler2D <%= segmentationName %>_mapping_texture;
 uniform sampler2D <%= segmentationName %>_mapping_lookup_texture;
+uniform float activeCellId;
+uniform bool isMouseInActiveViewport;
+uniform float activeVolumeToolIndex;
 <% } %>
 
 uniform float alpha;
@@ -632,10 +678,22 @@ float binarySearchIndex(sampler2D texture, float maxIndex, float value) {
 }
 
 vec4 getBrushOverlay(vec3 worldCoordUVW) {
-  vec3 flooredMousePos = floor(globalMousePosition);
-  float dist = length(floor(worldCoordUVW.xy) - flooredMousePos.xy);
-
   vec4 brushOverlayColor = vec4(0.0);
+
+  bool isBrushModeActive = activeVolumeToolIndex == <%= brushToolIndex %>;
+
+  if (!isMouseInActiveViewport || !isBrushModeActive) {
+    return brushOverlayColor;
+  }
+  vec3 flooredMousePos = floor(globalMousePosition);
+  // For some reason, taking the dataset scale from the uniform results in imprecise
+  // rendering of the brush circle. That's why it is directly inserted into the source
+  // via templating.
+  vec3 _datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
+  float baseVoxelSize = min(min(_datasetScale.x, _datasetScale.y), _datasetScale.z);
+  vec3 datasetScaleUVW = transDim(_datasetScale) / baseVoxelSize;
+
+  float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
 
   float radius = round(brushSizeInPixel * pixelToVoxelFactor / 2.0);
   float brushBorderWidthInPixel = 7.0;
@@ -647,8 +705,39 @@ vec4 getBrushOverlay(vec3 worldCoordUVW) {
   return brushOverlayColor;
 }
 
-void main() {
+float getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
+  vec4 volume_color =
+    getMaybeFilteredColorOrFallback(
+      <%= segmentationName %>_lookup_texture,
+      <%= segmentationName %>_textures,
+      coords,
+      fallbackCoords,
+      hasFallback,
+      true, // Don't use bilinear filtering for volume data
+      vec4(0.0, 0.0, 0.0, 0.0)
+    );
+
+  float id = vec4ToFloat(volume_color);
+
+  if (isMappingEnabled) {
+    float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
+    if (index != -1.0) {
+      id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, 4096.0, index).rgba);
+    }
+  }
+
+  return id;
+}
+
+vec3 convertCellIdToRGB(float id) {
   float golden_ratio = 0.618033988749895;
+  // To fight float imprecision, extract the smallest 8-bit first (mod with 256.0), then multiply with the golden golden_ratio
+  // and finally get a value between 0.0 and 1.0
+  vec4 HSV = vec4( mod( mod(id, 256.0) * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
+  return hsv_to_rgb(HSV);
+}
+
+void main() {
   float color_value  = 0.0;
 
   vec3 worldCoordUVW = getWorldCoordUVW();
@@ -662,27 +751,7 @@ void main() {
   vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
 
   <% if (hasSegmentation) { %>
-    vec4 volume_color =
-      getMaybeFilteredColorOrFallback(
-        <%= segmentationName %>_lookup_texture,
-        <%= segmentationName %>_textures,
-        coords,
-        fallbackCoords,
-        hasFallback,
-        // Don't use bilinear filtering for volume data
-        true,
-        vec4(0.0, 0.0, 0.0, 0.0)
-      );
-
-    float id = vec4ToFloat(volume_color);
-
-    if (isMappingEnabled) {
-      float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
-      if (index != -1.0) {
-        id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, 4096.0, index).rgba);
-      }
-    }
-
+    float id = getSegmentationId(coords, fallbackCoords, hasFallback);
   <% } else { %>
     float id = 0.0;
   <% } %>
@@ -727,16 +796,16 @@ void main() {
 
   // Color map (<= to fight rounding mistakes)
   if ( id > 0.1 ) {
-    // To fight float imprecision, extract the smallest 8-bit first (mod with 256.0), then multiply with the golden golden_ratio
-    // and finally get a value between 0.0 and 1.0
-    vec4 HSV = vec4( mod( mod(id, 256.0) * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
-    gl_FragColor = vec4(mix( data_color, hsv_to_rgb(HSV), alpha ), 1.0);
+        gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha ), 1.0);
   } else {
     gl_FragColor = vec4(data_color, 1.0);
   }
 
-  vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
-  gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);
+  <% if (hasSegmentation) { %>
+    vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
+    brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
+    gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);
+  <% } %>
 }
 
 
@@ -760,6 +829,8 @@ void main() {
       formatNumberAsGLSLFloat,
       formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
       resolutions: this.getResolutions(),
+      datasetScale,
+      brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
     });
   }
 }

@@ -2,8 +2,25 @@
 // mockRequire("libs/window", myFakeWindow);
 export const alert = typeof window === "undefined" ? console.log.bind(console) : window.alert;
 export const document = typeof window === "undefined" ? {} : window.document;
-export const location =
-  typeof window === "undefined" ? { reload: () => {} /* noop */ } : window.location;
+
+// See https://github.com/facebook/flow/blob/master/lib/bom.js#L294-L311
+const dummyLocation = {
+  ancestorOrigins: [],
+  hash: "",
+  host: "",
+  hostname: "",
+  href: "",
+  origin: "",
+  pathname: "",
+  port: "",
+  protocol: "",
+  search: "",
+  reload: () => {} /* noop */,
+  assign: () => {} /* noop */,
+  replace: () => {} /* noop */,
+  toString: () => "" /* noop */,
+};
+export const location: Location = typeof window === "undefined" ? dummyLocation : window.location;
 
 const _window =
   typeof window === "undefined"

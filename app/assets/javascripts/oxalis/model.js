@@ -45,11 +45,15 @@ import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
-import { doWithToken, getAnnotationInformation } from "admin/admin_rest_api";
+import {
+  doWithToken,
+  getAnnotationInformation,
+  getDataset,
+  getSharingToken,
+} from "admin/admin_rest_api";
 import messages from "messages";
-
 import type Layer from "oxalis/model/binary/layers/layer";
-import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
+import type { APIAnnotationType } from "admin/api_flow_types";
 
 export type ServerNodeType = {
   id: number,
@@ -295,7 +299,11 @@ export class OxalisModel {
   }
 
   async initializeDataset(datasetName: string): Promise<Array<Vector3>> {
-    const rawDataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
+    const sharingToken = getSharingToken();
+    const rawDataset =
+      sharingToken != null
+        ? await getDataset(datasetName, sharingToken)
+        : await getDataset(datasetName);
 
     let error;
     if (!rawDataset) {

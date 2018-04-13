@@ -3,7 +3,6 @@
 import _ from "lodash";
 import * as React from "react";
 import { Link, withRouter } from "react-router-dom";
-import Request from "libs/request";
 import Utils from "libs/utils";
 import moment from "moment";
 import { Spin, Input, Button } from "antd";
@@ -14,7 +13,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIUserType, APIDatasetType } from "admin/api_flow_types";
 import type { DataLayerType } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
-import { getDatastores, triggerDatasetCheck } from "admin/admin_rest_api";
+import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
 
 const { Search } = Input;
 
@@ -85,9 +84,8 @@ class DatasetView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = "/api/datasets";
     this.setState({ isLoading: true });
-    const datasets = await Request.receiveJSON(url);
+    const datasets = await getDatasets();
 
     const transformedDatasets = transformDatasets(datasets);
     this.setState({

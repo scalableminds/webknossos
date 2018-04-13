@@ -24,6 +24,7 @@ const ErrorHandling = {
   assertExists: _.noop,
   assert: _.noop,
 };
+
 const app = {
   vent: Object.assign({}, BackboneEvents),
 };

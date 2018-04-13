@@ -267,7 +267,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     for {
       teams <- getAllowedTeamsForNextTask(user)
       _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      task <- tryToGetNextAssignmentFor(user, teams)
+      task <-  TaskDAO.findAssignableFor(user, teams, initializeAnnotation = true) ?~> Messages("task.unavailable")
       annotation <- AnnotationService.createAnnotationFor(user, task)
       annotationJSON <- annotation.toJson(Some(user))
     } yield {
@@ -288,17 +288,12 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     }
   }
 
-  private def tryToGetNextAssignmentFor(user: User, teams: List[BSONObjectID])(implicit ctx: DBAccessContext): Fox[Task] =
-    for {
-      task <- TaskAssignmentService.findOneAssignableFor(user, teams) ?~> Messages("task.unavailable")
-    } yield task
-
-  def peekNext(limit: Int) = SecuredAction.async { implicit request =>
+  def peekNext = SecuredAction.async { implicit request =>
     val user = request.identity
     for {
-      tasks <- TaskAssignmentService.findAllAssignableFor(user, user.teamIds, Some(limit))
-      tasksJson <- Fox.combined(tasks.map(t => Task.transformToJson(t)(GlobalAccessContext)))
-    } yield Ok(Json.toJson(tasksJson))
+      task <- TaskDAO.findAssignableFor(user, user.teamIds, initializeAnnotation = false)
+      taskJson <- Task.transformToJson(task)(GlobalAccessContext)
+    } yield Ok(taskJson)
   }
 
 }

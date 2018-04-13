@@ -138,7 +138,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllAssignableFor(userId: ObjectId, teamIds: List[ObjectId], limit: Option[Int])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+  def findAssignableFor(userId: ObjectId, teamIds: List[ObjectId], initializeAnnotation: Boolean)(implicit ctx: DBAccessContext): Fox[TaskSQL] = {
     val q = sql"""
            select webknossos.tasks_.*
            from
@@ -156,11 +156,12 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                  and userAnnotations._task is null
                  and not webknossos.projects_.paused
            order by webknossos.projects_.priority
-           limit ${limit};
+           limit 1;
       """
     for {
-      r <- run(q.as[TasksRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      rList <- run(q.as[TasksRow])
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
     } yield parsed
   }
 
@@ -440,10 +441,10 @@ object TaskDAO {
       tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
     } yield tasks
 
-  def findAllAssignableFor(user: User, teamIds: List[BSONObjectID], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
+  def findAssignableFor(user: User, teamIds: List[BSONObjectID], initializeAnnotation: Boolean = false)(implicit ctx: DBAccessContext): Fox[Task] = {
     for {
-      tasksSQL <- TaskSQLDAO.findAllAssignableFor(ObjectId.fromBsonId(user._id), teamIds.map(ObjectId.fromBsonId(_)), limit)
-      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
+      taskSQL <- TaskSQLDAO.findAssignableFor(ObjectId.fromBsonId(user._id), teamIds.map(ObjectId.fromBsonId(_)), initializeAnnotation)
+      tasks <- Task.fromTaskSQL(taskSQL)
     } yield tasks
   }
 

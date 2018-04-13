@@ -13,7 +13,6 @@ import models.team._
 import models.user._
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
-import oxalis.jobs.AvailableTasksJob
 import oxalis.security.WebknossosSilhouette
 import play.api.Play.current
 import play.api._
@@ -68,13 +67,6 @@ object Global extends GlobalSettings with LazyLogging{
     Akka.system(app).actorOf(
       Props(new Mailer(conf)),
       name = "mailActor")
-
-    if (conf.getBoolean("workload.active")) {
-      Akka.system(app).actorOf(
-        Props(new AvailableTasksJob()),
-        name = "availableTasksMailActor"
-      )
-    }
   }
 
   override def onRouteRequest(request: RequestHeader): Option[Handler] = {

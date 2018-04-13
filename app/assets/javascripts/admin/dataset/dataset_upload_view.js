@@ -66,12 +66,10 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
           isUploading: true,
         });
 
-        const datasetConfig: DatasetConfigType = Object.assign(
-          {
-            organization: activeUser.organization,
-          },
-          formValues,
-        );
+        const datasetConfig: DatasetConfigType = {
+          ...formValues,
+          organization: activeUser.organization,
+        };
 
         addDataset(datasetConfig).then(
           async () => {

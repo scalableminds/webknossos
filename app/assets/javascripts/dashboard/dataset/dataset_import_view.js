@@ -28,6 +28,7 @@ import {
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
 } from "admin/admin_rest_api";
+import { Vector3Input } from "libs/vector_input";
 import type { APIDatasetType } from "admin/api_flow_types";
 import type { DatasetConfigurationType } from "oxalis/store";
 
@@ -85,10 +86,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     this.setState({ isLoading: true });
     const sharingToken = await getDatasetSharingToken(this.props.datasetName);
     const dataset = await getDataset(this.props.datasetName);
-    const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
-      this.props.datasetName,
-    );
-
     const datasetJson = await doWithToken(token =>
       Request.receiveJSON(
         `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
@@ -98,40 +95,50 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     this.props.form.setFieldsValue({
       dataSourceJson: JSON.stringify(datasetJson.dataSource, null, "  "),
       dataset: {
+        displayName: dataset.displayName,
         isPublic: dataset.isPublic,
         description: dataset.description || undefined,
       },
-      defaultConfiguration: datasetDefaultConfiguration,
-      defaultConfigurationLayersJson: JSON.stringify(
-        datasetDefaultConfiguration.layers,
-        null,
-        "  ",
-      ),
     });
 
-    // eslint-disable-next-line react/no-did-mount-set-state
+    if (this.props.isEditingMode) {
+      const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
+        this.props.datasetName,
+      );
+      this.props.form.setFieldsValue({
+        defaultConfiguration: datasetDefaultConfiguration,
+        defaultConfigurationLayersJson: JSON.stringify(
+          datasetDefaultConfiguration.layers,
+          null,
+          "  ",
+        ),
+      });
+      this.setState({ datasetDefaultConfiguration });
+    }
+
     this.setState({
       isLoading: false,
       sharingToken,
       dataset,
-      datasetDefaultConfiguration,
       messages: datasetJson.messages,
     });
   }
 
-  importDataset = (e: SyntheticEvent<>) => {
+  handleSubmit = (e: SyntheticEvent<>) => {
     e.preventDefault();
     this.props.form.validateFields(async (err, formValues: FormData) => {
       const { dataset, datasetDefaultConfiguration } = this.state;
       if (!err && dataset != null) {
         await updateDataset(this.props.datasetName, Object.assign({}, dataset, formValues.dataset));
 
-        await updateDatasetDefaultConfiguration(
-          this.props.datasetName,
-          _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
-            layers: JSON.parse(formValues.defaultConfigurationLayersJson),
-          }),
-        );
+        if (datasetDefaultConfiguration != null) {
+          await updateDatasetDefaultConfiguration(
+            this.props.datasetName,
+            _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
+              layers: JSON.parse(formValues.defaultConfigurationLayersJson),
+            }),
+          );
+        }
 
         const dataSource = JSON.parse(formValues.dataSourceJson);
         await doWithToken(token =>
@@ -144,7 +151,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         );
         const verb = this.props.isEditingMode ? "updated" : "imported";
         Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
-        // window.history.back();
+        window.history.back();
       }
     });
   };
@@ -199,13 +206,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       <div>
         <FormItem label="Description">
           {getFieldDecorator("dataset.description")(
-            <Input.TextArea rows="3" placeholder="Dataset Description" />,
+            <Input.TextArea rows="3" placeholder="Description" />,
           )}
         </FormItem>
         <FormItem label="Display Name">
-          {getFieldDecorator("defaultConfiguration.name", { rules: [{ len: 3 }] })(
-            <Input placeholder="Dataset Display Name" />,
-          )}
+          {getFieldDecorator("dataset.displayName")(<Input placeholder="Display Name" />)}
         </FormItem>
         <FormItem label="Sharing Link">
           <Input.Group compact>
@@ -231,14 +236,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             <Row gutter={24}>
               <Col span={6}>
                 <FormItem label="Position">
-                  {getFieldDecorator("defaultConfiguration.position", {
-                    rules: [
-                      {
-                        pattern: /\d+\w*,\w*\d+\w*,\w*\d+/,
-                        message: "Please provide a valid position (e.g., 123,456,789)",
-                      },
-                    ],
-                  })(<Input />)}
+                  {getFieldDecorator("defaultConfiguration.position")(
+                    <Vector3Input value="" onChange={() => {}} />,
+                  )}
                 </FormItem>
               </Col>
               <Col span={6}>
@@ -282,7 +282,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     const titleString = this.props.isEditingMode ? "Update" : "Import";
 
     return (
-      <Form className="row container dataset-import" onSubmit={this.importDataset}>
+      <Form className="row container dataset-import" onSubmit={this.handleSubmit}>
         <Card
           title={
             <h3>
@@ -307,7 +307,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 ],
               })(<Input.TextArea rows={20} style={jsonEditStyle} />)}
             </FormItem>
-            {this.getEditModeComponents()}
+            {this.props.isEditingMode ? this.getEditModeComponents() : null}
             <FormItem>
               <Button type="primary" htmlType="submit">
                 {titleString}

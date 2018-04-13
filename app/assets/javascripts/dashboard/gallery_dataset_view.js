@@ -122,7 +122,11 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           {dataset.dataStore.typ !== "ndstore" ? createVolumeTracingMenu : null}
         </div>
         <div className="dataset-description">
-          <h3>{dataset.name}</h3>
+          <h3>
+            {dataset.displayName != null && dataset.displayName !== ""
+              ? dataset.displayName
+              : dataset.name}
+          </h3>
           <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
           {description}
         </div>

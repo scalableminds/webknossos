@@ -214,7 +214,6 @@ export type DatasetLayerConfigurationType = {
 };
 
 export type DatasetConfigurationType = {
-  +name: string,
   +fourBit: boolean,
   +interpolation: boolean,
   +keyboardDelay: number,

@@ -49,14 +49,14 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   async fetchData(): Promise<void> {
     const dataset = await getDataset(this.props.datasetName);
-    const datasource = await getDatasetDatasource(dataset);
+    const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
 
     // eslint-disable-next-line react/no-did-mount-set-state
     this.setState({
       dataLoaded: true,
       dataset,
-      datasetJson: JSON.stringify(datasource.dataSource, null, "  "),
-      messages: datasource.messages,
+      datasetJson: JSON.stringify(dataSource, null, "  "),
+      messages: dataSourceMessages,
     });
   }
 

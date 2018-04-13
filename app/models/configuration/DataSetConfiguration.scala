@@ -19,7 +19,7 @@ object DataSetConfiguration {
     constructInitialDefault(dataSet.dataSource.toUsable.map(d => d.dataLayers.map(_.name)).getOrElse(List()))
 
   def constructInitialDefault(layerNames: List[String]): DataSetConfiguration = {
-    val layerValues = Json.toJson(layerNames.map(layerName => Json.obj(layerName -> initialDefaultPerLayer)))
+    val layerValues = Json.toJson(layerNames.map(layerName => (layerName -> initialDefaultPerLayer)).toMap)
 
     DataSetConfiguration(
       Map(

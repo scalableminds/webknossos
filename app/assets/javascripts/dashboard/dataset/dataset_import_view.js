@@ -1,10 +1,13 @@
 // @flow
 
 import * as React from "react";
-import { Button, Spin, Input, Checkbox, Alert } from "antd";
+import { Button, Spin, Input, Checkbox, Alert, Form, Card } from "antd";
+import Clipboard from "clipboard-js";
 import update from "immutability-helper";
 import Toast from "libs/toast";
 import {
+  getDatasetSharingToken,
+  revokeDatasetSharingToken,
   getDataset,
   getDatasetDatasource,
   updateDataset,
@@ -12,6 +15,8 @@ import {
 } from "admin/admin_rest_api";
 import messages from "messages";
 import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
+
+const FormItem = Form.Item;
 
 type Props = {
   datasetName: string,
@@ -21,9 +26,11 @@ type Props = {
 type State = {
   dataLoaded: boolean,
   dataset: ?APIDatasetType,
+  sharingToken: string,
   datasetJson: string,
   isValidJSON: boolean,
   messages: Array<APIMessageType>,
+  isLoading: boolean,
 };
 
 class DatasetImportView extends React.PureComponent<Props, State> {
@@ -35,6 +42,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   state = {
     dataLoaded: false,
     dataset: null,
+    sharingToken: "",
+    isLoading: false,
     datasetJson: "",
     isValidJSON: true,
     messages: [],
@@ -48,15 +57,19 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
+    this.setState({ isLoading: true });
+    const sharingToken = await getDatasetSharingToken(this.props.datasetName);
     const dataset = await getDataset(this.props.datasetName);
     const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
 
     // eslint-disable-next-line react/no-did-mount-set-state
     this.setState({
       dataLoaded: true,
+      sharingToken,
       dataset,
       datasetJson: JSON.stringify(dataSource, null, "  "),
       messages: dataSourceMessages,
+      isLoading: false,
     });
   }
 
@@ -101,11 +114,37 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     this.updateDataset("isPublic", event.target.checked);
   };
 
+  handleCopySharingLink = async () => {
+    await Clipboard.copy(this.getSharingLink());
+    Toast.success("Sharing Link copied to clipboard");
+  };
+
+  handleRevokeSharingLink = async () => {
+    this.setState({ isLoading: true });
+    try {
+      await revokeDatasetSharingToken(this.props.datasetName);
+      const sharingToken = await getDatasetSharingToken(this.props.datasetName);
+      this.setState({ sharingToken });
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  };
+
+  handleSelectText = (event: SyntheticInputEvent<>) => {
+    event.target.select();
+  };
+
   updateDataset(propertyName: string, value: string | boolean) {
     const newState = update(this.state, {
       dataset: { [propertyName]: { $set: value } },
     });
     this.setState(newState);
+  }
+
+  getSharingLink() {
+    return `${window.location.origin}/datasets/${this.props.datasetName}/view?token=${
+      this.state.sharingToken
+    }`;
   }
 
   getMessageComponents() {
@@ -132,20 +171,38 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   getEditModeComponents() {
     // these components are only available in editing mode
-    if (this.props.isEditingMode && this.state.dataset != null) {
+    if (this.props.isEditing && this.state.dataset != null) {
       const { dataset } = this.state;
 
       return (
         <div>
-          <Input.TextArea
-            rows="3"
-            value={dataset.description || ""}
-            placeholder="Dataset Description"
-            onChange={this.handleChangeDescription}
-          />
-          <Checkbox checked={dataset.isPublic} onChange={this.handleChangeCheckbox}>
-            Make dataset publicly accessible
-          </Checkbox>
+          <FormItem label="Dataset Description">
+            <Input.TextArea
+              rows="3"
+              value={dataset.description || ""}
+              placeholder="Dataset Description"
+              onChange={this.handleChangeDescription}
+            />
+          </FormItem>
+          <FormItem label="Sharing Link">
+            <Input.Group compact>
+              <Input
+                value={this.getSharingLink()}
+                onClick={this.handleSelectText}
+                style={{ width: "80%" }}
+                readOnly
+              />
+              <Button onClick={this.handleCopySharingLink} style={{ width: "10%" }} icon="copy" />
+              <Button onClick={this.handleRevokeSharingLink} style={{ width: "10%" }}>
+                Revoke
+              </Button>
+            </Input.Group>
+          </FormItem>
+          <FormItem>
+            <Checkbox checked={dataset.isPublic} onChange={this.handleChangeCheckbox}>
+              Make dataset publicly accessible
+            </Checkbox>
+          </FormItem>
         </div>
       );
     }
@@ -167,35 +224,42 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const content = this.state.dataLoaded ? (
-      <Input.TextArea
-        value={datasetJson}
-        onChange={this.handleChangeJson}
-        rows={20}
-        style={textAreaStyle}
-      />
-    ) : (
-      <Spin size="large" />
-    );
+      <FormItem label="Dataset Configuration">
+        <Input.TextArea
+          value={datasetJson}
+          onChange={this.handleChangeJson}
+          rows={20}
+          style={textAreaStyle}
+        />
+      </FormItem>
+    ) : null;
 
     return (
-      <div className="container" id="dataset-import-view">
-        <h3>
-          {titleString} Dataset {this.props.datasetName}
-        </h3>
-        <p>Please review your dataset&#39;s properties before importing it.</p>
-        {this.getMessageComponents()}
-        <div className="content">{content}</div>
-        {this.getEditModeComponents()}
-        <div>
-          <Button
-            onClick={this.importDataset}
-            type="primary"
-            disabled={this.state.datasetJson === ""}
-          >
-            {titleString}
-          </Button>
-          <Button onClick={() => window.history.back()}>Cancel</Button>
-        </div>
+      <div className="row container dataset-import">
+        <Card
+          title={
+            <h3>
+              {titleString} Dataset: {this.props.datasetName}
+            </h3>
+          }
+        >
+          <Spin size="large" spinning={this.state.isLoading}>
+            <p>Please review your dataset&#39;s properties before importing it.</p>
+            {this.getMessageComponents()}
+            {content}
+            {this.getEditModeComponents()}
+            <FormItem>
+              <Button
+                onClick={this.importDataset}
+                type="primary"
+                disabled={this.state.datasetJson === ""}
+              >
+                {titleString}
+              </Button>&nbsp;
+              <Button onClick={() => window.history.back()}>Cancel</Button>
+            </FormItem>
+          </Spin>
+        </Card>
       </div>
     );
   }

@@ -126,7 +126,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
               />
               <Column
                 title="Team"
-                dataIndex="team"
+                dataIndex="team.name"
                 key="team"
                 width={130}
                 sorter={Utils.localeCompareBy("team")}

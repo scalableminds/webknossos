@@ -1,11 +1,15 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import "../enzyme/e2e-setup";
+import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
+
+test.before("Change token", async () => {
+  setCurrToken(tokenUserA);
+});
 
 test.serial("getProjects()", async t => {
   const projects = _.sortBy(await api.getProjects(), p => p.name);
@@ -24,12 +28,12 @@ test.serial("getProject(projectName: string)", async t => {
 });
 
 test.serial("createProject and deleteProject", async t => {
-  const teamName = _.sortBy(await api.getTeams(), team => team.name)[0].name;
+  const teamId = _.sortBy(await api.getTeams(), team => team.name)[0].id;
   const activeUser = await api.getActiveUser();
   const projectName = "test-new-project";
   const newProject = {
     name: projectName,
-    team: teamName,
+    team: teamId,
     owner: activeUser.id,
     priority: 1,
     paused: false,

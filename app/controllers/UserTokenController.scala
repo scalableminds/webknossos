@@ -13,7 +13,7 @@ import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
 import models.user.User
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
-import oxalis.security.{TokenType, WebknossosSilhouette}
+import oxalis.security.{URLSharing, TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
@@ -47,7 +47,8 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     } else {
       for {
         userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
-        ctx = DBAccessContext(userBox)
+        ctxFromUserBox = DBAccessContext(userBox)
+        ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
@@ -77,8 +78,8 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       for {
         dataset <- DataSetDAO.findOneBySourceName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
-        owningTeam = dataset.owningTeam
-        isAllowed <- ensureTeamAdministration(user, owningTeam).futureBox
+        owningOrg = dataset.owningOrganization
+        isAllowed <- user.isAdminOf(owningOrg).futureBox
       } yield {
         Full(UserAccessAnswer(isAllowed.isDefined))
       }

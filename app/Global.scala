@@ -21,6 +21,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.concurrent._
 import play.api.mvc.Results.Ok
 import play.api.mvc._
+import reactivemongo.bson.BSONObjectID
 import utils.SQLClient
 
 import scala.concurrent.Future
@@ -116,13 +117,16 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
 
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
   val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").getOrElse("secret")
-  val rootTeamName = "Connectomics department"
+
+  val organizationTeamId = BSONObjectID.generate
+  val defaultOrganization = Organization("Connectomics department", List(), organizationTeamId)
+  val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)
 
   def insert: Fox[Unit] =
     for {
+      _ <- insertOrganization
+      _ <- insertTeams
       _ <- insertDefaultUser
-      _ <- insertRootTeam
-      _ <- giveDefaultUserTeam
       _ <- insertTaskType
       _ <- insertProject
       _ <- if (Play.configuration.getBoolean("datastore.enabled").getOrElse(true)) insertLocalDataStore else Fox.successful(())
@@ -141,58 +145,63 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
           "Boy",
           true,
           SCrypt.md5(password),
-          List(),
+          defaultOrganization.name,
+          List(TeamMembership(organizationTeam._id, organizationTeam.name, true)),
+          isAdmin = true,
           loginInfo = UserService.createLoginInfo(email),
           passwordInfo = UserService.createPasswordInfo(password),
           experiences = Map("sampleExp" -> 10),
           _isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser"))
-        )
-    }
+        )(GlobalAccessContext)
+    }.toFox
   }
 
-  def insertRootTeam = {
-    TeamDAO.findOneByName(rootTeamName).futureBox.flatMap {
+  def insertOrganization = {
+    OrganizationDAO.findOneByName(defaultOrganization.name)(GlobalAccessContext).futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        UserService.defaultUser.flatMap(user => TeamDAO.insert(Team(rootTeamName, None, RoleService.roles, user._id)))
-    }
+        OrganizationDAO.insert(defaultOrganization)(GlobalAccessContext)
+    }.toFox
   }
 
-  def giveDefaultUserTeam = {
-    UserService.defaultUser.flatMap { user =>
-      if (!user.teamNames.contains(rootTeamName)) {
-        UserDAO.addTeam(user._id, TeamMembership(rootTeamName, Role.Admin))
-      } else Fox.successful(())
-    }
+  def insertTeams = {
+    TeamDAO.findAll(GlobalAccessContext).flatMap {
+      teams =>
+        if (teams.isEmpty)
+          TeamDAO.insert(organizationTeam)(GlobalAccessContext)
+        else
+          Fox.successful(())
+    }.toFox
   }
 
   def insertTaskType = {
-    TaskTypeDAO.findAll.map {
+    TaskTypeDAO.findAll(GlobalAccessContext).flatMap {
       types =>
         if (types.isEmpty) {
           val taskType = TaskType(
             "sampleTaskType",
             "Check those cells out!",
-            rootTeamName)
-          TaskTypeDAO.insert(taskType)
+            organizationTeam._id)
+          for {_ <- TaskTypeDAO.insert(taskType)(GlobalAccessContext)} yield ()
         }
-    }
+        else Fox.successful(())
+    }.toFox
   }
 
   def insertProject = {
-    ProjectDAO.findAll.map {
+    ProjectDAO.findAll(GlobalAccessContext).flatMap {
       projects =>
         if (projects.isEmpty) {
           UserService.defaultUser.flatMap { user =>
-            val project = Project("sampleProject", rootTeamName, user._id, 100, false, Some(5400000))
-            ProjectDAO.insert(project)
+            val project = Project("sampleProject", organizationTeam._id, user._id, 100, false, Some(5400000))
+            for {_ <- ProjectDAO.insert(project)(GlobalAccessContext)} yield ()
           }
-        }
-    }
+        } else Fox.successful(())
+    }.toFox
   }
 
   def insertLocalDataStore: Fox[Any] = {
-    DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
+    DataStoreDAO.findOneByName("localhost")(GlobalAccessContext).futureBox.map { maybeStore =>
       if (maybeStore.isEmpty) {
         val url = Play.configuration.getString("http.uri").getOrElse("http://localhost:9000")
         val key = Play.configuration.getString("datastore.key").getOrElse("something-secure")

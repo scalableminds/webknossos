@@ -18,7 +18,6 @@ import type {
   APIDatastoreType,
   NDStoreConfigType,
   DatasetConfigType,
-  APIRoleType,
   APIDatasetType,
   APIDataSourceType,
   APIDataSourceWithMessagesType,
@@ -27,6 +26,7 @@ import type {
   APITimeTrackingType,
   APIProjectProgressReportType,
   APIOpenTasksReportType,
+  APIOrganizationType,
   APIBuildInfoType,
   APITracingType,
   APIFeatureToggles,
@@ -38,8 +38,6 @@ const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
 type NewTeamType = {
   +name: string,
-  +parent: string,
-  +roles: Array<APIRoleType>,
 };
 
 function assertResponseLimit(collection) {
@@ -63,8 +61,22 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
+export function getSharingToken(): ?string {
+  if (location != null) {
+    const params = Utils.getUrlParamsObject();
+    if (params != null && params.token != null) {
+      return ((params.token: any): string);
+    }
+  }
+  return null;
+}
+
 let tokenPromise;
 export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  const sharingToken = getSharingToken();
+  if (sharingToken != null) {
+    return fn(sharingToken);
+  }
   if (!tokenPromise) tokenPromise = requestUserToken();
   return tokenPromise.then(fn).catch(error => {
     if (error.status === 403) {
@@ -202,20 +214,6 @@ export async function getTeams(): Promise<Array<APITeamType>> {
 
 export async function getEditableTeams(): Promise<Array<APITeamType>> {
   const teams = await Request.receiveJSON("/api/teams?isEditable=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
-export async function getRootTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?isRoot=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
-export async function getAdminTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?amIAnAdmin=true");
   assertResponseLimit(teams);
 
   return teams;
@@ -502,21 +500,6 @@ export async function getDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
-export async function getDataset(datasetName: string): Promise<APIDatasetType> {
-  const dataset = await Request.receiveJSON(`/api/datasets/${datasetName}`);
-  return dataset;
-}
-
-export async function updateDataset(
-  datasetName: string,
-  dataset: APIDatasetType,
-): Promise<APIDatasetType> {
-  const updatedDataset = await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
-    data: dataset,
-  });
-  return updatedDataset;
-}
-
 export async function getDatasetDatasource(
   dataset: APIDatasetType,
 ): Promise<APIDataSourceWithMessagesType> {
@@ -544,6 +527,25 @@ export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
+export async function getDataset(
+  datasetName: string,
+  sharingToken?: string,
+): Promise<APIDatasetType> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
+  const dataset = await Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
+  return dataset;
+}
+
+export async function updateDataset(
+  datasetName: string,
+  dataset: APIDatasetType,
+): Promise<APIDatasetType> {
+  const updatedDataset = await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
+    data: dataset,
+  });
+  return updatedDataset;
+}
+
 export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
   return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
@@ -565,12 +567,30 @@ export async function addDataset(datatsetConfig: DatasetConfigType): Promise<voi
   );
 }
 
+export async function updateDatasetTeams(
+  datasetName: string,
+  newTeams: Array<string>,
+): Promise<APIDatasetType> {
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}/teams`, {
+    data: newTeams,
+  });
+}
+
 export async function triggerDatasetCheck(datatstoreHost: string): Promise<void> {
   doWithToken(token =>
     Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
       host: datatstoreHost,
     }),
   );
+}
+
+export async function getDatasetSharingToken(datasetName: string): Promise<string> {
+  const { sharingToken } = await Request.receiveJSON(`/api/datasets/${datasetName}/sharingToken`);
+  return sharingToken;
+}
+
+export async function revokeDatasetSharingToken(datasetName: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetName}/sharingToken`, { method: "DELETE" });
 }
 
 // #### Datastores
@@ -637,11 +657,17 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
   return openTasksData;
 }
 
+// ### Organizations
+export async function getOrganizations(): Promise<Array<APIOrganizationType>> {
+  return Request.receiveJSON("/api/organizations");
+}
+
 // ### BuildInfo
 export function getBuildInfo(): Promise<APIBuildInfoType> {
   return Request.receiveJSON("/api/buildinfo");
 }
 
+// ### Feature Selection
 export async function getFeatureToggles(): Promise<APIFeatureToggles> {
   return Request.receiveJSON("/api/features");
 }

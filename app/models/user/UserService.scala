@@ -9,6 +9,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.security.SCrypt._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.AnnotationService
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
 import oxalis.mail.DefaultMails
@@ -40,7 +41,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
   def findAll()(implicit ctx: DBAccessContext) =
     UserDAO.findAll
 
-  def findByTeams(teams: List[String])(implicit ctx: DBAccessContext) = {
+  def findByTeams(teams: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     UserDAO.findByTeams(teams)
   }
 
@@ -55,12 +56,13 @@ object UserService extends FoxImplicits with IdentityService[User] {
     UserDAO.logActivity(_user, lastActivity)(GlobalAccessContext)
   }
 
-  def insert(teamName: String, email: String, firstName: String,
-             lastName: String, password: String, isActive: Boolean, teamRole: Role = Role.User, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
+  def insert(organization: String, email: String, firstName: String,
+             lastName: String, password: String, isActive: Boolean, teamRole: Boolean = false, loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[User] =
     for {
-      teamOpt <- TeamDAO.findOneByName(teamName)(GlobalAccessContext).futureBox
-      teamMemberships = teamOpt.map(t => TeamMembership(t.name, teamRole)).toList
-      user = User(email, firstName, lastName, isActive = isActive, md5(password), teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
+      organizationTeamId <- OrganizationDAO.findOneByName(organization)(GlobalAccessContext).map(_._organizationTeam)
+      orgTeam <- TeamDAO.findOneById(organizationTeamId)(GlobalAccessContext)
+      teamMemberships = List(TeamMembership(orgTeam._id, orgTeam.name, teamRole))
+      user = User(email, firstName, lastName, isActive = isActive, md5(password), organization, teamMemberships, loginInfo = loginInfo, passwordInfo = passwordInfo)
       _ <- UserDAO.insert(user)(GlobalAccessContext)
     } yield user
 
@@ -69,13 +71,14 @@ object UserService extends FoxImplicits with IdentityService[User] {
               firstName: String,
               lastName: String,
               activated: Boolean,
+              isAdmin: Boolean,
               teams: List[TeamMembership],
               experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (!user.isActive && activated) {
       Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
     }
-    UserDAO.update(user._id, firstName, lastName, activated, teams, experiences).map {
+    UserDAO.update(user._id, firstName, lastName, activated, isAdmin, teams, experiences).map {
       result =>
         UserCache.invalidateUser(user.id)
         result

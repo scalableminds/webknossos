@@ -4,11 +4,13 @@
 package utils
 
 
+import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import net.liftweb.common.Full
+import oxalis.security.SharingTokenContainer
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -17,6 +19,7 @@ import slick.dbio.DBIOAction
 import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
+import scala.collection.JavaConverters._
 
 import scala.util.{Failure, Success, Try}
 
@@ -46,6 +49,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
         }
         case Failure(e: Throwable) => {
           logError(e, query)
+          reportErrorToNewrelic(e, query)
           Fox.failure("SQL Failure: " + e.getMessage)
         }
       }
@@ -56,6 +60,10 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
   private def logError[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
     logger.error("SQL Error: " + ex)
     logger.debug("Caused by query:\n" + query.getDumpInfo.mainInfo)
+  }
+
+  private def reportErrorToNewrelic[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]) = {
+    NewRelic.noticeError(ex, Map("Causing query: " -> query.getDumpInfo.mainInfo).asJava)
   }
 
 
@@ -95,7 +103,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
   def collectionName: String
   def existingCollectionName = collectionName + "_"
 
-  def anonymousReadAccessQ: String = "false"
+  def anonymousReadAccessQ(sharingToken: Option[String]): String = "false"
   def readAccessQ(requestingUserId: ObjectId): String = "true"
   def updateAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
   def deleteAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
@@ -108,7 +116,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
       } yield {
         userIdBox match {
           case Full(userId) => "(" + readAccessQ(userId) + ")"
-          case _ => "(" + anonymousReadAccessQ + ")"
+          case _ => "(" + anonymousReadAccessQ(sharingTokenFromCtx) + ")"
         }
       }
     }
@@ -141,6 +149,13 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
     ctx.data match {
       case Some(user: User) => Fox.successful(ObjectId.fromBsonId(user._id))
       case _ => Fox.failure("Access denied.")
+    }
+  }
+
+  private def sharingTokenFromCtx(implicit ctx: DBAccessContext): Option[String] = {
+    ctx.data match {
+      case Some(sharingTokenContainer: SharingTokenContainer) => Some(sanitize(sharingTokenContainer.sharingToken))
+      case _ => None
     }
   }
 

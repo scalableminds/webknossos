@@ -318,3 +318,73 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.user_experiences
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
+
+
+
+
+
+
+
+
+-- EVOLUTION 001 add organizations (schema only, for slick code generation)
+
+
+
+
+START TRANSACTION;
+
+CREATE TABLE webknossos.organizations(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _organizationTeam CHAR(24) NOT NULL UNIQUE,
+  name VARCHAR(256) NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
+CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
+
+
+DROP VIEW webknossos.teams_;
+ALTER TABLE webknossos.teams ADD COLUMN _organization CHAR(24);
+ALTER TABLE webknossos.teams ALTER COLUMN _organization SET NOT NULL;
+ALTER TABLE webknossos.teams DROP COLUMN _owner;
+ALTER TABLE webknossos.teams DROP COLUMN _parent;
+ALTER TABLE webknossos.teams DROP COLUMN behavesLikeRootTeam;
+ALTER TABLE webknossos.teams DROP CONSTRAINT teams_name_key;
+ALTER TABLE webknossos.teams ADD CONSTRAINT teams_name__organization_key UNIQUE(name, _organization);
+CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
+
+DROP VIEW webknossos.dataSets_;
+ALTER TABLE webknossos.dataSets ADD COLUMN _organization CHAR(24);
+ALTER TABLE webknossos.dataSets ALTER COLUMN _organization SET NOT NULL;
+ALTER TABLE webknossos.dataSets DROP CONSTRAINT datasets_name__team_key;
+ALTER TABLE webknossos.dataSets DROP COLUMN _team;
+ALTER TABLE webknossos.dataSets ADD CONSTRAINT datasets_name__organization_key UNIQUE(name, _organization);
+CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
+
+
+ALTER TABLE webknossos.user_team_roles ADD COLUMN isTeamManager BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE webknossos.user_team_roles DROP COLUMN role;
+DROP TYPE webknossos.TEAM_ROLES;
+
+
+DROP VIEW webknossos.users_;
+ALTER TABLE webknossos.users ADD COLUMN isAdmin BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE webknossos.users ADD COLUMN _organization CHAR(24);
+ALTER TABLE webknossos.users ALTER COLUMN _organization SET NOT NULL;
+CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
+
+
+
+COMMIT TRANSACTION;
+
+
+
+-- EVOLUTION 002 add dataset sharingtoken
+
+
+START TRANSACTION;
+DROP VIEW webknossos.datasets_;
+ALTER TABLE webknossos.datasets ADD COLUMN sharingToken CHAR(256);
+CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
+COMMIT TRANSACTION;

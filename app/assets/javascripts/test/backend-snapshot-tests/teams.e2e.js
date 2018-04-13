@@ -1,10 +1,14 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import "../enzyme/e2e-setup";
+import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
+
+test.before("Change token", async () => {
+  setCurrToken(tokenUserA);
+});
 
 test("getTeams()", async t => {
   const teams = _.sortBy(await api.getTeams(), team => team.name);
@@ -16,21 +20,16 @@ test("getEditableTeams()", async t => {
   t.snapshot(editableTeams, { id: "teams-getEditableTeams()" });
 });
 
-test("getRootTeams()", async t => {
-  const rootTeams = await api.getRootTeams();
-  t.snapshot(rootTeams, { id: "teams-getRootTeams()" });
-});
-
-test("getAdminTeams()", async t => {
-  const adminTeams = _.sortBy(await api.getAdminTeams(), team => team.name);
-  t.snapshot(adminTeams, { id: "teams-getAdminTeams()" });
+test("getOrganizations()", async t => {
+  const organizations = await api.getOrganizations();
+  t.snapshot(organizations, { id: "teams-getOrganizations()" });
 });
 
 test("createTeam and deleteTeam", async t => {
-  const rootTeams = await api.getRootTeams();
+  const organizations = await api.getOrganizations();
   const newTeam = {
     name: "test-team-name",
-    parent: rootTeams[0].name,
+    parent: organizations[0].name,
     roles: [{ name: "admin" }, { name: "user" }],
   };
 

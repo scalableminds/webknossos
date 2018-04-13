@@ -31,7 +31,7 @@ object ScriptSQL {
   def fromScript(s: Script) = {
     Fox.successful(ScriptSQL(
       ObjectId.fromBsonId(s._id),
-      ObjectId(s._owner),
+      ObjectId.fromBsonId(s._owner),
       s.name,
       s.gist,
       System.currentTimeMillis(),
@@ -79,7 +79,7 @@ object ScriptSQLDAO extends SQLDAO[ScriptSQL, ScriptsRow, Scripts] {
 case class Script(
   name: String,
   gist: String,
-  _owner: String,
+  _owner: BSONObjectID,
   _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id: String = _id.stringify
@@ -94,7 +94,7 @@ object Script extends FoxImplicits {
     gist: String,
     _owner: String) = {
 
-    Script(name, gist, _owner)
+    Script(name, gist, BSONObjectID(_owner))
   }
 
   def scriptPublicWrites(script: Script)(implicit ctx: DBAccessContext): Future[JsObject] =
@@ -112,11 +112,12 @@ object Script extends FoxImplicits {
   def fromScriptSQL(s: ScriptSQL)(implicit ctx: DBAccessContext): Fox[Script] = {
     for {
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
+      ownerBson <- s._owner.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._owner.toString)
     } yield {
       Script(
         s.name,
         s.gist,
-        s._owner.toString,
+        ownerBson,
         idBson
       )
     }

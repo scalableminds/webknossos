@@ -27,6 +27,7 @@ const ErrorHandling = {
 const window = {
   location: {
     pathname: "annotationUrl",
+    search: "",
   },
   alert: console.log.bind(console),
   open: sinon.spy(),

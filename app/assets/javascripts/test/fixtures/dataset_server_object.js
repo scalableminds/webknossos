@@ -30,7 +30,7 @@ export default {
     scale: [11.239999771118164, 11.239999771118164, 28],
   },
   dataStore: { name: "localhost", url: "http://localhost:9000", typ: "webknossos-store" },
-  owningTeam: "Connectomics department",
+  owningOrganization: "Connectomics department",
   allowedTeams: ["Connectomics department"],
   isActive: true,
   isPublic: false,

@@ -5,7 +5,7 @@ import { connect } from "react-redux";
 import { Button } from "antd";
 import Constants, { OrthoViews } from "oxalis/constants";
 import api from "oxalis/api/internal_api";
-import type { Vector2, OrthoViewType } from "oxalis/constants";
+import type { OrthoViewType } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 
 const ButtonGroup = Button.Group;

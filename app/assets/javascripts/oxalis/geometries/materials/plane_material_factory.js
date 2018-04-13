@@ -18,12 +18,14 @@ import type {
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import {
+  getPlaneScalingFactor,
+  getRequestLogZoomStep,
+} from "oxalis/model/accessors/flycam_accessor";
 import constants, { OrthoViews, VolumeToolEnum, volumeToolEnumToIndex } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
-import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);

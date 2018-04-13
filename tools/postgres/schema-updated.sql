@@ -61,6 +61,7 @@ CREATE TABLE webknossos.dataSets(
   _organization CHAR(24) NOT NULL,
   defaultConfiguration JSONB,
   description TEXT,
+  displayName VARCHAR(256),
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL UNIQUE,

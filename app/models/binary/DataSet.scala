@@ -37,6 +37,7 @@ case class DataSetSQL(
                        _organization: ObjectId,
                        defaultConfiguration: Option[JsValue] = None,
                        description: Option[String] = None,
+                       displayName: Option[String] = None,
                        isPublic: Boolean,
                        isUsable: Boolean,
                        name: String,
@@ -58,6 +59,7 @@ object DataSetSQL {
         organization._id,
         d.defaultConfiguration.map(Json.toJson(_)),
         d.description,
+        d.displayName,
         d.isPublic,
         d.isActive,
         d.dataSource.id.name,
@@ -97,6 +99,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
         ObjectId(r._Organization),
         r.defaultconfiguration.map(Json.parse(_).as[JsObject]),
         r.description,
+        r.displayname,
         r.ispublic,
         r.isusable,
         r.name,
@@ -160,10 +163,10 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     } yield ()
   }
 
-  def updateFieldsByName(name: String, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- Datasets if (notdel(row) && row.name === name)} yield (row.description, row.ispublic)
+  def updateFieldsByName(name: String, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val q = for {row <- Datasets if (notdel(row) && row.name === name)} yield (row.description, row.displayname, row.ispublic)
     for {
-      _ <- run(q.update(description, isPublic))
+      _ <- run(q.update(description, displayName, isPublic))
     } yield ()
   }
 
@@ -178,8 +181,8 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   def insertOne(d: DataSetSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       _ <- run(
-        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, isPublic, isUsable, name, scale, status, sharingToken, created, isDeleted)
-               values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d.defaultConfiguration.map(_.toString).map(sanitize))}, ${d.description}, ${d.isPublic}, ${d.isUsable},
+        sqlu"""insert into webknossos.dataSets(_id, _dataStore, _organization, defaultConfiguration, description, displayName, isPublic, isUsable, name, scale, status, sharingToken, created, isDeleted)
+               values(${d._id.id}, ${d._dataStore}, ${d._organization.id}, #${optionLiteral(d.defaultConfiguration.map(_.toString).map(sanitize))}, ${d.description}, ${d.displayName}, ${d.isPublic}, ${d.isUsable},
                       ${d.name}, #${optionLiteral(d.scale.map(s => writeScaleLiteral(s)))}, ${d.status.take(1024)}, ${d.sharingToken}, ${new java.sql.Timestamp(d.created)}, ${d.isDeleted})
             """)
     } yield ()
@@ -369,6 +372,7 @@ case class DataSet(
                     isActive: Boolean = false,
                     isPublic: Boolean = false,
                     description: Option[String] = None,
+                    displayName: Option[String] = None,
                     defaultConfiguration: Option[DataSetConfiguration] = None,
                     sharingToken: Option[String] = None,
                     created: Long = System.currentTimeMillis()) {
@@ -401,6 +405,7 @@ object DataSet extends FoxImplicits {
         "isActive" -> d.isActive,
         "isPublic" -> d.isPublic,
         "description" -> d.description,
+        "displayName" -> d.displayName,
         "created" -> d.created,
         "isEditable" -> d.isEditableBy(user))
     }
@@ -445,6 +450,7 @@ object DataSet extends FoxImplicits {
         s.isUsable,
         s.isPublic,
         s.description,
+        s.displayName,
         defaultConfiguration,
         s.sharingToken,
         s.created
@@ -478,9 +484,9 @@ object DataSetDAO {
   def updateTeams(name: String, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
     DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams.map(ObjectId.fromBsonId(_)))
 
-  def update(name: String, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[DataSet] = {
+  def update(name: String, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[DataSet] = {
     for {
-      _ <- DataSetSQLDAO.updateFieldsByName(name, description, isPublic)
+      _ <- DataSetSQLDAO.updateFieldsByName(name, description, displayName, isPublic)
       updated <- findOneBySourceName(name)
     } yield updated
   }

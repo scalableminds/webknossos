@@ -231,10 +231,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     return _.template(
       `\
-const int textureCountPerLayer = <%= textureCountPerLayer %>;
+const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 
 <% _.each(layers, function(name) { %>
-  uniform sampler2D <%= name %>_textures[textureCountPerLayer];
+  uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
   uniform sampler2D <%= name %>_lookup_texture;
   uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_brightness;
@@ -245,7 +245,7 @@ const int textureCountPerLayer = <%= textureCountPerLayer %>;
 
 <% if (hasSegmentation) { %>
   uniform sampler2D <%= segmentationName %>_lookup_texture;
-  uniform sampler2D <%= segmentationName %>_textures[textureCountPerLayer];
+  uniform sampler2D <%= segmentationName %>_textures[dataTextureCountPerLayer];
   uniform float <%= segmentationName %>_maxZoomStep;
 
   <% if (isMappingSupported) { %>
@@ -308,23 +308,28 @@ vec4 round(vec4 a) {
 }
 
 
-vec4 getRgbaAtXYIndex(sampler2D textures[textureCountPerLayer], float textureIdx, float textureWidth, float x, float y) {
+vec4 getRgbaAtXYIndex(sampler2D textures[dataTextureCountPerLayer], float textureIdx, float textureWidth, float x, float y) {
   vec2 accessPoint = (floor(vec2(x, y)) + 0.5) / textureWidth;
 
   // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
   // here which checks for each case individually. The else-if-branches are constructed via
   // lodash templates.
 
-  if (textureIdx == 0.0) {
-    return texture2D(textures[0], accessPoint).rgba;
-  } <% _.range(1, textureCountPerLayer).forEach(textureIndex => { %>
-  else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-    return texture2D(textures[<%= textureIndex %>], accessPoint).rgba;
-  }
-  <% }) %>
-  else {
-    return vec4(0.5, 0.0, 0.0, 0.0);
-  }
+  <% if (dataTextureCountPerLayer === 1) { %>
+      // Don't use if-else when there is only one data texture anyway
+      return texture2D(textures[0], accessPoint).rgba;
+  <% } else { %>
+    if (textureIdx == 0.0) {
+      return texture2D(textures[0], accessPoint).rgba;
+    } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
+    else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
+      return texture2D(textures[<%= textureIndex %>], accessPoint).rgba;
+    }
+    <% }) %>
+    else {
+      return vec4(0.5, 0.0, 0.0, 0.0);
+    }
+  <% } %>
 }
 
 vec4 getRgbaAtIndex(sampler2D texture, float textureWidth, float idx) {
@@ -386,7 +391,7 @@ bool isNan(float val) {
   /*return ( val <= 0.0 || 0.0 <= val ) ? false : true;*/
 }
 
-vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 bucketPosition, vec3 offsetInBucket, float isFallback) {
+vec4 getColorFor(sampler2D lookUpTexture, sampler2D dataTextures[dataTextureCountPerLayer], vec3 bucketPosition, vec3 offsetInBucket, float isFallback) {
   float bucketIdx = linearizeVec3ToIndex(bucketPosition, bucketsPerDim);
 
   // If we are making a fallback lookup, the lookup area we are interested in starts at
@@ -483,7 +488,7 @@ vec3 getCoords(float usedZoomStep) {
   return coords;
 }
 
-vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 coords, float isFallback) {
+vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[dataTextureCountPerLayer], vec3 coords, float isFallback) {
   coords = floor(coords);
   vec3 bucketPosition = div(coords, bucketWidth);
   vec3 offsetInBucket = mod(coords, bucketWidth);
@@ -497,7 +502,7 @@ vec4 getColorForCoords(sampler2D lookUpTexture, sampler2D dataTextures[textureCo
   );
 }
 
-vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[textureCountPerLayer], vec3 coords) {
+vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[dataTextureCountPerLayer], vec3 coords) {
   coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
@@ -521,7 +526,7 @@ vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[texture
 
 vec4 getMaybeFilteredColor(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[textureCountPerLayer],
+  sampler2D dataTextures[dataTextureCountPerLayer],
   vec3 coords,
   bool suppressBilinearFiltering
 ) {
@@ -536,7 +541,7 @@ vec4 getMaybeFilteredColor(
 
 vec4 getMaybeFilteredColorOrFallback(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[textureCountPerLayer],
+  sampler2D dataTextures[dataTextureCountPerLayer],
   vec3 coords,
   vec3 fallbackCoords,
   bool hasFallback,
@@ -685,11 +690,11 @@ void main() {
       d_texture_width: formatNumberAsGLSLFloat(dataTextureWidth),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
       isMappingSupported: Model.isMappingSupported,
+      dataTextureCountPerLayer: Model.dataTextureCountPerLayer,
       mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
       bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
       bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
       floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
-      textureCountPerLayer: constants.MAX_TEXTURE_COUNT_PER_LAYER,
       formatNumberAsGLSLFloat,
       formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
       resolutions: this.getResolutions(),

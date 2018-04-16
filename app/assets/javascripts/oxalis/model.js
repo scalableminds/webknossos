@@ -122,6 +122,7 @@ export class OxalisModel {
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
   isMappingSupported: boolean = true;
+  textureCountPerLayer: number;
 
   async fetch(
     tracingType: TracingTypeTracingType,
@@ -366,6 +367,7 @@ export class OxalisModel {
     );
 
     const [textureWidth, dataTextureCountPerLayer] = this.validateSpecsForLayers(layers);
+    this.dataTextureCountPerLayer = dataTextureCountPerLayer;
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};

@@ -3,16 +3,18 @@
 import * as React from "react";
 import { Button, Spin, Input, Checkbox, Alert, Form, Card } from "antd";
 import Clipboard from "clipboard-js";
-import Request from "libs/request";
 import update from "immutability-helper";
 import Toast from "libs/toast";
 import {
-  doWithToken,
   getDatasetSharingToken,
   revokeDatasetSharingToken,
   getDataset,
+  getDatasetDatasource,
+  updateDataset,
+  updateDatasetDatasource,
 } from "admin/admin_rest_api";
-import type { APIDatasetType } from "admin/api_flow_types";
+import messages from "messages";
+import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 
@@ -27,11 +29,16 @@ type State = {
   sharingToken: string,
   datasetJson: string,
   isValidJSON: boolean,
+  messages: Array<APIMessageType>,
   isLoading: boolean,
-  messages: Array<{ ["info" | "warning" | "error"]: string }>,
 };
 
 class DatasetImportView extends React.PureComponent<Props, State> {
+  static defaultProps: Props = {
+    datasetName: "",
+    isEditingMode: false,
+  };
+
   state = {
     dataLoaded: false,
     dataset: null,
@@ -49,58 +56,36 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     );
   }
 
-  props: {
-    datasetName: string,
-    isEditingMode: boolean,
-  } = {
-    datasetName: "",
-    isEditingMode: false,
-  };
-
   async fetchData(): Promise<void> {
     this.setState({ isLoading: true });
     const sharingToken = await getDatasetSharingToken(this.props.datasetName);
     const dataset = await getDataset(this.props.datasetName);
-
-    const datasetJson = await doWithToken(token =>
-      Request.receiveJSON(
-        `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
-      ),
-    );
+    const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
 
     // eslint-disable-next-line react/no-did-mount-set-state
     this.setState({
       dataLoaded: true,
       sharingToken,
       dataset,
-      datasetJson: JSON.stringify(datasetJson.dataSource, null, "  "),
-      messages: datasetJson.messages,
+      datasetJson: JSON.stringify(dataSource, null, "  "),
+      messages: dataSourceMessages,
       isLoading: false,
     });
   }
 
-  importDataset = () => {
-    if (this.props.isEditingMode) {
-      const url = `/api/datasets/${this.props.datasetName}`;
-      Request.sendJSONReceiveJSON(url, {
-        data: this.state.dataset,
-      });
+  importDataset = async () => {
+    if (this.props.isEditingMode && this.state.dataset != null) {
+      await updateDataset(this.props.datasetName, this.state.dataset);
     }
 
-    if (this.state.isValidJSON && this.state.dataset) {
-      // Make flow happy
-      const nonNullDataset = this.state.dataset;
-      doWithToken(token =>
-        Request.sendJSONReceiveJSON(
-          `${nonNullDataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
-          {
-            data: JSON.parse(this.state.datasetJson),
-          },
-        ),
-      ).then(() => {
-        Toast.success(`Successfully imported ${this.props.datasetName}`);
-        window.history.back();
-      });
+    if (this.state.isValidJSON && this.state.dataset != null) {
+      await updateDatasetDatasource(
+        this.props.datasetName,
+        this.state.dataset.dataStore.url,
+        JSON.parse(this.state.datasetJson),
+      );
+      Toast.success(`Successfully imported ${this.props.datasetName}`);
+      window.history.back();
     } else {
       Toast.error("Invalid JSON. Please fix the errors.");
     }
@@ -168,13 +153,26 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       <Alert key={i} message={Object.values(message)[0]} type={Object.keys(message)[0]} showIcon />
     ));
 
+    if (this.state.dataset != null && this.state.dataset.dataSource.status != null) {
+      const statusMessage = (
+        <span>
+          {messages["dataset.invalid_datasource_json"]}
+          <br />
+          {this.state.dataset.dataSource.status}
+        </span>
+      );
+      messageElements.push(
+        <Alert key="datasourceStatus" message={statusMessage} type="error" showIcon />,
+      );
+    }
+
     return <div>{messageElements}</div>;
   }
 
   getEditModeComponents() {
     // these components are only available in editing mode
-    if (this.state.dataset) {
-      const dataset = this.state.dataset;
+    if (this.props.isEditing && this.state.dataset != null) {
+      const { dataset } = this.state;
 
       return (
         <div>
@@ -213,7 +211,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const datasetJson = this.state.datasetJson;
+    const { datasetJson } = this.state;
     const textAreaStyle = this.state.isValidJSON
       ? {
           fontFamily: "monospace",

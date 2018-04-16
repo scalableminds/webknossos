@@ -6,7 +6,9 @@ import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontr
 import type { Vector3, Vector6 } from "oxalis/constants";
 import type { DataLayerType, SettingsType, BoundingBoxObjectType } from "oxalis/store";
 
-type APIDataSourceType = {
+export type APIMessageType = { ["info" | "warning" | "error"]: string };
+
+export type APIDataSourceType = {
   +id: {
     +name: string,
     +team: string,
@@ -42,6 +44,11 @@ export type APIDatasetType = {
   +displayName: string,
   +owningOrganization: string,
   +sourceType: "wkw" | "knossos",
+};
+
+export type APIDataSourceWithMessagesType = {
+  +dataSource?: APIDataSourceType,
+  +messages: Array<APIMessageType>,
 };
 
 export type APITeamMembershipType = {

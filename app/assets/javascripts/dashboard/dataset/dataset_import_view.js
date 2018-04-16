@@ -16,21 +16,22 @@ import {
   Row,
 } from "antd";
 import Clipboard from "clipboard-js";
-import Request from "libs/request";
 import update from "immutability-helper";
 import Toast from "libs/toast";
 import {
-  doWithToken,
   getDatasetSharingToken,
   revokeDatasetSharingToken,
   getDataset,
   updateDataset,
   getDatasetDefaultConfiguration,
   updateDatasetDefaultConfiguration,
+  getDatasetDatasource,
+  updateDatasetDatasource,
 } from "admin/admin_rest_api";
 import { Vector3Input } from "libs/vector_input";
-import type { APIDatasetType } from "admin/api_flow_types";
 import type { DatasetConfigurationType } from "oxalis/store";
+import messages from "messages";
+import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 const CollapsePanel = Collapse.Panel;
@@ -58,8 +59,8 @@ type State = {
   sharingToken: string,
   dataset: ?APIDatasetType,
   datasetDefaultConfiguration: ?DatasetConfigurationType,
+  messages: Array<APIMessageType>,
   isLoading: boolean,
-  messages: Array<{ ["info" | "warning" | "error"]: string }>,
 };
 
 type FormData = {
@@ -70,6 +71,10 @@ type FormData = {
 };
 
 class DatasetImportView extends React.PureComponent<Props, State> {
+  static defaultProps = {
+    isEditingMode: false,
+  };
+
   state = {
     dataset: null,
     datasetDefaultConfiguration: null,
@@ -86,14 +91,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     this.setState({ isLoading: true });
     const sharingToken = await getDatasetSharingToken(this.props.datasetName);
     const dataset = await getDataset(this.props.datasetName);
-    const datasetJson = await doWithToken(token =>
-      Request.receiveJSON(
-        `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
-      ),
-    );
+    const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
 
     this.props.form.setFieldsValue({
-      dataSourceJson: JSON.stringify(datasetJson.dataSource, null, "  "),
+      dataSourceJson: JSON.stringify(dataSource, null, "  "),
       dataset: {
         displayName: dataset.displayName,
         isPublic: dataset.isPublic,
@@ -120,7 +121,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       isLoading: false,
       sharingToken,
       dataset,
-      messages: datasetJson.messages,
+      messages: dataSourceMessages,
     });
   }
 
@@ -141,14 +142,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         }
 
         const dataSource = JSON.parse(formValues.dataSourceJson);
-        await doWithToken(token =>
-          Request.sendJSONReceiveJSON(
-            `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
-            {
-              data: dataSource,
-            },
-          ),
-        );
+        await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+
         const verb = this.props.isEditingMode ? "updated" : "imported";
         Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
         window.history.back();
@@ -195,13 +190,24 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       <Alert key={i} message={Object.values(message)[0]} type={Object.keys(message)[0]} showIcon />
     ));
 
+    if (this.state.dataset != null && this.state.dataset.dataSource.status != null) {
+      const statusMessage = (
+        <span>
+          {messages["dataset.invalid_datasource_json"]}
+          <br />
+          {this.state.dataset.dataSource.status}
+        </span>
+      );
+      messageElements.push(
+        <Alert key="datasourceStatus" message={statusMessage} type="error" showIcon />,
+      );
+    }
+
     return <div>{messageElements}</div>;
   }
 
   getEditModeComponents() {
     const { getFieldDecorator } = this.props.form;
-    // these components are only available in editing mode
-
     return (
       <div>
         <FormItem label="Description">

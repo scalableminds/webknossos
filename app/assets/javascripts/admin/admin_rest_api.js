@@ -19,6 +19,8 @@ import type {
   NDStoreConfigType,
   DatasetConfigType,
   APIDatasetType,
+  APIDataSourceType,
+  APIDataSourceWithMessagesType,
   APITimeIntervalType,
   APIUserLoggedTimeType,
   APITimeTrackingType,
@@ -499,6 +501,26 @@ export async function getDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
+export async function getDatasetDatasource(
+  dataset: APIDatasetType,
+): Promise<APIDataSourceWithMessagesType> {
+  return doWithToken(token =>
+    Request.receiveJSON(`${dataset.dataStore.url}/data/datasets/${dataset.name}?token=${token}`),
+  );
+}
+
+export async function updateDatasetDatasource(
+  datasetName: string,
+  dataStoreUrl: string,
+  datasource: APIDataSourceType,
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetName}?token=${token}`, {
+      data: datasource,
+    }),
+  );
+}
+
 export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets?isActive=true");
   assertResponseLimit(datasets);
@@ -515,8 +537,14 @@ export async function getDataset(
   return dataset;
 }
 
-export async function updateDataset(datasetName: string, dataset: APIDatasetType): Promise<void> {
-  await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, { data: dataset });
+export async function updateDataset(
+  datasetName: string,
+  dataset: APIDatasetType,
+): Promise<APIDatasetType> {
+  const updatedDataset = await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
+    data: dataset,
+  });
+  return updatedDataset;
 }
 
 export async function getDatasetDefaultConfiguration(
@@ -551,8 +579,8 @@ export async function addNDStoreDataset(
   });
 }
 
-export async function addDataset(datatsetConfig: DatasetConfigType): Promise<APIAnnotationType> {
-  return doWithToken(token =>
+export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
+  doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datatsetConfig,
       host: datatsetConfig.datastore,
@@ -611,7 +639,7 @@ export async function getTimeTrackingForUserByMonth(
     `/api/time/userlist/${year}/${month}?email=${userEmail}`,
   );
 
-  const timelogs = timeTrackingData[0].timelogs;
+  const { timelogs } = timeTrackingData[0];
   assertResponseLimit(timelogs);
 
   return timelogs;
@@ -627,7 +655,7 @@ export async function getTimeTrackingForUser(
       1000}`,
   );
 
-  const timelogs = timeTrackingData.timelogs;
+  const { timelogs } = timeTrackingData;
   assertResponseLimit(timelogs);
 
   return timelogs;

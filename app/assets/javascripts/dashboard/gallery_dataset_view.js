@@ -139,7 +139,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       <Row gutter={padding}>
         {Utils.filterWithSearchQueryAND(
           this.props.datasets.filter(ds => ds.isActive),
-          ["name", "owningTeam", "description"],
+          ["name", "description"],
           this.props.searchQuery,
         )
           .sort(Utils.localeCompareBy("formattedCreated", false))

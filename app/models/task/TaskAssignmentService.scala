@@ -11,13 +11,5 @@ import reactivemongo.bson.BSONObjectID
 
 object TaskAssignmentService extends FoxImplicits {
 
-  def findOneAssignableFor(user: User, teams: List[BSONObjectID])(implicit ctx: DBAccessContext): Fox[Task] =
-    (for {
-      list <- findAllAssignableFor(user, teams, Some(1))
-    } yield list.headOption.toFox).flatten
-
-  def findAllAssignableFor(user: User, teams: List[BSONObjectID], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
-    TaskDAO.findAllAssignableFor(user, teams, limit)
-  }
 
 }

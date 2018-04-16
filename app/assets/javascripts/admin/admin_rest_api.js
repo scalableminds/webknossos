@@ -19,6 +19,8 @@ import type {
   NDStoreConfigType,
   DatasetConfigType,
   APIDatasetType,
+  APIDataSourceType,
+  APIDataSourceWithMessagesType,
   APITimeIntervalType,
   APIUserLoggedTimeType,
   APITimeTrackingType,
@@ -59,8 +61,22 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
+export function getSharingToken(): ?string {
+  if (location != null) {
+    const params = Utils.getUrlParamsObject();
+    if (params != null && params.token != null) {
+      return ((params.token: any): string);
+    }
+  }
+  return null;
+}
+
 let tokenPromise;
 export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  const sharingToken = getSharingToken();
+  if (sharingToken != null) {
+    return fn(sharingToken);
+  }
   if (!tokenPromise) tokenPromise = requestUserToken();
   return tokenPromise.then(fn).catch(error => {
     if (error.status === 403) {
@@ -484,11 +500,50 @@ export async function getDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
+export async function getDatasetDatasource(
+  dataset: APIDatasetType,
+): Promise<APIDataSourceWithMessagesType> {
+  return doWithToken(token =>
+    Request.receiveJSON(`${dataset.dataStore.url}/data/datasets/${dataset.name}?token=${token}`),
+  );
+}
+
+export async function updateDatasetDatasource(
+  datasetName: string,
+  dataStoreUrl: string,
+  datasource: APIDataSourceType,
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetName}?token=${token}`, {
+      data: datasource,
+    }),
+  );
+}
+
 export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets?isActive=true");
   assertResponseLimit(datasets);
 
   return datasets;
+}
+
+export async function getDataset(
+  datasetName: string,
+  sharingToken?: string,
+): Promise<APIDatasetType> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
+  const dataset = await Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
+  return dataset;
+}
+
+export async function updateDataset(
+  datasetName: string,
+  dataset: APIDatasetType,
+): Promise<APIDatasetType> {
+  const updatedDataset = await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
+    data: dataset,
+  });
+  return updatedDataset;
 }
 
 export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
@@ -503,8 +558,8 @@ export async function addNDStoreDataset(
   });
 }
 
-export async function addDataset(datatsetConfig: DatasetConfigType): Promise<APIAnnotationType> {
-  return doWithToken(token =>
+export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
+  doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datatsetConfig,
       host: datatsetConfig.datastore,
@@ -527,6 +582,15 @@ export async function triggerDatasetCheck(datatstoreHost: string): Promise<void>
       host: datatstoreHost,
     }),
   );
+}
+
+export async function getDatasetSharingToken(datasetName: string): Promise<string> {
+  const { sharingToken } = await Request.receiveJSON(`/api/datasets/${datasetName}/sharingToken`);
+  return sharingToken;
+}
+
+export async function revokeDatasetSharingToken(datasetName: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetName}/sharingToken`, { method: "DELETE" });
 }
 
 // #### Datastores
@@ -554,7 +618,7 @@ export async function getTimeTrackingForUserByMonth(
     `/api/time/userlist/${year}/${month}?email=${userEmail}`,
   );
 
-  const timelogs = timeTrackingData[0].timelogs;
+  const { timelogs } = timeTrackingData[0];
   assertResponseLimit(timelogs);
 
   return timelogs;
@@ -570,7 +634,7 @@ export async function getTimeTrackingForUser(
       1000}`,
   );
 
-  const timelogs = timeTrackingData.timelogs;
+  const { timelogs } = timeTrackingData;
   assertResponseLimit(timelogs);
 
   return timelogs;

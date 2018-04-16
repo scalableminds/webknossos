@@ -377,3 +377,14 @@ CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDele
 
 
 COMMIT TRANSACTION;
+
+
+
+-- EVOLUTION 002 add dataset sharingtoken
+
+
+START TRANSACTION;
+DROP VIEW webknossos.datasets_;
+ALTER TABLE webknossos.datasets ADD COLUMN sharingToken CHAR(256);
+CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
+COMMIT TRANSACTION;

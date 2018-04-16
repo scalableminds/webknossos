@@ -1,12 +1,22 @@
 // @flow
 
 import * as React from "react";
-import { Button, Spin, Input, Checkbox, Alert } from "antd";
-import Request from "libs/request";
+import { Button, Spin, Input, Checkbox, Alert, Form, Card } from "antd";
+import Clipboard from "clipboard-js";
 import update from "immutability-helper";
 import Toast from "libs/toast";
-import { doWithToken } from "admin/admin_rest_api";
-import type { APIDatasetType } from "admin/api_flow_types";
+import {
+  getDatasetSharingToken,
+  revokeDatasetSharingToken,
+  getDataset,
+  getDatasetDatasource,
+  updateDataset,
+  updateDatasetDatasource,
+} from "admin/admin_rest_api";
+import messages from "messages";
+import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
+
+const FormItem = Form.Item;
 
 type Props = {
   datasetName: string,
@@ -16,15 +26,24 @@ type Props = {
 type State = {
   dataLoaded: boolean,
   dataset: ?APIDatasetType,
+  sharingToken: string,
   datasetJson: string,
   isValidJSON: boolean,
-  messages: Array<{ ["info" | "warning" | "error"]: string }>,
+  messages: Array<APIMessageType>,
+  isLoading: boolean,
 };
 
 class DatasetImportView extends React.PureComponent<Props, State> {
+  static defaultProps: Props = {
+    datasetName: "",
+    isEditingMode: false,
+  };
+
   state = {
     dataLoaded: false,
     dataset: null,
+    sharingToken: "",
+    isLoading: false,
     datasetJson: "",
     isValidJSON: true,
     messages: [],
@@ -37,55 +56,36 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     );
   }
 
-  props: {
-    datasetName: string,
-    isEditingMode: boolean,
-  } = {
-    datasetName: "",
-    isEditingMode: false,
-  };
-
   async fetchData(): Promise<void> {
-    const datasetUrl = `/api/datasets/${this.props.datasetName}`;
-    const dataset = await Request.receiveJSON(datasetUrl);
-
-    const datasetJson = await doWithToken(token =>
-      Request.receiveJSON(
-        `${dataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
-      ),
-    );
+    this.setState({ isLoading: true });
+    const sharingToken = await getDatasetSharingToken(this.props.datasetName);
+    const dataset = await getDataset(this.props.datasetName);
+    const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
 
     // eslint-disable-next-line react/no-did-mount-set-state
     this.setState({
       dataLoaded: true,
+      sharingToken,
       dataset,
-      datasetJson: JSON.stringify(datasetJson.dataSource, null, "  "),
-      messages: datasetJson.messages,
+      datasetJson: JSON.stringify(dataSource, null, "  "),
+      messages: dataSourceMessages,
+      isLoading: false,
     });
   }
 
-  importDataset = () => {
-    if (this.props.isEditingMode) {
-      const url = `/api/datasets/${this.props.datasetName}`;
-      Request.sendJSONReceiveJSON(url, {
-        data: this.state.dataset,
-      });
+  importDataset = async () => {
+    if (this.props.isEditingMode && this.state.dataset != null) {
+      await updateDataset(this.props.datasetName, this.state.dataset);
     }
 
-    if (this.state.isValidJSON && this.state.dataset) {
-      // Make flow happy
-      const nonNullDataset = this.state.dataset;
-      doWithToken(token =>
-        Request.sendJSONReceiveJSON(
-          `${nonNullDataset.dataStore.url}/data/datasets/${this.props.datasetName}?token=${token}`,
-          {
-            data: JSON.parse(this.state.datasetJson),
-          },
-        ),
-      ).then(() => {
-        Toast.success(`Successfully imported ${this.props.datasetName}`);
-        window.history.back();
-      });
+    if (this.state.isValidJSON && this.state.dataset != null) {
+      await updateDatasetDatasource(
+        this.props.datasetName,
+        this.state.dataset.dataStore.url,
+        JSON.parse(this.state.datasetJson),
+      );
+      Toast.success(`Successfully imported ${this.props.datasetName}`);
+      window.history.back();
     } else {
       Toast.error("Invalid JSON. Please fix the errors.");
     }
@@ -114,11 +114,37 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     this.updateDataset("isPublic", event.target.checked);
   };
 
+  handleCopySharingLink = async () => {
+    await Clipboard.copy(this.getSharingLink());
+    Toast.success("Sharing Link copied to clipboard");
+  };
+
+  handleRevokeSharingLink = async () => {
+    this.setState({ isLoading: true });
+    try {
+      await revokeDatasetSharingToken(this.props.datasetName);
+      const sharingToken = await getDatasetSharingToken(this.props.datasetName);
+      this.setState({ sharingToken });
+    } finally {
+      this.setState({ isLoading: false });
+    }
+  };
+
+  handleSelectText = (event: SyntheticInputEvent<>) => {
+    event.target.select();
+  };
+
   updateDataset(propertyName: string, value: string | boolean) {
     const newState = update(this.state, {
       dataset: { [propertyName]: { $set: value } },
     });
     this.setState(newState);
+  }
+
+  getSharingLink() {
+    return `${window.location.origin}/datasets/${this.props.datasetName}/view?token=${
+      this.state.sharingToken
+    }`;
   }
 
   getMessageComponents() {
@@ -127,25 +153,56 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       <Alert key={i} message={Object.values(message)[0]} type={Object.keys(message)[0]} showIcon />
     ));
 
+    if (this.state.dataset != null && this.state.dataset.dataSource.status != null) {
+      const statusMessage = (
+        <span>
+          {messages["dataset.invalid_datasource_json"]}
+          <br />
+          {this.state.dataset.dataSource.status}
+        </span>
+      );
+      messageElements.push(
+        <Alert key="datasourceStatus" message={statusMessage} type="error" showIcon />,
+      );
+    }
+
     return <div>{messageElements}</div>;
   }
 
   getEditModeComponents() {
     // these components are only available in editing mode
-    if (this.props.isEditingMode && this.state.dataset) {
-      const dataset = this.state.dataset;
+    if (this.props.isEditing && this.state.dataset != null) {
+      const { dataset } = this.state;
 
       return (
         <div>
-          <Input.TextArea
-            rows="3"
-            value={dataset.description || ""}
-            placeholder="Dataset Description"
-            onChange={this.handleChangeDescription}
-          />
-          <Checkbox checked={dataset.isPublic} onChange={this.handleChangeCheckbox}>
-            Make dataset publicly accessible
-          </Checkbox>
+          <FormItem label="Dataset Description">
+            <Input.TextArea
+              rows="3"
+              value={dataset.description || ""}
+              placeholder="Dataset Description"
+              onChange={this.handleChangeDescription}
+            />
+          </FormItem>
+          <FormItem label="Sharing Link">
+            <Input.Group compact>
+              <Input
+                value={this.getSharingLink()}
+                onClick={this.handleSelectText}
+                style={{ width: "80%" }}
+                readOnly
+              />
+              <Button onClick={this.handleCopySharingLink} style={{ width: "10%" }} icon="copy" />
+              <Button onClick={this.handleRevokeSharingLink} style={{ width: "10%" }}>
+                Revoke
+              </Button>
+            </Input.Group>
+          </FormItem>
+          <FormItem>
+            <Checkbox checked={dataset.isPublic} onChange={this.handleChangeCheckbox}>
+              Make dataset publicly accessible
+            </Checkbox>
+          </FormItem>
         </div>
       );
     }
@@ -154,7 +211,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    const datasetJson = this.state.datasetJson;
+    const { datasetJson } = this.state;
     const textAreaStyle = this.state.isValidJSON
       ? {
           fontFamily: "monospace",
@@ -167,35 +224,42 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const content = this.state.dataLoaded ? (
-      <Input.TextArea
-        value={datasetJson}
-        onChange={this.handleChangeJson}
-        rows={20}
-        style={textAreaStyle}
-      />
-    ) : (
-      <Spin size="large" />
-    );
+      <FormItem label="Dataset Configuration">
+        <Input.TextArea
+          value={datasetJson}
+          onChange={this.handleChangeJson}
+          rows={20}
+          style={textAreaStyle}
+        />
+      </FormItem>
+    ) : null;
 
     return (
-      <div className="container" id="dataset-import-view">
-        <h3>
-          {titleString} Dataset {this.props.datasetName}
-        </h3>
-        <p>Please review your dataset&#39;s properties before importing it.</p>
-        {this.getMessageComponents()}
-        <div className="content">{content}</div>
-        {this.getEditModeComponents()}
-        <div>
-          <Button
-            onClick={this.importDataset}
-            type="primary"
-            disabled={this.state.datasetJson === ""}
-          >
-            {titleString}
-          </Button>
-          <Button onClick={() => window.history.back()}>Cancel</Button>
-        </div>
+      <div className="row container dataset-import">
+        <Card
+          title={
+            <h3>
+              {titleString} Dataset: {this.props.datasetName}
+            </h3>
+          }
+        >
+          <Spin size="large" spinning={this.state.isLoading}>
+            <p>Please review your dataset&#39;s properties before importing it.</p>
+            {this.getMessageComponents()}
+            {content}
+            {this.getEditModeComponents()}
+            <FormItem>
+              <Button
+                onClick={this.importDataset}
+                type="primary"
+                disabled={this.state.datasetJson === ""}
+              >
+                {titleString}
+              </Button>&nbsp;
+              <Button onClick={() => window.history.back()}>Cancel</Button>
+            </FormItem>
+          </Spin>
+        </Card>
       </div>
     );
   }

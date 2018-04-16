@@ -4,8 +4,8 @@ import { Link } from "react-router-dom";
 import { Spin, Layout, Row, Col } from "antd";
 import { transformDatasets } from "dashboard/dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
-import Request from "libs/request";
 import type { DatasetType } from "dashboard/dataset_view";
+import { getDatasets } from "admin/admin_rest_api";
 
 const { Header, Content, Footer } = Layout;
 
@@ -25,9 +25,8 @@ class SpotlightView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = "/api/datasets";
     this.setState({ isLoading: true });
-    const datasets = await Request.receiveJSON(url);
+    const datasets = await getDatasets();
 
     const transformedDatasets = transformDatasets(datasets);
     this.setState({

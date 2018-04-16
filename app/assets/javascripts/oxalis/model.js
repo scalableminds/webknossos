@@ -121,6 +121,7 @@ export class OxalisModel {
   };
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
+  isMappingSupported: boolean = true;
 
   async fetch(
     tracingType: TracingTypeTracingType,
@@ -240,6 +241,7 @@ export class OxalisModel {
     } else if (necessaryTextureCount + textureCountForCellMappings > maxTextureCount) {
       const message = messages["mapping.too_few_textures"];
       console.warn(message);
+      this.isMappingSupported = false;
     }
 
     return [usedTextureSize, dataTextureCountPerLayer];
@@ -396,7 +398,7 @@ export class OxalisModel {
   buildMappingsObject() {
     const segmentationBinary = this.getSegmentationBinary();
 
-    if (segmentationBinary != null) {
+    if (segmentationBinary != null && this.isMappingSupported) {
       window.mappings = {
         getAll() {
           return segmentationBinary.mappings.getMappingNames();

@@ -55,6 +55,7 @@ import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
 import { doWithToken, finishAnnotation, requestTask } from "admin/admin_rest_api";
 import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
+import messages from "messages";
 import type { ToastStyleType } from "libs/toast";
 import update from "immutability-helper";
 
@@ -560,8 +561,11 @@ class DataApi {
    * api.setMapping("segmentation", mapping);
    */
   setMapping(layerName: string, mapping: MappingType) {
-    const layer = this.__getLayer(layerName);
+    if (!Model.isMappingSupported) {
+      throw new Error(messages["mapping.too_few_textures"]);
+    }
 
+    const layer = this.__getLayer(layerName);
     layer.cube.setMapping(mapping);
   }
 

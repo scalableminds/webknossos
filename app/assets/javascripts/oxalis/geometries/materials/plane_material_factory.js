@@ -129,7 +129,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     // Add mapping
     const segmentationBinary = Model.getSegmentationBinary();
-    if (segmentationBinary != null) {
+    if (segmentationBinary != null && Model.isMappingSupported) {
       const [
         mappingTexture,
         mappingLookupTexture,
@@ -244,14 +244,16 @@ const int textureCountPerLayer = <%= textureCountPerLayer %>;
 <% }) %>
 
 <% if (hasSegmentation) { %>
-uniform sampler2D <%= segmentationName %>_lookup_texture;
-uniform sampler2D <%= segmentationName %>_textures[textureCountPerLayer];
-uniform float <%= segmentationName %>_maxZoomStep;
+  uniform sampler2D <%= segmentationName %>_lookup_texture;
+  uniform sampler2D <%= segmentationName %>_textures[textureCountPerLayer];
+  uniform float <%= segmentationName %>_maxZoomStep;
 
-uniform bool isMappingEnabled;
-uniform float mappingSize;
-uniform sampler2D <%= segmentationName %>_mapping_texture;
-uniform sampler2D <%= segmentationName %>_mapping_lookup_texture;
+  <% if (isMappingSupported) { %>
+    uniform bool isMappingEnabled;
+    uniform float mappingSize;
+    uniform sampler2D <%= segmentationName %>_mapping_texture;
+    uniform sampler2D <%= segmentationName %>_mapping_lookup_texture;
+  <% } %>
 <% } %>
 
 uniform float alpha;
@@ -607,13 +609,14 @@ void main() {
 
     float id = vec4ToFloat(volume_color);
 
-    if (isMappingEnabled) {
-      float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
-      if (index != -1.0) {
-        id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, <%= mappingTextureWidth %>, index).rgba);
+    <% if (isMappingSupported) { %>
+      if (isMappingEnabled) {
+        float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
+        if (index != -1.0) {
+          id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, <%= mappingTextureWidth %>, index).rgba);
+        }
       }
-    }
-
+    <% } %>
   <% } else { %>
     float id = 0.0;
   <% } %>
@@ -681,6 +684,7 @@ void main() {
       bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
       d_texture_width: formatNumberAsGLSLFloat(dataTextureWidth),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
+      isMappingSupported: Model.isMappingSupported,
       mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
       bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
       bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),

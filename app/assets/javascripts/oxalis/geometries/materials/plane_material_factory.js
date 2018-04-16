@@ -22,6 +22,7 @@ import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { OrthoViews } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -561,10 +562,10 @@ float vec4ToFloat(vec4 v) {
 float binarySearchIndex(sampler2D texture, float maxIndex, float value) {
   float low = 0.0;
   float high = maxIndex - 1.0;
-  // maxIndex is at most 2**24, requiring a maximum of 25 loop passes
-  for (float i = 0.0; i < 25.0; i++) {
+  // maxIndex is at most MAPPING_TEXTURE_WIDTH**2, requiring a maximum of log2(MAPPING_TEXTURE_WIDTH**2)+1 loop passes
+  for (float i = 0.0; i < <%= formatNumberAsGLSLFloat(Math.log2(mappingTextureWidth**2) + 1.0) %>; i++) {
     float mid = floor((low + high) / 2.0);
-    float cur = vec4ToFloat(getRgbaAtIndex(texture, 4096.0, mid).rgba);
+    float cur = vec4ToFloat(getRgbaAtIndex(texture, <%= mappingTextureWidth %>, mid).rgba);
     if (cur == value) {
       return mid;
     } else if (cur == 0.0 || cur > value) {
@@ -609,7 +610,7 @@ void main() {
     if (isMappingEnabled) {
       float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
       if (index != -1.0) {
-        id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, 4096.0, index).rgba);
+        id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, <%= mappingTextureWidth %>, index).rgba);
       }
     }
 
@@ -680,6 +681,7 @@ void main() {
       bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
       d_texture_width: formatNumberAsGLSLFloat(dataTextureWidth),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
+      mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
       bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
       bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),
       floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),

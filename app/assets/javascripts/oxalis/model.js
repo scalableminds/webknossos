@@ -234,7 +234,7 @@ export class OxalisModel {
       throw new Error(message);
     } else if (necessaryTextureCount + textureCountForCellMappings > maxTextureCount) {
       const message = messages["mapping.too_few_textures"];
-      Toast.info(message);
+      console.warn(message);
     }
 
     return [usedTextureSize, dataTextureCountPerLayer];

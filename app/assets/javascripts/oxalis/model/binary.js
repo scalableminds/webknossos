@@ -46,7 +46,7 @@ import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
-const MAPPING_TEXTURE_WIDTH = 4096;
+export const MAPPING_TEXTURE_WIDTH = 4096;
 
 type PingOptions = {
   zoomStep: number,
@@ -169,19 +169,12 @@ class Binary {
     const { currentMapping } = this.cube;
     if (currentMapping == null) return;
 
-    // TODO: Remove timing code
+    console.log("Create mapping texture");
     console.time("Time to create mapping texture");
-    console.time("Time to create keys array");
     // $FlowFixMe Flow chooses the wrong library definition, because it doesn't seem to know that Object.keys always returns strings and throws an error
     const keys = Uint32Array.from(Object.keys(currentMapping), x => parseInt(x, 10));
-    console.timeEnd("Time to create keys array");
-    console.time("Time to sort keys array");
     keys.sort();
-    console.timeEnd("Time to sort keys array");
-    console.time("Time to create values array");
     const values = Uint32Array.from(keys, key => currentMapping[key]);
-    console.timeEnd("Time to create values array");
-    console.time("Time to convert to Uint8Arrays");
     // Instantiate the Uint8Arrays with the array buffer from the Uint32Arrays, so that each 32-bit value is converted
     // to four 8-bit values correctly
     const uint8Keys = new Uint8Array(keys.buffer);
@@ -193,11 +186,10 @@ class Binary {
     uint8KeysPadded.set(uint8Keys);
     const uint8ValuesPadded = new Uint8Array(paddedLength * 4);
     uint8ValuesPadded.set(uint8Values);
-    console.timeEnd("Time to convert to Uint8Arrays");
     console.timeEnd("Time to create mapping texture");
 
     const mappingSize = keys.length;
-    if (mappingSize > MAPPING_TEXTURE_WIDTH * MAPPING_TEXTURE_WIDTH) {
+    if (mappingSize > MAPPING_TEXTURE_WIDTH ** 2) {
       throw new Error(messages["mapping.too_big"]);
     }
 

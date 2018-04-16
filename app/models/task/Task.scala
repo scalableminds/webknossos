@@ -8,6 +8,7 @@ import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEve
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
 import models.basics.SecuredBaseDAO
@@ -24,8 +25,13 @@ import play.api.libs.json.{JsNull, JsObject, Json}
 import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
-import utils.{ObjectId, SQLDAO}
+import slick.jdbc.TransactionIsolation.Serializable
+import utils.{ObjectId, SQLClient, SQLDAO}
+import views.html.helper.select
+
+import scala.util.Random
 
 
 case class TaskSQL(
@@ -138,8 +144,11 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllAssignableFor(userId: ObjectId, teamIds: List[ObjectId], limit: Option[Int])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
-    val q = sql"""
+  def findAssignableFor(userId: ObjectId, teamIds: List[ObjectId], initializeAnnotation: Boolean)(implicit ctx: DBAccessContext): Fox[(TaskSQL, ObjectId)] = {
+    val dummyTracingId = Random.nextString(36)
+    val annotationId = ObjectId.generate
+
+    val selectTaskQ = sql"""
            select webknossos.tasks_.*
            from
              (webknossos.tasks_
@@ -156,12 +165,29 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                  and userAnnotations._task is null
                  and not webknossos.projects_.paused
            order by webknossos.projects_.priority
-           limit ${limit};
-      """
+           limit 1""".as[TasksRow]
+
+        def insertInitializingAnnotationQ(taskIdOpt: Option[String]) = {
+          if (initializeAnnotation)
+            taskIdOpt.map(taskId => sqlu"""
+                 insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+                                        values(${annotationId.id}, 'dummyDatasetId', ${taskId}, 'dummyTeamId', 'dummyUserId', ${dummyTracingId},
+                                               'skeleton', '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
+                                               '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
+                                                ${new java.sql.Timestamp(System.currentTimeMillis)}, false)""").getOrElse(sqlu"")
+          else sqlu""
+        }
+
+    val queries = for {
+      selectedTask <- selectTaskQ
+      _ <- insertInitializingAnnotationQ(selectedTask.headOption.map(_._Id))
+    } yield selectedTask
+
     for {
-      r <- run(q.as[TasksRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
+      rList <- run(queries.withTransactionIsolation(Serializable))
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
+    } yield (parsed, annotationId)
   }
 
   def findAllByPojectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
@@ -440,11 +466,11 @@ object TaskDAO {
       tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
     } yield tasks
 
-  def findAllAssignableFor(user: User, teamIds: List[BSONObjectID], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
+  def findAssignableFor(user: User, teamIds: List[BSONObjectID], initializeAnnotation: Boolean = false)(implicit ctx: DBAccessContext): Fox[(Task, ObjectId)] = {
     for {
-      tasksSQL <- TaskSQLDAO.findAllAssignableFor(ObjectId.fromBsonId(user._id), teamIds.map(ObjectId.fromBsonId(_)), limit)
-      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
-    } yield tasks
+      (taskSQL, initializingAnnotationId) <- TaskSQLDAO.findAssignableFor(ObjectId.fromBsonId(user._id), teamIds.map(ObjectId.fromBsonId(_)), initializeAnnotation)
+      task <- Task.fromTaskSQL(taskSQL)
+    } yield (task, initializingAnnotationId)
   }
 
   def findAllByFilterByProjectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[Task]] =

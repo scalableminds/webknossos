@@ -76,6 +76,7 @@ export type APIUserType = {
   +isEditable: boolean,
   +lastActivity: number,
   +teams: Array<APITeamMembershipType>,
+  +organization: string,
 };
 
 export type APITimeIntervalType = {
@@ -222,7 +223,7 @@ export type NDStoreConfigType = {
 
 export type DatasetConfigType = {
   +name: string,
-  +team: string,
+  +organization: string,
   +datastore: string,
   +zipFile: File,
 };

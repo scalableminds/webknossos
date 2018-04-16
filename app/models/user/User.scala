@@ -410,9 +410,10 @@ object User extends FoxImplicits {
       (__ \ "experiences").write[Map[String, Int]] and
       (__ \ "lastActivity").write[Long] and
       (__ \ "isAnonymous").write[Boolean] and
-      (__ \ "isEditable").write[Boolean]) (u =>
+      (__ \ "isEditable").write[Boolean] and
+      (__ \ "organization").write[String]) (u =>
       (u.id, u.email, u.firstName, u.lastName, u.isAdmin, u.isActive, u.teams.map(TeamMembership.teamMembershipPublicWrites(_)), u.experiences,
-        u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser)))
+        u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser), u.organization))
 
   def userCompactWrites: Writes[User] =
     ((__ \ "id").write[String] and

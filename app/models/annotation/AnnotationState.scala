@@ -9,6 +9,7 @@ object AnnotationState extends Enumeration {
   val Cancelled = Value("Cancelled")
   val Active = Value("Active")
   val Finished = Value("Finished")
+  val Initializing = Value("Initializing")
 
   implicit val enumReads: Reads[AnnotationState] = EnumUtils.enumReads(AnnotationState)
 

@@ -10,7 +10,7 @@ import type { APITeamType, APIDatastoreType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 
 type Props = {
   form: Object,

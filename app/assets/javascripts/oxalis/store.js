@@ -336,7 +336,6 @@ export type OxalisState = {
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
-    name: "",
     fourBit: true,
     interpolation: false,
     keyboardDelay: 342,

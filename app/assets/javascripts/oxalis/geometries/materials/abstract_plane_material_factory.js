@@ -83,10 +83,13 @@ class AbstractPlaneMaterialFactory {
     listenToStoreProperty(
       state => state.datasetConfiguration.layers,
       layerSettings => {
-        _.forEach(layerSettings, (settings, layerName) => {
-          const name = this.sanitizeName(layerName);
-          this.updateUniformsForLayer(settings, name);
-        });
+        for (const binary of Model.getColorBinaries()) {
+          const settings = layerSettings[binary.name];
+          if (settings != null) {
+            const name = this.sanitizeName(binary.name);
+            this.updateUniformsForLayer(settings, name);
+          }
+        }
 
         app.vent.trigger("rerender");
       },

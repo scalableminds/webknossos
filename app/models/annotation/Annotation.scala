@@ -28,6 +28,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
@@ -208,13 +209,27 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   // update operations
 
-  def insertOne(a: AnnotationSQL): Fox[Unit] = {
-    for {
-      _ <- run(sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-                       values(${a._id.toString}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
+  def insertOne(a: AnnotationSQL, overwrite: Boolean = false): Fox[Unit] = {
+    val deleteOldQ = if (overwrite) sqlu"delete from webknossos.annotations where _id = ${a._id.id} and state = '#${AnnotationState.Initializing.toString}'" else sqlu""
+    val insertQ = sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+                       values(${a._id.id}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
                               '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
                               '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
-                              ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})""")
+                              ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})"""
+
+    val actions = for {
+      _ <- deleteOldQ
+      _ <- insertQ
+    } yield ()
+
+    for {
+      _ <- run(actions.withTransactionIsolation(Serializable))
+    } yield ()
+  }
+
+  def abortInitializingAnnotation(id: ObjectId): Fox[Unit] = {
+    for {
+      _ <- run(sqlu"delete from webknossos.annotations where _id = ${id.id} and state = '#${AnnotationState.Initializing.toString}'")
     } yield ()
   }
 
@@ -423,10 +438,10 @@ object AnnotationDAO extends FoxImplicits {
     } yield parsed
   }
 
-  def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  def saveToDB(annotation: Annotation, overwrite: Boolean = false)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
       annotationSQL <- AnnotationSQL.fromAnnotation(annotation)
-      _ <- AnnotationSQLDAO.insertOne(annotationSQL)
+      _ <- AnnotationSQLDAO.insertOne(annotationSQL, overwrite)
     } yield annotation
   }
 

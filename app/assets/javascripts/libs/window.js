@@ -26,8 +26,9 @@ const _window =
   typeof window === "undefined"
     ? {
         alert: console.log.bind(console),
-        requestAnimationFrame: resolve => resolve(),
         app: null,
+        location: dummyLocation,
+        requestAnimationFrame: resolve => resolve(),
       }
     : window;
 

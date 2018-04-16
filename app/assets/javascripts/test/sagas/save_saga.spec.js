@@ -3,8 +3,8 @@
 
 import test from "ava";
 import mockRequire from "mock-require";
-import _ from "lodash";
 import DiffableMap from "libs/diffable_map";
+import { alert } from "libs/window";
 import { expectValueDeepEqual } from "../helpers/sagaHelpers";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 
@@ -16,13 +16,6 @@ const DateMock = {
 };
 mockRequire("libs/date", DateMock);
 
-const window = require("libs/window");
-
-window.location = {
-  reload: _.noop,
-};
-mockRequire("libs/window", window);
-
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
@@ -31,7 +24,6 @@ const UpdateActions = mockRequire.reRequire("oxalis/model/sagas/update_actions")
 const SaveActions = mockRequire.reRequire("oxalis/model/actions/save_actions");
 const { take, call, put } = mockRequire.reRequire("redux-saga/effects");
 
-const { alert } = mockRequire.reRequire("libs/window");
 const {
   compactUpdateActions,
   pushAnnotationAsync,

@@ -4,6 +4,7 @@ import BackboneEvents from "backbone-events-standalone";
 import sinon from "sinon";
 import _ from "lodash";
 import { ControlModeEnum } from "oxalis/constants";
+import window from "libs/window";
 import {
   tracing as SKELETON_TRACING,
   annotation as SKELETON_ANNOTATION,
@@ -35,15 +36,9 @@ export const KeyboardJS = {
 mockRequire("libs/keyboard", KeyboardJS);
 mockRequire("libs/toast", { error: _.noop, warning: _.noop, close: _.noop });
 
-const window = require("libs/window");
-
 mockRequire(
   "libs/window",
   Object.assign({}, window, {
-    location: {
-      pathname: "annotationUrl",
-    },
-    requestAnimationFrame: resolve => resolve(),
     open: sinon.spy(),
   }),
 );

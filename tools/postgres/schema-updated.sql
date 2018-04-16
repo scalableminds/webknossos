@@ -32,7 +32,7 @@ CREATE TABLE webknossos.analytics(
 
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
-CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled');
+CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _dataSet CHAR(24) NOT NULL,

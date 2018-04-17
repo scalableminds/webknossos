@@ -96,8 +96,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     this.props.form.setFieldsValue({
       dataSourceJson: JSON.stringify(dataSource, null, "  "),
       dataset: {
-        displayName: dataset.displayName,
-        isPublic: dataset.isPublic,
+        displayName: dataset.displayName || undefined,
+        isPublic: dataset.isPublic || false,
         description: dataset.description || undefined,
       },
     });

@@ -1,5 +1,6 @@
 package models.configuration
 
+import com.scalableminds.webknossos.datastore.models.datasource.Category
 import models.binary.DataSet
 import play.api.libs.json._
 
@@ -16,7 +17,7 @@ object DataSetConfiguration {
   implicit val dataSetConfigurationFormat = Json.format[DataSetConfiguration]
 
   def constructInitialDefault(dataSet: DataSet): DataSetConfiguration =
-    constructInitialDefault(dataSet.dataSource.toUsable.map(d => d.dataLayers.map(_.name)).getOrElse(List()))
+    constructInitialDefault(dataSet.dataSource.toUsable.map(d => d.dataLayers.filter(_.category != Category.segmentation).map(_.name)).getOrElse(List()))
 
   def constructInitialDefault(layerNames: List[String]): DataSetConfiguration = {
     val layerValues = Json.toJson(layerNames.map(layerName => (layerName -> initialDefaultPerLayer)).toMap)

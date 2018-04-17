@@ -1,7 +1,20 @@
 // @flow
 
 import * as React from "react";
-import { Button, Spin, Input, Checkbox, Alert, Form, Card } from "antd";
+import _ from "lodash";
+import {
+  Button,
+  Spin,
+  Input,
+  Checkbox,
+  Alert,
+  Form,
+  Card,
+  InputNumber,
+  Collapse,
+  Col,
+  Row,
+} from "antd";
 import Clipboard from "clipboard-js";
 import update from "immutability-helper";
 import Toast from "libs/toast";
@@ -9,51 +22,69 @@ import {
   getDatasetSharingToken,
   revokeDatasetSharingToken,
   getDataset,
-  getDatasetDatasource,
   updateDataset,
+  getDatasetDefaultConfiguration,
+  updateDatasetDefaultConfiguration,
+  getDatasetDatasource,
   updateDatasetDatasource,
 } from "admin/admin_rest_api";
+import { Vector3Input } from "libs/vector_input";
+import type { DatasetConfigurationType } from "oxalis/store";
 import messages from "messages";
 import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
+const CollapsePanel = Collapse.Panel;
+
+const validateJSON = (rule, value, callback) => {
+  try {
+    JSON.parse(value);
+    callback();
+  } catch (e) {
+    callback(true);
+  }
+};
+
+const jsonEditStyle = {
+  fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+};
 
 type Props = {
+  form: Object,
   datasetName: string,
   isEditingMode: boolean,
 };
 
 type State = {
-  dataLoaded: boolean,
-  dataset: ?APIDatasetType,
   sharingToken: string,
-  datasetJson: string,
-  isValidJSON: boolean,
+  dataset: ?APIDatasetType,
+  datasetDefaultConfiguration: ?DatasetConfigurationType,
   messages: Array<APIMessageType>,
   isLoading: boolean,
 };
 
+type FormData = {
+  dataSourceJson: string,
+  dataset: APIDatasetType,
+  defaultConfiguration: DatasetConfigurationType,
+  defaultConfigurationLayersJson: string,
+};
+
 class DatasetImportView extends React.PureComponent<Props, State> {
-  static defaultProps: Props = {
-    datasetName: "",
+  static defaultProps = {
     isEditingMode: false,
   };
 
   state = {
-    dataLoaded: false,
     dataset: null,
+    datasetDefaultConfiguration: null,
     sharingToken: "",
-    isLoading: false,
-    datasetJson: "",
-    isValidJSON: true,
+    isLoading: true,
     messages: [],
   };
 
   componentDidMount() {
-    this.fetchData().then(
-      _ => this.setState({ dataLoaded: true }),
-      _ => this.setState({ dataLoaded: true }),
-    );
+    this.fetchData();
   }
 
   async fetchData(): Promise<void> {
@@ -62,56 +93,62 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     const dataset = await getDataset(this.props.datasetName);
     const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
 
-    // eslint-disable-next-line react/no-did-mount-set-state
+    this.props.form.setFieldsValue({
+      dataSourceJson: JSON.stringify(dataSource, null, "  "),
+      dataset: {
+        displayName: dataset.displayName || undefined,
+        isPublic: dataset.isPublic || false,
+        description: dataset.description || undefined,
+      },
+    });
+
+    if (this.props.isEditingMode) {
+      const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
+        this.props.datasetName,
+      );
+      this.props.form.setFieldsValue({
+        defaultConfiguration: datasetDefaultConfiguration,
+        defaultConfigurationLayersJson: JSON.stringify(
+          datasetDefaultConfiguration.layers,
+          null,
+          "  ",
+        ),
+      });
+      this.setState({ datasetDefaultConfiguration });
+    }
+
     this.setState({
-      dataLoaded: true,
+      isLoading: false,
       sharingToken,
       dataset,
-      datasetJson: JSON.stringify(dataSource, null, "  "),
       messages: dataSourceMessages,
-      isLoading: false,
     });
   }
 
-  importDataset = async () => {
-    if (this.props.isEditingMode && this.state.dataset != null) {
-      await updateDataset(this.props.datasetName, this.state.dataset);
-    }
+  handleSubmit = (e: SyntheticEvent<>) => {
+    e.preventDefault();
+    this.props.form.validateFields(async (err, formValues: FormData) => {
+      const { dataset, datasetDefaultConfiguration } = this.state;
+      if (!err && dataset != null) {
+        await updateDataset(this.props.datasetName, Object.assign({}, dataset, formValues.dataset));
 
-    if (this.state.isValidJSON && this.state.dataset != null) {
-      await updateDatasetDatasource(
-        this.props.datasetName,
-        this.state.dataset.dataStore.url,
-        JSON.parse(this.state.datasetJson),
-      );
-      Toast.success(`Successfully imported ${this.props.datasetName}`);
-      window.history.back();
-    } else {
-      Toast.error("Invalid JSON. Please fix the errors.");
-    }
-  };
+        if (datasetDefaultConfiguration != null) {
+          await updateDatasetDefaultConfiguration(
+            this.props.datasetName,
+            _.extend({}, datasetDefaultConfiguration, formValues.defaultConfiguration, {
+              layers: JSON.parse(formValues.defaultConfigurationLayersJson),
+            }),
+          );
+        }
 
-  handleChangeJson = (event: SyntheticInputEvent<>) => {
-    try {
-      JSON.parse(event.target.value);
-      this.setState({
-        datasetJson: event.target.value,
-        isValidJSON: true,
-      });
-    } catch (e) {
-      this.setState({
-        datasetJson: event.target.value,
-        isValidJSON: false,
-      });
-    }
-  };
+        const dataSource = JSON.parse(formValues.dataSourceJson);
+        await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
 
-  handleChangeDescription = (event: SyntheticInputEvent<>) => {
-    this.updateDataset("description", event.target.value);
-  };
-
-  handleChangeCheckbox = (event: SyntheticInputEvent<>) => {
-    this.updateDataset("isPublic", event.target.checked);
+        const verb = this.props.isEditingMode ? "updated" : "imported";
+        Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
+        window.history.back();
+      }
+    });
   };
 
   handleCopySharingLink = async () => {
@@ -170,72 +207,88 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   getEditModeComponents() {
-    // these components are only available in editing mode
-    if (this.props.isEditing && this.state.dataset != null) {
-      const { dataset } = this.state;
-
-      return (
-        <div>
-          <FormItem label="Dataset Description">
-            <Input.TextArea
-              rows="3"
-              value={dataset.description || ""}
-              placeholder="Dataset Description"
-              onChange={this.handleChangeDescription}
+    const { getFieldDecorator } = this.props.form;
+    return (
+      <div>
+        <FormItem label="Description">
+          {getFieldDecorator("dataset.description")(
+            <Input.TextArea rows="3" placeholder="Description" />,
+          )}
+        </FormItem>
+        <FormItem label="Display Name">
+          {getFieldDecorator("dataset.displayName")(<Input placeholder="Display Name" />)}
+        </FormItem>
+        <FormItem label="Sharing Link">
+          <Input.Group compact>
+            <Input
+              value={this.getSharingLink()}
+              onClick={this.handleSelectText}
+              style={{ width: "80%" }}
+              readOnly
             />
-          </FormItem>
-          <FormItem label="Sharing Link">
-            <Input.Group compact>
-              <Input
-                value={this.getSharingLink()}
-                onClick={this.handleSelectText}
-                style={{ width: "80%" }}
-                readOnly
-              />
-              <Button onClick={this.handleCopySharingLink} style={{ width: "10%" }} icon="copy" />
-              <Button onClick={this.handleRevokeSharingLink} style={{ width: "10%" }}>
-                Revoke
-              </Button>
-            </Input.Group>
-          </FormItem>
-          <FormItem>
-            <Checkbox checked={dataset.isPublic} onChange={this.handleChangeCheckbox}>
-              Make dataset publicly accessible
-            </Checkbox>
-          </FormItem>
-        </div>
-      );
-    }
-
-    return <span />;
+            <Button onClick={this.handleCopySharingLink} style={{ width: "10%" }} icon="copy" />
+            <Button onClick={this.handleRevokeSharingLink} style={{ width: "10%" }}>
+              Revoke
+            </Button>
+          </Input.Group>
+        </FormItem>
+        <FormItem>
+          {getFieldDecorator("dataset.isPublic", { valuePropName: "checked" })(
+            <Checkbox>Make dataset publicly accessible</Checkbox>,
+          )}
+        </FormItem>
+        <Collapse defaultActiveKey={["1"]} bordered={false} style={{ marginBottom: 10 }}>
+          <CollapsePanel header="Default Settings" key="1" style={{ borderBottom: "none" }}>
+            <Row gutter={24}>
+              <Col span={6}>
+                <FormItem label="Position">
+                  {getFieldDecorator("defaultConfiguration.position")(
+                    <Vector3Input value="" onChange={() => {}} />,
+                  )}
+                </FormItem>
+              </Col>
+              <Col span={6}>
+                <FormItem label="Zoom">
+                  {getFieldDecorator("defaultConfiguration.zoom")(
+                    <InputNumber style={{ width: "100%" }} />,
+                  )}
+                </FormItem>
+              </Col>
+              <Col span={6}>
+                <FormItem label="Segmentation Opacity">
+                  {getFieldDecorator("defaultConfiguration.segmentationOpacity")(
+                    <InputNumber style={{ width: "100%" }} />,
+                  )}
+                </FormItem>
+              </Col>
+              <Col span={6}>
+                <FormItem label=" " colon={false}>
+                  {getFieldDecorator("defaultConfiguration.interpolation", {
+                    valuePropName: "checked",
+                  })(<Checkbox>Interpolation</Checkbox>)}
+                </FormItem>
+              </Col>
+            </Row>
+            <FormItem label="Layer Configuration">
+              {getFieldDecorator("defaultConfigurationLayersJson", {
+                rules: [
+                  { validator: validateJSON, message: "Invalid JSON. Please fix the errors." },
+                ],
+              })(<Input.TextArea rows="10" style={jsonEditStyle} />)}
+            </FormItem>
+          </CollapsePanel>
+        </Collapse>
+      </div>
+    );
   }
 
   render() {
-    const { datasetJson } = this.state;
-    const textAreaStyle = this.state.isValidJSON
-      ? {
-          fontFamily: "monospace",
-        }
-      : {
-          fontFamily: "monospace",
-          border: "1px solid red",
-          boxShadow: "0 0 0 2px rgba(233, 16, 76, 0.28)",
-        };
+    const { getFieldDecorator } = this.props.form;
 
     const titleString = this.props.isEditingMode ? "Update" : "Import";
-    const content = this.state.dataLoaded ? (
-      <FormItem label="Dataset Configuration">
-        <Input.TextArea
-          value={datasetJson}
-          onChange={this.handleChangeJson}
-          rows={20}
-          style={textAreaStyle}
-        />
-      </FormItem>
-    ) : null;
 
     return (
-      <div className="row container dataset-import">
+      <Form className="row container dataset-import" onSubmit={this.handleSubmit}>
         <Card
           title={
             <h3>
@@ -246,23 +299,32 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           <Spin size="large" spinning={this.state.isLoading}>
             <p>Please review your dataset&#39;s properties before importing it.</p>
             {this.getMessageComponents()}
-            {content}
-            {this.getEditModeComponents()}
+            <FormItem label="Dataset Configuration" hasFeedback>
+              {getFieldDecorator("dataSourceJson", {
+                rules: [
+                  {
+                    required: true,
+                    message: "Please provide a dataset configuration.",
+                  },
+                  {
+                    validator: validateJSON,
+                    message: "Invalid JSON. Please fix the errors.",
+                  },
+                ],
+              })(<Input.TextArea rows={20} style={jsonEditStyle} />)}
+            </FormItem>
+            {this.props.isEditingMode ? this.getEditModeComponents() : null}
             <FormItem>
-              <Button
-                onClick={this.importDataset}
-                type="primary"
-                disabled={this.state.datasetJson === ""}
-              >
+              <Button type="primary" htmlType="submit">
                 {titleString}
               </Button>&nbsp;
               <Button onClick={() => window.history.back()}>Cancel</Button>
             </FormItem>
           </Spin>
         </Card>
-      </div>
+      </Form>
     );
   }
 }
 
-export default DatasetImportView;
+export default Form.create()(DatasetImportView);

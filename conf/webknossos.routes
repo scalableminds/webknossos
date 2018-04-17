@@ -20,12 +20,12 @@ GET           /api/auth/logout                                                  
 GET           /api/auth/sso                                                     controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 # Configurations
-GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default
 GET           /api/user/userConfiguration                                       controllers.ConfigurationController.read
 POST          /api/user/userConfiguration                                       controllers.ConfigurationController.update
-GET           /api/dataSetConfigurations/default                                controllers.ConfigurationController.defaultDataSet
 GET           /api/dataSetConfigurations/:dataSetName                           controllers.ConfigurationController.readDataSet(dataSetName: String)
 POST          /api/dataSetConfigurations/:dataSetName                           controllers.ConfigurationController.updateDataSet(dataSetName: String)
+GET           /api/dataSetConfigurations/default/:dataSetName                   controllers.ConfigurationController.readDataSetDefault(dataSetName: String)
+POST          /api/dataSetConfigurations/default/:dataSetName                   controllers.ConfigurationController.updateDataSetDefault(dataSetName: String)
 
 # Users
 GET           /api/user/tasks/request                                           controllers.TaskController.request

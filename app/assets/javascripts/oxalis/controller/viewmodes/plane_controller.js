@@ -98,10 +98,6 @@ class PlaneController extends React.PureComponent<Props> {
     this.start();
   }
 
-  componentDidUpdate(): void {
-    this.setTargetAndFixPosition();
-  }
-
   componentWillUnmount() {
     this.stop();
   }
@@ -131,6 +127,8 @@ class PlaneController extends React.PureComponent<Props> {
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
+        // Fix the rotation target of the TrackballControls
+        this.setTargetAndFixPosition();
       },
       pinch: delta => this.zoomTDView(delta, true),
     };
@@ -169,6 +167,9 @@ class PlaneController extends React.PureComponent<Props> {
     for (let i = 0; i <= 2; i++) {
       invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
     }
+
+    if (Utils.sum(invertedDiff) === 0) return;
+
     this.oldNmPos = nmPosition;
 
     const nmVector = new THREE.Vector3(...invertedDiff);

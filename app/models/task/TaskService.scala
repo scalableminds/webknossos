@@ -45,20 +45,4 @@ object TaskService
     } yield task
   }
 
-  def getProjectsFor(tasks: List[Task])(implicit ctx: DBAccessContext): Future[List[Project]] =
-    Fox.serialSequence(tasks)(_.project).map(_.flatten).map(_.distinct)
-
-  def getAllAvailableTaskCountsAndProjects()(implicit ctx: DBAccessContext): Fox[Map[User, (Int, List[Project])]] = {
-    UserDAO.findAll
-    .flatMap { users =>
-      Fox.serialSequence(users){ user =>
-        for{
-          tasks <- TaskAssignmentService.findAllAssignableFor(user, user.teamIds).getOrElse(Nil)
-          taskCount = tasks.size
-          projects <- TaskService.getProjectsFor(tasks)
-        } yield (user, (taskCount, projects))
-      }
-    }
-    .map(_.toMap[User, (Int, List[Project])])
-  }
 }

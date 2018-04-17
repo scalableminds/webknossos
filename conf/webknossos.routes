@@ -29,7 +29,7 @@ POST          /api/dataSetConfigurations/default/:dataSetName                   
 
 # Users
 GET           /api/user/tasks/request                                           controllers.TaskController.request
-GET           /api/user/tasks/peek                                              controllers.TaskController.peekNext(limit: Int ?= 10)
+GET           /api/user/tasks/peek                                              controllers.TaskController.peekNext
 
 GET           /api/users                                                        controllers.UserController.list
 GET           /api/user                                                         controllers.UserController.current

@@ -20,15 +20,15 @@ import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO}
 import models.task.Task
 import models.user.User
-import net.liftweb.common.Box
+import net.liftweb.common.{Box, Full}
 import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
+import utils.ObjectId
 
 import scala.concurrent.Future
-
 import scala.collection.{IterableLike, TraversableLike}
 import scala.runtime.Tuple3Zipped
 import scala.collection.generic.Growable
@@ -134,7 +134,7 @@ object AnnotationService
     } yield newTracingReference
   }
 
-  def createAnnotationFor(user: User, task: Task)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+  def createAnnotationFor(user: User, task: Task, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
         newTracing <- tracingFromBase(annotation) ?~> "Failed to create tracing from base"
@@ -143,10 +143,10 @@ object AnnotationService
           tracingReference = newTracing,
           state = Active,
           typ = AnnotationType.Task,
-          _id = BSONObjectID.generate,
+          _id = initializingAnnotationId.toBSONObjectId.get,
           createdTimestamp = System.currentTimeMillis,
           modifiedTimestamp = System.currentTimeMillis)
-        _ <- newAnnotation.saveToDB
+        _ <- AnnotationDAO.saveToDB(newAnnotation, overwrite = true)
       } yield {
         newAnnotation
       }
@@ -170,6 +170,13 @@ object AnnotationService
       editRotation = startRotation,
       activeNodeId = Some(1),
       trees = Seq(initialTree))
+  }
+
+  def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationFox: Box[Annotation]) = {
+    insertedAnnotationFox match {
+      case Full(_) => Fox.successful()
+      case _ => AnnotationSQLDAO.abortInitializingAnnotation(initializingAnnotationId)
+    }
   }
 
   def createAnnotationBase(

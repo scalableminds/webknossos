@@ -47,6 +47,7 @@ export type APIDatasetType = {
   +isEditable: boolean,
   +isPublic: boolean,
   +name: string,
+  +displayName: string,
   +owningOrganization: string,
   +sourceType: "wkw" | "knossos",
 };

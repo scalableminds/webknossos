@@ -24,25 +24,14 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def updateTeams(dataSet: DataSet, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
     DataSetDAO.updateTeams(dataSet.name, teams)
 
-  def update(dataSet: DataSet, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =
-    DataSetDAO.update(dataSet.name, description, isPublic)
+  def update(dataSet: DataSet, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =
+    DataSetDAO.update(dataSet.name, description, displayName, isPublic)
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
   def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     findDataSource(name)(GlobalAccessContext).reverse
-
-  def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
-    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map { dataSetBox =>
-      (for {
-        dataSet <- dataSetBox
-        dataSource <- dataSet.dataSource.toUsable
-      } yield {
-        dataSource.center
-      }).getOrElse(Point3D(0, 0, 0))
-    }
-  }
 
   def createDataSet(
                      name: String,

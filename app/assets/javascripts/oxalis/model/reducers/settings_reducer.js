@@ -39,8 +39,32 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
     }
 
     case "INITIALIZE_SETTINGS": {
+      // Only color layers need layer settings
+      const colorLayers = _.filter(state.dataset.dataLayers, layer => layer.category === "color");
+      const initialLayerSettings = action.initialDatasetSettings.layers;
+      const layerSettingsDefaults = _.transform(
+        colorLayers,
+        (result, layer) => {
+          if (initialLayerSettings != null && initialLayerSettings[layer.name] != null) {
+            result[layer.name] = initialLayerSettings[layer.name];
+          } else {
+            // Set defaults for each layer without settings
+            result[layer.name] = {
+              brightness: 0,
+              contrast: 1,
+              color: [255, 255, 255],
+            };
+          }
+        },
+        {},
+      );
+
+      const initialDatasetSettingsWithDefaults = Object.assign({}, action.initialDatasetSettings, {
+        layers: layerSettingsDefaults,
+      });
+
       return update(state, {
-        datasetConfiguration: { $merge: action.initialDatasetSettings },
+        datasetConfiguration: { $merge: initialDatasetSettingsWithDefaults },
         userConfiguration: { $merge: action.initialUserSettings },
       });
     }
@@ -52,27 +76,6 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
         scale: action.dataset.dataSource.scale,
         dataLayers: action.dataset.dataSource.dataLayers,
       };
-
-      // set defaults for every data layer if not yet present
-      if (_.isEmpty(state.datasetConfiguration.layers)) {
-        const colorLayers = _.filter(dataset.dataLayers, layer => layer.category === "color");
-        const layerSettingsDefaults = _.transform(
-          colorLayers,
-          (result, layer) => {
-            result[layer.name] = {
-              brightness: 0,
-              contrast: 1,
-              color: [255, 255, 255],
-            };
-          },
-          {},
-        );
-
-        return update(state, {
-          datasetConfiguration: { layers: { $set: layerSettingsDefaults } },
-          dataset: { $set: dataset },
-        });
-      }
 
       return update(state, {
         dataset: { $set: dataset },

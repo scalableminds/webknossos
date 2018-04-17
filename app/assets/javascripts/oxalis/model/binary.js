@@ -26,7 +26,6 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
 import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import { DataBucket } from "oxalis/model/binary/bucket";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
 import UpdatableTexture from "libs/UpdatableTexture";
@@ -57,14 +56,27 @@ type PingOptions = {
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   // E.g., modAndDivide(63, 32) === 31 / 32 === ~0.97
   const modAndDivide = (a, b) => (a % b) / b;
-  const roundToNearestBucketBoundary = (position, dimension) => {
+  const roundToNearestBucketBoundary = (pos, dimension) => {
     const bucketExtentInVoxel = constants.BUCKET_WIDTH * resolution[dimension];
     // Math.round returns 0 or 1 which will be mapped to -1 or 1
-    return Math.round(modAndDivide(position[dimension], bucketExtentInVoxel)) * 2 - 1;
+    return Math.round(modAndDivide(pos[dimension], bucketExtentInVoxel)) * 2 - 1;
   };
 
   // $FlowFixMe
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
+}
+
+function consumeBucketsFromPriorityQueue(queue, capacity) {
+  const buckets = new Set();
+  // Consume priority queue until we maxed out the capacity
+  while (buckets.size < capacity) {
+    if (queue.length === 0) {
+      break;
+    }
+    const bucketWithPriority = queue.dequeue();
+    buckets.add(bucketWithPriority.bucket);
+  }
+  return Array.from(buckets);
 }
 
 // TODO: Non-reactive
@@ -298,28 +310,15 @@ class Binary {
         subBucketLocality,
       );
 
-      isFallbackAvailable
-        ? this.addNecessaryBucketsToPriorityQueue(
-            bucketQueue,
-            logZoomStep + 1,
-            this.anchorPointCache.fallbackAnchorPoint,
-            true,
-            areas,
-            subBucketLocality,
-          )
-        : [];
-
-      function consumeBucketsFromPriorityQueue(queue, capacity) {
-        const requiredBucketSet = new Set();
-        // Consume priority queue until we maxed out the bucket capacity
-        while (requiredBucketSet.size < capacity) {
-          if (queue.length === 0) {
-            break;
-          }
-          const bucketWithPriority = queue.dequeue();
-          requiredBucketSet.add(bucketWithPriority.bucket);
-        }
-        return Array.from(requiredBucketSet);
+      if (isFallbackAvailable) {
+        this.addNecessaryBucketsToPriorityQueue(
+          bucketQueue,
+          logZoomStep + 1,
+          this.anchorPointCache.fallbackAnchorPoint,
+          true,
+          areas,
+          subBucketLocality,
+        );
       }
 
       const buckets = consumeBucketsFromPriorityQueue(

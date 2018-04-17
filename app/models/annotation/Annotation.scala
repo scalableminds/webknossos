@@ -223,7 +223,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     } yield ()
 
     for {
-      _ <- run(actions.withTransactionIsolation(Serializable))
+      _ <- run(actions.transactionally.withTransactionIsolation(Serializable))
     } yield ()
   }
 

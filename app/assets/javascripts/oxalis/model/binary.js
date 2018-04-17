@@ -53,6 +53,20 @@ type PingOptions = {
   activePlane: OrthoViewType,
 };
 
+// each index of the returned Vector3 is either -1 or +1.
+function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
+  // E.g., modAndDivide(63, 32) === 31 / 32 === ~0.97
+  const modAndDivide = (a, b) => (a % b) / b;
+  const roundToNearestBucketBoundary = (position, dimension) => {
+    const bucketExtentInVoxel = constants.BUCKET_WIDTH * resolution[dimension];
+    // Math.round returns 0 or 1 which will be mapped to -1 or 1
+    return Math.round(modAndDivide(position[dimension], bucketExtentInVoxel)) * 2 - 1;
+  };
+
+  // $FlowFixMe
+  return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
+}
+
 // TODO: Non-reactive
 class Binary {
   cube: DataCube;
@@ -72,6 +86,9 @@ class Binary {
   direction: Vector3;
   activeMapping: ?string;
   lastPosition: ?Vector3;
+  // Indicates whether the current position is closer to the previous or next bucket for each dimension
+  // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
+  lastSubBucketLocality: Vector3 = [-1, -1, -1];
   lastZoomStep: ?number;
   lastAreas: OrthoViewMapType<AreaType>;
   lastAreasPinged: OrthoViewMapType<AreaType>;
@@ -255,28 +272,63 @@ class Binary {
       isFallbackAvailable &&
       this.yieldsNewZoomedAnchorPoint(unzoomedAnchorPoint, fallbackZoomStep, "fallbackAnchorPoint");
 
+    const subBucketLocality = getSubBucketLocality(position, this.layer.resolutions[logZoomStep]);
     const areas = getAreas(Store.getState());
 
-    if (isAnchorPointNew || isFallbackAnchorPointNew || !_.isEqual(areas, this.lastAreas)) {
+    if (
+      isAnchorPointNew ||
+      isFallbackAnchorPointNew ||
+      !_.isEqual(areas, this.lastAreas) ||
+      !_.isEqual(subBucketLocality, this.lastSubBucketLocality)
+    ) {
+      this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
-      const buckets = this.calculateBucketsForTexturesForManager(
+
+      const bucketQueue = new PriorityQueue({
+        // small priorities take precedence
+        comparator: (b, a) => b.priority - a.priority,
+      });
+
+      this.addNecessaryBucketsToPriorityQueue(
+        bucketQueue,
         logZoomStep,
         this.anchorPointCache.anchorPoint,
         false,
         areas,
+        subBucketLocality,
       );
 
-      const fallbackBuckets = isFallbackAvailable
-        ? this.calculateBucketsForTexturesForManager(
+      isFallbackAvailable
+        ? this.addNecessaryBucketsToPriorityQueue(
+            bucketQueue,
             logZoomStep + 1,
             this.anchorPointCache.fallbackAnchorPoint,
             true,
             areas,
+            subBucketLocality,
           )
         : [];
 
+      function consumeBucketsFromPriorityQueue(queue, capacity) {
+        const requiredBucketSet = new Set();
+        // Consume priority queue until we maxed out the bucket capacity
+        while (requiredBucketSet.size < capacity) {
+          if (queue.length === 0) {
+            break;
+          }
+          const bucketWithPriority = queue.dequeue();
+          requiredBucketSet.add(bucketWithPriority.bucket);
+        }
+        return Array.from(requiredBucketSet);
+      }
+
+      const buckets = consumeBucketsFromPriorityQueue(
+        bucketQueue,
+        this.textureBucketManager.maximumCapacity,
+      );
+
       this.textureBucketManager.setActiveBuckets(
-        buckets.concat(fallbackBuckets),
+        buckets,
         this.anchorPointCache.anchorPoint,
         this.anchorPointCache.fallbackAnchorPoint,
       );
@@ -315,14 +367,14 @@ class Binary {
     return anchorPoint;
   }
 
-  calculateBucketsForTexturesForManager(
+  addNecessaryBucketsToPriorityQueue(
+    bucketQueue: PriorityQueue,
     logZoomStep: number,
     zoomedAnchorPoint: Vector4,
     isFallback: boolean,
     areas: OrthoViewMapType<AreaType>,
-  ): Array<DataBucket> {
-    // find out which buckets we need for each plane
-    const requiredBucketSet = new Set();
+    subBucketLocality: Vector3,
+  ): void {
     const resolution = this.layer.resolutions[logZoomStep];
 
     let resolutionChangeRatio = [1, 1, 1];
@@ -368,50 +420,57 @@ class Binary {
         scaledTopLeftVector[v] + (scaledBottomRightVector[v] - scaledTopLeftVector[v]) / 2,
       ];
 
-      // By subtracting and adding 1 to the bounds of y and x, we move
+      // By subtracting and adding 1 (extraBucket) to the bounds of y and x, we move
       // one additional bucket on each edge of the viewport to the GPU. This decreases the
       // chance of showing gray data, when moving the viewport. However, it might happen that
       // we do not have enough capacity to move these additional buckets to the GPU.
       // That's why, we are using a priority queue which orders buckets by manhattan distance to
       // the center bucket. We only consume that many items from the PQ, which we can handle on the
       // GPU.
+      const extraBucket = 1;
 
-      const bucketPQForCurrentPlane = new PriorityQueue({
-        // small priorities take precedence
-        comparator: (b, a) => b.priority - a.priority,
-      });
+      // Always use buckets in the current w slice, but also load either the previous or the next
+      // slice (depending on locality within the current bucket).
+      // Similar to `extraBucket`, the PQ takes care of cases in which the additional slice can't be
+      // loaded.
+      const wSliceOffsets = isFallback ? [0] : [0, subBucketLocality[w]];
+      // fallback buckets should have lower priority
+      const additionalPriorityWeight = isFallback ? 1000 : 0;
 
       // Build up priority queue
-      for (let y = scaledTopLeftVector[v] - 1; y <= scaledBottomRightVector[v] + 1; y++) {
-        for (let x = scaledTopLeftVector[u] - 1; x <= scaledBottomRightVector[u] + 1; x++) {
-          const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
-          bucketAddress[u] = x;
-          bucketAddress[v] = y;
+      wSliceOffsets.forEach(wSliceOffset => {
+        for (
+          let y = scaledTopLeftVector[v] - extraBucket;
+          y <= scaledBottomRightVector[v] + extraBucket;
+          y++
+        ) {
+          for (
+            let x = scaledTopLeftVector[u] - extraBucket;
+            x <= scaledBottomRightVector[u] + extraBucket;
+            x++
+          ) {
+            const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
+            bucketAddress[u] = x;
+            bucketAddress[v] = y;
+            bucketAddress[w] += wSliceOffset;
 
-          const bucket = this.cube.getOrCreateBucket(bucketAddress);
+            const bucket = this.cube.getOrCreateBucket(bucketAddress);
 
-          if (bucket.type !== "null") {
-            const priority = Math.abs(x - centerBucketUV[0]) + Math.abs(y - centerBucketUV[1]);
-            bucketPQForCurrentPlane.queue({
-              priority,
-              bucket,
-            });
+            if (bucket.type !== "null") {
+              const priority =
+                Math.abs(x - centerBucketUV[0]) +
+                Math.abs(y - centerBucketUV[1]) +
+                Math.abs(100 * wSliceOffset) +
+                additionalPriorityWeight;
+              bucketQueue.queue({
+                priority,
+                bucket,
+              });
+            }
           }
         }
-      }
-
-      // Consume priority queue until we maxed out the bucket capacity
-      let addedBucketCount = 0;
-      while (addedBucketCount < constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION ** 2) {
-        if (bucketPQForCurrentPlane.length === 0) {
-          break;
-        }
-        const bucketWithPriority = bucketPQForCurrentPlane.dequeue();
-        requiredBucketSet.add(bucketWithPriority.bucket);
-        addedBucketCount++;
-      }
+      });
     }
-    return Array.from(requiredBucketSet);
   }
 
   setActiveMapping(mappingName: string): void {

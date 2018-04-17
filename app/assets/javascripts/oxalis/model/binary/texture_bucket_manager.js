@@ -44,20 +44,15 @@ export default class TextureBucketManager {
 
   // This is passed as a parameter to allow for testing
   bucketsPerDim: number;
-  bufferCapacity: number;
   currentAnchorPoint: Vector4 = [0, 0, 0, 0];
   fallbackAnchorPoint: Vector4 = [0, 0, 0, 0];
   writerQueue: Array<{ bucket: DataBucket, _index: number }> = [];
   textureWidth: number;
   dataTextureCount: number;
+  maximumCapacity: number;
 
   constructor(bucketsPerDim: number, textureWidth: number, dataTextureCount: number) {
-    // Each plane gets bucketsPerDim**2 buckets. Additionally, the fallback zoomstep
-    // requires bucketsPerDim/2 buckets per plane.
-    const normalCapacity = 3 * Math.pow(bucketsPerDim, 2);
-    const fallbackCapacity = 3 * Math.pow(Math.floor(bucketsPerDim / 2), 2);
-
-    this.bufferCapacity = normalCapacity + fallbackCapacity;
+    this.maximumCapacity = dataTextureCount * textureWidth ** 2 / constants.BUCKET_SIZE;
     // the look up buffer is bucketsPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
     this.bucketsPerDim = bucketsPerDim;
@@ -65,7 +60,7 @@ export default class TextureBucketManager {
     this.dataTextureCount = dataTextureCount;
 
     this.lookUpBuffer = new Float32Array(lookUpBufferSize);
-    this.freeIndexSet = new Set(_.range(this.bufferCapacity));
+    this.freeIndexSet = new Set(_.range(this.maximumCapacity));
 
     this.dataTextures = [];
 

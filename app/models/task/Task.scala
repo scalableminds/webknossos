@@ -190,7 +190,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield selectedTask
 
     for {
-      rList <- run(queries.withTransactionIsolation(Serializable))
+      rList <- run(queries.transactionally.withTransactionIsolation(Serializable))
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield (parsed, annotationId)

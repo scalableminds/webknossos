@@ -96,7 +96,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
-    logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
+    //logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
     val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
     Fox.serialSequence(dataSources) { dataSource =>
       DataSetService.updateDataSource(dataStoreInfo, dataSource)

@@ -168,7 +168,7 @@ class PlaneController extends React.PureComponent<Props> {
       invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
     }
 
-    if (Utils.sum(invertedDiff) === 0) return;
+    if (invertedDiff.every(el => el === 0)) return;
 
     this.oldNmPos = nmPosition;
 

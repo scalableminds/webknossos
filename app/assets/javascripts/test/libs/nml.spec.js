@@ -115,117 +115,114 @@ test("NML serializing and parsing should yield the same state", async t => {
   const serializedNml = serializeToNml(initialState, initialState.tracing, buildInfo);
   const importedTrees = await parseNml(serializedNml);
 
-  console.log("Intial ", initialState.tracing.trees[1].edges.inMap.id);
-  console.log("Imported ", importedTrees[1].edges.inMap.id);
-
   t.deepEqual(initialState.tracing.trees, importedTrees);
 });
 
-// test("NML Serializer should only serialize visible trees", async t => {
-//   const state = update(initialState, {
-//     tracing: { trees: { "1": { isVisible: { $set: false } } } },
-//   });
-//   const serializedNml = serializeToNml(state, state.tracing, buildInfo);
-//   const importedTrees = await parseNml(serializedNml);
+test("NML Serializer should only serialize visible trees", async t => {
+  const state = update(initialState, {
+    tracing: { trees: { "1": { isVisible: { $set: false } } } },
+  });
+  const serializedNml = serializeToNml(state, state.tracing, buildInfo);
+  const importedTrees = await parseNml(serializedNml);
 
-//   // Tree 1 should not be exported as it is not visible
-//   delete state.tracing.trees["1"];
-//   t.deepEqual(Object.keys(state.tracing.trees), Object.keys(importedTrees));
-//   t.deepEqual(state.tracing.trees, importedTrees);
-// });
+  // Tree 1 should not be exported as it is not visible
+  delete state.tracing.trees["1"];
+  t.deepEqual(Object.keys(state.tracing.trees), Object.keys(importedTrees));
+  t.deepEqual(state.tracing.trees, importedTrees);
+});
 
-// test("NML serializer should produce correct NMLs", t => {
-//   const serializedNml = serializeToNml(initialState, initialState.tracing, buildInfo);
+test("NML serializer should produce correct NMLs", t => {
+  const serializedNml = serializeToNml(initialState, initialState.tracing, buildInfo);
 
-//   t.snapshot(serializedNml, { id: "nml" });
-// });
+  t.snapshot(serializedNml, { id: "nml" });
+});
 
-// test("Serialized nml should be correctly named", async t => {
-//   t.is(getNmlName(initialState), "Test Dataset__1__sboy__tionId.nml");
-//   const stateWithoutTask = _.omit(initialState, "task");
-//   t.is(getNmlName(stateWithoutTask), "Test Dataset__explorational__sboy__tionId.nml");
-// });
+test("Serialized nml should be correctly named", async t => {
+  t.is(getNmlName(initialState), "Test Dataset__1__sboy__tionId.nml");
+  const stateWithoutTask = _.omit(initialState, "task");
+  t.is(getNmlName(stateWithoutTask), "Test Dataset__explorational__sboy__tionId.nml");
+});
 
-// test("NML Parser should throw errors for invalid nmls", async t => {
-//   const invalidCommentState = update(initialState, {
-//     tracing: { trees: { "2": { comments: { $set: [{ content: "test", nodeId: 99 }] } } } },
-//   });
-//   const invalidBranchPointState = update(initialState, {
-//     tracing: { trees: { "2": { branchPoints: { $set: [{ timestamp: 0, nodeId: 99 }] } } } },
-//   });
-//   const invalidEdgeState = update(initialState, {
-//     tracing: {
-//       trees: {
-//         "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 99, target: 5 }]) } },
-//       },
-//     },
-//   });
-//   const disconnectedTreeState = update(initialState, {
-//     tracing: {
-//       trees: { "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } } },
-//     },
-//   });
-//   const nmlWithInvalidComment = serializeToNml(
-//     invalidCommentState,
-//     invalidCommentState.tracing,
-//     buildInfo,
-//   );
-//   const nmlWithInvalidBranchPoint = serializeToNml(
-//     invalidBranchPointState,
-//     invalidBranchPointState.tracing,
-//     buildInfo,
-//   );
-//   const nmlWithInvalidEdge = serializeToNml(invalidEdgeState, invalidEdgeState.tracing, buildInfo);
-//   const nmlWithDisconnectedTree = serializeToNml(
-//     disconnectedTreeState,
-//     disconnectedTreeState.tracing,
-//     buildInfo,
-//   );
+test("NML Parser should throw errors for invalid nmls", async t => {
+  const invalidCommentState = update(initialState, {
+    tracing: { trees: { "2": { comments: { $set: [{ content: "test", nodeId: 99 }] } } } },
+  });
+  const invalidBranchPointState = update(initialState, {
+    tracing: { trees: { "2": { branchPoints: { $set: [{ timestamp: 0, nodeId: 99 }] } } } },
+  });
+  const invalidEdgeState = update(initialState, {
+    tracing: {
+      trees: {
+        "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 99, target: 5 }]) } },
+      },
+    },
+  });
+  const disconnectedTreeState = update(initialState, {
+    tracing: {
+      trees: { "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } } },
+    },
+  });
+  const nmlWithInvalidComment = serializeToNml(
+    invalidCommentState,
+    invalidCommentState.tracing,
+    buildInfo,
+  );
+  const nmlWithInvalidBranchPoint = serializeToNml(
+    invalidBranchPointState,
+    invalidBranchPointState.tracing,
+    buildInfo,
+  );
+  const nmlWithInvalidEdge = serializeToNml(invalidEdgeState, invalidEdgeState.tracing, buildInfo);
+  const nmlWithDisconnectedTree = serializeToNml(
+    disconnectedTreeState,
+    disconnectedTreeState.tracing,
+    buildInfo,
+  );
 
-//   // TODO AVAs t.throws doesn't properly work with async functions yet, see https://github.com/avajs/ava/issues/1371
-//   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidComment));
-//   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidBranchPoint));
-//   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidEdge));
-//   await throwsAsyncParseError(t, () => parseNml(nmlWithDisconnectedTree));
-// });
+  // TODO AVAs t.throws doesn't properly work with async functions yet, see https://github.com/avajs/ava/issues/1371
+  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidComment));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidBranchPoint));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidEdge));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithDisconnectedTree));
+});
 
-// test("addTrees reducer should assign new node and tree ids", t => {
-//   const action = SkeletonTracingActions.addTreesAction(initialState.tracing.trees);
-//   const newState = SkeletonTracingReducer(initialState, action);
+test("addTrees reducer should assign new node and tree ids", t => {
+  const action = SkeletonTracingActions.addTreesAction(initialState.tracing.trees);
+  const newState = SkeletonTracingReducer(initialState, action);
 
-//   t.not(newState, initialState);
+  t.not(newState, initialState);
 
-//   // This should be unchanged / sanity check
-//   t.is(newState.tracing.name, initialState.tracing.name);
-//   t.is(newState.tracing.activeTreeId, initialState.tracing.activeTreeId);
+  // This should be unchanged / sanity check
+  t.is(newState.tracing.name, initialState.tracing.name);
+  t.is(newState.tracing.activeTreeId, initialState.tracing.activeTreeId);
 
-//   // New node and tree ids should have been assigned
-//   t.is(_.size(newState.tracing.trees), 4);
-//   t.is(newState.tracing.trees[3].treeId, 3);
-//   t.is(newState.tracing.trees[4].treeId, 4);
-//   t.is(newState.tracing.trees[3].nodes.size(), 4);
-//   t.is(newState.tracing.trees[3].nodes.get(8).id, 8);
-//   t.is(newState.tracing.trees[3].nodes.get(9).id, 9);
-//   t.is(newState.tracing.trees[4].nodes.size(), 3);
-//   t.is(newState.tracing.trees[4].nodes.get(12).id, 12);
+  // New node and tree ids should have been assigned
+  t.is(_.size(newState.tracing.trees), 4);
+  t.is(newState.tracing.trees[3].treeId, 3);
+  t.is(newState.tracing.trees[4].treeId, 4);
+  t.is(newState.tracing.trees[3].nodes.size(), 4);
+  t.is(newState.tracing.trees[3].nodes.get(8).id, 8);
+  t.is(newState.tracing.trees[3].nodes.get(9).id, 9);
+  t.is(newState.tracing.trees[4].nodes.size(), 3);
+  t.is(newState.tracing.trees[4].nodes.get(12).id, 12);
 
-//   const getSortedEdges = edges => _.sortBy(edges.asArray(), "source");
+  const getSortedEdges = edges => _.sortBy(edges.asArray(), "source");
 
-//   // And node ids in edges, branchpoints and comments should have been replaced
-//   t.deepEqual(getSortedEdges(newState.tracing.trees[3].edges), [
-//     { source: 8, target: 9 },
-//     { source: 9, target: 11 },
-//     { source: 10, target: 9 },
-//   ]);
-//   t.deepEqual(newState.tracing.trees[3].branchPoints, [
-//     { nodeId: 9, timestamp: 0 },
-//     { nodeId: 11, timestamp: 0 },
-//   ]);
-//   t.deepEqual(newState.tracing.trees[3].comments, [{ content: "comment", nodeId: 8 }]);
-//   t.deepEqual(getSortedEdges(newState.tracing.trees[4].edges), [
-//     { source: 12, target: 13 },
-//     { source: 13, target: 14 },
-//   ]);
-//   // The cachedMaxNodeId should be correct afterwards as well
-//   t.is(newState.tracing.cachedMaxNodeId, 14);
-// });
+  // And node ids in edges, branchpoints and comments should have been replaced
+  t.deepEqual(getSortedEdges(newState.tracing.trees[3].edges), [
+    { source: 8, target: 9 },
+    { source: 9, target: 11 },
+    { source: 10, target: 9 },
+  ]);
+  t.deepEqual(newState.tracing.trees[3].branchPoints, [
+    { nodeId: 9, timestamp: 0 },
+    { nodeId: 11, timestamp: 0 },
+  ]);
+  t.deepEqual(newState.tracing.trees[3].comments, [{ content: "comment", nodeId: 8 }]);
+  t.deepEqual(getSortedEdges(newState.tracing.trees[4].edges), [
+    { source: 12, target: 13 },
+    { source: 13, target: 14 },
+  ]);
+  // The cachedMaxNodeId should be correct afterwards as well
+  t.is(newState.tracing.cachedMaxNodeId, 14);
+});

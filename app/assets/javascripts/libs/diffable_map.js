@@ -2,6 +2,7 @@
 
 const defaultItemsPerBatch = 10000;
 let idCounter = 0;
+const idSymbol = Symbol("id");
 
 // DiffableMap is an immutable key-value data structure which supports fast diffing.
 // Updating a DiffableMap returns a new DiffableMap, in which case the Maps are
@@ -12,7 +13,6 @@ let idCounter = 0;
 // Stored values may be null. However, `undefined` is equal to "does not exist".
 
 class DiffableMap<K: number, V> {
-  id: number;
   chunks: Array<Map<K, V>>;
   entryCount: number;
   existsCache: Map<K, boolean>;
@@ -20,7 +20,12 @@ class DiffableMap<K: number, V> {
 
   constructor(optKeyValueArray?: ?Array<[K, V]>, itemsPerBatch: number = defaultItemsPerBatch) {
     // Make the id property not enumerable so that it does not interfere with tests
-    Object.defineProperty(this, "id", { value: idCounter++, writable: true });
+    // Ava's deepEquals uses Object.getOwnProperties() to obtain all Object keys
+    // Luckily "Symbols" don't count as properties
+    Object.defineProperty(this, idSymbol, {
+      value: idCounter++,
+      writable: true,
+    });
     this.chunks = [];
     this.existsCache = new Map();
     this.entryCount = 0;
@@ -31,6 +36,16 @@ class DiffableMap<K: number, V> {
         this.mutableSet(key, value);
       }
     }
+  }
+
+  getId() {
+    // $FlowFixMe
+    return this[idSymbol];
+  }
+
+  setId(id: number) {
+    // $FlowFixMe
+    this[idSymbol] = id;
   }
 
   get(key: K): V {
@@ -135,7 +150,7 @@ class DiffableMap<K: number, V> {
     });
 
     // Clone other attributes
-    newDiffableMap.id = this.id;
+    newDiffableMap.setId(this.getId());
     newDiffableMap.existsCache = new Map(this.existsCache);
     newDiffableMap.entryCount = this.entryCount;
     newDiffableMap.itemsPerBatch = this.itemsPerBatch;
@@ -215,7 +230,7 @@ class DiffableMap<K: number, V> {
 // The existsCache is safely cloned.
 function shallowCopy<K: number, V>(template: DiffableMap<K, V>): DiffableMap<K, V> {
   const newMap = new DiffableMap();
-  newMap.id = template.id;
+  newMap.setId(template.getId());
   newMap.chunks = template.chunks.slice();
   newMap.existsCache = new Map(template.existsCache);
   newMap.entryCount = template.entryCount;
@@ -235,7 +250,7 @@ export function diffDiffableMaps<K: number, V>(
   mapB: DiffableMap<K, V>,
 ): { changed: Array<K>, onlyA: Array<K>, onlyB: Array<K> } {
   // For the edge case that one of the maps is empty, we will consider them dependent, anyway
-  const areDiffsDependent = mapA.id === mapB.id || mapA.size() === 0 || mapB.size() === 0;
+  const areDiffsDependent = mapA.getId() === mapB.getId() || mapA.size() === 0 || mapB.size() === 0;
   let idx = 0;
 
   const changed = [];

@@ -13,7 +13,7 @@ test("DiffableMap should be empty", t => {
 
   t.is(emptyMap.size(), 0);
   t.false(emptyMap.has(1));
-  t.throws(() => emptyMap.get(1));
+  t.throws((): void => emptyMap.get(1));
 });
 
 test("DiffableMap should behave immutable on set/delete operations", t => {

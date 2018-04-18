@@ -3,11 +3,13 @@
  * cube.spec.js
  * @flow
  */
-import test from "ava";
+import anyTest from "ava";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
 import runAsync from "test/helpers/run-async";
+
+import type { TestInterface } from "ava";
 
 mockRequire.stopAll();
 
@@ -28,6 +30,14 @@ mockRequire("libs/toast", { error: _.noop });
 // Avoid node caching and make sure all mockRequires are applied
 const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
 
+// Ava's recommendation for Flow types
+// https://github.com/avajs/ava/blob/master/docs/recipes/flow.md#typing-tcontext
+const test: TestInterface<{
+  cube: Cube,
+  pullQueue: Object,
+  pushQueue: Object,
+}> = (anyTest: any);
+
 test.beforeEach(t => {
   const cube = new Cube([100, 100, 100], 3, 24);
   const pullQueue = {
@@ -40,12 +50,11 @@ test.beforeEach(t => {
   };
   cube.initializeWithQueues(pullQueue, pushQueue);
 
-  // workaround, which shouldn't be necessary after this landed:
-  // https://github.com/avajs/ava/pull/1344
-  const context = ((t: any).context: any);
-  context.cube = cube;
-  context.pullQueue = pullQueue;
-  context.pushQueue = pushQueue;
+  t.context = {
+    cube,
+    pullQueue,
+    pushQueue,
+  };
 });
 
 test("GetBucket should return a NullBucket on getBucket()", t => {
@@ -231,5 +240,5 @@ test("Garbage Collection should throw an exception if no bucket is collectable",
   cube.getOrCreateBucket([1, 1, 1, 0]).pull();
   cube.getOrCreateBucket([2, 2, 2, 0]).pull();
 
-  t.throws(() => cube.getOrCreateBucket([3, 3, 3, 0]));
+  t.throws((): Error => cube.getOrCreateBucket([3, 3, 3, 0]));
 });

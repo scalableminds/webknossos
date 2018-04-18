@@ -1,21 +1,18 @@
 FROM openjdk:8-jdk
-
 RUN apt-get update \
-  && apt-get install -y mongodb-clients mongo-tools
-
-ENV PROJECT "webknossos"
+    && apt-get -y install postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /srv/webknossos
 WORKDIR /srv/webknossos
 
 COPY target/universal/stage .
-COPY buildtools/cmd.sh .
 
-RUN groupadd -r app-user \
-  && useradd -r -g app-user app-user \
+RUN groupadd -r webknossos \
+  && useradd -r -g webknossos webknossos \
   && mkdir disk \
-  && chown -R app-user .
+  && chown -R webknossos .
 
-USER app-user
+USER webknossos
 
-CMD [ "./cmd.sh" ]
+ENTRYPOINT [ "bin/oxalis" ]

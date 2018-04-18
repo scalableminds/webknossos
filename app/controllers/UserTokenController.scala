@@ -5,14 +5,15 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
-import com.scalableminds.braingames.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
+import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
-import models.binary.DataSetDAO
-import models.user.{User, UserToken, UserTokenDAO, UserTokenService}
+import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
+import models.user.User
 import net.liftweb.common.{Box, Full}
+import oxalis.security.WebknossosSilhouette.UserAwareAction
+import oxalis.security.{URLSharing, TokenType, WebknossosSilhouette}
 import play.api.i18n.MessagesApi
 import play.api.libs.json.Json
 
@@ -23,15 +24,13 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
     with WKDataStoreActionHelper
     with AnnotationInformationProvider {
 
-  val webKnossosToken = play.api.Play.current.configuration.getString("application.authentication.dataStoreToken").getOrElse("somethingSecure")
+  val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def generateUserToken = UserAwareAction.async { implicit request =>
+  def generateTokenForDataStore = UserAwareAction.async { implicit request =>
     val context = userAwareRequestToDBAccess(request)
-
     val tokenFox: Fox[String] = request.identity match {
       case Some(user) =>
-        val token = UserToken(user._id)
-        UserTokenDAO.insert(token).map(_ => token.token)
+        bearerTokenService.createAndInit(user.loginInfo, TokenType.DataStore, deleteOld = false).toFox
       case None => Fox.successful("")
     }
     for {
@@ -43,12 +42,13 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
   def validateUserAccess(name: String, token: String) = DataStoreAction(name).async(validateJson[UserAccessRequest]) { implicit request =>
     val accessRequest = request.body
-    if (token == webKnossosToken) {
+    if (token == DataStoreHandlingStrategy.webKnossosToken) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(true))))
     } else {
       for {
-        userBox <- UserTokenService.userForToken(token)(GlobalAccessContext).futureBox
-        ctx = DBAccessContext(userBox)
+        userBox <- bearerTokenService.userForToken(token)(GlobalAccessContext).futureBox
+        ctxFromUserBox = DBAccessContext(userBox)
+        ctx = URLSharing.fallbackTokenAccessContext(Some(token))(ctxFromUserBox)
         answer <- accessRequest.resourceType match {
           case AccessResourceType.datasource =>
             handleDataSourceAccess(accessRequest.resourceId, accessRequest.mode, userBox)(ctx)
@@ -78,8 +78,8 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       for {
         dataset <- DataSetDAO.findOneBySourceName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
-        owningTeam = dataset.owningTeam
-        isAllowed <- ensureTeamAdministration(user, owningTeam).futureBox
+        owningOrg = dataset.owningOrganization
+        isAllowed <- user.isAdminOf(owningOrg).futureBox
       } yield {
         Full(UserAccessAnswer(isAllowed.isDefined))
       }
@@ -103,7 +103,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
   private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
     def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
-      val annotationFox = AnnotationDAO.findByTracingId(tracingId)
+      val annotationFox = AnnotationDAO.findOneByTracingId(tracingId)
       for {
         annotationBox <- annotationFox.futureBox
       } yield {

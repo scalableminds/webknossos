@@ -95,16 +95,21 @@ const Utils = {
       : null;
   },
 
-  compareBy<T: Object>(key: string, isSortedAscending: boolean = true): Comparator<T> {
+  compareBy<T: Object>(
+    selector: string | (T => number),
+    isSortedAscending: boolean = true,
+  ): Comparator<T> {
     // generic key comparator for array.prototype.sort
-    return function(a: T, b: T) {
+    return (a: T, b: T) => {
       if (!isSortedAscending) {
         [a, b] = [b, a];
       }
-      if (a[key] < b[key]) {
+      const valueA = typeof selector === "function" ? selector(a) : a[selector];
+      const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      if (valueA < valueB) {
         return -1;
       }
-      if (a[key] > b[key]) {
+      if (valueA > valueB) {
         return 1;
       }
       return 0;
@@ -139,7 +144,7 @@ const Utils = {
     const result = [];
     for (const e of stringArray) {
       const newEl = parseFloat(e);
-      if (!isNaN(newEl)) {
+      if (!Number.isNaN(newEl)) {
         result.push(newEl);
       }
     }
@@ -178,17 +183,12 @@ const Utils = {
     );
   },
 
-  // this is insecure and must not be used for security related functionality
-  isUserModelAdmin(user: any): boolean {
-    if (user == null) {
-      return false;
-    } else {
-      return _.findIndex(user.get("teams"), team => team.role.name === "admin") >= 0;
-    }
+  isUserTeamManager(user: APIUserType): boolean {
+    return _.findIndex(user.teams, team => team.isTeamManager) >= 0;
   },
 
   isUserAdmin(user: APIUserType): boolean {
-    return _.findIndex(user.teams, team => team.role.name === "admin") >= 0;
+    return user.isAdmin || this.isUserTeamManager(user);
   },
 
   getUrlParamsObject(): { [key: string]: string | boolean } {

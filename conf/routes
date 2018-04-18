@@ -1,2 +1,2 @@
 -> /          webknossos.Routes
--> /data/     com.scalableminds.datastore.Routes
+-> /data/     com.scalableminds.webknossos.datastore.Routes

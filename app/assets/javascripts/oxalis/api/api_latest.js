@@ -42,7 +42,6 @@ import type {
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
-import Request from "libs/request";
 import window, { location } from "libs/window";
 import Utils from "libs/utils";
 import { ControlModeEnum, OrthoViews, VolumeToolEnum } from "oxalis/constants";
@@ -54,34 +53,39 @@ import UrlManager from "oxalis/controller/url_manager";
 import { centerTDViewAction } from "oxalis/model/actions/view_mode_actions";
 import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
-import { doWithToken } from "admin/admin_rest_api";
+import { requestTask, finishAnnotation, doWithToken } from "admin/admin_rest_api";
 import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
 import type { ToastStyleType } from "libs/toast";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
-    throw Error(message);
+    throw new Error(message);
   }
 }
 
 function assertSkeleton(tracing: TracingType) {
   if (tracing.type !== "skeleton") {
-    throw Error("This api function should only be called in a skeleton tracing.");
+    throw new Error("This api function should only be called in a skeleton tracing.");
   }
 }
 
 function assertVolume(tracing: TracingType) {
   if (tracing.type !== "volume") {
-    throw Error("This api function should only be called in a volume tracing.");
+    throw new Error("This api function should only be called in a volume tracing.");
   }
 }
 /**
- * All tracing related API methods. This is the newest version of the API (version 2).
- * @version 2
+ * All tracing related API methods. This is the newest version of the API (version 3).
+ * @version 3
  * @class
  */
 class TracingApi {
   model: OxalisModel;
+  /**
+   * @private
+   */
+  isFinishing: boolean = false;
+
   /**
    * @private
    */
@@ -131,7 +135,7 @@ class TracingApi {
     return getSkeletonTracing(tracing)
       .map(skeletonTracing => {
         const { trees } = skeletonTracing;
-        return _.flatMap(trees, tree => _.values(tree.nodes));
+        return _.flatMap(trees, tree => Array.from(tree.nodes.values()));
       })
       .getOrElse([]);
   }
@@ -176,7 +180,7 @@ class TracingApi {
         assertExists(tree, `Couldn't find node ${nodeId}.`);
         Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
       } else {
-        throw Error("Node id is missing.");
+        throw new Error("Node id is missing.");
       }
     });
   }
@@ -202,9 +206,9 @@ class TracingApi {
         if (treeId != null) {
           tree = skeletonTracing.trees[treeId];
           assertExists(tree, `Couldn't find tree ${treeId}.`);
-          assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
+          assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
         } else {
-          tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+          tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
           assertExists(tree, `Couldn't find node ${nodeId}.`);
         }
         // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
@@ -272,16 +276,17 @@ class TracingApi {
    * await api.tracing.finishAndGetNextTask();
    */
   async finishAndGetNextTask() {
+    if (this.isFinishing) return;
+
+    this.isFinishing = true;
     const state = Store.getState();
     const { tracingType, annotationId } = state.tracing;
     const task = state.task;
-    const finishUrl = `/annotations/${tracingType}/${annotationId}/finish`;
-    const requestTaskUrl = "/user/tasks/request";
 
     await Model.save();
-    await Request.triggerRequest(finishUrl);
+    await finishAnnotation(annotationId, tracingType);
     try {
-      const annotation = await Request.receiveJSON(requestTaskUrl);
+      const annotation = await requestTask();
 
       const isDifferentDataset = state.dataset.name !== annotation.dataSetName;
       const isDifferentTaskType = annotation.task.type.id !== Utils.__guard__(task, x => x.type.id);
@@ -295,14 +300,16 @@ class TracingApi {
 
       // In some cases the page needs to be reloaded, in others the tracing can be hot-swapped
       if (isDifferentDataset || isDifferentTaskType || isDifferentScript) {
-        location.pathname = newTaskUrl;
+        location.href = newTaskUrl;
       } else {
         await this.restart(annotation.typ, annotation.id, ControlModeEnum.TRACE);
       }
     } catch (err) {
       console.error(err);
       await Utils.sleep(2000);
-      location.pathname = "/dashboard";
+      location.href = "/dashboard";
+    } finally {
+      this.isFinishing = false;
     }
   }
 
@@ -500,7 +507,9 @@ class TracingApi {
     assertVolume(Store.getState().tracing);
     assertExists(tool, "Volume tool is missing.");
     if (VolumeToolEnum[tool] == null) {
-      throw Error(`Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`);
+      throw new Error(
+        `Volume tool has to be one of: "${Object.keys(VolumeToolEnum).join('", "')}".`,
+      );
     }
     Store.dispatch(setToolAction(tool));
   }
@@ -518,7 +527,7 @@ class DataApi {
 
   __getLayer(layerName: string): Binary {
     const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
+    if (layer === undefined) throw new Error(`Layer with name ${layerName} was not found.`);
     return layer;
   }
 
@@ -712,8 +721,6 @@ class UserApi {
     - isosurfaceBBsize
     - isosurfaceResolution
     - newNodeNewTree
-    - inverseX
-    - inverseY
     - keyboardDelay
     - particleSize
     - overrideNodeRadius

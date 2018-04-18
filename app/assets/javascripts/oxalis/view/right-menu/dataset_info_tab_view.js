@@ -81,7 +81,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     } else if (constants.MODES_ARBITRARY.includes(viewMode)) {
       width = constants.VIEWPORT_WIDTH;
     } else {
-      throw Error(`Model mode not recognized: ${viewMode}`);
+      throw new Error(`Model mode not recognized: ${viewMode}`);
     }
     // unit is nm
     const baseVoxel = getBaseVoxel(this.props.dataset.scale);

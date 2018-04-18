@@ -1,17 +1,53 @@
 # webKnossos
-Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. Current solutions require an efficient integration of automated image analysis with massive manual data annotation. To scale such annotation efforts it is decisive to be able to crowd source data analysis online. Here we present **webKnossos** (former oxalis).
+Cellular-resolution connectomics is currently substantially limited by the throughput and efficiency of data analysis. 
+Current solutions require an efficient integration of automated image analysis with massive manual data annotation. 
+To scale such annotation efforts it is decisive to be able to crowd source data analysis online. 
+Here we present **webKnossos**.
+
+> Boergens, Berning, Bocklisch, Bräunlein, Drawitsch, Frohnhofen, Herold, Otto, Rzepka, Werkmeister, Werner, Wiese, Wissler and Helmstaedter  
+webKnossos: efficient online 3D data annotation for connectomics.  
+[Nature Methods (2017) DOI:10.1038/NMETH.4331.](https://www.nature.com/articles/nmeth.4331)
 
 ![webKnossos logo](https://webknossos.brain.mpg.de/assets/images/oxalis.svg)
+[![CircleCI](https://circleci.com/gh/scalableminds/webknossos.svg?style=svg)](https://circleci.com/gh/scalableminds/webknossos)
+
+## Demo
+[https://demo.webknossos.org/](https://demo.webknossos.org/)
+
+## Features
+* Exploration of large 3D image datasets
+* Fully browser-based user experience with efficient data streaming
+* Creation/editing of skeleton and volume annotations
+* [Innovative flight mode for fast skeleton tracing](https://www.nature.com/articles/nmeth.4331)
+* Optimized performance for large tracings
+* User and task management for high-throughput crowdsourcing
+* Sharing and collaboration features
+* [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
+* [Supported dataset formats: WKW (Optimized), KNOSSOS cubes](https://github.com/scalableminds/webknossos/wiki/Datasets)
+* Supported image formats: Grayscale, Segmentation Maps, RGB, Multi-Channel
+* [Documented frontend API for user scripts](https://demo.webknossos.org/assets/docs/frontend-api/index.html), REST API for backend access
+* Open-source development with [automated test suite](https://circleci.com/gh/scalableminds/webknossos)
+* [Docker-based deployment](https://hub.docker.com/r/scalableminds/webknossos/) for production and development
+
 
 ## Development setup
-If you are installing *webKnossos* in a virtual machine, please make sure you allocated **enough memory**. A good value is 5 GB.
+### Docker
+This is the fastest way to try webKnossos. 
+Docker CE 17+ and Docker Compose 1.18+ is required. 
+This is only recommended for testing. 
+[For production](https://github.com/scalableminds/webknossos/wiki/Production-setup), a more elaborate setup with persistent file mounts and HTTPS reverse proxy is recommended.
+
+```bash
+docker-compose pull webknossos
+docker-compose up webknossos
+```
 
 ### Dependencies
 
 * [Oracle JDK 8+](http://www.oracle.com/technetwork/java/javase/downloads/index.html) or [Open JDK 8+](http://openjdk.java.net/) (full JDK, JRE is not enough)
 * [sbt](http://www.scala-sbt.org/)
-* [mongoDB 3+](http://www.mongodb.org/downloads)
-* [node.js 7+](http://nodejs.org/download/)
+* [PostgreSQL 10](https://www.postgresql.org/)
+* [node.js 9+](http://nodejs.org/download/)
 * [yarn package manager](https://yarnpkg.com/)
 * [git](http://git-scm.com/downloads)
 
@@ -25,12 +61,19 @@ Or install Java manually and run:
 # Install Homebrew package manager
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 
-# Install git, node.js, mongoDB, sbt, gfind
-brew install git node mongodb sbt findutils
+# Install git, node.js, mongoDB, sbt, gfind, gsed
+brew install git node postgresql sbt findutils coreutils gnu-sed
 npm install -g yarn
 
 # Start mongo
-brew services start mongodb
+brew services start postgresql
+
+# Create PostgreSQL user
+createdb
+psql -c "CREATE DATABASE webknossos;"
+psql -c "CREATE USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
+psql -c "ALTER USER postgres WITH SUPERUSER;"
+psql -c "GRANT ALL PRIVILEGES ON DATABASE webknossos TO postgres;"
 
 # Checkout the webKnossos git repository
 git clone git@github.com:scalableminds/webknossos.git
@@ -39,28 +82,25 @@ git clone git@github.com:scalableminds/webknossos.git
 
 ### Ubuntu 16.04 LTS
 
-```
+```bash
 # Adding repositories for sbt, nodejs and yarn
-echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
+echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee /etc/apt/sources.list.d/sbt.list
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 642AC823
-curl -sL https://deb.nodesource.com/setup_7.x | sudo -E bash -
+echo "deb http://apt.postgresql.org/pub/repos/apt/ xenial-pgdg main" | sudo tee /etc/apt/sources.list.d/postgresql.list
+curl -sS https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+curl -sL https://deb.nodesource.com/setup_9.x | sudo -E bash -
 curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
 echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
 
 # Installing everything
 sudo apt-get update
-sudo apt-get install -y git mongodb-server nodejs scala sbt openjdk-8-jdk yarn
+sudo apt-get install -y git postgresql-10 postgresql-client-10 nodejs scala sbt openjdk-8-jdk yarn
+
+# Assign a password to PostgreSQL user
+sudo -u postgres psql -c "ALTER USER postgres WITH ENCRYPTED PASSWORD 'postgres';"
 ```
 
-On older Ubuntu distributions: Please make sure to have the correct versions of node, mongoDB and java installed.
-
-### Docker
-This is the fastest way to try webKnossos. Docker 1.13+ and Docker Compose 1.10+ is required. This is only recommended for testing. For production a more elaborate setup with persistent file mounts is recommended.
-
-```
-docker-compose up webknossos
-```
-
+On older Ubuntu distributions: Please make sure to have the correct versions of node, PostgreSQL and java installed.
 
 ### Manual Installation
 
@@ -71,44 +111,63 @@ docker-compose up webknossos
 ##### sbt
 See: http://www.scala-sbt.org/release/docs/Getting-Started/Setup.html
 
-##### mongoDB
-* Install mongoDB from http://www.mongodb.org/downloads
-* mongoDB version **3+ is required**
+##### PostgreSQL
+* Install PostgreSQL from https://www.postgresql.org/download/
+* PostgreSQL version **10+ is required**
 
 ##### node.js & yarn
 * Install node from http://nodejs.org/download/
-* node version **7+ is required**
+* node version **9+ is required**
 * Install yarn package manager: `npm install -g yarn`
 
 ### Run locally
 ```bash
 sbt run
 ```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000. Make sure that the mongoDB service is running before you start sbt.
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000. 
+Make sure that the PostgreSQL service is running before you start sbt.
 
 ### Run on a remote machine
 ```bash
 sbt "run -Dhttp.uri=http://<remote address>:9000"
 ```
-Will fetch all Scala, Java and node dependencies and run the application on Port 9000. Make sure that the mongoDB service is running before you start sbt.
+Will fetch all Scala, Java and node dependencies and run the application on Port 9000. 
+Make sure that the PostgreSQL service is running before you start sbt.
 
-Make sure to open port `9000` in our firewall. This is only recommended for development purposes. See below for a recommended production setup.
+Make sure to open port `9000` in your firewall. 
+This is only recommended for development purposes. 
+See below for a recommended production setup.
 
 ## Production setup
 [See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.
 
-## Test
+## Tests
 ```bash
-sbt test
-yarn test
+# Frontend linting
+yarn run lint
+
+# Format frontend code
+yarn run pretty
+
+# Frontend type checking
+yarn flow
+
+# Frontend tests
+yarn test-verbose
+
+# End-to-end tests
+docker-compose run e2e-tests
 ```
 
-These tests are run on our CI server. Running the tests manually is not encouraged at this point.
+
+## Contact and support
+Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
+
+[scalable minds](https://scalableminds.com) offers commercial hosting, support and development services for webKnossos.
 
 ## Credits
-* scalable minds - https://scm.io/
+* scalable minds - https://scalableminds.com/
 * Max Planck Institute for Brain Research – https://brain.mpg.de/
 
 # License
 AGPLv3
-Copyright scalable minds 2017

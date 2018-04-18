@@ -1,6 +1,6 @@
 package controllers
 
-import com.scalableminds.braingames.datastore.controllers.ValidationHelpers
+import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
@@ -16,6 +16,7 @@ import play.api.libs.json._
 import play.api.mvc.{Request, Result, Controller => PlayController}
 import play.twirl.api.Html
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
+import reactivemongo.bson.BSONObjectID
 
 
 trait Controller extends PlayController
@@ -29,8 +30,8 @@ trait Controller extends PlayController
   implicit def AuthenticatedRequest2Request[T](r: SecuredRequest[T]): Request[T] =
     r.request
 
-  def ensureTeamAdministration(user: User, team: String) =
-    user.isAdminOf(team) ?~> Messages("team.admin.notAllowed", team)
+  def ensureTeamAdministration(user: User, team: BSONObjectID) =
+    user.isTeamManagerOf(team) ?~> Messages("team.admin.notAllowed")
 
   def allowedToAdministrate(admin: User, dataSet: DataSet) =
     dataSet.isEditableBy(Some(admin)) ?~> Messages("notAllowed")

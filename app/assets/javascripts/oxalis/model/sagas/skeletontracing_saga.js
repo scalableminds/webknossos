@@ -35,11 +35,12 @@ import type {
   TreeType,
   TreeMapType,
   NodeMapType,
-  EdgeType,
   FlycamType,
 } from "oxalis/store";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import api from "oxalis/api/internal_api";
+import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
+import EdgeCollection, { diffEdgeCollections } from "oxalis/model/edge_collection";
 
 function* centerActiveNode() {
   getActiveNode(yield select(state => state.tracing)).map(activeNode => {
@@ -118,24 +119,26 @@ function* diffNodes(
   treeId: number,
 ): Generator<UpdateAction, void, void> {
   if (prevNodes === nodes) return;
-  const { onlyA: deletedNodeIds, onlyB: addedNodeIds, both: bothNodeIds } = Utils.diffArrays(
-    _.map(prevNodes, node => node.id),
-    _.map(nodes, node => node.id),
+
+  const { onlyA: deletedNodeIds, onlyB: addedNodeIds, changed: changedNodeIds } = diffDiffableMaps(
+    prevNodes,
+    nodes,
   );
+
   for (const nodeId of deletedNodeIds) {
     yield deleteNode(treeId, nodeId);
   }
+
   for (const nodeId of addedNodeIds) {
-    const node = nodes[nodeId];
+    const node = nodes.get(nodeId);
     yield createNode(treeId, node);
   }
-  for (const nodeId of bothNodeIds) {
-    const node = nodes[nodeId];
-    const prevNode = prevNodes[nodeId];
-    if (node !== prevNode) {
-      if (updateNodePredicate(prevNode, node)) {
-        yield updateNode(treeId, node);
-      }
+
+  for (const nodeId of changedNodeIds) {
+    const node = nodes.get(nodeId);
+    const prevNode = prevNodes.get(nodeId);
+    if (updateNodePredicate(prevNode, node)) {
+      yield updateNode(treeId, node);
     }
   }
 }
@@ -145,12 +148,12 @@ function updateNodePredicate(prevNode: NodeType, node: NodeType): boolean {
 }
 
 function* diffEdges(
-  prevEdges: Array<EdgeType>,
-  edges: Array<EdgeType>,
+  prevEdges: EdgeCollection,
+  edges: EdgeCollection,
   treeId: number,
 ): Generator<UpdateAction, void, void> {
   if (prevEdges === edges) return;
-  const { onlyA: deletedEdges, onlyB: addedEdges } = Utils.diffArrays(prevEdges, edges);
+  const { onlyA: deletedEdges, onlyB: addedEdges } = diffEdgeCollections(prevEdges, edges);
   for (const edge of deletedEdges) {
     yield deleteEdge(treeId, edge.source, edge.target);
   }
@@ -178,21 +181,22 @@ export function* diffTrees(
     _.map(prevTrees, tree => tree.treeId),
     _.map(trees, tree => tree.treeId),
   );
+
   for (const treeId of deletedTreeIds) {
     const prevTree = prevTrees[treeId];
-    yield* diffNodes(prevTree.nodes, {}, treeId);
-    yield* diffEdges(prevTree.edges, [], treeId);
+    yield* diffNodes(prevTree.nodes, new DiffableMap(), treeId);
+    yield* diffEdges(prevTree.edges, new EdgeCollection(), treeId);
     yield deleteTree(treeId);
   }
   for (const treeId of addedTreeIds) {
     const tree = trees[treeId];
     yield createTree(tree);
-    yield* diffNodes({}, tree.nodes, treeId);
-    yield* diffEdges([], tree.edges, treeId);
+    yield* diffNodes(new DiffableMap(), tree.nodes, treeId);
+    yield* diffEdges(new EdgeCollection(), tree.edges, treeId);
   }
   for (const treeId of bothTreeIds) {
     const tree = trees[treeId];
-    const prevTree = prevTrees[treeId];
+    const prevTree: TreeType = prevTrees[treeId];
     if (tree !== prevTree) {
       yield* diffNodes(prevTree.nodes, tree.nodes, treeId);
       yield* diffEdges(prevTree.edges, tree.edges, treeId);

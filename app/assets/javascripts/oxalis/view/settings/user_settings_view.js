@@ -307,16 +307,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
           />
           {moveValueSetting}
           <SwitchSetting
-            label="Inverse X"
-            value={this.props.userConfiguration.inverseX}
-            onChange={this.onChangeUser.inverseX}
-          />
-          <SwitchSetting
-            label="Inverse Y"
-            value={this.props.userConfiguration.inverseY}
-            onChange={this.onChangeUser.inverseY}
-          />
-          <SwitchSetting
             label="d/f-Switching"
             value={this.props.userConfiguration.dynamicSpaceDirection}
             onChange={this.onChangeUser.dynamicSpaceDirection}

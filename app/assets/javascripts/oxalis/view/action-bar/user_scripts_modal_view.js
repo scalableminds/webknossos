@@ -8,6 +8,8 @@ import { fetchGistContent } from "libs/gist";
 import messages from "messages";
 import type { ScriptType } from "oxalis/store";
 
+const TextArea = Input.TextArea;
+
 type UserScriptsModalViewPropsType = {
   onOK: Function,
   isVisible: boolean,
@@ -110,12 +112,7 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
               </Select.Option>
             ))}
           </Select>
-          <Input
-            type="textarea"
-            rows={15}
-            onChange={this.handleCodeChange}
-            value={this.state.code}
-          />
+          <TextArea rows={15} onChange={this.handleCodeChange} value={this.state.code} />
         </Spin>
       </Modal>
     );

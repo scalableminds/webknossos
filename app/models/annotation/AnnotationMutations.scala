@@ -1,19 +1,14 @@
+/*
+ * Copyright (C) 2011-2017 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
+ */
 package models.annotation
 
-import com.scalableminds.braingames.datastore.tracings.TracingType
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import models.project.{Project, WebknossosAssignmentConfig}
-import models.task.{OpenAssignmentService, Task}
+import com.scalableminds.webknossos.datastore.tracings.TracingType
+import models.annotation.AnnotationState._
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 21.01.14
- * Time: 14:06
- */
 
 class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
 
@@ -32,17 +27,17 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     }
 
     if (restrictions.allowFinish(user)) {
-      if (annotation.state.isInProgress)
+      if (annotation.state == Active)
         executeFinish(annotation)
       else
-          Fox.failure("annotation.notInProgress")
+        Fox.failure("annotation.notActive")
     } else {
       Fox.failure("annotation.notPossible")
     }
   }
 
   def reopen()(implicit ctx: DBAccessContext) = {
-    AnnotationDAO.reopen(annotation._id)
+    AnnotationDAO.updateState(annotation._id, AnnotationState.Active)
   }
 
   def rename(name: String)(implicit ctx: DBAccessContext) =
@@ -57,24 +52,8 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
   def setTags(tags: List[String])(implicit ctx: DBAccessContext) =
     AnnotationDAO.setTags(annotation._id, tags)
 
-  def cancelTask()(implicit ctx: DBAccessContext) = {
-    def insertReplacement(task: Task, project: Project) = {
-      project.assignmentConfiguration match {
-        case WebknossosAssignmentConfig =>
-          OpenAssignmentService.insertOneFor(task, project)
-        case _ =>
-          // If this is a project with its assignments on MTurk, they will handle the replacement generation
-          Fox.successful(true)
-      }
-    }
-
-    for {
-      task <- annotation.task
-      project <- task.project
-      _ <- insertReplacement(task, project)
-      _ <- AnnotationDAO.updateState(annotation, AnnotationState.Unassigned)
-    } yield annotation
-  }
+  def cancelTask()(implicit ctx: DBAccessContext) =
+    AnnotationDAO.updateState(annotation._id, Cancelled)
 
   def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {
     case AnnotationType.Explorational =>

@@ -13,13 +13,13 @@ import ButtonComponent from "oxalis/view/components/button_component";
 import messages from "messages";
 import api from "oxalis/api/internal_api";
 import { undoAction, redoAction } from "oxalis/model/actions/save_actions";
-import { copyAnnotationToUserAccount } from "admin/admin_rest_api";
+import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_api";
 import { location } from "libs/window";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
-import type { APIUserType } from "admin/api_flow_types";
+import type { APIUserType, APITracingType } from "admin/api_flow_types";
 
 type StateProps = {
-  tracingType: string,
+  tracingType: APITracingType,
   annotationId: string,
   restrictions: RestrictionsType & SettingsType,
   task: ?TaskType,
@@ -67,15 +67,14 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
   handleFinish = async (event: SyntheticInputEvent<>) => {
     event.target.blur();
-    const url = `/annotations/${this.props.tracingType}/${
-      this.props.annotationId
-    }/finishAndRedirect`;
     await this.handleSave();
 
     Modal.confirm({
       title: messages["annotation.finish"],
-      onOk: () => {
-        location.href = url;
+      onOk: async () => {
+        await finishAnnotation(this.props.annotationId, this.props.tracingType);
+        // Force page refresh
+        location.href = "/dashboard";
       },
     });
   };
@@ -94,7 +93,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
     win.document.body.innerHTML = messages["download.wait"];
     await this.handleSave();
 
-    const downloadUrl = `/annotations/${this.props.tracingType}/${
+    const downloadUrl = `/api/annotations/${this.props.tracingType}/${
       this.props.annotationId
     }/download`;
     win.location.href = downloadUrl;
@@ -125,7 +124,6 @@ class TracingActionsView extends PureComponent<StateProps, State> {
   render() {
     const viewMode = Store.getState().temporaryConfiguration.viewMode;
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
-    const hasAdvancedOptions = this.props.restrictions.advancedOptionsAllowed;
     const archiveButtonText = this.props.task ? "Finish" : "Archive";
     const restrictions = this.props.restrictions;
 
@@ -147,13 +145,15 @@ class TracingActionsView extends PureComponent<StateProps, State> {
           <ButtonComponent key="read-only-button" type="primary" disabled>
             Read only
           </ButtonComponent>,
-          <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
-            Copy To My Account
-          </ButtonComponent>,
+          isSkeletonMode ? (
+            <ButtonComponent key="copy-button" icon="file-add" onClick={this.handleCopyToAccount}>
+              Copy To My Account
+            </ButtonComponent>
+          ) : null,
         ];
 
     const finishAndNextTaskButton =
-      hasAdvancedOptions && restrictions.allowFinish && this.props.task ? (
+      restrictions.allowFinish && this.props.task ? (
         <ButtonComponent
           key="next-button"
           icon="verticle-left"
@@ -165,58 +165,56 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
     const elements = [];
     const modals = [];
-    if (hasAdvancedOptions) {
-      if (restrictions.allowFinish) {
-        elements.push(
-          <Menu.Item key="finish-button">
-            <div onClick={this.handleFinish}>
-              <Icon type="check-circle-o" />
-              {archiveButtonText}
-            </div>
-          </Menu.Item>,
-        );
-      }
-      if (restrictions.allowDownload) {
-        elements.push(
-          <Menu.Item key="download-button">
-            <div onClick={this.handleDownload}>
-              <Icon type="download" />
-              Download
-            </div>
-          </Menu.Item>,
-        );
-      }
+    if (restrictions.allowFinish) {
       elements.push(
-        <Menu.Item key="share-button">
-          <div onClick={this.handleShareOpen}>
-            <Icon type="share-alt" />
-            Share
+        <Menu.Item key="finish-button">
+          <div onClick={this.handleFinish}>
+            <Icon type="check-circle-o" />
+            {archiveButtonText}
           </div>
         </Menu.Item>,
-      );
-      modals.push(
-        <ShareModalView
-          key="share-modal"
-          isVisible={this.state.isShareModalOpen}
-          onOk={this.handleShareClose}
-        />,
-      );
-      elements.push(
-        <Menu.Item key="user-scripts-button">
-          <div onClick={this.handleUserScriptsOpen}>
-            <Icon type="setting" />
-            Add Script
-          </div>
-        </Menu.Item>,
-      );
-      modals.push(
-        <UserScriptsModalView
-          key="user-scripts-modal"
-          isVisible={this.state.isUserScriptsModalOpen}
-          onOK={this.handleUserScriptsClose}
-        />,
       );
     }
+    if (restrictions.allowDownload) {
+      elements.push(
+        <Menu.Item key="download-button">
+          <div onClick={this.handleDownload}>
+            <Icon type="download" />
+            Download
+          </div>
+        </Menu.Item>,
+      );
+    }
+    elements.push(
+      <Menu.Item key="share-button">
+        <div onClick={this.handleShareOpen}>
+          <Icon type="share-alt" />
+          Share
+        </div>
+      </Menu.Item>,
+    );
+    modals.push(
+      <ShareModalView
+        key="share-modal"
+        isVisible={this.state.isShareModalOpen}
+        onOk={this.handleShareClose}
+      />,
+    );
+    elements.push(
+      <Menu.Item key="user-scripts-button">
+        <div onClick={this.handleUserScriptsOpen}>
+          <Icon type="setting" />
+          Add Script
+        </div>
+      </Menu.Item>,
+    );
+    modals.push(
+      <UserScriptsModalView
+        key="user-scripts-modal"
+        isVisible={this.state.isUserScriptsModalOpen}
+        onOK={this.handleUserScriptsClose}
+      />,
+    );
 
     if (isSkeletonMode && this.props.activeUser != null) {
       elements.push(
@@ -240,7 +238,7 @@ class TracingActionsView extends PureComponent<StateProps, State> {
 
     return (
       <div>
-        <Button.Group size="large">
+        <Button.Group>
           {saveButton}
           {finishAndNextTaskButton}
           {modals}

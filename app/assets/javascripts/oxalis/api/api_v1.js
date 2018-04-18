@@ -32,7 +32,7 @@ import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middlewar
 
 function assertExists(value: any, message: string) {
   if (value == null) {
-    throw Error(message);
+    throw new Error(message);
   }
 }
 
@@ -83,7 +83,7 @@ class TracingApi_DEPRECATED {
     return getSkeletonTracing(Store.getState().tracing)
       .map(skeletonTracing => {
         const { trees } = skeletonTracing;
-        return _.flatMap(trees, tree => _.values(tree.nodes));
+        return _.flatMap(trees, tree => Array.from(tree.nodes.values()));
       })
       .getOrElse([]);
   }
@@ -114,7 +114,7 @@ class TracingApi_DEPRECATED {
         assertExists(tree, `Couldn't find node ${nodeId}.`);
         Store.dispatch(createCommentAction(commentText, nodeId, tree.treeId));
       } else {
-        throw Error("Node id is missing.");
+        throw new Error("Node id is missing.");
       }
     });
   }
@@ -138,9 +138,9 @@ class TracingApi_DEPRECATED {
         if (treeId != null) {
           tree = skeletonTracing.trees[treeId];
           assertExists(tree, `Couldn't find tree ${treeId}.`);
-          assertExists(tree.nodes[nodeId], `Couldn't find node ${nodeId} in tree ${treeId}.`);
+          assertExists(tree.nodes.get(nodeId), `Couldn't find node ${nodeId} in tree ${treeId}.`);
         } else {
-          tree = _.values(skeletonTracing.trees).find(__ => __.nodes[nodeId] != null);
+          tree = _.values(skeletonTracing.trees).find(__ => __.nodes.has(nodeId));
           assertExists(tree, `Couldn't find node ${nodeId}.`);
         }
         // $FlowFixMe TODO remove once https://github.com/facebook/flow/issues/34 is closed
@@ -163,7 +163,7 @@ class DataApi_DEPRECATED {
 
   __getLayer(layerName: string): Binary {
     const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw Error(`Layer with name ${layerName} was not found.`);
+    if (layer === undefined) throw new Error(`Layer with name ${layerName} was not found.`);
     return layer;
   }
 
@@ -280,8 +280,6 @@ class UserApi_DEPRECATED {
     - isosurfaceBBsize
     - isosurfaceResolution
     - newNodeNewTree
-    - inverseX
-    - inverseY
     - keyboardDelay
     - particleSize
     - overrideNodeRadius

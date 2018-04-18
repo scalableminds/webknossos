@@ -1,0 +1,23 @@
+syntax = "proto2";
+
+package com.scalableminds.webknossos.datastore;
+
+
+message Point3D {
+    required int32 x = 1;
+    required int32 y = 2;
+    required int32 z = 3;
+}
+
+message Vector3D {
+    required double x = 1;
+    required double y = 2;
+    required double z = 3;
+}
+
+message BoundingBox {
+    required Point3D topLeft = 1;
+    required int32 width = 2;
+    required int32 height = 3;
+    required int32 depth = 4;
+}

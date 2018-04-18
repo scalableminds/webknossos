@@ -1,6 +1,6 @@
 // @flow
 
-import { watchPushSettingsAsync, initializeSettingsAsync } from "oxalis/model/sagas/settings_saga";
+import watchPushSettingsAsync from "oxalis/model/sagas/settings_saga";
 import { watchSkeletonTracingAsync } from "oxalis/model/sagas/skeletontracing_saga";
 import {
   pushAnnotationAsync,
@@ -31,7 +31,6 @@ function* restartableSaga(): Generator<*, *, *> {
   try {
     yield [
       warnAboutSegmentationOpacity(),
-      initializeSettingsAsync(),
       watchPushSettingsAsync(),
       watchSkeletonTracingAsync(),
       collectUndoStates(),
@@ -54,11 +53,15 @@ ${err} ${err.stack}`);
 // TODO: move this saga functionality as soon as annotation_saga.js was merged
 
 function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
-  const warnMaybe = function*() {
+  const warnMaybe = function* warnMaybe() {
     const shouldWarn = Model.shouldDisplaySegmentationData() && !Model.canDisplaySegmentationData();
     if (shouldWarn) {
-      const toastType = yield select(state => (state.tracing.type === "volume" ? "error" : "info"));
-      Toast.message(toastType, messages["tracing.segmentation_zoom_warning"], true);
+      const isVolumeTracing = yield select(state => state.tracing.type === "volume");
+      if (isVolumeTracing) {
+        Toast.message("error", messages["tracing.segmentation_zoom_warning"], true);
+      } else {
+        Toast.message("info", messages["tracing.segmentation_zoom_warning"], false, 3000);
+      }
     } else if (!shouldWarn) {
       Toast.close(messages["tracing.segmentation_zoom_warning"]);
     }

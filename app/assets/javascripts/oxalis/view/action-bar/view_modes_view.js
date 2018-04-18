@@ -30,7 +30,7 @@ class ViewModesView extends PureComponent<Props> {
   render() {
     const viewMode = this.props.viewMode;
     return (
-      <Radio.Group onChange={this.handleChange} value={viewMode} size="large">
+      <Radio.Group onChange={this.handleChange} value={viewMode}>
         {constants.MODES_SKELETON.map(mode => (
           <Radio.Button
             onClick={this.blurElement}

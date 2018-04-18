@@ -14,9 +14,10 @@ import {
   addToLayerReducer,
   resetContourReducer,
   hideBrushReducer,
+  setContourTracingModeReducer,
 } from "oxalis/model/reducers/volumetracing_reducer_helpers";
 import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
-import { VolumeToolEnum } from "oxalis/constants";
+import { VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 
 function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionType): OxalisState {
   switch (action.type) {
@@ -32,9 +33,11 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
       const maxCellId = action.tracing.largestSegmentId;
       const volumeTracing: VolumeTracingType = {
         annotationId: action.annotation.id,
+        createdTimestamp: action.tracing.createdTimestamp,
         type: "volume",
         activeCellId: 0,
         lastCentroid: null,
+        contourTracingMode: ContourModeEnum.IDLE,
         contourList: [],
         maxCellId,
         cells: {},
@@ -116,6 +119,10 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
           return update(state, {
             temporaryConfiguration: { brushSize: { $set: brushSize } },
           });
+        }
+
+        case "SET_CONTOUR_TRACING_MODE": {
+          return setContourTracingModeReducer(state, action.mode);
         }
 
         default:

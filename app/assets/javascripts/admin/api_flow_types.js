@@ -6,7 +6,9 @@ import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontr
 import type { Vector3, Vector6 } from "oxalis/constants";
 import type { DataLayerType, SettingsType, BoundingBoxObjectType } from "oxalis/store";
 
-type APIDataSourceType = {
+export type APIMessageType = { ["info" | "warning" | "error"]: string };
+
+export type APIDataSourceType = {
   +id: {
     +name: string,
     +team: string,
@@ -23,8 +25,14 @@ export type APIDataStoreType = {
   +accessToken?: string,
 };
 
+export type APITeamType = {
+  +id: string,
+  +name: string,
+  +organization: string,
+};
+
 export type APIDatasetType = {
-  +allowedTeams: Array<string>,
+  +allowedTeams: Array<APITeamType>,
   +created: number,
   +dataSource: APIDataSourceType,
   +dataStore: APIDataStoreType,
@@ -33,15 +41,20 @@ export type APIDatasetType = {
   +isEditable: boolean,
   +isPublic: boolean,
   +name: string,
-  +owningTeam: "Connectomics department",
+  +displayName: string,
+  +owningOrganization: string,
   +sourceType: "wkw" | "knossos",
 };
 
-export type APIRoleType = { +name: string };
+export type APIDataSourceWithMessagesType = {
+  +dataSource?: APIDataSourceType,
+  +messages: Array<APIMessageType>,
+};
 
-export type APITeamRoleType = {
-  +team: string,
-  +role: APIRoleType,
+export type APITeamMembershipType = {
+  +id: string,
+  +name: string,
+  +isTeamManager: boolean,
 };
 
 export type ExperienceMapType = { +[string]: number };
@@ -52,11 +65,13 @@ export type APIUserType = {
   +firstName: string,
   +lastName: string,
   +id: string,
+  +isAdmin: boolean,
   +isActive: boolean,
   +isAnonymous: boolean,
   +isEditable: boolean,
   +lastActivity: number,
-  +teams: Array<APITeamRoleType>,
+  +teams: Array<APITeamMembershipType>,
+  +organization: string,
 };
 
 export type APITimeIntervalType = {
@@ -70,14 +85,6 @@ export type APIUserLoggedTimeType = {
   loggedTime: Array<APITimeIntervalType>,
 };
 
-export type APITeamType = {
-  +id: string,
-  +name: string,
-  +owner: APIUserType,
-  +parent: string,
-  +roles: Array<APIRoleType>,
-};
-
 export type APIRestrictionsType = {
   +allowAccess: boolean,
   +allowUpdate: boolean,
@@ -88,7 +95,6 @@ export type APIRestrictionsType = {
 export type APIAllowedModeType = "orthogonal" | "oblique" | "flight" | "volume";
 
 export type APISettingsType = {
-  +advancedOptionsAllowed: boolean,
   +allowedModes: Array<APIAllowedModeType>,
   +preferredMode?: APIAllowedModeType,
   +branchPointsAllowed: boolean,
@@ -114,7 +120,7 @@ export type APITaskTypeType = {
   +settings: SettingsType,
 };
 
-export type TaskStatusType = { +open: number, +inProgress: number, +completed: number };
+export type TaskStatusType = { +open: number, +active: number, +finished: number };
 
 export type APIScriptType = {
   +id: string,
@@ -123,16 +129,27 @@ export type APIScriptType = {
   +gist: string,
 };
 
-export type APIProjectType = {
-  +id: string,
+type APIProjectTypeBase = {
   +name: string,
   +team: string,
-  +owner: APIUserType,
   +priority: number,
   +paused: boolean,
   +expectedTime: number,
-  +assignmentConfiguration: { location: "webknossos" | "mturk" },
   +numberOfOpenAssignments: number,
+};
+
+export type APIProjectType = APIProjectTypeBase & {
+  +id: string,
+  +owner: APIUserType,
+};
+
+export type APIProjectUpdaterType = APIProjectTypeBase & {
+  +id: string,
+  +owner: string,
+};
+
+export type APIProjectCreatorType = APIProjectTypeBase & {
+  +owner: string,
 };
 
 export type APITaskType = {
@@ -173,11 +190,7 @@ export type APIAnnotationType = {
   +name: string,
   +restrictions: APIRestrictionsType,
   +settings: APISettingsType,
-  +state: {
-    +isAssigned: boolean,
-    +isFinished: boolean,
-    +isInProgress: boolean,
-  },
+  +state: string,
   +stats: SkeletonTracingStatsType,
   +tags: Array<string>,
   +task: APITaskType,
@@ -186,22 +199,7 @@ export type APIAnnotationType = {
   +user?: APIUserType,
 };
 
-export type APITaskWithAnnotationType = {
-  +id: string,
-  +team: string,
-  +formattedHash: string,
-  +projectName: string,
-  +type: APITaskTypeType,
-  +dataSet: string,
-  +editPosition: Vector3,
-  +editRotation: Vector3,
-  +boundingBox: null,
-  +neededExperience: ExperienceMapType,
-  +created: string,
-  +status: TaskStatusType,
-  +script: null,
-  +tracingTime: null,
-  +creationInfo: null,
+export type APITaskWithAnnotationType = APITaskType & {
   +annotation: APIAnnotationType,
 };
 
@@ -220,7 +218,7 @@ export type NDStoreConfigType = {
 
 export type DatasetConfigType = {
   +name: string,
-  +team: string,
+  +organization: string,
   +datastore: string,
   +zipFile: File,
 };
@@ -234,6 +232,54 @@ export type APITimeTrackingType = {
   project_name: string,
   tasktype_id: string,
   tasktype_summary: string,
+};
+
+export type APIProjectProgressReportType = {
+  +projectName: string,
+  +paused: boolean,
+  +totalTasks: number,
+  +totalInstances: number,
+  +openInstances: number,
+  +finishedInstances: number,
+  +inProgressInstances: number,
+};
+
+export type APIOpenTasksReportType = {
+  +id: string,
+  +user: string,
+  +totalAssignments: number,
+  +assignmentsByProjects: { [projectName: string]: number },
+};
+
+export type APIOrganizationType = {
+  +id: string,
+  +name: string,
+  +teams: Array<string>,
+  +organizationTeam: string,
+};
+
+export type APIBuildInfoType = {
+  webknossos: {
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    commitDate: string,
+  },
+  "webknossos-wrap": {
+    builtAtMillis: string,
+    name: string,
+    commitHash: string,
+    scalaVersion: string,
+    version: string,
+    sbtVersion: string,
+    builtAtString: string,
+  },
+};
+
+export type APIFeatureToggles = {
+  +discussionBoard: boolean,
 };
 
 export default {};

@@ -4,6 +4,9 @@ echo "[info] Cleaning target directories..."
 rm -rf target
 rm -rf project/target
 rm -rf project/project/target
+rm -rf webknossos-datastore/target
+rm -rf webknossos-datastore/project/target
+rm -rf webknossos-datastore/project/project/target
 rm -rf node_modules
 
 echo "[info] Done."

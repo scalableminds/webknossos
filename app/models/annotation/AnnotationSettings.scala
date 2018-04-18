@@ -1,6 +1,6 @@
 package models.annotation
 
-import com.scalableminds.braingames.datastore.tracings.TracingType
+import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation.AnnotationSettings._
 import play.api.data.validation.ValidationError
 import play.api.libs.json._
@@ -9,8 +9,7 @@ case class AnnotationSettings(
   allowedModes: List[String] = SKELETON_MODES,
   preferredMode: Option[String] = None,
   branchPointsAllowed: Boolean = true,
-  somaClickingAllowed: Boolean = true,
-  advancedOptionsAllowed: Boolean = true
+  somaClickingAllowed: Boolean = true
 )
 
 object AnnotationSettings {

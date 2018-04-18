@@ -11,7 +11,7 @@ import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
 import type { ServerSkeletonTracingType } from "oxalis/model";
 import type { APIAnnotationType } from "admin/api_flow_types";
-import type { SkeletonTracingType } from "oxalis/store";
+import type { SkeletonTracingType, TreeMapType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -58,6 +58,7 @@ type ToggleAllTreesActionType = { type: "TOGGLE_ALL_TREES", timestamp: number };
 type ToggleInactiveTreesActionType = { type: "TOGGLE_INACTIVE_TREES", timestamp: number };
 type RequestDeleteBranchPointActionType = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeActionType = { type: "CREATE_TREE", timestamp: number };
+type AddTreesActionType = { type: "ADD_TREES", trees: TreeMapType };
 type DeleteTreeActionType = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type SetActiveTreeActionType = { type: "SET_ACTIVE_TREE", treeId: number };
 type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
@@ -86,6 +87,7 @@ export type SkeletonTracingActionType =
   | DeleteBranchPointActionType
   | RequestDeleteBranchPointActionType
   | CreateTreeActionType
+  | AddTreesActionType
   | DeleteTreeActionType
   | SetActiveTreeActionType
   | MergeTreesActionType
@@ -112,6 +114,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
+  "ADD_TREES",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
   "SET_TREE_NAME",
@@ -241,6 +244,11 @@ export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActi
   timestamp,
 });
 
+export const addTreesAction = (trees: TreeMapType): AddTreesActionType => ({
+  type: "ADD_TREES",
+  trees,
+});
+
 export const deleteTreeAction = (
   treeId?: number,
   timestamp: number = Date.now(),
@@ -253,7 +261,7 @@ export const deleteTreeAction = (
 export const deleteTreeWithConfirmAction = (treeId?: number): NoActionType => {
   const state = Store.getState();
   getTree(state.tracing, treeId).map(tree => {
-    if (state.task != null && tree.nodes[1] != null) {
+    if (state.task != null && tree.nodes.has(1) != null) {
       // Let the user confirm the deletion of the initial node (node with id 1) of a task
       Modal.confirm({
         title: messages["tracing.delete_tree_with_initial_node"],

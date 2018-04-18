@@ -3,7 +3,7 @@
  */
 package oxalis.ndstore
 
-import com.scalableminds.braingames.binary.models.datasource.{Category, ElementClass}
+import com.scalableminds.webknossos.datastore.models.datasource.{Category, ElementClass}
 import play.api.data.validation.ValidationError
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{JsResult, JsValue, _}
@@ -21,7 +21,7 @@ object NDChannels {
         ).tupled
 
     override def reads(json: JsValue): JsResult[List[NDChannel]] = {
-      json.validate(Reads.mapReads(channelBodyReads)).map { jso =>
+      json.validate(Reads.mapReads(channelBodyReads)).map { (jso: Map[String, (ElementClass.Value, Category.Value)]) =>
         jso.map {
           case (name, (dataType, channelType)) =>
             NDChannel(name, dataType, channelType)

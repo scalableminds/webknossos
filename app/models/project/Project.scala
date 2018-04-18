@@ -1,49 +1,175 @@
 package models.project
 
 import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, JsonFormatHelper}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import models.basics._
-import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
-import models.task.{OpenAssignmentDAO, TaskDAO, TaskService}
+import models.annotation.AnnotationState
+import models.basics.SecuredBaseDAO
+import models.task.{TaskDAO, TaskService}
+import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
-import oxalis.mturk.MTurkService
-import play.api.data.validation.ValidationError
+import play.api.Play.current
+import play.api.i18n.Messages
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
-import reactivemongo.api.indexes.{Index, IndexType}
+import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import slick.jdbc.PostgresProfile.api._
+import slick.lifted.Rep
+import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.Future
 
+
+case class ProjectSQL(
+                     _id: ObjectId,
+                     _team: ObjectId,
+                     _owner: ObjectId,
+                     name: String,
+                     priority: Long,
+                     paused: Boolean,
+                     expectedTime: Option[Long],
+                     created: Long = System.currentTimeMillis(),
+                     isDeleted: Boolean = false
+                     )
+
+object ProjectSQL {
+  def fromProject(p: Project)(implicit ctx: DBAccessContext) = {
+    Fox.successful(ProjectSQL(
+      ObjectId.fromBsonId(p._id),
+      ObjectId.fromBsonId(p._team),
+      ObjectId.fromBsonId(p._owner),
+      p.name,
+      p.priority,
+      p.paused,
+      p.expectedTime.map(_.toLong),
+      System.currentTimeMillis(),
+      false))
+  }
+}
+
+object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
+  val collection = Projects
+
+  def idColumn(x: Projects): Rep[String] = x._Id
+  def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
+
+  def parse(r: ProjectsRow): Fox[ProjectSQL] =
+    Fox.successful(ProjectSQL(
+      ObjectId(r._Id),
+      ObjectId(r._Team),
+      ObjectId(r._Owner),
+      r.name,
+      r.priority,
+      r.paused,
+      r.expectedtime,
+      r.created.getTime,
+      r.isdeleted
+    ))
+
+  override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _owner = '${requestingUserId.id}'"
+  override def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
+
+  // read operations
+
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[ProjectSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[ProjectsRow])
+      r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
+      parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
+    } yield parsed
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[ProjectSQL]] = {
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery} order by created".as[ProjectsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[ProjectSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[ProjectsRow])
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
+    } yield parsed
+
+  def findUsersWithOpenTasks(name: String)(implicit ctx: DBAccessContext): Fox[List[String]] =
+    for {
+      accessQuery <- readAccessQuery
+      rSeq <- run(sql"""select u.email
+                         from
+                         webknossos.annotations_ a
+                         join webknossos.tasks_ t on a._task = t._id
+                         join webknossos.projects_ p on t._project = p._id
+                         join webknossos.users_ u on a._user = u._id
+                         where p.name = ${name}
+                         and a.state != '#${AnnotationState.Finished.toString}'
+                         group by u.email
+                     """.as[String])
+    } yield rSeq.toList
+
+  // write operations
+
+  def insertOne(p: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- run(sqlu"""insert into webknossos.projects(_id, _team, _owner, name, priority, paused, expectedTime, created, isDeleted)
+                         values(${p._id.id}, ${p._team.id}, ${p._owner.id}, ${p.name}, ${p.priority}, ${p.paused}, ${p.expectedTime}, ${new java.sql.Timestamp(p.created)}, ${p.isDeleted})""")
+    } yield ()
+
+
+
+  def updateOne(p: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for { //note that p.created is skipped
+      _ <- assertUpdateAccess(p._id)
+      _ <- run(sqlu"""update webknossos.projects
+                          set
+                            _team = ${p._team.id},
+                            _owner = ${p._owner.id},
+                            name = ${p.name},
+                            priority = ${p.priority},
+                            paused = ${p.paused},
+                            expectedTime = ${p.expectedTime},
+                            isDeleted = ${p.isDeleted}
+                          where _id = ${p._id.id}""")
+    } yield ()
+
+  def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext) =
+    updateBooleanCol(id, _.paused, isPaused)
+
+}
+
+
 case class Project(
-  name: String,
-  team: String,
-  _owner: BSONObjectID,
-  priority: Int,
-  paused: Boolean,
-  expectedTime: Option[Int],
-  assignmentConfiguration: AssignmentConfig,
-  _id: BSONObjectID = BSONObjectID.generate) {
+                    name: String,
+                    _team: BSONObjectID,
+                    _owner: BSONObjectID,
+                    priority: Int,
+                    paused: Boolean,
+                    expectedTime: Option[Int],
+                    _id: BSONObjectID = BSONObjectID.generate) {
 
   def owner = UserService.findOneById(_owner.stringify, useCache = true)(GlobalAccessContext)
 
-  def isOwnedBy(user: User) = user._id == _owner
+  def isDeletableBy(user: User) = user._id == _owner || user.isAdmin
 
   def id = _id.stringify
 
   def tasks(implicit ctx: DBAccessContext) = TaskDAO.findAllByProject(name)(GlobalAccessContext)
+
+  lazy val team = _team.stringify
 }
 
-object Project {
+object Project extends FoxImplicits {
   implicit val projectFormat = Json.format[Project]
-
-  def StringObjectIdReads(key: String) =
-    Reads.filter[String](ValidationError("objectid.invalid", key))(BSONObjectID.parse(_).isSuccess)
 
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
     for {
@@ -56,20 +182,19 @@ object Project {
         "priority" -> project.priority,
         "paused" -> project.paused,
         "expectedTime" -> project.expectedTime,
-        "assignmentConfiguration" -> project.assignmentConfiguration,
         "id" -> project.id
       )
     }
 
   def projectPublicWritesWithStatus(
-    project: Project,
-    openAssignments: Int,
-    requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
+                                     project: Project,
+                                     openTaskInstances: Int,
+                                     requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] = {
 
     for {
       projectJson <- projectPublicWrites(project, requestingUser)
     } yield {
-      projectJson + ("numberOfOpenAssignments" -> JsNumber(openAssignments))
+      projectJson + ("numberOfOpenAssignments" -> JsNumber(openTaskInstances))
     }
   }
 
@@ -77,125 +202,112 @@ object Project {
 
   val projectPublicReads: Reads[Project] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[String] and
+      (__ \ 'team).read[String](JsonFormatHelper.StringObjectIdReads("team")) and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Int] and
-      (__ \ 'assignmentConfiguration).read[AssignmentConfig] and
-      (__ \ 'owner).read[String](StringObjectIdReads("owner"))) (
-      (name, team, priority, paused, expectedTime, assignmentLocation, owner) =>
-        Project(name, team, BSONObjectID(owner), priority, paused getOrElse false, expectedTime, assignmentLocation))
+      (__ \ 'owner).read[String](JsonFormatHelper.StringObjectIdReads("owner"))) (
+      (name, team, priority, paused, expectedTime, owner) =>
+        Project(name, BSONObjectID(team), BSONObjectID(owner), priority, paused getOrElse false, expectedTime))
+
+  def fromProjectSQL(s: ProjectSQL)(implicit ctx: DBAccessContext): Fox[Project] = {
+    for {
+      team <- TeamSQLDAO.findOne(s._team)(GlobalAccessContext) ?~> Messages("team.notFound")
+      ownerBSON <- s._owner.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id)
+      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id)
+      teamIdBson <- team._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
+    } yield {
+      Project(
+        s.name,
+        teamIdBson,
+        ownerBSON,
+        s.priority.toInt,
+        s.paused,
+        s.expectedTime.map(_.toInt),
+        idBson
+      )
+    }
+  }
 }
 
 object ProjectService extends FoxImplicits with LazyLogging {
-  def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
-    ProjectDAO.remove("name", project.name).flatMap {
-      case result if result.n > 0 =>
-        for{
-          _ <- TaskService.removeAllWithProject(project)
-        } yield true
-      case _                      =>
-        logger.warn("Tried to remove project without permission.")
-        Fox.successful(false)
-    }
-  }
 
-  def reportToExternalService(project: Project, json: JsValue): Fox[Boolean] = {
-    project.assignmentConfiguration match {
-      case mturk: MTurkAssignmentConfig =>
-        MTurkService.handleProjectCreation(project, mturk)
-      case _ =>
-        Fox.successful(true)
+  def remove(project: Project)(implicit ctx: DBAccessContext): Fox[Boolean] = {
+    val futureFox: Future[Fox[Boolean]] = for {
+      removalSuccessBox <- ProjectDAO.remove(project._id).futureBox
+    } yield {
+      removalSuccessBox match {
+        case Full(_) => {
+          for {
+            _ <- TaskService.removeAllWithProject(project)
+          } yield true
+        }
+        case _ => {
+          logger.warn("Tried to remove project without permission.")
+          Fox.successful(false)
+        }
+      }
     }
+    futureFox.toFox.flatten
   }
 
   def findIfNotEmpty(name: Option[String])(implicit ctx: DBAccessContext): Fox[Option[Project]] = {
     name match {
       case Some("") | None =>
         new Fox(Future.successful(Full(None)))
-      case Some(x)         =>
+      case Some(x) =>
         ProjectDAO.findOneByName(x).toFox.map(p => Some(p))
     }
   }
 
-  def update(_id: BSONObjectID, oldProject: Project, updateRequest: Project)(implicit ctx: DBAccessContext) = {
-    def updateTasksIfNecessary(updated: Project) = {
-      if (oldProject.priority == updated.priority)
-        Fox.successful(true)
-      else
-        TaskService.handleProjectUpdate(oldProject.name, updated)
-    }
+  def update(_id: BSONObjectID, oldProject: Project, updateRequest: Project)(implicit ctx: DBAccessContext) =
+    ProjectDAO.updateProject(_id, updateRequest)
 
-    for {
-      updatedProject <- ProjectDAO.updateProject(_id, updateRequest)
-      _ <- updateTasksIfNecessary(updatedProject)
-    } yield updatedProject
-
-  }
-
-  def updatePauseStatus(project: Project, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
-    def updateTasksIfNecessary(updated: Project) = {
-      if(updated.paused == project.paused)
-        Fox.successful(true)
-      else
-        TaskService.handleProjectUpdate(updated.name, updated)
-    }
-
-    val updated = project.copy(paused = isPaused)
-
-    for {
-      updatedProject <- ProjectDAO.updatePausedFlag(updated._id, updated.paused)
-      _ <- updateTasksIfNecessary(updated)
-    } yield updatedProject
-  }
+  def updatePauseStatus(project: Project, isPaused: Boolean)(implicit ctx: DBAccessContext) =
+    ProjectDAO.updatePausedFlag(project._id, isPaused)
 }
 
-object ProjectDAO extends SecuredBaseDAO[Project] {
+object ProjectDAO {
+  def findOneByName(name: String)(implicit ctx: DBAccessContext) =
+    for {
+      projectSQL <- ProjectSQLDAO.findOneByName(name)
+      project <- Project.fromProjectSQL(projectSQL)
+    } yield project
 
-  override val AccessDefinitions = new DefaultAccessDefinitions {
-    override def findQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("team" -> Json.obj("$in" -> user.teamNames)))
-        case _                =>
-          DenyEveryone()
-      }
-    }
+  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[Project] =
+    for {
+      projectSQL <- ProjectSQLDAO.findOne(ObjectId(id))
+      project <- Project.fromProjectSQL(projectSQL)
+    } yield project
 
-    override def removeQueryFilter(implicit ctx: DBAccessContext) = {
-      ctx.data match {
-        case Some(user: User) =>
-          AllowIf(Json.obj("_owner" -> user._id))
-        case _                =>
-          DenyEveryone()
-      }
-    }
-  }
+  def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Project] =
+    findOneById(id.stringify)
 
-  val collectionName = "projects"
+  def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) =
+    for {
+      _ <- ProjectSQLDAO.updatePaused(ObjectId.fromBsonId(_id), isPaused)
+      project <- findOneById(_id)
+    } yield project
 
-  val formatter = Project.projectFormat
+  def updateProject(_id: BSONObjectID, project: Project)(implicit ctx: DBAccessContext) =
+    for {
+      projectSQL <- ProjectSQL.fromProject(project.copy(_id = _id))
+      _ <- ProjectSQLDAO.updateOne(projectSQL)
+      updated <- findOneById(_id)
+    } yield updated
 
-  underlying.indexesManager.ensure(Index(Seq("name" -> IndexType.Ascending)))
-  underlying.indexesManager.ensure(Index(Seq("team" -> IndexType.Ascending)))
+  def insert(project: Project)(implicit ctx: DBAccessContext): Fox[Project] =
+    for {
+      projectSQL <- ProjectSQL.fromProject(project)
+      _ <- ProjectSQLDAO.insertOne(projectSQL)
+    } yield project
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext) = {
-    findOne("name", name)
-  }
+  def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
+    for {
+      projectsSQL <- ProjectSQLDAO.findAll
+      projects <- Fox.combined(projectsSQL.map(Project.fromProjectSQL(_)))
+    } yield projects
 
-  def updatePausedFlag(_id: BSONObjectID, isPaused: Boolean)(implicit ctx: DBAccessContext) = {
-    findAndModify(Json.obj("_id" -> _id), Json.obj("$set" -> Json.obj("paused" -> isPaused)), returnNew = true)
-  }
-
-  def updateProject(_id: BSONObjectID, project: Project)(implicit ctx: DBAccessContext) = {
-    findAndModify(Json.obj("_id" -> _id), Json.obj("$set" ->
-      Json.obj(
-        "name" -> project.name,
-        "team" -> project.team,
-        "_owner" -> project._owner,
-        "priority" -> project.priority,
-        "expectedTime" -> project.expectedTime,
-        "paused" -> project.paused)), returnNew = true)
-
-  }
+  def remove(id: BSONObjectID)(implicit ctx: DBAccessContext) =
+    ProjectSQLDAO.deleteOne(ObjectId.fromBsonId(id))
 }

@@ -7,11 +7,14 @@ import { Layout, Menu, Icon } from "antd";
 import { connect } from "react-redux";
 import Request from "libs/request";
 import Utils from "libs/utils";
-import LoginView from "admin/views/auth/login_view";
+import LoginView from "admin/auth/login_view";
+import { logoutUserAction } from "oxalis/model/actions/user_actions";
+import Store from "oxalis/store";
+import features from "features";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
-import type { ReactRouterHistoryType } from "react_router";
+import type { RouterHistory } from "react-router-dom";
 
 const { SubMenu } = Menu;
 const { Header } = Layout;
@@ -22,14 +25,13 @@ type StateProps = {
 
 type Props = {
   isAuthenticated: boolean,
-  history: ReactRouterHistoryType,
+  history: RouterHistory,
 } & StateProps;
 
 class Navbar extends React.PureComponent<Props> {
   handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
-    await Utils.sleep(500);
-    window.location.reload();
+    Store.dispatch(logoutUserAction());
   };
 
   render() {
@@ -88,11 +90,27 @@ class Navbar extends React.PureComponent<Props> {
             <Link to="/scripts">Scripts</Link>
           </Menu.Item>
         </SubMenu>,
-        <Menu.Item key="/statistics">
-          <Link to="/statistics">
-            <Icon type="line-chart" />Statistics
-          </Link>
-        </Menu.Item>,
+        <SubMenu
+          key="sub2"
+          title={
+            <span>
+              <Icon type="line-chart" />Statistics
+            </span>
+          }
+        >
+          <Menu.Item key="/statistics">
+            <Link to="/statistics">Statistics</Link>
+          </Menu.Item>
+          <Menu.Item key="/reports/timetracking">
+            <Link to="/reports/timetracking">Time Tracking</Link>
+          </Menu.Item>
+          <Menu.Item key="/reports/projectProgress">
+            <Link to="/reports/projectProgress">Project Progress</Link>
+          </Menu.Item>
+          <Menu.Item key="/reports/openTasks">
+            <Link to="/reports/openTasks">Open Tasks</Link>
+          </Menu.Item>
+        </SubMenu>,
       );
     }
 
@@ -118,7 +136,7 @@ class Navbar extends React.PureComponent<Props> {
       </SubMenu>,
     );
 
-    if (isAdmin) {
+    if (isAdmin && features().discussionBoard) {
       menuItems.push(
         <Menu.Item key="13">
           <a href="https://discuss.webknossos.org" target="_blank" rel="noopener noreferrer">
@@ -172,7 +190,7 @@ class Navbar extends React.PureComponent<Props> {
         </Menu>
         {!isAuthenticated ? (
           <div style={{ flex: 1, display: "flex", justifyContent: "flex-end" }}>
-            <LoginView layout="inline" />
+            <LoginView layout="inline" redirect={this.props.history.location.pathname} />
           </div>
         ) : null}
       </Header>
@@ -184,4 +202,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeUser: state.activeUser,
 });
 
-export default withRouter(connect(mapStateToProps)(Navbar));
+export default connect(mapStateToProps)(withRouter(Navbar));

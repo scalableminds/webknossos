@@ -2,7 +2,6 @@
  * model.js
  * @flow
  */
-
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
@@ -18,6 +17,7 @@ import {
   setDatasetAction,
   setViewModeAction,
   setControlModeAction,
+  initializeSettingsAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
@@ -44,9 +44,14 @@ import ErrorHandling from "libs/error_handling";
 import WkLayer from "oxalis/model/binary/layers/wk_layer";
 import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
-import { doWithToken, getAnnotationInformation } from "admin/admin_rest_api";
+import {
+  doWithToken,
+  getAnnotationInformation,
+  getDataset,
+  getSharingToken,
+} from "admin/admin_rest_api";
 import messages from "messages";
-import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
+import type { APIAnnotationType } from "admin/api_flow_types";
 
 export type ServerNodeType = {
   id: number,
@@ -57,6 +62,7 @@ export type ServerNodeType = {
   resolution: number,
   radius: number,
   createdTimestamp: number,
+  interpolation: boolean,
 };
 
 export type ServerBranchPointType = {
@@ -64,7 +70,7 @@ export type ServerBranchPointType = {
   nodeId: number,
 };
 
-type ServerSkeletonTracingTreeType = {
+export type ServerSkeletonTracingTreeType = {
   branchPoints: Array<ServerBranchPointType>,
   color: ?Vector3,
   comments: Array<CommentType>,
@@ -77,7 +83,6 @@ type ServerSkeletonTracingTreeType = {
 
 type ServerTracingBaseType = {
   id: string,
-  boundingBox?: BoundingBoxObjectType,
   userBoundingBox?: BoundingBoxObjectType,
   createdTimestamp: number,
   editPosition: Vector3,
@@ -89,6 +94,7 @@ type ServerTracingBaseType = {
 
 export type ServerSkeletonTracingType = ServerTracingBaseType & {
   activeNodeId?: number,
+  boundingBox?: BoundingBoxObjectType,
   trees: Array<ServerSkeletonTracingTreeType>,
 };
 
@@ -144,6 +150,7 @@ export class OxalisModel {
     }
 
     await this.initializeDataset(datasetName);
+    await this.initializeSettings(datasetName);
 
     // Fetch the actual tracing from the datastore, if there is an annotation
     let tracing: ?ServerTracingType;
@@ -211,6 +218,10 @@ export class OxalisModel {
         Store.dispatch(initializeVolumeTracingAction(annotation, volumeTracing));
       } else {
         const skeletonTracing: ServerSkeletonTracingType = (tracing: any);
+
+        // To generate a huge amount of dummy trees, use:
+        // import generateDummyTrees from "./model/helpers/generate_dummy_trees";
+        // tracing.trees = generateDummyTrees(1, 200000);
         Store.dispatch(initializeSkeletonTracingAction(annotation, skeletonTracing));
       }
     }
@@ -225,7 +236,11 @@ export class OxalisModel {
   }
 
   async initializeDataset(datasetName: string) {
-    const dataset: APIDatasetType = await Request.receiveJSON(`/api/datasets/${datasetName}`);
+    const sharingToken = getSharingToken();
+    const dataset =
+      sharingToken != null
+        ? await getDataset(datasetName, sharingToken)
+        : await getDataset(datasetName);
 
     let error;
     if (!dataset) {
@@ -254,6 +269,14 @@ export class OxalisModel {
     Store.dispatch(setDatasetAction(dataset));
   }
 
+  async initializeSettings(datasetName: string) {
+    const initialUserSettings = await Request.receiveJSON("/api/user/userConfiguration");
+    const initialDatasetSettings = await Request.receiveJSON(
+      `/api/dataSetConfigurations/${datasetName}`,
+    );
+    Store.dispatch(initializeSettingsAction(initialUserSettings, initialDatasetSettings));
+  }
+
   initializeModel(tracing: ?ServerTracingType) {
     const { dataStore } = Store.getState().dataset;
 
@@ -275,7 +298,8 @@ export class OxalisModel {
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
     for (const layer of layers) {
-      const maxLayerZoomStep = Math.log(Math.max(...layer.resolutions)) / Math.LN2;
+      const maxLayerZoomStep =
+        Math.log(Math.max(...layer.resolutions.map(r => Math.max(...r)))) / Math.LN2;
       this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
     }
 
@@ -355,7 +379,7 @@ export class OxalisModel {
         height: tracing.boundingBox.height,
         depth: tracing.boundingBox.depth,
       },
-      resolutions: [1],
+      resolutions: [[1, 1, 1]],
       elementClass: tracing.elementClass,
       mappings:
         existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],
@@ -411,24 +435,46 @@ export class OxalisModel {
     ];
   }
 
-  applyState(state: UrlManagerState, tracing: ?ServerTracingType) {
-    // If there is no editPosition (e.g. when viewing a dataset), compute the center of the dataset
-    const editPosition = tracing != null ? tracing.editPosition : this.getDatasetCenter();
-    const position = state.position || editPosition;
+  applyState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
+    // If there is no editPosition (e.g. when viewing a dataset) and
+    // no default position, compute the center of the dataset
+    const defaultPosition = Store.getState().datasetConfiguration.position;
+    let position = this.getDatasetCenter();
+    if (defaultPosition != null) {
+      position = defaultPosition;
+    }
+    if (tracing != null) {
+      position = tracing.editPosition;
+    }
+    if (urlState.position != null) {
+      position = urlState.position;
+    }
     Store.dispatch(setPositionAction(position));
 
-    if (state.zoomStep != null) {
-      Store.dispatch(setZoomStepAction(state.zoomStep));
+    const defaultZoomStep = Store.getState().datasetConfiguration.zoom;
+    if (urlState.zoomStep != null) {
+      Store.dispatch(setZoomStepAction(urlState.zoomStep));
+    } else if (defaultZoomStep != null) {
+      Store.dispatch(setZoomStepAction(defaultZoomStep));
     }
 
-    const editRotation = tracing != null ? tracing.editRotation : null;
-    const rotation = state.rotation || editRotation;
+    const defaultRotation = Store.getState().datasetConfiguration.rotation;
+    let rotation = null;
+    if (defaultRotation != null) {
+      rotation = defaultRotation;
+    }
+    if (tracing != null) {
+      rotation = tracing.editRotation;
+    }
+    if (urlState.rotation != null) {
+      rotation = urlState.rotation;
+    }
     if (rotation != null) {
       Store.dispatch(setRotationAction(rotation));
     }
 
-    if (state.activeNode != null) {
-      Store.dispatch(setActiveNodeAction(state.activeNode));
+    if (urlState.activeNode != null) {
+      Store.dispatch(setActiveNodeAction(urlState.activeNode));
     }
   }
 

@@ -21,16 +21,14 @@ db.runCommand({
         team: { $type: "string", $exists: true },
       },
       {
-        state: { $type: "object", $exists: true },
-      },
-      {
-        "state.isAssigned": { $type: "bool", $exists: true },
-      },
-      {
-        "state.isFinished": { $type: "bool", $exists: true },
-      },
-      {
-        "state.isInProgress": { $type: "bool", $exists: true },
+        state: {
+          $exists: true,
+          $in: [
+            "Active",
+            "Cancelled",
+            "Finished",
+          ]
+        },
       },
       {
         typ: {

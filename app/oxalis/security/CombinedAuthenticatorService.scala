@@ -4,6 +4,7 @@ import com.mohiva.play.silhouette.api._
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import com.mohiva.play.silhouette.api.util.{Clock, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators._
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -30,7 +31,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   extends AuthenticatorService[CombinedAuthenticator] with Logger {
 
   val cookieAuthenticatorService = new CookieAuthenticatorService(cookieSettings, None, fingerprintGenerator, idGenerator, clock)
-  val tokenAuthenticatorService = new BearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock)
+  val tokenAuthenticatorService = new WebknossosBearerTokenAuthenticatorService(tokenSettings, tokenDao, idGenerator, clock)
 
   //is actually createCookie, called as "create" because it is the default
   override def create(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
@@ -38,8 +39,8 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
   }
 
   def createToken(loginInfo: LoginInfo)(implicit request: RequestHeader): Future[CombinedAuthenticator] = {
-    val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo)
-    tokenAuthenticator.map(tokenAuthenticatorService.init(_))
+    val tokenAuthenticator = tokenAuthenticatorService.create(loginInfo, TokenType.Authentication)
+    tokenAuthenticator.map(tokenAuthenticatorService.init(_, TokenType.Authentication))
     tokenAuthenticator.map(CombinedAuthenticator(_))
   }
 
@@ -54,7 +55,7 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   // only called in token case
   def findByLoginInfo(loginInfo: LoginInfo) =
-    tokenDao.findByLoginInfo(loginInfo).map(opt => opt.map(CombinedAuthenticator(_)))
+    tokenDao.findOneByLoginInfo(loginInfo, TokenType.Authentication)(GlobalAccessContext).map(opt => opt.map(CombinedAuthenticator(_)))
 
   // only called in the cookie case
   override def init(authenticator: CombinedAuthenticator)(implicit request: RequestHeader): Future[Cookie] =

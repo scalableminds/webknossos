@@ -13,28 +13,6 @@
   }
 }
 
-#dataset-import-view {
-  h3 {
-    margin-top: 20px;
-    margin-bottom: 30px;
-  }
-
-  .content {
-    text-align: center;
-  }
-
-  textarea,
-  .ant-checkbox-wrapper,
-  p,
-  .ant-alert {
-    margin-bottom: 20px;
-  }
-
-  button {
-    margin-right: 10px;
-  }
-}
-
 .dataset-thumbnail-buttons {
   display: flex;
   justify-content: center;
@@ -56,8 +34,7 @@
       width: 25px;
       height: 25px;
       margin: 7.5px;
-      filter: invert(1);
-      -webkit-filter: invert(1);
+      filter: brightness(0) invert(1);
     }
   }
   a:hover {
@@ -98,5 +75,21 @@
     p {
       font-size: 14px;
     }
+  }
+}
+
+.task-type-description {
+  word-break: break-word;
+  max-height: 150px;
+  overflow-y: auto;
+
+  ul {
+    list-style: disc;
+    padding-left: 2em;
+  }
+
+  ol {
+    list-style: decimal;
+    padding-left: 2em;
   }
 }

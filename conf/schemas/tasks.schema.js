@@ -21,6 +21,9 @@ db.runCommand({
         instances: { $type: "number", $exists: true },
       },
       {
+        openInstances: { $type: "number", $exists: true },
+      },
+      {
         $or: [{ tracingTime: { $type: "number" } }, { tracingTime: { $exists: false } }],
       },
       {
@@ -31,6 +34,9 @@ db.runCommand({
       },
       {
         _project: { $type: "string", $exists: true },
+      },
+      {
+        priority: { $type: "number", $exists: true },
       },
       {
         $or: [{ _script: { $type: "string" } }, { _script: { $exists: false } }],

@@ -12,13 +12,6 @@ import { Provider } from "react-redux";
 import { Router } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
 
-mockRequire("app", {
-  currentUser: {
-    email: "scmboy@scalableminds.com",
-    teams: [{ role: { name: "admin" } }],
-  },
-});
-
 // Those wrappers interfere with global.window and global.document otherwise
 mockRequire("libs/hammerjs_wrapper", {});
 mockRequire("libs/keyboardjs_wrapper", {});
@@ -36,10 +29,9 @@ mockRequire("antd/lib/button", props => (
   </div>
 ));
 
-const ProjectListView = mockRequire.reRequire("../../admin/views/project/project_list_view")
-  .default;
-const Dashboard = mockRequire.reRequire("../../dashboard/views/dashboard_view").default;
-const UserListView = mockRequire.reRequire("../../admin/views/user/user_list_view").default;
+const ProjectListView = mockRequire.reRequire("../../admin/project/project_list_view").default;
+const Dashboard = mockRequire.reRequire("../../dashboard/dashboard_view").default;
+const UserListView = mockRequire.reRequire("../../admin/user/user_list_view").default;
 const Store = mockRequire.reRequire("../../oxalis/throttled_store").default;
 const { setActiveUserAction } = mockRequire.reRequire("../../oxalis/model/actions/user_actions");
 const { getActiveUser } = mockRequire.reRequire("../../admin/admin_rest_api");
@@ -103,9 +95,11 @@ test("Dashboard", async t => {
 
 test("Users", async t => {
   const userListView = mount(
-    <Router history={browserHistory}>
-      <UserListView />
-    </Router>,
+    <Provider store={Store}>
+      <Router history={browserHistory}>
+        <UserListView />
+      </Router>
+    </Provider>,
   );
   await waitForAllRequests(userListView);
 

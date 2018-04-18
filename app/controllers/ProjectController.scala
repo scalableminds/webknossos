@@ -4,20 +4,19 @@
 package controllers
 import javax.inject.Inject
 
-import scala.concurrent.Future
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
-import models.mturk.{MTurkAssignmentConfig, MTurkProjectDAO}
-import models.project.{Project, ProjectDAO, ProjectService, WebknossosAssignmentConfig}
+import models.project.{Project, ProjectDAO, ProjectSQLDAO, ProjectService}
 import models.task._
-import net.liftweb.common.{Empty, Full}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest, SecuredAction}
 import models.user.UserDAO
+import net.liftweb.common.Empty
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.{JsValue, Json}
-import play.twirl.api.Html
+import play.api.libs.json.Json
+
+import scala.concurrent.Future
 
 class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
@@ -35,16 +34,11 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectDAO.findAll
-        allCounts <- OpenAssignmentDAO.countForProjects
+        allCounts <- TaskDAO.countOpenInstancesByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
-            openAssignments <- project.assignmentConfiguration match {
-              case WebknossosAssignmentConfig =>
-                Fox.successful(allCounts.get(project.name).getOrElse(0))
-              case _: MTurkAssignmentConfig =>
-                MTurkProjectDAO.findByProject(project.name).map(_.numberOfOpenAssignments)
-            }
-            r <- Project.projectPublicWritesWithStatus(project, openAssignments, request.identity)
+            openTaskInstances <- Fox.successful(allCounts.get(project._id.stringify).getOrElse(0))
+            r <- Project.projectPublicWritesWithStatus(project, openTaskInstances, request.identity)
           } yield r
         }
       } yield {
@@ -66,7 +60,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- project.isOwnedBy(request.identity) ?~> Messages("project.remove.notAllowed")
+        _ <- project.isDeletableBy(request.identity) ?~> Messages("project.remove.notAllowed")
         _ <- ProjectService.remove(project) ?~> Messages("project.remove.failure")
       } yield {
         JsonOk(Messages("project.remove.success"))
@@ -76,15 +70,14 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
-        case Empty if request.identity.isAdminOf(project.team) =>
+        case Empty if request.identity.isTeamManagerOf(project._team) =>
           for {
-            _ <- ProjectService.reportToExternalService(project, request.body)
             _ <- ProjectDAO.insert(project)
             js <- Project.projectPublicWrites(project, request.identity)
           } yield Ok(js)
-        case Empty                                                       =>
+        case Empty =>
           Future.successful(JsonBadRequest(Messages("team.notAllowed")))
-        case _                                                           =>
+        case _ =>
           Future.successful(JsonBadRequest(Messages("project.name.alreadyTaken")))
       }
     }
@@ -94,7 +87,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for{
         project <- ProjectDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
-        _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("team.notAllowed")
+        _ <- request.identity.teamManagerTeamIds.contains(project._team) ?~> Messages("team.notAllowed")
         updatedProject <- ProjectService.update(project._id, project, updateRequest) ?~> Messages("project.update.failed", projectName)
         js <- Project.projectPublicWrites(updatedProject, request.identity)
       } yield Ok(js)
@@ -125,7 +118,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        _ <- request.identity.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
+        _ <- request.identity.teamManagerTeamIds.contains(project._team) ?~> Messages("notAllowed")
         tasks <- project.tasks
         js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
       } yield {
@@ -133,15 +126,23 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       }
   }
 
+  def incrementEachTasksInstances(projectName: String, delta: Option[Long]) = SecuredAction.async {
+    implicit request =>
+      for {
+        _ <- (delta.getOrElse(1L) >= 0) ?~> Messages("project.increaseTaskInstances.negative")
+        _ <- TaskDAO.incrementTotalInstancesOfAllWithProject(projectName, delta.getOrElse(1L))
+        updatedProject <- ProjectDAO.findOneByName(projectName)
+        openInstanceCount <- TaskDAO.countOpenInstancesForProject(projectName)
+        js <- Project.projectPublicWritesWithStatus(updatedProject, openInstanceCount, request.identity)
+      } yield Ok(js)
+  }
+
   def usersWithOpenTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        tasks <- TaskDAO.findAllByProject(projectName)
-        annotations <- AnnotationDAO.findAllUnfinishedByTaskIds(tasks.map(_._id))
-        userIds = annotations.map(_._user).flatten
-        users <- UserDAO.findAllByIds(userIds)
+        emails <- ProjectSQLDAO.findUsersWithOpenTasks(projectName)
       } yield {
-        Ok(Json.toJson(users.map(_.email)))
+        Ok(Json.toJson(emails))
       }
   }
 }

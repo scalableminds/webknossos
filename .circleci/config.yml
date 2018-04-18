@@ -3,7 +3,6 @@ jobs:
   build_test_deploy:
     machine: true
     environment:
-      SBT_VERSION_TAG: sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
       USER_NAME: circleci
       USER_UID: 1001
       USER_GID: 1001
@@ -12,10 +11,10 @@ jobs:
       - checkout
       - run:
           name: Pull sbt docker image
-          command: docker pull scalableminds/sbt:$SBT_VERSION_TAG
+          command: docker-compose pull base
       - run:
           name: Prepare dependency folders
-          command: mkdir -p ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
+          command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache
       - restore_cache:
           keys:
             - cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
@@ -23,25 +22,42 @@ jobs:
 
       - run:
           name: Install frontend dependencies
-          command: docker-compose run base yarn install
+          command: docker-compose run base yarn install --frozen-lockfile
       - run:
           name: Build frontend documentation
           command: docker-compose run base yarn run docs
       - run:
-          name: Build code (sbt and webpack)
-          command: docker-compose run base sbt clean compile stage
+          name: Build webknossos (sbt and webpack)
+          command: |
+            if [ "${CIRCLE_BRANCH}" == "master" ]; then
+              docker-compose run compile sbt clean compile stage
+            else
+              docker-compose run compile sbt compile stage
+            fi
+      - run:
+          name: Build webknossos-datastore (sbt)
+          command: docker-compose run base sbt "project webknossosDatastore" compile stage
 
       - save_cache:
-          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}
+          key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}
           paths:
+            - "project/target"
+            - "target"
             - "~/.m2"
             - "~/.ivy2"
             - "~/.sbt"
             - "~/.yarn-cache"
 
       - run:
-          name: Build docker image
-          command: docker build --no-cache --pull -t scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} .
+          name: Build webknossos docker image
+          command: |
+            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose build --pull webknossos
+
+      - run:
+          name: Build webknossos-datastore docker image
+          command: |
+            cd webknossos-datastore
+            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose build --pull webknossos-datastore
 
       - run:
           name: Lint frontend code
@@ -59,24 +75,53 @@ jobs:
               docker-compose run e2e-tests && s=0 && break || s=$?
             done
             (exit $s)
+
       - run:
-          name: Run smoke test
+          name: Start webknossos
+          background: true
+          command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos
+      - run:
+          name: Run webknossos smoke test
           command: |
-            set -x
-            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up -d webknossos
             sleep 10
             ./test/infrastructure/deployment.bash
+      - run:
+          name: Stop webknossos
+          command: docker-compose down --volumes --remove-orphans
+
+      - run:
+          name: Start webknossos-datastore
+          background: true
+          command: |
+            cd webknossos-datastore
+            DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos-datastore
+      - run:
+          name: Run webknossos-datastore smoke test
+          command: |
+            sleep 10
+            curl --retry 3 --max-time 15 -v http://localhost:9090/data/health
+      - run:
+          name: Stop webknossos-datastore
+          command: |
+            cd webknossos-datastore
             docker-compose down --volumes --remove-orphans
 
-      # - run:
-      #     name: Deploy docker images
-      #     command: |
-      #       set -x
-      #       docker login -u $DOCKER_USER -p $DOCKER_PASS
-      #       docker tag scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} scalableminds/webknossos:${CIRCLE_BRANCH}
-      #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-      #       docker push scalableminds/webknossos:${CIRCLE_BRANCH}
-      #       docker logout
+      - run:
+          name: Push docker images
+          command: |
+            docker login -u $DOCKER_USER -p $DOCKER_PASS
+            docker tag \
+              scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+              scalableminds/webknossos:${CIRCLE_BRANCH}
+            docker tag \
+              scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+              scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+            docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+            docker push scalableminds/webknossos:${CIRCLE_BRANCH}
+            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+            docker logout
+
 workflows:
   version: 2
   default:

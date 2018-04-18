@@ -25,11 +25,14 @@ import type {
   Vector2,
   Vector3,
   ModeType,
+  ContourModeType,
   VolumeToolType,
   ControlModeType,
   BoundingBoxType,
 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
+import DiffableMap from "libs/diffable_map";
+import EdgeCollection from "oxalis/model/edge_collection";
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 import type { ActionType } from "oxalis/model/actions/actions";
 import type {
@@ -62,6 +65,7 @@ export type NodeType = {
   +resolution: number,
   +radius: number,
   +timestamp: number,
+  +interpolation: boolean,
 };
 
 export type BranchPointType = {
@@ -69,7 +73,7 @@ export type BranchPointType = {
   +nodeId: number,
 };
 
-export type NodeMapType = { +[number]: NodeType };
+export type NodeMapType = DiffableMap<number, NodeType>;
 
 export type BoundingBoxObjectType = {
   +topLeft: Vector3,
@@ -85,17 +89,12 @@ type TreeTypeBase = {
   +timestamp: number,
   +comments: Array<CommentType>,
   +branchPoints: Array<BranchPointType>,
-  +edges: Array<EdgeType>,
+  +edges: EdgeCollection,
   +isVisible: boolean,
 };
 
 export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
-};
-
-type TemporaryMutableNodeMapType = { [number]: NodeType };
-export type TemporaryMutableTreeType = TreeTypeBase & {
-  +nodes: TemporaryMutableNodeMapType,
 };
 
 export type MappingType = {
@@ -117,7 +116,7 @@ export type DataLayerType = {
   +name: string,
   +category: CategoryType,
   +boundingBox: BoundingBoxObjectType,
-  +resolutions: Array<number>,
+  +resolutions: Array<Vector3>,
   +elementClass: ElementClassType,
   +mappings?: Array<MappingType>,
 };
@@ -143,11 +142,13 @@ export type DatasetType = {
 };
 
 export type TreeMapType = { +[number]: TreeType };
+export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 
 export type SkeletonTracingType = {
   +annotationId: string,
+  +createdTimestamp: number,
   +type: "skeleton",
   +trees: TreeMapType,
   +name: string,
@@ -167,6 +168,7 @@ export type SkeletonTracingType = {
 
 export type VolumeTracingType = {
   +annotationId: string,
+  +createdTimestamp: number,
   +type: "volume",
   +name: string,
   +version: number,
@@ -174,6 +176,7 @@ export type VolumeTracingType = {
   +activeTool: VolumeToolType,
   +activeCellId: number,
   +lastCentroid: ?Vector3,
+  +contourTracingMode: ContourModeType,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
   +tracingId: string,
@@ -188,6 +191,7 @@ export type VolumeTracingType = {
 
 export type ReadOnlyTracingType = {
   +annotationId: string,
+  +createdTimestamp: number,
   +type: "readonly",
   +name: string,
   +version: number,
@@ -210,7 +214,6 @@ export type DatasetLayerConfigurationType = {
 };
 
 export type DatasetConfigurationType = {
-  +datasetName: string,
   +fourBit: boolean,
   +interpolation: boolean,
   +keyboardDelay: number,
@@ -219,6 +222,9 @@ export type DatasetConfigurationType = {
   },
   +quality: number,
   +segmentationOpacity: number,
+  +position?: Vector3,
+  +zoom?: number,
+  +rotation?: Vector3,
 };
 
 export type UserConfigurationType = {
@@ -227,8 +233,6 @@ export type UserConfigurationType = {
   +crosshairSize: number,
   +displayCrosshair: boolean,
   +dynamicSpaceDirection: boolean,
-  +inverseX: boolean,
-  +inverseY: boolean,
   +isosurfaceBBsize: number,
   +isosurfaceDisplay: boolean,
   +isosurfaceResolution: number,
@@ -332,7 +336,6 @@ export type OxalisState = {
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
-    datasetName: "",
     fourBit: true,
     interpolation: false,
     keyboardDelay: 342,
@@ -346,8 +349,6 @@ export const defaultState: OxalisState = {
     crosshairSize: 0.1,
     displayCrosshair: true,
     dynamicSpaceDirection: true,
-    inverseX: false,
-    inverseY: false,
     isosurfaceBBsize: 1,
     isosurfaceDisplay: false,
     isosurfaceResolution: 80,
@@ -389,6 +390,7 @@ export const defaultState: OxalisState = {
   tracing: {
     annotationId: "",
     boundingBox: null,
+    createdTimestamp: 0,
     userBoundingBox: null,
     type: "readonly",
     name: "",
@@ -403,7 +405,6 @@ export const defaultState: OxalisState = {
       allowAccess: true,
       allowDownload: false,
       somaClickingAllowed: false,
-      advancedOptionsAllowed: true,
       allowedModes: ["orthogonal", "oblique", "flight"],
     },
     tags: [],

@@ -53,7 +53,7 @@ object DefaultMails {
   def activatedMail(name: String, receiver: String) =
     Mail(
       from = defaultFrom,
-      subject = s"Your account on $uri got activated",
+      subject = s"Your account on $uri was activated",
       bodyText = html.mail.validated(name, uri).body,
       recipients = List(receiver))
 

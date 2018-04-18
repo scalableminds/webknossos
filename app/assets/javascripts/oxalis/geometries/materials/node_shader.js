@@ -85,7 +85,7 @@ class NodeShader {
   }
 
   getVertexShader(): string {
-    return `\
+    return `
 precision highp float;
 precision highp int;
 
@@ -172,7 +172,7 @@ void main() {
       // - finally, the non-fractional part of each digit is removed (since it is covered by a more significant digit)
       color = fract(floor(nodeId / vec3(255.0 * 255.0, 255.0, 1.0)) / 255.0);
       // Enlarge the nodes on mobile, so they're easier to select
-      gl_PointSize = isTouch == 1 ? max(gl_PointSize * 1.5, 30.0) : gl_PointSize * 1.5;
+      gl_PointSize = isTouch == 1 ? max(gl_PointSize * 1.5, 30.0) : max(gl_PointSize * 1.5, 10.0);
       return;
     }
 
@@ -186,12 +186,11 @@ void main() {
     if (type == ${NodeTypes.BRANCH_POINT.toFixed(1)}) {
       color = shiftColor(color, 0.5);
     }
-}\
-`;
+}`;
   }
 
   getFragmentShader(): string {
-    return `\
+    return `
 precision highp float;
 
 varying vec3 color;
@@ -199,8 +198,7 @@ varying vec3 color;
 void main()
 {
     gl_FragColor = vec4(color, 1.0);
-}\
-`;
+}`;
   }
 }
 export default NodeShader;

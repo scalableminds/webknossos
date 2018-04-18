@@ -1,6 +1,7 @@
 // @flow
 import Request from "libs/request";
 import Toast from "libs/toast";
+import type { MessageType } from "libs/toast";
 import Utils from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
@@ -10,26 +11,34 @@ import type {
   APITaskTypeType,
   APITeamType,
   APIProjectType,
+  APIProjectCreatorType,
+  APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
   APIDatastoreType,
   NDStoreConfigType,
   DatasetConfigType,
-  APIRoleType,
   APIDatasetType,
+  APIDataSourceType,
+  APIDataSourceWithMessagesType,
   APITimeIntervalType,
   APIUserLoggedTimeType,
   APITimeTrackingType,
+  APIProjectProgressReportType,
+  APIOpenTasksReportType,
+  APIOrganizationType,
+  APIBuildInfoType,
+  APITracingType,
+  APIFeatureToggles,
 } from "admin/api_flow_types";
-import type { QueryObjectType } from "admin/views/task/task_search_form";
-import type { NewTaskType, TaskCreationResponseType } from "admin/views/task/task_create_bulk_view";
+import type { QueryObjectType } from "admin/task/task_search_form";
+import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
+import type { DatasetConfigurationType } from "oxalis/store";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
 type NewTeamType = {
   +name: string,
-  +parent: string,
-  +roles: Array<APIRoleType>,
 };
 
 function assertResponseLimit(collection) {
@@ -39,7 +48,6 @@ function assertResponseLimit(collection) {
 }
 
 // ### Do with userToken
-
 let tokenRequestPromise;
 function requestUserToken(): Promise<string> {
   if (tokenRequestPromise) {
@@ -54,8 +62,22 @@ function requestUserToken(): Promise<string> {
   return tokenRequestPromise;
 }
 
+export function getSharingToken(): ?string {
+  if (location != null) {
+    const params = Utils.getUrlParamsObject();
+    if (params != null && params.token != null) {
+      return ((params.token: any): string);
+    }
+  }
+  return null;
+}
+
 let tokenPromise;
 export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise<*> {
+  const sharingToken = getSharingToken();
+  if (sharingToken != null) {
+    return fn(sharingToken);
+  }
   if (!tokenPromise) tokenPromise = requestUserToken();
   return tokenPromise.then(fn).catch(error => {
     if (error.status === 403) {
@@ -136,7 +158,6 @@ export async function deleteScript(scriptId: string): Promise<void> {
 
 export async function createScript(script: APIScriptType): Promise<APIScriptType> {
   return Request.sendJSONReceiveJSON("/api/scripts", {
-    method: "POST",
     data: script,
   });
 }
@@ -169,9 +190,10 @@ export async function getTaskType(taskTypeId: string): Promise<APITaskTypeType> 
   return Request.receiveJSON(`/api/taskTypes/${taskTypeId}`);
 }
 
-export async function createTaskType(taskType: APITaskTypeType): Promise<APITaskTypeType> {
+export async function createTaskType(
+  taskType: $Diff<APITaskTypeType, { id: string }>,
+): Promise<APITaskTypeType> {
   return Request.sendJSONReceiveJSON("/api/taskTypes", {
-    method: "POST",
     data: taskType,
   });
 }
@@ -193,20 +215,6 @@ export async function getTeams(): Promise<Array<APITeamType>> {
 
 export async function getEditableTeams(): Promise<Array<APITeamType>> {
   const teams = await Request.receiveJSON("/api/teams?isEditable=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
-export async function getRootTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?isRoot=true");
-  assertResponseLimit(teams);
-
-  return teams;
-}
-
-export async function getAdminTeams(): Promise<Array<APITeamType>> {
-  const teams = await Request.receiveJSON("/api/teams?amIAnAdmin=true");
   assertResponseLimit(teams);
 
   return teams;
@@ -250,26 +258,35 @@ export async function getProject(projectName: string): Promise<APIProjectType> {
   return transformProject(project);
 }
 
+export async function increaseProjectTaskInstances(
+  projectName: string,
+  delta?: number = 1,
+): Promise<APIProjectType> {
+  const project = await Request.receiveJSON(
+    `/api/projects/${projectName}/incrementEachTasksInstances?delta=${delta}`,
+  );
+  return transformProject(project);
+}
+
 export async function deleteProject(projectName: string): Promise<void> {
   return Request.receiveJSON(`/api/projects/${projectName}`, {
     method: "DELETE",
   });
 }
 
-export async function createProject(project: APIProjectType): Promise<APIProjectType> {
+export async function createProject(project: APIProjectCreatorType): Promise<APIProjectType> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
   });
 
   return Request.sendJSONReceiveJSON("/api/projects", {
-    method: "POST",
     data: transformedProject,
   });
 }
 
 export async function updateProject(
   projectName: string,
-  project: APIProjectType,
+  project: APIProjectUpdaterType,
 ): Promise<APIProjectType> {
   const transformedProject = Object.assign({}, project, {
     expectedTime: Utils.minutesToMilliseconds(project.expectedTime),
@@ -292,6 +309,14 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
 }
 
 // ### Tasks
+export async function peekNextTasks(): Promise<Array<APITaskType>> {
+  return Request.receiveJSON("/api/user/tasks/peek");
+}
+
+export async function requestTask(): Promise<APIAnnotationType> {
+  return Request.receiveJSON("/api/user/tasks/request");
+}
+
 export async function getAnnotationsForTask(taskId: string): Promise<void> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
 }
@@ -366,22 +391,76 @@ export async function updateTask(taskId: string, task: NewTaskType): Promise<API
   return transformTask(updatedTask);
 }
 
+export async function finishTask(annotationId: string): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/Task/${annotationId}/finish`);
+}
+
+export async function transferTask(
+  annotationId: string,
+  userId: string,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON(`/api/annotations/Task/${annotationId}/transfer`, {
+    data: {
+      userId,
+    },
+  });
+}
+
 // ### Annotations
-export async function reOpenAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/reopen`);
+export async function reOpenAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reopen`);
 }
 
-export async function finishAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/finish`);
+type EditableAnnotationType = {
+  name: string,
+  description: string,
+  isPublic: boolean,
+  tags: Array<string>,
+};
+
+export async function editAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+  data: $Shape<EditableAnnotationType>,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
+    data,
+  });
 }
 
-export async function resetAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}/reset`);
+export async function finishAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/finish`);
 }
 
-export async function deleteAnnotation(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/annotations/Task/${annotationId}`, {
+export async function resetAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reset`);
+}
+
+export async function deleteAnnotation(
+  annotationId: string,
+  annotationType: APITracingType,
+): Promise<APIAnnotationType> {
+  return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}`, {
     method: "DELETE",
+  });
+}
+
+export async function finishAllAnnotations(
+  selectedAnnotationIds: Array<string>,
+): Promise<{ messages: Array<MessageType> }> {
+  return Request.sendJSONReceiveJSON("/api/annotations/Explorational/finish", {
+    data: {
+      annotations: selectedAnnotationIds,
+    },
   });
 }
 
@@ -389,7 +468,7 @@ export async function copyAnnotationToUserAccount(
   annotationId: string,
   tracingType: string,
 ): Promise<APIAnnotationType> {
-  const url = `/annotations/${tracingType}/${annotationId}/duplicate`;
+  const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url);
 }
 
@@ -400,8 +479,18 @@ export async function getAnnotationInformation(
   // Include /readOnly part whenever it is in the pathname
   const isReadOnly = location.pathname.endsWith("/readOnly");
   const readOnlyPart = isReadOnly ? "readOnly/" : "";
-  const infoUrl = `/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
+  const infoUrl = `/api/annotations/${tracingType}/${annotationId}/${readOnlyPart}info`;
   return Request.receiveJSON(infoUrl);
+}
+
+export async function createExplorational(
+  dataset: APIDatasetType,
+  typ: "volume" | "skeleton",
+  withFallback: boolean,
+) {
+  const url = `/api/datasets/${dataset.name}/createExplorational`;
+
+  return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
 // ### Datasets
@@ -412,11 +501,70 @@ export async function getDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
+export async function getDatasetDatasource(
+  dataset: APIDatasetType,
+): Promise<APIDataSourceWithMessagesType> {
+  return doWithToken(token =>
+    Request.receiveJSON(`${dataset.dataStore.url}/data/datasets/${dataset.name}?token=${token}`),
+  );
+}
+
+export async function updateDatasetDatasource(
+  datasetName: string,
+  dataStoreUrl: string,
+  datasource: APIDataSourceType,
+): Promise<void> {
+  return doWithToken(token =>
+    Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetName}?token=${token}`, {
+      data: datasource,
+    }),
+  );
+}
+
 export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   const datasets = await Request.receiveJSON("/api/datasets?isActive=true");
   assertResponseLimit(datasets);
 
   return datasets;
+}
+
+export async function getDataset(
+  datasetName: string,
+  sharingToken?: string,
+): Promise<APIDatasetType> {
+  const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
+  const dataset = await Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
+  return dataset;
+}
+
+export async function updateDataset(
+  datasetName: string,
+  dataset: APIDatasetType,
+): Promise<APIDatasetType> {
+  const updatedDataset = await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
+    data: dataset,
+  });
+  return updatedDataset;
+}
+
+export async function getDatasetDefaultConfiguration(
+  datasetName: string,
+): Promise<DatasetConfigurationType> {
+  const datasetDefaultConfiguration = await Request.receiveJSON(
+    `/api/dataSetConfigurations/default/${datasetName}`,
+  );
+  return datasetDefaultConfiguration;
+}
+
+export async function updateDatasetDefaultConfiguration(
+  datasetName: string,
+  datasetConfiguration: DatasetConfigurationType,
+): Promise<{}> {
+  const datasetDefaultConfiguration = await Request.sendJSONReceiveJSON(
+    `/api/dataSetConfigurations/default/${datasetName}`,
+    { data: datasetConfiguration },
+  );
+  return datasetDefaultConfiguration;
 }
 
 export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
@@ -431,13 +579,39 @@ export async function addNDStoreDataset(
   });
 }
 
-export async function addDataset(datatsetConfig: DatasetConfigType): Promise<APIAnnotationType> {
-  return doWithToken(token =>
+export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
+  doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datatsetConfig,
       host: datatsetConfig.datastore,
     }),
   );
+}
+
+export async function updateDatasetTeams(
+  datasetName: string,
+  newTeams: Array<string>,
+): Promise<APIDatasetType> {
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}/teams`, {
+    data: newTeams,
+  });
+}
+
+export async function triggerDatasetCheck(datatstoreHost: string): Promise<void> {
+  doWithToken(token =>
+    Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
+      host: datatstoreHost,
+    }),
+  );
+}
+
+export async function getDatasetSharingToken(datasetName: string): Promise<string> {
+  const { sharingToken } = await Request.receiveJSON(`/api/datasets/${datasetName}/sharingToken`);
+  return sharingToken;
+}
+
+export async function revokeDatasetSharingToken(datasetName: string): Promise<void> {
+  await Request.triggerRequest(`/api/datasets/${datasetName}/sharingToken`, { method: "DELETE" });
 }
 
 // #### Datastores
@@ -465,7 +639,7 @@ export async function getTimeTrackingForUserByMonth(
     `/api/time/userlist/${year}/${month}?email=${userEmail}`,
   );
 
-  const timelogs = timeTrackingData[0].timelogs;
+  const { timelogs } = timeTrackingData[0];
   assertResponseLimit(timelogs);
 
   return timelogs;
@@ -481,8 +655,40 @@ export async function getTimeTrackingForUser(
       1000}`,
   );
 
-  const timelogs = timeTrackingData.timelogs;
+  const { timelogs } = timeTrackingData;
   assertResponseLimit(timelogs);
 
   return timelogs;
+}
+
+export async function getProjectProgressReport(
+  teamId: string,
+  doNotCatch?: boolean = false,
+): Promise<Array<APIProjectProgressReportType>> {
+  const progressData = await Request.receiveJSON(`/api/teams/${teamId}/progressOverview`, {
+    doNotCatch,
+  });
+  assertResponseLimit(progressData);
+  return progressData;
+}
+
+export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenTasksReportType>> {
+  const openTasksData = await Request.receiveJSON(`/api/teams/${teamId}/openTasksOverview`);
+  assertResponseLimit(openTasksData);
+  return openTasksData;
+}
+
+// ### Organizations
+export async function getOrganizations(): Promise<Array<APIOrganizationType>> {
+  return Request.receiveJSON("/api/organizations");
+}
+
+// ### BuildInfo
+export function getBuildInfo(): Promise<APIBuildInfoType> {
+  return Request.receiveJSON("/api/buildinfo");
+}
+
+// ### Feature Selection
+export async function getFeatureToggles(): Promise<APIFeatureToggles> {
+  return Request.receiveJSON("/api/features");
 }

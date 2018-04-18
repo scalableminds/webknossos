@@ -1,3 +1,4 @@
+@import "../../../node_modules/antd/lib/style/v2-compatible-reset.less";
 @import "../../../node_modules/antd/dist/antd.css";
 @import "../../../node_modules/font-awesome/less/font-awesome.less";
 
@@ -33,11 +34,13 @@ body {
 }
 
 .logo {
-  background: url(/assets/images/oxalis-white.png) 15px center no-repeat;
+  background: url(/assets/images/oxalis.svg) 15px center no-repeat;
   padding-left: 43px;
   height: 40px;
   float: left;
   margin-top: 6px;
+  background-size: 20px 20px;
+  filter: invert(1);
 }
 
 .bold {
@@ -167,19 +170,12 @@ i {
   word-wrap: break-word;
   max-width: 154px;
   font-family: monospace;
-  font-size: 12px;
+  font-size: 14px;
+  width: 135px;
 }
 
 img.img-50 {
   width: 47%;
-}
-
-.divider-vertical {
-  display: inline-block;
-  vertical-align: middle;
-  height: 25px;
-  margin: 0 8px;
-  border-right: 1px solid #e5e5e5;
 }
 
 @media (min-width: 1200px) {

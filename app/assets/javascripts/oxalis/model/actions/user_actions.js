@@ -7,9 +7,17 @@ type SetActiveUserType = {
   user: APIUserType,
 };
 
-export type UserActionType = SetActiveUserType;
+type LogoutUserType = {
+  type: "LOGOUT_USER",
+};
+
+export type UserActionType = SetActiveUserType | LogoutUserType;
 
 export const setActiveUserAction = (user: APIUserType): SetActiveUserType => ({
   type: "SET_ACTIVE_USER",
   user,
+});
+
+export const logoutUserAction = (): LogoutUserType => ({
+  type: "LOGOUT_USER",
 });

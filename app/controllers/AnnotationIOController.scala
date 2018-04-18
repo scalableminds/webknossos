@@ -2,19 +2,20 @@ package controllers
 
 import javax.inject.Inject
 
-import oxalis.security.WebknossosSilhouette.{UserAwareRequest, UserAwareAction, SecuredRequest, SecuredAction}
-import com.scalableminds.braingames.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
-import com.scalableminds.braingames.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
+import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.typesafe.scalalogging.LazyLogging
+import models.annotation.AnnotationState._
 import models.annotation.nml.{NmlService, NmlWriter}
 import models.annotation.{AnnotationType, _}
 import models.binary.{DataSet, DataSetDAO}
 import models.project.{Project, ProjectDAO}
 import models.task.{Task, _}
 import models.user._
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
@@ -116,21 +117,21 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
         tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference)
-        scale <- dataSet.dataSource.toUsable.map(_.scale)
+        scale <- dataSet.dataSource.scaleOpt
       } yield {
-        (NmlWriter.toNmlStream(Left(tracing), annotation.description, scale), name + ".nml")
+        (NmlWriter.toNmlStream(Left(tracing), annotation, scale), name + ".nml")
       }
     }
 
     def volumeToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
         (tracing, data) <- dataSet.dataStore.getVolumeTracing(annotation.tracingReference)
-        scale <- dataSet.dataSource.toUsable.map(_.scale)
+        scale <- dataSet.dataSource.scaleOpt
       } yield {
         (Enumerator.outputStream { outputStream =>
           ZipIO.zip(
             List(
-              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(Right(tracing), annotation.description, scale)),
+              new NamedEnumeratorStream(name + ".nml", NmlWriter.toNmlStream(Right(tracing), annotation, scale)),
               new NamedEnumeratorStream("data.zip", data)
             ), outputStream)
         }, name + ".zip")
@@ -166,13 +167,13 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def createProjectZip(project: Project) =
       for {
         tasks <- TaskDAO.findAllByProject(project.name)
-        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
+        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state == Finished))
         zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
       } yield zip
 
     for {
       project <- ProjectDAO.findOneById(projectId) ?~> Messages("project.notFound", projectId)
-      _ <- user.adminTeamNames.contains(project.team) ?~> Messages("notAllowed")
+      _ <- user.teamManagerTeamIds.contains(project._team) ?~> Messages("notAllowed")
       zip <- createProjectZip(project)
     } yield {
       Ok.sendFile(zip.file)
@@ -181,13 +182,13 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
   def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
     def createTaskZip(task: Task): Fox[TemporaryFile] = task.annotations.flatMap { annotations =>
-      val finished = annotations.filter(_.state.isFinished)
+      val finished = annotations.filter(_.state == Finished)
       AnnotationService.zipAnnotations(finished, task.id + "_nmls.zip")
     }
 
     for {
       task <- TaskDAO.findOneById(taskId).toFox ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(user, task.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(user, task._team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }
@@ -196,25 +197,14 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- TaskDAO.findAllByTaskType(taskType._id)
-        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state.isFinished))
+        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state == Finished))
         zip <- AnnotationService.zipAnnotations(annotations, taskType.summary + "_nmls.zip")
       } yield zip
 
     for {
       tasktype <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
-      _ <- ensureTeamAdministration(user, tasktype.team) ?~> Messages("notAllowed")
+      _ <- ensureTeamAdministration(user, tasktype._team) ?~> Messages("notAllowed")
       zip <- createTaskTypeZip(tasktype)
     } yield Ok.sendFile(zip.file)
-  }
-
-  def userDownload(userId: String) = SecuredAction.async { implicit request =>
-    for {
-      user <- UserService.findOneById(userId, useCache = true) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      annotations <- AnnotationService.findTasksOf(user, isFinished = Some(true), limit = Int.MaxValue)
-      zipped <- AnnotationService.zipAnnotations(annotations, user.abreviatedName + "_nmls.zip")
-    } yield {
-      Ok.sendFile(zipped.file)
-    }
   }
 }

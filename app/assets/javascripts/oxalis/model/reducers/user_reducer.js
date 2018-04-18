@@ -12,6 +12,11 @@ function UserReducer(state: OxalisState, action: ActionType): OxalisState {
         activeUser: { $set: action.user },
       });
     }
+    case "LOGOUT_USER": {
+      return update(state, {
+        activeUser: { $set: null },
+      });
+    }
 
     default:
       return state;

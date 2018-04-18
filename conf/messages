@@ -6,7 +6,7 @@ error.invalidCredentials=Email or Password is wrong
 error.noUser=There is no user to this email
 error.notInDev=This feature is only available in dev mode
 
-notAllowed=You are not allowed to view this resource
+notAllowed=You are not authorized to view or edit this resource
 
 binary.payload.invalid=Couldn''t parse payload
 
@@ -38,19 +38,20 @@ image.create.failed=Failed to create image
 auth.tokenDeleted=Token was deleted
 auth.invalidToken=The token is invalid
 
-team.created=Team got created
+team.created=Team was created
 team.name.alreadyTaken=There already exists a team with this name. Choose a different name, please.
 team.notAllowed=You are not part of this team. Project can''t be created.
 team.nonExistentRole=Team {0} doesn''t contain role {1}.
 team.admin.notPossibleBy=User {1} can''t be assigned administrative rights in team {0} because he doesn't belong to the teams parent team.
 team.noOwner=This action is restricted to the creator of the team.
-team.admin.notAllowed=You are not allowed to administrate team {0}.
+team.admin.notAllowed=You are not authorized to administrate this team.
 team.notFound=Team could not be found.
 
 user.automaticUserActivation=User was activated automatically
 user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
 user.activated={0} has been activated
 user.notFound=User not found
+user.noAdmin=Access denied. Only admin users can execute this operation.
 user.deactivated=Your account hasn''t been activated yet
 user.deleted={0} has been deleted
 user.bulk.empty=No user has been chosen
@@ -69,7 +70,7 @@ user.login.failed=Invalid email or password
 user.login.success=You are now logged in
 user.logout.success=You have successfully logged out
 user.configuration.invalid=Couldn''t parse configuration
-user.configuration.updated=Your configuration got updated
+user.configuration.updated=Your configuration was updated
 user.configuration.dataset.invalid=Dataset configuration is invalid
 user.configuration.dataset.updated=Dataset configuration updated
 user.experience.set=Set experience of {0}
@@ -102,6 +103,7 @@ dataSet.import.failedWithoutError=Import of dataset {0} failed
 dataSet.import.failedWithError=Import of the dataset failed with error: {0}
 dataSet.import.directoryEmpty=Import failed because the dataset directory is empty
 dataSet.import.noLayers=Import failed because no data layers could be found
+dataSet.defaultconfiguration.updated=Dataset default configuration updated
 
 dataSource.notFound=Datasource not found on datastore server
 
@@ -159,12 +161,13 @@ projectName=Project Name
 project.name.alreadyTaken=Name already used
 project.name.invalidChars=Name contains invalid characters
 project.remove.confirm=Do you really want to delete this project? All annotations and tasks connected to this project will be deleted.
-project.remove.notAllowed=You are not allowed to remove this project. Talk to the owner.
-project.remove.success=Project got removed
+project.remove.notAllowed=You are not authorized to remove this project. Talk to the owner.
+project.remove.success=Project was removed
 project.remove.failure=Project couldn''t get removed
 project.notFound=Project {0} couldn''t be found
 project.update.failed=Project {0} update failed
 project.noAnnotations=We couldn''t find annotations for this project
+project.increaseTaskInstances.negative=Cannot increment task counts by negative number
 
 role.invalid=Invalid role
 role.removed=Removed role from {0}
@@ -174,13 +177,13 @@ tracing=Annotation
 tracing.notFound=Tracing couldn''t be found
 
 annotation.creationFailed=Failed to create annotation
-annotation.transfered=Annotation got transfered
+annotation.transfered=Annotation was transfered
 annotation.notFound=Annotation couldn''t be found
 annotation.invalid=Invalid annotation
 annotation.finished=Annotation is archived
 annotation.allFinished=All annotations are archived
-annotation.reopened=Annotation got reopened
-annotation.saved=Annotation got saved
+annotation.reopened=Annotation was reopened
+annotation.saved=Annotation was saved
 annotation.edit.success=Successfully updated annotation
 annotation.edit.failed=Updating the annotation failed
 annotation.finish.confirm=Are you sure you want to permanently finish this tracing?
@@ -188,7 +191,7 @@ annotation.reset.success=Annotation was successfully reset
 annotation.revert.skeletonOnly=Reverting an annotation is only implemented for skeleton tracings of tasks
 annotation.download.notAllowed=You can''t download this tracing
 annotation.notPossible=Couldn''t access annotation
-annotation.notInProgress=The tracing is not in progress and can''t be finished
+annotation.notActive=The tracing is not active and can''t be finished
 annotation.reset.failed=Couldn''t reset tracing to base
 annotation.merge.success=Merging successfully done
 annotation.merge.failed.compound=Couldn''t merge annotations for compound view
@@ -209,12 +212,12 @@ task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.bulk.processed=Tasks successfully processed
 task.finished=Task is finished
-task.assigned=You got a new task
+task.assigned=You was a new task
 task.tooManyOpenOnes=You already have too many open tasks
 task.requestAnother=Do you really want another task?
 task.unavailable=There is currently no task available
 task.notFound=Task couldn''t be found
-task.removed=Task got removed
+task.removed=Task was removed
 task.editSuccess=Task successfully edited
 task.noAnnotations=We couldn''t find finished annotations for this task
 task.instances.changeImpossible=Due to the project settings it is not possible to change the number of instances of this task
@@ -231,10 +234,12 @@ taskType.deleteSuccess=Task type ''{0}'' successfully deleted
 taskType.deleteFailure=Task type ''{0}'' deletion failed
 taskType.noAnnotations=We couldn''t find finished annotations for this task type
 
+org.team=You are not authorized to delete the organization wide team.
+
 time.invalidFormat=Time couldn''t get parsed.
 point.invalidFormat=Invalid format. Use something like: 4, 63, 24
 
-mturk.qualification.invalid=The entered qualification is unknown
-
 mail.welcome.subject = Welcome to ScalableMinds
 script.notFound=Script couldn''t be found
+
+sql.invalidBSONObjectId=Invalid BSONObjectID in SQL DB: {0}

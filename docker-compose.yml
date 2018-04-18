@@ -2,49 +2,34 @@ version: '2.1'
 
 services:
   webknossos:
+    build: .
     image: scalableminds/webknossos:${DOCKER_TAG:-master}
     ports:
       - "9000:9000"
     links:
       - mongo
+      - fossildb
+      - postgres
+    entrypoint: bin/oxalis
+    command:
+      - -Djava.io.tmpdir=disk
+      - -Dconfig.file=conf/application.conf
+      - -Djava.net.preferIPv4Stack=true
+      - -Dhttp.address=0.0.0.0
+      - -Ddatastore.fossildb.address=fossildb
+      - -Dmongodb.uri=mongodb://mongo:27017/webknossos
+      - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
     environment:
-      - PORT=9000
-      - MODE=dev
-
-  dev:
-    extends:
-      service: base
-    ports:
-      - "9000:9000"
-    links:
-      - mongo-dev
-    command: >
-      bash -c
-      "sbt -v -d -jvm-debug 5005 \"run
-      -Djava.net.preferIPv4Stack=true
-      -Dhttp.address=0.0.0.0
-      -Dhttp.port=$${PORT}
-      -Dmongodb.db=$${MONGO_DB}
-      -Dmongodb.url=$${MONGO_HOST}
-      -Dmongodb.port=$${MONGO_PORT}
-      -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
-      \""
-    environment:
-      - PORT=9000
-      - MONGO_HOST=mongo-dev
-      - MONGO_PORT=27017
-      - MONGO_DB=webknossos-dev
-    stdin_open: true
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
 
   base:
-    image: scalableminds/sbt:sbt-0.13.15_mongo-3.2.17_node-8.x_jdk-8
-    ports:
-      - "5005:5005"
+    image: scalableminds/sbt:sbt-0.13.15_mongo-3.4.10_node-9.x_jdk-8
     environment:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
       - USER_GID
       - TZ=${TZ:-Europe/Berlin}
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"
@@ -53,64 +38,100 @@ services:
       - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/${USER_NAME:-sbt-user}/.sbt"
       - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
 
-  frontend-dependencies:
+  compile:
     extends:
       service: base
-    command: yarn install
+    links:
+      - postgres
 
-  frontend-linting:
+  dev:
     extends:
       service: base
-    command: yarn run lint && yarn run am-i-pretty
-
-  frontend-flow:
-    extends:
-      service: base
-    command: yarn run flow
-
-  frontend-tests:
-    extends:
-      service: base
-    command: yarn test-verbose
-
-  frontend-docs:
-    extends:
-      service: base
-    command: yarn run docs
+    ports:
+      - "5005:5005"
+      - "9000:9000"
+    links:
+      - mongo-dev
+      - fossildb-dev
+      - postgres
+    command:
+      - bash
+      - -c
+      - >
+        sbt
+        -v -d -jvm-debug 5005
+        "run
+          -Djava.net.preferIPv4Stack=true
+          -Dhttp.address=0.0.0.0
+          -Ddatastore.fossildb.address=fossildb-dev
+          -Dmongodb.uri=$${MONGO_URI}
+          -Dpostgres.url=$${POSTGRES_URL}"
+    environment:
+      - PORT=9000
+      - MONGO_URI=mongodb://mongo-dev:27017/webknossos-dev
+    stdin_open: true
 
   e2e-tests:
     extends:
       service: base
-    command: >
-      bash -c
-      "sbt -v -d \"test-only * --
-      -Dconfig.file=./conf/application_$${MODE}.conf
-      -Djava.net.preferIPv4Stack=true
-      -Dhttp.address=0.0.0.0
-      -Dhttp.port=$${PORT}
-      -Dmongodb.db=$${MONGO_DB}
-      -Dmongodb.url=$${MONGO_HOST}
-      -Dmongodb.port=$${MONGO_PORT}
-      -Dmongodb.uri=mongodb://$${MONGO_HOST}:$${MONGO_PORT}/$${MONGO_DB}
-      \""
     ports:
+      - "5005:5005"
       - "9000:9000"
     links:
       - mongo
+      - postgres
+      - fossildb
+    command:
+      - bash
+      - -c
+      - >
+        sbt
+        -v -d
+        "test-only * --
+          -Dconfig.file=./conf/application.conf
+          -Djava.net.preferIPv4Stack=true
+          -Dhttp.address=0.0.0.0
+          -Ddatastore.fossildb.address=fossildb
+          -Dmongodb.uri=$${MONGO_URI}
+          -Dpostgres.url=$${POSTGRES_URL}
+          -Dapplication.insertInitialData=false"
     environment:
-      - MONGO_HOST=mongo
-      - MONGO_PORT=27017
-      - MONGO_DB=webknossos-testing
+      - MONGO_URI=mongodb://mongo:27017/webknossos-testing
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
       - PORT=9000
-      - MODE=dev
 
   mongo:
-    image: mongo
+    image: mongo:3.4
 
   mongo-dev:
-    image: mongo
+    extends:
+      service: mongo
     ports:
       - "27017:27017"
     volumes:
       - "./dev-db/configdb:/data/configdb"
       - "./dev-db/db:/data/db"
+
+  postgres:
+    image: postgres:10-alpine
+    environment:
+      POSTGRES_DB: webknossos
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+
+  fossildb:
+    image: scalableminds/fossildb:master__272
+    command:
+      - fossildb
+      - -c
+      - skeletons,skeletonUpdates,volumes,volumeData
+    user: ${USER_UID:-fossildb}:${USER_GID:-fossildb}
+
+  fossildb-dev:
+    extends:
+      service: fossildb
+    ports:
+      - "7155:7155"
+    volumes:
+      - "./fossildb/data:/fossildb/data"
+      - "./fossildb/backup:/fossildb/backup"

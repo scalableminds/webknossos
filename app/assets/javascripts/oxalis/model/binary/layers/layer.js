@@ -40,7 +40,7 @@ class Layer {
   upperBoundary: Vector3;
   mappings: ?Array<MappingType>;
   boundingBox: BoundingBoxObjectType;
-  resolutions: Array<number>;
+  resolutions: Array<Vector3>;
 
   constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     this.dataStoreInfo = dataStoreInfo;

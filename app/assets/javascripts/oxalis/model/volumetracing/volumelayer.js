@@ -101,7 +101,7 @@ class VolumeLayer {
   getContourList() {
     const volumeTracing = Store.getState().tracing;
     if (volumeTracing.type !== "volume") {
-      throw Error("getContourList must only be called in a volume tracing!");
+      throw new Error("getContourList must only be called in a volume tracing!");
     } else {
       return volumeTracing.contourList;
     }

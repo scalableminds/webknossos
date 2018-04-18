@@ -1,6 +1,5 @@
 package models.configuration
 
-import models.basics.BasicSettings
 import play.api.libs.json.{JsBoolean, JsValue, _}
 
 case class UserConfiguration(configuration: Map[String, JsValue]) {
@@ -11,7 +10,7 @@ case class UserConfiguration(configuration: Map[String, JsValue]) {
 
 }
 
-object UserConfiguration extends BasicSettings {
+object UserConfiguration {
 
   implicit val userConfigurationFormat = Json.format[UserConfiguration]
 
@@ -34,8 +33,6 @@ object UserConfiguration extends BasicSettings {
       "isosurfaceBBsize" -> JsNumber(1),
       "isosurfaceResolution" -> JsNumber(80),
       "newNodeNewTree" -> JsBoolean(false),
-      "inverseX" -> JsBoolean(false),
-      "inverseY" -> JsBoolean(false),
       "keyboardDelay" -> JsNumber(200),
       "particleSize" -> JsNumber(5),
       "overrideNodeRadius" -> JsBoolean(true),

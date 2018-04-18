@@ -35,13 +35,12 @@ class VolumeActionsView extends PureComponent<Props> {
           onChange={this.handleSetTool}
           value={this.props.volumeTracing.activeTool}
           style={{ marginRight: 10 }}
-          size="large"
         >
           <RadioButton value={VolumeToolEnum.MOVE}>Move</RadioButton>
           <RadioButton value={VolumeToolEnum.TRACE}>Trace</RadioButton>
           <RadioButton value={VolumeToolEnum.BRUSH}>Brush</RadioButton>
         </RadioGroup>
-        <ButtonGroup size="large">
+        <ButtonGroup>
           <ButtonComponent onClick={this.handleCreateCell}>Create new cell (C)</ButtonComponent>
         </ButtonGroup>
       </div>

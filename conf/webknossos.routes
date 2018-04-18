@@ -2,31 +2,12 @@
 # This file defines all application routes (Higher priority routes first)
 # ~~~~
 
-# The general pages
-GET           /                                                                 controllers.Application.index
-
-GET           /dashboard                                                        controllers.Authentication.empty
-GET           /impressum                                                        controllers.Application.impressum
-GET           /info                                                             controllers.Application.info
-GET           /thankyou                                                         controllers.Application.thankyou
-GET           /spotlight                                                        controllers.Authentication.empty
 GET           /api/buildinfo                                                    controllers.Application.buildInfo
+GET           /api/features                                                     controllers.Application.features
 POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
 
-# Help section
-GET           /help/faq                                                         controllers.Authentication.empty
-GET           /help/keyboardshortcuts                                           controllers.Authentication.empty
-
 # Authentication
-GET           /register                                                         controllers.Authentication.empty
-GET           /login                                                            controllers.Authentication.empty
-GET           /auth/register                                                    controllers.Authentication.empty
-GET           /auth/login                                                       controllers.Authentication.empty
-GET           /auth/resetPassword                                               controllers.Authentication.empty
-GET           /auth/changePassword                                              controllers.Authentication.empty
-GET           /auth/finishResetPassword                                         controllers.Authentication.empty
-GET           /auth/token                                                       controllers.Authentication.empty
-GET           /auth/autoLogin                                                   controllers.Authentication.autoLogin
+GET           /api/auth/autoLogin                                               controllers.Authentication.autoLogin
 POST          /api/auth/register                                                controllers.Authentication.handleRegistration
 POST          /api/auth/login                                                   controllers.Authentication.authenticate
 GET           /api/auth/token                                                   controllers.Authentication.getToken
@@ -39,18 +20,16 @@ GET           /api/auth/logout                                                  
 GET           /api/auth/sso                                                     controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 # Configurations
-GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default
 GET           /api/user/userConfiguration                                       controllers.ConfigurationController.read
 POST          /api/user/userConfiguration                                       controllers.ConfigurationController.update
-GET           /api/dataSetConfigurations/default                                controllers.ConfigurationController.defaultDataSet
 GET           /api/dataSetConfigurations/:dataSetName                           controllers.ConfigurationController.readDataSet(dataSetName: String)
 POST          /api/dataSetConfigurations/:dataSetName                           controllers.ConfigurationController.updateDataSet(dataSetName: String)
+GET           /api/dataSetConfigurations/default/:dataSetName                   controllers.ConfigurationController.readDataSetDefault(dataSetName: String)
+POST          /api/dataSetConfigurations/default/:dataSetName                   controllers.ConfigurationController.updateDataSetDefault(dataSetName: String)
 
 # Users
-GET           /user/tasks/request                                               controllers.TaskController.request
-GET           /user/tasks/peek                                                  controllers.TaskController.peekNext(limit: Int ?= 10)
-GET           /users/:id/details                                                controllers.Authentication.emptyWithWildcard(id)
-GET           /users                                                            controllers.Authentication.empty
+GET           /api/user/tasks/request                                           controllers.TaskController.request
+GET           /api/user/tasks/peek                                              controllers.TaskController.peekNext
 
 GET           /api/users                                                        controllers.UserController.list
 GET           /api/user                                                         controllers.UserController.current
@@ -63,31 +42,24 @@ GET           /api/users/:id/tasks                                              
 GET           /api/users/:id/loggedTime                                         controllers.UserController.userLoggedTime(id: String)
 POST          /api/users/loggedTime                                             controllers.UserController.usersLoggedTime
 GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int])
-GET           /api/users/:id/annotations/download                               controllers.AnnotationIOController.userDownload(id: String)
-
-# MTurk
-GET           /hits/:id                                                         controllers.MTurkController.startAssignment(id: String, workerId: String, assignmentId: String)
 
 # Team
-GET           /teams                                                            controllers.Authentication.empty
 GET           /api/teams                                                        controllers.TeamController.list
 GET           /api/allTeams                                                     controllers.TeamController.listAllTeams
 POST          /api/teams                                                        controllers.TeamController.create
 DELETE        /api/teams/:id                                                    controllers.TeamController.delete(id: String)
+GET           /api/teams/:id/openTasksOverview                                  controllers.ReportController.openTasksOverview(id: String)
+GET           /api/teams/:id/progressOverview                                   controllers.ReportController.projectProgressOverview(id: String)
 
 # DataSets
-GET           /datasets                                                         controllers.Authentication.empty
-GET           /datasets/:id/edit                                                controllers.Authentication.emptyWithWildcard(id)
-GET           /datasets/:id/import                                              controllers.Authentication.emptyWithWildcard(id)
-GET           /datasets/:dataSetName/view                                       controllers.DataSetController.view(dataSetName: String)
-GET           /datasets/upload                                                  controllers.Authentication.empty
-GET           /datasets/:dataSetName/trace                                      controllers.AnnotationController.createExplorational(dataSetName: String, typ: String, withFallback: Option[Boolean])
-
+POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String)
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
-GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)
+GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String, sharingToken: Option[String])
 POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
+GET           /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.getSharingToken(dataSetName: String)
+DELETE        /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.deleteSharingToken(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
 
@@ -101,67 +73,48 @@ POST          /api/datastores/:name/verifyUpload                                
 POST          /api/datastores/:name/validateUserAccess                          controllers.UserTokenController.validateUserAccess(name: String, token: String)
 
 # User access tokens for datastore authentification
-GET           /api/userToken/generate                                           controllers.UserTokenController.generateUserToken
+GET           /api/userToken/generate                                           controllers.UserTokenController.generateTokenForDataStore
 
 # Annotations
-POST          /annotations/upload                                               controllers.AnnotationIOController.upload
-GET           /annotations/:typ/:id/duplicate                                   controllers.AnnotationController.duplicate(typ: String, id: String)
-POST          /annotations/:typ/:id/edit                                        controllers.AnnotationController.editAnnotation(typ: String, id: String)
+POST          /api/annotations/upload                                           controllers.AnnotationIOController.upload
+GET           /api/annotations/:typ/:id/duplicate                               controllers.AnnotationController.duplicate(typ: String, id: String)
+POST          /api/annotations/:typ/:id/edit                                    controllers.AnnotationController.editAnnotation(typ: String, id: String)
 
-GET           /annotations/:typ/:id/finishAndRedirect                           controllers.AnnotationController.finishWithRedirect(typ: String, id: String)
-GET           /annotations/:typ/:id/finish                                      controllers.AnnotationController.finish(typ: String, id: String)
-POST          /annotations/:typ/finish                                          controllers.AnnotationController.finishAll(typ: String)
-GET           /annotations/:typ/:id/reopen                                      controllers.AnnotationController.reopen(typ: String, id: String)
-GET           /annotations/:typ/:id/reset                                       controllers.AnnotationController.reset(typ: String, id: String)
-GET           /annotations/:typ/:id/revert                                      controllers.AnnotationController.revert(typ: String, id: String, version: Int)
-POST          /annotations/:typ/:id/transfer                                    controllers.AnnotationController.transfer(typ: String, id: String)
+GET           /api/annotations/:typ/:id/finish                                  controllers.AnnotationController.finish(typ: String, id: String)
+POST          /api/annotations/:typ/finish                                      controllers.AnnotationController.finishAll(typ: String)
+GET           /api/annotations/:typ/:id/reopen                                  controllers.AnnotationController.reopen(typ: String, id: String)
+GET           /api/annotations/:typ/:id/reset                                   controllers.AnnotationController.reset(typ: String, id: String)
+GET           /api/annotations/:typ/:id/revert                                  controllers.AnnotationController.revert(typ: String, id: String, version: Int)
+POST          /api/annotations/:typ/:id/transfer                                controllers.AnnotationController.transfer(typ: String, id: String)
 
-GET           /annotations/:typ/:id                                             controllers.AnnotationController.empty(typ: String, id: String)
-GET           /annotations/:typ/:id/readOnly                                    controllers.AnnotationController.emptyReadOnly(typ: String, id: String)
 
-GET           /annotations/:typ/:id/info                                        controllers.AnnotationController.info(typ: String, id: String)
-GET           /annotations/:typ/:id/readOnly/info                               controllers.AnnotationController.infoReadOnly(typ: String, id: String)
-DELETE        /annotations/:typ/:id                                             controllers.AnnotationController.cancel(typ: String, id: String)
-GET           /annotations/:typ/:id/merge/:mergedTyp/:mergedId                  controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
-GET           /annotations/:typ/:id/download                                    controllers.AnnotationIOController.download(typ: String, id: String)
+
+GET           /api/annotations/:typ/:id/info                                    controllers.AnnotationController.info(typ: String, id: String)
+GET           /api/annotations/:typ/:id/readOnly/info                           controllers.AnnotationController.infoReadOnly(typ: String, id: String)
+DELETE        /api/annotations/:typ/:id                                         controllers.AnnotationController.cancel(typ: String, id: String)
+GET           /api/annotations/:typ/:id/merge/:mergedTyp/:mergedId              controllers.AnnotationController.merge(typ: String, id: String, mergedTyp: String, mergedId: String)
+GET           /api/annotations/:typ/:id/download                                controllers.AnnotationIOController.download(typ: String, id: String)
 
 GET           /api/annotations/:typ/:id/loggedTime                              controllers.AnnotationController.loggedTime(typ: String, id: String)
 
 # Tasks
-GET           /tasks                                                            controllers.Authentication.empty
-GET           /tasks/create                                                     controllers.Authentication.empty
-GET           /tasks/:id/edit                                                   controllers.Authentication.emptyWithWildcard(id: String)
-
-GET           /api/tasks                                                        controllers.TaskController.list
 POST          /api/tasks                                                        controllers.TaskController.create
 POST          /api/tasks/createFromFile                                         controllers.TaskController.createFromFile
-
 POST          /api/tasks/list                                                   controllers.TaskController.listTasks
 GET           /api/tasks/:id                                                    controllers.TaskController.read(id: String)
 DELETE        /api/tasks/:id                                                    controllers.TaskController.delete(id: String)
 PUT           /api/tasks/:id                                                    controllers.TaskController.update(id: String)
 GET           /api/tasks/:id/annotations                                        controllers.AnnotationController.annotationsForTask(id: String)
 
-
-# Task Types
-GET           /taskTypes                                                        controllers.Authentication.empty
-GET           /taskTypes/create                                                 controllers.Authentication.empty
-GET           /taskTypes/:id/tasks                                              controllers.Authentication.emptyWithWildcard(id: String)
-GET           /taskTypes/:id/edit                                               controllers.Authentication.emptyWithWildcard(id: String)
-
+# TaskTypes
 GET           /api/taskTypes                                                    controllers.TaskTypeController.list
 POST          /api/taskTypes                                                    controllers.TaskTypeController.create
 DELETE        /api/taskTypes/:id                                                controllers.TaskTypeController.delete(id: String)
 GET           /api/taskTypes/:id/tasks                                          controllers.TaskController.listTasksForType(id: String)
-
 GET           /api/taskTypes/:id                                                controllers.TaskTypeController.get(id: String)
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
 # Scripts
-GET           /scripts                                                          controllers.Authentication.empty
-GET           /scripts/create                                                   controllers.Authentication.empty
-GET           /scripts/:id/edit                                                 controllers.Authentication.emptyWithWildcard(id: String)
-
 GET           /api/scripts                                                      controllers.ScriptsController.list
 POST          /api/scripts                                                      controllers.ScriptsController.create
 GET           /api/scripts/:id                                                  controllers.ScriptsController.get(id: String)
@@ -169,11 +122,6 @@ PUT           /api/scripts/:id                                                  
 DELETE        /api/scripts/:id                                                  controllers.ScriptsController.delete(id: String)
 
 # Projects
-GET           /projects                                                         controllers.Authentication.empty
-GET           /projects/create                                                  controllers.Authentication.empty
-GET           /projects/:name/tasks                                             controllers.Authentication.emptyWithWildcard(name: String)
-GET           /projects/:name/edit                                              controllers.Authentication.emptyWithWildcard(name: String)
-
 GET           /api/projects                                                     controllers.ProjectController.list
 GET           /api/projects/assignments                                         controllers.ProjectController.listWithStatus
 POST          /api/projects                                                     controllers.ProjectController.create
@@ -181,24 +129,22 @@ GET           /api/projects/:name                                               
 DELETE        /api/projects/:name                                               controllers.ProjectController.delete(name: String)
 PUT           /api/projects/:name                                               controllers.ProjectController.update(name: String)
 GET           /api/projects/:name/tasks                                         controllers.ProjectController.tasksForProject(name: String)
+GET           /api/projects/:name/incrementEachTasksInstances                   controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
 GET           /api/projects/:name/usersWithOpenTasks                            controllers.ProjectController.usersWithOpenTasks(name:String)
 
-# GET           /api/statistics/webknossos                                        controllers.StatisticsController.oxalis(interval: String, start: Option[Long], end: Option[Long])
-# GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
-# GET           /api/statistics/assignments                                       controllers.StatisticsController.assignmentStatistics(start: Option[Long], end: Option[Long])
 # Statistics
-GET           /statistics                                                       controllers.Authentication.empty
-
 GET           /api/statistics/webknossos                                        controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])
 GET           /api/statistics/users                                             controllers.StatisticsController.users(interval: String, start: Option[Long], end: Option[Long], limit: Int)
 
 # Map static resources from the /public folder to the /public path
 GET           /assets/*file                                                     controllers.Assets.at(path="/public", file)
 
+#Organizations
+GET           /api/organizations                                                controllers.OrganizationController.listAllOrganizations
+
 #Timelogging
-GET           /timetracking                                                     controllers.Authentication.empty
 GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
 GET           /api/time/userlist/:year/:month                                   controllers.TimeController.getWorkingHoursOfUsers(email: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])
 GET           /api/time/user/:userId                                            controllers.TimeController.getWorkingHoursOfUser(userId: String, startDate: Long, endDate: Long)

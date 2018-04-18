@@ -9,7 +9,7 @@ export const tracing = {
       height: 131,
       depth: 384,
     },
-    resolutions: [1],
+    resolutions: [[1, 1, 1]],
     fallbackLayer: "segmentation",
     elementClass: "uint16",
     largestSegmentId: 21890,
@@ -21,7 +21,7 @@ export const tracing = {
 
 export const annotation = {
   created: "2017-08-09 20:19",
-  state: { isAssigned: true, isFinished: false, isInProgress: true },
+  state: "Active",
   id: "598b52293c00009906f043e7",
   name: "",
   typ: "Explorational",
@@ -36,7 +36,6 @@ export const annotation = {
     allowedModes: ["volume"],
     branchPointsAllowed: true,
     somaClickingAllowed: true,
-    advancedOptionsAllowed: true,
   },
   tracingTime: 0,
 };

@@ -3,9 +3,10 @@ import React from "react";
 import { notification, Icon } from "antd";
 
 export type ToastStyleType = "info" | "warning" | "success" | "error";
+export type MessageType = { success: string } | { error: string };
 
 const Toast = {
-  messages(messages: Array<{ success: string } | { error: string }>): void {
+  messages(messages: Array<MessageType>): void {
     messages.forEach(singleMessage => {
       if (singleMessage.success != null) {
         this.success(singleMessage.success);

@@ -24,25 +24,14 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def updateTeams(dataSet: DataSet, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
     DataSetDAO.updateTeams(dataSet.name, teams)
 
-  def update(dataSet: DataSet, description: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =
-    DataSetDAO.update(dataSet.name, description, isPublic)
+  def update(dataSet: DataSet, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext) =
+    DataSetDAO.update(dataSet.name, description, displayName, isPublic)
 
   def isProperDataSetName(name: String): Boolean =
     name.matches("[A-Za-z0-9_\\-]*")
 
   def checkIfNewDataSetName(name: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
     findDataSource(name)(GlobalAccessContext).reverse
-
-  def defaultDataSetPosition(dataSetName: String)(implicit ctx: DBAccessContext) = {
-    DataSetDAO.findOneBySourceName(dataSetName).futureBox.map { dataSetBox =>
-      (for {
-        dataSet <- dataSetBox
-        dataSource <- dataSet.dataSource.toUsable
-      } yield {
-        dataSource.center
-      }).getOrElse(Point3D(0, 0, 0))
-    }
-  }
 
   def createDataSet(
                      name: String,
@@ -107,7 +96,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
-    logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
+    //logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
     val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
     Fox.serialSequence(dataSources) { dataSource =>
       DataSetService.updateDataSource(dataStoreInfo, dataSource)

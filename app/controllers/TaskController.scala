@@ -293,7 +293,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def peekNext = SecuredAction.async { implicit request =>
     val user = request.identity
     for {
-      (task, _) <- TaskDAO.findAssignableFor(user, user.teamIds, initializeAnnotation = false)
+      (task, _) <- TaskDAO.findAssignableFor(user, user.teamIds, initializeAnnotation = false) ?~> Messages("task.unavailable")
       taskJson <- Task.transformToJson(task)(GlobalAccessContext)
     } yield Ok(taskJson)
   }

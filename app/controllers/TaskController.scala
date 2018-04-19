@@ -267,7 +267,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     for {
       teams <- getAllowedTeamsForNextTask(user)
       _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      (task, initializingAnnotationId) <-  TaskDAO.findAssignableFor(user, teams, initializeAnnotation = true) ?~> Messages("task.unavailable")
+      (task, initializingAnnotationId) <-  TaskDAO.assignNext(user, teams) ?~> Messages("task.unavailable")
       insertedAnnotationBox <- AnnotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
       _ <- AnnotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
       annotation <- insertedAnnotationBox.toFox
@@ -293,7 +293,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def peekNext = SecuredAction.async { implicit request =>
     val user = request.identity
     for {
-      (task, _) <- TaskDAO.findAssignableFor(user, user.teamIds, initializeAnnotation = false) ?~> Messages("task.unavailable")
+      task <- TaskDAO.peekNextAssignment(user, user.teamIds) ?~> Messages("task.unavailable")
       taskJson <- Task.transformToJson(task)(GlobalAccessContext)
     } yield Ok(taskJson)
   }

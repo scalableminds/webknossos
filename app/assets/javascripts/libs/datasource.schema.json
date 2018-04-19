@@ -3,7 +3,9 @@
   "definitions": {
     "types::Vector3": {
       "type": "array",
-      "items": [{ "type": "number" }, { "type": "number" }, { "type": "number" }]
+      "items": { "type": "number" },
+      "minItems": 3,
+      "maxItems": 3
     },
     "types::BoundingBox": {
       "type": "object",
@@ -112,11 +114,9 @@
         "dataLayers": { "type": "array", "items": { "$ref": "#/definitions/types::DataLayer" } },
         "scale": {
           "type": "array",
-          "items": [
-            { "type": "number", "minimum": 0, "exclusiveMinimum": true },
-            { "type": "number", "minimum": 0, "exclusiveMinimum": true },
-            { "type": "number", "minimum": 0, "exclusiveMinimum": true }
-          ]
+          "items": { "type": "number", "minimum": 0, "exclusiveMinimum": true },
+          "minItems": 3,
+          "maxItems": 3
         }
       },
       "required": ["id", "dataLayers", "scale"]

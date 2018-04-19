@@ -139,7 +139,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
     return (
-      <div className="flex-overflow">
+      <div className="ignore-me flex-overflow">
         <p>{annotationTypeLabel}</p>
         <p>Dataset: {dataSetName}</p>
         <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>

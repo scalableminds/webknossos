@@ -9,6 +9,7 @@ import type {
   DatasetConfigurationType,
   DatasetLayerConfigurationType,
   TemporaryConfigurationType,
+  PlaneLayoutType,
 } from "oxalis/store";
 import type { APIDatasetType } from "admin/api_flow_types";
 import type { ModeType, ControlModeType } from "oxalis/constants";
@@ -43,6 +44,11 @@ export type InitializeSettingsAction = {
   initialUserSettings: UserConfigurationType,
   initialDatasetSettings: DatasetConfigurationType,
 };
+export type SetPlaneLayoutAction = {
+  type: "SET_PLANE_LAYOUT_ACTION",
+  layout: PlaneLayoutType,
+};
+
 type SetDatasetAction = { type: "SET_DATASET", dataset: APIDatasetType };
 type SetViewModeActionType = { type: "SET_VIEW_MODE", viewMode: ModeType };
 type SetFlightmodeRecordingActionType = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
@@ -61,7 +67,8 @@ export type SettingActionType =
   | SetFlightmodeRecordingActionType
   | SetControlModeActionType
   | SetMappingEnabledActionType
-  | SetMappingSizeActionType;
+  | SetMappingSizeActionType
+  | SetPlaneLayoutAction;
 
 export const updateUserSettingAction = (
   propertyName: $Keys<UserConfigurationType>,
@@ -147,4 +154,9 @@ export const setMappingEnabledAction = (
 export const setMappingSizeAction = (mappingSize: number): SetMappingSizeActionType => ({
   type: "SET_MAPPING_SIZE",
   mappingSize,
+});
+
+export const setPlaneLayoutAction = (layout: PlaneLayoutType) => ({
+  type: "SET_PLANE_LAYOUT_ACTION",
+  layout,
 });

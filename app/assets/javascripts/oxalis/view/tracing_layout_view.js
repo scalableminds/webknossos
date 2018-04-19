@@ -9,15 +9,22 @@ import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
 import RightMenuView from "oxalis/view/right_menu_view";
 import TracingView from "oxalis/view/tracing_view";
-import { Layout, Icon } from "antd";
+import { Layout, Icon, Row, Grid } from "antd";
 import { location } from "libs/window";
+import { withRouter } from "react-router-dom";
 import ButtonComponent from "oxalis/view/components/button_component";
-import type { TracingTypeTracingType } from "oxalis/store";
+import { connect } from "react-redux";
+import type { PlaneLayoutType, TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
 
 const { Header, Sider } = Layout;
 
+type StateProps = {
+  activePlaneLayout: PlaneLayoutType,
+};
+
 type Props = {
+  ...StateProps,
   initialTracingType: TracingTypeTracingType,
   initialAnnotationId: string,
   initialControlmode: ControlModeType,
@@ -45,6 +52,37 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   };
 
   render() {
+    // const newLayout = (
+    //   <div>
+    //     <Row>
+    //       <Col>
+    //         <TracingView />
+    //       </Col>
+    //     </Row>
+    //     <Row>
+    //       <Col>
+    //         <RightMenuView />
+    //       </Col>
+    //     </Row>
+    //   </div>
+    // );
+
+    // .wrapper {
+    //   display: flex;
+    //   height: 100vh;
+    // }
+
+    // nav {
+    //   flex: 0 0 auto;
+    // }
+
+    // section {
+    //   flex: 1 1 auto;
+    //   overflow: auto;
+    // }
+
+    const isClassicMode = this.props.activePlaneLayout === "two-rows-two-columns";
+    return <div />;
     return (
       <div>
         <OxalisController
@@ -72,11 +110,25 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             >
               <SettingsView />
             </Sider>
-            <div style={{ zIndex: 200, display: "flex", flex: 1 }}>
-              <div>
+            <div
+              style={{
+                zIndex: 200,
+                display: "flex",
+                flexDirection: isClassicMode ? "row" : "column",
+                height: "calc(100vh - 135px)",
+              }}
+            >
+              <div style={{ flex: "1 1 auto", overflow: "auto" }}>
                 <TracingView />
               </div>
-              <div style={{ flex: "1", display: "inline-flex" }}>
+              <div
+                style={{
+                  flex: "1 1 auto",
+                  height: isClassicMode ? "100%" : "40%",
+                  display: "flex",
+                  overflow: "hidden",
+                }}
+              >
                 <RightMenuView />
               </div>
             </div>
@@ -87,4 +139,10 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   }
 }
 
-export default TracingLayoutView;
+function mapStateToProps(state: OxalisState): StateProps {
+  return {
+    activePlaneLayout: state.viewModeData.plane.activeLayout,
+  };
+}
+
+export default connect(mapStateToProps)(withRouter(TracingLayoutView));

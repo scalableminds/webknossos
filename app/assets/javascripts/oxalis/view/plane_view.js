@@ -12,6 +12,7 @@ import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
+import { getCanvasExtent, getViewportPositionsForLayout } from "./viewport_calculations";
 
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
@@ -56,9 +57,13 @@ class PlaneView {
     }
 
     // Attach the canvas to the container
-    renderer.setSize(
-      2 * this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
-      2 * this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+    listenToStoreProperty(
+      store => store.viewModeData.plane.activeLayout,
+      activeLayout => {
+        const [width, height] = getCanvasExtent(activeLayout, this.curWidth);
+        renderer.setSize(width, height);
+      },
+      true,
     );
 
     this.needsRerender = true;
@@ -126,15 +131,10 @@ class PlaneView {
 
       this.trigger("render");
 
-      const viewport: OrthoViewMapType<Vector2> = {
-        [OrthoViews.PLANE_XY]: [0, 0],
-        [OrthoViews.PLANE_YZ]: [this.curWidth + Constants.VIEWPORT_GAP_WIDTH, 0],
-        [OrthoViews.PLANE_XZ]: [0, this.curWidth + Constants.VIEWPORT_GAP_WIDTH],
-        [OrthoViews.TDView]: [
-          this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
-          this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
-        ],
-      };
+      const viewport = getViewportPositionsForLayout(
+        Store.getState().viewModeData.plane.activeLayout,
+        this.curWidth,
+      );
       renderer.autoClear = true;
 
       const setupRenderArea = (x, y, width, color) => {
@@ -149,13 +149,8 @@ class PlaneView {
 
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
-
-        setupRenderArea(
-          viewport[plane][0],
-          viewport[plane][1],
-          this.curWidth,
-          OrthoViewColors[plane],
-        );
+        const [x, y] = viewport[plane];
+        setupRenderArea(x, y, this.curWidth, OrthoViewColors[plane]);
         renderer.render(scene, this.cameras[plane]);
       }
 
@@ -177,12 +172,16 @@ class PlaneView {
     const viewportWidth = Math.round(
       Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH,
     );
-    const canvasWidth = viewportWidth * 2 + Constants.VIEWPORT_GAP_WIDTH;
     this.curWidth = viewportWidth;
 
-    SceneController.renderer.setSize(canvasWidth, canvasWidth);
+    const [canvasWidth, canvasHeight] = getCanvasExtent(
+      Store.getState().viewModeData.plane.activeLayout,
+      viewportWidth,
+    );
+
+    SceneController.renderer.setSize(canvasWidth, canvasHeight);
     for (const plane of OrthoViewValues) {
-      this.cameras[plane].aspect = canvasWidth / canvasWidth;
+      this.cameras[plane].aspect = canvasHeight / canvasWidth;
       this.cameras[plane].updateProjectionMatrix();
     }
     this.draw();

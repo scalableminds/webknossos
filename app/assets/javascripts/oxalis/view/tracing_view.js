@@ -11,9 +11,10 @@ import Constants from "oxalis/constants";
 import { setFlightmodeRecordingAction } from "oxalis/model/actions/settings_actions";
 import InputCatchers from "oxalis/view/input_catchers";
 import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, PlaneLayoutType } from "oxalis/store";
 import type { ModeType } from "oxalis/constants";
 import type { Dispatch } from "redux";
+import { getCanvasExtent } from "./viewport_calculations";
 
 type Props = {
   flightmodeRecording: boolean,
@@ -21,6 +22,7 @@ type Props = {
   viewMode: ModeType,
   scale: number,
   isVolumeTracingDisallowed: boolean,
+  activePlaneLayout: PlaneLayoutType,
 };
 
 class TracingView extends React.PureComponent<Props> {
@@ -41,17 +43,15 @@ class TracingView extends React.PureComponent<Props> {
 
   render() {
     const isArbitraryMode = Constants.MODES_ARBITRARY.includes(this.props.viewMode);
-    const inputCatchers = !isArbitraryMode ? <InputCatchers /> : null;
+    const scaledViewportWidth = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
+    const [width, height] = isArbitraryMode
+      ? [scaledViewportWidth, scaledViewportWidth]
+      : getCanvasExtent(this.props.activePlaneLayout, scaledViewportWidth);
+    const inputCatchers = !isArbitraryMode ? <InputCatchers width={width} height={height} /> : null;
     const flightModeRecordingSwitch = isArbitraryMode ? this.getRecordingSwitch() : null;
     const divClassName = classnames({ "zoomstep-warning": this.props.isVolumeTracingDisallowed });
 
-    const canvasWidth = isArbitraryMode
-      ? Math.round(this.props.scale * Constants.VIEWPORT_WIDTH)
-      : Math.round(this.props.scale * Constants.VIEWPORT_WIDTH) * 2 + Constants.VIEWPORT_GAP_WIDTH;
-    const canvasStyle = {
-      width: canvasWidth,
-      height: canvasWidth,
-    };
+    const canvasStyle = { width, height };
 
     return (
       <div id="tracing" className={divClassName} onContextMenu={this.handleContextMenu}>
@@ -74,6 +74,7 @@ const mapStateToProps = (state: OxalisState) => ({
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
   scale: state.userConfiguration.scale,
   isVolumeTracingDisallowed: state.tracing.type === "volume" && isVolumeTracingDisallowed(state),
+  activePlaneLayout: state.viewModeData.plane.activeLayout,
 });
 
 export default connect(mapStateToProps, mapDispatchToProps)(TracingView);

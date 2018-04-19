@@ -15,6 +15,8 @@ type Props = {
   activeViewport: OrthoViewType,
   brushPosition: ?Vector2,
   brushSize: number,
+  width: number,
+  height: number,
 };
 
 type State = {};
@@ -49,7 +51,14 @@ class InputCatchers extends React.PureComponent<Props, State> {
     const activeInputCatcher = this.props.activeViewport;
 
     return (
-      <div id="inputcatchers" style={{ cursor: brushPosition != null ? "none" : "" }}>
+      <div
+        id="inputcatchers"
+        style={{
+          cursor: brushPosition != null ? "none" : "",
+          width: this.props.width,
+          height: this.props.height,
+        }}
+      >
         <div
           id="inputcatcher_PLANE_XY"
           data-value={OrthoViews.PLANE_XY}

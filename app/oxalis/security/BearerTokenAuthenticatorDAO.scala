@@ -12,6 +12,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
+import play.api.i18n.{Messages, MessagesApi}
 import utils.{ObjectId, SQLDAO}
 
 import scala.concurrent.Future
@@ -120,6 +121,14 @@ object TokenSQLDAO extends SQLDAO[TokenSQL, TokensRow, Tokens] {
     val q = for {row <- collection if (notdel(row) && row.expirationdatetime <= new java.sql.Timestamp(System.currentTimeMillis))} yield isDeletedColumn(row)
     for {_ <- run(q.update(true))} yield ()
   }
+
+  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext) = {
+    for {
+      _ <- run(sqlu"""update webknossos.tokens set
+        logininfo_providerkey = ${newEmail}
+        where logininfo_providerkey = ${oldEmail}""")
+    } yield ()
+  }
 }
 
 class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthenticator] {
@@ -178,5 +187,12 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
 
   def deleteAllExpired(implicit ctx: DBAccessContext): Fox[Unit] =
     TokenSQLDAO.deleteAllExpired
+
+  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext): Fox[Unit] = { // maybe return an message if the token were updated
+    val oldLoginInfo = LoginInfo(CredentialsProvider.ID, oldEmail)
+    for { // is it needed to verify that the requesting user is authorized to do this here again? then we need to collect all id first and then verify it for every token
+      _ <- TokenSQLDAO.updateEmail(oldEmail, newEmail)
+    } yield ()
+  }
 }
 

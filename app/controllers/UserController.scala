@@ -230,7 +230,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   def changeEmail(oldEmail: String, newEmail: String) = SecuredAction.async { implicit request =>
     for {
       _ <- request.identity.isAdmin ?~> Messages("notAllowed")
-      _ <- UserService.findOneByEmail(newEmail).reverse ?~> Messages("email not available")
+      _ <- UserService.findOneByEmail(newEmail).reverse ?~> Messages("new email not available")
       user <- UserService.changeEmail(oldEmail, newEmail)
     } yield {
       Ok(User.userPublicWrites(request.identity).writes(user))

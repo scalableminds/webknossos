@@ -197,17 +197,14 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   def updateEmail(userId: ObjectId, newEmail: String)(implicit ctx: DBAccessContext) = {
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(
-        sqlu"""update webknossos.users
-               set email = ${newEmail}
+      _ <- run(sqlu"""update webknossos.users set
+              email = ${newEmail},
+              logininfo_providerkey = ${newEmail}
                where _id = ${userId.id}""")
     } yield ()
   }
 
 }
-
-
-
 
 object UserTeamRolesSQLDAO extends SimpleSQLDAO {
 

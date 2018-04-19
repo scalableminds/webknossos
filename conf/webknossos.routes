@@ -42,7 +42,6 @@ GET           /api/users/:id/tasks                                              
 GET           /api/users/:id/loggedTime                                         controllers.UserController.userLoggedTime(id: String)
 POST          /api/users/loggedTime                                             controllers.UserController.usersLoggedTime
 GET           /api/users/:id/annotations                                        controllers.UserController.userAnnotations(id: String, isFinished: Option[Boolean], limit: Option[Int])
-GET           /api/user/changeEmail                                             controllers.UserController.changeEmail(oldEmail: String, newEmail: String)
 
 # Team
 GET           /api/teams                                                        controllers.TeamController.list

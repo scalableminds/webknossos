@@ -170,6 +170,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
   val userUpdateReader =
     ((__ \ "firstName").read[String] and
       (__ \ "lastName").read[String] and
+      (__ \ "email").read[String] and
       (__ \ "isActive").read[Boolean] and
       (__ \ "isAdmin").read[Boolean] and
       (__ \ "teams").read[List[TeamMembership]](Reads.list(TeamMembership.teamMembershipPublicReads)) and
@@ -184,19 +185,19 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     })
   }
 
-  private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean)(issuingUser: User): Boolean = {
-    if (user.isActive == isActive && user.isAdmin == isAdmin) true
+  private def checkAdminOnlyUpdates(user: User, isActive: Boolean, isAdmin: Boolean, email: String)(issuingUser: User): Boolean = {
+    if (user.isActive == isActive && user.isAdmin == isAdmin && user.email == email) true
     else issuingUser.isAdminOf(user)
   }
 
   def update(userId: String) = SecuredAction.async(parse.json) { implicit request =>
     val issuingUser = request.identity
     withJsonBodyUsing(userUpdateReader) {
-      case (firstName, lastName, isActive, isAdmin, assignedMemberships, experiences) =>
+      case (firstName, lastName, email, isActive, isAdmin, assignedMemberships, experiences) =>
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
           _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-          _ <- checkAdminOnlyUpdates(user, isActive, isAdmin)(issuingUser) ?~> Messages("notAllowed")
+          _ <- checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneById(t._id)(GlobalAccessContext) ?~> Messages("team.notFound")))
           allTeams <- Fox.serialSequence(user.teams)(t => TeamDAO.findOneById(t._id)(GlobalAccessContext)).map(_.flatten)
           teamsWithoutUpdate = user.teams.filterNot(t => issuingUser.isTeamManagerOf(t._id))
@@ -205,7 +206,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams <- ensureOrganizationTeamIsPresent(issuingUser, teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate)
-          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, isActive, isAdmin, updatedTeams, trimmedExperiences)
+          updatedUser <- UserService.update(user, firstName.trim, lastName.trim, email, isActive, isAdmin, updatedTeams, trimmedExperiences)
         } yield {
           Ok(User.userPublicWrites(request.identity).writes(updatedUser))
         }
@@ -224,16 +225,6 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           case Some(teamMembership) => teamMembership :: updatedTeams
           case None => updatedTeams
         }
-    }
-  }
-
-  def changeEmail(oldEmail: String, newEmail: String) = SecuredAction.async { implicit request =>
-    for {
-      _ <- request.identity.isAdmin ?~> Messages("notAllowed")
-      _ <- UserService.findOneByEmail(newEmail).reverse ?~> Messages("new email not available")
-      user <- UserService.changeEmail(oldEmail, newEmail)
-    } yield {
-      Ok(User.userPublicWrites(request.identity).writes(user))
     }
   }
 }

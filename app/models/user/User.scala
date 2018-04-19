@@ -186,24 +186,13 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
                where _id = ${userId.id}""")
     } yield ()
 
-  def updateValues(userId: ObjectId, firstName: String, lastName: String, isAdmin: Boolean, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
+  def updateValues(userId: ObjectId, firstName: String, email: String, lastName: String, isAdmin: Boolean, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
     val q = for {row <- Users if (notdel(row) && idColumn(row) === userId.id)} yield (row.firstname, row.lastname, row.isadmin, row.isdeactivated)
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q.update(firstName, lastName, isAdmin, isDeactivated))
     } yield ()
   }
-
-  def updateEmail(userId: ObjectId, newEmail: String)(implicit ctx: DBAccessContext) = {
-    for {
-      _ <- assertUpdateAccess(userId)
-      _ <- run(sqlu"""update webknossos.users set
-              email = ${newEmail},
-              logininfo_providerkey = ${newEmail}
-               where _id = ${userId.id}""")
-    } yield ()
-  }
-
 }
 
 object UserTeamRolesSQLDAO extends SimpleSQLDAO {
@@ -497,11 +486,11 @@ object UserDAO {
       users <- Fox.combined(usersSQL.map(User.fromUserSQL(_)))
     } yield users
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, email: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
     for {
       teamMembershipsSQL <- Fox.combined(teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       id = ObjectId.fromBsonId(_user)
-      _ <- UserSQLDAO.updateValues(id, firstName, lastName, isAdmin, !activated)
+      _ <- UserSQLDAO.updateValues(id, firstName, lastName, email, isAdmin, !activated)
       _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(id, teamMembershipsSQL)
       _ <- UserExperiencesSQLDAO.updateExperiencesForUser(id, experiences)
       updated <- findOneById(_user.stringify)
@@ -575,13 +564,4 @@ object UserDAO {
     for {
       _ <- UserSQLDAO.deleteOne(ObjectId.fromBsonId(id))
     } yield ()
-
-  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext) = {
-    for {
-      user <- findOneByEmail(oldEmail)
-      id = ObjectId.fromBsonId(user._id)
-      _ <- UserSQLDAO.updateEmail(id, newEmail)
-      updated <- findOneByEmail(newEmail)
-    } yield updated
-  }
 }

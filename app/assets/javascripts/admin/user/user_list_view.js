@@ -19,6 +19,7 @@ import messages from "messages";
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -246,6 +247,19 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="email"
               key="email"
               sorter={Utils.localeCompareBy("email")}
+              render={(__, user: APIUserType) => {
+                if (user.isAdmin) {
+                  return (
+                    <span>
+                      <EditableTextLabel value={user.email} onChange={this.setAnnotationName}/>
+                    </span>
+                  );
+                } else {
+                  <span>
+                    {user.email}
+                  </span>
+                }
+                }}
             />
             <Column
               title="Experiences"

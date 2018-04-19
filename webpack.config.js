@@ -20,6 +20,12 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
+    new webpack.ProvidePlugin({
+      React: "react",
+      ReactDOM: "react-dom",
+      $: "jquery",
+      jQuery: "jquery",
+    }),
   ];
 
   if (env.production) {
@@ -33,7 +39,7 @@ module.exports = function(env = {}) {
             inline: 1,
           },
         },
-      })
+      }),
     );
   }
 

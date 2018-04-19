@@ -13,9 +13,20 @@ import { Layout, Icon, Row, Grid } from "antd";
 import { location } from "libs/window";
 import { withRouter } from "react-router-dom";
 import ButtonComponent from "oxalis/view/components/button_component";
-import { connect } from "react-redux";
+import { Provider, connect } from "react-redux";
+import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
+import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
+import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
+import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
+import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
+
+import Store from "oxalis/store";
 import type { PlaneLayoutType, TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
+
+import GoldenLayout from "golden-layout/dist/goldenlayout.js";
+import "golden-layout/src/css/goldenlayout-base.css";
+import "golden-layout/src/css/goldenlayout-light-theme.css";
 
 const { Header, Sider } = Layout;
 
@@ -51,38 +62,86 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     });
   };
 
+  componentDidMount() {
+    function wrapComponent(Component, store) {
+      class Wrapped extends React.Component {
+        render() {
+          return (
+            <Provider store={store}>
+              <Component {...this.props} />
+            </Provider>
+          );
+        }
+      }
+      return Wrapped;
+    }
+
+    var myLayout = new GoldenLayout(
+      {
+        content: [
+          {
+            type: "row",
+            content: [
+              {
+                type: "react-component",
+                component: "TracingView",
+                title: "Data",
+                props: { label: "Tracing View" },
+              },
+              {
+                type: "column",
+                content: [
+                  {
+                    type: "stack",
+                    content: [
+                      {
+                        type: "react-component",
+                        component: "DatasetInfoTabView",
+                        title: "Dataset Info",
+                      },
+                      {
+                        type: "react-component",
+                        component: "TreesTabView",
+                        title: "Trees",
+                      },
+                      {
+                        type: "react-component",
+                        component: "CommentTabView",
+                        title: "Comments",
+                      },
+                      {
+                        type: "react-component",
+                        component: "AbstractTreeTabView",
+                        title: "Abstract Tree View",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+      "#layoutContainer",
+    );
+
+    class TestComponent extends React.Component {
+      render() {
+        return <h1>{this.props.label}</h1>;
+      }
+    }
+    myLayout.registerComponent("test-component", TestComponent);
+    myLayout.registerComponent("TracingView", wrapComponent(TracingView, Store));
+    myLayout.registerComponent("DatasetInfoTabView", wrapComponent(DatasetInfoTabView, Store));
+
+    myLayout.registerComponent("TreesTabView", wrapComponent(TreesTabView, Store));
+    myLayout.registerComponent("CommentTabView", wrapComponent(CommentTabView, Store));
+    myLayout.registerComponent("AbstractTreeTabView", wrapComponent(AbstractTreeTabView, Store));
+
+    setTimeout(() => myLayout.init(), 10);
+  }
+
   render() {
-    // const newLayout = (
-    //   <div>
-    //     <Row>
-    //       <Col>
-    //         <TracingView />
-    //       </Col>
-    //     </Row>
-    //     <Row>
-    //       <Col>
-    //         <RightMenuView />
-    //       </Col>
-    //     </Row>
-    //   </div>
-    // );
-
-    // .wrapper {
-    //   display: flex;
-    //   height: 100vh;
-    // }
-
-    // nav {
-    //   flex: 0 0 auto;
-    // }
-
-    // section {
-    //   flex: 1 1 auto;
-    //   overflow: auto;
-    // }
-
-    const isClassicMode = this.props.activePlaneLayout === "two-rows-two-columns";
-    return <div />;
     return (
       <div>
         <OxalisController
@@ -90,7 +149,6 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
           initialAnnotationId={this.props.initialAnnotationId}
           initialControlmode={this.props.initialControlmode}
         />
-
         <Layout className="tracing-layout">
           <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
@@ -111,27 +169,9 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               <SettingsView />
             </Sider>
             <div
-              style={{
-                zIndex: 200,
-                display: "flex",
-                flexDirection: isClassicMode ? "row" : "column",
-                height: "calc(100vh - 135px)",
-              }}
-            >
-              <div style={{ flex: "1 1 auto", overflow: "auto" }}>
-                <TracingView />
-              </div>
-              <div
-                style={{
-                  flex: "1 1 auto",
-                  height: isClassicMode ? "100%" : "40%",
-                  display: "flex",
-                  overflow: "hidden",
-                }}
-              >
-                <RightMenuView />
-              </div>
-            </div>
+              id="layoutContainer"
+              style={{ display: "block", height: "1000px", width: "100%" }}
+            />
           </Layout>
         </Layout>
       </div>

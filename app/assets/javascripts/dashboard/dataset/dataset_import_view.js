@@ -17,6 +17,7 @@ import {
 } from "antd";
 import Clipboard from "clipboard-js";
 import update from "immutability-helper";
+import jsonschema from "jsonschema";
 import Toast from "libs/toast";
 import {
   getDatasetSharingToken,
@@ -32,18 +33,36 @@ import { Vector3Input } from "libs/vector_input";
 import type { DatasetConfigurationType } from "oxalis/store";
 import messages from "messages";
 import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
+import DatasourceSchema from "libs/datasource.schema.json";
 
 const FormItem = Form.Item;
 const CollapsePanel = Collapse.Panel;
 
-const validateJSON = (rule, value, callback) => {
+const validator = new jsonschema.Validator();
+validator.addSchema(DatasourceSchema, "/");
+
+const validateWithSchema = (type: string) => (rule, value, callback) => {
   try {
-    JSON.parse(value);
-    callback();
+    const json = JSON.parse(value);
+    const result = validator.validate(json, {
+      $ref: `#/definitions/${type}`,
+    });
+    if (result.valid) {
+      callback();
+    } else {
+      callback(
+        new Error(
+          `Invalid schema: ${result.errors.map(e => `${e.property} ${e.message}`).join("; ")}`,
+        ),
+      );
+    }
   } catch (e) {
-    callback(true);
+    callback(new Error(`Invalid JSON: ${e.message}`));
   }
 };
+
+const validateDatasourceJSON = validateWithSchema("types::DatasourceConfiguration");
+const validateLayerConfigurationJSON = validateWithSchema("types::LayerUserConfiguration");
 
 const jsonEditStyle = {
   fontFamily: 'Monaco, Consolas, "Courier New", monospace',
@@ -271,9 +290,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             </Row>
             <FormItem label="Layer Configuration">
               {getFieldDecorator("defaultConfigurationLayersJson", {
-                rules: [
-                  { validator: validateJSON, message: "Invalid JSON. Please fix the errors." },
-                ],
+                rules: [{ validator: validateLayerConfigurationJSON }],
               })(<Input.TextArea rows="10" style={jsonEditStyle} />)}
             </FormItem>
           </CollapsePanel>
@@ -307,8 +324,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                     message: "Please provide a dataset configuration.",
                   },
                   {
-                    validator: validateJSON,
-                    message: "Invalid JSON. Please fix the errors.",
+                    validator: validateDatasourceJSON,
                   },
                 ],
               })(<Input.TextArea rows={20} style={jsonEditStyle} />)}

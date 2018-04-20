@@ -163,7 +163,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                          and webknossos.tasks_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                          and userAnnotations._task is null
                          and not webknossos.projects_.paused
-                   order by webknossos.projects_.priority
+                   order by webknossos.projects_.priority desc
                    limit 1
       """
 

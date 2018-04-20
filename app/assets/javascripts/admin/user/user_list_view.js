@@ -252,8 +252,8 @@ class UserListView extends React.PureComponent<Props, State> {
                   <EditableTextLabel
                     value={user.email}
                     onChange={newEmail => {
-                      user.email = newEmail;
-                      updateUser(user);
+                      const newUser = Object.assign({}, user, { email: newEmail });
+                      updateUser(newUser);
                     }}
                   />
                 </span>

@@ -133,6 +133,7 @@ case class UpdateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option
 
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
+
 }
 
 case class DeleteNodeSkeletonAction(nodeId: Int, treeId: Int) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {

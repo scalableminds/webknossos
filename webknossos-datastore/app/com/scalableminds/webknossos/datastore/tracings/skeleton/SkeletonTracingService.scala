@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, Writes}
 
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
@@ -35,7 +35,13 @@ class SkeletonTracingService @Inject()(
   def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
 
   def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] = {
-    tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions)
+    tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions.map(_.addTimeStamp(updateActionGroup.timestamp)))
+    testTimeLog(tracingId)
+  }
+
+  def testTimeLog(tracingId: String)(implicit w: Writes[SkeletonUpdateAction]) = {
+    val x = tracingDataStore.skeletonUpdates.get(tracingId, None, None)(fromJson[List[SkeletonUpdateAction]])
+    x.map(y => logger.debug(w.writes(y.value.head).toString))
   }
 
   override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {

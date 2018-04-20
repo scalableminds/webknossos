@@ -188,7 +188,7 @@ class BearerTokenAuthenticatorDAO extends AuthenticatorDAO[BearerTokenAuthentica
   def deleteAllExpired(implicit ctx: DBAccessContext): Fox[Unit] =
     TokenSQLDAO.deleteAllExpired
 
-  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext): Fox[Unit] = { // maybe return an message if the token were updated
+  def updateEmail(oldEmail: String, newEmail: String)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for { // is it needed to verify that the requesting user is authorized to do this here again? then we need to collect all id first and then verify it for every token
       _ <- TokenSQLDAO.updateEmail(oldEmail, newEmail)
     } yield ()

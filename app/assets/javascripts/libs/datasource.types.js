@@ -40,7 +40,7 @@ type DataLayer = {
       category: "segmentation",
       // Add minimum=1
       largestSegmentId: number,
-      mappings?: Array<string>,
+      mappings: Array<string>,
     }
 ) &
   (DataLayerWKWPartial | DataLayerKnossosPartial);

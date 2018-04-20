@@ -309,7 +309,7 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
 }
 
 // ### Tasks
-export async function peekNextTasks(): Promise<Array<APITaskType>> {
+export async function peekNextTasks(): Promise<?APITaskType> {
   return Request.receiveJSON("/api/user/tasks/peek");
 }
 

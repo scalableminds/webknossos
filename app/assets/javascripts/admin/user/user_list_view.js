@@ -105,6 +105,24 @@ class UserListView extends React.PureComponent<Props, State> {
     this.activateUser(user, false);
   };
 
+  changeEmail = (selectedUser: APIUserType, newEmail: String): void => {
+    const newUsers = this.state.users.map(user => {
+      if (selectedUser.id === user.id) {
+        const newUser = Object.assign({}, user, { email: newEmail });
+
+        updateUser(newUser);
+        return newUser;
+      }
+
+      return user;
+    });
+
+    this.setState({
+      users: newUsers,
+      selectedUserIds: [selectedUser.id],
+    });
+  };
+
   handleUsersChange = (updatedUsers: Array<APIUserType>): void => {
     this.setState({
       users: updatedUsers,
@@ -251,10 +269,7 @@ class UserListView extends React.PureComponent<Props, State> {
                 <span>
                   <EditableTextLabel
                     value={user.email}
-                    onChange={newEmail => {
-                      const newUser = Object.assign({}, user, { email: newEmail });
-                      updateUser(newUser);
-                    }}
+                    onChange={newEmail => this.changeEmail(user, newEmail)}
                   />
                 </span>
               )}

@@ -51,13 +51,25 @@ class TracingView extends React.PureComponent<Props> {
     const flightModeRecordingSwitch = isArbitraryMode ? this.getRecordingSwitch() : null;
     const divClassName = classnames({ "zoomstep-warning": this.props.isVolumeTracingDisallowed });
 
-    const canvasStyle = { width, height };
+    const canvasStyle = {
+      width: "100%",
+      position: "absolute",
+      top: 0,
+      left: 0,
+    };
 
-    return (
-      <div id="tracing" className={divClassName} onContextMenu={this.handleContextMenu}>
+    return this.props.renderCanvas ? (
+      <div
+        style={{ position: "relative" }}
+        className={divClassName}
+        onContextMenu={this.handleContextMenu}
+      >
+        <canvas key="render-canvas" id="render-canvas" style={canvasStyle} />
+      </div>
+    ) : (
+      <div>
         {inputCatchers}
         {flightModeRecordingSwitch}
-        <canvas id="render-canvas" style={canvasStyle} />
       </div>
     );
   }

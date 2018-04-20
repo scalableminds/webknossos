@@ -21,12 +21,34 @@ type Props = {
 
 type State = {};
 
+function TDViewControls({ width }) {
+  const TDButtonStyle = { width: width / 4 - 0.5 };
+  return (
+    <ButtonGroup id="TDViewControls">
+      <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToDiagonal}>
+        3D
+      </Button>
+      <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToXY}>
+        <span className="colored-dot" />XY
+      </Button>
+      <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToYZ}>
+        <span className="colored-dot" />YZ
+      </Button>
+      <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToXZ}>
+        <span className="colored-dot" />XZ
+      </Button>
+    </ButtonGroup>
+  );
+}
+
 class InputCatchers extends React.PureComponent<Props, State> {
+  handleContextMenu(event: SyntheticInputEvent<>) {
+    // hide contextmenu, while rightclicking a canvas
+    event.preventDefault();
+  }
+
   render() {
     const width = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
-    const TDButtonStyle = {
-      width: width / 4 - 0.5,
-    };
 
     const { brushPosition, brushSize } = this.props;
     const brush =
@@ -50,78 +72,40 @@ class InputCatchers extends React.PureComponent<Props, State> {
 
     const activeInputCatcher = this.props.activeViewport;
 
-    return (
-      <div
-        id="inputcatchers"
-        style={{
-          cursor: brushPosition != null ? "none" : "",
-          width: this.props.width,
-          height: this.props.height,
-        }}
-      >
+    const InputCatcher = ({ name, planeType, children }) => {
+      const active = activeInputCatcher === planeType;
+      console.log("children", children);
+      return (
         <div
-          id="inputcatcher_PLANE_XY"
-          data-value={OrthoViews.PLANE_XY}
+          id={`inputcatcher_${name}`}
+          onContextMenu={this.handleContextMenu}
+          data-value={planeType}
           className="inputcatcher"
           style={{
             width,
             height: width,
-            borderColor: activeInputCatcher === OrthoViews.PLANE_XY ? "#ff0" : "white",
+            borderColor: active ? "#ff0" : "white",
           }}
         >
-          {activeInputCatcher === OrthoViews.PLANE_XY ? brush : null}
+          {children || (active ? brush : null)}
         </div>
-        <div
-          id="inputcatcher_PLANE_YZ"
-          data-value={OrthoViews.PLANE_YZ}
-          className="inputcatcher"
-          style={{
-            width,
-            height: width,
-            borderColor: activeInputCatcher === OrthoViews.PLANE_YZ ? "#ff0" : "white",
-          }}
-        >
-          {activeInputCatcher === OrthoViews.PLANE_YZ ? brush : null}
-        </div>
-        <div
-          id="inputcatcher_PLANE_XZ"
-          data-value={OrthoViews.PLANE_XZ}
-          className="inputcatcher"
-          style={{
-            width,
-            height: width,
-            borderColor: activeInputCatcher === OrthoViews.PLANE_XZ ? "#ff0" : "white",
-          }}
-        >
-          {activeInputCatcher === OrthoViews.PLANE_XZ ? brush : null}
-        </div>
-        <div
-          id="inputcatcher_TDView"
-          data-value={OrthoViews.TDView}
-          className="inputcatcher"
-          style={{
-            width,
-            height: width,
-            borderColor: activeInputCatcher === OrthoViews.TDView ? "#ff0" : "white",
-          }}
-        >
-          <ButtonGroup id="TDViewControls">
-            <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToDiagonal}>
-              3D
-            </Button>
-            <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToXY}>
-              <span className="colored-dot" />XY
-            </Button>
-            <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToYZ}>
-              <span className="colored-dot" />YZ
-            </Button>
-            <Button size="small" style={TDButtonStyle} onClick={api.tracing.rotate3DViewToXZ}>
-              <span className="colored-dot" />XZ
-            </Button>
-          </ButtonGroup>
-        </div>
-      </div>
-    );
+      );
+    };
+
+    switch (this.props.planeID) {
+      case "xy":
+        return <InputCatcher name="PLANE_XY" planeType={OrthoViews.PLANE_XY} />;
+      case "yz":
+        return <InputCatcher name="PLANE_YZ" planeType={OrthoViews.PLANE_YZ} />;
+      case "xz":
+        return <InputCatcher name="PLANE_XZ" planeType={OrthoViews.PLANE_XZ} />;
+      case "td":
+        return (
+          <InputCatcher name="TDView" planeType={OrthoViews.TDView}>
+            <TDViewControls width={width} />
+          </InputCatcher>
+        );
+    }
   }
 }
 

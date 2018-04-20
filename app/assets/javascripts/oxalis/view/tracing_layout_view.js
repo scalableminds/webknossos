@@ -4,6 +4,7 @@
  */
 
 import * as React from "react";
+import ReactDOM from "react-dom";
 import OxalisController from "oxalis/controller";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -19,6 +20,7 @@ import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
+import InputCatchers from "oxalis/view/input_catchers";
 
 import Store from "oxalis/store";
 import type { PlaneLayoutType, TracingTypeTracingType } from "oxalis/store";
@@ -45,6 +47,147 @@ type State = {
   isSettingsCollapsed: boolean,
 };
 
+// Renders the provided children into a portal (referenced by id) if that portal exists
+function RenderToPortal({ children, portalId }) {
+  const portalEl = document.getElementById(`myPortal-${portalId}`);
+  return portalEl && ReactDOM.createPortal(children, portalEl);
+}
+
+class PortalTarget extends React.Component {
+  render() {
+    return <div id={`myPortal-${this.props.portalId}`} />;
+  }
+}
+
+const DefaultLayoutConfig = {
+  settings: {
+    showPopoutIcon: false,
+    showCloseIcon: false,
+    showMaximiseIcon: false,
+  },
+  content: [
+    {
+      type: "row",
+      content: [
+        {
+          type: "row",
+          content: [
+            {
+              type: "column",
+              content: [
+                {
+                  type: "react-component",
+                  component: "PortalTarget",
+                  title: "Data",
+                  props: { portalId: "xy" },
+                },
+                {
+                  type: "react-component",
+                  component: "PortalTarget",
+                  title: "Data",
+                  props: { portalId: "xz" },
+                },
+              ],
+            },
+            {
+              type: "column",
+              content: [
+                {
+                  type: "react-component",
+                  component: "PortalTarget",
+                  title: "Data",
+                  props: { portalId: "yz" },
+                },
+                {
+                  type: "react-component",
+                  component: "PortalTarget",
+                  title: "Data",
+                  props: { portalId: "td" },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          type: "column",
+          content: [
+            {
+              type: "stack",
+              content: [
+                {
+                  type: "react-component",
+                  component: "PortalTarget",
+                  title: "Dataset Info",
+                  props: { portalId: 1 },
+                },
+                {
+                  type: "react-component",
+                  component: "PortalTarget",
+                  title: "Trees",
+                  props: { portalId: 2 },
+                },
+                {
+                  type: "react-component",
+                  component: "PortalTarget",
+                  title: "Comments",
+                  props: { portalId: 3 },
+                },
+                {
+                  type: "react-component",
+                  component: "PortalTarget",
+                  title: "Abstract Tree View",
+                  props: { portalId: 4 },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+class GoldenLayoutWrapper extends React.Component<*, *> {
+  componentDidMount() {
+    const myLayout = new GoldenLayout(this.props.layoutConfig, "#layoutContainer");
+    window.myLayout = myLayout;
+
+    myLayout.registerComponent("PortalTarget", PortalTarget);
+
+    // The timeout is necessary since react cannot deal with react.render calls (which goldenlayout executes)
+    // while being in the middle of a react lifecycle (componentDidMount)
+    setTimeout(() => {
+      myLayout.init();
+      this.forceUpdate();
+    }, 10);
+
+    const persistLayoutDebounced = _.debounce(() => {
+      localStorage.setItem("golden-wk-layout", JSON.stringify(myLayout.toConfig()));
+    }, 2000);
+
+    myLayout.eventHub.on("stateChanged", () => {
+      window.needsRerender = true;
+    });
+  }
+
+  render() {
+    console.log("this.props.children", this.props.children);
+    return [
+      <div
+        key="layoutContainer"
+        id="layoutContainer"
+        style={{ display: "block", height: "100%", width: "100%", flex: "1 1 auto" }}
+      />,
+    ].concat(
+      this.props.children.map(child => (
+        <RenderToPortal key={child.key} portalId={child.key}>
+          {child}
+        </RenderToPortal>
+      )),
+    );
+  }
+}
+
 class TracingLayoutView extends React.PureComponent<Props, State> {
   state = {
     isSettingsCollapsed: true,
@@ -62,102 +205,27 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     });
   };
 
-  componentDidMount() {
-    function wrapComponent(Component, store) {
-      class Wrapped extends React.Component {
-        render() {
-          return (
-            <Provider store={store}>
-              <Component {...this.props} />
-            </Provider>
-          );
-        }
-      }
-      return Wrapped;
-    }
-
-    var myLayout = new GoldenLayout(
-      {
-        content: [
-          {
-            type: "row",
-            content: [
-              {
-                type: "react-component",
-                component: "TracingView",
-                title: "Data",
-                props: { label: "Tracing View" },
-              },
-              {
-                type: "column",
-                content: [
-                  {
-                    type: "stack",
-                    content: [
-                      {
-                        type: "react-component",
-                        component: "DatasetInfoTabView",
-                        title: "Dataset Info",
-                      },
-                      {
-                        type: "react-component",
-                        component: "TreesTabView",
-                        title: "Trees",
-                      },
-                      {
-                        type: "react-component",
-                        component: "CommentTabView",
-                        title: "Comments",
-                      },
-                      {
-                        type: "react-component",
-                        component: "AbstractTreeTabView",
-                        title: "Abstract Tree View",
-                      },
-                    ],
-                  },
-                ],
-              },
-            ],
-          },
-        ],
-      },
-      "#layoutContainer",
-    );
-
-    class TestComponent extends React.Component {
-      render() {
-        return <h1>{this.props.label}</h1>;
-      }
-    }
-    myLayout.registerComponent("test-component", TestComponent);
-    myLayout.registerComponent("TracingView", wrapComponent(TracingView, Store));
-    myLayout.registerComponent("DatasetInfoTabView", wrapComponent(DatasetInfoTabView, Store));
-
-    myLayout.registerComponent("TreesTabView", wrapComponent(TreesTabView, Store));
-    myLayout.registerComponent("CommentTabView", wrapComponent(CommentTabView, Store));
-    myLayout.registerComponent("AbstractTreeTabView", wrapComponent(AbstractTreeTabView, Store));
-
-    setTimeout(() => myLayout.init(), 10);
-  }
-
   render() {
+    const serializedLayoutConfig = JSON.parse(localStorage.getItem("golden-wk-layout"));
+
     return (
       <div>
-        <OxalisController
-          initialTracingType={this.props.initialTracingType}
-          initialAnnotationId={this.props.initialAnnotationId}
-          initialControlmode={this.props.initialControlmode}
-        />
+        {
+          <OxalisController
+            initialTracingType={this.props.initialTracingType}
+            initialAnnotationId={this.props.initialAnnotationId}
+            initialControlmode={this.props.initialControlmode}
+          />
+        }
         <Layout className="tracing-layout">
-          <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
+          <Header style={{ flex: "0 1 auto", zIndex: 210, minHeight: 48 }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               Settings
             </ButtonComponent>
             <ActionBarView />
           </Header>
-          <Layout style={{ marginTop: 64 }}>
+          <Layout style={{ marginTop: 64 }} style={{ display: "flex" }}>
             <Sider
               collapsible
               trigger={null}
@@ -168,10 +236,24 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             >
               <SettingsView />
             </Sider>
+
             <div
-              id="layoutContainer"
-              style={{ display: "block", height: "1000px", width: "100%" }}
-            />
+              id="canvasAndLayoutContainer"
+              style={{ display: "flex", flexDirection: "column", flex: "1 1 auto" }}
+            >
+              <TracingView renderCanvas={true} />
+
+              <GoldenLayoutWrapper layoutConfig={!serializedLayoutConfig || DefaultLayoutConfig}>
+                <InputCatchers planeID="xy" key="xy" />
+                <InputCatchers planeID="yz" key="yz" />
+                <InputCatchers planeID="xz" key="xz" />
+                <InputCatchers planeID="td" key="td" />
+                <DatasetInfoTabView key={1} />
+                <TreesTabView key={2} />
+                <CommentTabView key={3} />
+                <AbstractTreeTabView key={4} />
+              </GoldenLayoutWrapper>
+            </div>
           </Layout>
         </Layout>
       </div>

@@ -189,7 +189,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <div id="tree-list" className="ignore-me flex-column">
+      <div id="tree-list">
         <Modal
           visible={this.state.isDownloading || this.state.isUploading}
           title={title}
@@ -241,7 +241,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </Dropdown>
         </InputGroup>
 
-        <ul className="ignore-me flex-overflow">{this.getTreesComponents()}</ul>
+        <ul>{this.getTreesComponents()}</ul>
       </div>
     );
   }

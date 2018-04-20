@@ -57,14 +57,14 @@ class PlaneView {
     }
 
     // Attach the canvas to the container
-    listenToStoreProperty(
-      store => store.viewModeData.plane.activeLayout,
-      activeLayout => {
-        const [width, height] = getCanvasExtent(activeLayout, this.curWidth);
-        renderer.setSize(width, height);
-      },
-      true,
-    );
+    // listenToStoreProperty(
+    //   store => store.viewModeData.plane.activeLayout,
+    //   activeLayout => {
+    //     const [width, height] = getCanvasExtent(activeLayout, this.curWidth);
+    //     renderer.setSize(2000, 2000);
+    //   },
+    //   true,
+    // );
 
     this.needsRerender = true;
     app.vent.on("rerender", () => {
@@ -131,27 +131,59 @@ class PlaneView {
 
       this.trigger("render");
 
-      const viewport = getViewportPositionsForLayout(
-        Store.getState().viewModeData.plane.activeLayout,
-        this.curWidth,
-      );
+      const getXYForId = (id, curWidth) => {
+        const domElement = document.getElementById(`inputcatcher_${id}`);
+        const layoutContainer = document.getElementById("layoutContainer");
+        if (!domElement || !layoutContainer) {
+          return [0, 0, 0, 0];
+        }
+        if (domElement.closest(".lm_item_container").style.display) {
+          return [0, 0, 0, 0];
+        }
+        const { x: containerX, y: containerY } = layoutContainer.getBoundingClientRect();
+        const { x, y } = domElement.getBoundingClientRect();
+        const { scrollWidth, scrollHeight } = domElement.closest(".lm_item_container");
+        return [
+          x - containerX,
+          y - containerY,
+          Math.min(curWidth, scrollWidth),
+          Math.min(curWidth, scrollHeight),
+        ];
+      };
+
+      const viewport = {
+        [OrthoViews.PLANE_XY]: getXYForId("PLANE_XY", this.curWidth),
+        [OrthoViews.PLANE_YZ]: getXYForId("PLANE_YZ", this.curWidth),
+        [OrthoViews.PLANE_XZ]: getXYForId("PLANE_XZ", this.curWidth),
+        [OrthoViews.TDView]: getXYForId("TDView", this.curWidth),
+      };
       renderer.autoClear = true;
 
-      const setupRenderArea = (x, y, width, color) => {
-        renderer.setViewport(x, y, width, width);
-        renderer.setScissor(x, y, width, width);
+      const setupRenderArea = (x, y, fullExtent, width, height, color) => {
+        renderer.setViewport(x, y, fullExtent, fullExtent);
+        renderer.setScissor(x, y, width, height);
         renderer.setScissorTest(true);
         renderer.setClearColor(color, 1);
       };
 
-      setupRenderArea(0, 0, renderer.domElement.width, 0xffffff);
+      const rendererSize = renderer.getSize();
+      setupRenderArea(
+        0,
+        0,
+        renderer.domElement.width,
+        rendererSize.width,
+        rendererSize.height,
+        0xffffff,
+      );
       renderer.clear();
 
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
-        const [x, y] = viewport[plane];
-        setupRenderArea(x, y, this.curWidth, OrthoViewColors[plane]);
-        renderer.render(scene, this.cameras[plane]);
+        const [x, y, width, height] = viewport[plane];
+        if (width > 0 && height > 0) {
+          setupRenderArea(x, y, this.curWidth, width, height, OrthoViewColors[plane]);
+          renderer.render(scene, this.cameras[plane]);
+        }
       }
 
       this.needsRerender = false;
@@ -179,7 +211,13 @@ class PlaneView {
       viewportWidth,
     );
 
-    SceneController.renderer.setSize(canvasWidth, canvasHeight);
+    const canvasAndLayoutContainer = document.getElementById("canvasAndLayoutContainer");
+    if (canvasAndLayoutContainer) {
+      const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
+      // document.body.clientWidth
+      SceneController.renderer.setSize(width, height);
+    }
+
     for (const plane of OrthoViewValues) {
       this.cameras[plane].aspect = canvasHeight / canvasWidth;
       this.cameras[plane].updateProjectionMatrix();

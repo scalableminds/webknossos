@@ -186,11 +186,11 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
                where _id = ${userId.id}""")
     } yield ()
 
-  def updateValues(userId: ObjectId, firstName: String, email: String, lastName: String, isAdmin: Boolean, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
-    val q = for {row <- Users if (notdel(row) && idColumn(row) === userId.id)} yield (row.firstname, row.lastname, row.isadmin, row.isdeactivated)
+  def updateValues(userId: ObjectId, firstName: String, lastName: String, email: String, isAdmin: Boolean, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
+    val q = for {row <- Users if (notdel(row) && idColumn(row) === userId.id)} yield (row.firstname, row.lastname, row.email, row.isadmin, row.isdeactivated)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, isAdmin, isDeactivated))
+      _ <- run(q.update(firstName, lastName, email, isAdmin, isDeactivated))
     } yield ()
   }
 }

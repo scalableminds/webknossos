@@ -97,9 +97,8 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     ))
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""_id not in (select _user from webknossos.user_team_roles)
-      or (_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')))
-      or (_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+    s"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')))
+        or (_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)"
 

@@ -62,6 +62,9 @@ declare module "antd" {
     static TabPane: React$ComponentType<P>;
   }
   declare class Tag<P> extends React$Component<P> {}
+  declare class Tree<P> extends React$Component<P> {
+    static TreeNode: React$ComponentType<P>;
+  }
   declare class Tooltip<P> extends React$Component<P> {}
   declare class Upload<P> extends React$Component<P> {
     static Dragger: React$ComponentType<P>;

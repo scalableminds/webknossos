@@ -126,6 +126,20 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
 
+      const groups = {
+        name: "Axon",
+        key: "a",
+        type: "group",
+        children: [
+          {
+            name: "Synapse",
+            key: "b",
+            type: "group",
+            children: [],
+          },
+        ],
+      };
+
       const skeletonTracing: SkeletonTracingType = {
         annotationId: action.annotation.id,
         createdTimestamp: action.tracing.createdTimestamp,
@@ -135,6 +149,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         activeTreeId,
         restrictions,
         trees,
+        treeGroups: groups,
         name: action.annotation.name,
         tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,
@@ -516,6 +531,22 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               }),
             )
             .getOrElse(state);
+        }
+
+        case "SET_TREE_GROUPS": {
+          return update(state, {
+            tracing: {
+              treeGroups: {
+                $set: action.treeGroups,
+              },
+            },
+          });
+        }
+
+        case "SET_TREE_GROUP": {
+          return update(state, {
+            tracing: { trees: { [action.treeId]: { group: { $set: action.group } } } },
+          });
         }
 
         default:

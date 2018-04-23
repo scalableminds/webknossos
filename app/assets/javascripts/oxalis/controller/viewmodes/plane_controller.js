@@ -106,20 +106,12 @@ class PlaneController extends React.PureComponent<Props> {
 
   initMouse(): void {
     for (const id of OrthoViewValues) {
-      if (id !== OrthoViews.TDView) {
-        const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
-        this.input.mouseControllers[id] = new InputMouse(
-          inputcatcherSelector,
-          this.getPlaneMouseControls(id),
-          id,
-        );
-      } else {
-        this.input.mouseControllers[id] = new InputMouse(
-          "#inputcatcher_TDView",
-          this.getTDViewMouseControls(),
-          id,
-        );
-      }
+      const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
+      this.input.mouseControllers[id] = new InputMouse(
+        inputcatcherSelector,
+        id !== OrthoViews.TDView ? this.getPlaneMouseControls(id) : this.getTDViewMouseControls(),
+        id,
+      );
     }
   }
 

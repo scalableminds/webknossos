@@ -47,7 +47,7 @@ class TracingView extends React.PureComponent<Props> {
     const [width, height] = isArbitraryMode
       ? [scaledViewportWidth, scaledViewportWidth]
       : getCanvasExtent(this.props.activePlaneLayout, scaledViewportWidth);
-    const inputCatchers = !isArbitraryMode ? <InputCatchers width={width} height={height} /> : null;
+    const inputCatchers = !isArbitraryMode ? <InputCatchers /> : null;
     const flightModeRecordingSwitch = isArbitraryMode ? this.getRecordingSwitch() : null;
     const divClassName = classnames({ "zoomstep-warning": this.props.isVolumeTracingDisallowed });
 

@@ -15,11 +15,7 @@ type Props = {
   activeViewport: OrthoViewType,
   brushPosition: ?Vector2,
   brushSize: number,
-  width: number,
-  height: number,
 };
-
-type State = {};
 
 function TDViewControls({ width }) {
   const TDButtonStyle = { width: width / 4 - 0.5 };
@@ -41,7 +37,7 @@ function TDViewControls({ width }) {
   );
 }
 
-class InputCatchers extends React.PureComponent<Props, State> {
+class InputCatchers extends React.PureComponent<Props, {}> {
   handleContextMenu(event: SyntheticInputEvent<>) {
     // hide contextmenu, while rightclicking a canvas
     event.preventDefault();
@@ -74,7 +70,6 @@ class InputCatchers extends React.PureComponent<Props, State> {
 
     const InputCatcher = ({ name, planeType, children }) => {
       const active = activeInputCatcher === planeType;
-      console.log("children", children);
       return (
         <div
           id={`inputcatcher_${name}`}

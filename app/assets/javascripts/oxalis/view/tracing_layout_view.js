@@ -78,13 +78,13 @@ const DefaultLayoutConfig = {
                 {
                   type: "react-component",
                   component: "PortalTarget",
-                  title: "Data",
+                  title: "XY",
                   props: { portalId: "xy" },
                 },
                 {
                   type: "react-component",
                   component: "PortalTarget",
-                  title: "Data",
+                  title: "XZ",
                   props: { portalId: "xz" },
                 },
               ],
@@ -95,13 +95,13 @@ const DefaultLayoutConfig = {
                 {
                   type: "react-component",
                   component: "PortalTarget",
-                  title: "Data",
+                  title: "YZ",
                   props: { portalId: "yz" },
                 },
                 {
                   type: "react-component",
                   component: "PortalTarget",
-                  title: "Data",
+                  title: "3D",
                   props: { portalId: "td" },
                 },
               ],
@@ -166,6 +166,7 @@ class GoldenLayoutWrapper extends React.Component<*, *> {
     }, 2000);
 
     myLayout.eventHub.on("stateChanged", () => {
+      // todo: does not work properly?
       window.needsRerender = true;
     });
   }
@@ -207,6 +208,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   render() {
     const serializedLayoutConfig = JSON.parse(localStorage.getItem("golden-wk-layout"));
+    const restoreLayout = false;
 
     return (
       <div>
@@ -243,7 +245,9 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             >
               <TracingView renderCanvas={true} />
 
-              <GoldenLayoutWrapper layoutConfig={!serializedLayoutConfig || DefaultLayoutConfig}>
+              <GoldenLayoutWrapper
+                layoutConfig={(restoreLayout && serializedLayoutConfig) || DefaultLayoutConfig}
+              >
                 <InputCatchers planeID="xy" key="xy" />
                 <InputCatchers planeID="yz" key="yz" />
                 <InputCatchers planeID="xz" key="xz" />

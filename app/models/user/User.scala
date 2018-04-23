@@ -346,6 +346,8 @@ case class User(
     teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
   }
 
+  def isTeamManagerInOrg(organization: String) = teamManagerTeams.length > 0 && organization == this.organization
+
   def isAdminOf(organization: String): Boolean = isAdmin && organization == this.organization
 
   override def toString = email

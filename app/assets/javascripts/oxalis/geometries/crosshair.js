@@ -51,27 +51,6 @@ class Crosshair {
 
   update() {
     const { context, WIDTH, COLOR, mesh } = this;
-
-    if (this.isDirty) {
-      context.clearRect(0, 0, WIDTH, WIDTH);
-
-      context.fillStyle = COLOR;
-      context.strokeStyle = COLOR;
-
-      context.lineWidth = 3;
-      context.moveTo(WIDTH / 2, 3);
-      context.beginPath();
-      context.arc(WIDTH / 2, WIDTH / 2, WIDTH / 2 - 3, 0, 2 * Math.PI);
-      context.stroke();
-
-      context.beginPath();
-      context.moveTo(WIDTH / 2, WIDTH / 2 - 1);
-      context.arc(WIDTH / 2, WIDTH / 2, 4, 0, 2 * Math.PI, true);
-      context.fill();
-
-      mesh.material.map.needsUpdate = true;
-    }
-
     const m = getZoomedMatrix(Store.getState().flycam);
 
     mesh.matrix.set(
@@ -118,12 +97,23 @@ class Crosshair {
   createMesh(canvas: HTMLCanvasElement) {
     const { WIDTH } = this;
 
-    const texture = new THREE.Texture(canvas);
+    const createCircle = radius => {
+      var segments = 64,
+        material = new THREE.LineBasicMaterial({ color: this.COLOR }),
+        geometry = new THREE.CircleGeometry(radius, segments);
 
-    const material = new THREE.MeshBasicMaterial({ map: texture });
-    material.transparent = true;
+      // Remove center vertex
+      geometry.vertices.shift();
 
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(WIDTH, WIDTH), material);
+      return new THREE.LineLoop(geometry, material);
+    };
+
+    var mesh = new THREE.Group();
+    const outerCircle = createCircle(WIDTH / 2);
+    mesh.add(outerCircle);
+
+    const innerCircle = createCircle(4);
+    mesh.add(innerCircle);
 
     mesh.rotation.x = Math.PI;
 

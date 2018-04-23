@@ -146,7 +146,7 @@ object AnnotationService
           _id = initializingAnnotationId.toBSONObjectId.get,
           createdTimestamp = System.currentTimeMillis,
           modifiedTimestamp = System.currentTimeMillis)
-        _ <- AnnotationDAO.saveToDB(newAnnotation, overwrite = true)
+        _ <- AnnotationDAO.updateInitialized(newAnnotation)
       } yield {
         newAnnotation
       }

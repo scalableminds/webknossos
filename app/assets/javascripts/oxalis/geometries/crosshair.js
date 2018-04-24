@@ -14,7 +14,6 @@ class Crosshair {
   SCALE_MIN: number;
   SCALE_MAX: number;
 
-  context: CanvasRenderingContext2D;
   scale: number;
 
   isDirty: boolean;
@@ -26,23 +25,9 @@ class Crosshair {
     this.SCALE_MAX = 1;
     this.scale = 0;
     this.isDirty = true;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = this.WIDTH;
-    canvas.height = this.WIDTH;
-    this.context = this.getContext(canvas);
-
-    this.mesh = this.createMesh(canvas);
+    this.mesh = this.createMesh();
 
     this.setScale(scale);
-  }
-
-  getContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      return ctx;
-    }
-    throw new Error("Could not retrieve 2d context");
   }
 
   setVisibility(v: boolean) {
@@ -50,7 +35,7 @@ class Crosshair {
   }
 
   update() {
-    const { context, WIDTH, COLOR, mesh } = this;
+    const { mesh } = this;
     const m = getZoomedMatrix(Store.getState().flycam);
 
     mesh.matrix.set(
@@ -94,13 +79,11 @@ class Crosshair {
     scene.add(this.mesh);
   }
 
-  createMesh(canvas: HTMLCanvasElement) {
-    const { WIDTH } = this;
-
+  createMesh() {
     const createCircle = radius => {
-      var segments = 64,
-        material = new THREE.LineBasicMaterial({ color: this.COLOR }),
-        geometry = new THREE.CircleGeometry(radius, segments);
+      const segments = 64;
+      const material = new THREE.LineBasicMaterial({ color: this.COLOR });
+      const geometry = new THREE.CircleGeometry(radius, segments);
 
       // Remove center vertex
       geometry.vertices.shift();
@@ -108,11 +91,11 @@ class Crosshair {
       return new THREE.LineLoop(geometry, material);
     };
 
-    var mesh = new THREE.Group();
-    const outerCircle = createCircle(WIDTH / 2);
-    mesh.add(outerCircle);
-
+    const outerCircle = createCircle(this.WIDTH / 2);
     const innerCircle = createCircle(4);
+
+    const mesh = new THREE.Group();
+    mesh.add(outerCircle);
     mesh.add(innerCircle);
 
     mesh.rotation.x = Math.PI;

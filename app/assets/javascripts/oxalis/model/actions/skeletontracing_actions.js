@@ -11,7 +11,7 @@ import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
 import type { ServerSkeletonTracingType } from "oxalis/model";
 import type { APIAnnotationType } from "admin/api_flow_types";
-import type { SkeletonTracingType, TreeMapType } from "oxalis/store";
+import type { SkeletonTracingType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -74,8 +74,8 @@ type CreateCommentActionType = {
 };
 type DeleteCommentActionType = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: number };
 type SetTracingActionType = { type: "SET_TRACING", tracing: SkeletonTracingType };
-type SetTreeGroupsActionType = { type: "SET_TREE_GROUPS", treeGroups: TreeGroupsType };
-type SetTreeGroupActionType = { type: "SET_TREE_GROUP", group: TreeGroupType, treeId: number };
+type SetTreeGroupsActionType = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroupType> };
+type SetTreeGroupActionType = { type: "SET_TREE_GROUP", group: ?string, treeId: number };
 type NoActionType = { type: "NONE" };
 
 export type SkeletonTracingActionType =
@@ -367,15 +367,12 @@ export const setTracingAction = (tracing: SkeletonTracingType): SetTracingAction
   tracing,
 });
 
-export const setTreeGroupsAction = (treeGroups: TreeGroupsType): SetTreeGroupsActionType => ({
+export const setTreeGroupsAction = (treeGroups: Array<TreeGroupType>): SetTreeGroupsActionType => ({
   type: "SET_TREE_GROUPS",
   treeGroups,
 });
 
-export const setTreeGroupAction = (
-  group: TreeGroupType,
-  treeId: number,
-): SetTreeGroupActionType => ({
+export const setTreeGroupAction = (group: ?string, treeId: number): SetTreeGroupActionType => ({
   type: "SET_TREE_GROUP",
   group,
   treeId,

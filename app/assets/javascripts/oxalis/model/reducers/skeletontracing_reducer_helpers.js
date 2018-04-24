@@ -16,6 +16,7 @@ import Constants from "oxalis/constants";
 import {
   getSkeletonTracing,
   getActiveNodeFromTree,
+  getActiveTree,
   findTreeByNodeId,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
@@ -285,6 +286,7 @@ function splitTreeByNodes(
           timestamp: activeTree.timestamp,
           treeId: activeTree.treeId,
           isVisible: true,
+          group: activeTree.group,
         };
       } else {
         const immutableNewTree = createTree(intermediateState, timestamp).get();
@@ -386,6 +388,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
       const name = generateTreeName(state, timestamp, newTreeId);
+      const group = Utils.toNullable(getActiveTree(skeletonTracing).map(tree => tree.group));
 
       // Create the new tree
       const tree: TreeType = {
@@ -398,6 +401,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
         edges: new EdgeCollection(),
         comments: [],
         isVisible: true,
+        group,
       };
       return Maybe.Just(tree);
     }

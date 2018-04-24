@@ -3,11 +3,10 @@
  * @flow
  */
 
-import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Button, Dropdown, Input, Menu, Icon, Spin, Modal } from "antd";
-import TreesTabItemView from "oxalis/view/right-menu/trees_tab_item_view";
+import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { updateUserSettingAction } from "oxalis/model/actions/settings_actions";
@@ -30,7 +29,6 @@ import FileUpload from "components/file_upload";
 import { saveAs } from "file-saver";
 import Toast from "libs/toast";
 import { getBuildInfo } from "admin/admin_rest_api";
-import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
 
@@ -114,17 +112,12 @@ class TreesTabView extends React.PureComponent<Props, State> {
   getTreesComponents() {
     const orderAttribute = this.props.userConfiguration.sortTreesByName ? "name" : "timestamp";
 
-    // return _.orderBy(this.props.skeletonTracing.trees, [orderAttribute], ["asc"]).map(tree => (
-    //   <TreesTabItemView
-    //     key={tree.treeId}
-    //     tree={tree}
-    //     activeTreeId={this.props.skeletonTracing.activeTreeId}
-    //   />
-    // ));
     return (
       <TreeHierarchyView
         trees={this.props.skeletonTracing.trees}
         treeGroups={this.props.skeletonTracing.treeGroups}
+        activeTreeId={this.props.skeletonTracing.activeTreeId}
+        sortBy={orderAttribute}
       />
     );
   }

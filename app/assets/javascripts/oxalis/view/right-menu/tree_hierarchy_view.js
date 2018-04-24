@@ -3,201 +3,317 @@
 import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Tree } from "antd";
+import { Tree, Modal, Dropdown, Menu, Icon, Input } from "antd";
+import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
 import {
   setActiveTreeAction,
   toggleTreeAction,
   setTreeGroupsAction,
   setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
+import type { TreeType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 const { TreeNode } = Tree;
 
+const MISSING_GROUP_KEY = "__none__";
+
 type Props = {
-  treeGroups: Object,
+  activeTreeId: number,
+  treeGroups: Array<TreeGroupType>,
+  sortBy: string,
+  trees: TreeMapType,
+  onSetActiveTree: number => void,
+  onToggleTree: number => void,
+  onUpdateTreeGroups: (Array<TreeGroupType>) => void,
+  onSetTreeGroup: (?string, number) => void,
 };
 
 type State = {
   expandedKeys: Array<string>,
   checkedKeys: Array<string>,
-  autoExpandParent: boolean,
+  groupTree: Array<TreeGroupType>,
+  renamingGroup: ?{ groupId: string, name: string },
 };
 
-function* iterateGroups(groups) {
-  if (groups == null || groups.length == null || groups.length === 0) {
-    return;
-  }
-
-  for (const group of groups) {
-    if (group.type === "group") yield group.key;
-
-    if (group.children) {
-      yield* iterateGroups(group.children);
-    }
-  }
+function makeGroupObjectFromTree(tree: TreeType) {
+  return {
+    groupId: `${tree.treeId}`,
+    type: "tree",
+    name: tree.name,
+    timestamp: tree.timestamp,
+    children: [],
+  };
 }
 
-function buildGroupToTreesMap(trees) {
-  const groupToTreesMap = {};
-  for (const treeId of Object.keys(trees)) {
-    let group = trees[treeId].group;
-    if (group == null) {
-      group = "__none__";
+function insertTrees(groups: Array<TreeGroupType>, groupToTreesMap) {
+  return groups.map(group => {
+    // Ensure that groups are always at the top when sorting by timestamp
+    group.timestamp = 0;
+    insertTrees(group.children, groupToTreesMap);
+    if (groupToTreesMap[group.groupId] != null) {
+      group.children = group.children.concat(
+        groupToTreesMap[group.groupId].map(makeGroupObjectFromTree),
+      );
     }
-    if (groupToTreesMap[group] == null) {
-      groupToTreesMap[group] = [treeId];
-    } else {
-      groupToTreesMap[group].push(treeId);
-    }
-  }
-  return groupToTreesMap;
+    return group;
+  });
 }
 
-function insertTrees(group, groupToTreesMap) {
-  for (const child of group.children) {
-    insertTrees(child, groupToTreesMap);
-  }
-  if (groupToTreesMap[group.key] != null) {
-    group.children = group.children.concat(
-      groupToTreesMap[group.key].map(treeId => ({ key: `${treeId}`, type: "tree" })),
-    );
-  }
-  return group;
+function walk(
+  data: Array<TreeGroupType>,
+  key: string,
+  callback: Function,
+  parentKey: ?string = MISSING_GROUP_KEY,
+) {
+  data.forEach((item: TreeGroupType, index: number, arr: Array<TreeGroupType>) => {
+    if (item.groupId === key) {
+      callback(item, index, arr, parentKey);
+    }
+    if (item.children) {
+      walk(item.children, key, callback, item.groupId);
+    }
+  });
+}
+
+function findNode(group: Array<TreeGroupType>, key: string): ?TreeGroupType {
+  let node;
+  walk(group, key, item => {
+    node = item;
+  });
+  return node;
+}
+
+function createGroupToTreesMap(trees: TreeMapType): { [string]: Array<TreeType> } {
+  return _.groupBy(trees, tree => (tree.group != null ? tree.group : MISSING_GROUP_KEY));
 }
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
   static getDerivedStateFromProps(nextProps, prevState) {
     const newState = {};
+
+    // Check the trees that are visible
     const checkedKeys = _.filter(nextProps.trees, tree => tree.isVisible).map(
       tree => `${tree.treeId}`,
     );
-    const expandedKeys = _.map(nextProps.trees, tree => `${tree.treeId}`).concat(
-      Array.from(iterateGroups([nextProps.treeGroups])),
-    );
-
-    const groupToTreesMap = buildGroupToTreesMap(nextProps.trees);
-    const generatedGroupTree = [
-      insertTrees(_.cloneDeep(nextProps.treeGroups), groupToTreesMap),
-      ...(groupToTreesMap.__none__ != null
-        ? groupToTreesMap.__none__.map(treeId => ({ key: `${treeId}`, type: "tree" }))
-        : []),
-    ];
-    newState.groupTree = generatedGroupTree;
-
     if (_.xor(prevState.checkedKeys, checkedKeys).length > 0) {
       newState.checkedKeys = checkedKeys;
     }
-    if (_.size(prevState.expandedKeys) === 0) {
-      newState.expandedKeys = expandedKeys;
-    }
-    return _.size(newState) > 0 ? newState : null;
+
+    // Insert the trees into the corresponding groups and create a
+    // groupTree object that can be rendered using an Antd Tree component
+    const groupToTreesMap = createGroupToTreesMap(nextProps.trees);
+    if (groupToTreesMap[MISSING_GROUP_KEY] == null) groupToTreesMap[MISSING_GROUP_KEY] = [];
+    const generatedGroupTree = insertTrees(
+      _.cloneDeep(nextProps.treeGroups),
+      groupToTreesMap,
+    ).concat(...groupToTreesMap[MISSING_GROUP_KEY].map(makeGroupObjectFromTree));
+    newState.groupTree = generatedGroupTree;
+
+    return newState;
   }
 
   state = {
     expandedKeys: [],
     checkedKeys: [],
-    autoExpandParent: true,
+    groupTree: [],
+    renamingGroup: null,
   };
 
+  componentDidUpdate() {
+    this.ensureVisible();
+  }
+
+  selectedKeyRef = null;
+
+  ensureVisible() {
+    // scroll to active tree
+    if (this.selectedKeyRef != null) {
+      scrollIntoViewIfNeeded(this.selectedKeyRef, { centerIfNeeded: true });
+    }
+  }
+
   onExpand = expandedKeys => {
-    // autoExpandParent needs to be set to false, otherwise the parent can not collapse if one of its children is expanded.
-    this.setState({
-      expandedKeys,
-      autoExpandParent: false,
-    });
+    this.setState({ expandedKeys });
   };
 
   onCheck = checkedKeys => {
     const oldCheckedKeys = this.state.checkedKeys;
     const toggledKeys = _.xor(checkedKeys, oldCheckedKeys);
     for (const key of toggledKeys) {
-      const possibleTreeId = parseInt(key, 10);
-      if (_.isFinite(possibleTreeId)) {
-        this.props.onToggleTree(possibleTreeId);
+      const node = findNode(this.state.groupTree, key);
+      if (node != null && node.type === "tree") {
+        this.props.onToggleTree(parseInt(node.groupId, 10));
       }
     }
     this.setState({ checkedKeys });
   };
 
-  onSelect = selectedKeys => {
-    const possibleTreeId = parseInt(selectedKeys[0], 10);
-    if (_.isFinite(possibleTreeId)) {
-      this.props.onSetActiveTree(possibleTreeId);
+  onSelect = (selectedKeys, { node }) => {
+    if (node.props.type === "tree") {
+      // Only one node can be selected at a time
+      this.props.onSetActiveTree(parseInt(selectedKeys[0], 10));
     }
   };
 
-  onDrop = info => {
+  onDrop = ({ node, dragNode, dropToGap }) => {
     // Code based on example from https://ant.design/components/tree/
-    console.log(info);
-    let dropKey = info.node.props.eventKey;
-    const dragKey = info.dragNode.props.eventKey;
+    let dropKey = node.props.eventKey;
+    const dragKey = dragNode.props.eventKey;
 
-    // const dragNodesKeys = info.dragNodesKeys;
-    const loop = (data, key, callback, parentKey = "__none__") => {
-      data.forEach((item, index, arr) => {
-        if (item.key === key) {
-          return callback(item, index, arr, parentKey);
-        }
-        if (item.children) {
-          return loop(item.children, key, callback, item.key);
-        }
-      });
-    };
-    const groupTree = this.state.groupTree;
+    const { groupTree } = this.state;
 
-    if (!info.dropToGap) {
-      // Cannot drop on tree nodes, only on groups
-      let dropItem;
-      loop(groupTree, dropKey, item => {
-        dropItem = item;
-      });
-      if (dropItem.type === "tree") return;
-    } else {
+    if (dropToGap) {
       // If dropToGap is true the dropKey is that of the sibling element, but we want the key of the parent element
-      loop(groupTree, dropKey, (item, index, arr, parentKey) => {
+      walk(groupTree, dropKey, (item, index, arr, parentKey) => {
         dropKey = parentKey;
       });
+    } else if (node.props.type === "tree") {
+      // Cannot drop on tree nodes, only on groups
+      return;
     }
 
-    let dragObj;
-    loop(groupTree, dragKey, item => {
-      dragObj = item;
-    });
-    if (dragObj.type === "tree") {
-      console.log("Updated group of tree");
+    if (dragNode.props.type === "tree") {
+      // A tree was dragged - Update group of tree
       this.props.onSetTreeGroup(dropKey, parseInt(dragKey, 10));
     } else {
+      // A group was dragged - Update the tree groups object
       const newTreeGroups = _.cloneDeep(this.props.treeGroups);
-      loop(newTreeGroups, dragKey, (item, index, arr) => {
+      // Remove group from old spot
+      walk(newTreeGroups, dragKey, (item, index, arr) => {
         arr.splice(index, 1);
       });
-      loop(newTreeGroups, dropKey, item => {
-        item.children = item.children || [];
-        item.children.push(dragObj);
-      });
-      console.log("Updated groups");
-      this.props.onUpdateTreeGroups(newTreeGroups);
+      // Insert group in new spot
+      const dragObjWithoutTrees = findNode(this.props.treeGroups, dragKey);
+      if (dragObjWithoutTrees != null) {
+        if (dropKey === MISSING_GROUP_KEY) {
+          newTreeGroups.push(dragObjWithoutTrees);
+        } else {
+          walk(newTreeGroups, dropKey, item => {
+            item.children.push(dragObjWithoutTrees);
+          });
+        }
+        this.props.onUpdateTreeGroups(newTreeGroups);
+      }
     }
+  };
+
+  renameGroup(groupId, newName) {
+    const newTreeGroups = _.cloneDeep(this.props.treeGroups);
+    walk(newTreeGroups, groupId, item => {
+      item.name = newName;
+    });
+    this.props.onUpdateTreeGroups(newTreeGroups);
+  }
+
+  deleteGroup(groupId) {
+    const newTreeGroups = _.cloneDeep(this.props.treeGroups);
+    const groupToTreesMap = createGroupToTreesMap(this.props.trees);
+    walk(newTreeGroups, groupId, (item, index, arr, parentKey) => {
+      // Remove group and move its group children to the parent group
+      arr.splice(index, 1);
+      arr.push(...item.children);
+      // Update the group of all its tree children to the parent group
+      const trees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
+      for (const tree of trees) {
+        this.props.onSetTreeGroup(parentKey === MISSING_GROUP_KEY ? null : parentKey, tree.treeId);
+      }
+    });
+    this.props.onUpdateTreeGroups(newTreeGroups);
+  }
+
+  handleDropdownClick = ({ item, key }) => {
+    const { groupId, name } = item.props;
+    if (key === "rename") {
+      this.setState({ renamingGroup: { groupId, name } });
+    } else if (key === "delete") {
+      this.deleteGroup(groupId);
+    }
+  };
+
+  renderGroupActionsDropdown = (groupName, groupId) => {
+    const menu = (
+      <Menu onClick={this.handleDropdownClick}>
+        <Menu.Item key="rename" groupId={groupId} name={groupName}>
+          <Icon type="tool" />Rename
+        </Menu.Item>
+        <Menu.Item key="delete" groupId={groupId} name={groupName}>
+          <Icon type="delete" />Delete
+        </Menu.Item>
+      </Menu>
+    );
+
+    return (
+      <React.Fragment>
+        {groupName}{" "}
+        <Dropdown overlay={menu}>
+          <a className="ant-dropdown-link" href="#">
+            <Icon type="down" />
+          </a>
+        </Dropdown>
+      </React.Fragment>
+    );
+  };
+
+  renderRenameModal = () => {
+    let newName;
+    return (
+      <Modal
+        title="Rename group"
+        visible={this.state.renamingGroup != null}
+        onOk={() => {
+          this.renameGroup(
+            this.state.renamingGroup != null ? this.state.renamingGroup.groupId : "",
+            newName,
+          );
+          this.setState({ renamingGroup: null });
+        }}
+        onCancel={() => this.setState({ renamingGroup: null })}
+      >
+        <Input
+          onChange={e => {
+            newName = e.target.value;
+          }}
+          defaultValue={this.state.renamingGroup != null ? this.state.renamingGroup.name : ""}
+        />
+      </Modal>
+    );
   };
 
   renderTreeNodes = data =>
-    data.map(node => {
+    _.orderBy(data, [this.props.sortBy], ["asc"]).map(node => {
       if (node.type === "group") {
-        if (node.children) {
-          return (
-            <TreeNode title={node.name} key={node.key} dataRef={node}>
-              {this.renderTreeNodes(node.children)}
-            </TreeNode>
-          );
-        }
-        return <TreeNode {...node} />;
-      } else {
-        const tree = this.props.trees[parseInt(node.key, 10)];
+        const children = node.children != null ? this.renderTreeNodes(node.children) : null;
+
         return (
           <TreeNode
-            title={`${tree.nodes.size()} - ${tree.name}`}
-            key={tree.treeId}
-            dataRef={tree}
+            title={this.renderGroupActionsDropdown(node.name, node.groupId)}
+            key={node.groupId}
+            type="group"
+          >
+            {children}
+          </TreeNode>
+        );
+      } else {
+        const tree = this.props.trees[parseInt(node.groupId, 10)];
+        const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
+
+        return (
+          <TreeNode
+            title={
+              <React.Fragment>
+                {`${tree.nodes.size()}  `}
+                <i className="fa fa-circle" style={{ color: `rgb(${rgbColorString})` }} />
+                {`${tree.name} `}
+              </React.Fragment>
+            }
+            key={node.groupId}
+            type="tree"
+            ref={ref => {
+              if (ref != null && tree.treeId === this.props.activeTreeId) {
+                // $FlowFixMe Antd components have the selectHandle property which contains the DOM reference
+                this.selectedKeyRef = ref.selectHandle;
+              }
+            }}
           />
         );
       }
@@ -205,28 +321,28 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <Tree
-        checkable
-        draggable
-        showLine
-        onDrop={this.onDrop}
-        onExpand={this.onExpand}
-        expandedKeys={this.state.expandedKeys}
-        autoExpandParent={this.state.autoExpandParent}
-        onCheck={this.onCheck}
-        checkedKeys={this.state.checkedKeys}
-        onSelect={this.onSelect}
-        selectedKeys={[`${this.props.activeTreeId}`]}
-      >
-        {this.renderTreeNodes(this.state.groupTree)}
-      </Tree>
+      <React.Fragment>
+        {this.renderRenameModal()}
+        <Tree
+          checkable
+          draggable
+          showLine
+          onDrop={this.onDrop}
+          onExpand={this.onExpand}
+          expandedKeys={this.state.expandedKeys}
+          defaultExpandAll
+          autoExpandParent={false}
+          onCheck={this.onCheck}
+          checkedKeys={this.state.checkedKeys}
+          onSelect={this.onSelect}
+          selectedKeys={[`${this.props.activeTreeId}`]}
+        >
+          {this.renderTreeNodes(this.state.groupTree)}
+        </Tree>
+      </React.Fragment>
     );
   }
 }
-
-const mapStateToProps = (state: OxalisState) => ({
-  activeTreeId: state.tracing.activeTreeId,
-});
 
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onSetActiveTree(treeId) {
@@ -243,4 +359,4 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(TreeHierarchyView);
+export default connect(null, mapDispatchToProps)(TreeHierarchyView);

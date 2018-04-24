@@ -42,6 +42,7 @@ declare module "antd" {
     static info: Function;
   }
   declare var notification: Object;
+  declare class Popover<P> extends React$Component<P> {}
   declare class Progress<P> extends React$Component<P> {}
   declare class Radio<P> extends React$Component<P> {
     static Button: React$ComponentType<P>;

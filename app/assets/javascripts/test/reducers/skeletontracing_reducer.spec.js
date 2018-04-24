@@ -54,6 +54,7 @@ const initialState = {
         comments: [],
         color: [23, 23, 23],
         isVisible: true,
+        group: null,
       },
     },
     tracingType: "Explorational",

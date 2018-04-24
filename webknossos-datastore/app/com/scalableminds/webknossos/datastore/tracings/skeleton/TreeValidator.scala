@@ -10,7 +10,9 @@ object TreeValidator {
     for {
       _ <- checkNoDuplicateTreeIds(trees)
       _ <- checkNoDuplicateNodeIds(trees)
+      _ <- checkNoDuplicateEdges(trees)
       _ <- checkAllNodesUsedInEdgesExist(trees)
+      _ <- checkNoEdgesWithSameSourceAndTarget(trees)
       _ <- checkTreesAreConnected(trees)
     } yield Full(())
   }
@@ -35,6 +37,21 @@ object TreeValidator {
     }
   }
 
+  private def checkNoDuplicateEdges(trees: Seq[Tree]): Box[Unit] = {
+    trees.foldLeft[Box[Unit]](Full(())){
+      case (Full(()), tree) =>
+        val edges = tree.edges
+        val distinctEdges = edges.distinct
+        if (edges.size == distinctEdges.size) {
+          Full(())
+        } else {
+          Failure(s"Duplicate edges in tree ${tree.treeId}: ${edges.diff(distinctEdges).mkString(", ")}")
+        }
+      case (f, _) =>
+        f
+    }
+  }
+
   private def checkAllNodesUsedInEdgesExist(trees: Seq[Tree]): Box[Unit] = {
     trees.foldLeft[Box[Unit]](Full(())){
       case (Full(()), tree) =>
@@ -45,6 +62,22 @@ object TreeValidator {
           Full(())
         } else {
           Failure(s"Some edges refer to non-existent nodes. treeId: ${tree.treeId}, nodeIds: ${nodesOnlyInEdges.mkString(", ")}")
+        }
+      case (f, _) =>
+        f
+    }
+  }
+
+  private def checkNoEdgesWithSameSourceAndTarget(trees: Seq[Tree]): Box[Unit] = {
+    trees.foldLeft[Box[Unit]](Full(())){
+      case (Full(()), tree) =>
+        val invalidEdges = tree.edges.filter { edge =>
+          edge.source == edge.target
+        }
+        if (invalidEdges.isEmpty) {
+          Full(())
+        } else {
+          Failure(s"Some edges have the same source and target. treeId: ${tree.treeId}, edges: ${invalidEdges.mkString(", ")}")
         }
       case (f, _) =>
         f

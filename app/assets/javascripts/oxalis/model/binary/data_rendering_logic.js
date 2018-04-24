@@ -64,16 +64,17 @@ export function calculateTextureSizeAndCountForLayer(
   specs: GpuSpecs,
   byteCount: number,
 ): DataTextureSizeAndCount {
-  let textureSize = specs.supportedTextureSize >= 8192 ? 8192 : 4096;
+  let textureSize = specs.supportedTextureSize; // >= 8192 ? 8192 : 4096;
   const packingDegree = getPackingDegree(byteCount);
-
-  const textureCount = getTextureCount(textureSize, packingDegree);
 
   // Try to half the texture size as long as it does not require more
   // data textures
-  while (getTextureCount(textureSize / 2, packingDegree) === 1) {
+  while (
+    getTextureCount(textureSize / 2, packingDegree) <= getTextureCount(textureSize, packingDegree)
+  ) {
     textureSize /= 2;
   }
 
+  const textureCount = getTextureCount(textureSize, packingDegree);
   return { textureSize, textureCount };
 }

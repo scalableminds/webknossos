@@ -126,7 +126,7 @@ class Binary {
     maxZoomStep: number,
     connectionInfo: ConnectionInfo,
     textureWidth: number,
-    dataTextureCount: number,
+    unpackedDataTextureCount: number,
   ) {
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
@@ -134,7 +134,9 @@ class Binary {
     _.extend(this, BackboneEvents);
 
     this.textureWidth = textureWidth;
-    this.dataTextureCount = dataTextureCount;
+    // If the layer only holds one byte per voxel, we can pack 4 bytes using rgba channels
+    const packingDegree = this.getByteCount() === 1 ? 4 : 1;
+    this.dataTextureCount = Math.ceil(unpackedDataTextureCount / packingDegree);
 
     this.category = this.layer.category;
     this.name = this.layer.name;
@@ -248,13 +250,18 @@ class Binary {
     return [this.mappingTexture, this.mappingLookupTexture];
   }
 
+  getByteCount(): number {
+    return this.layer.bitDepth >> 3;
+  }
+
   setupDataTextures(): void {
-    const bytes = this.layer.bitDepth >> 3;
+    const bytes = this.getByteCount();
 
     this.textureBucketManager = new TextureBucketManager(
       constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,
       this.textureWidth,
       this.dataTextureCount,
+      bytes,
     );
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 

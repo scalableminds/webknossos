@@ -122,7 +122,7 @@ export class OxalisModel {
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
   isMappingSupported: boolean = true;
-  dataTextureCountPerLayer: number;
+  unpackedDataTextureCountPerLayer: number;
 
   async fetch(
     tracingType: TracingTypeTracingType,
@@ -215,7 +215,7 @@ export class OxalisModel {
     }
 
     const usedTextureSize = supportedTextureSize >= 8192 ? 8192 : 4096;
-    const dataTextureCountPerLayer = (() => {
+    const unpackedDataTextureCountPerLayer = (() => {
       const bucketCountPerPlane =
         constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION ** 2 + // buckets in current zoomStep
         Math.ceil(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / 2) ** 2; // buckets in fallback zoomstep;
@@ -226,7 +226,7 @@ export class OxalisModel {
 
     const lookupTextureCountPerLayer = 1;
     const necessaryTextureCount =
-      layers.length * (dataTextureCountPerLayer + lookupTextureCountPerLayer);
+      layers.length * (unpackedDataTextureCountPerLayer + lookupTextureCountPerLayer);
 
     // Count textures needed for mappings separately, because they are not strictly necessary
     let textureCountForCellMappings = 0;
@@ -245,7 +245,7 @@ export class OxalisModel {
       this.isMappingSupported = false;
     }
 
-    return [usedTextureSize, dataTextureCountPerLayer];
+    return [usedTextureSize, unpackedDataTextureCountPerLayer];
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -366,8 +366,8 @@ export class OxalisModel {
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
-    const [textureWidth, dataTextureCountPerLayer] = this.validateSpecsForLayers(layers);
-    this.dataTextureCountPerLayer = dataTextureCountPerLayer;
+    const [textureWidth, unpackedDataTextureCountPerLayer] = this.validateSpecsForLayers(layers);
+    this.unpackedDataTextureCountPerLayer = unpackedDataTextureCountPerLayer;
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
@@ -382,7 +382,7 @@ export class OxalisModel {
         maxLayerZoomStep,
         this.connectionInfo,
         textureWidth,
-        dataTextureCountPerLayer,
+        unpackedDataTextureCountPerLayer,
       );
     }
 

@@ -46,8 +46,8 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         case Some(a: Array[Byte]) =>
           Fox.successful(a)
         case _ => {
-          val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c => JsonHelper.jsResultToOpt(c.configuration("position").validate[Point3D]))
-          val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c => JsonHelper.jsResultToOpt(c.configuration("zoom").validate[Int]))
+          val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
+          val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Int])))
           dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, ThumbnailWidth, ThumbnailHeight, defaultZoomOpt, defaultCenterOpt).map {
             result =>
               Cache.set(s"thumbnail-$dataSetName*$dataLayerName",

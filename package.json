@@ -100,6 +100,7 @@
     "history": "^4.7.2",
     "immutability-helper": "^2.6.6",
     "js-priority-queue": "^0.1.5",
+    "jsonschema": "^1.2.4",
     "lodash": "^4.13.1",
     "mini-css-extract-plugin": "^0.2.0",
     "mjs": "^1.0.0",

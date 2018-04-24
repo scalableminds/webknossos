@@ -14,6 +14,7 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.binary.DataSetDAO
 import models.project.ProjectDAO
 import models.task._
+import models.team.TeamDAO
 import models.user._
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
@@ -31,7 +32,7 @@ case class TaskParameters(
                            taskTypeId: String,
                            neededExperience: Experience,
                            openInstances: Int,
-                           team: String,
+                           teamName: String,
                            projectName: String,
                            scriptId: Option[String],
                            boundingBox: Option[BoundingBox],
@@ -47,7 +48,7 @@ case class NmlTaskParameters(
                               taskTypeId: String,
                               neededExperience: Experience,
                               openInstances: Int,
-                              team: String,
+                              teamName: String,
                               projectName: String,
                               scriptId: Option[String],
                               boundingBox: Option[BoundingBox])
@@ -90,8 +91,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      teamBSON <- MongoHelpers.parseBsonToFox(params.team)
-      _ <- ensureTeamAdministration(request.identity, teamBSON)
+      team <- TeamDAO.findOneByName(params.teamName) ?~> Messages("team.notFound")
+      _ <- ensureTeamAdministration(request.identity, team._id)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       tracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
       tracings <- Fox.combined(tracingFoxes) ?~> Messages("task.create.failed")
@@ -115,7 +116,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       nmlParams.taskTypeId,
       nmlParams.neededExperience,
       nmlParams.openInstances,
-      nmlParams.team,
+      nmlParams.teamName,
       nmlParams.projectName,
       nmlParams.scriptId,
       nmlParams.boundingBox,
@@ -176,11 +177,12 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     for {
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      team <- TeamDAO.findOneByName(params.teamName) ?~> Messages("team.notFound")
       _ <- validateScript(params.scriptId)
-      _ <- ensureTeamAdministration(request.identity, BSONObjectID(params.team))
+      _ <- ensureTeamAdministration(request.identity, team._id)
       task = Task(
         taskType._id,
-        BSONObjectID(params.team),
+        team._id,
         params.neededExperience,
         params.openInstances,
         params.openInstances,

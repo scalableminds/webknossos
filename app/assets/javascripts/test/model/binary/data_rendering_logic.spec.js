@@ -2,7 +2,6 @@
 
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
-import _ from "lodash";
 
 import { calculateTextureSizeAndCountForLayer } from "oxalis/model/binary/data_rendering_logic";
 

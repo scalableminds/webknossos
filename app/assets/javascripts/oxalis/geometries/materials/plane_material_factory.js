@@ -121,6 +121,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: dataTextures,
       };
 
+      this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
+        type: "f",
+        value: binary.textureWidth,
+      };
+
       this.uniforms[sanitizeName(`${name}_lookup_texture`)] = {
         type: "t",
         value: lookUpTexture,
@@ -227,7 +232,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   getFragmentShader(): string {
     const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
     const segmentationBinary = Model.getSegmentationBinary();
-    const dataTextureWidth = _.values(Model.binary)[0].textureWidth;
 
     return _.template(
       `\
@@ -235,6 +239,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 
 <% _.each(layers, function(name) { %>
   uniform sampler2D <%= name %>_textures[dataTextureCountPerLayer];
+  uniform float <%= name %>_data_texture_width;
   uniform sampler2D <%= name %>_lookup_texture;
   uniform float <%= name %>_maxZoomStep;
   uniform float <%= name %>_brightness;
@@ -246,6 +251,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% if (hasSegmentation) { %>
   uniform sampler2D <%= segmentationName %>_lookup_texture;
   uniform sampler2D <%= segmentationName %>_textures[dataTextureCountPerLayer];
+  uniform float <%= segmentationName %>_data_texture_width;
   uniform float <%= segmentationName %>_maxZoomStep;
 
   <% if (isMappingSupported) { %>
@@ -271,7 +277,6 @@ varying vec4 worldCoord;
 const float bucketsPerDim = <%= bucketsPerDim %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
-const float d_texture_width = <%= d_texture_width %>;
 const float l_texture_width = <%= l_texture_width %>;
 const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
 
@@ -394,6 +399,7 @@ bool isNan(float val) {
 vec4 getColorFor(
   sampler2D lookUpTexture,
   sampler2D dataTextures[dataTextureCountPerLayer],
+  float d_texture_width,
   float packingDegree,
   vec3 bucketPosition,
   vec3 offsetInBucket,
@@ -517,6 +523,7 @@ vec3 getCoords(float usedZoomStep) {
 vec4 getColorForCoords(
   sampler2D lookUpTexture,
   sampler2D dataTextures[dataTextureCountPerLayer],
+  float d_texture_width,
   float packingDegree,
   vec3 coords,
   float isFallback
@@ -528,6 +535,7 @@ vec4 getColorForCoords(
   return getColorFor(
     lookUpTexture,
     dataTextures,
+    d_texture_width,
     packingDegree,
     bucketPosition,
     offsetInBucket,
@@ -535,15 +543,21 @@ vec4 getColorForCoords(
   );
 }
 
-vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[dataTextureCountPerLayer], float packingDegree, vec3 coords) {
+vec4 getBilinearColorFor(
+  sampler2D lookUpTexture,
+  sampler2D dataTextures[dataTextureCountPerLayer],
+  float d_texture_width,
+  float packingDegree,
+  vec3 coords
+) {
   coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
 
-  vec4 a = getColorForCoords(lookUpTexture, dataTextures, packingDegree, coords, 0.0);
-  vec4 b = getColorForCoords(lookUpTexture, dataTextures, packingDegree, coords + transDim(vec3(1, 0, 0)), 0.0);
-  vec4 c = getColorForCoords(lookUpTexture, dataTextures, packingDegree, coords + transDim(vec3(0, 1, 0)), 0.0);
-  vec4 d = getColorForCoords(lookUpTexture, dataTextures, packingDegree, coords + transDim(vec3(1, 1, 0)), 0.0);
+  vec4 a = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords, 0.0);
+  vec4 b = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), 0.0);
+  vec4 c = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), 0.0);
+  vec4 d = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), 0.0);
   if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
     // We need to check all four colors for a negative parts, because there will be black
     // lines at the borders otherwise (black gets mixed with data)
@@ -560,15 +574,16 @@ vec4 getBilinearColorFor(sampler2D lookUpTexture, sampler2D dataTextures[dataTex
 vec4 getMaybeFilteredColor(
   sampler2D lookUpTexture,
   sampler2D dataTextures[dataTextureCountPerLayer],
+  float d_texture_width,
   float packingDegree,
   vec3 coords,
   bool suppressBilinearFiltering
 ) {
   vec4 color;
   if (!suppressBilinearFiltering && useBilinearFiltering) {
-    color = getBilinearColorFor(lookUpTexture, dataTextures, packingDegree, coords);
+    color = getBilinearColorFor(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords);
   } else {
-    color = getColorForCoords(lookUpTexture, dataTextures, packingDegree, coords, 0.0);
+    color = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords, 0.0);
   }
   return color;
 }
@@ -576,6 +591,7 @@ vec4 getMaybeFilteredColor(
 vec4 getMaybeFilteredColorOrFallback(
   sampler2D lookUpTexture,
   sampler2D dataTextures[dataTextureCountPerLayer],
+  float d_texture_width,
   float packingDegree,
   vec3 coords,
   vec3 fallbackCoords,
@@ -583,10 +599,10 @@ vec4 getMaybeFilteredColorOrFallback(
   bool suppressBilinearFiltering,
   vec4 fallbackColor
 ) {
-  vec4 color = getMaybeFilteredColor(lookUpTexture, dataTextures, packingDegree, coords, suppressBilinearFiltering);
+  vec4 color = getMaybeFilteredColor(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords, suppressBilinearFiltering);
 
   if (color.a < 0.0 && hasFallback) {
-    color = getColorForCoords(lookUpTexture, dataTextures, packingDegree, fallbackCoords, 1.0).rgba;
+    color = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, fallbackCoords, 1.0).rgba;
     if (color.a < 0.0) {
       // Render gray for not-yet-existing data
       color = fallbackColor;
@@ -639,6 +655,7 @@ void main() {
       getMaybeFilteredColorOrFallback(
         <%= segmentationName %>_lookup_texture,
         <%= segmentationName %>_textures,
+        <%= segmentationName %>_data_texture_width,
         1.0,
         coords,
         fallbackCoords,
@@ -668,6 +685,7 @@ void main() {
       getMaybeFilteredColorOrFallback(
         <%= layers[0] %>_lookup_texture,
         <%= layers[0] %>_textures,
+        <%= layers[0] %>_data_texture_width,
         1.0,
         coords,
         fallbackCoords,
@@ -685,6 +703,7 @@ void main() {
         getMaybeFilteredColorOrFallback(
           <%= name %>_lookup_texture,
           <%= name %>_textures,
+          <%= name %>_data_texture_width,
           4.0, // gray scale data is always packed into rgba channels
           coords,
           fallbackCoords,
@@ -725,10 +744,9 @@ void main() {
       planeID: this.planeID,
       uvw: Dimensions.getIndices(this.planeID),
       bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
-      d_texture_width: formatNumberAsGLSLFloat(dataTextureWidth),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
       isMappingSupported: Model.isMappingSupported,
-      dataTextureCountPerLayer: Model.unpackedDataTextureCountPerLayer,
+      dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
       mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
       bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),
       bucketSize: formatNumberAsGLSLFloat(constants.BUCKET_SIZE),

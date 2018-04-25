@@ -124,20 +124,18 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
 
   getKeyboardShortcuts(isPublicViewMode: boolean) {
     return isPublicViewMode ? (
-      <div>
-        <Table
-          dataSource={shortcuts}
-          columns={shortcutColumns}
-          pagination={false}
-          style={{ marginRight: 20 }}
-          size="small"
-        />
-      </div>
+      <Table
+        dataSource={shortcuts}
+        columns={shortcutColumns}
+        pagination={false}
+        style={{ marginRight: 20, marginTop: 25, marginBottom: 25 }}
+        size="small"
+      />
     ) : null;
   }
 
-  getOrganisationLogo() {
-    return (
+  getOrganisationLogo(isPublicViewMode: boolean) {
+    return isPublicViewMode ? (
       <div>
         <img
           className="img-50"
@@ -150,40 +148,22 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
           alt="Max Plank Institute of Brain Research Logo"
         />
       </div>
-    );
+    ) : null;
   }
 
   getDatasetName(isPublicViewMode: boolean) {
-    let { name: datasetName } = this.props.dataset;
-    const { displayName } = this.props.dataset;
+    const { name: datasetName, displayName, description } = this.props.dataset;
 
-    if (isPublicViewMode && displayName) {
-      datasetName = displayName;
+    if (isPublicViewMode) {
+      return (
+        <div>
+          <p>Dataset: {displayName || datasetName}</p>
+          {description ? <p>{description}</p> : null}
+        </div>
+      );
     }
 
     return <p>Dataset: {datasetName}</p>;
-  }
-
-  getDatasetDescription(isPublicViewMode: boolean) {
-    const { description } = this.props.tracing;
-
-    if (isPublicViewMode) {
-      return description ? <p>Description: {description}</p> : null;
-    }
-
-    const tracingDescription = this.props.tracing.description || "<no comment>";
-    return (
-      <p>
-        <span>
-          Description:
-          <EditableTextLabel
-            value={tracingDescription}
-            onChange={this.setAnnotationDescription}
-            rows={4}
-          />
-        </span>
-      </p>
-    );
   }
 
   getTracingName(isPublicViewMode: boolean) {
@@ -213,8 +193,23 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         </span>
       );
     }
+    const tracingDescription = this.props.tracing.description || "<no comment>";
 
-    return <p>{annotationTypeLabel}</p>;
+    return (
+      <div>
+        <p>{annotationTypeLabel}</p>
+        <p>
+          <span>
+            Description:
+            <EditableTextLabel
+              value={tracingDescription}
+              onChange={this.setAnnotationDescription}
+              rows={4}
+            />
+          </span>
+        </p>
+      </div>
+    );
   }
 
   render() {
@@ -227,7 +222,6 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       <div className="flex-overflow">
         {this.getTracingName(isPublicViewMode)}
         {this.getDatasetName(isPublicViewMode)}
-        {this.getDatasetDescription(isPublicViewMode)}
 
         <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
         <p>
@@ -236,7 +230,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
 
         {this.getTracingStatistics()}
         {this.getKeyboardShortcuts(isPublicViewMode)}
-        {this.getOrganisationLogo()}
+        {this.getOrganisationLogo(isPublicViewMode)}
       </div>
     );
   }

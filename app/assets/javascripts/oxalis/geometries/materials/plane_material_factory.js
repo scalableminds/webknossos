@@ -294,7 +294,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       listenToStoreProperty(
         storeState => getActiveCellId(storeState.tracing).getOrElse(0),
         activeCellId => {
-          this.uniforms.activeCellId.value = activeCellId;
+          // Mod the id since we do so anyway in the shader and floats are imprecise
+          // for high values
+          this.uniforms.activeCellId.value = activeCellId % 256;
         },
       );
 
@@ -777,10 +779,12 @@ float getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
       vec4(0.0, 0.0, 0.0, 0.0)
     );
 
-  float id = vec4ToFloat(volume_color);
+  // Only consider the last 8 bit (little endian)
+  float id = volume_color.r * 255.0;
 
   <% if (isMappingSupported) { %>
     if (isMappingEnabled) {
+      id = vec4ToFloat(volume_color);
       float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
       if (index != -1.0) {
         id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, 4096.0, index).rgba);

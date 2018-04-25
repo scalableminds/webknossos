@@ -714,25 +714,35 @@ vec4 getMaybeFilteredColorOrFallback(
   return color;
 }
 
+// Be careful! Floats higher than 2**24 cannot be expressed precisely.
 float vec4ToFloat(vec4 v) {
   v *= 255.0;
   return v.r + v.g * pow(2.0, 8.0) + v.b * pow(2.0, 16.0) + v.a * pow(2.0, 24.0);
 }
 
-float binarySearchIndex(sampler2D texture, float maxIndex, float value) {
+bool greaterThanVec4(vec4 x, vec4 y) {
+  if (x.a > y.a) return true;
+  if (x.a < y.a) return false;
+  if (x.b > y.b) return true;
+  if (x.b < y.b) return false;
+  if (x.g > y.g) return true;
+  if (x.g < y.g) return false;
+  if (x.r > y.r) return true;
+  else return false;
+}
+
+float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
   float low = 0.0;
   float high = maxIndex - 1.0;
   // maxIndex is at most MAPPING_TEXTURE_WIDTH**2, requiring a maximum of log2(MAPPING_TEXTURE_WIDTH**2)+1 loop passes
   for (float i = 0.0; i < <%= formatNumberAsGLSLFloat(Math.log2(mappingTextureWidth**2) + 1.0) %>; i++) {
     float mid = floor((low + high) / 2.0);
-    float cur = vec4ToFloat(getRgbaAtIndex(texture, <%= mappingTextureWidth %>, mid).rgba);
+    vec4 cur = getRgbaAtIndex(texture, <%= mappingTextureWidth %>, mid);
     if (cur == value) {
       return mid;
-    } else if (cur == 0.0 || cur > value) {
-      // Uninitialized values in the texture are 0.0, so if we encounter a 0.0 and it is not the searched value
-      // we are too far to the end of the texture
+    } else if (greaterThanVec4(cur, value)) {
       high = mid - 1.0;
-    } else if (cur < value) {
+    } else {
       low = mid + 1.0;
     }
   }
@@ -779,19 +789,26 @@ float getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
       vec4(0.0, 0.0, 0.0, 0.0)
     );
 
-  // Only consider the last 8 bit (little endian)
-  float id = volume_color.r * 255.0;
 
   <% if (isMappingSupported) { %>
     if (isMappingEnabled) {
-      id = vec4ToFloat(volume_color);
-      float index = binarySearchIndex(<%= segmentationName %>_mapping_lookup_texture, mappingSize, id);
+      float index = binarySearchIndex(
+        <%= segmentationName %>_mapping_lookup_texture,
+        mappingSize,
+        volume_color
+      );
       if (index != -1.0) {
-        id = vec4ToFloat(getRgbaAtIndex(<%= segmentationName %>_mapping_texture, 4096.0, index).rgba);
+        volume_color = getRgbaAtIndex(
+          <%= segmentationName %>_mapping_texture,
+          <%= mappingTextureWidth %>,
+          index
+        );
       }
     }
   <% } %>
 
+  // Only consider the last 8 bit (little endian)
+  float id = volume_color.r * 255.0;
   return id;
 }
 

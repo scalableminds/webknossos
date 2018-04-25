@@ -202,7 +202,6 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
-    let pos;
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
@@ -214,7 +213,7 @@ class SceneController {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(true);
-          pos = _.clone(getPosition(Store.getState().flycam));
+          const pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
@@ -227,7 +226,7 @@ class SceneController {
     } else {
       this.volumeMeshes.visible = true;
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        pos = getPosition(Store.getState().flycam);
+        const pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);

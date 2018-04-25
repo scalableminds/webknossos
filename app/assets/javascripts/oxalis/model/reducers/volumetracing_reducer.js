@@ -115,7 +115,7 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
         }
 
         case "SET_BRUSH_SIZE": {
-          const brushSize = Math.max(1, action.brushSize);
+          const brushSize = Math.max(10, action.brushSize);
           return update(state, {
             temporaryConfiguration: { brushSize: { $set: brushSize } },
           });

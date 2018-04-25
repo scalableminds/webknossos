@@ -51,9 +51,10 @@ import {
   getDataset,
   getSharingToken,
 } from "admin/admin_rest_api";
+
+import messages from "messages";
 import type Layer from "oxalis/model/binary/layers/layer";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
-import messages from "messages";
 import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
 import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
 
@@ -269,7 +270,7 @@ export class OxalisModel {
     }
   }
 
-  async initializeDataset(datasetName: string) {
+  async initializeDataset(datasetName: string): Promise<Array<Vector3>> {
     const sharingToken = getSharingToken();
     const rawDataset =
       sharingToken != null

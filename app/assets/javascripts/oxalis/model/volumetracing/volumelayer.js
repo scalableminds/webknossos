@@ -192,19 +192,16 @@ class VolumeLayer {
     const coord2d = [Math.floor(floatingCoord2d[0]), Math.floor(floatingCoord2d[1])];
     const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
 
-    const setMap = function(x: number, y: number, value = true): void {
-      x = Math.floor(x);
-      y = Math.floor(y);
-      map[x - minCoord2d[0]][y - minCoord2d[1]] = value;
-    };
-
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
-    const baseVoxelFactors = this.get2DCoordinate(
-      getBaseVoxelFactors(Store.getState().dataset.scale),
-    );
-    Drawing.fillCircle(coord2d[0], coord2d[1], radius, baseVoxelFactors, (x, y) =>
-      setMap(x, y, true),
-    );
+    const [u, v] = this.get2DCoordinate(getBaseVoxelFactors(Store.getState().dataset.scale));
+
+    for (let x = 0; x < width; x++) {
+      for (let y = 0; y < width; y++) {
+        if (Math.sqrt(((x - radius) / u) ** 2 + ((y - radius) / v) ** 2) < radius) {
+          map[x][y] = true;
+        }
+      }
+    }
 
     const iterator = new VoxelIterator(
       map,

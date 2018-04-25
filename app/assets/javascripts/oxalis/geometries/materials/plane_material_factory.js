@@ -700,7 +700,7 @@ vec4 getBrushOverlay(vec3 worldCoordUVW) {
   float radius = round(brushSizeInPixel * pixelToVoxelFactor / 2.0);
   float brushBorderWidthInPixel = 7.0;
   float brushBorderWidth = ceil(brushBorderWidthInPixel * pixelToVoxelFactor);
-  if (radius > dist - brushBorderWidth && radius <= dist) {
+  if (radius > dist) {
     brushOverlayColor = vec4(vec3(1.0), 0.5);
   }
 

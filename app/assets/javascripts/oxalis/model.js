@@ -53,7 +53,7 @@ import {
 } from "admin/admin_rest_api";
 import messages from "messages";
 import type Layer from "oxalis/model/binary/layers/layer";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type { APIDatasetType, APIAnnotationType } from "admin/api_flow_types";
 
 export type ServerNodeType = {
   id: number,

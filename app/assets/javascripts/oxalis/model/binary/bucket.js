@@ -97,11 +97,9 @@ export class DataBucket {
   }
 
   label(labelFunc: Uint8Array => void) {
-    window.requestAnimationFrame(() => {
-      labelFunc(this.getOrCreateData());
-      this.dirty = true;
-      this.throttledTriggerLabeled();
-    });
+    labelFunc(this.getOrCreateData());
+    this.dirty = true;
+    this.throttledTriggerLabeled();
   }
 
   throttledTriggerLabeled = _.throttle(() => this.trigger("bucketLabeled"), 10);

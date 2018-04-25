@@ -106,12 +106,80 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     this.props.setAnnotationDescription(newDescription);
   };
 
-  render() {
-    const { tracingType, name, description } = this.props.tracing;
-    const tracingName = name || "<untitled>";
-    const tracingDescription = description || "<no comment>";
+  getTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
+
+    return this.props.tracing.type === "skeleton" ? (
+      <div>
+        <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
+        <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
+        <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
+        <p>
+          Number of Branch Points: {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
+        </p>
+      </div>
+    ) : null;
+  }
+
+  getKeyboardShortcuts(isPublicViewMode: boolean) {
+    return isPublicViewMode ? (
+      <div>
+        <Table
+          dataSource={shortcuts}
+          columns={shortcutColumns}
+          pagination={false}
+          style={{ marginRight: 20 }}
+          size="small"
+        />
+      </div>
+    ) : null;
+  }
+
+  getOrganisationLogo() {
+    return (
+      <div>
+        <img
+          className="img-50"
+          src="/assets/images/Max-Planck-Gesellschaft.svg"
+          alt="Max Plank Geselleschaft Logo"
+        />
+        <img
+          className="img-50"
+          src="/assets/images/MPI-brain-research.svg"
+          alt="Max Plank Institute of Brain Research Logo"
+        />
+      </div>
+    );
+  }
+
+  getDatasetName(isPublicViewMode: boolean) {
+    const dataSetName = this.props.dataset.name;
+    return <p>Dataset: {dataSetName}</p>;
+  }
+
+  getDatasetDescription(isPublicViewMode: boolean) {
+    const tracingDescription = this.props.tracing.description || "<no comment>";
+    return (
+      <p>
+        <span>
+          Description:
+          <EditableTextLabel
+            value={tracingDescription}
+            onChange={this.setAnnotationDescription}
+            rows={4}
+          />
+        </span>
+      </p>
+    );
+  }
+
+  getTracingName(isPublicViewMode: boolean) {
+    if (isPublicViewMode) return null;
+
     let annotationTypeLabel;
+
+    const { tracingType, name } = this.props.tracing;
+    const tracingName = name || "<untitled>";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -133,61 +201,27 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       );
     }
 
-    const zoomLevel = this.calculateZoomLevel();
-    const dataSetName = this.props.dataset.name;
+    return <p>{annotationTypeLabel}</p>;
+  }
+
+  render() {
     const isPublicViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
+    const zoomLevel = this.calculateZoomLevel();
+
     return (
       <div className="flex-overflow">
-        <p>{annotationTypeLabel}</p>
-        <p>Dataset: {dataSetName}</p>
+        {this.getTracingName(isPublicViewMode)}
+        {this.getDatasetName(isPublicViewMode)}
+
         <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
         <p>Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
-        <p>
-          <span>
-            Description:
-            <EditableTextLabel
-              value={tracingDescription}
-              onChange={this.setAnnotationDescription}
-              rows={4}
-            />
-          </span>
-        </p>
-        {this.props.tracing.type === "skeleton" ? (
-          <div>
-            <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
-            <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
-            <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
-            <p>
-              Number of Branch Points:{" "}
-              {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
-            </p>
-          </div>
-        ) : null}
-        {isPublicViewMode ? (
-          <div>
-            <Table
-              dataSource={shortcuts}
-              columns={shortcutColumns}
-              pagination={false}
-              style={{ marginRight: 20 }}
-              size="small"
-            />
-            <div>
-              <img
-                className="img-50"
-                src="/assets/images/Max-Planck-Gesellschaft.svg"
-                alt="Max Plank Geselleschaft Logo"
-              />
-              <img
-                className="img-50"
-                src="/assets/images/MPI-brain-research.svg"
-                alt="Max Plank Institute of Brain Research Logo"
-              />
-            </div>
-          </div>
-        ) : null}
+
+        {this.getDatasetDescription(isPublicViewMode)}
+        {this.getTracingStatistics()}
+        {this.getKeyboardShortcuts(isPublicViewMode)}
+        {this.getOrganisationLogo()}
       </div>
     );
   }

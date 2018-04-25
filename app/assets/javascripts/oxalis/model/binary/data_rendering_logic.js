@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import constants from "oxalis/constants";
 
 type GpuSpecs = {
@@ -6,7 +7,7 @@ type GpuSpecs = {
   maxTextureCount: number,
 };
 
-export function getSupportedTextureMetrics(): GpuSpecs {
+export function getSupportedTextureSpecs(): GpuSpecs {
   const canvas = document.createElement("canvas");
   const contextProvider = canvas.getContext
     ? x => canvas.getContext(x)
@@ -77,4 +78,91 @@ export function calculateTextureSizeAndCountForLayer(
 
   const textureCount = getTextureCount(textureSize, packingDegree);
   return { textureSize, textureCount };
+}
+
+function buildTextureInformationMap<Layer>(
+  layers: Array<Layer>,
+  getByteCountForLayer: Layer => number,
+  specs: GpuSpecs,
+): Map<Layer, DataTextureSizeAndCount> {
+  const textureInformationPerLayer = new Map();
+
+  layers.map(layer => {
+    const sizeAndCount = calculateTextureSizeAndCountForLayer(specs, getByteCountForLayer(layer));
+    textureInformationPerLayer.set(layer, sizeAndCount);
+  });
+
+  return textureInformationPerLayer;
+}
+
+function calculateNecessaryTextureCount<Layer>(
+  textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
+): number {
+  const layers = Array.from(textureInformationPerLayer.values());
+  const totalDataTextureCount = _.sum(layers.map(info => info.textureCount));
+
+  const lookupTextureCountPerLayer = 1;
+  const necessaryTextureCount = layers.length * lookupTextureCountPerLayer + totalDataTextureCount;
+
+  return necessaryTextureCount;
+}
+
+function calculateMappingTextureCount(): number {
+  // If there is a segmentation layer, we need one lookup and one data texture for mappings
+  const textureCountForCellMappings = 2;
+  return textureCountForCellMappings;
+}
+
+function deriveSupportedFeatures<Layer>(
+  specs: GpuSpecs,
+  textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount>,
+  hasSegmentation: boolean,
+): * {
+  const necessaryTextureCount = calculateNecessaryTextureCount(textureInformationPerLayer);
+
+  let isMappingSupported = true;
+  let isBasicRenderingSupported = true;
+
+  if (necessaryTextureCount > specs.maxTextureCount) {
+    isBasicRenderingSupported = false;
+  }
+
+  // Count textures needed for mappings separately, because they are not strictly necessary
+
+  const notEnoughTexturesForMapping =
+    necessaryTextureCount + calculateMappingTextureCount() > specs.maxTextureCount;
+  if (hasSegmentation && notEnoughTexturesForMapping) {
+    // Only mark mappings as unsupported if a segmentation exists
+    isMappingSupported = false;
+  }
+
+  return {
+    isMappingSupported,
+    isBasicRenderingSupported,
+  };
+}
+
+export function computeDataTexturesSetup<Layer>(
+  specs: GpuSpecs,
+  layers: Array<Layer>,
+  getByteCountForLayer: Layer => number,
+  hasSegmentation: boolean,
+): * {
+  const textureInformationPerLayer = buildTextureInformationMap(
+    layers,
+    getByteCountForLayer,
+    specs,
+  );
+
+  const { isBasicRenderingSupported, isMappingSupported } = deriveSupportedFeatures(
+    specs,
+    textureInformationPerLayer,
+    hasSegmentation,
+  );
+
+  return {
+    isBasicRenderingSupported,
+    isMappingSupported,
+    textureInformationPerLayer,
+  };
 }

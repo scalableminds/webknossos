@@ -189,45 +189,30 @@ export class OxalisModel {
   }
 
   validateSpecsForLayers(layers: Array<Layer>): Map<Layer, DataTextureSizeAndCount> {
-    const specs = DataRenderingLogic.getSupportedTextureMetrics();
+    const specs = DataRenderingLogic.getSupportedTextureSpecs();
     DataRenderingLogic.validateMinimumRequirements(specs);
 
-    const textureInformationPerLayer: Map<Layer, DataTextureSizeAndCount> = new Map();
-
-    layers.map(layer => {
-      const sizeAndCount = DataRenderingLogic.calculateTextureSizeAndCountForLayer(
-        specs,
-        layer.bitDepth >> 3,
-      );
-      textureInformationPerLayer.set(layer, sizeAndCount);
-    });
-
-    const totalDataTextureCount = _.sum(
-      Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
+    const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
+    const setupInfo = DataRenderingLogic.computeDataTexturesSetup(
+      specs,
+      layers,
+      layer => layer.bitDepth >> 3,
+      hasSegmentation,
     );
 
-    const lookupTextureCountPerLayer = 1;
-    const necessaryTextureCount =
-      layers.length * lookupTextureCountPerLayer + totalDataTextureCount;
-
-    // Count textures needed for mappings separately, because they are not strictly necessary
-    let textureCountForCellMappings = 0;
-    if (_.find(layers, layer => layer.category === "segmentation") != null) {
-      // One lookup and one data texture for mappings
-      textureCountForCellMappings = 2;
-    }
-
-    if (necessaryTextureCount > specs.maxTextureCount) {
+    if (!setupInfo.isBasicRenderingSupported) {
       const message = `Not enough textures available for rendering ${layers.length} layers`;
       Toast.error(message);
       throw new Error(message);
-    } else if (necessaryTextureCount + textureCountForCellMappings > specs.maxTextureCount) {
+    }
+
+    if (!setupInfo.isMappingSupported) {
       const message = messages["mapping.too_few_textures"];
       console.warn(message);
       this.isMappingSupported = false;
     }
 
-    return textureInformationPerLayer;
+    return setupInfo.textureInformationPerLayer;
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -562,7 +547,7 @@ export class OxalisModel {
     // Different layers can have different resolutions. At the moment,
     // unequal resolutions will result in undefined behavior.
     // However, if resolutions are subset of each other, everything should be fine.
-    // For that case, return the longest resolutions array should suffice
+    // For that case, returning the longest resolutions array should suffice
 
     return _.chain(this.binary)
       .map(b => b.layer.resolutions)

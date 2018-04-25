@@ -67,7 +67,7 @@ export const VolumeToolEnum = {
 };
 export type VolumeToolType = $Keys<typeof VolumeToolEnum>;
 
-export function volumeToolEnumToIndex(volumeTool: VolumeToolType): number {
+export function volumeToolEnumToIndex(volumeTool: ?VolumeToolType): number {
   return Object.keys(VolumeToolEnum).indexOf(volumeTool);
 }
 

@@ -105,7 +105,7 @@ class UserListView extends React.PureComponent<Props, State> {
     this.activateUser(user, false);
   };
 
-  changeEmail = (selectedUser: APIUserType, newEmail: String): void => {
+  changeEmail = (selectedUser: APIUserType, newEmail: string): void => {
     const newUsers = this.state.users.map(user => {
       if (selectedUser.id === user.id) {
         const newUser = Object.assign({}, user, { email: newEmail });

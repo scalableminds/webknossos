@@ -188,7 +188,8 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     for {
       task <- TaskDAO.findOneById(taskId).toFox ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(user, task._team) ?~> Messages("notAllowed")
+      project <- task.project ?~> Messages("project.notFound")
+      _ <- ensureTeamAdministration(user, project._team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
     } yield Ok.sendFile(zip.file)
   }

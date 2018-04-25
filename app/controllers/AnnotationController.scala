@@ -195,7 +195,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def annotationsForTask(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.identity, task._team)
+      project <- task.project
+      _ <- ensureTeamAdministration(request.identity, project._team)
       annotations <- task.annotations
       jsons <- Fox.serialSequence(annotations)(_.toJson(Some(request.identity)))
     } yield {

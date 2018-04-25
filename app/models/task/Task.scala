@@ -39,7 +39,6 @@ case class TaskSQL(
                   _project: ObjectId,
                   _script: Option[ObjectId],
                   _taskType: ObjectId,
-                  _team: ObjectId,
                   neededExperience: Experience,
                   totalInstances: Long,
                   tracingTime: Option[Long],
@@ -61,7 +60,6 @@ object TaskSQL {
         project._id,
         t._script.map(ObjectId(_)),
         ObjectId.fromBsonId(t._taskType),
-        ObjectId.fromBsonId(t._team),
         t.neededExperience,
         t.instances,
         t.tracingTime,
@@ -92,7 +90,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
         ObjectId(r._Project),
         r._Script.map(ObjectId(_)),
         ObjectId(r._Tasktype),
-        ObjectId(r._Team),
         Experience(r.neededexperienceDomain, r.neededexperienceValue),
         r.totalinstances,
         r.tracingtime,
@@ -264,9 +261,9 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def insertOne(t: TaskSQL): Fox[Unit] = {
     for {
       _ <- run(
-        sqlu"""insert into webknossos.tasks(_id, _project, _script, _taskType, _team, neededExperience_domain, neededExperience_value,
+        sqlu"""insert into webknossos.tasks(_id, _project, _script, _taskType, neededExperience_domain, neededExperience_value,
                                              totalInstances, tracingTime, boundingBox, editPosition, editRotation, creationInfo, created, isDeleted)
-                   values(${t._id.id}, ${t._project.id}, #${optionLiteral(t._script.map(s => sanitize(s.id)))}, ${t._taskType.id}, ${t._team.id},
+                   values(${t._id.id}, ${t._project.id}, #${optionLiteral(t._script.map(s => sanitize(s.id)))}, ${t._taskType.id},
                           ${t.neededExperience.domain}, ${t.neededExperience.value},
                           ${t.totalInstances}, ${t.tracingTime}, #${optionLiteral(t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple(_)))},
                            '#${writeStructTuple(t.editPosition.toList.map(_.toString))}', '#${writeStructTuple(t.editRotation.toList.map(_.toString))}',
@@ -344,7 +341,6 @@ class info(message: String) extends scala.annotation.StaticAnnotation
 
 case class Task(
                  @info("Reference to task type") _taskType: BSONObjectID,
-                 @info("Assigned team ObjectID") _team: BSONObjectID,
                  @info("Required experience") neededExperience: Experience = Experience.empty,
                  @info("Number of total instances") instances: Int = 1,
                  @info("Number of open (=remaining) instances") openInstances: Int = 1,
@@ -362,7 +358,6 @@ case class Task(
                ) extends FoxImplicits {
 
   lazy val id = _id.stringify
-  lazy val team = _team.stringify
 
   def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
@@ -413,7 +408,6 @@ object Task extends FoxImplicits {
     } yield {
       Json.obj(
         "id" -> task.id,
-        "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> task._project,
         "type" -> tt,
@@ -435,14 +429,12 @@ object Task extends FoxImplicits {
     for {
       taskTypeIdBson <- s._taskType.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._taskType.toString)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      teamIdBson <- s._team.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
       project <- ProjectSQLDAO.findOne(s._project)(GlobalAccessContext) ?~> Messages("project.notFound", s._project.toString)
       priority = if (project.paused) -1 else project.priority
       openInstances <- TaskSQLDAO.countOpenInstancesForTask(s._id)
     } yield {
       Task(
         taskTypeIdBson,
-        teamIdBson,
         s.neededExperience,
         s.totalInstances.toInt,
         openInstances,

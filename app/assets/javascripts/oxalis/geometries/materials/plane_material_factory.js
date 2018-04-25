@@ -698,8 +698,6 @@ vec4 getBrushOverlay(vec3 worldCoordUVW) {
   float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
 
   float radius = round(brushSizeInPixel * pixelToVoxelFactor / 2.0);
-  float brushBorderWidthInPixel = 7.0;
-  float brushBorderWidth = ceil(brushBorderWidthInPixel * pixelToVoxelFactor);
   if (radius > dist) {
     brushOverlayColor = vec4(vec3(1.0), 0.5);
   }
@@ -798,7 +796,7 @@ void main() {
 
   // Color map (<= to fight rounding mistakes)
   if ( id > 0.1 ) {
-        gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha ), 1.0);
+    gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha ), 1.0);
   } else {
     gl_FragColor = vec4(data_color, 1.0);
   }

@@ -168,7 +168,11 @@ Contact us at [hello@scalableminds.com](mailto:hello@scalableminds.com).
 ## Credits
 * scalable minds - https://scalableminds.com/
 * Max Planck Institute for Brain Research – https://brain.mpg.de/
-* [Browser Stack](http://browserstack.com/) for letting us test WebKnossos on a variety of different devices <a href="http://browserstack.com/"><img src="https://p14.zdusercontent.com/attachment/1015988/wustfygoUpQ0faC7tIiaOpJUM?token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..TpDEVjDPeSTDWdmL0pu6Mw.pdawodFlbAuP4ZbKn5Ucpyq69pCh3bUXv_XH_yJk7CdAzi6IIi7Az6VWriflXVKOyTWtqA8JkxqPu11s9R56jC2I5JwCc1DJILtD_j9fT4rAIth-hvnST0eA_LqBdXpRYKMHtxookA-dZ9pbvHBTFb-JG2PEKl1IXZCw5GlIRgW2Oxieg9xXtFpBN7R6_Q5yRiwuviemrK0ide1ygC8HTMDgdgdbCLuhHDDeNyluU7tR9kVtV7KZDsVd2WIBId-fSyzInofDhlk196_fHwR0WQd1pN7GDVIdfRhxTTTNWTw.g0PCM6T1kBG7AtBwKZmfzQ" width=100 alt="Browserstack Logo"></a>
+
+### Thanks
+* [CircleCI](https://circleci.com/gh/scalableminds/webknossos) for letting us run builds and tests on their CI
+* [Browser Stack](https://www.browserstack.com/) for letting us test WebKnossos on a variety of different devices  
+<a href="https://www.browserstack.com/"><img src="https://p14.zdusercontent.com/attachment/1015988/wustfygoUpQ0faC7tIiaOpJUM?token=eyJhbGciOiJkaXIiLCJlbmMiOiJBMTI4Q0JDLUhTMjU2In0..TpDEVjDPeSTDWdmL0pu6Mw.pdawodFlbAuP4ZbKn5Ucpyq69pCh3bUXv_XH_yJk7CdAzi6IIi7Az6VWriflXVKOyTWtqA8JkxqPu11s9R56jC2I5JwCc1DJILtD_j9fT4rAIth-hvnST0eA_LqBdXpRYKMHtxookA-dZ9pbvHBTFb-JG2PEKl1IXZCw5GlIRgW2Oxieg9xXtFpBN7R6_Q5yRiwuviemrK0ide1ygC8HTMDgdgdbCLuhHDDeNyluU7tR9kVtV7KZDsVd2WIBId-fSyzInofDhlk196_fHwR0WQd1pN7GDVIdfRhxTTTNWTw.g0PCM6T1kBG7AtBwKZmfzQ" width=100 alt="Browserstack Logo"></a>
 
 # License
 AGPLv3

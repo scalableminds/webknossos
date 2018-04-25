@@ -83,7 +83,7 @@ class SceneController {
     this.rootGroup.add(this.getRootNode());
 
     // The dimension(s) with the highest resolution will not be distorted
-    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
+    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
   }
@@ -259,7 +259,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.scale);
+    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
 
     app.vent.trigger("rerender");

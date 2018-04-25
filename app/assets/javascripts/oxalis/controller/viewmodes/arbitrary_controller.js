@@ -254,7 +254,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   getVoxelOffset(timeFactor: number): number {
     const state = Store.getState();
     const moveValue3d = state.userConfiguration.moveValue3d;
-    const baseVoxel = getBaseVoxel(state.dataset.scale);
+    const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
     return moveValue3d * timeFactor / baseVoxel / constants.FPS;
   }
 

@@ -16,11 +16,12 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { Table } from "antd";
-import type { OxalisState, TracingType, DatasetType, TaskType, FlycamType } from "oxalis/store";
+import type { APIDatasetType } from "admin/api_flow_types";
+import type { OxalisState, TracingType, TaskType, FlycamType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
   tracing: TracingType,
-  dataset: DatasetType,
+  dataset: APIDatasetType,
   flycam: FlycamType,
   task: ?TaskType,
 };
@@ -84,7 +85,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       throw new Error(`Model mode not recognized: ${viewMode}`);
     }
     // unit is nm
-    const baseVoxel = getBaseVoxel(this.props.dataset.scale);
+    const baseVoxel = getBaseVoxel(this.props.dataset.dataSource.scale);
     return zoom * width * baseVoxel;
   }
 
@@ -153,11 +154,23 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   }
 
   getDatasetName(isPublicViewMode: boolean) {
-    const dataSetName = this.props.dataset.name;
-    return <p>Dataset: {dataSetName}</p>;
+    let { name: datasetName } = this.props.dataset;
+    const { displayName } = this.props.dataset;
+
+    if (isPublicViewMode && displayName) {
+      datasetName = displayName;
+    }
+
+    return <p>Dataset: {datasetName}</p>;
   }
 
   getDatasetDescription(isPublicViewMode: boolean) {
+    const { description } = this.props.tracing;
+
+    if (isPublicViewMode) {
+      return description ? <p>Description: {description}</p> : null;
+    }
+
     const tracingDescription = this.props.tracing.description || "<no comment>";
     return (
       <p>
@@ -214,11 +227,13 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       <div className="flex-overflow">
         {this.getTracingName(isPublicViewMode)}
         {this.getDatasetName(isPublicViewMode)}
+        {this.getDatasetDescription(isPublicViewMode)}
 
         <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
-        <p>Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
+        <p>
+          Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.dataSource.scale)}
+        </p>
 
-        {this.getDatasetDescription(isPublicViewMode)}
         {this.getTracingStatistics()}
         {this.getKeyboardShortcuts(isPublicViewMode)}
         {this.getOrganisationLogo()}

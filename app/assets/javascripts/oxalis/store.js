@@ -44,6 +44,7 @@ import type {
   APIScriptType,
   APITaskType,
   APIUserType,
+  APIDatasetType,
 } from "admin/api_flow_types";
 
 export type CommentType = {
@@ -325,7 +326,7 @@ export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
-  +dataset: DatasetType,
+  +dataset: APIDatasetType,
   +tracing: TracingType,
   +task: ?TaskType,
   +save: SaveStateType,
@@ -378,14 +379,27 @@ export const defaultState: OxalisState = {
   task: null,
   dataset: {
     name: "Test Dataset",
-    scale: [5, 5, 5],
+    created: 123,
+    dataSource: {
+      dataLayers: [],
+      scale: [5, 5, 5],
+      id: {
+        name: "Test Dataset",
+        team: "",
+      },
+    },
     isPublic: false,
+    isActive: true,
+    isEditable: true,
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
       typ: "webknossos-store",
     },
-    dataLayers: [],
+    owningOrganization: "Connectomics department",
+    description: null,
+    displayName: "Awesome Test Dataset",
+    allowedTeams: [],
   },
   tracing: {
     annotationId: "",

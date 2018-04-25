@@ -185,7 +185,9 @@ export class OxalisModel {
     // The order of allowedModes should be independent from the server and instead be similar to ModeValues
     let allowedModes = _.intersection(ModeValues, settings.allowedModes);
 
-    const colorLayer = _.find(Store.getState().dataset.dataLayers, { category: "color" });
+    const colorLayer = _.find(Store.getState().dataset.dataSource.dataLayers, {
+      category: "color",
+    });
     if (colorLayer != null && colorLayer.elementClass !== "uint8") {
       allowedModes = allowedModes.filter(mode => !constants.MODES_ARBITRARY.includes(mode));
     }
@@ -346,7 +348,7 @@ export class OxalisModel {
 
   getLayerInfos(tracing: ?ServerTracingType) {
     // Overwrite or extend layers with volumeTracingLayer
-    let layers = _.clone(Store.getState().dataset.dataLayers);
+    let layers = _.clone(Store.getState().dataset.dataSource.dataLayers);
     // $FlowFixMe TODO Why does Flow complain about this check
     if (tracing == null || tracing.elementClass == null) {
       return layers;

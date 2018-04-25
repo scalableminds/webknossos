@@ -89,7 +89,7 @@ class PlaneController extends React.PureComponent<Props> {
     this.isStarted = false;
 
     const state = Store.getState();
-    this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
+    this.oldNmPos = voxelToNm(state.dataset.dataSource.scale, getPosition(state.flycam));
 
     this.planeView = new PlaneView();
 
@@ -224,14 +224,14 @@ class PlaneController extends React.PureComponent<Props> {
         return (
           state.userConfiguration.moveValue *
           timeFactor /
-          getBaseVoxel(state.dataset.scale) /
+          getBaseVoxel(state.dataset.dataSource.scale) /
           constants.FPS
         );
       }
       return (
         state.userConfiguration.moveValue *
         timeFactor /
-        getBaseVoxel(state.dataset.scale) /
+        getBaseVoxel(state.dataset.dataSource.scale) /
         constants.FPS
       );
     };
@@ -515,7 +515,7 @@ function calculateGlobalPos(clickPos: Point2) {
   const curGlobalPos = getPosition(state.flycam);
   const zoomFactor = getPlaneScalingFactor(state.flycam);
   const viewportScale = state.userConfiguration.scale;
-  const planeRatio = getBaseVoxelFactors(state.dataset.scale);
+  const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
   switch (activeViewport) {
     case OrthoViews.PLANE_XY:
       position = [
@@ -574,7 +574,7 @@ function calculateGlobalPos(clickPos: Point2) {
 export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
   return {
     flycam: state.flycam,
-    scale: state.dataset.scale,
+    scale: state.dataset.dataSource.scale,
     onRender: ownProps.onRender,
   };
 }

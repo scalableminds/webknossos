@@ -411,8 +411,8 @@ vec4 round(vec4 a) {
   return floor(a + 0.5);
 }
 
-// Define this function for each layer, since iOS cannot handle
-// sampler2D textures[dataTextureCountPerLayer
+// Define this function for each segmentation and color layer, since iOS cannot handle
+// sampler2D textures[dataTextureCountPerLayer]
 // as a function parameter properly
 
 <% _.each(layerNamesWithSegmentation, (name) => { %>

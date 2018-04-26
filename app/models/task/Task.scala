@@ -146,25 +146,31 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
 
 
-  private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId]) =
+  private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId], forUpdate: Boolean) =
     s"""
+      with valid_tasks as (
         select webknossos.tasks_.*
-                   from
-                     (webknossos.tasks_
-                     join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id)
-                     join
-                       (select *
-                        from webknossos.user_experiences
-                        where _user = '${userId.id}')
-                       as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
-                     join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-                     left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
-                   where webknossos.task_instances.openInstances > 0
-                         and webknossos.tasks_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
-                         and userAnnotations._task is null
-                         and not webknossos.projects_.paused
-                   order by webknossos.projects_.priority desc
-                   limit 1
+          from
+            webknossos.tasks_
+            join (
+              select *
+                from webknossos.user_experiences
+                where _user = '${userId.id}'
+              ) as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
+            join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
+          where webknossos.tasks_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+                and not webknossos.projects_.paused
+          order by webknossos.projects_.priority desc
+          ${if (forUpdate) "for update" else ""}
+      )
+      select valid_tasks.*
+        from
+          valid_tasks
+          left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON valid_tasks._id = userAnnotations._task
+          join webknossos.task_instances on valid_tasks._id = webknossos.task_instances._id
+        where webknossos.task_instances.openInstances > 0
+        and userAnnotations._task is null
+        limit 1
       """
 
   def assignNext(userId: ObjectId, teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[(TaskSQL, ObjectId)] = {
@@ -173,7 +179,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     val dummyTracingId = Random.alphanumeric.take(36).mkString
 
     val insertAnnotationQ = sqlu"""
-           with task as (#${findNextTaskQ(userId, teamIds)})
+           with task as (#${findNextTaskQ(userId, teamIds, forUpdate = true)})
 
            insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
            select ${annotationId.id}, 'dummyDatasetId', _id, 'dummyTeamId', 'dummyUserId', ${dummyTracingId},
@@ -201,7 +207,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
   def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[TaskSQL] = {
     for {
-      rList <- run(sql"#${findNextTaskQ(userId, teamIds)}".as[TasksRow])
+      rList <- run(sql"#${findNextTaskQ(userId, teamIds, forUpdate = false)}".as[TasksRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed

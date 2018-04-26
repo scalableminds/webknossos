@@ -286,7 +286,7 @@ function splitTreeByNodes(
           timestamp: activeTree.timestamp,
           treeId: activeTree.treeId,
           isVisible: true,
-          group: activeTree.group,
+          groupId: activeTree.groupId,
         };
       } else {
         const immutableNewTree = createTree(intermediateState, timestamp).get();
@@ -388,7 +388,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
       const newTreeId = _.isNumber(maxTreeId) ? maxTreeId + 1 : Constants.MIN_TREE_ID;
 
       const name = generateTreeName(state, timestamp, newTreeId);
-      const group = Utils.toNullable(getActiveTree(skeletonTracing).map(tree => tree.group));
+      const groupId = Utils.toNullable(getActiveTree(skeletonTracing).map(tree => tree.groupId));
 
       // Create the new tree
       const tree: TreeType = {
@@ -401,7 +401,7 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
         edges: new EdgeCollection(),
         comments: [],
         isVisible: true,
-        group,
+        groupId,
       };
       return Maybe.Just(tree);
     }

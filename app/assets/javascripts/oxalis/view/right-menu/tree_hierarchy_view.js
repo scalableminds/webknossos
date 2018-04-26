@@ -15,7 +15,7 @@ import type { TreeType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 const { TreeNode } = Tree;
 
-const MISSING_GROUP_KEY = "__none__";
+const MISSING_GROUP_ID = "__none__";
 
 type Props = {
   activeTreeId: number,
@@ -63,7 +63,7 @@ function walk(
   data: Array<TreeGroupType>,
   key: string,
   callback: Function,
-  parentKey: ?string = MISSING_GROUP_KEY,
+  parentKey: ?string = MISSING_GROUP_ID,
 ) {
   data.forEach((item: TreeGroupType, index: number, arr: Array<TreeGroupType>) => {
     if (item.groupId === key) {
@@ -84,7 +84,7 @@ function findNode(group: Array<TreeGroupType>, key: string): ?TreeGroupType {
 }
 
 function createGroupToTreesMap(trees: TreeMapType): { [string]: Array<TreeType> } {
-  return _.groupBy(trees, tree => (tree.group != null ? tree.group : MISSING_GROUP_KEY));
+  return _.groupBy(trees, tree => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
@@ -102,11 +102,11 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // Insert the trees into the corresponding groups and create a
     // groupTree object that can be rendered using an Antd Tree component
     const groupToTreesMap = createGroupToTreesMap(nextProps.trees);
-    if (groupToTreesMap[MISSING_GROUP_KEY] == null) groupToTreesMap[MISSING_GROUP_KEY] = [];
+    if (groupToTreesMap[MISSING_GROUP_ID] == null) groupToTreesMap[MISSING_GROUP_ID] = [];
     const generatedGroupTree = insertTrees(
       _.cloneDeep(nextProps.treeGroups),
       groupToTreesMap,
-    ).concat(...groupToTreesMap[MISSING_GROUP_KEY].map(makeGroupObjectFromTree));
+    ).concat(...groupToTreesMap[MISSING_GROUP_ID].map(makeGroupObjectFromTree));
     newState.groupTree = generatedGroupTree;
 
     return newState;
@@ -185,7 +185,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // Insert group in new spot
       const dragObjWithoutTrees = findNode(this.props.treeGroups, dragKey);
       if (dragObjWithoutTrees != null) {
-        if (dropKey === MISSING_GROUP_KEY) {
+        if (dropKey === MISSING_GROUP_ID) {
           newTreeGroups.push(dragObjWithoutTrees);
         } else {
           walk(newTreeGroups, dropKey, item => {
@@ -215,7 +215,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       // Update the group of all its tree children to the parent group
       const trees = groupToTreesMap[groupId] != null ? groupToTreesMap[groupId] : [];
       for (const tree of trees) {
-        this.props.onSetTreeGroup(parentKey === MISSING_GROUP_KEY ? null : parentKey, tree.treeId);
+        this.props.onSetTreeGroup(parentKey === MISSING_GROUP_ID ? null : parentKey, tree.treeId);
       }
     });
     this.props.onUpdateTreeGroups(newTreeGroups);
@@ -357,8 +357,8 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onUpdateTreeGroups(treeGroups) {
     dispatch(setTreeGroupsAction(treeGroups));
   },
-  onSetTreeGroup(group, treeId) {
-    dispatch(setTreeGroupAction(group, treeId));
+  onSetTreeGroup(groupId, treeId) {
+    dispatch(setTreeGroupAction(groupId, treeId));
   },
 });
 

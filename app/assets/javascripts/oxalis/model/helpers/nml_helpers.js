@@ -358,7 +358,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
               // TODO: Parse group from NML
-              group: null,
+              groupId: null,
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);

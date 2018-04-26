@@ -58,7 +58,7 @@ const tracing = {
       comments: [{ content: "comment", nodeId: 0 }],
       color: [23, 23, 23],
       isVisible: true,
-      group: null,
+      groupId: null,
     },
     "2": {
       treeId: 2,
@@ -74,7 +74,7 @@ const tracing = {
       comments: [],
       color: [30, 30, 30],
       isVisible: true,
-      group: null,
+      groupId: null,
     },
   },
   tracingType: "Explorational",

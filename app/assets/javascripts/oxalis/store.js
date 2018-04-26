@@ -84,7 +84,7 @@ export type BoundingBoxObjectType = {
 
 type TreeTypeBase = {
   +treeId: number,
-  +group: ?string,
+  +groupId: ?string,
   +color: Vector3,
   +name: string,
   +timestamp: number,

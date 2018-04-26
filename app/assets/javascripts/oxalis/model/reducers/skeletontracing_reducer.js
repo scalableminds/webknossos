@@ -85,6 +85,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
           isVisible: true,
           timestamp: tree.createdTimestamp,
+          groupId: tree.groupId,
         })),
         "treeId",
       );
@@ -548,7 +549,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
 
         case "SET_TREE_GROUP": {
           return update(state, {
-            tracing: { trees: { [action.treeId]: { group: { $set: action.group } } } },
+            tracing: { trees: { [action.treeId]: { groupId: { $set: action.groupId } } } },
           });
         }
 

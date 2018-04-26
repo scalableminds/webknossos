@@ -158,18 +158,18 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                 where _user = '${userId.id}'
               ) as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
             join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-            left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
           where webknossos.tasks_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
-                and userAnnotations._task is null
                 and not webknossos.projects_.paused
           order by webknossos.projects_.priority desc
-          ${if (forUpdate) "for update"}
+          ${if (forUpdate) "for update" else ""}
       )
       select valid_tasks.*
         from
           valid_tasks
+          left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON valid_tasks._id = userAnnotations._task
           join webknossos.task_instances on valid_tasks._id = webknossos.task_instances._id
         where webknossos.task_instances.openInstances > 0
+        and userAnnotations._task is null
         limit 1
       """
 

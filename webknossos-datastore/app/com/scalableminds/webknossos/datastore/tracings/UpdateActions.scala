@@ -8,21 +8,19 @@ import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.trueaccord.scalapb.{GeneratedMessage, Message}
 import play.api.libs.json._
 
-class UpdateAction[T <: GeneratedMessage with Message[T]](var timeStamp: Option[Long] = None) {
+trait UpdateAction[T <: GeneratedMessage with Message[T]] {
   // def applyTo(tracing: T, service: TracingService[T]): Fox[T] = Fox.successful(tracing)
+
+  def timeStamp: Option[Long]
 
   def applyOn(tracing: T): T = tracing
 
-  def addTimeStamp(timestamp: Long): UpdateAction[T] = { timeStamp = Some(timestamp); this}
+  def addTimeStamp(timestamp: Long): UpdateAction[T] = { this }
 }
 
 object UpdateAction {
   type SkeletonUpdateAction = UpdateAction[SkeletonTracing]
   type VolumeUpdateAction = UpdateAction[VolumeTracing]
-
-  def apply[T <: GeneratedMessage with Message[T]](timeStamp: Option[Long]) = new UpdateAction[T](timeStamp)
-
-  def unapply[T <: GeneratedMessage with Message[T]](arg: UpdateAction[T]): Option[Long] = arg.timeStamp
 }
 
 case class UpdateActionGroup[T <: GeneratedMessage with Message[T]](

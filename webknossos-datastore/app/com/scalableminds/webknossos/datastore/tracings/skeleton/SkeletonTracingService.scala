@@ -34,15 +34,8 @@ class SkeletonTracingService @Inject()(
 
   def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] = {
+  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] =
     tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions.map(_.addTimeStamp(updateActionGroup.timestamp)))
-    testTimeLog(tracingId)
-  }
-
-  def testTimeLog(tracingId: String)(implicit w: Writes[SkeletonUpdateAction]) = {
-    val x = tracingDataStore.skeletonUpdates.get(tracingId, None, None)(fromJson[List[SkeletonUpdateAction]])
-    x.map(y => logger.debug(w.writes(y.value.head).toString))
-  }
 
   override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {
     val existingVersion = tracing.version
@@ -90,7 +83,7 @@ class SkeletonTracingService @Inject()(
         case Full(tracing) => {
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion) :: tail => {
+            case RevertToVersionAction(sourceVersion, timeStamp) :: tail => {
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
             }

@@ -749,68 +749,72 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
   return -1.0;
 }
 
-vec4 getBrushOverlay(vec3 worldCoordUVW) {
-  vec4 brushOverlayColor = vec4(0.0);
+<% if (hasSegmentation) { %>
 
-  bool isBrushModeActive = activeVolumeToolIndex == <%= brushToolIndex %>;
+  vec4 getBrushOverlay(vec3 worldCoordUVW) {
+    vec4 brushOverlayColor = vec4(0.0);
 
-  if (!isMouseInActiveViewport || !isBrushModeActive) {
+    bool isBrushModeActive = activeVolumeToolIndex == <%= brushToolIndex %>;
+
+    if (!isMouseInActiveViewport || !isBrushModeActive) {
+      return brushOverlayColor;
+    }
+    vec3 flooredMousePos = floor(globalMousePosition);
+    // For some reason, taking the dataset scale from the uniform results in imprecise
+    // rendering of the brush circle. That's why it is directly inserted into the source
+    // via templating.
+    vec3 _datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
+    float baseVoxelSize = min(min(_datasetScale.x, _datasetScale.y), _datasetScale.z);
+    vec3 datasetScaleUVW = transDim(_datasetScale) / baseVoxelSize;
+
+    float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
+
+    float radius = round(brushSizeInPixel * pixelToVoxelFactor / 2.0);
+    if (radius > dist) {
+      brushOverlayColor = vec4(vec3(1.0), 0.5);
+    }
+
     return brushOverlayColor;
   }
-  vec3 flooredMousePos = floor(globalMousePosition);
-  // For some reason, taking the dataset scale from the uniform results in imprecise
-  // rendering of the brush circle. That's why it is directly inserted into the source
-  // via templating.
-  vec3 _datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
-  float baseVoxelSize = min(min(_datasetScale.x, _datasetScale.y), _datasetScale.z);
-  vec3 datasetScaleUVW = transDim(_datasetScale) / baseVoxelSize;
 
-  float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
-
-  float radius = round(brushSizeInPixel * pixelToVoxelFactor / 2.0);
-  if (radius > dist) {
-    brushOverlayColor = vec4(vec3(1.0), 0.5);
-  }
-
-  return brushOverlayColor;
-}
-
-float getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
-  vec4 volume_color =
-    getMaybeFilteredColorOrFallback(
-      <%= segmentationName %>_lookup_texture,
-      <%= segmentationName %>_textures,
-      <%= segmentationName %>_data_texture_width,
-      1.0,
-      coords,
-      fallbackCoords,
-      hasFallback,
-      true, // Don't use bilinear filtering for volume data
-      vec4(0.0, 0.0, 0.0, 0.0)
-    );
-
-
-  <% if (isMappingSupported) { %>
-    if (isMappingEnabled) {
-      float index = binarySearchIndex(
-        <%= segmentationName %>_mapping_lookup_texture,
-        mappingSize,
-        volume_color
+  float getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
+    vec4 volume_color =
+      getMaybeFilteredColorOrFallback(
+        <%= segmentationName %>_lookup_texture,
+        <%= segmentationName %>_textures,
+        <%= segmentationName %>_data_texture_width,
+        1.0,
+        coords,
+        fallbackCoords,
+        hasFallback,
+        true, // Don't use bilinear filtering for volume data
+        vec4(0.0, 0.0, 0.0, 0.0)
       );
-      if (index != -1.0) {
-        volume_color = getRgbaAtIndex(
-          <%= segmentationName %>_mapping_texture,
-          <%= mappingTextureWidth %>,
-          index
-        );
-      }
-    }
-  <% } %>
 
-  // Only consider the last 8 bit (little endian)
-  float id = volume_color.r * 255.0;
-  return id;
-}
+
+    <% if (isMappingSupported) { %>
+      if (isMappingEnabled) {
+        float index = binarySearchIndex(
+          <%= segmentationName %>_mapping_lookup_texture,
+          mappingSize,
+          volume_color
+        );
+        if (index != -1.0) {
+          volume_color = getRgbaAtIndex(
+            <%= segmentationName %>_mapping_texture,
+            <%= mappingTextureWidth %>,
+            index
+          );
+        }
+      }
+    <% } %>
+
+    // Only consider the last 8 bit (little endian)
+    float id = volume_color.r * 255.0;
+    return id;
+  }
+<% } %>
+
 
 vec3 convertCellIdToRGB(float id) {
   float golden_ratio = 0.618033988749895;

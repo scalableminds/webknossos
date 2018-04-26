@@ -254,19 +254,21 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
   };
 
+  onRenameOk = newName => {
+    this.renameGroup(
+      this.state.renamingGroup != null ? this.state.renamingGroup.groupId : "",
+      newName,
+    );
+    this.setState({ renamingGroup: null });
+  };
+
   renderRenameModal = () => {
     let newName;
     return (
       <Modal
         title="Rename group"
         visible={this.state.renamingGroup != null}
-        onOk={() => {
-          this.renameGroup(
-            this.state.renamingGroup != null ? this.state.renamingGroup.groupId : "",
-            newName,
-          );
-          this.setState({ renamingGroup: null });
-        }}
+        onOk={() => this.onRenameOk(newName)}
         onCancel={() => this.setState({ renamingGroup: null })}
       >
         <Input
@@ -274,6 +276,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             newName = e.target.value;
           }}
           defaultValue={this.state.renamingGroup != null ? this.state.renamingGroup.name : ""}
+          onPressEnter={() => this.onRenameOk(newName)}
         />
       </Modal>
     );

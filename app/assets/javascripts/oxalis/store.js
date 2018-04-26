@@ -134,14 +134,6 @@ export type SettingsType = APISettingsType;
 
 export type DataStoreInfoType = APIDataStoreType;
 
-export type DatasetType = {
-  +name: string,
-  +dataStore: DataStoreInfoType,
-  +scale: Vector3,
-  +dataLayers: Array<DataLayerType>,
-  +isPublic: boolean,
-};
-
 export type TreeMapType = { +[number]: TreeType };
 export type TemporaryMutableTreeMapType = { [number]: TreeType };
 

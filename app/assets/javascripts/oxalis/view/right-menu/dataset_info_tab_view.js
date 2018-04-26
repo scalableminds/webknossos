@@ -193,7 +193,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         </span>
       );
     }
-    const tracingDescription = this.props.tracing.description || "<no comment>";
+    const tracingDescription = this.props.tracing.description || "<no description>";
 
     return (
       <div>

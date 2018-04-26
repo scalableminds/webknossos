@@ -3,17 +3,22 @@ const fetch = require("node-fetch");
 
 const HOST = "http://localhost:9000";
 
-const MIN_ACTIONS = 10;
+const MIN_MOVE_ACTIONS = 50;
 const MIN_RATIO = 2;
 const LAST_X_DAYS = 7;
 
 const ANNOTATIONS_SQL = `
-SELECT annotations._id, tracing_id, _user, firstname, lastname, modified
+SELECT annotations._id, tracing_id, _user, _task, firstname, lastname, modified
 FROM webknossos.annotations
 JOIN webknossos.users ON webknossos.annotations._user=webknossos.users._id
 WHERE DATE_PART('day', now() - modified) <= ${LAST_X_DAYS}
-AND _task IS NOT NULL
-LIMIT 500;`;
+AND _task IS NOT NULL;`;
+
+function sleep(ms) {
+  return new Promise(resolve => {
+    setTimeout(resolve, ms);
+  });
+}
 
 async function connect() {
   const client = new Client();
@@ -30,18 +35,20 @@ async function connect() {
 
   console.log(
     `Configuration:
-    Minimum number of actions: ${MIN_ACTIONS}
+    Minimum number of move actions: ${MIN_MOVE_ACTIONS}
     Minimum ratio between moveActions/createNodeActions: ${MIN_RATIO}
     Annotations that were modified in the last ${LAST_X_DAYS} days.
     `,
   );
 
-  console.log(res.rows.length);
+  console.log(`Checking ${res.rows.length} annotations.`);
 
   for (const entry of res.rows) {
     const url = `${HOST}/data/tracings/skeleton/${
       entry.tracing_id
     }/updateActionStatistics?token=${TOKEN}`;
+
+    await sleep(200);
 
     try {
       const response = await fetch(url);
@@ -51,11 +58,13 @@ async function connect() {
       const { updateTracingActionCount: moved, createNodeActionCount: created } = parsedJSON;
       const movedToCreatedRatio = Math.round(moved / created * 10) / 10;
 
-      if (moved > 0 && moved + created >= MIN_ACTIONS && movedToCreatedRatio >= MIN_RATIO) {
+      if (moved > 0 && moved >= MIN_MOVE_ACTIONS && movedToCreatedRatio >= MIN_RATIO) {
         console.log(
           `Moved: ${moved}, Created: ${created}, Moved/Created: ${movedToCreatedRatio} - User: ${
             entry.firstname
-          } ${entry.lastname}, TracingId: ${entry.tracing_id}, Modified: ${entry.modified}`,
+          } ${entry.lastname}, TaskId: ${entry._task}, AnnotationId: ${entry._id}, Modified: ${
+            entry.modified
+          }`,
         );
       }
     } catch (err) {

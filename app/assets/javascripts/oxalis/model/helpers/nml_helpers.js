@@ -135,9 +135,9 @@ function serializeParameters(state: OxalisState): Array<string> {
           description: state.tracing.description,
         }),
         serializeTag("scale", {
-          x: state.dataset.scale[0],
-          y: state.dataset.scale[1],
-          z: state.dataset.scale[2],
+          x: state.dataset.dataSource.scale[0],
+          y: state.dataset.dataSource.scale[1],
+          z: state.dataset.dataSource.scale[2],
         }),
         serializeTag("offset", {
           x: 0,

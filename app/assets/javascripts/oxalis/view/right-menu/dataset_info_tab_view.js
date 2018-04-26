@@ -16,11 +16,12 @@ import {
 } from "oxalis/model/actions/annotation_actions";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 import { Table } from "antd";
-import type { OxalisState, TracingType, DatasetType, TaskType, FlycamType } from "oxalis/store";
+import type { APIDatasetType } from "admin/api_flow_types";
+import type { OxalisState, TracingType, TaskType, FlycamType } from "oxalis/store";
 
 type DatasetInfoTabStateProps = {
   tracing: TracingType,
-  dataset: DatasetType,
+  dataset: APIDatasetType,
   flycam: FlycamType,
   task: ?TaskType,
 };
@@ -84,7 +85,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
       throw new Error(`Model mode not recognized: ${viewMode}`);
     }
     // unit is nm
-    const baseVoxel = getBaseVoxel(this.props.dataset.scale);
+    const baseVoxel = getBaseVoxel(this.props.dataset.dataSource.scale);
     return zoom * width * baseVoxel;
   }
 
@@ -106,12 +107,72 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     this.props.setAnnotationDescription(newDescription);
   };
 
-  render() {
-    const { tracingType, name, description } = this.props.tracing;
-    const tracingName = name || "<untitled>";
-    const tracingDescription = description || "<no comment>";
+  getTracingStatistics() {
     const statsMaybe = getStats(this.props.tracing);
+
+    return this.props.tracing.type === "skeleton" ? (
+      <div>
+        <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
+        <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
+        <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
+        <p>
+          Number of Branch Points: {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
+        </p>
+      </div>
+    ) : null;
+  }
+
+  getKeyboardShortcuts(isPublicViewMode: boolean) {
+    return isPublicViewMode ? (
+      <Table
+        dataSource={shortcuts}
+        columns={shortcutColumns}
+        pagination={false}
+        style={{ marginRight: 20, marginTop: 25, marginBottom: 25 }}
+        size="small"
+      />
+    ) : null;
+  }
+
+  getOrganisationLogo(isPublicViewMode: boolean) {
+    return isPublicViewMode ? (
+      <div>
+        <img
+          className="img-50"
+          src="/assets/images/Max-Planck-Gesellschaft.svg"
+          alt="Max Plank Geselleschaft Logo"
+        />
+        <img
+          className="img-50"
+          src="/assets/images/MPI-brain-research.svg"
+          alt="Max Plank Institute of Brain Research Logo"
+        />
+      </div>
+    ) : null;
+  }
+
+  getDatasetName(isPublicViewMode: boolean) {
+    const { name: datasetName, displayName, description } = this.props.dataset;
+
+    if (isPublicViewMode) {
+      return (
+        <div>
+          <p>Dataset: {displayName || datasetName}</p>
+          {description ? <p>{description}</p> : null}
+        </div>
+      );
+    }
+
+    return <p>Dataset: {datasetName}</p>;
+  }
+
+  getTracingName(isPublicViewMode: boolean) {
+    if (isPublicViewMode) return null;
+
     let annotationTypeLabel;
+
+    const { tracingType, name } = this.props.tracing;
+    const tracingName = name || "<untitled>";
 
     if (this.props.task != null) {
       // In case we have a task display its id
@@ -132,18 +193,11 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
         </span>
       );
     }
-
-    const zoomLevel = this.calculateZoomLevel();
-    const dataSetName = this.props.dataset.name;
-    const isPublicViewMode =
-      Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
+    const tracingDescription = this.props.tracing.description || "<no description>";
 
     return (
-      <div className="flex-overflow">
+      <div>
         <p>{annotationTypeLabel}</p>
-        <p>Dataset: {dataSetName}</p>
-        <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
-        <p>Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.scale)}</p>
         <p>
           <span>
             Description:
@@ -154,40 +208,29 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
             />
           </span>
         </p>
-        {this.props.tracing.type === "skeleton" ? (
-          <div>
-            <p>Number of Trees: {statsMaybe.map(stats => stats.treeCount).getOrElse(null)}</p>
-            <p>Number of Nodes: {statsMaybe.map(stats => stats.nodeCount).getOrElse(null)}</p>
-            <p>Number of Edges: {statsMaybe.map(stats => stats.edgeCount).getOrElse(null)}</p>
-            <p>
-              Number of Branch Points:{" "}
-              {statsMaybe.map(stats => stats.branchPointCount).getOrElse(null)}
-            </p>
-          </div>
-        ) : null}
-        {isPublicViewMode ? (
-          <div>
-            <Table
-              dataSource={shortcuts}
-              columns={shortcutColumns}
-              pagination={false}
-              style={{ marginRight: 20 }}
-              size="small"
-            />
-            <div>
-              <img
-                className="img-50"
-                src="/assets/images/Max-Planck-Gesellschaft.svg"
-                alt="Max Plank Geselleschaft Logo"
-              />
-              <img
-                className="img-50"
-                src="/assets/images/MPI-brain-research.svg"
-                alt="Max Plank Institute of Brain Research Logo"
-              />
-            </div>
-          </div>
-        ) : null}
+      </div>
+    );
+  }
+
+  render() {
+    const isPublicViewMode =
+      Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
+
+    const zoomLevel = this.calculateZoomLevel();
+
+    return (
+      <div className="flex-overflow">
+        {this.getTracingName(isPublicViewMode)}
+        {this.getDatasetName(isPublicViewMode)}
+
+        <p>Viewport Width: {this.chooseUnit(zoomLevel)}</p>
+        <p>
+          Dataset Resolution: {TemplateHelpers.formatScale(this.props.dataset.dataSource.scale)}
+        </p>
+
+        {this.getTracingStatistics()}
+        {this.getKeyboardShortcuts(isPublicViewMode)}
+        {this.getOrganisationLogo(isPublicViewMode)}
       </div>
     );
   }

@@ -79,7 +79,7 @@ export function getMaxZoomStep(state: OxalisState): number {
       .map(dataset =>
         Math.max(
           0,
-          ...dataset.dataLayers.map(layer =>
+          ...dataset.dataSource.dataLayers.map(layer =>
             Math.max(0, ...layer.resolutions.map(r => Math.max(r[0], r[1], r[2]))),
           ),
         ),
@@ -107,7 +107,7 @@ export function calculateTextureBuffer(state: OxalisState): OrthoViewMapType<Vec
   // How many pixels is the texture larger than the canvas on each dimension?
   // Returns: two dimensional array with buffer[planeId][dimension], dimension: x->0, y->1
   const pixelNeeded = constants.PLANE_WIDTH * getTextureScalingFactor(state);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
   const buffer = {};
   for (const planeId of OrthoViewValues) {
     const scaleArray = Dimensions.transDim(baseVoxelFactors, planeId);
@@ -142,7 +142,7 @@ export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
 export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
   const position = getPosition(state.flycam);
   const offset = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
   const min = [0, 0, 0];
   const max = [0, 0, 0];
 
@@ -182,7 +182,7 @@ export function getOffsets(state: OxalisState, planeId: OrthoViewType): Vector2 
 export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {
   // returns [left, top, right, bottom] array
   const scaleArray = Dimensions.transDim(
-    scaleInfo.getBaseVoxelFactors(state.dataset.scale),
+    scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale),
     planeId,
   );
   const offsets = getOffsets(state, planeId);

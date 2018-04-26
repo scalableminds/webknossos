@@ -23,7 +23,9 @@ function equalWithEpsilon(t, a, b, epsilon = 1e-10) {
 
 const initialState = {
   dataset: {
-    scale: [1, 1, 2],
+    dataSource: {
+      scale: [1, 1, 2],
+    },
   },
   userConfiguration: {
     sphericalCapRadius: 100,

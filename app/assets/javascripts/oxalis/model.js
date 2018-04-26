@@ -51,10 +51,12 @@ import {
   getDataset,
   getSharingToken,
 } from "admin/admin_rest_api";
-import messages from "messages";
 
+import messages from "messages";
 import type Layer from "oxalis/model/binary/layers/layer";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
+import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
+import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
 
 export type ServerNodeType = {
   id: number,
@@ -122,7 +124,7 @@ export class OxalisModel {
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
   isMappingSupported: boolean = true;
-  dataTextureCountPerLayer: number;
+  maximumDataTextureCountForLayer: number;
 
   async fetch(
     tracingType: TracingTypeTracingType,
@@ -187,65 +189,31 @@ export class OxalisModel {
     this.applyState(UrlManager.initialState, tracing);
   }
 
-  validateSpecsForLayers(layers: Array<Layer>): [number, number] {
-    const canvas = document.createElement("canvas");
-    const contextProvider = canvas.getContext
-      ? x => canvas.getContext(x)
-      : ctxName => ({
-          MAX_TEXTURE_SIZE: 0,
-          MAX_COMBINED_TEXTURE_IMAGE_UNITS: 1,
-          getParameter(param) {
-            return ctxName === "webgl" && param === 0 ? 4096 : 8192;
-          },
-        });
+  validateSpecsForLayers(layers: Array<Layer>): Map<Layer, DataTextureSizeAndCount> {
+    const specs = DataRenderingLogic.getSupportedTextureSpecs();
+    DataRenderingLogic.validateMinimumRequirements(specs);
 
-    const gl = contextProvider("webgl");
+    const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
+    const setupInfo = DataRenderingLogic.computeDataTexturesSetup(
+      specs,
+      layers,
+      layer => layer.bitDepth >> 3,
+      hasSegmentation,
+    );
 
-    if (!gl) {
-      throw new Error("WebGL context could not be constructed.");
-    }
-
-    const supportedTextureSize = gl.getParameter(gl.MAX_TEXTURE_SIZE);
-    const maxTextureCount = gl.getParameter(gl.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
-
-    if (supportedTextureSize < 4096 || maxTextureCount < 8) {
-      throw new Error(
-        "Minimum spec is not met. GPU should support at least a texture size of 4096 and 8 textures.",
-      );
-    }
-
-    const usedTextureSize = supportedTextureSize >= 8192 ? 8192 : 4096;
-    const dataTextureCountPerLayer = (() => {
-      const bucketCountPerPlane =
-        constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION ** 2 + // buckets in current zoomStep
-        Math.ceil(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / 2) ** 2; // buckets in fallback zoomstep;
-      const necessaryVoxelCount = 3 * bucketCountPerPlane * constants.BUCKET_SIZE;
-      const availableVoxelCount = usedTextureSize ** 2;
-      return Math.ceil(necessaryVoxelCount / availableVoxelCount);
-    })();
-
-    const lookupTextureCountPerLayer = 1;
-    const necessaryTextureCount =
-      layers.length * (dataTextureCountPerLayer + lookupTextureCountPerLayer);
-
-    // Count textures needed for mappings separately, because they are not strictly necessary
-    let textureCountForCellMappings = 0;
-    if (_.find(layers, layer => layer.category === "segmentation") != null) {
-      // One lookup and one data texture for mappings
-      textureCountForCellMappings = 2;
-    }
-
-    if (necessaryTextureCount > maxTextureCount) {
+    if (!setupInfo.isBasicRenderingSupported) {
       const message = `Not enough textures available for rendering ${layers.length} layers`;
       Toast.error(message);
       throw new Error(message);
-    } else if (necessaryTextureCount + textureCountForCellMappings > maxTextureCount) {
+    }
+
+    if (!setupInfo.isMappingSupported) {
       const message = messages["mapping.too_few_textures"];
       console.warn(message);
       this.isMappingSupported = false;
     }
 
-    return [usedTextureSize, dataTextureCountPerLayer];
+    return setupInfo.textureInformationPerLayer;
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -302,7 +270,7 @@ export class OxalisModel {
     }
   }
 
-  async initializeDataset(datasetName: string) {
+  async initializeDataset(datasetName: string): Promise<Array<Vector3>> {
     const sharingToken = getSharingToken();
     const rawDataset =
       sharingToken != null
@@ -366,8 +334,10 @@ export class OxalisModel {
       layerInfo => new LayerClass(layerInfo, dataStore),
     );
 
-    const [textureWidth, dataTextureCountPerLayer] = this.validateSpecsForLayers(layers);
-    this.dataTextureCountPerLayer = dataTextureCountPerLayer;
+    const textureInformationPerLayer = this.validateSpecsForLayers(layers);
+    this.maximumDataTextureCountForLayer = _.max(
+      Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
+    );
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
@@ -377,12 +347,16 @@ export class OxalisModel {
       if (layer.category === "segmentation") {
         maxLayerZoomStep = 1;
       }
+      const textureInformation = textureInformationPerLayer.get(layer);
+      if (!textureInformation) {
+        throw new Error("No texture information for layer?");
+      }
       this.binary[layer.name] = new Binary(
         layer,
         maxLayerZoomStep,
         this.connectionInfo,
-        textureWidth,
-        dataTextureCountPerLayer,
+        textureInformation.textureSize,
+        textureInformation.textureCount,
       );
     }
 
@@ -574,7 +548,7 @@ export class OxalisModel {
     // Different layers can have different resolutions. At the moment,
     // unequal resolutions will result in undefined behavior.
     // However, if resolutions are subset of each other, everything should be fine.
-    // For that case, return the longest resolutions array should suffice
+    // For that case, returning the longest resolutions array should suffice
 
     return _.chain(this.binary)
       .map(b => b.layer.resolutions)

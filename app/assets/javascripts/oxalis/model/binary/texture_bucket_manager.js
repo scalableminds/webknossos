@@ -50,9 +50,20 @@ export default class TextureBucketManager {
   textureWidth: number;
   dataTextureCount: number;
   maximumCapacity: number;
+  packingDegree: number;
 
-  constructor(bucketsPerDim: number, textureWidth: number, dataTextureCount: number) {
-    this.maximumCapacity = dataTextureCount * textureWidth ** 2 / constants.BUCKET_SIZE;
+  constructor(
+    bucketsPerDim: number,
+    textureWidth: number,
+    dataTextureCount: number,
+    bytes: number,
+  ) {
+    // If there is one byte per voxel, we pack 4 bytes into one texel (packingDegree = 4)
+    // Otherwise, we don't pack bytes together (packingDegree = 1)
+    this.packingDegree = bytes === 1 ? 4 : 1;
+
+    this.maximumCapacity =
+      this.packingDegree * dataTextureCount * textureWidth ** 2 / constants.BUCKET_SIZE;
     // the look up buffer is bucketsPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
     this.bucketsPerDim = bucketsPerDim;
@@ -138,8 +149,9 @@ export default class TextureBucketManager {
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
 
-    const bucketHeightInTexture = constants.BUCKET_SIZE / this.textureWidth;
-    const bucketsPerTexture = this.textureWidth * this.textureWidth / constants.BUCKET_SIZE;
+    const packedBucketSize = constants.BUCKET_SIZE / this.packingDegree;
+    const bucketHeightInTexture = packedBucketSize / this.textureWidth;
+    const bucketsPerTexture = this.textureWidth * this.textureWidth / packedBucketSize;
 
     while (performance.now() - startingTime < maxTimePerFrame && this.writerQueue.length > 0) {
       const { bucket, _index } = this.writerQueue.pop();
@@ -149,12 +161,12 @@ export default class TextureBucketManager {
       }
 
       const dataTextureIndex = Math.floor(_index / bucketsPerTexture);
-      const indexInDataTeture = _index % bucketsPerTexture;
+      const indexInDataTexture = _index % bucketsPerTexture;
 
       this.dataTextures[dataTextureIndex].update(
         bucket.getData(),
         0,
-        bucketHeightInTexture * indexInDataTeture,
+        bucketHeightInTexture * indexInDataTexture,
         this.textureWidth,
         bucketHeightInTexture,
       );
@@ -176,7 +188,7 @@ export default class TextureBucketManager {
     for (let i = 0; i < this.dataTextureCount; i++) {
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
-        bytes,
+        bytes * this.packingDegree,
         THREE.UnsignedByteType,
         getRenderer(),
       );

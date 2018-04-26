@@ -248,13 +248,18 @@ class Binary {
     return [this.mappingTexture, this.mappingLookupTexture];
   }
 
+  getByteCount(): number {
+    return this.layer.bitDepth >> 3;
+  }
+
   setupDataTextures(): void {
-    const bytes = this.layer.bitDepth >> 3;
+    const bytes = this.getByteCount();
 
     this.textureBucketManager = new TextureBucketManager(
       constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,
       this.textureWidth,
       this.dataTextureCount,
+      bytes,
     );
     this.textureBucketManager.setupDataTextures(bytes, this.category);
 

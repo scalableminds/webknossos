@@ -254,11 +254,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       return this.getNewTask();
     } else {
       let modalContent = messages["task.request_new"];
-      const likelyNextTasks = await peekNextTasks();
+      const likelyNextTask = await peekNextTasks();
 
-      if (likelyNextTasks.length > 0) {
+      if (likelyNextTask != null) {
         modalContent += `\n${messages["task.peek_next"]({
-          projectName: likelyNextTasks[0].projectName,
+          projectName: likelyNextTask.projectName,
         })}`;
       }
 

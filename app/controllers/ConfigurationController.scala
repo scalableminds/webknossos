@@ -68,7 +68,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
   def updateDataSetDefault(dataSetName: String) = SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
       dataset <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataset.notFound")
-      _ <- request.identity.isAdminOf(dataset.owningOrganization) ?~> Messages("notAllowed")
+      _ <- (request.identity.isAdminOf(dataset.owningOrganization) || request.identity.isTeamManagerInOrg(dataset.owningOrganization)) ?~> Messages("notAllowed")
       jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
       conf = jsConfiguration.fields.toMap
       _ <- DataSetSQLDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))

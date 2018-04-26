@@ -383,7 +383,7 @@ case class DataSet(
     UriEncoding.encodePathSegment(name, "UTF-8")
 
   def isEditableBy(user: Option[User]) =
-    user.exists(_.isAdminOf(owningOrganization))
+    user.exists(u => u.isAdminOf(owningOrganization) || u.isTeamManagerInOrg(owningOrganization))
 
   lazy val dataStore: DataStoreHandlingStrategy =
     DataStoreHandlingStrategy(this)

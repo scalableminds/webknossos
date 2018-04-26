@@ -854,8 +854,14 @@ void main() {
 
   <% if (hasSegmentation) { %>
     float id = getSegmentationId(coords, fallbackCoords, hasFallback);
+
+    vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
+    vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
+
+    float cellIdUnderMouse = getSegmentationId(mousePosCoords, fallbackCoords, false);
   <% } else { %>
     float id = 0.0;
+    float cellIdUnderMouse = 0.0;
   <% } %>
 
   // Get Color Value(s)
@@ -902,7 +908,9 @@ void main() {
 
   // Color map (<= to fight rounding mistakes)
   if ( id > 0.1 ) {
-    gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha ), 1.0);
+    // Increase cell opacity when cell is hovered
+    float hoverAlphaIncrement = cellIdUnderMouse == id ? 0.1 : 0.0;
+    gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
   } else {
     gl_FragColor = vec4(data_color, 1.0);
   }

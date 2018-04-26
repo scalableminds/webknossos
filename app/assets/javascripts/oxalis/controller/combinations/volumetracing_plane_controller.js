@@ -206,9 +206,9 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
       mouseMove: (delta: Point2, position: Point2) => {
         const tool = getVolumeTool(Store.getState().tracing).get();
 
-        if (tool === VolumeToolEnum.BRUSH) {
-          Store.dispatch(setBrushPositionAction([position.x, position.y]));
-        }
+        // TODO: when cell-hovering can be (and is) disabled via options
+        // this dispatch is only necessary when tool === VolumeToolEnum.BRUSH
+        Store.dispatch(setBrushPositionAction([position.x, position.y]));
       },
 
       out: () => {

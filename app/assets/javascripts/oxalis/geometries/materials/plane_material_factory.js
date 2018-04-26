@@ -321,8 +321,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   getFragmentShader(): string {
     const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
     const segmentationBinary = Model.getSegmentationBinary();
-
+    const segmentationName = sanitizeName(segmentationBinary ? segmentationBinary.name : "");
     const datasetScale = Store.getState().dataset.scale;
+    const hasSegmentation = segmentationBinary != null;
 
     return _.template(
       `\
@@ -410,30 +411,46 @@ vec4 round(vec4 a) {
   return floor(a + 0.5);
 }
 
+// Define this function for each layer, since iOS cannot handle
+// sampler2D textures[dataTextureCountPerLayer
+// as a function parameter properly
 
-vec4 getRgbaAtXYIndex(sampler2D textures[dataTextureCountPerLayer], float textureIdx, float textureWidth, float x, float y) {
-  vec2 accessPoint = (floor(vec2(x, y)) + 0.5) / textureWidth;
+<% _.each(layerNamesWithSegmentation, (name) => { %>
+  vec4 getRgbaAtXYIndex_<%= name %>(float textureIdx, float textureWidth, float x, float y) {
+    vec2 accessPoint = (floor(vec2(x, y)) + 0.5) / textureWidth;
 
-  // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
-  // here which checks for each case individually. The else-if-branches are constructed via
-  // lodash templates.
+    // Since WebGL 1 doesnt allow dynamic texture indexing, we use an exhaustive if-else-construct
+    // here which checks for each case individually. The else-if-branches are constructed via
+    // lodash templates.
 
-  <% if (dataTextureCountPerLayer === 1) { %>
-      // Don't use if-else when there is only one data texture anyway
-      return texture2D(textures[0], accessPoint).rgba;
-  <% } else { %>
-    if (textureIdx == 0.0) {
-      return texture2D(textures[0], accessPoint).rgba;
-    } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
-    else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
-      return texture2D(textures[<%= textureIndex %>], accessPoint).rgba;
+    <% if (dataTextureCountPerLayer === 1) { %>
+        // Don't use if-else when there is only one data texture anyway
+        return texture2D(<%= name + "_textures" %>[0], accessPoint).rgba;
+    <% } else { %>
+      if (textureIdx == 0.0) {
+        return texture2D(<%= name + "_textures" %>[0], accessPoint).rgba;
+      } <% _.range(1, dataTextureCountPerLayer).forEach(textureIndex => { %>
+      else if (textureIdx == <%= formatNumberAsGLSLFloat(textureIndex) %>) {
+        return texture2D(<%= name + "_textures" %>[<%= textureIndex %>], accessPoint).rgba;
+      }
+      <% }) %>
+      else {
+        return vec4(0.5, 0.0, 0.0, 0.0);
+      }
+    <% } %>
+  }
+<% }); %>
+
+vec4 getRgbaAtXYIndex(float layerIndex, float textureIdx, float textureWidth, float x, float y) {
+  if (layerIndex == 0.0) {
+    return getRgbaAtXYIndex_<%= layerNamesWithSegmentation[0] %>(textureIdx, textureWidth, x, y);
+  } <% _.each(layerNamesWithSegmentation.slice(1), (name, index) => { %>
+    else if (layerIndex == <%= formatNumberAsGLSLFloat(index + 1) %>) {
+      return getRgbaAtXYIndex_<%= name %>(textureIdx, textureWidth, x, y);
     }
-    <% }) %>
-    else {
-      return vec4(0.5, 0.0, 0.0, 0.0);
-    }
-  <% } %>
+  <% }); %>
 }
+
 
 vec4 getRgbaAtIndex(sampler2D texture, float textureWidth, float idx) {
   float finalPosX = mod(idx, textureWidth);
@@ -496,7 +513,7 @@ bool isNan(float val) {
 
 vec4 getColorFor(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[dataTextureCountPerLayer],
+  float layerIndex,
   float d_texture_width,
   float packingDegree,
   vec3 bucketPosition,
@@ -548,7 +565,7 @@ vec4 getColorFor(
     div(packedBucketSize * bucketAddress, d_texture_width);
 
   vec4 bucketColor = getRgbaAtXYIndex(
-    dataTextures,
+    layerIndex,
     textureIndex,
     d_texture_width,
     x,
@@ -624,7 +641,7 @@ vec3 getWorldCoordUVW() {
 
 vec4 getColorForCoords(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[dataTextureCountPerLayer],
+  float layerIndex,
   float d_texture_width,
   float packingDegree,
   vec3 coords,
@@ -636,7 +653,7 @@ vec4 getColorForCoords(
 
   return getColorFor(
     lookUpTexture,
-    dataTextures,
+    layerIndex,
     d_texture_width,
     packingDegree,
     bucketPosition,
@@ -647,7 +664,7 @@ vec4 getColorForCoords(
 
 vec4 getBilinearColorFor(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[dataTextureCountPerLayer],
+  float layerIndex,
   float d_texture_width,
   float packingDegree,
   vec3 coords
@@ -656,10 +673,10 @@ vec4 getBilinearColorFor(
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
 
-  vec4 a = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords, 0.0);
-  vec4 b = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), 0.0);
-  vec4 c = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), 0.0);
-  vec4 d = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), 0.0);
+  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
+  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), 0.0);
+  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), 0.0);
+  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), 0.0);
   if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
     // We need to check all four colors for a negative parts, because there will be black
     // lines at the borders otherwise (black gets mixed with data)
@@ -675,7 +692,7 @@ vec4 getBilinearColorFor(
 
 vec4 getMaybeFilteredColor(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[dataTextureCountPerLayer],
+  float layerIndex,
   float d_texture_width,
   float packingDegree,
   vec3 coords,
@@ -683,16 +700,16 @@ vec4 getMaybeFilteredColor(
 ) {
   vec4 color;
   if (!suppressBilinearFiltering && useBilinearFiltering) {
-    color = getBilinearColorFor(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords);
+    color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
   } else {
-    color = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords, 0.0);
+    color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
   }
   return color;
 }
 
 vec4 getMaybeFilteredColorOrFallback(
   sampler2D lookUpTexture,
-  sampler2D dataTextures[dataTextureCountPerLayer],
+  float layerIndex,
   float d_texture_width,
   float packingDegree,
   vec3 coords,
@@ -701,10 +718,10 @@ vec4 getMaybeFilteredColorOrFallback(
   bool suppressBilinearFiltering,
   vec4 fallbackColor
 ) {
-  vec4 color = getMaybeFilteredColor(lookUpTexture, dataTextures, d_texture_width, packingDegree, coords, suppressBilinearFiltering);
+  vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, suppressBilinearFiltering);
 
   if (color.a < 0.0 && hasFallback) {
-    color = getColorForCoords(lookUpTexture, dataTextures, d_texture_width, packingDegree, fallbackCoords, 1.0).rgba;
+    color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, 1.0).rgba;
     if (color.a < 0.0) {
       // Render gray for not-yet-existing data
       color = fallbackColor;
@@ -781,7 +798,7 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
     vec4 volume_color =
       getMaybeFilteredColorOrFallback(
         <%= segmentationName %>_lookup_texture,
-        <%= segmentationName %>_textures,
+        <%= formatNumberAsGLSLFloat(segmentationLayerIndex) %>,
         <%= segmentationName %>_data_texture_width,
         1.0,
         coords,
@@ -846,7 +863,7 @@ void main() {
     vec3 data_color =
       getMaybeFilteredColorOrFallback(
         <%= layers[0] %>_lookup_texture,
-        <%= layers[0] %>_textures,
+        0.0, // layerIndex
         <%= layers[0] %>_data_texture_width,
         1.0,
         coords,
@@ -859,12 +876,12 @@ void main() {
     data_color = (data_color + <%= layers[0] %>_brightness - 0.5) * <%= layers[0] %>_contrast + 0.5;
   <% } else { %>
     vec3 data_color = vec3(0.0, 0.0, 0.0);
-    <% _.each(layers, function(name){ %>
+    <% _.each(layers, function(name, layerIndex){ %>
       // Get grayscale value for <%= name %>
       color_value =
         getMaybeFilteredColorOrFallback(
           <%= name %>_lookup_texture,
-          <%= name %>_textures,
+          <%= formatNumberAsGLSLFloat(layerIndex) %>,
           <%= name %>_data_texture_width,
           4.0, // gray scale data is always packed into rgba channels
           coords,
@@ -901,9 +918,13 @@ void main() {
 \
 `,
     )({
+      layerNamesWithSegmentation: colorLayerNames.concat(hasSegmentation ? [segmentationName] : []),
+      // Since we concat the segmentation to the color layers, its index is equal
+      // to the length of the colorLayer array
+      segmentationLayerIndex: colorLayerNames.length,
       layers: colorLayerNames,
-      hasSegmentation: segmentationBinary != null,
-      segmentationName: sanitizeName(segmentationBinary ? segmentationBinary.name : ""),
+      hasSegmentation,
+      segmentationName,
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
       OrthoViews,
       planeID: this.planeID,

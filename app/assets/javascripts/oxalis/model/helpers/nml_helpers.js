@@ -325,12 +325,17 @@ function isTreeConnected(tree: TreeType): boolean {
   return _.size(visitedNodes) === tree.nodes.size();
 }
 
+function getEdgeHash(source: number, target: number) {
+  return source < target ? `${source}-${target}` : `${target}-${source}`;
+}
+
 export function parseNml(nmlString: string): Promise<TreeMapType> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
     const trees: TemporaryMutableTreeMapType = {};
     const existingNodeIds = new Set();
+    const existingEdges = new Set();
     let currentTree: ?TreeType = null;
     parser
       .on("tagopen", node => {
@@ -392,6 +397,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               source: _parseInt(attr, "source"),
               target: _parseInt(attr, "target"),
             };
+            const edgeHash = getEdgeHash(currentEdge.source, currentEdge.target);
             if (currentTree == null)
               throw new NmlParseError(
                 `${messages["nml.edge_outside_tree"]} ${JSON.stringify(currentEdge)}`,
@@ -409,7 +415,12 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               throw new NmlParseError(
                 `${messages["nml.edge_with_same_source_target"]} ${JSON.stringify(currentEdge)}`,
               );
+            if (existingEdges.has(edgeHash))
+              throw new NmlParseError(
+                `${messages["nml.duplicate_edge"]} ${JSON.stringify(currentEdge)}`,
+              );
             currentTree.edges.addEdge(currentEdge, true);
+            existingEdges.add(edgeHash);
             break;
           }
           case "comment": {

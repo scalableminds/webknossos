@@ -247,7 +247,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
         {groupName}{" "}
         <Dropdown overlay={menu}>
           <a className="ant-dropdown-link" href="#">
-            <Icon type="down" />
+            <Icon type="setting" />
           </a>
         </Dropdown>
       </React.Fragment>

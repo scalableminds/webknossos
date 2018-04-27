@@ -92,7 +92,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   val collection = Annotations
 
   def idColumn(x: Annotations): Rep[String] = x._Id
-
   def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
   def parse(r: AnnotationsRow): Fox[AnnotationSQL] =
@@ -123,12 +122,10 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     }
 
   override def anonymousReadAccessQ(sharingToken: Option[String]) = s"isPublic"
-
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""(isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'
        or (select _organization from webknossos.teams where webknossos.teams._id = _team)
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
-
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}
        or (select _organization from webknossos.teams where webknossos.teams._id = _team)

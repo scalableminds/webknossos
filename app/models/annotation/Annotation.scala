@@ -92,6 +92,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   val collection = Annotations
 
   def idColumn(x: Annotations): Rep[String] = x._Id
+
   def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
   def parse(r: AnnotationsRow): Fox[AnnotationSQL] =
@@ -122,10 +123,12 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     }
 
   override def anonymousReadAccessQ(sharingToken: Option[String]) = s"isPublic"
+
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""(isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'
        or (select _organization from webknossos.teams where webknossos.teams._id = _team)
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}
        or (select _organization from webknossos.teams where webknossos.teams._id = _team)
@@ -211,7 +214,8 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def insertOne(a: AnnotationSQL): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""
+      _ <- run(
+        sqlu"""
                insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
                values(${a._id.id}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
                    '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
@@ -222,8 +226,9 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   }
 
   def updateInitialized(a: AnnotationSQL): Fox[Unit] = {
-    val query =
-      sqlu"""
+    for {
+      _ <- run(
+        sqlu"""
              update webknossos.annotations
              set
                _dataSet = ${a._dataset.id},
@@ -243,9 +248,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
                modified = ${new java.sql.Timestamp(a.modified)},
                isDeleted = ${a.isDeleted}
              where _id = ${a._id.id}
-          """
-    for {
-      _ <- run(query.withTransactionIsolation(Serializable))
+          """)
     } yield ()
   }
 

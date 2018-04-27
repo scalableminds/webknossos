@@ -192,7 +192,8 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
          """.as[TasksRow]
 
     for {
-      _ <- run(insertAnnotationQ.withTransactionIsolation(Serializable), retryCount = 50, alsoRetryIfErrorContains = List("Negative openInstances for Task"))
+      _ <- run(insertAnnotationQ.withTransactionIsolation(Serializable),
+               retryCount = 50, retryIfErrorContains = List(transactionSerializationError, "Negative openInstances for Task"))
       rList <- run(findTaskOfInsertedAnnotationQ)
       r <- rList.headOption.toFox
       parsed <- parse(r)

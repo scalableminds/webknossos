@@ -39,7 +39,7 @@ class NodeShader {
       },
       datasetScale: {
         type: "f",
-        value: getBaseVoxel(state.dataset.scale),
+        value: getBaseVoxel(state.dataset.dataSource.scale),
       },
       overrideParticleSize: {
         type: "f",

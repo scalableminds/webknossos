@@ -63,7 +63,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       },
       datasetScale: {
         type: "v3",
-        value: Store.getState().dataset.scale,
+        value: Store.getState().dataset.dataSource.scale,
       },
       anchorPoint: {
         type: "v4",
@@ -328,7 +328,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
     const segmentationBinary = Model.getSegmentationBinary();
     const segmentationName = sanitizeName(segmentationBinary ? segmentationBinary.name : "");
-    const datasetScale = Store.getState().dataset.scale;
+    const datasetScale = Store.getState().dataset.dataSource.scale;
     const hasSegmentation = segmentationBinary != null;
 
     return _.template(

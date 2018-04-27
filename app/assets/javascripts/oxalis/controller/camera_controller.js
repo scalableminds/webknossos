@@ -53,7 +53,7 @@ class CameraController extends React.PureComponent<Props> {
   updateCamViewport(): void {
     const state = Store.getState();
     const clippingDistance = state.userConfiguration.clippingDistance;
-    const scaleFactor = getBaseVoxel(state.dataset.scale);
+    const scaleFactor = getBaseVoxel(state.dataset.dataSource.scale);
     const zoom = state.flycam.zoomStep;
     const halfBoundary = constants.VIEWPORT_WIDTH / 2 * zoom;
     for (const planeId of OrthoViewValuesWithoutTDView) {
@@ -71,7 +71,7 @@ class CameraController extends React.PureComponent<Props> {
     const state = Store.getState();
     const gPos = getPosition(state.flycam);
     // camera position's unit is nm, so convert it.
-    const cPos = voxelToNm(state.dataset.scale, gPos);
+    const cPos = voxelToNm(state.dataset.dataSource.scale, gPos);
     const cPosVec = new THREE.Vector3(cPos[0], cPos[1], cPos[2]);
     this.props.cameras[OrthoViews.PLANE_XY].position.copy(cPosVec);
     this.props.cameras[OrthoViews.PLANE_YZ].position.copy(cPosVec);
@@ -140,8 +140,8 @@ type TweenState = {
 
 export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void {
   const state = Store.getState();
-  const b = voxelToNm(state.dataset.scale, Model.upperBoundary);
-  const pos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
+  const b = voxelToNm(state.dataset.dataSource.scale, Model.upperBoundary);
+  const pos = voxelToNm(state.dataset.dataSource.scale, getPosition(state.flycam));
 
   let to: TweenState;
   if (id === OrthoViews.TDView) {
@@ -218,7 +218,10 @@ export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void
   }
 
   const updateCameraTDView = function(tweenState: TweenState): void {
-    const p = voxelToNm(Store.getState().dataset.scale, getPosition(Store.getState().flycam));
+    const p = voxelToNm(
+      Store.getState().dataset.dataSource.scale,
+      getPosition(Store.getState().flycam),
+    );
 
     Store.dispatch(
       setTDCameraAction({

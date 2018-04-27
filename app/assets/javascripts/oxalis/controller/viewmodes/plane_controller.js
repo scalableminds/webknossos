@@ -87,17 +87,13 @@ class PlaneController extends React.PureComponent<Props> {
     this.isStarted = false;
 
     const state = Store.getState();
-    this.oldNmPos = voxelToNm(state.dataset.scale, getPosition(state.flycam));
+    this.oldNmPos = voxelToNm(state.dataset.dataSource.scale, getPosition(state.flycam));
 
     this.planeView = new PlaneView();
 
     Store.dispatch(setViewportAction(OrthoViews.PLANE_XY));
 
     this.start();
-  }
-
-  componentDidUpdate(): void {
-    this.setTargetAndFixPosition();
   }
 
   componentWillUnmount() {
@@ -129,6 +125,8 @@ class PlaneController extends React.PureComponent<Props> {
       scroll: (value: number) => this.zoomTDView(Utils.clamp(-1, value, 1), true),
       over: () => {
         Store.dispatch(setViewportAction(OrthoViews.TDView));
+        // Fix the rotation target of the TrackballControls
+        this.setTargetAndFixPosition();
       },
       pinch: delta => this.zoomTDView(delta, true),
     };
@@ -167,6 +165,9 @@ class PlaneController extends React.PureComponent<Props> {
     for (let i = 0; i <= 2; i++) {
       invertedDiff.push(this.oldNmPos[i] - nmPosition[i]);
     }
+
+    if (invertedDiff.every(el => el === 0)) return;
+
     this.oldNmPos = nmPosition;
 
     const nmVector = new THREE.Vector3(...invertedDiff);
@@ -222,14 +223,14 @@ class PlaneController extends React.PureComponent<Props> {
         return (
           state.userConfiguration.moveValue *
           timeFactor /
-          getBaseVoxel(state.dataset.scale) /
+          getBaseVoxel(state.dataset.dataSource.scale) /
           constants.FPS
         );
       }
       return (
         state.userConfiguration.moveValue *
         timeFactor /
-        getBaseVoxel(state.dataset.scale) /
+        getBaseVoxel(state.dataset.dataSource.scale) /
         constants.FPS
       );
     };
@@ -512,7 +513,7 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   const curGlobalPos = getPosition(state.flycam);
   const zoomFactor = getPlaneScalingFactor(state.flycam);
   const viewportScale = state.userConfiguration.scale;
-  const planeRatio = getBaseVoxelFactors(state.dataset.scale);
+  const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const diffX =
     (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) / viewportScale * zoomFactor;
@@ -554,7 +555,7 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
 export function mapStateToProps(state: OxalisState, ownProps: OwnProps): Props {
   return {
     flycam: state.flycam,
-    scale: state.dataset.scale,
+    scale: state.dataset.dataSource.scale,
     onRender: ownProps.onRender,
   };
 }

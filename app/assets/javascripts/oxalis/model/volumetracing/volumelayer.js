@@ -193,7 +193,9 @@ class VolumeLayer {
     const minCoord2d = [coord2d[0] - radius, coord2d[1] - radius];
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
-    const [u, v] = this.get2DCoordinate(getBaseVoxelFactors(Store.getState().dataset.scale));
+    const [u, v] = this.get2DCoordinate(
+      getBaseVoxelFactors(Store.getState().dataset.dataSource.scale),
+    );
 
     for (let x = 0; x < width; x++) {
       for (let y = 0; y < width; y++) {

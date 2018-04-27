@@ -9,13 +9,12 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
-import play.api.data.Form
+import play.api.data.{Form, Forms}
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.json.Json
+import play.api.libs.json.{JsError, JsObject, JsSuccess, Json}
 import play.api.mvc._
 import reactivemongo.bson.BSONObjectID
-
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -57,28 +56,29 @@ class DataSourceController @Inject()(
   def upload = TokenSecuredAction(UserAccessRequest.administrateDataSources).async(parse.multipartFormData) {
     implicit request =>
 
-    val uploadForm = Form(
-      tuple(
-        "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-        "organization" -> nonEmptyText
-      )).fill(("", ""))
+      val uploadForm = Form(
+        tuple(
+          "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
+          "organization" -> nonEmptyText,
+          "allowedTeams" -> Forms.list(nonEmptyText)
+        )).fill(("", "", List[String]()))
 
-    AllowRemoteOrigin {
-      uploadForm.bindFromRequest(request.body.dataParts).fold(
-        hasErrors =
-          formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-        success = {
-          case (name, organization) =>
-            val id = DataSourceId(name, organization)
-            for {
-              _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
-              zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
-              _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
-            } yield {
-              Ok
-            }
-        })
-    }
+      AllowRemoteOrigin {
+        uploadForm.bindFromRequest(request.body.dataParts).fold(
+          hasErrors =
+            formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+          success = {
+            case (name, organization, allowedTeams) =>
+              val id = DataSourceId(name, organization)
+              for {
+                _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
+                zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
+                _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath), allowedTeams)
+              } yield {
+                Ok
+              }
+          })
+      }
   }
 
   def explore(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName)) {
@@ -96,21 +96,29 @@ class DataSourceController @Inject()(
       }
   }
 
-  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName))(validateJson[DataSource]) {
+  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName)).async(parse.json) {
     implicit request =>
+
       AllowRemoteOrigin {
-        for {
-          dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages ("dataSource.notFound") ~> 404
-          _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
-        } yield {
-          Ok
+
+        val dataSourceJson = (request.body \ "datasource").as[JsObject]
+        val allowedTeams = (request.body \ "allowedTeams").as[List[String]]
+
+        dataSourceJson.validate[DataSource] match {
+          case JsSuccess(dataSourceJs, _) =>
+            for {
+              dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
+              _ <- dataSourceService.updateDataSource(dataSourceJs.copy(id = dataSource.id), allowedTeams)
+            } yield {
+              Future(Ok)
+            }
         }
       }
   }
 
   def getTeamIdFromString(str: String) = {
     val teamId = BSONObjectID.parse(str)
-    if(teamId.isSuccess)
+    if (teamId.isSuccess)
       Fox.successful(teamId.get)
     else
       Fox.failure("Not a TeamId")

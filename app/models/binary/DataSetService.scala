@@ -38,14 +38,16 @@ object DataSetService extends FoxImplicits with LazyLogging {
                      dataStore: DataStoreInfo,
                      owningOrganization: String,
                      dataSource: InboxDataSource,
-                     isActive: Boolean = false)(implicit ctx: DBAccessContext) = {
+                     allowedTeams: List[BSONObjectID],
+                     isActive: Boolean = false
+                     )(implicit ctx: DBAccessContext) = {
     OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
       case Full(organization) =>
       DataSetDAO.insert(DataSet(
         dataStore,
         dataSource,
         owningOrganization,
-        List(organization._organizationTeam),
+        allowedTeams,
         isActive = isActive,
         isPublic = false))(GlobalAccessContext)
       case _ => Fox.failure("org.notExist")
@@ -54,7 +56,8 @@ object DataSetService extends FoxImplicits with LazyLogging {
 
   def updateDataSource(
                         dataStoreInfo: DataStoreInfo,
-                        dataSource: InboxDataSource
+                        dataSource: InboxDataSource,
+                        allowedTeams: List[BSONObjectID]
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     DataSetDAO.findOneBySourceName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
@@ -75,6 +78,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
           dataStoreInfo,
           dataSource.id.team,
           dataSource,
+          allowedTeams,
           isActive = dataSource.isUsable).futureBox
     }
   }
@@ -93,13 +97,13 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def findDataSource(name: String)(implicit ctx: DBAccessContext): Fox[InboxDataSource] =
     DataSetDAO.findOneBySourceName(name).map(_.dataSource)
 
-  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
+  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource], allowedTeams: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
     //logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
     val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
     Fox.serialSequence(dataSources) { dataSource =>
-      DataSetService.updateDataSource(dataStoreInfo, dataSource)
+      DataSetService.updateDataSource(dataStoreInfo, dataSource, allowedTeams)
     }
   }
 

@@ -25,9 +25,9 @@ class DataSourceRepository @Inject()(
   def findUsableByName(name: String): Option[DataSource] =
     find(name).flatMap(_.toUsable)
 
-  def updateDataSource(dataSource: InboxDataSource): Unit = {
+  def updateDataSource(dataSource: InboxDataSource, allowedTeams: List[String]): Unit = {
     insert(dataSource.id.name, dataSource)
-    webKnossosServer.reportDataSource(dataSource)
+    webKnossosServer.reportDataSource(dataSource, allowedTeams)
   }
 
   def updateDataSources(dataSources: List[InboxDataSource]): Fox[Unit] =

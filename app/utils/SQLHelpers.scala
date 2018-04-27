@@ -171,6 +171,10 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
   def collection: TableQuery[X]
   def collectionName = collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 
+  def columnsList = collection.baseTableRow.create_*.map(_.name).toList
+  def columns = columnsList.mkString(", ")
+  def columnsWithPrefix(prefix: String) = columnsList.map(prefix + _).mkString(", ")
+  
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 

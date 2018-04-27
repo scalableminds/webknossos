@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.tracings.UpdateAction.VolumeUpdate
 import com.scalableminds.util.geometry.{Point3D, Vector3D}
 import play.api.libs.json._
 
-case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String, timeStamp: Option[Long] = None) extends VolumeUpdateAction {
+case class UpdateBucketVolumeAction(position: Point3D, cubeSize: Int, zoomStep: Int, base64Data: String, actionTimestamp: Option[Long] = None) extends VolumeUpdateAction {
   lazy val data: Array[Byte] = Base64.getDecoder().decode(base64Data)
 }
 
@@ -24,7 +24,7 @@ case class UpdateTracingVolumeAction(
                                       largestSegmentId: Long,
                                       zoomLevel: Double,
                                       userBoundingBox: Option[com.scalableminds.util.geometry.BoundingBox],
-                                      timeStamp: Option[Long] = None
+                                      actionTimestamp: Option[Long] = None
                                     ) extends VolumeUpdateAction
 
 object UpdateTracingVolumeAction {

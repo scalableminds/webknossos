@@ -83,7 +83,7 @@ class SkeletonTracingService @Inject()(
         case Full(tracing) => {
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion, timeStamp) :: tail => {
+            case RevertToVersionAction(sourceVersion, actionTimestamp) :: tail => {
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
             }

@@ -9,7 +9,10 @@ import type Layer from "oxalis/model/binary/layers/layer";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector4 } from "oxalis/constants";
 import type { DataStoreInfoType } from "oxalis/store";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import {
+  getResolutionsFactors,
+  zoomedAddressToAnotherZoomStep,
+} from "oxalis/model/helpers/position_converter";
 
 export type PullQueueItemType = {
   priority: number,
@@ -114,10 +117,15 @@ class PullQueue {
               zoomStep + 1,
             );
 
+            const resolutionsFactors = getResolutionsFactors(
+              this.layer.resolutions[zoomStep + 1],
+              this.layer.resolutions[zoomStep],
+            );
             const higherBucket = this.cube.getOrCreateBucket(higherAddress);
             if (higherBucket.type === "data") {
               higherBucket.downsampleFromLowerBucket(
                 bucket,
+                resolutionsFactors,
                 this.layer.category === "segmentation",
               );
             }

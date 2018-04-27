@@ -15,7 +15,7 @@ trait UpdateAction[T <: GeneratedMessage with Message[T]] {
 
   def applyOn(tracing: T): T = tracing
 
-  def addTimeStamp(timestamp: Long): UpdateAction[T] = { this }
+  def addTimestamp(timestamp: Long): UpdateAction[T] = { this }
 }
 
 object UpdateAction {

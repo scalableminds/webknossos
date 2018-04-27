@@ -117,6 +117,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "b",
         value: false,
       },
+      isMouseInCanvas: {
+        type: "b",
+        value: false,
+      },
       activeVolumeToolIndex: {
         type: "f",
         value: 0,
@@ -270,6 +274,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         storeState => storeState.temporaryConfiguration.brushPosition,
         globalMousePosition => {
           if (!globalMousePosition) {
+            this.uniforms.isMouseInCanvas.value = false;
             return;
           }
           if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
@@ -281,6 +286,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
             y: globalMousePosition[1],
           });
           this.uniforms.globalMousePosition.value.set(x, y, z);
+          this.uniforms.isMouseInCanvas.value = true;
         },
       );
 
@@ -367,6 +373,7 @@ uniform vec3 uvw;
 uniform bool useBilinearFiltering;
 uniform vec3 datasetScale;
 uniform vec3 globalMousePosition;
+uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float pixelToVoxelFactor;
 
@@ -753,10 +760,9 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
 
   vec4 getBrushOverlay(vec3 worldCoordUVW) {
     vec4 brushOverlayColor = vec4(0.0);
-
     bool isBrushModeActive = activeVolumeToolIndex == <%= brushToolIndex %>;
 
-    if (!isMouseInActiveViewport || !isBrushModeActive) {
+    if (!isMouseInCanvas || !isMouseInActiveViewport || !isBrushModeActive) {
       return brushOverlayColor;
     }
     vec3 flooredMousePos = floor(globalMousePosition);

@@ -266,12 +266,10 @@ class UserListView extends React.PureComponent<Props, State> {
               key="email"
               sorter={Utils.localeCompareBy("email")}
               render={(__, user: APIUserType) => (
-                <span>
-                  <EditableTextLabel
-                    value={user.email}
-                    onChange={newEmail => this.changeEmail(user, newEmail)}
-                  />
-                </span>
+                <EditableTextLabel
+                  value={user.email}
+                  onChange={newEmail => this.changeEmail(user, newEmail)}
+                />
               )}
             />
             <Column

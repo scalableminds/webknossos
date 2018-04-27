@@ -16,6 +16,8 @@ case class CreateTreeSkeletonAction(id: Int, color: Option[com.scalableminds.uti
     val newTree = Tree(id, Nil, Nil, convertColorOpt(color), branchPoints.map(convertBranchPoint), comments.map(convertComment), name, timestamp)
     tracing.withTrees(newTree +: tracing.trees)
   }
+
+  override def addTimeStamp(timestamp: Long): UpdateAction[SkeletonTracing] = this.copy(actionTimestamp = Some(timestamp))
 }
 
 case class DeleteTreeSkeletonAction(id: Int, actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction {
@@ -119,6 +121,8 @@ case class CreateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option
 
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
+
+  override def addTimeStamp(timestamp: Long): UpdateAction[SkeletonTracing] = this.copy(actionTimestamp = Some(timestamp))
 }
 
 
@@ -145,6 +149,8 @@ case class UpdateNodeSkeletonAction(id: Int, position: Point3D, rotation: Option
 
     tracing.withTrees(mapTrees(tracing, treeId, treeTransform))
   }
+
+  override def addTimeStamp(timestamp: Long): UpdateAction[SkeletonTracing] = this.copy(actionTimestamp = Some(timestamp))
 
 }
 

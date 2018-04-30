@@ -57,6 +57,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 0,
       },
+      highlightHoveredCellId: {
+        type: "b",
+        value: true,
+      },
       globalPosition: {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
@@ -262,6 +266,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       },
     );
 
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.highlightHoveredCellId,
+      highlightHoveredCellId => {
+        this.uniforms.highlightHoveredCellId.value = highlightHoveredCellId;
+      },
+    );
+
     const segmentationBinary = Model.getSegmentationBinary();
     const hasSegmentation = segmentationBinary != null;
 
@@ -359,6 +370,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% } %>
 
 uniform float alpha;
+uniform bool highlightHoveredCellId;
 uniform vec3 globalPosition;
 uniform vec3 anchorPoint;
 uniform vec3 fallbackAnchorPoint;
@@ -909,7 +921,7 @@ void main() {
   // Color map (<= to fight rounding mistakes)
   if ( id > 0.1 ) {
     // Increase cell opacity when cell is hovered
-    float hoverAlphaIncrement = cellIdUnderMouse == id ? 0.1 : 0.0;
+    float hoverAlphaIncrement = cellIdUnderMouse == id && highlightHoveredCellId ? 0.2 : 0.0;
     gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
   } else {
     gl_FragColor = vec4(data_color, 1.0);

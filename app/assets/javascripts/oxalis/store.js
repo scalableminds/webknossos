@@ -217,6 +217,7 @@ export type DatasetConfigurationType = {
   },
   +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
+  +highlightHoveredCellId: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
@@ -339,6 +340,7 @@ export const defaultState: OxalisState = {
     layers: {},
     quality: 0,
     segmentationOpacity: 20,
+    highlightHoveredCellId: true,
   },
   userConfiguration: {
     clippingDistance: 50,

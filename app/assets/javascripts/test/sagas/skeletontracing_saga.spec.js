@@ -39,7 +39,9 @@ function testDiffing(prevTracing, nextTracing, flycam) {
 
 const initialState = {
   dataset: {
-    scale: [5, 5, 5],
+    dataSource: {
+      scale: [5, 5, 5],
+    },
   },
   task: {
     id: 1,

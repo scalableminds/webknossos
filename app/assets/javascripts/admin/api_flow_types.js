@@ -49,7 +49,6 @@ export type APIDatasetType = {
   +name: string,
   +displayName: string,
   +owningOrganization: string,
-  +sourceType: "wkw" | "knossos",
 };
 
 export type APIDataSourceWithMessagesType = {

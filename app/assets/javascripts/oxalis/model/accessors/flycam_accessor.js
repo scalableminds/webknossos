@@ -60,7 +60,7 @@ export function getMaxZoomStep(state: OxalisState): number {
     .map(dataset =>
       Math.max(
         minimumZoomStepCount,
-        ...dataset.dataLayers.map(layer =>
+        ...dataset.dataSource.dataLayers.map(layer =>
           Math.max(0, ...layer.resolutions.map(r => Math.max(r[0], r[1], r[2]))),
         ),
       ),
@@ -105,7 +105,7 @@ export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
 export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
   const position = getPosition(state.flycam);
   const offset = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
   const min = [0, 0, 0];
   const max = [0, 0, 0];
 
@@ -124,7 +124,7 @@ export function getArea(state: OxalisState, planeId: OrthoViewType): AreaType {
 
   const position = getPosition(state.flycam);
   const viewportWidthHalf = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
 
   const uWidthHalf = viewportWidthHalf * baseVoxelFactors[u];
   const vWidthhalf = viewportWidthHalf * baseVoxelFactors[v];

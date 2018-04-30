@@ -49,6 +49,14 @@ export function bucketPositionToGlobalAddress(
   ];
 }
 
+export function getResolutionsFactors(resolutionA: Vector3, resolutionB: Vector3): Vector3 {
+  return [
+    resolutionA[0] / resolutionB[0],
+    resolutionA[1] / resolutionB[1],
+    resolutionA[2] / resolutionB[2],
+  ];
+}
+
 export function zoomedAddressToAnotherZoomStep(
   [x, y, z, resolutionIndex]: Vector4,
   resolutions: Array<Vector3>,
@@ -56,11 +64,12 @@ export function zoomedAddressToAnotherZoomStep(
 ): Vector4 {
   const currentResolution = resolutions[resolutionIndex];
   const targetResolution = resolutions[targetResolutionIndex];
+  const factors = getResolutionsFactors(currentResolution, targetResolution);
 
   return [
-    Math.floor(x * (currentResolution[0] / targetResolution[0])),
-    Math.floor(y * (currentResolution[1] / targetResolution[1])),
-    Math.floor(z * (currentResolution[2] / targetResolution[2])),
+    Math.floor(x * factors[0]),
+    Math.floor(y * factors[1]),
+    Math.floor(z * factors[2]),
     targetResolutionIndex,
   ];
 }

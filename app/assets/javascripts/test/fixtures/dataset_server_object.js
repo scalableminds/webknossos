@@ -7,14 +7,14 @@ export default {
         name: "color",
         category: "color",
         boundingBox: { topLeft: [0, 0, 0], width: 1024, height: 1024, depth: 1024 },
-        resolutions: [[1, 1, 1], [16, 16, 16], [2, 2, 2], [32, 32, 32], [4, 4, 4], [8, 8, 8]],
+        resolutions: [[1, 1, 1], [2, 2, 2], [32, 32, 32], [4, 4, 4], [8, 8, 8], [16, 16, 16]],
         elementClass: "uint8",
       },
       {
         name: "segmentation",
         category: "segmentation",
         boundingBox: { topLeft: [0, 0, 0], width: 1024, height: 1024, depth: 1024 },
-        resolutions: [[1, 1, 1], [16, 16, 16], [2, 2, 2], [32, 32, 32], [4, 4, 4], [8, 8, 8]],
+        resolutions: [[1, 1, 1], [2, 2, 2], [32, 32, 32], [4, 4, 4], [8, 8, 8], [16, 16, 16]],
         elementClass: "uint32",
         largestSegmentId: 1000000000,
         mappings: [

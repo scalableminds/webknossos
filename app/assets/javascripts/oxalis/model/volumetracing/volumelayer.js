@@ -199,7 +199,7 @@ class VolumeLayer {
 
     // Use the baseVoxelFactors to scale the circle, otherwise it'll become an ellipse
     const baseVoxelFactors = this.get2DCoordinate(
-      getBaseVoxelFactors(Store.getState().dataset.scale),
+      getBaseVoxelFactors(Store.getState().dataset.dataSource.scale),
     );
     Drawing.fillCircle(coord2d[0], coord2d[1], radius, baseVoxelFactors, (x, y) =>
       setMap(x, y, true),

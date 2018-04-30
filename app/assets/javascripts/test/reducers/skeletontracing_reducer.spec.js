@@ -29,7 +29,9 @@ function deepEqualObjectContaining(t: Object, actual: Object, expected: Object) 
 
 const initialState = {
   dataset: {
-    scale: [5, 5, 5],
+    dataSource: {
+      scale: [5, 5, 5],
+    },
   },
   userConfiguration: {
     sortTreesByName: "timestamp",

@@ -6,15 +6,17 @@ import * as accessors from "oxalis/model/accessors/flycam_accessor";
 
 const initialState = {
   dataset: {
-    scale: [1, 1, 2],
-    dataLayers: [
-      {
-        resolutions: [[1, 1, 1], [16, 16, 16], [2, 2, 2], [4, 4, 4], [8, 8, 8]],
-      },
-      {
-        resolutions: [[1, 1, 1]],
-      },
-    ],
+    dataSource: {
+      scale: [1, 1, 2],
+      dataLayers: [
+        {
+          resolutions: [[1, 1, 1], [16, 16, 16], [2, 2, 2], [4, 4, 4], [8, 8, 8]],
+        },
+        {
+          resolutions: [[1, 1, 1]],
+        },
+      ],
+    },
   },
   datasetConfiguration: {
     quality: 0,

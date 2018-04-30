@@ -35,20 +35,20 @@ import scala.util.Random
 
 
 case class TaskSQL(
-                  _id: ObjectId,
-                  _project: ObjectId,
-                  _script: Option[ObjectId],
-                  _taskType: ObjectId,
-                  _team: ObjectId,
-                  neededExperience: Experience,
-                  totalInstances: Long,
-                  tracingTime: Option[Long],
-                  boundingBox: Option[BoundingBox],
-                  editPosition: Point3D,
-                  editRotation: Vector3D,
-                  creationInfo: Option[String],
-                  created: Long = System.currentTimeMillis(),
-                  isDeleted: Boolean = false
+                    _id: ObjectId,
+                    _project: ObjectId,
+                    _script: Option[ObjectId],
+                    _taskType: ObjectId,
+                    _team: ObjectId,
+                    neededExperience: Experience,
+                    totalInstances: Long,
+                    tracingTime: Option[Long],
+                    boundingBox: Option[BoundingBox],
+                    editPosition: Point3D,
+                    editRotation: Vector3D,
+                    creationInfo: Option[String],
+                    created: Long = System.currentTimeMillis(),
+                    isDeleted: Boolean = false
                   )
 
 object TaskSQL {
@@ -246,8 +246,8 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                           where t._project = ${projectId.id}
                           group by t._project""".as[Int])
       firstResult <- result.headOption
-      } yield firstResult
-    }
+    } yield firstResult
+  }
 
   def countAllOpenInstancesGroupedByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
     for {

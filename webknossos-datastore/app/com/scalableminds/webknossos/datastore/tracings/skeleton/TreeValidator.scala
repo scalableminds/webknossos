@@ -1,8 +1,11 @@
 package com.scalableminds.webknossos.datastore.tracings.skeleton
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing.Tree
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
 import com.scalableminds.util.datastructures.UnionFind
 import net.liftweb.common.{Box, Failure, Full}
+import net.liftweb.util.A
+
+import scala.collection.mutable
 
 object TreeValidator {
 
@@ -10,7 +13,9 @@ object TreeValidator {
     for {
       _ <- checkNoDuplicateTreeIds(trees)
       _ <- checkNoDuplicateNodeIds(trees)
+      _ <- checkNoDuplicateEdges(trees)
       _ <- checkAllNodesUsedInEdgesExist(trees)
+      _ <- checkNoEdgesWithSameSourceAndTarget(trees)
       _ <- checkTreesAreConnected(trees)
     } yield Full(())
   }
@@ -35,38 +40,77 @@ object TreeValidator {
     }
   }
 
-  private def checkAllNodesUsedInEdgesExist(trees: Seq[Tree]): Box[Unit] = {
+  private def checkNoDuplicateEdges(trees: Seq[Tree]): Box[Unit] =
+    foldOverTrees(trees) { tree =>
+      val duplicateEdges = findDuplicateEdges(tree.edges)
+      if (duplicateEdges.isEmpty) {
+        Full(())
+      } else {
+        Failure(s"Duplicate edges in tree ${tree.treeId}: ${duplicateEdges.mkString(", ")}")
+      }
+    }
+
+  private def findDuplicateEdges(edges: Seq[Edge]): Seq[Edge] = {
+    val duplicates = Seq.newBuilder[Edge]
+    val seen = mutable.HashSet[Edge]()
+    for (x <- edges) {
+      if (seen(x) || seen(Edge(x.target, x.source))) {
+        duplicates += x
+      } else {
+        seen += x
+      }
+    }
+    duplicates.result()
+  }
+
+  private def checkAllNodesUsedInEdgesExist(trees: Seq[Tree]): Box[Unit] =
+    foldOverTrees(trees) { tree =>
+      val nodesInTree = tree.nodes.map(_.id)
+      val nodesInEdges = tree.edges.flatMap(edge => Seq(edge.source, edge.target)).distinct
+      val nodesOnlyInEdges = nodesInEdges.diff(nodesInTree)
+      if (nodesOnlyInEdges.isEmpty) {
+        Full(())
+      } else {
+        Failure(s"Some edges refer to non-existent nodes. treeId: ${tree.treeId}, nodeIds: ${nodesOnlyInEdges.mkString(", ")}")
+      }
+    }
+
+  private def checkNoEdgesWithSameSourceAndTarget(trees: Seq[Tree]): Box[Unit] =
+    foldOverTrees(trees) { tree =>
+      val invalidEdges = tree.edges.filter { edge =>
+        edge.source == edge.target
+      }
+      if (invalidEdges.isEmpty) {
+        Full(())
+      } else {
+        Failure(s"Some edges have the same source and target. treeId: ${tree.treeId}, edges: ${invalidEdges.mkString(", ")}")
+      }
+    }
+
+  private def checkTreesAreConnected(trees: Seq[Tree]): Box[Unit] =
+    foldOverTrees(trees) { tree =>
+      val treeComponents = UnionFind(tree.nodes.map(_.id))
+      tree.edges.foreach { edge =>
+        treeComponents.union(edge.source, edge.target)
+      }
+      val treeComponentCount = treeComponents.size
+
+      if (treeComponentCount == 1) {
+        Full(())
+      } else {
+        Failure(s"Tree ${tree.treeId} is not fully connected, but consists of $treeComponentCount components.")
+      }
+    }
+
+
+
+  private def foldOverTrees(trees: Seq[Tree])(block: Tree => Box[Unit]) = {
     trees.foldLeft[Box[Unit]](Full(())){
       case (Full(()), tree) =>
-        val nodesInTree = tree.nodes.map(_.id)
-        val nodesInEdges = tree.edges.flatMap(edge => Seq(edge.source, edge.target)).distinct
-        val nodesOnlyInEdges = nodesInEdges.diff(nodesInTree)
-        if (nodesOnlyInEdges.isEmpty) {
-          Full(())
-        } else {
-          Failure(s"Some edges refer to non-existent nodes. treeId: ${tree.treeId}, nodeIds: ${nodesOnlyInEdges.mkString(", ")}")
-        }
+        block(tree)
       case (f, _) =>
         f
     }
   }
 
-  private def checkTreesAreConnected(trees: Seq[Tree]): Box[Unit] = {
-    trees.foldLeft[Box[Unit]](Full(())){
-      case (Full(()), tree) =>
-        val treeComponents = UnionFind(tree.nodes.map(_.id))
-        tree.edges.foreach { edge =>
-          treeComponents.union(edge.source, edge.target)
-        }
-        val treeComponentCount = treeComponents.size
-
-        if (treeComponentCount == 1) {
-          Full(())
-        } else {
-          Failure(s"Tree ${tree.treeId} is not fully connected, but consists of $treeComponentCount components.")
-        }
-      case (f, _) =>
-        f
-    }
-  }
 }

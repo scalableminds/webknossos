@@ -408,3 +408,8 @@ COMMIT TRANSACTION;
 
 ALTER TYPE webknossos.ANNOTATION_STATE ADD VALUE 'Initializing';
 
+
+
+-- EVOLUTION 005 remove team assignment from task
+
+ALTER TABLE webknossos.tasks DROP COLUMN _team;

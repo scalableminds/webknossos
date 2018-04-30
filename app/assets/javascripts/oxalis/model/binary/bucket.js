@@ -210,7 +210,6 @@ export class DataBucket {
       throw new Error("Downsampling initiated for unsupported resolution change");
     }
 
-    const halfBucketWidth = constants.BUCKET_WIDTH / 2;
     const octantExtents = [
       constants.BUCKET_WIDTH / xFactor,
       constants.BUCKET_WIDTH / yFactor,

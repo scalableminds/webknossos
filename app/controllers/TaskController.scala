@@ -77,7 +77,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def create = SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
     createTasks(request.body.map { params =>
       val tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
-      (params, tracing)
+      (params, tracing, None)
     })
   }
 
@@ -93,19 +93,19 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       teamBSON <- MongoHelpers.parseBsonToFox(params.team)
       _ <- ensureTeamAdministration(request.identity, teamBSON)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
-      tracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
-      tracings <- Fox.combined(tracingFoxes) ?~> Messages("task.create.failed")
-      result <- createTasks(tracings.map(t => (buildFullParams(params, t), t)))
+      namedTracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
+      namedTracings <- Fox.combined(namedTracingFoxes) ?~> Messages("task.create.failed")
+      result <- createTasks(namedTracings.map(t => (buildFullParams(params, t._1), t._1, Some(t._2))))
     } yield {
       result
     }
   }
 
-  private def parseResultToSkeletonTracingFox(parseResult: NmlService.NmlParseResult): Fox[SkeletonTracing] = parseResult match {
+  private def parseResultToSkeletonTracingFox(parseResult: NmlService.NmlParseResult): Fox[(SkeletonTracing, String)] = parseResult match {
     case NmlService.NmlParseFailure(fileName, error) =>
       Fox.failure(Messages("nml.file.invalid", fileName, error))
     case NmlService.NmlParseSuccess(fileName, (Left(skeletonTracing), description)) =>
-      Fox.successful(skeletonTracing)
+      Fox.successful((skeletonTracing, fileName))
     case _ =>
       Fox.failure(Messages("nml.file.invalid"))
   }
@@ -124,9 +124,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       tracing.editRotation)
   }
 
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing)])(implicit request: SecuredRequest[_]): Fox[Result] = {
+  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing, Option[String])])(implicit request: SecuredRequest[_]): Fox[Result] = {
     def assertAllOnSameDataset(): Fox[String] = {
-      def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing)], dataSetName: String): Boolean = {
+      def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing, Option[String])], dataSetName: String): Boolean = {
         requestedTasksRest match {
           case List() => true
           case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
@@ -144,7 +144,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       dataSetName <- assertAllOnSameDataset()
       dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
       tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
-      taskObjects: List[Fox[Task]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
+      taskObjects: List[Fox[Task]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1, r._3))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
       annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
         taskFox = tuple._3,
@@ -172,7 +172,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     }
   }
 
-  private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: SecuredRequest[_]): Fox[Task] = {
+  private def createTaskWithoutAnnotationBase(params: TaskParameters, creationInfo: Option[String])(implicit request: SecuredRequest[_]): Fox[Task] = {
     for {
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
@@ -189,7 +189,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
         editPosition = params.editPosition,
         editRotation = params.editRotation,
         boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) },
-        priority = if (project.paused) -1 else project.priority)
+        priority = if (project.paused) -1 else project.priority,
+        creationInfo = creationInfo)
       _ <- TaskService.insert(task, project)
     } yield task
   }

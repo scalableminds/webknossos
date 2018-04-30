@@ -278,7 +278,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     if (hasSegmentation) {
       listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.brushPosition,
+        storeState => storeState.temporaryConfiguration.mousePosition,
         globalMousePosition => {
           if (!globalMousePosition) {
             return;

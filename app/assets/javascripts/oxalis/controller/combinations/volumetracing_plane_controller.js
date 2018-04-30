@@ -22,7 +22,6 @@ import {
   startEditingAction,
   addToLayerAction,
   finishEditingAction,
-  setBrushPositionAction,
   hideBrushAction,
   setBrushSizeAction,
   setContourTracingMode,
@@ -201,13 +200,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
           );
           this.handleCellSelection(cellId);
         }
-      },
-
-      mouseMove: (delta: Point2, position: Point2) => {
-        // TODO: when cell-hovering can be (and is) disabled via options
-        // this dispatch is only necessary when tool === VolumeToolEnum.BRUSH
-        // const tool = getVolumeTool(Store.getState().tracing).get();
-        Store.dispatch(setBrushPositionAction([position.x, position.y]));
       },
 
       out: () => {

@@ -372,7 +372,9 @@ export class InputMouse {
       Utils.addEventListenerWithDelegation(document, "wheel", this.targetSelector, this.mouseWheel),
     );
 
-    this.hammerManager = new Hammer(this.domElement);
+    this.hammerManager = new Hammer(this.domElement, {
+      inputClass: Hammer.TouchInput,
+    });
     this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
     this.hammerManager.get("pinch").set({ enable: true });
     this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));

@@ -76,6 +76,14 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
 
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[TeamsRow])
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
+    } yield parsed
+
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
     for {
       accessQuery <- readAccessQuery
@@ -174,6 +182,12 @@ object TeamDAO {
 
   def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Team] =
     findOneById(id.stringify)
+
+  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[Team] =
+    for {
+      teamSQL <- TeamSQLDAO.findOneByName(name: String)
+      team <- Team.fromTeamSQL(teamSQL)
+    } yield team
 
   def insert(team: Team)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {

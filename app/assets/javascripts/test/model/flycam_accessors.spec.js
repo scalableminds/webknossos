@@ -5,15 +5,17 @@ import * as accessors from "oxalis/model/accessors/flycam_accessor";
 
 const initialState = {
   dataset: {
-    scale: [1, 1, 2],
-    dataLayers: [
-      {
-        resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16]],
-      },
-      {
-        resolutions: [[1, 1, 1]],
-      },
-    ],
+    dataSource: {
+      scale: [1, 1, 2],
+      dataLayers: [
+        {
+          resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16]],
+        },
+        {
+          resolutions: [[1, 1, 1]],
+        },
+      ],
+    },
   },
   datasetConfiguration: {
     quality: 0,
@@ -31,10 +33,6 @@ const initialState = {
 
 test("Flycam Accessors should calculate the max zoom step", t => {
   t.is(accessors.getMaxZoomStep(initialState), 16);
-});
-
-test("Flycam Accessors should calculate the integer zoom step", t => {
-  t.is(accessors.getIntegerZoomStep(initialState), 1);
 });
 
 test("Flycam Accessors should calculate the request log zoom step (1/3)", t => {

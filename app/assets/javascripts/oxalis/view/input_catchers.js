@@ -5,16 +5,18 @@ import { connect } from "react-redux";
 import { Button } from "antd";
 import Constants, { OrthoViews } from "oxalis/constants";
 import api from "oxalis/api/internal_api";
-import type { Vector2, OrthoViewType } from "oxalis/constants";
+import type { OrthoViewType } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 
 const ButtonGroup = Button.Group;
 
-type Props = {
+type StateProps = {
   scale: number,
   activeViewport: OrthoViewType,
-  brushPosition: ?Vector2,
-  brushSize: number,
+};
+
+type Props = StateProps & {
+  planeID: OrthoViewType,
 };
 
 function TDViewControls({ width }) {
@@ -46,29 +48,10 @@ class InputCatchers extends React.PureComponent<Props, {}> {
   render() {
     const width = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
 
-    const { brushPosition, brushSize } = this.props;
-    const brush =
-      brushPosition != null ? (
-        <div
-          id="cursor"
-          style={{
-            position: "relative",
-            left: brushPosition[0] - brushSize / 2,
-            top: brushPosition[1] - brushSize / 2,
-            width: brushSize,
-            height: brushSize,
-            borderColor: "black",
-            borderStyle: "solid",
-            borderWidth: 1,
-            borderRadius: "50%",
-            pointerEvents: "none",
-          }}
-        />
-      ) : null;
-
     const activeInputCatcher = this.props.activeViewport;
 
-    const InputCatcher = ({ name, planeType, children }) => {
+    const InputCatcher = props => {
+      const { name, planeType } = props;
       const active = activeInputCatcher === planeType;
       return (
         <div
@@ -82,7 +65,7 @@ class InputCatchers extends React.PureComponent<Props, {}> {
             borderColor: active ? "#ff0" : "white",
           }}
         >
-          {children || (active ? brush : null)}
+          {props.children || null}
         </div>
       );
     };
@@ -104,11 +87,9 @@ class InputCatchers extends React.PureComponent<Props, {}> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): Props => ({
+const mapStateToProps = (state: OxalisState): StateProps => ({
   scale: state.userConfiguration.scale,
   activeViewport: state.viewModeData.plane.activeViewport,
-  brushPosition: state.temporaryConfiguration.brushPosition,
-  brushSize: state.temporaryConfiguration.brushSize,
 });
 
 export default connect(mapStateToProps)(InputCatchers);

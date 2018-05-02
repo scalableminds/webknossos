@@ -97,9 +97,8 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     ))
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""_id not in (select _user from webknossos.user_team_roles)
-      or (_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')))
-      or (_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+    s"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')))
+        or (_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
   override def deleteAccessQ(requestingUserId: ObjectId) =
     s"_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)"
 
@@ -277,7 +276,8 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
                where _user = ${userId.id} and _dataSet = ${dataSetId.id}"""
       insertQuery  = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
                values(${userId.id}, ${dataSetId.id}, '#${sanitize(Json.toJson(configuration).toString)}')"""
-      _ <- run(DBIO.sequence(List(deleteQuery, insertQuery)).transactionally.withTransactionIsolation(Serializable))
+      _ <- run(DBIO.sequence(List(deleteQuery, insertQuery)).transactionally
+              .withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 
@@ -346,6 +346,8 @@ case class User(
     val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 500 millis).openOrThrowException("Keep the teamManager Query synchronous")
     teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
   }
+
+  def isTeamManagerInOrg(organization: String) = teamManagerTeams.length > 0 && organization == this.organization
 
   def isAdminOf(organization: String): Boolean = isAdmin && organization == this.organization
 

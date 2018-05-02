@@ -343,18 +343,12 @@ export class OxalisModel {
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
     for (const layer of layers) {
-      let maxLayerZoomStep =
-        Math.log(Math.max(...layer.resolutions.map(r => Math.max(...r)))) / Math.LN2;
-      if (layer.category === "segmentation") {
-        maxLayerZoomStep = 1;
-      }
       const textureInformation = textureInformationPerLayer.get(layer);
       if (!textureInformation) {
         throw new Error("No texture information for layer?");
       }
       this.binary[layer.name] = new Binary(
         layer,
-        maxLayerZoomStep,
         this.connectionInfo,
         textureInformation.textureSize,
         textureInformation.textureCount,
@@ -412,6 +406,7 @@ export class OxalisModel {
       return layers.map(l => ({
         ...l,
         resolutions,
+        maxZoomStep: l.resolutions.length - 1,
       }));
     }
 
@@ -443,6 +438,7 @@ export class OxalisModel {
         depth: tracing.boundingBox.depth,
       },
       resolutions,
+      maxZoomStep: resolutions.length - 1,
       elementClass: tracing.elementClass,
       mappings:
         fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
@@ -458,7 +454,11 @@ export class OxalisModel {
       layers = layers.filter(layer => layer.category !== "segmentation");
       layers.push(tracingLayer);
     }
-    return layers;
+    return layers.map(l => ({
+      ...l,
+      resolutions,
+      maxZoomStep: l.resolutions.length - 1,
+    }));
   }
 
   shouldDisplaySegmentationData(): boolean {

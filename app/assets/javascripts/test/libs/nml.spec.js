@@ -207,6 +207,29 @@ test("NML Parser should throw errors for invalid nmls", async t => {
       trees: { "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } } },
     },
   });
+  const missingGroupIdState = update(initialState, {
+    tracing: {
+      trees: {
+        "2": {
+          groupId: { $set: "missing" },
+        },
+      },
+    },
+  });
+  const duplicateGroupIdState = update(initialState, {
+    tracing: {
+      treeGroups: {
+        $push: [
+          {
+            groupId: "3",
+            name: "Group",
+            type: "group",
+            children: [],
+          },
+        ],
+      },
+    },
+  });
   const nmlWithInvalidComment = serializeToNml(
     invalidCommentState,
     invalidCommentState.tracing,
@@ -228,6 +251,16 @@ test("NML Parser should throw errors for invalid nmls", async t => {
     disconnectedTreeState.tracing,
     buildInfo,
   );
+  const nmlWithMissingGroup = serializeToNml(
+    missingGroupIdState,
+    missingGroupIdState.tracing,
+    buildInfo,
+  );
+  const nmlWithDuplicateGroup = serializeToNml(
+    duplicateGroupIdState,
+    duplicateGroupIdState.tracing,
+    buildInfo,
+  );
 
   // TODO AVAs t.throws doesn't properly work with async functions yet, see https://github.com/avajs/ava/issues/1371
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidComment));
@@ -235,6 +268,8 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidEdge));
   await throwsAsyncParseError(t, () => parseNml(nmlWithDuplicateEdge));
   await throwsAsyncParseError(t, () => parseNml(nmlWithDisconnectedTree));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithMissingGroup));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithDuplicateGroup));
 });
 
 test("addTreesAndGroups reducer should assign new node and tree ids", t => {

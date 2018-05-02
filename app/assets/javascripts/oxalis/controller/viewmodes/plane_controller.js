@@ -46,6 +46,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 
 type OwnProps = {
   onRender: () => void,
@@ -145,6 +146,9 @@ class PlaneController extends React.PureComponent<Props> {
         Store.dispatch(setViewportAction(planeId));
       },
       pinch: delta => this.zoom(delta, true),
+      mouseMove: (delta: Point2, position: Point2) => {
+        Store.dispatch(setMousePositionAction([position.x, position.y]));
+      },
     };
   }
 

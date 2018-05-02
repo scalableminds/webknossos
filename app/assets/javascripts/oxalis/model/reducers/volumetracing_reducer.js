@@ -104,12 +104,6 @@ function VolumeTracingReducer(state: OxalisState, action: VolumeTracingActionTyp
           return resetContourReducer(state);
         }
 
-        case "SET_BRUSH_POSITION": {
-          return update(state, {
-            temporaryConfiguration: { brushPosition: { $set: action.position } },
-          });
-        }
-
         case "HIDE_BRUSH": {
           return hideBrushReducer(state);
         }

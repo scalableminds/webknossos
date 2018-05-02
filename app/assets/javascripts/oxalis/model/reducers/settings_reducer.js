@@ -38,6 +38,12 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
       });
     }
 
+    case "SET_MOUSE_POSITION": {
+      return update(state, {
+        temporaryConfiguration: { mousePosition: { $set: action.position } },
+      });
+    }
+
     case "INITIALIZE_SETTINGS": {
       // Only color layers need layer settings
       const colorLayers = _.filter(

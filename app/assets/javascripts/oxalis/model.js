@@ -36,7 +36,6 @@ import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
-import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
 import type { Vector3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
@@ -472,14 +471,6 @@ export class OxalisModel {
     // Currently segmentation data can only be displayed in orthogonal and volume mode
     const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
     return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;
-  }
-
-  cantDisplaySegmentationData(): boolean {
-    return getIntegerZoomStep(Store.getState()) > 1;
-  }
-
-  displaysUnsampledVolumeData(): boolean {
-    return getIntegerZoomStep(Store.getState()) === 1;
   }
 
   computeBoundaries() {

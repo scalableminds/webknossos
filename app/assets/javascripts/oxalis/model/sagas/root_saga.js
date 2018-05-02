@@ -18,6 +18,10 @@ import { select, fork, take, cancel } from "redux-saga/effects";
 import Model from "oxalis/model";
 import Toast from "libs/toast";
 import messages from "messages";
+import {
+  isVolumeTracingDisallowed,
+  displaysUnsampledVolumeData,
+} from "oxalis/model/accessors/volumetracing_accessor";
 
 export default function* rootSaga(): Generator<*, *, *> {
   while (true) {
@@ -55,8 +59,9 @@ ${err} ${err.stack}`);
 function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
   const warnMaybe = function* warnMaybe() {
     const shouldWarn = Model.shouldDisplaySegmentationData();
+    const isDisallowed = yield select(isVolumeTracingDisallowed);
 
-    if (shouldWarn && Model.cantDisplaySegmentationData()) {
+    if (shouldWarn && isDisallowed) {
       const isVolumeTracing = yield select(state => state.tracing.type === "volume");
       Toast.message(
         "error",
@@ -67,9 +72,9 @@ function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
     } else {
       Toast.close(messages["tracing.segmentation_zoom_warning"]);
     }
-
-    if (shouldWarn && Model.displaysUnsampledVolumeData()) {
-      Toast.message("warning", messages["tracing.segmentation_downsampled_data_warning"], true);
+    const displaysUnsampled = yield select(displaysUnsampledVolumeData);
+    if (shouldWarn && displaysUnsampled) {
+      Toast.message("warning", messages["tracing.segmentation_downsampled_data_warning"]);
     } else {
       Toast.close(messages["tracing.segmentation_downsampled_data_warning"]);
     }

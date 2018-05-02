@@ -35,10 +35,6 @@ test("Flycam Accessors should calculate the max zoom step", t => {
   t.is(accessors.getMaxZoomStep(initialState), 16);
 });
 
-test("Flycam Accessors should calculate the integer zoom step", t => {
-  t.is(accessors.getIntegerZoomStep(initialState), 1);
-});
-
 test("Flycam Accessors should calculate the request log zoom step (1/3)", t => {
   t.is(accessors.getRequestLogZoomStep(initialState), 1);
 });

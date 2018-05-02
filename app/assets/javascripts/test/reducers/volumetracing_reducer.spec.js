@@ -47,6 +47,17 @@ const initialState = update(defaultState, {
   tracing: {
     $set: volumeTracing,
   },
+  dataset: {
+    dataLayers: {
+      $set: [
+        {
+          // We need to have some resolutions. Otherwise,
+          // getRequestLogZoomStep will always return 0
+          resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
+        },
+      ],
+    },
+  },
 });
 
 test("VolumeTracing should set a new active cell", t => {
@@ -185,17 +196,6 @@ test("VolumeTracing should not allow to set trace tool if getRequestLogZoomStep(
     flycam: {
       zoomStep: { $set: 3 },
     },
-    dataset: {
-      dataLayers: {
-        $set: [
-          {
-            // We need to have some resolutions. Otherwise,
-            // getRequestLogZoomStep will always return 0
-            resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
-          },
-        ],
-      },
-    },
   });
 
   t.true(getRequestLogZoomStep(alteredState) > 1);
@@ -269,17 +269,6 @@ test("VolumeTracing should not add values to the contourList if getRequestLogZoo
   const alteredState = update(initialState, {
     flycam: {
       zoomStep: { $set: 3 },
-    },
-    dataset: {
-      dataLayers: {
-        $set: [
-          {
-            // We need to have some resolutions. Otherwise,
-            // getRequestLogZoomStep will always return 0
-            resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
-          },
-        ],
-      },
     },
   });
 

@@ -69,10 +69,6 @@ export function getMaxZoomStep(state: OxalisState): number {
   return maxZoomstep;
 }
 
-export function getIntegerZoomStep(state: OxalisState): number {
-  return Math.floor(state.flycam.zoomStep);
-}
-
 export function getRequestLogZoomStep(state: OxalisState): number {
   const maxLogZoomStep = Math.log2(getMaxZoomStep(state));
   const min = Math.min(state.datasetConfiguration.quality, maxLogZoomStep);

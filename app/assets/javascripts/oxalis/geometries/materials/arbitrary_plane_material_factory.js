@@ -6,26 +6,31 @@
 import _ from "lodash";
 import * as THREE from "three";
 import Model from "oxalis/model";
-import AbstractPlaneMaterialFactory from "oxalis/geometries/materials/abstract_plane_material_factory";
+import AbstractPlaneMaterialFactory, {
+  sanitizeName,
+  createDataTexture,
+} from "oxalis/geometries/materials/abstract_plane_material_factory";
 
 class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   getColorName(): string {
-    return this.sanitizeName(Model.getColorBinaries()[0].name);
+    return sanitizeName(Model.getColorBinaries()[0].name);
   }
 
-  createTextures(): void {
+  attachTextures(): void {
     this.textures = {};
-    this.textures[this.getColorName()] = this.createDataTexture(this.tWidth, 1);
+    this.minFilter = THREE.LinearFilter;
+    this.textures[this.getColorName()] = createDataTexture(
+      this.tWidth,
+      1,
+      false,
+      this.minFilter,
+      this.maxFilter,
+    );
 
     this.uniforms[`${this.getColorName()}_texture`] = {
       type: "t",
       value: this.textures[this.getColorName()],
     };
-  }
-
-  createDataTexture(width: number, bytes: number): void {
-    this.minFilter = THREE.LinearFilter;
-    return super.createDataTexture(width, bytes);
   }
 
   getFragmentShader(): string {
@@ -39,7 +44,8 @@ void main()
 {
   float color_value = 0.0;
 
-  // Need to mirror y for some reason.
+  // Need to mirror y since WebGL origin (0, 0) is at the bottom left corner. However, we
+  // want it to refer to the top left corner
   vec2 texture_pos = vec2(vUv.x, 1.0 - vUv.y);
 
   /* Get grayscale value */

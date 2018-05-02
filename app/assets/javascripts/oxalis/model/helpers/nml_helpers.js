@@ -140,9 +140,9 @@ function serializeParameters(state: OxalisState): Array<string> {
           description: state.tracing.description,
         }),
         serializeTag("scale", {
-          x: state.dataset.scale[0],
-          y: state.dataset.scale[1],
-          z: state.dataset.scale[2],
+          x: state.dataset.dataSource.scale[0],
+          y: state.dataset.dataSource.scale[1],
+          z: state.dataset.dataSource.scale[2],
         }),
         serializeTag("offset", {
           x: 0,
@@ -346,6 +346,10 @@ function isTreeConnected(tree: TreeType): boolean {
   return _.size(visitedNodes) === tree.nodes.size();
 }
 
+function getEdgeHash(source: number, target: number) {
+  return source < target ? `${source}-${target}` : `${target}-${source}`;
+}
+
 export function parseNml(
   nmlString: string,
 ): Promise<{ trees: TreeMapType, treeGroups: Array<TreeGroupType> }> {
@@ -356,6 +360,7 @@ export function parseNml(
     const treeGroups: Array<TreeGroupType> = [];
     const existingNodeIds = new Set();
     const existingGroupIds = new Set();
+    const existingEdges = new Set();
     let currentTree: ?TreeType = null;
     let currentGroup: ?TreeGroupType = null;
     const groupIdToParent: { [string]: ?TreeGroupType } = {};
@@ -421,6 +426,7 @@ export function parseNml(
               source: _parseInt(attr, "source"),
               target: _parseInt(attr, "target"),
             };
+            const edgeHash = getEdgeHash(currentEdge.source, currentEdge.target);
             if (currentTree == null)
               throw new NmlParseError(
                 `${messages["nml.edge_outside_tree"]} ${JSON.stringify(currentEdge)}`,
@@ -438,7 +444,12 @@ export function parseNml(
               throw new NmlParseError(
                 `${messages["nml.edge_with_same_source_target"]} ${JSON.stringify(currentEdge)}`,
               );
+            if (existingEdges.has(edgeHash))
+              throw new NmlParseError(
+                `${messages["nml.duplicate_edge"]} ${JSON.stringify(currentEdge)}`,
+              );
             currentTree.edges.addEdge(currentEdge, true);
+            existingEdges.add(edgeHash);
             break;
           }
           case "comment": {

@@ -28,6 +28,7 @@ object DataSetConfiguration {
         "quality" -> JsNumber(0),
         "interpolation" -> JsBoolean(true),
         "segmentationOpacity" -> JsNumber(20),
+        "highlightHoveredCellId" -> JsBoolean(true),
         "layers" -> layerValues)
     )
   }

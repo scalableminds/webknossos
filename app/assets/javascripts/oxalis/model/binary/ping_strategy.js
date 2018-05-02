@@ -5,11 +5,12 @@
 
 import _ from "lodash";
 import Dimensions from "oxalis/model/dimensions";
-import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import type DataCube from "oxalis/model/binary/data_cube";
-import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
@@ -40,19 +41,23 @@ export class AbstractPingStrategy {
     return this.roundTripTimeRangeStart <= value && value <= this.roundTripTimeRangeEnd;
   }
 
-  getBucketArray(center: Vector3, width: number, height: number) {
+  getBucketPositions(center: Vector3, width: number, height: number): Array<Vector3> {
     const buckets = [];
     const uOffset = Math.ceil(width / 2);
     const vOffset = Math.ceil(height / 2);
 
     for (let u = -uOffset; u <= uOffset; u++) {
       for (let v = -vOffset; v <= vOffset; v++) {
-        const bucket = center.slice(0);
+        const bucket = center.slice();
         bucket[this.u] += u;
         bucket[this.v] += v;
-        buckets.push(_.min(bucket) >= 0 ? bucket : null);
+        if (_.min(bucket) >= 0) {
+          // $FlowFixMe Flow does not understand that bucket will always be of length 3
+          buckets.push(bucket);
+        }
       }
     }
+    // $FlowFixMe flow does not understand that slicing a Vector3 returns another Vector3
     return buckets;
   }
 }
@@ -69,59 +74,97 @@ export class PingStrategy extends AbstractPingStrategy {
   ping(
     position: Vector3,
     direction: Vector3,
-    requestedZoomStep: number,
-    areas: OrthoViewMapType<Vector4>,
+    currentZoomStep: number,
     activePlane: OrthoViewType,
+    areas: OrthoViewMapType<AreaType>,
   ): Array<PullQueueItemType> {
-    const zoomStep = Math.min(requestedZoomStep, this.cube.MAX_ZOOM_STEP);
-    const zoomStepDiff = requestedZoomStep - zoomStep;
+    const zoomStep = Math.min(currentZoomStep, this.cube.MAX_UNSAMPLED_ZOOM_STEP);
+    const zoomStepDiff = currentZoomStep - zoomStep;
+
+    const queueItemsForCurrentZoomStep = this.pingImpl(
+      position,
+      direction,
+      zoomStep,
+      zoomStepDiff,
+      activePlane,
+      areas,
+    );
+
+    let queueItemsForFallbackZoomStep = [];
+    const fallbackZoomStep = Math.min(this.cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
+    if (fallbackZoomStep > zoomStep) {
+      queueItemsForFallbackZoomStep = this.pingImpl(
+        position,
+        direction,
+        fallbackZoomStep,
+        zoomStepDiff - 1,
+        activePlane,
+        areas,
+      );
+    }
+
+    return queueItemsForCurrentZoomStep.concat(queueItemsForFallbackZoomStep);
+  }
+
+  pingImpl(
+    position: Vector3,
+    direction: Vector3,
+    zoomStep: number,
+    zoomStepDiff: number,
+    activePlane: OrthoViewType,
+    areas: OrthoViewMapType<AreaType>,
+  ): Array<PullQueueItemType> {
     const pullQueue = [];
 
     if (zoomStepDiff > MAX_ZOOM_STEP_DIFF) {
       return pullQueue;
     }
 
+    const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
+    const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
+
     for (const plane of OrthoViewValuesWithoutTDView) {
-      const indices = Dimensions.getIndices(plane);
-      this.u = indices[0];
-      this.v = indices[1];
-      this.w = indices[2];
+      const [u, v, w] = Dimensions.getIndices(plane);
+      this.u = u;
+      this.v = v;
+      this.w = w;
 
-      // Converting area from voxels to buckets
-      const bucketArea = [
-        areas[plane][0] >> BUCKET_SIZE_P,
-        areas[plane][1] >> BUCKET_SIZE_P,
-        (areas[plane][2] - 1) >> BUCKET_SIZE_P,
-        (areas[plane][3] - 1) >> BUCKET_SIZE_P,
-      ];
-      const width = (bucketArea[2] - bucketArea[0]) << zoomStepDiff;
-      const height = (bucketArea[3] - bucketArea[1]) << zoomStepDiff;
+      // areas holds bucket indices for zoomStep = 0, which we want to
+      // convert to the desired zoomStep
+      const widthHeightVector = [0, 0, 0, 0];
+      widthHeightVector[u] = areas[plane].right - areas[plane].left;
+      widthHeightVector[v] = areas[plane].bottom - areas[plane].top;
 
-      const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
-      const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
-      const buckets = this.getBucketArray(centerBucket3, width, height);
+      const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
+        widthHeightVector,
+        this.cube.layer.resolutions,
+        zoomStep,
+      );
 
-      for (const bucket of buckets) {
-        if (bucket != null) {
-          const priority =
-            Math.abs(bucket[0] - centerBucket3[0]) +
-            Math.abs(bucket[1] - centerBucket3[1]) +
-            Math.abs(bucket[2] - centerBucket3[2]);
-          pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
-          if (plane === activePlane) {
-            // preload only for active plane
-            for (let slide = 0; slide < this.preloadingSlides; slide++) {
-              if (direction[this.w] >= 0) {
-                bucket[this.w]++;
-              } else {
-                bucket[this.w]--;
-              }
-              const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
-              pullQueue.push({
-                bucket: [bucket[0], bucket[1], bucket[2], zoomStep],
-                priority: preloadingPriority,
-              });
+      const width = scaledWidthHeightVector[u];
+      const height = scaledWidthHeightVector[v];
+
+      const bucketPositions = this.getBucketPositions(centerBucket3, width, height);
+
+      for (const bucket of bucketPositions) {
+        const priority =
+          Math.abs(bucket[0] - centerBucket3[0]) +
+          Math.abs(bucket[1] - centerBucket3[1]) +
+          Math.abs(bucket[2] - centerBucket3[2]);
+        pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
+        if (plane === activePlane) {
+          // preload only for active plane
+          for (let slide = 0; slide < this.preloadingSlides; slide++) {
+            if (direction[this.w] >= 0) {
+              bucket[this.w]++;
+            } else {
+              bucket[this.w]--;
             }
+            const preloadingPriority = (priority << (slide + 1)) + this.preloadingPriorityOffset;
+            pullQueue.push({
+              bucket: [bucket[0], bucket[1], bucket[2], zoomStep],
+              priority: preloadingPriority,
+            });
           }
         }
       }

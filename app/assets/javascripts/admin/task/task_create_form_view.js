@@ -246,7 +246,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
               </FormItem>
 
               <FormItem label="Team" hasFeedback>
-                {getFieldDecorator("team", {
+                {getFieldDecorator("teamName", {
                   rules: [{ required: true }],
                 })(
                   <Select
@@ -258,7 +258,7 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
                     disabled={isEditingMode}
                   >
                     {this.state.teams.map((team: APITeamType) => (
-                      <Option key={team.id} value={team.id}>
+                      <Option key={team.name} value={team.name}>
                         {team.name}
                       </Option>
                     ))}

@@ -46,7 +46,6 @@ mockRequire("oxalis/model/user", User);
 mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
 mockRequire("oxalis/model/binary/layers/wk_layer", Layer);
 mockRequire("oxalis/model/binary/layers/nd_store_layer", Layer);
-mockRequire("libs/window", {});
 
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;

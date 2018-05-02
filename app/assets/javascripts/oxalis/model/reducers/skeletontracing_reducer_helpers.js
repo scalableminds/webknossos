@@ -103,7 +103,7 @@ export function createNode(
 
   if (allowUpdate) {
     // Use the same radius as current active node or revert to default value
-    const defaultRadius = 10 * getBaseVoxel(state.dataset.scale);
+    const defaultRadius = 10 * getBaseVoxel(state.dataset.dataSource.scale);
     const radius = activeNodeMaybe.map(activeNode => activeNode.radius).getOrElse(defaultRadius);
 
     // Find new node id by increasing the max node id.

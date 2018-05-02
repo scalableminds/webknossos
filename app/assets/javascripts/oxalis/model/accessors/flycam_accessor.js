@@ -1,18 +1,10 @@
 // @flow
-import type {
-  Vector2,
-  Vector3,
-  Vector4,
-  OrthoViewType,
-  OrthoViewMapType,
-  BoundingBoxType,
-} from "oxalis/constants";
+import type { Vector3, OrthoViewType, BoundingBoxType, OrthoViewMapType } from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
-import constants, { OrthoViews, OrthoViewValues } from "oxalis/constants";
+import constants, { OrthoViews } from "oxalis/constants";
 import Maybe from "data.maybe";
 import Dimensions from "oxalis/model/dimensions";
 import * as scaleInfo from "oxalis/model/scaleinfo";
-import _ from "lodash";
 import Utils from "libs/utils";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
@@ -23,18 +15,8 @@ import * as THREE from "three";
 // If VIEWPORT_WIDTH, which is a little bigger, is used instead, we end up with a data texture
 // that is shrinked a little bit, which leads to the texture not being in sync with the THREEjs scene.
 
-const MAX_TEXTURE_OFFSET = 31;
-const MAX_ZOOM_THRESHOLD = 2;
-
-function log2(a: number): number {
-  return Math.log(a) / Math.LN2;
-}
-
 // maximum difference between requested coordinate and actual texture position
-export const MAX_ZOOM_STEP_DIFF = Math.min(
-  MAX_ZOOM_THRESHOLD,
-  (constants.TEXTURE_WIDTH - MAX_TEXTURE_OFFSET) / constants.PLANE_WIDTH,
-);
+const MAX_ZOOM_STEP_DIFF = constants.MAX_RENDERING_TARGET_WIDTH / constants.PLANE_WIDTH;
 
 export function getUp(flycam: FlycamType): Vector3 {
   const matrix = flycam.currentMatrix;
@@ -73,50 +55,27 @@ export function getZoomedMatrix(flycam: FlycamType): Matrix4x4 {
 }
 
 export function getMaxZoomStep(state: OxalisState): number {
-  return (
-    1 +
-    Maybe.fromNullable(state.dataset)
-      .map(dataset =>
-        Math.max(
-          0,
-          ...dataset.dataLayers.map(layer =>
-            Math.max(0, ...layer.resolutions.map(r => Math.max(r[0], r[1], r[2]))),
-          ),
+  const minimumZoomStepCount = 1;
+  const maxZoomstep = Maybe.fromNullable(state.dataset)
+    .map(dataset =>
+      Math.max(
+        minimumZoomStepCount,
+        ...dataset.dataSource.dataLayers.map(layer =>
+          Math.max(0, ...layer.resolutions.map(r => Math.max(r[0], r[1], r[2]))),
         ),
-      )
-      .getOrElse(1)
-  );
-}
-
-export function getIntegerZoomStep(state: OxalisState): number {
-  return Math.floor(state.flycam.zoomStep);
+      ),
+    )
+    .getOrElse(2 ** (minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1));
+  return maxZoomstep;
 }
 
 export function getRequestLogZoomStep(state: OxalisState): number {
-  const maxLogZoomStep = log2(getMaxZoomStep(state));
-  return Utils.clamp(
-    Math.min(state.datasetConfiguration.quality, maxLogZoomStep),
-    Math.ceil(log2(state.flycam.zoomStep / MAX_ZOOM_STEP_DIFF)) +
-      state.datasetConfiguration.quality,
-    maxLogZoomStep,
-  );
-}
-
-export function calculateTextureBuffer(state: OxalisState): OrthoViewMapType<Vector2> {
-  // Buffer in this context means "cushion".
-  // How many pixels is the texture larger than the canvas on each dimension?
-  // Returns: two dimensional array with buffer[planeId][dimension], dimension: x->0, y->1
-  const pixelNeeded = constants.PLANE_WIDTH * getTextureScalingFactor(state);
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
-  const buffer = {};
-  for (const planeId of OrthoViewValues) {
-    const scaleArray = Dimensions.transDim(baseVoxelFactors, planeId);
-    buffer[planeId] = [
-      constants.TEXTURE_WIDTH - pixelNeeded * scaleArray[0],
-      constants.TEXTURE_WIDTH - pixelNeeded * scaleArray[1],
-    ];
-  }
-  return buffer;
+  const maxLogZoomStep = Math.log2(getMaxZoomStep(state));
+  const min = Math.min(state.datasetConfiguration.quality, maxLogZoomStep);
+  const value =
+    Math.ceil(Math.log2(state.flycam.zoomStep / MAX_ZOOM_STEP_DIFF)) +
+    state.datasetConfiguration.quality;
+  return Utils.clamp(min, value, maxLogZoomStep);
 }
 
 export function getTextureScalingFactor(state: OxalisState): number {
@@ -142,7 +101,7 @@ export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
 export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
   const position = getPosition(state.flycam);
   const offset = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.scale);
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
   const min = [0, 0, 0];
   const max = [0, 0, 0];
 
@@ -154,50 +113,32 @@ export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
   return { min, max };
 }
 
-export function getTexturePosition(state: OxalisState, planeId: OrthoViewType): Vector3 {
-  const texturePosition = _.clone(getPosition(state.flycam));
-  // As the Model does not render textures for exact positions, the last 5 bits of
-  // the X and Y coordinates for each texture have to be set to 0
-  for (let i = 0; i <= 2; i++) {
-    if (i !== Dimensions.getIndices(planeId)[2]) {
-      texturePosition[i] &= -1 << (5 + getRequestLogZoomStep(state));
-    }
-  }
-  return texturePosition;
-}
+export type AreaType = { left: number, top: number, right: number, bottom: number };
 
-export function getOffsets(state: OxalisState, planeId: OrthoViewType): Vector2 {
-  // return the coordinate of the upper left corner of the viewport as texture-relative coordinate
-  const buffer = calculateTextureBuffer(state);
+export function getArea(state: OxalisState, planeId: OrthoViewType): AreaType {
+  const [u, v] = Dimensions.getIndices(planeId);
+
   const position = getPosition(state.flycam);
-  const requestZoomStep = Math.pow(2, getRequestLogZoomStep(state));
-  const texturePosition = getTexturePosition(state, planeId);
-  const ind = Dimensions.getIndices(planeId);
-  return [
-    buffer[planeId][0] / 2 + (position[ind[0]] - texturePosition[ind[0]]) / requestZoomStep,
-    buffer[planeId][1] / 2 + (position[ind[1]] - texturePosition[ind[1]]) / requestZoomStep,
-  ];
+  const viewportWidthHalf = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
+  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
+
+  const uWidthHalf = viewportWidthHalf * baseVoxelFactors[u];
+  const vWidthhalf = viewportWidthHalf * baseVoxelFactors[v];
+
+  const left = Math.floor((position[u] - uWidthHalf) / constants.BUCKET_WIDTH);
+  const top = Math.floor((position[v] - vWidthhalf) / constants.BUCKET_WIDTH);
+  const right = Math.floor((position[u] + uWidthHalf) / constants.BUCKET_WIDTH);
+  const bottom = Math.floor((position[v] + vWidthhalf) / constants.BUCKET_WIDTH);
+
+  return {
+    left,
+    top,
+    right,
+    bottom,
+  };
 }
 
-export function getArea(state: OxalisState, planeId: OrthoViewType): Vector4 {
-  // returns [left, top, right, bottom] array
-  const scaleArray = Dimensions.transDim(
-    scaleInfo.getBaseVoxelFactors(state.dataset.scale),
-    planeId,
-  );
-  const offsets = getOffsets(state, planeId);
-  const size = getTextureScalingFactor(state) * constants.PLANE_WIDTH;
-  // two pixels larger, just to fight rounding mistakes (important for mouse click conversion)
-  // [offsets[0] - 1, offsets[1] - 1, offsets[0] + size * scaleArray[ind[0]] + 1, offsets[1] + size * scaleArray[ind[1]] + 1]
-  return [
-    offsets[0],
-    offsets[1],
-    offsets[0] + size * scaleArray[0],
-    offsets[1] + size * scaleArray[1],
-  ];
-}
-
-export function getAreas(state: OxalisState): OrthoViewMapType<Vector4> {
+export function getAreas(state: OxalisState): OrthoViewMapType<AreaType> {
   return {
     [OrthoViews.PLANE_XY]: getArea(state, OrthoViews.PLANE_XY),
     [OrthoViews.PLANE_XZ]: getArea(state, OrthoViews.PLANE_XZ),

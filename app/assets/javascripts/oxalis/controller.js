@@ -130,12 +130,6 @@ class Controller extends React.PureComponent<Props, State> {
     this.initTaskScript();
     this.maybeShowNewTaskTypeModal();
 
-    for (const binaryName of Object.keys(Model.binary)) {
-      this.listenTo(Model.binary[binaryName].cube, "bucketLoaded", () =>
-        app.vent.trigger("rerender"),
-      );
-    }
-
     window.webknossos = new ApiLoader(Model);
 
     app.vent.trigger("webknossos:ready");

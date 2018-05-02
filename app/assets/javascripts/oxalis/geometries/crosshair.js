@@ -14,7 +14,6 @@ class Crosshair {
   SCALE_MIN: number;
   SCALE_MAX: number;
 
-  context: CanvasRenderingContext2D;
   scale: number;
 
   isDirty: boolean;
@@ -26,23 +25,9 @@ class Crosshair {
     this.SCALE_MAX = 1;
     this.scale = 0;
     this.isDirty = true;
-
-    const canvas = document.createElement("canvas");
-    canvas.width = this.WIDTH;
-    canvas.height = this.WIDTH;
-    this.context = this.getContext(canvas);
-
-    this.mesh = this.createMesh(canvas);
+    this.mesh = this.createMesh();
 
     this.setScale(scale);
-  }
-
-  getContext(canvas: HTMLCanvasElement): CanvasRenderingContext2D {
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      return ctx;
-    }
-    throw new Error("Could not retrieve 2d context");
   }
 
   setVisibility(v: boolean) {
@@ -50,28 +35,7 @@ class Crosshair {
   }
 
   update() {
-    const { context, WIDTH, COLOR, mesh } = this;
-
-    if (this.isDirty) {
-      context.clearRect(0, 0, WIDTH, WIDTH);
-
-      context.fillStyle = COLOR;
-      context.strokeStyle = COLOR;
-
-      context.lineWidth = 3;
-      context.moveTo(WIDTH / 2, 3);
-      context.beginPath();
-      context.arc(WIDTH / 2, WIDTH / 2, WIDTH / 2 - 3, 0, 2 * Math.PI);
-      context.stroke();
-
-      context.beginPath();
-      context.moveTo(WIDTH / 2, WIDTH / 2 - 1);
-      context.arc(WIDTH / 2, WIDTH / 2, 4, 0, 2 * Math.PI, true);
-      context.fill();
-
-      mesh.material.map.needsUpdate = true;
-    }
-
+    const { mesh } = this;
     const m = getZoomedMatrix(Store.getState().flycam);
 
     mesh.matrix.set(
@@ -115,15 +79,24 @@ class Crosshair {
     scene.add(this.mesh);
   }
 
-  createMesh(canvas: HTMLCanvasElement) {
-    const { WIDTH } = this;
+  createMesh() {
+    const createCircle = radius => {
+      const segments = 64;
+      const material = new THREE.LineBasicMaterial({ color: this.COLOR });
+      const geometry = new THREE.CircleGeometry(radius, segments);
 
-    const texture = new THREE.Texture(canvas);
+      // Remove center vertex
+      geometry.vertices.shift();
 
-    const material = new THREE.MeshBasicMaterial({ map: texture });
-    material.transparent = true;
+      return new THREE.LineLoop(geometry, material);
+    };
 
-    const mesh = new THREE.Mesh(new THREE.PlaneGeometry(WIDTH, WIDTH), material);
+    const outerCircle = createCircle(this.WIDTH / 2);
+    const innerCircle = createCircle(4);
+
+    const mesh = new THREE.Group();
+    mesh.add(outerCircle);
+    mesh.add(innerCircle);
 
     mesh.rotation.x = Math.PI;
 

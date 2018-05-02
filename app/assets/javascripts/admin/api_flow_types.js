@@ -18,6 +18,12 @@ export type APIDataSourceType = {
   +scale: Vector3,
 };
 
+export type APIMappingType = {
+  +parent?: string,
+  +name: string,
+  +classes?: Array<Array<number>>,
+};
+
 export type APIDataStoreType = {
   +name: string,
   +url: string,

@@ -44,6 +44,7 @@ import type {
   APIScriptType,
   APITaskType,
   APIUserType,
+  APIMappingType,
   APIDatasetType,
 } from "admin/api_flow_types";
 
@@ -98,12 +99,6 @@ export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
-export type MappingType = {
-  +parent?: string,
-  +name: string,
-  +classes?: Array<Array<number>>,
-};
-
 export type VolumeCellType = {
   +id: number,
 };
@@ -119,7 +114,7 @@ export type DataLayerType = {
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<Vector3>,
   +elementClass: ElementClassType,
-  +mappings?: Array<MappingType>,
+  +mappings?: Array<APIMappingType>,
 };
 
 export type SegmentationDataLayerType = DataLayerType & {
@@ -213,8 +208,9 @@ export type DatasetConfigurationType = {
   +layers: {
     [name: string]: DatasetLayerConfigurationType,
   },
-  +quality: number,
+  +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
+  +highlightHoveredCellId: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
@@ -250,8 +246,10 @@ export type TemporaryConfigurationType = {
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
-  +brushPosition: ?Vector2,
+  +mousePosition: ?Vector2,
   +brushSize: number,
+  +isMappingEnabled: boolean,
+  +mappingSize: number,
 };
 
 export type ScriptType = APIScriptType;
@@ -335,6 +333,7 @@ export const defaultState: OxalisState = {
     layers: {},
     quality: 0,
     segmentationOpacity: 20,
+    highlightHoveredCellId: true,
   },
   userConfiguration: {
     clippingDistance: 50,
@@ -365,8 +364,10 @@ export const defaultState: OxalisState = {
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
-    brushPosition: null,
+    mousePosition: null,
     brushSize: 50,
+    isMappingEnabled: false,
+    mappingSize: 0,
   },
   task: null,
   dataset: {

@@ -22,4 +22,14 @@ const dummyLocation = {
 };
 export const location: Location = typeof window === "undefined" ? dummyLocation : window.location;
 
-export default (typeof window === "undefined" ? null : window);
+const _window =
+  typeof window === "undefined"
+    ? {
+        alert: console.log.bind(console),
+        app: null,
+        location: dummyLocation,
+        requestAnimationFrame: resolve => resolve(),
+      }
+    : window;
+
+export default _window;

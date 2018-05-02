@@ -126,7 +126,7 @@ export function resetContourReducer(state: OxalisState) {
 
 export function hideBrushReducer(state: OxalisState) {
   return update(state, {
-    temporaryConfiguration: { brushPosition: { $set: null } },
+    temporaryConfiguration: { mousePosition: { $set: null } },
   });
 }
 

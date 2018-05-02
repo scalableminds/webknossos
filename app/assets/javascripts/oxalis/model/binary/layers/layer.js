@@ -14,8 +14,8 @@ import type {
   ElementClassType,
   BoundingBoxObjectType,
   DataLayerType,
-  MappingType,
 } from "oxalis/store";
+import type { APIMappingType } from "admin/api_flow_types";
 import type { DataBucket } from "oxalis/model/binary/bucket";
 
 export type BucketRequestOptions = {
@@ -38,7 +38,7 @@ class Layer {
   elementClass: ElementClassType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  mappings: ?Array<MappingType>;
+  mappings: Array<APIMappingType>;
   boundingBox: BoundingBoxObjectType;
   resolutions: Array<Vector3>;
 
@@ -48,7 +48,7 @@ class Layer {
     this.name = layerInfo.name;
     this.category = layerInfo.category;
     this.elementClass = layerInfo.elementClass;
-    this.mappings = layerInfo.mappings;
+    this.mappings = layerInfo.mappings || [];
     this.boundingBox = layerInfo.boundingBox;
     this.resolutions = layerInfo.resolutions;
 
@@ -64,7 +64,9 @@ class Layer {
   }
 
   buildBuckets(batch: Array<Vector4>, options: ?BucketRequestOptions): Array<BucketInfo> {
-    return batch.map(bucketAddress => BucketBuilder.fromZoomedAddress(bucketAddress, options));
+    return batch.map(bucketAddress =>
+      BucketBuilder.fromZoomedAddress(bucketAddress, this.resolutions, options),
+    );
   }
 
   // Requests the data, ensures it has the right tokens and resolves with

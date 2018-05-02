@@ -127,23 +127,6 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         });
       const activeTreeId = Utils.toNullable(activeTreeIdMaybe);
 
-      // TODO: remove and use groups from server
-      const groups = [
-        {
-          name: "Axon",
-          groupId: "a",
-          type: "group",
-          children: [
-            {
-              name: "Synapse",
-              groupId: "b",
-              type: "group",
-              children: [],
-            },
-          ],
-        },
-      ];
-
       const skeletonTracing: SkeletonTracingType = {
         annotationId: action.annotation.id,
         createdTimestamp: action.tracing.createdTimestamp,
@@ -153,7 +136,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         activeTreeId,
         restrictions,
         trees,
-        treeGroups: groups,
+        treeGroups: action.tracing.treeGroups || [],
         name: action.annotation.name,
         tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,

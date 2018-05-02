@@ -315,7 +315,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const displayableName = groupName.trim() || "<no name>";
     return (
       <div onMouseEnter={() => this.onHover(key)} onMouseLeave={() => this.onHover(null)}>
-        {displayableName} {actions}
+        <Icon type="folder" /> {displayableName} {actions}
       </div>
     );
   };
@@ -344,7 +344,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           }}
           defaultValue={this.state.renamingGroup != null ? this.state.renamingGroup.name : ""}
           onPressEnter={() => this.onRenameOk(newName)}
-          autoFocus
+          ref={input => input != null && input.focus()}
         />
       </Modal>
     );

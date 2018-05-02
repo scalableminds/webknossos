@@ -41,16 +41,20 @@ object SQLClient {
 
 trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
 
-  def run[R](query: DBIOAction[R, NoStream, Nothing], retryTransactionCount: Int = 0): Fox[R] = {
+  lazy val transactionSerializationError = "could not serialize access"
+
+  def run[R](query: DBIOAction[R, NoStream, Nothing], retryCount: Int = 0, retryIfErrorContains: List[String] = List()): Fox[R] = {
     val foxFuture = SQLClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
         case Success(res) => {
           Fox.successful(res)
         }
         case Failure(e: Throwable) => {
-          if (e.getMessage.contains("could not serialize access") && retryTransactionCount > 0) {
+          val msg = e.getMessage
+          if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
+            logger.debug(s"Retrying SQL Query (${retryCount} remaining) due to ${msg}")
             Thread.sleep(20)
-            run(query, retryTransactionCount - 1)
+            run(query, retryCount - 1)
           }
           else {
             logError(e, query)

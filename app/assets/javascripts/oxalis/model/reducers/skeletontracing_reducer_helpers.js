@@ -29,6 +29,7 @@ import type {
   BranchPointType,
   TreeMapType,
   CommentType,
+  TreeGroupType,
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
@@ -59,6 +60,32 @@ function getMaximumNodeId(trees: TreeMapType): number {
 
 function getMaximumTreeId(trees: TreeMapType): number {
   return _.max(_.map(trees, "treeId"));
+}
+
+function* mapGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => any) {
+  if (groups == null || groups.length == null || groups.length === 0) {
+    return;
+  }
+
+  for (const group of groups) {
+    yield callback(group);
+    if (group.children) {
+      yield* mapGroups(group.children, callback);
+    }
+  }
+}
+
+function forEachGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => any) {
+  if (groups == null || groups.length == null || groups.length === 0) {
+    return;
+  }
+
+  for (const group of groups) {
+    callback(group);
+    if (group.children) {
+      forEachGroups(group.children, callback);
+    }
+  }
 }
 
 export function createNode(
@@ -178,7 +205,7 @@ export function deleteEdge(
       if (sourceTree.treeId !== targetTree.treeId) {
         // The two selected nodes are in different trees
         console.error(
-          "Tried two delete an edge that was not there, the two nodes are in different trees.",
+          "Tried to delete an edge that was not there, the two nodes are in different trees.",
         );
         return Maybe.Nothing();
       }
@@ -189,7 +216,7 @@ export function deleteEdge(
 
       if (deletedEdge == null) {
         // The two selected nodes do not share an edge
-        console.error("Tried two delete an edge that was not there.");
+        console.error("Tried to delete an edge that was not there.");
         return Maybe.Nothing();
       }
 
@@ -409,11 +436,30 @@ export function createTree(state: OxalisState, timestamp: number): Maybe<TreeTyp
   });
 }
 
-export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<[TreeMapType, number]> {
+export function addTreesAndGroups(
+  state: OxalisState,
+  trees: TreeMapType,
+  treeGroups: Array<TreeGroupType>,
+): Maybe<[TreeMapType, Array<TreeGroupType>, number]> {
   return getSkeletonTracing(state.tracing).chain(skeletonTracing => {
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
+      // Check whether any group ids collide and assign new ids when neccessary
+      const groupIdMap = {};
+      const existingGroupIds = new Set(
+        mapGroups(skeletonTracing.treeGroups, group => group.groupId),
+      );
+
+      forEachGroups(treeGroups, (group: TreeGroupType) => {
+        // Assign a new group id to groups whose id already exists
+        if (existingGroupIds.has(group.groupId)) {
+          const newGroupId = Utils.randomId();
+          groupIdMap[group.groupId] = newGroupId;
+          group.groupId = newGroupId;
+        }
+      });
+
       const newTrees = {};
       // Assign new ids for all nodes and trees to avoid duplicates
       let newTreeId = getMaximumTreeId(skeletonTracing.trees) + 1;
@@ -445,16 +491,23 @@ export function addTrees(state: OxalisState, trees: TreeMapType): Maybe<[TreeMap
           update(bp, { nodeId: { $set: idMap[bp.nodeId] } }),
         );
 
+        // If the tree's group was assigned a new group id, change it
+        const newGroupId =
+          tree.groupId != null && groupIdMap[tree.groupId] != null
+            ? groupIdMap[tree.groupId]
+            : tree.groupId;
+
         newTrees[newTreeId] = update(tree, {
           treeId: { $set: newTreeId },
           nodes: { $set: newNodes },
           edges: { $set: newEdges },
           comments: { $set: newComments },
           branchPoints: { $set: newBranchPoints },
+          groupId: { $set: newGroupId },
         });
         newTreeId++;
       }
-      return Maybe.Just([newTrees, newNodeId - 1]);
+      return Maybe.Just([newTrees, treeGroups, newNodeId - 1]);
     }
     return Maybe.Nothing();
   });

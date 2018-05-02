@@ -14,7 +14,7 @@ import { getActiveTree } from "oxalis/model/accessors/skeletontracing_accessor";
 import {
   setTreeNameAction,
   createTreeAction,
-  addTreesAction,
+  addTreesAndGroupsAction,
   deleteTreeWithConfirmAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
@@ -98,10 +98,9 @@ class TreesTabView extends React.PureComponent<Props, State> {
   };
 
   handleNmlUpload = async (nmlString: string) => {
-    let trees;
     try {
-      trees = await parseNml(nmlString);
-      Store.dispatch(addTreesAction(trees));
+      const { trees, treeGroups } = await parseNml(nmlString);
+      Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
     } catch (e) {
       Toast.error(e.message);
     } finally {

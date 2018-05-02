@@ -410,6 +410,13 @@ const Utils = {
     }
     return deflator.result;
   },
+
+  // https://stackoverflow.com/a/44078785
+  randomId(): string {
+    return Math.random()
+      .toString(36)
+      .substring(2);
+  },
 };
 
 export default Utils;

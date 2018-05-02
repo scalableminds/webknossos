@@ -21,7 +21,7 @@ import {
   deleteComment,
   mergeTrees,
   toggleAllTreesReducer,
-  addTrees,
+  addTreesAndGroups,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
@@ -334,12 +334,13 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .getOrElse(state);
         }
 
-        case "ADD_TREES": {
-          const { trees } = action;
-          return addTrees(state, trees)
-            .map(([updatedTrees, newMaxNodeId]) =>
+        case "ADD_TREES_AND_GROUPS": {
+          const { trees, treeGroups } = action;
+          return addTreesAndGroups(state, trees, treeGroups)
+            .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
               update(state, {
                 tracing: {
+                  treeGroups: { $push: updatedTreeGroups },
                   trees: { $merge: updatedTrees },
                   cachedMaxNodeId: { $set: newMaxNodeId },
                 },

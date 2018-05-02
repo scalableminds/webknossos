@@ -58,7 +58,11 @@ type ToggleAllTreesActionType = { type: "TOGGLE_ALL_TREES", timestamp: number };
 type ToggleInactiveTreesActionType = { type: "TOGGLE_INACTIVE_TREES", timestamp: number };
 type RequestDeleteBranchPointActionType = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeActionType = { type: "CREATE_TREE", timestamp: number };
-type AddTreesActionType = { type: "ADD_TREES", trees: TreeMapType };
+type AddTreesAndGroupsActionType = {
+  type: "ADD_TREES_AND_GROUPS",
+  trees: TreeMapType,
+  treeGroups: Array<TreeGroupType>,
+};
 type DeleteTreeActionType = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type SetActiveTreeActionType = { type: "SET_ACTIVE_TREE", treeId: number };
 type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
@@ -89,7 +93,7 @@ export type SkeletonTracingActionType =
   | DeleteBranchPointActionType
   | RequestDeleteBranchPointActionType
   | CreateTreeActionType
-  | AddTreesActionType
+  | AddTreesAndGroupsActionType
   | DeleteTreeActionType
   | SetActiveTreeActionType
   | MergeTreesActionType
@@ -118,7 +122,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
-  "ADD_TREES",
+  "ADD_TREES_AND_GROUPS",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
   "SET_TREE_NAME",
@@ -248,9 +252,13 @@ export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActi
   timestamp,
 });
 
-export const addTreesAction = (trees: TreeMapType): AddTreesActionType => ({
-  type: "ADD_TREES",
+export const addTreesAndGroupsAction = (
+  trees: TreeMapType,
+  treeGroups: Array<TreeGroupType>,
+): AddTreesAndGroupsActionType => ({
+  type: "ADD_TREES_AND_GROUPS",
   trees,
+  treeGroups,
 });
 
 export const deleteTreeAction = (

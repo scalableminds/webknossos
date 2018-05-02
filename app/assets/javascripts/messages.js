@@ -111,8 +111,11 @@ In order to restore the current window, a reload is necessary.`,
     "NML contains <comment ...> with a node id that is not in any tree: Node with id",
   "nml.edge_with_invalid_node":
     "NML contains <edge ...> with a node id that is not part of the tree: Edge",
+  "nml.tree_with_missing_group_id":
+    "NML contains <tree ...> with a non-existing group id: Group with id",
   "nml.duplicate_tree_id": "NML contains <thing ...> with duplicate tree id: Tree with id",
   "nml.duplicate_node_id": "NML contains <node ...> with duplicate node id: Node with id",
+  "nml.duplicate_group_id": "NML contains <group ...> with duplicate group id: Group with id",
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
   "nml.tree_not_connected": "NML contains tree that is not fully connected: Tree with id",

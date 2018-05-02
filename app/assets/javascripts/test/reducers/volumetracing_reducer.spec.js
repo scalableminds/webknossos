@@ -48,14 +48,16 @@ const initialState = update(defaultState, {
     $set: volumeTracing,
   },
   dataset: {
-    dataLayers: {
-      $set: [
-        {
-          // We need to have some resolutions. Otherwise,
-          // getRequestLogZoomStep will always return 0
-          resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
-        },
-      ],
+    dataSource: {
+      dataLayers: {
+        $set: [
+          {
+            // We need to have some resolutions. Otherwise,
+            // getRequestLogZoomStep will always return 0
+            resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4]],
+          },
+        ],
+      },
     },
   },
 });

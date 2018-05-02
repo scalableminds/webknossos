@@ -69,7 +69,7 @@ trait DataLayerLike {
   def lookUpResolution(resolutionExponent: Int, snapToClosest: Boolean = false): Point3D = {
     val resPower = Math.pow(2, resolutionExponent).toInt
     val matchOpt = resolutions.find(resolution => resolution.maxDim == resPower)
-    if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resolutionExponent - (math.log(resolution.maxDim)/math.log(2)))))
+    if (snapToClosest) matchOpt.getOrElse(resolutions.minBy(resolution => math.abs(resPower - resolution.maxDim)))
     else matchOpt.getOrElse(Point3D(resPower, resPower, resPower))
   }
 

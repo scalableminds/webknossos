@@ -168,7 +168,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def findAllFinishedForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""select a.* from #${existingCollectionName} a
+      r <- run(sql"""select #${columnsWithPrefix("a.")} from #${existingCollectionName} a
                      join webknossos.tasks_ t on a._task = t._id
                      where t._project = ${projectId.id} and a.typ = '#${AnnotationType.Task.toString}' and a.state = '#${AnnotationState.Finished.toString}'""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))

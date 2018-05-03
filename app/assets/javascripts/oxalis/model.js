@@ -11,6 +11,7 @@ import type {
   CommentType,
   TracingTypeTracingType,
   ElementClassType,
+  DataLayerType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -35,7 +36,6 @@ import window from "libs/window";
 import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
-import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
 import type { Vector3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
@@ -50,8 +50,12 @@ import {
   getDataset,
   getSharingToken,
 } from "admin/admin_rest_api";
+
 import messages from "messages";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type Layer from "oxalis/model/binary/layers/layer";
+import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
+import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
+import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
 
 export type ServerNodeType = {
   id: number,
@@ -118,6 +122,8 @@ export class OxalisModel {
   };
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
+  isMappingSupported: boolean = true;
+  maximumDataTextureCountForLayer: number;
 
   async fetch(
     tracingType: TracingTypeTracingType,
@@ -149,7 +155,7 @@ export class OxalisModel {
       datasetName = annotationId;
     }
 
-    await this.initializeDataset(datasetName);
+    const highestResolutions = await this.initializeDataset(datasetName);
     await this.initializeSettings(datasetName);
 
     // Fetch the actual tracing from the datastore, if there is an annotation
@@ -170,15 +176,43 @@ export class OxalisModel {
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
     if (initialFetch) {
-      this.initializeModel(tracing);
+      this.initializeModel(tracing, highestResolutions);
       if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
     }
+
     // There is no need to initialize the tracing if there is no tracing (View mode).
     if (annotation != null && tracing != null) {
       this.initializeTracing(annotation, tracing);
     }
 
     this.applyState(UrlManager.initialState, tracing);
+  }
+
+  validateSpecsForLayers(layers: Array<Layer>): Map<Layer, DataTextureSizeAndCount> {
+    const specs = DataRenderingLogic.getSupportedTextureSpecs();
+    DataRenderingLogic.validateMinimumRequirements(specs);
+
+    const hasSegmentation = _.find(layers, layer => layer.category === "segmentation") != null;
+    const setupInfo = DataRenderingLogic.computeDataTexturesSetup(
+      specs,
+      layers,
+      layer => layer.bitDepth >> 3,
+      hasSegmentation,
+    );
+
+    if (!setupInfo.isBasicRenderingSupported) {
+      const message = `Not enough textures available for rendering ${layers.length} layers`;
+      Toast.error(message);
+      throw new Error(message);
+    }
+
+    if (!setupInfo.isMappingSupported) {
+      const message = messages["mapping.too_few_textures"];
+      console.warn(message);
+      this.isMappingSupported = false;
+    }
+
+    return setupInfo.textureInformationPerLayer;
   }
 
   determineAllowedModes(settings: SettingsType) {
@@ -237,17 +271,17 @@ export class OxalisModel {
     }
   }
 
-  async initializeDataset(datasetName: string) {
+  async initializeDataset(datasetName: string): Promise<Array<Vector3>> {
     const sharingToken = getSharingToken();
-    const dataset =
+    const rawDataset =
       sharingToken != null
         ? await getDataset(datasetName, sharingToken)
         : await getDataset(datasetName);
 
     let error;
-    if (!dataset) {
+    if (!rawDataset) {
       error = messages["dataset.does_not_exist"];
-    } else if (!dataset.dataSource.dataLayers) {
+    } else if (!rawDataset.dataSource.dataLayers) {
       error = `${messages["dataset.not_imported"]} '${datasetName}'`;
     }
 
@@ -255,6 +289,8 @@ export class OxalisModel {
       Toast.error(error);
       throw this.HANDLED_ERROR;
     }
+
+    const [dataset, highestResolutions] = adaptResolutions(rawDataset);
 
     // Make sure subsequent fetch calls are always for the same dataset
     if (!_.isEmpty(this.binary)) {
@@ -269,6 +305,8 @@ export class OxalisModel {
     });
 
     Store.dispatch(setDatasetAction(dataset));
+
+    return highestResolutions;
   }
 
   async initializeSettings(datasetName: string) {
@@ -279,7 +317,7 @@ export class OxalisModel {
     Store.dispatch(initializeSettingsAction(initialUserSettings, initialDatasetSettings));
   }
 
-  initializeModel(tracing: ?ServerTracingType) {
+  initializeModel(tracing: ?ServerTracingType, resolutions: Array<Vector3>) {
     const { dataStore } = Store.getState().dataset;
 
     const LayerClass = (() => {
@@ -293,16 +331,34 @@ export class OxalisModel {
       }
     })();
 
-    const layers = this.getLayerInfos(tracing).map(
+    const layers = this.getLayerInfos(tracing, resolutions).map(
       layerInfo => new LayerClass(layerInfo, dataStore),
+    );
+
+    const textureInformationPerLayer = this.validateSpecsForLayers(layers);
+    this.maximumDataTextureCountForLayer = _.max(
+      Array.from(textureInformationPerLayer.values()).map(info => info.textureCount),
     );
 
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
     for (const layer of layers) {
-      const maxLayerZoomStep =
+      let maxLayerZoomStep =
         Math.log(Math.max(...layer.resolutions.map(r => Math.max(...r)))) / Math.LN2;
-      this.binary[layer.name] = new Binary(layer, maxLayerZoomStep, this.connectionInfo);
+      if (layer.category === "segmentation") {
+        maxLayerZoomStep = 1;
+      }
+      const textureInformation = textureInformationPerLayer.get(layer);
+      if (!textureInformation) {
+        throw new Error("No texture information for layer?");
+      }
+      this.binary[layer.name] = new Binary(
+        layer,
+        maxLayerZoomStep,
+        this.connectionInfo,
+        textureInformation.textureSize,
+        textureInformation.textureCount,
+      );
     }
 
     this.buildMappingsObject();
@@ -319,7 +375,7 @@ export class OxalisModel {
   buildMappingsObject() {
     const segmentationBinary = this.getSegmentationBinary();
 
-    if (segmentationBinary != null) {
+    if (segmentationBinary != null && this.isMappingSupported) {
       window.mappings = {
         getAll() {
           return segmentationBinary.mappings.getMappingNames();
@@ -346,15 +402,20 @@ export class OxalisModel {
     return this.binary[name];
   }
 
-  getLayerInfos(tracing: ?ServerTracingType) {
+  getLayerInfos(tracing: ?ServerTracingType, resolutions: Array<Vector3>): Array<DataLayerType> {
+    // This method adds/merges the layers of the tracing into the dataset layers
     // Overwrite or extend layers with volumeTracingLayer
     let layers = _.clone(Store.getState().dataset.dataSource.dataLayers);
+
     // $FlowFixMe TODO Why does Flow complain about this check
     if (tracing == null || tracing.elementClass == null) {
-      return layers;
+      return layers.map(l => ({
+        ...l,
+        resolutions,
+      }));
     }
 
-    // Flow doesn't check that as the tracing has the elementClass property it has to be a volumeTracing
+    // Flow doesn't understand that as the tracing has the elementClass property it has to be a volumeTracing
     tracing = ((tracing: any): ServerVolumeTracingType);
 
     // This code will only be executed for volume tracings as only those have a dataLayer.
@@ -364,9 +425,9 @@ export class OxalisModel {
     // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer.
     // 2) Segmentation exists: In that case layers already contains dataLayer and the fallbackLayer
     //    property specifies its name, to be able to merge the two layers
-    const fallbackLayer = tracing.fallbackLayer != null ? tracing.fallbackLayer : null;
-    const existingLayerIndex = _.findIndex(layers, layer => layer.name === fallbackLayer);
-    const existingLayer = layers[existingLayerIndex];
+    const fallbackLayerName = tracing.fallbackLayer;
+    const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === fallbackLayerName);
+    const fallbackLayer = layers[fallbackLayerIndex];
 
     const tracingLayer = {
       name: tracing.id,
@@ -381,15 +442,15 @@ export class OxalisModel {
         height: tracing.boundingBox.height,
         depth: tracing.boundingBox.depth,
       },
-      resolutions: [[1, 1, 1]],
+      resolutions,
       elementClass: tracing.elementClass,
       mappings:
-        existingLayer != null && existingLayer.mappings != null ? existingLayer.mappings : [],
+        fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
       largestSegmentId: tracing.largestSegmentId,
     };
 
-    if (existingLayer != null) {
-      layers[existingLayerIndex] = tracingLayer;
+    if (fallbackLayer != null) {
+      layers[fallbackLayerIndex] = tracingLayer;
     } else {
       // Remove other segmentation layers, since we are adding a new one.
       // This is a temporary workaround. In the long term we want to support
@@ -410,10 +471,6 @@ export class OxalisModel {
     // Currently segmentation data can only be displayed in orthogonal and volume mode
     const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
     return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;
-  }
-
-  canDisplaySegmentationData(): boolean {
-    return getIntegerZoomStep(Store.getState()) <= 1;
   }
 
   computeBoundaries() {
@@ -480,6 +537,19 @@ export class OxalisModel {
     }
   }
 
+  getResolutions(): Array<Vector3> {
+    // Different layers can have different resolutions. At the moment,
+    // unequal resolutions will result in undefined behavior.
+    // However, if resolutions are subset of each other, everything should be fine.
+    // For that case, returning the longest resolutions array should suffice
+
+    return _.chain(this.binary)
+      .map(b => b.layer.resolutions)
+      .sortBy(resolutions => resolutions.length)
+      .last()
+      .valueOf();
+  }
+
   stateSaved() {
     const state = Store.getState();
     const storeStateSaved = !state.save.isBusy && state.save.queue.length === 0;
@@ -501,6 +571,40 @@ export class OxalisModel {
       await Utils.sleep(500);
     }
   };
+}
+
+function adaptResolutions(dataset: APIDatasetType): [APIDatasetType, Array<Vector3>] {
+  const adaptedLayers = dataset.dataSource.dataLayers.map(dataLayer => {
+    const adaptedResolutions = dataLayer.resolutions.slice();
+    _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
+      // We add another level of resolutions to allow zooming out even further
+      const lastResolution = _.last(adaptedResolutions);
+      adaptedResolutions.push([
+        2 * lastResolution[0],
+        2 * lastResolution[1],
+        2 * lastResolution[2],
+      ]);
+    });
+
+    return {
+      ...dataLayer,
+      resolutions: adaptedResolutions,
+    };
+  });
+
+  const highestResolutions = _.last(
+    _.sortBy(adaptedLayers.map(layer => layer.resolutions), resolutions => resolutions.length),
+  );
+
+  const adaptedDataset = {
+    ...dataset,
+    dataSource: {
+      ...dataset.dataSource,
+      dataLayers: adaptedLayers,
+    },
+  };
+
+  return [adaptedDataset, highestResolutions];
 }
 
 // export the model as a singleton

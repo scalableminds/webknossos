@@ -4,8 +4,7 @@
  */
 
 import _ from "lodash";
-import { Vector3Indicies } from "oxalis/constants";
-import { BUCKET_SIZE_P } from "oxalis/model/binary/bucket";
+import constants, { Vector3Indicies } from "oxalis/constants";
 import type { Vector3, Vector4, BoundingBoxType } from "oxalis/constants";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { Bucket } from "oxalis/model/binary/bucket";
@@ -35,24 +34,15 @@ class BoundingBox {
   }
 
   getBoxForZoomStep = _.memoize((zoomStep: number): BoundingBoxType => {
+    const resolution = this.cube.layer.resolutions[zoomStep];
     // No `map` for performance reasons
     const min = [0, 0, 0];
     const max = [0, 0, 0];
 
     for (let i = 0; i < 3; i++) {
-      min[i] = this.min[i] >> (BUCKET_SIZE_P + zoomStep);
-
-      const maxI = this.max[i];
-      const shift = BUCKET_SIZE_P + zoomStep;
-      let res = maxI >> shift;
-
-      // Computing ceil(e / 2^shift)
-      const remainder = maxI & ((1 << shift) - 1);
-      if (remainder !== 0) {
-        res += 1;
-      }
-
-      max[i] = res;
+      const divisor = constants.BUCKET_WIDTH * resolution[i];
+      min[i] = Math.floor(this.min[i] / divisor);
+      max[i] = Math.ceil(this.max[i] / divisor);
     }
 
     return { min, max };
@@ -79,14 +69,20 @@ class BoundingBox {
       bucket.isPartlyOutsideBoundingBox = true;
     }
 
-    const baseVoxel = bucketAddress.slice(0, 3).map(e => e << (BUCKET_SIZE_P + bucketAddress[3]));
+    const resolutions = this.cube.layer.resolutions;
+    const zoomStep = bucketAddress[3];
+    const resolution = resolutions[zoomStep];
 
-    for (let dx = 0; dx < 1 << BUCKET_SIZE_P; dx++) {
-      for (let dy = 0; dy < 1 << BUCKET_SIZE_P; dy++) {
-        for (let dz = 0; dz < 1 << BUCKET_SIZE_P; dz++) {
-          const x = baseVoxel[0] + (dx << bucketAddress[3]);
-          const y = baseVoxel[1] + (dy << bucketAddress[3]);
-          const z = baseVoxel[2] + (dz << bucketAddress[3]);
+    const baseVoxel = bucketAddress
+      .slice(0, 3)
+      .map((e, idx) => e * resolution[idx] * constants.BUCKET_WIDTH);
+
+    for (let dx = 0; dx < constants.BUCKET_WIDTH; dx++) {
+      for (let dy = 0; dy < constants.BUCKET_WIDTH; dy++) {
+        for (let dz = 0; dz < constants.BUCKET_WIDTH; dz++) {
+          const x = baseVoxel[0] + dx * resolution[0];
+          const y = baseVoxel[1] + dy * resolution[1];
+          const z = baseVoxel[2] + dz * resolution[2];
 
           if (
             this.min[0] <= x &&

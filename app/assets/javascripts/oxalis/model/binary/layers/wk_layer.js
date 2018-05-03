@@ -94,7 +94,7 @@ class WkLayer extends Layer {
       // eslint-disable-next-line no-await-in-loop
       if (counter % YIELD_AFTER_X_BUCKETS === 0) await Utils.sleep(1);
       const bucketData = bucket.getData();
-      const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress);
+      const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress, this.resolutions);
       items.push(updateBucket(bucketInfo, Base64.fromByteArray(bucketData)));
     }
     Store.dispatch(pushSaveQueueAction(items));

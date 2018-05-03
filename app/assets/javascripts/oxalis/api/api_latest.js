@@ -31,7 +31,7 @@ import {
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeToolType, ControlModeType } from "oxalis/constants";
-import type { MappingArray } from "oxalis/model/binary/mappings";
+import type { MappingType } from "oxalis/model/binary/mappings";
 import type {
   NodeType,
   UserConfigurationType,
@@ -55,6 +55,7 @@ import { rotate3DViewTo } from "oxalis/controller/camera_controller";
 import dimensions from "oxalis/model/dimensions";
 import { requestTask, finishAnnotation, doWithToken } from "admin/admin_rest_api";
 import { discardSaveQueueAction } from "oxalis/model/actions/save_actions";
+import messages from "messages";
 import type { ToastStyleType } from "libs/toast";
 
 function assertExists(value: any, message: string) {
@@ -560,9 +561,12 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: MappingArray) {
-    const layer = this.__getLayer(layerName);
+  setMapping(layerName: string, mapping: MappingType) {
+    if (!Model.isMappingSupported) {
+      throw new Error(messages["mapping.too_few_textures"]);
+    }
 
+    const layer = this.__getLayer(layerName);
     layer.cube.setMapping(mapping);
   }
 

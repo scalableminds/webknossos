@@ -156,11 +156,21 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     } yield parsed
   }
 
-  def findAllActiveFor(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
+  def findAllActiveForUser(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}""".as[AnnotationsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
+  def findAllFinishedForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select a.* from #${existingCollectionName} a
+                     join webknossos.tasks_ t on a._task = t._id
+                     where t._project = ${projectId.id} and a.typ = '#${AnnotationType.Task.toString}' and a.state = '#${AnnotationState.Finished.toString}'""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -488,7 +498,13 @@ object AnnotationDAO extends FoxImplicits {
   def findActiveAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     for {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
-      annotationsSQL <- AnnotationSQLDAO.findAllActiveFor(ObjectId.fromBsonId(_user), typ)
+      annotationsSQL <- AnnotationSQLDAO.findAllActiveForUser(ObjectId.fromBsonId(_user), typ)
+      annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
+    } yield annotations
+
+  def findFinishedForProject(projectId: String)(implicit ctx: DBAccessContext) =
+    for {
+      annotationsSQL <- AnnotationSQLDAO.findAllFinishedForProject(ObjectId(projectId))
       annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
     } yield annotations
 

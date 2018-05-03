@@ -113,6 +113,7 @@ export type DataLayerType = {
   +category: CategoryType,
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<Vector3>,
+  +maxZoomStep: number, // denotes for which maximum zoomStep data exists
   +elementClass: ElementClassType,
   +mappings?: Array<APIMappingType>,
 };

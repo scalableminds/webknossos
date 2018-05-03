@@ -41,6 +41,7 @@ class Layer {
   mappings: Array<APIMappingType>;
   boundingBox: BoundingBoxObjectType;
   resolutions: Array<Vector3>;
+  maxZoomStep: number;
 
   constructor(layerInfo: DataLayerType, dataStoreInfo: DataStoreInfoType) {
     this.dataStoreInfo = dataStoreInfo;
@@ -51,6 +52,7 @@ class Layer {
     this.mappings = layerInfo.mappings || [];
     this.boundingBox = layerInfo.boundingBox;
     this.resolutions = layerInfo.resolutions;
+    this.maxZoomStep = layerInfo.maxZoomStep;
 
     this.bitDepth = parseInt(this.elementClass.substring(4));
   }

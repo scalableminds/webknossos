@@ -123,7 +123,6 @@ class Binary {
 
   constructor(
     layer: Layer,
-    maxZoomStep: number,
     connectionInfo: ConnectionInfo,
     textureWidth: number,
     dataTextureCount: number,
@@ -147,7 +146,12 @@ class Binary {
     this.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
     this.layer.upperBoundary = this.upperBoundary;
 
-    this.cube = new DataCube(this.upperBoundary, maxZoomStep + 1, this.layer.bitDepth, this.layer);
+    this.cube = new DataCube(
+      this.upperBoundary,
+      layer.maxZoomStep + 1,
+      this.layer.bitDepth,
+      this.layer,
+    );
 
     const taskQueue = new AsyncTaskQueue(Infinity);
 
@@ -288,6 +292,16 @@ class Binary {
     const isFallbackAnchorPointNew =
       isFallbackAvailable &&
       this.yieldsNewZoomedAnchorPoint(unzoomedAnchorPoint, fallbackZoomStep, "fallbackAnchorPoint");
+
+    if (logZoomStep > this.cube.MAX_ZOOM_STEP) {
+      // Don't render anything if the zoomStep is too high
+      this.textureBucketManager.setActiveBuckets(
+        [],
+        this.anchorPointCache.anchorPoint,
+        this.anchorPointCache.fallbackAnchorPoint,
+      );
+      return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
+    }
 
     const subBucketLocality = getSubBucketLocality(position, this.layer.resolutions[logZoomStep]);
     const areas = getAreas(Store.getState());

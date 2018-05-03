@@ -202,10 +202,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     }
   }
 
-  getResolutions(): Array<Vector3> {
-    return _.first(Model.getColorBinaries()).layer.resolutions;
-  }
-
   makeMaterial(options?: ShaderMaterialOptionsType): void {
     super.makeMaterial(options);
 
@@ -965,7 +961,7 @@ void main() {
       floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
       formatNumberAsGLSLFloat,
       formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
-      resolutions: this.getResolutions(),
+      resolutions: Model.getResolutions(),
       datasetScale,
       brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
     });

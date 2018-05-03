@@ -10,7 +10,7 @@ test.before("Change token", async () => {
   setCurrToken(tokenUserA);
 });
 
-test.serial("Load datasets", async t => {
+test.serial("getDatasets", async t => {
   let datasets = await api.getDatasets();
 
   let retry = 0;
@@ -21,20 +21,20 @@ test.serial("Load datasets", async t => {
   }
   datasets = _.sortBy(datasets, d => d.name);
 
-  t.snapshot(datasets, { id: "datasets" });
+  t.snapshot(datasets, { id: "datasets-getDatasets" });
 });
 
-test("Load active datasets", async t => {
+test("getActiveDatasets", async t => {
   let datasets = await api.getActiveDatasets();
   datasets = _.sortBy(datasets, d => d.name);
 
-  t.snapshot(datasets, { id: "active-datasets" });
+  t.snapshot(datasets, { id: "datasets-getActiveDatasets" });
 });
 
-test("Get Dataset Access List", async t => {
+test("getDatasetAccessList", async t => {
   const datasets = await api.getActiveDatasets();
   const dataset = _.sortBy(datasets, d => d.name)[0];
   const accessList = api.getDatasetAccessList(dataset.name);
 
-  t.snapshot(accessList, { id: "dataset-accessList" });
+  t.snapshot(accessList, { id: "dataset-getDatasetAccessList" });
 });

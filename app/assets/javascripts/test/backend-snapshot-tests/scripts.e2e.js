@@ -26,28 +26,30 @@ test("createScript(), updateScript(), and deleteScript()", async t => {
   const activeUser = await api.getActiveUser();
 
   const data = {
-    id: "will-be-ignored-anyway"
+    id: "will-be-ignored-anyway",
     name: "MergerMode",
-    owner: activeUser,
-    gist: " https://gist.github.com/heikowissler/d5ff5d490ab381af9405c9078096c723",
+    owner: activeUser.id,
+    gist: "https://gist.github.com/heikowissler/d5ff5d490ab381af9405c9078096c723",
   };
 
   // Create New Script
   const createdScript = await api.createScript(data);
+  console.log("da script", createdScript);
 
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
-  const createdScriptWithFixedId = Object.assign({}, createdScript, { id: "fixed-project-id" });
+  const createdScriptWithFixedId = Object.assign({}, createdScript, { id: "fixed-script-id" });
   t.snapshot(createdScriptWithFixedId, { id: "scripts-createScript" });
 
   // Update Script
-  const newData = Object.assign({}, createdScript, { name: "MegaScript" });
+  const newData = Object.assign({}, createdScript, { name: "MegaScript", owner: activeUser.id });
   const updatedScript = await api.updateScript(createdScript.id, newData);
+  console.log("updatedScript", updatedScript);
 
-  const updatedScriptWithFixedId = Object.assign({}, updatedScript, { id: "fixed-project-id" });
+  const updatedScriptWithFixedId = Object.assign({}, updatedScript, { id: "fixed-script-id" });
   t.snapshot(updatedScriptWithFixedId, { id: "scripts-updatedScript" });
 
   // Delete Script
-  const response = await api.deleteScript(updatedScript.id);
+  const response = await api.deleteScript(createdScript.id);
   t.snapshot(response, { id: "scripts-deleteScript" });
 });

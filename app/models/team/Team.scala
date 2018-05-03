@@ -79,7 +79,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[TeamsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[TeamsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed

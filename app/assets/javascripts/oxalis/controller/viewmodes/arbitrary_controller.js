@@ -30,6 +30,7 @@ import {
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
+import app from "app";
 import ArbitraryView from "oxalis/view/arbitrary_view";
 import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
@@ -275,9 +276,14 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.listenTo(this.arbitraryView, "render", this.pingBinaries);
     this.listenTo(this.arbitraryView, "render", this.props.onRender);
 
+    const onBucketLoaded = () => {
+      this.arbitraryView.draw();
+      app.vent.trigger("rerender");
+    };
+
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
-      this.listenTo(binary.cube, "bucketLoaded", this.arbitraryView.draw);
+      this.listenTo(binary.cube, "bucketLoaded", onBucketLoaded);
     }
 
     this.storePropertyUnsubscribers.push(

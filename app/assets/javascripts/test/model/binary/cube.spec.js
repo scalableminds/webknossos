@@ -29,7 +29,10 @@ mockRequire("libs/toast", { error: _.noop });
 const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
 
 test.beforeEach(t => {
-  const cube = new Cube([100, 100, 100], 3, 24);
+  const mockedLayer = {
+    resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
+  };
+  const cube = new Cube([100, 100, 100], 3, 24, mockedLayer);
   const pullQueue = {
     add: sinon.stub(),
     pull: sinon.stub(),

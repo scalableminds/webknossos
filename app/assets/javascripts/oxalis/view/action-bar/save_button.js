@@ -7,7 +7,7 @@ type Props = {
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
 };
 
-const SAVED_POLLING_INTERVAL = 100;
+const SAVED_POLLING_INTERVAL = 1000;
 
 class SaveButton extends React.PureComponent<Props> {
   componentDidMount() {

@@ -20,8 +20,6 @@ import SceneController from "oxalis/controller/scene_controller";
 import {
   getPosition,
   getRequestLogZoomStep,
-  getIntegerZoomStep,
-  getAreas,
   getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
@@ -48,6 +46,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 
 type OwnProps = {
   onRender: () => void,
@@ -147,6 +146,9 @@ class PlaneController extends React.PureComponent<Props> {
         Store.dispatch(setViewportAction(planeId));
       },
       pinch: delta => this.zoom(delta, true),
+      mouseMove: (delta: Point2, position: Point2) => {
+        Store.dispatch(setMousePositionAction([position.x, position.y]));
+      },
     };
   }
 
@@ -326,7 +328,6 @@ class PlaneController extends React.PureComponent<Props> {
 
   bindToEvents(): void {
     this.listenTo(this.planeView, "render", this.onPlaneViewRender);
-    this.listenTo(this.planeView, "renderCam", SceneController.updateSceneForCam);
   }
 
   onPlaneViewRender(): void {
@@ -336,7 +337,6 @@ class PlaneController extends React.PureComponent<Props> {
       if (SceneController.pingDataLayer(dataLayerName)) {
         Model.binary[dataLayerName].ping(getPosition(state.flycam), {
           zoomStep: getRequestLogZoomStep(state),
-          areas: getAreas(state),
           activePlane: activeViewport,
         });
       }
@@ -366,12 +366,13 @@ class PlaneController extends React.PureComponent<Props> {
     }
 
     if (oneSlide) {
+      const logZoomStep = getRequestLogZoomStep(Store.getState());
+      const w = Dimensions.getIndices(activeViewport)[2];
+      const zStep = Model.getResolutions()[logZoomStep][w];
+
       Store.dispatch(
         moveFlycamOrthoAction(
-          Dimensions.transDim(
-            [0, 0, (z < 0 ? -1 : 1) * Math.max(1, getIntegerZoomStep(Store.getState()))],
-            activeViewport,
-          ),
+          Dimensions.transDim([0, 0, (z < 0 ? -1 : 1) * Math.max(1, zStep)], activeViewport),
           activeViewport,
         ),
       );
@@ -509,7 +510,7 @@ function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
   };
 }
 
-function calculateGlobalPos(clickPos: Point2) {
+export function calculateGlobalPos(clickPos: Point2): Vector3 {
   let position;
   const state = Store.getState();
   const activeViewport = state.viewModeData.plane.activeViewport;
@@ -517,56 +518,39 @@ function calculateGlobalPos(clickPos: Point2) {
   const zoomFactor = getPlaneScalingFactor(state.flycam);
   const viewportScale = state.userConfiguration.scale;
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
+
+  const diffX =
+    (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) / viewportScale * zoomFactor;
+  const diffY =
+    (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) / viewportScale * zoomFactor;
+
   switch (activeViewport) {
     case OrthoViews.PLANE_XY:
       position = [
-        curGlobalPos[0] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) /
-            viewportScale *
-            planeRatio[0] *
-            zoomFactor,
-        curGlobalPos[1] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) /
-            viewportScale *
-            planeRatio[1] *
-            zoomFactor,
+        curGlobalPos[0] - diffX * planeRatio[0],
+        curGlobalPos[1] - diffY * planeRatio[1],
         curGlobalPos[2],
       ];
       break;
     case OrthoViews.PLANE_YZ:
       position = [
         curGlobalPos[0],
-        curGlobalPos[1] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) /
-            viewportScale *
-            planeRatio[1] *
-            zoomFactor,
-        curGlobalPos[2] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) /
-            viewportScale *
-            planeRatio[2] *
-            zoomFactor,
+        curGlobalPos[1] - diffY * planeRatio[1],
+        curGlobalPos[2] - diffX * planeRatio[2],
       ];
       break;
     case OrthoViews.PLANE_XZ:
       position = [
-        curGlobalPos[0] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) /
-            viewportScale *
-            planeRatio[0] *
-            zoomFactor,
+        curGlobalPos[0] - diffX * planeRatio[0],
         curGlobalPos[1],
-        curGlobalPos[2] -
-          (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) /
-            viewportScale *
-            planeRatio[2] *
-            zoomFactor,
+        curGlobalPos[2] - diffY * planeRatio[2],
       ];
       break;
     default:
-      throw new Error(
+      console.error(
         `Trying to calculate the global position, but no viewport is active: ${activeViewport}`,
       );
+      return [0, 0, 0];
   }
 
   return position;

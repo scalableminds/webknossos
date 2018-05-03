@@ -12,7 +12,6 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
 mockRequire("libs/request", RequestMock);
-mockRequire("libs/window", {});
 
 // Avoid node caching and make sure all mockRequires are applied
 const PullQueue = mockRequire.reRequire("oxalis/model/binary/pullqueue").default;

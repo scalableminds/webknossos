@@ -9,6 +9,10 @@ import type Layer from "oxalis/model/binary/layers/layer";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector4 } from "oxalis/constants";
 import type { DataStoreInfoType } from "oxalis/store";
+import {
+  getResolutionsFactors,
+  zoomedAddressToAnotherZoomStep,
+} from "oxalis/model/helpers/position_converter";
 
 export type PullQueueItemType = {
   priority: number,
@@ -96,12 +100,36 @@ class PullQueue {
 
       let offset = 0;
       for (const bucketAddress of batch) {
+        const zoomStep = bucketAddress[3];
+        if (zoomStep > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+          continue;
+        }
         bucketData = responseBuffer.subarray(offset, (offset += this.cube.BUCKET_LENGTH));
         const bucket = this.cube.getBucket(bucketAddress);
         this.cube.boundingBox.removeOutsideArea(bucket, bucketAddress, bucketData);
         this.maybeWhitenEmptyBucket(bucketData);
         if (bucket.type === "data") {
           bucket.receiveData(bucketData);
+          if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
+            const higherAddress = zoomedAddressToAnotherZoomStep(
+              bucketAddress,
+              this.layer.resolutions,
+              zoomStep + 1,
+            );
+
+            const resolutionsFactors = getResolutionsFactors(
+              this.layer.resolutions[zoomStep + 1],
+              this.layer.resolutions[zoomStep],
+            );
+            const higherBucket = this.cube.getOrCreateBucket(higherAddress);
+            if (higherBucket.type === "data") {
+              higherBucket.downsampleFromLowerBucket(
+                bucket,
+                resolutionsFactors,
+                this.layer.category === "segmentation",
+              );
+            }
+          }
         }
       }
     } catch (error) {

@@ -38,6 +38,12 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
       });
     }
 
+    case "SET_MOUSE_POSITION": {
+      return update(state, {
+        temporaryConfiguration: { mousePosition: { $set: action.position } },
+      });
+    }
+
     case "INITIALIZE_SETTINGS": {
       // Only color layers need layer settings
       const colorLayers = _.filter(
@@ -96,6 +102,16 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
     case "SET_CONTROL_MODE": {
       return update(state, {
         temporaryConfiguration: { controlMode: { $set: action.controlMode } },
+      });
+    }
+    case "SET_MAPPING_ENABLED": {
+      return update(state, {
+        temporaryConfiguration: { isMappingEnabled: { $set: action.isMappingEnabled } },
+      });
+    }
+    case "SET_MAPPING_SIZE": {
+      return update(state, {
+        temporaryConfiguration: { mappingSize: { $set: action.mappingSize } },
       });
     }
     default:

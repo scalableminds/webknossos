@@ -19,11 +19,6 @@ test("activeUser()", async t => {
   t.snapshot(activeUser, { id: "misc-activeUser" });
 });
 
-test("getBuildInfo()", async t => {
-  const buildInfo = await api.getBuildInfo();
-  t.snapshot(buildInfo, { id: "misc-getBuildInfo" });
-});
-
 test("getFeatureToggles()", async t => {
   const features = await api.getFeatureToggles();
   t.snapshot(features, { id: "misc-getFeatureToggles" });

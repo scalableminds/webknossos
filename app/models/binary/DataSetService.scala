@@ -56,8 +56,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
 
   def updateDataSource(
                         dataStoreInfo: DataStoreInfo,
-                        dataSource: InboxDataSource,
-                        allowedTeams: List[BSONObjectID]
+                        dataSource: InboxDataSource
                       )(implicit ctx: DBAccessContext): Fox[Unit] = {
 
     DataSetDAO.findOneBySourceName(dataSource.id.name)(GlobalAccessContext).futureBox.flatMap {
@@ -78,7 +77,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
           dataStoreInfo,
           dataSource.id.team,
           dataSource,
-          allowedTeams,
+          List(),
           isActive = dataSource.isUsable).futureBox
     }
   }
@@ -97,13 +96,13 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def findDataSource(name: String)(implicit ctx: DBAccessContext): Fox[InboxDataSource] =
     DataSetDAO.findOneBySourceName(name).map(_.dataSource)
 
-  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource], allowedTeams: List[BSONObjectID])(implicit ctx: DBAccessContext) = {
+  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
     //logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))
     val dataStoreInfo = DataStoreInfo(dataStore.name, dataStore.url, dataStore.typ)
     Fox.serialSequence(dataSources) { dataSource =>
-      DataSetService.updateDataSource(dataStoreInfo, dataSource, allowedTeams)
+      DataSetService.updateDataSource(dataStoreInfo, dataSource)
     }
   }
 

@@ -73,7 +73,8 @@ class DataSourceController @Inject()(
               for {
                 _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
                 zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
-                _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath), allowedTeams)
+                _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
+                //_ <- webKnossosServer.addAllowedTeams(allowedTeams) This is not necessary for the first step bc you import it afterwards anyways
               } yield {
                 Ok
               }
@@ -96,23 +97,15 @@ class DataSourceController @Inject()(
       }
   }
 
-  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName)).async(parse.json) {
+  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName))(validateJson[DataSource]) {
     implicit request =>
-
       AllowRemoteOrigin {
-
-        val dataSourceJson = (request.body \ "datasource").as[JsObject]
-        val allowedTeams = (request.body \ "allowedTeams").as[List[String]]
-
-        dataSourceJson.validate[DataSource] match {
-          case JsSuccess(dataSourceJs, _) =>
             for {
               dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages("dataSource.notFound") ~> 404
-              _ <- dataSourceService.updateDataSource(dataSourceJs.copy(id = dataSource.id), allowedTeams)
+              _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
             } yield {
-              Future(Ok)
+              Ok
             }
-        }
       }
   }
 

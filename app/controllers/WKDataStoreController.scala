@@ -57,7 +57,7 @@ request.body.validate[List[InboxDataSource]] match {
       case JsSuccess(dataSources, _) =>
         for {
           _ <- DataSetService.deactivateUnreportedDataSources(request.dataStore.name, dataSources)(GlobalAccessContext)
-          _ <- DataSetService.updateDataSources(request.dataStore, dataSources, List())(GlobalAccessContext)
+          _ <- DataSetService.updateDataSources(request.dataStore, dataSources)(GlobalAccessContext)
         } yield {
           JsonOk
         }
@@ -69,13 +69,10 @@ request.body.validate[List[InboxDataSource]] match {
   }
 
   def updateOne(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
-    val dataSourceJson = (request.body \ "datasource").as[JsObject]
-    val allowedTeams = (request.body \ "allowedTeams").as[List[String]]
-    dataSourceJson.validate[InboxDataSource] match {
+    request.body.validate[InboxDataSource] match {
       case JsSuccess(dataSource, _) =>
         for {
-          _ <- Fox.combined(allowedTeams.map(TeamDAO.findOneById(_)(GlobalAccessContext))) //TODO change to findByName once its in master
-          _ <- DataSetService.updateDataSources(request.dataStore, List(dataSource), allowedTeams.map(BSONObjectID(_)))(GlobalAccessContext)
+          _ <- DataSetService.updateDataSources(request.dataStore, List(dataSource))(GlobalAccessContext)
         } yield {
           JsonOk
         }

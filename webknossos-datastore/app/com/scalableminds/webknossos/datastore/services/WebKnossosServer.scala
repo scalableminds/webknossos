@@ -54,10 +54,10 @@ class WebKnossosServer @Inject()(
       .post(DataStoreStatus(ok, dataStoreUrl))
   }
 
-  def reportDataSource(dataSource: InboxDataSourceLike, allowedTeams: List[String]): Fox[_] = {
+  def reportDataSource(dataSource: InboxDataSourceLike): Fox[_] = {
     RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/datasource")
       .withQueryString("key" -> dataStoreKey)
-      .post(Json.obj("datasource" -> dataSource, "allowedTeams" -> allowedTeams))
+      .post(dataSource)
   }
 
   def reportDataSources(dataSources: List[InboxDataSourceLike]): Fox[_] = {
@@ -83,5 +83,11 @@ class WebKnossosServer @Inject()(
       .withQueryString("key" -> dataStoreKey)
       .withQueryString("token" -> token)
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
+  }
+
+  def addAllowedTeams(allowedTeams: List[String]): Fox[_] = {
+    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
+      .withQueryString("key" -> dataStoreKey)
+      .post(allowedTeams)
   }
 }

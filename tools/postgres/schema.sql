@@ -168,6 +168,26 @@ CREATE VIEW webknossos.task_instances AS
   left join (select * from webknossos.annotations a where typ = 'Task' and a.state != 'Cancelled' AND a.isDeleted = false) as annotations ON t._id = annotations._task
   GROUP BY t._id, t.totalinstances;
 
+CREATE FUNCTION webknossos.checkOpenAssignments() RETURNS trigger AS $$
+  DECLARE
+    cur CURSOR for SELECT openInstances FROM webknossos.task_instances where NEW.typ = 'Task' and _id = NEW._task;
+  BEGIN
+    IF NEW.typ = 'Task' THEN
+      FOR rec IN cur LOOP
+        IF rec.openInstances < 0 THEN
+          RAISE EXCEPTION 'Negative openInstances for Task (%)', NEW._task;
+        END IF;
+      END LOOP;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER checkOpenAssignmentsTrigger
+AFTER INSERT ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.checkOpenAssignments();
+
+
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _organization CHAR(24) NOT NULL,

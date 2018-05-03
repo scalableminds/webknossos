@@ -161,7 +161,7 @@ class RPCRequest(val id: Int, val url: String) extends FoxImplicits with LazyLog
     r.flatMap { response =>
       if (response.status == OK) {
         logger.debug(s"Successful request (ID: $id). " +
-          s"Body: '${response.body.take(100)}'")
+          s"Body: <${response.body.length} bytes of protobuf data>")
       } else {
         logger.error(s"Failed to send WS request to $url (ID: $id). " +
           s"RequestBody: '${requestBodyPreview}'. Status ${response.status}. " +

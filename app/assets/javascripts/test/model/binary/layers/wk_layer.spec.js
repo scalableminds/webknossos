@@ -33,6 +33,7 @@ const layerInfo = {
   name: "layername",
   category: "color",
   elementClass: "uint16",
+  resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
 };
 const dataStoreInfo = {
   typ: "webknossos-store",

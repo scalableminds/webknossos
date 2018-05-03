@@ -26,9 +26,9 @@ import {
   getSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3 } from "oxalis/constants";
-import type { MappingArray } from "oxalis/model/binary/mappings";
+import type { MappingType } from "oxalis/model/binary/mappings";
 import type { NodeType, UserConfigurationType, DatasetConfigurationType } from "oxalis/store";
-import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware.js";
+import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 
 function assertExists(value: any, message: string) {
   if (value == null) {
@@ -185,7 +185,7 @@ class DataApi_DEPRECATED {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: MappingArray) {
+  setMapping(layerName: string, mapping: MappingType) {
     const layer = this.__getLayer(layerName);
 
     layer.cube.setMapping(mapping);

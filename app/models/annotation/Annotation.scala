@@ -3,6 +3,8 @@
  */
 package models.annotation
 
+import javax.management.relation.Role
+
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -26,6 +28,7 @@ import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
 
@@ -118,7 +121,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       )
     }
 
-  override def anonymousReadAccessQ = s"isPublic"
+  override def anonymousReadAccessQ(sharingToken: Option[String]) = s"isPublic"
   override def readAccessQ(requestingUserId: ObjectId) =
     s"""(isPublic or _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') or _user = '${requestingUserId.id}'
        or (select _organization from webknossos.teams where webknossos.teams._id = _team)
@@ -133,7 +136,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -146,7 +149,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     }
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}
                      order by _id desc limit ${limit}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
@@ -156,7 +159,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def findAllActiveFor(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -165,7 +168,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       r <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _task = ${taskId.id} and typ = '#${typ.toString}' and state != '#${AnnotationState.Cancelled.toString}' and #${accessQuery}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -174,7 +177,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       rList <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
@@ -189,7 +192,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       excludeTeamsQ = if (excludedTeamIds.isEmpty) "true" else s"(not t._id in ${writeStructTupleWithQuotes(excludedTeamIds.map(t => sanitize(t.id)))})"
       countList <- run(sql"""select count(*)
                          from (select a._id from
-                                  (select *
+                                  (select #${columns}
                                    from #${existingCollectionName}
                                    where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) a
                                   join webknossos.teams t on a._team = t._id where #${excludeTeamsQ}) q
@@ -208,11 +211,47 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def insertOne(a: AnnotationSQL): Fox[Unit] = {
     for {
-      _ <- run(sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-                       values(${a._id.toString}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
-                              '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
-                              '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
-                              ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})""")
+      _ <- run(
+        sqlu"""
+               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+               values(${a._id.id}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
+                   '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
+                   '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
+                   ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
+               """)
+    } yield ()
+  }
+
+  def updateInitialized(a: AnnotationSQL): Fox[Unit] = {
+    for {
+      _ <- run(
+        sqlu"""
+             update webknossos.annotations
+             set
+               _dataSet = ${a._dataset.id},
+               _team = ${a._team.id},
+               _user = ${a._user.id},
+               tracing_id = ${a.tracing.id},
+               tracing_typ = '#${a.tracing.typ.toString}',
+               description = ${a.description},
+               isPublic = ${a.isPublic},
+               name = ${a.name},
+               state = '#${a.state.toString}',
+               statistics = '#${sanitize(a.statistics.toString)}',
+               tags = '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}',
+               tracingTime = ${a.tracingTime},
+               typ = '#${a.typ.toString}',
+               created = ${new java.sql.Timestamp(a.created)},
+               modified = ${new java.sql.Timestamp(a.modified)},
+               isDeleted = ${a.isDeleted}
+             where _id = ${a._id.id}
+          """)
+    } yield ()
+  }
+
+  def abortInitializingAnnotation(id: ObjectId): Fox[Unit] = {
+    for {
+      _ <- run(sqlu"delete from webknossos.annotations where _id = ${id.id} and state = '#${AnnotationState.Initializing.toString}'")
     } yield ()
   }
 
@@ -252,7 +291,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def updateTracingReference(id: ObjectId, tracing: TracingReference)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set tracing_id = ${tracing.id}, tracingTyp = '#${tracing.typ.toString}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set tracing_id = ${tracing.id}, tracing_typ = '#${tracing.typ.toString}' where _id = ${id.id}")
     } yield ()
 
   def updateStatistics(id: ObjectId, statistics: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -428,6 +467,12 @@ object AnnotationDAO extends FoxImplicits {
     } yield annotation
   }
 
+  def updateInitialized(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    for {
+      annotationSQL <- AnnotationSQL.fromAnnotation(annotation)
+      _ <- AnnotationSQLDAO.updateInitialized(annotationSQL)
+    } yield annotation
+  }
 
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) =
     for {

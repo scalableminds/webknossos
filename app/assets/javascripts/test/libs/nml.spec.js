@@ -157,6 +157,21 @@ test("NML Parser should throw errors for invalid nmls", async t => {
       },
     },
   });
+  const duplicateEdgeState = update(initialState, {
+    tracing: {
+      trees: {
+        "2": {
+          edges: {
+            $set: EdgeCollection.loadFromArray([
+              { source: 4, target: 5 },
+              { source: 4, target: 5 },
+              { source: 5, target: 6 },
+            ]),
+          },
+        },
+      },
+    },
+  });
   const disconnectedTreeState = update(initialState, {
     tracing: {
       trees: { "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } } },
@@ -173,6 +188,11 @@ test("NML Parser should throw errors for invalid nmls", async t => {
     buildInfo,
   );
   const nmlWithInvalidEdge = serializeToNml(invalidEdgeState, invalidEdgeState.tracing, buildInfo);
+  const nmlWithDuplicateEdge = serializeToNml(
+    duplicateEdgeState,
+    duplicateEdgeState.tracing,
+    buildInfo,
+  );
   const nmlWithDisconnectedTree = serializeToNml(
     disconnectedTreeState,
     disconnectedTreeState.tracing,
@@ -183,6 +203,7 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidComment));
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidBranchPoint));
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidEdge));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithDuplicateEdge));
   await throwsAsyncParseError(t, () => parseNml(nmlWithDisconnectedTree));
 });
 

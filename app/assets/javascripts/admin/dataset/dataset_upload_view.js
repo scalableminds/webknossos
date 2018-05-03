@@ -1,31 +1,36 @@
 // @flow
 import React from "react";
+import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import { Form, Input, Select, Button, Card, Spin, Upload, Icon } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import Utils from "libs/utils";
-import { getEditableTeams, getDatastores, addDataset } from "admin/admin_rest_api";
-import type { APITeamType, APIDatastoreType } from "admin/api_flow_types";
+import { getDatastores, addDataset } from "admin/admin_rest_api";
+
+import type { APIDatastoreType, APIUserType, DatasetConfigType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 
-type Props = {
+type StateProps = {
+  activeUser: ?APIUserType,
+};
+
+type Props = StateProps & {
   form: Object,
   history: RouterHistory,
 };
 
 type State = {
-  teams: Array<APITeamType>,
   datastores: Array<APIDatastoreType>,
   isUploading: boolean,
 };
 
 class DatasetUploadView extends React.PureComponent<Props, State> {
   state = {
-    teams: [],
     datastores: [],
     isUploading: false,
   };
@@ -36,11 +41,9 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
 
   async fetchData() {
     const datastores = await getDatastores();
-    const teams = await getEditableTeams();
 
     this.setState({
       datastores,
-      teams,
     });
   }
 
@@ -55,13 +58,20 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
     evt.preventDefault();
 
     this.props.form.validateFields(async (err, formValues) => {
-      if (!err) {
+      const activeUser = this.props.activeUser;
+
+      if (!err && activeUser != null) {
         Toast.info("Uploading datasets");
         this.setState({
           isUploading: true,
         });
 
-        addDataset(formValues).then(
+        const datasetConfig: DatasetConfigType = {
+          ...formValues,
+          organization: activeUser.organization,
+        };
+
+        addDataset(datasetConfig).then(
           async () => {
             Toast.success(messages["dataset.upload_success"]);
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
@@ -90,32 +100,13 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                 })(<Input autoFocus />)}
               </FormItem>
 
-              <FormItem label="Team" hasFeedback>
-                {getFieldDecorator("team", {
-                  rules: [{ required: true }],
-                })(
-                  <Select
-                    showSearch
-                    placeholder="Select a Team"
-                    optionFilterProp="children"
-                    style={{ width: "100%" }}
-                  >
-                    {this.state.teams.map((team: APITeamType) => (
-                      <Option key={team.id} value={team.id}>
-                        {`${team.name}`}
-                      </Option>
-                    ))}
-                  </Select>,
-                )}
-              </FormItem>
-
               <FormItem label="Datastore" hasFeedback>
                 {getFieldDecorator("datastore", {
                   rules: [{ required: true }],
                 })(
                   <Select
                     showSearch
-                    placeholder="Select a Team"
+                    placeholder="Select a Datastore"
                     optionFilterProp="children"
                     style={{ width: "100%" }}
                   >
@@ -162,4 +153,8 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(Form.create()(DatasetUploadView));
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(withRouter(Form.create()(DatasetUploadView)));

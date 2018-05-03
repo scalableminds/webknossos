@@ -7,7 +7,6 @@ services:
     ports:
       - "9000:9000"
     links:
-      - mongo
       - fossildb
       - postgres
     entrypoint: bin/oxalis
@@ -17,7 +16,6 @@ services:
       - -Djava.net.preferIPv4Stack=true
       - -Dhttp.address=0.0.0.0
       - -Ddatastore.fossildb.address=fossildb
-      - -Dmongodb.uri=mongodb://mongo:27017/webknossos
       - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
@@ -51,9 +49,10 @@ services:
       - "5005:5005"
       - "9000:9000"
     links:
-      - mongo-dev
       - fossildb-dev
-      - postgres
+      - postgres-dev
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://postgres-dev/webknossos
     command:
       - bash
       - -c
@@ -64,11 +63,7 @@ services:
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
           -Ddatastore.fossildb.address=fossildb-dev
-          -Dmongodb.uri=$${MONGO_URI}
           -Dpostgres.url=$${POSTGRES_URL}"
-    environment:
-      - PORT=9000
-      - MONGO_URI=mongodb://mongo-dev:27017/webknossos-dev
     stdin_open: true
 
   e2e-tests:
@@ -78,7 +73,6 @@ services:
       - "5005:5005"
       - "9000:9000"
     links:
-      - mongo
       - postgres
       - fossildb
     command:
@@ -92,25 +86,10 @@ services:
           -Djava.net.preferIPv4Stack=true
           -Dhttp.address=0.0.0.0
           -Ddatastore.fossildb.address=fossildb
-          -Dmongodb.uri=$${MONGO_URI}
           -Dpostgres.url=$${POSTGRES_URL}
           -Dapplication.insertInitialData=false"
     environment:
-      - MONGO_URI=mongodb://mongo:27017/webknossos-testing
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
-      - PORT=9000
-
-  mongo:
-    image: mongo:3.4
-
-  mongo-dev:
-    extends:
-      service: mongo
-    ports:
-      - "27017:27017"
-    volumes:
-      - "./dev-db/configdb:/data/configdb"
-      - "./dev-db/db:/data/db"
 
   postgres:
     image: postgres:10-alpine
@@ -118,6 +97,14 @@ services:
       POSTGRES_DB: webknossos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+
+  postgres-dev:
+    extends:
+      service: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - "./pg/dev-db:/var/lib/postgresql/data/"
 
   fossildb:
     image: scalableminds/fossildb:master__272

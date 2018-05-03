@@ -13,6 +13,7 @@ import {
   getPosition,
   getPlaneScalingFactor,
   getViewportBoundingBox,
+  getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
@@ -27,6 +28,7 @@ import { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxali
 import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import { getRenderer } from "oxalis/controller/renderer";
 
 const CUBE_COLOR = 0x999999;
 
@@ -65,13 +67,10 @@ class SceneController {
   }
 
   initialize() {
+    this.renderer = getRenderer();
+
     this.createMeshes();
     this.bindToEvents();
-
-    this.renderer = new THREE.WebGLRenderer({
-      canvas: document.getElementById("render-canvas"),
-      antialias: true,
-    });
     this.scene = new THREE.Scene();
 
     // Because the voxel coordinates do not have a cube shape but are distorted,
@@ -83,7 +82,7 @@ class SceneController {
     this.rootGroup.add(this.getRootNode());
 
     // The dimension(s) with the highest resolution will not be distorted
-    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.scale));
+    this.rootGroup.scale.copy(new THREE.Vector3(...Store.getState().dataset.dataSource.scale));
     // Add scene to the group, all Geometries are then added to group
     this.scene.add(this.rootGroup);
   }
@@ -203,7 +202,6 @@ class SceneController {
     // though they are all looking at the same scene, some
     // things have to be changed for each cam.
 
-    let pos;
     this.cube.updateForCam(id);
     this.userBoundingBox.updateForCam(id);
     Utils.__guard__(this.taskBoundingBox, x => x.updateForCam(id));
@@ -215,7 +213,7 @@ class SceneController {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
           this.planes[planeId].setVisible(true);
-          pos = _.clone(getPosition(Store.getState().flycam));
+          const pos = _.clone(getPosition(Store.getState().flycam));
           ind = Dimensions.getIndices(planeId);
           // Offset the plane so the user can see the skeletonTracing behind the plane
           pos[ind[2]] +=
@@ -228,7 +226,7 @@ class SceneController {
     } else {
       this.volumeMeshes.visible = true;
       for (const planeId of OrthoViewValuesWithoutTDView) {
-        pos = getPosition(Store.getState().flycam);
+        const pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));
         this.planes[planeId].setGrayCrosshairColor();
         this.planes[planeId].setVisible(true);
@@ -241,12 +239,28 @@ class SceneController {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      this.planes[planeId].updateTexture();
+
+    // The anchor point refers to the top-left-front bucket of the bounding box
+    // which covers all three rendered planes. Relative to this anchor point,
+    // all buckets necessary for rendering are addressed. The anchorPoint is
+    // defined with bucket indices for the coordinate system of the current zoomStep.
+    let anchorPoint;
+    // The fallbackAnchorPoint is similar to the anchorPoint, but refers to the
+    // coordinate system of the next zoomStep which is used for fallback rendering.
+    let fallbackAnchorPoint;
+
+    for (const name of Object.keys(Model.binary)) {
+      const binary = Model.binary[name];
+      const zoomStep = getRequestLogZoomStep(Store.getState());
+      [anchorPoint, fallbackAnchorPoint] = binary.updateDataTextures(gPos, zoomStep);
+    }
+
+    for (const currentPlane of _.values(this.planes)) {
+      currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
       // Update plane position
-      this.planes[planeId].setPosition(globalPosVec);
+      currentPlane.setPosition(globalPosVec);
       // Update plane scale
-      this.planes[planeId].setScale(planeScale);
+      currentPlane.setScale(planeScale);
     }
   };
 
@@ -259,7 +273,7 @@ class SceneController {
 
   setClippingDistance(value: number): void {
     // convert nm to voxel
-    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.scale);
+    const voxelPerNMVector = getVoxelPerNM(Store.getState().dataset.dataSource.scale);
     V3.scale(voxelPerNMVector, value, this.planeShift);
 
     app.vent.trigger("rerender");
@@ -295,6 +309,13 @@ class SceneController {
     this.pingBinarySeg = alpha !== 0;
   }
 
+  setIsMappingEnabled(isMappingEnabled: boolean): void {
+    for (const plane of _.values(this.planes)) {
+      plane.setIsMappingEnabled(isMappingEnabled);
+    }
+    app.vent.trigger("rerender");
+  }
+
   pingDataLayer(dataLayerName: string): boolean {
     if (Model.binary[dataLayerName].category === "color") {
       return this.pingBinary;
@@ -324,26 +345,44 @@ class SceneController {
   }
 
   bindToEvents(): void {
-    Store.subscribe(() => {
-      const {
-        clippingDistance,
-        displayCrosshair,
-        tdViewDisplayPlanes,
-      } = Store.getState().userConfiguration;
-      const { segmentationOpacity } = Store.getState().datasetConfiguration;
-      this.setSegmentationAlpha(segmentationOpacity);
-      this.setClippingDistance(clippingDistance);
-      this.setDisplayCrosshair(displayCrosshair);
-      this.setDisplayPlanes(tdViewDisplayPlanes);
-      this.setInterpolation(Store.getState().datasetConfiguration.interpolation);
-    });
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.clippingDistance,
+      clippingDistance => this.setClippingDistance(clippingDistance),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.displayCrosshair,
+      displayCrosshair => this.setDisplayCrosshair(displayCrosshair),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.tdViewDisplayPlanes,
+      tdViewDisplayPlanes => this.setDisplayPlanes(tdViewDisplayPlanes),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.segmentationOpacity,
+      segmentationOpacity => this.setSegmentationAlpha(segmentationOpacity),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.datasetConfiguration.interpolation,
+      interpolation => this.setInterpolation(interpolation),
+    );
+
     listenToStoreProperty(
       storeState => storeState.tracing.userBoundingBox,
       bb => this.setUserBoundingBox(bb),
     );
+
     listenToStoreProperty(
       storeState => storeState.tracing.boundingBox,
       bb => this.buildTaskingBoundingBox(bb),
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.isMappingEnabled,
+      isMappingEnabled => this.setIsMappingEnabled(isMappingEnabled),
     );
   }
 }

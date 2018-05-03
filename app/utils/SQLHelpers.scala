@@ -10,6 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import net.liftweb.common.Full
+import oxalis.security.SharingTokenContainer
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
@@ -40,16 +41,26 @@ object SQLClient {
 
 trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
 
-  def run[R](query: DBIOAction[R, NoStream, Nothing]): Fox[R] = {
+  lazy val transactionSerializationError = "could not serialize access"
+
+  def run[R](query: DBIOAction[R, NoStream, Nothing], retryCount: Int = 0, retryIfErrorContains: List[String] = List()): Fox[R] = {
     val foxFuture = SQLClient.db.run(query.asTry).map { result: Try[R] =>
       result match {
         case Success(res) => {
           Fox.successful(res)
         }
         case Failure(e: Throwable) => {
-          logError(e, query)
-          reportErrorToNewrelic(e, query)
-          Fox.failure("SQL Failure: " + e.getMessage)
+          val msg = e.getMessage
+          if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
+            logger.debug(s"Retrying SQL Query (${retryCount} remaining) due to ${msg}")
+            Thread.sleep(20)
+            run(query, retryCount - 1, retryIfErrorContains)
+          }
+          else {
+            logError(e, query)
+            reportErrorToNewrelic(e, query)
+            Fox.failure("SQL Failure: " + e.getMessage)
+          }
         }
       }
     }
@@ -102,7 +113,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
   def collectionName: String
   def existingCollectionName = collectionName + "_"
 
-  def anonymousReadAccessQ: String = "false"
+  def anonymousReadAccessQ(sharingToken: Option[String]): String = "false"
   def readAccessQ(requestingUserId: ObjectId): String = "true"
   def updateAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
   def deleteAccessQ(requestingUserId: ObjectId): String = readAccessQ(requestingUserId)
@@ -115,7 +126,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
       } yield {
         userIdBox match {
           case Full(userId) => "(" + readAccessQ(userId) + ")"
-          case _ => "(" + anonymousReadAccessQ + ")"
+          case _ => "(" + anonymousReadAccessQ(sharingTokenFromCtx) + ")"
         }
       }
     }
@@ -151,12 +162,23 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
     }
   }
 
+  private def sharingTokenFromCtx(implicit ctx: DBAccessContext): Option[String] = {
+    ctx.data match {
+      case Some(sharingTokenContainer: SharingTokenContainer) => Some(sanitize(sharingTokenContainer.sharingToken))
+      case _ => None
+    }
+  }
+
 }
 
 trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
   def collection: TableQuery[X]
   def collectionName = collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 
+  def columnsList = collection.baseTableRow.create_*.map(_.name).toList
+  def columns = columnsList.mkString(", ")
+  def columnsWithPrefix(prefix: String) = columnsList.map(prefix + _).mkString(", ")
+  
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 

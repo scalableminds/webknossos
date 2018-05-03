@@ -8,6 +8,7 @@ import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEve
 import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation._
 import models.basics.SecuredBaseDAO
@@ -24,25 +25,30 @@ import play.api.libs.json.{JsNull, JsObject, Json}
 import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
-import utils.{ObjectId, SQLDAO}
+import slick.jdbc.TransactionIsolation.Serializable
+import utils.{ObjectId, SQLClient, SQLDAO}
+import views.html.helper.select
+
+import scala.util.Random
 
 
 case class TaskSQL(
-                  _id: ObjectId,
-                  _project: ObjectId,
-                  _script: Option[ObjectId],
-                  _taskType: ObjectId,
-                  _team: ObjectId,
-                  neededExperience: Experience,
-                  totalInstances: Long,
-                  tracingTime: Option[Long],
-                  boundingBox: Option[BoundingBox],
-                  editPosition: Point3D,
-                  editRotation: Vector3D,
-                  creationInfo: Option[String],
-                  created: Long = System.currentTimeMillis(),
-                  isDeleted: Boolean = false
+                    _id: ObjectId,
+                    _project: ObjectId,
+                    _script: Option[ObjectId],
+                    _taskType: ObjectId,
+                    _team: ObjectId,
+                    neededExperience: Experience,
+                    totalInstances: Long,
+                    tracingTime: Option[Long],
+                    boundingBox: Option[BoundingBox],
+                    editPosition: Point3D,
+                    editRotation: Vector3D,
+                    creationInfo: Option[String],
+                    created: Long = System.currentTimeMillis(),
+                    isDeleted: Boolean = false
                   )
 
 object TaskSQL {
@@ -111,7 +117,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TasksRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TasksRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -119,7 +125,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[TasksRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
@@ -127,40 +133,78 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def findAllByTaskType(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where _taskType = ${taskTypeId.id} and #${accessQuery}".as[TasksRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where _taskType = ${taskTypeId.id} and #${accessQuery}".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
   def findAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}".as[TasksRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where _project = ${projectId.id} and #${accessQuery}".as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
-  def findAllAssignableFor(userId: ObjectId, teamIds: List[ObjectId], limit: Option[Int])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
-    val q = sql"""
-           select webknossos.tasks_.*
+
+
+  private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId]) =
+    s"""
+        select ${columnsWithPrefix("webknossos.tasks_.")}
            from
-             (webknossos.tasks_
-             join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id)
+             webknossos.tasks_
+             join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id
              join
-               (select *
+               (select domain, value
                 from webknossos.user_experiences
-                where _user = ${userId.id})
+                where _user = '${userId.id}')
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-             left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.task_instances.openInstances > 0
-                 and webknossos.tasks_._team in #${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+                 and webknossos.tasks_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
                  and not webknossos.projects_.paused
-           order by webknossos.projects_.priority
-           limit ${limit};
+           order by webknossos.projects_.priority desc
+           limit 1
       """
+
+  def assignNext(userId: ObjectId, teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[(TaskSQL, ObjectId)] = {
+
+    val annotationId = ObjectId.generate
+    val dummyTracingId = Random.alphanumeric.take(36).mkString
+
+    val insertAnnotationQ = sqlu"""
+           with task as (#${findNextTaskQ(userId, teamIds)})
+
+           insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+           select ${annotationId.id}, 'dummyDatasetId', _id, 'dummyTeamId', 'dummyUserId', ${dummyTracingId},
+                    'skeleton', '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
+                    '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
+                     ${new java.sql.Timestamp(System.currentTimeMillis)}, false
+           from task
+      """
+
+    val findTaskOfInsertedAnnotationQ =
+      sql"""
+           select #${columnsWithPrefix("t.")}
+           from webknossos.annotations_ a
+           join webknossos.tasks_ t on a._task = t._id
+           where a._id = ${annotationId.id}
+         """.as[TasksRow]
+
     for {
-      r <- run(q.as[TasksRow])
-      parsed <- Fox.combined(r.toList.map(parse))
+      _ <- run(insertAnnotationQ.withTransactionIsolation(Serializable),
+               retryCount = 50, retryIfErrorContains = List(transactionSerializationError, "Negative openInstances for Task"))
+      rList <- run(findTaskOfInsertedAnnotationQ)
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
+    } yield (parsed, annotationId)
+  }
+
+  def peekNextAssignment(userId: ObjectId, teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[TaskSQL] = {
+    for {
+      rList <- run(sql"#${findNextTaskQ(userId, teamIds)}".as[TasksRow])
+      r <- rList.headOption.toFox
+      parsed <- parse(r)
     } yield parsed
   }
 
@@ -176,7 +220,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     for {
       projectFilter <- projectFilterFox
       accessQuery <- readAccessQuery
-      q = sql"select * from webknossos.tasks where webknossos.tasks.isDeleted = false and #${projectFilter} and #${taskTypeFilter} and #${idsFilter} and #${accessQuery} limit 1000"
+      q = sql"select #${columns} from webknossos.tasks where webknossos.tasks.isDeleted = false and #${projectFilter} and #${taskTypeFilter} and #${idsFilter} and #${accessQuery} limit 1000"
       r <- run(q.as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -203,8 +247,8 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                           where t._project = ${projectId.id}
                           group by t._project""".as[Int])
       firstResult <- result.headOption
-      } yield firstResult
-    }
+    } yield firstResult
+  }
 
   def countAllOpenInstancesGroupedByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
     for {
@@ -440,11 +484,18 @@ object TaskDAO {
       tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
     } yield tasks
 
-  def findAllAssignableFor(user: User, teamIds: List[BSONObjectID], limit: Option[Int] = None)(implicit ctx: DBAccessContext): Fox[List[Task]] = {
+  def assignNext(user: User, teamIds: List[BSONObjectID])(implicit ctx: DBAccessContext): Fox[(Task, ObjectId)] = {
     for {
-      tasksSQL <- TaskSQLDAO.findAllAssignableFor(ObjectId.fromBsonId(user._id), teamIds.map(ObjectId.fromBsonId(_)), limit)
-      tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
-    } yield tasks
+      (taskSQL, initializingAnnotationId) <- TaskSQLDAO.assignNext(ObjectId.fromBsonId(user._id), teamIds.map(ObjectId.fromBsonId(_)))
+      task <- Task.fromTaskSQL(taskSQL)
+    } yield (task, initializingAnnotationId)
+  }
+
+  def peekNextAssignment(user: User, teamIds: List[BSONObjectID])(implicit ctx: DBAccessContext): Fox[Task] = {
+    for {
+      taskSQL <- TaskSQLDAO.peekNextAssignment(ObjectId.fromBsonId(user._id), teamIds.map(ObjectId.fromBsonId(_)))
+      task <- Task.fromTaskSQL(taskSQL)
+    } yield task
   }
 
   def findAllByFilterByProjectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[Task]] =

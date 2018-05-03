@@ -32,7 +32,7 @@ CREATE TABLE webknossos.analytics(
 
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
-CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled');
+CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _dataSet CHAR(24) NOT NULL,
@@ -58,17 +58,19 @@ CREATE TABLE webknossos.annotations(
 CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _dataStore CHAR(256) NOT NULL ,
-  _team CHAR(24) NOT NULL,
+  _organization CHAR(24) NOT NULL,
   defaultConfiguration JSONB,
   description TEXT,
+  displayName VARCHAR(256),
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL UNIQUE,
   scale webknossos.VECTOR3,
   status VARCHAR(1024) NOT NULL DEFAULT '',
+  sharingToken CHAR(256),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (name, _team)
+  UNIQUE (name, _organization)
 );
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
@@ -166,14 +168,33 @@ CREATE VIEW webknossos.task_instances AS
   left join (select * from webknossos.annotations a where typ = 'Task' and a.state != 'Cancelled' AND a.isDeleted = false) as annotations ON t._id = annotations._task
   GROUP BY t._id, t.totalinstances;
 
+CREATE FUNCTION webknossos.checkOpenAssignments() RETURNS trigger AS $$
+  DECLARE
+    cur CURSOR for SELECT openInstances FROM webknossos.task_instances where NEW.typ = 'Task' and _id = NEW._task;
+  BEGIN
+    IF NEW.typ = 'Task' THEN
+      FOR rec IN cur LOOP
+        IF rec.openInstances < 0 THEN
+          RAISE EXCEPTION 'Negative openInstances for Task (%)', NEW._task;
+        END IF;
+      END LOOP;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER checkOpenAssignmentsTrigger
+AFTER INSERT ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.checkOpenAssignments();
+
+
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _owner CHAR(24) NOT NULL,
-  _parent CHAR(24),
-  name VARCHAR(256) NOT NULL UNIQUE CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
-  behavesLikeRootTeam BOOLEAN,
+  _organization CHAR(24) NOT NULL,
+  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE (name, _organization)
 );
 
 CREATE TABLE webknossos.timespans(
@@ -187,10 +208,19 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TABLE webknossos.organizations(
+  _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _organizationTeam CHAR(24) NOT NULL UNIQUE,
+  name VARCHAR(256) NOT NULL,
+  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isDeleted BOOLEAN NOT NULL DEFAULT false
+);
+
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
+  _organization CHAR(24) NOT NULL,
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
@@ -202,16 +232,16 @@ CREATE TABLE webknossos.users(
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
+  isAdmin BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TYPE webknossos.TEAM_ROLES AS ENUM ('user', 'admin');
 CREATE TABLE webknossos.user_team_roles(
   _user CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
-  role webknossos.TEAM_ROLES NOT NULL,
+  isTeamManager BOOLEAN NOT NULL DEFAULT false,
   PRIMARY KEY (_user, _team)
 );
 
@@ -255,6 +285,7 @@ CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NO
 CREATE VIEW webknossos.tasks_ AS SELECT * FROM webknossos.tasks WHERE NOT isDeleted;
 CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
 CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NOT isDeleted;
+CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 
@@ -318,62 +349,3 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.user_experiences
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
-
-
-
-
-
-
-
-
--- EVOLUTION 001 add organizations (schema only, for slick code generation)
-
-
-
-
-START TRANSACTION;
-
-CREATE TABLE webknossos.organizations(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organizationTeam CHAR(24) NOT NULL UNIQUE,
-  name VARCHAR(256) NOT NULL,
-  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
-);
-
-CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
-
-
-DROP VIEW webknossos.teams_;
-ALTER TABLE webknossos.teams ADD COLUMN _organization CHAR(24);
-ALTER TABLE webknossos.teams ALTER COLUMN _organization SET NOT NULL;
-ALTER TABLE webknossos.teams DROP COLUMN _owner;
-ALTER TABLE webknossos.teams DROP COLUMN _parent;
-ALTER TABLE webknossos.teams DROP COLUMN behavesLikeRootTeam;
-ALTER TABLE webknossos.teams DROP CONSTRAINT teams_name_key;
-ALTER TABLE webknossos.teams ADD CONSTRAINT teams_name__organization_key UNIQUE(name, _organization);
-CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
-
-DROP VIEW webknossos.dataSets_;
-ALTER TABLE webknossos.dataSets ADD COLUMN _organization CHAR(24);
-ALTER TABLE webknossos.dataSets ALTER COLUMN _organization SET NOT NULL;
-ALTER TABLE webknossos.dataSets DROP CONSTRAINT datasets_name__team_key;
-ALTER TABLE webknossos.dataSets DROP COLUMN _team;
-ALTER TABLE webknossos.dataSets ADD CONSTRAINT datasets_name__organization_key UNIQUE(name, _organization);
-CREATE VIEW webknossos.dataSets_ AS SELECT * FROM webknossos.dataSets WHERE NOT isDeleted;
-
-
-ALTER TABLE webknossos.user_team_roles ADD COLUMN isTeamManager BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE webknossos.user_team_roles DROP COLUMN role;
-DROP TYPE webknossos.TEAM_ROLES;
-
-
-DROP VIEW webknossos.users_;
-ALTER TABLE webknossos.users ADD COLUMN isAdmin BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE webknossos.users ADD COLUMN _organization CHAR(24);
-ALTER TABLE webknossos.users ALTER COLUMN _organization SET NOT NULL;
-CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
-
-
-
-COMMIT TRANSACTION;

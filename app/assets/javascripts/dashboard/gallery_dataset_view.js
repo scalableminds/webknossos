@@ -122,7 +122,11 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           {dataset.dataStore.typ !== "ndstore" ? createVolumeTracingMenu : null}
         </div>
         <div className="dataset-description">
-          <h3>{dataset.name}</h3>
+          <h3>
+            {dataset.displayName != null && dataset.displayName !== ""
+              ? dataset.displayName
+              : dataset.name}
+          </h3>
           <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
           {description}
         </div>
@@ -135,7 +139,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       <Row gutter={padding}>
         {Utils.filterWithSearchQueryAND(
           this.props.datasets.filter(ds => ds.isActive),
-          ["name", "owningTeam", "description"],
+          ["name", "description"],
           this.props.searchQuery,
         )
           .sort(Utils.localeCompareBy("formattedCreated", false))

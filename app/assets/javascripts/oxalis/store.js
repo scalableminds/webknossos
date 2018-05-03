@@ -44,6 +44,8 @@ import type {
   APIScriptType,
   APITaskType,
   APIUserType,
+  APIMappingType,
+  APIDatasetType,
 } from "admin/api_flow_types";
 
 export type CommentType = {
@@ -97,12 +99,6 @@ export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
-export type MappingType = {
-  +parent?: string,
-  +name: string,
-  +classes?: Array<Array<number>>,
-};
-
 export type VolumeCellType = {
   +id: number,
 };
@@ -117,8 +113,9 @@ export type DataLayerType = {
   +category: CategoryType,
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<Vector3>,
+  +maxZoomStep: number, // denotes for which maximum zoomStep data exists
   +elementClass: ElementClassType,
-  +mappings?: Array<MappingType>,
+  +mappings?: Array<APIMappingType>,
 };
 
 export type SegmentationDataLayerType = DataLayerType & {
@@ -132,14 +129,6 @@ export type AllowedModeType = APIAllowedModeType;
 export type SettingsType = APISettingsType;
 
 export type DataStoreInfoType = APIDataStoreType;
-
-export type DatasetType = {
-  +name: string,
-  +dataStore: DataStoreInfoType,
-  +scale: Vector3,
-  +dataLayers: Array<DataLayerType>,
-  +isPublic: boolean,
-};
 
 export type TreeMapType = { +[number]: TreeType };
 export type TemporaryMutableTreeMapType = { [number]: TreeType };
@@ -214,15 +203,15 @@ export type DatasetLayerConfigurationType = {
 };
 
 export type DatasetConfigurationType = {
-  +datasetName: string,
   +fourBit: boolean,
   +interpolation: boolean,
   +keyboardDelay: number,
   +layers: {
     [name: string]: DatasetLayerConfigurationType,
   },
-  +quality: number,
+  +quality: 0 | 1 | 2,
   +segmentationOpacity: number,
+  +highlightHoveredCellId: boolean,
   +position?: Vector3,
   +zoom?: number,
   +rotation?: Vector3,
@@ -258,8 +247,10 @@ export type TemporaryConfigurationType = {
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
-  +brushPosition: ?Vector2,
+  +mousePosition: ?Vector2,
   +brushSize: number,
+  +isMappingEnabled: boolean,
+  +mappingSize: number,
 };
 
 export type ScriptType = APIScriptType;
@@ -326,7 +317,7 @@ export type OxalisState = {
   +datasetConfiguration: DatasetConfigurationType,
   +userConfiguration: UserConfigurationType,
   +temporaryConfiguration: TemporaryConfigurationType,
-  +dataset: DatasetType,
+  +dataset: APIDatasetType,
   +tracing: TracingType,
   +task: ?TaskType,
   +save: SaveStateType,
@@ -337,13 +328,13 @@ export type OxalisState = {
 
 export const defaultState: OxalisState = {
   datasetConfiguration: {
-    datasetName: "",
     fourBit: true,
     interpolation: false,
     keyboardDelay: 342,
     layers: {},
     quality: 0,
     segmentationOpacity: 20,
+    highlightHoveredCellId: true,
   },
   userConfiguration: {
     clippingDistance: 50,
@@ -374,20 +365,35 @@ export const defaultState: OxalisState = {
     viewMode: Constants.MODE_PLANE_TRACING,
     flightmodeRecording: false,
     controlMode: ControlModeEnum.VIEW,
-    brushPosition: null,
+    mousePosition: null,
     brushSize: 50,
+    isMappingEnabled: false,
+    mappingSize: 0,
   },
   task: null,
   dataset: {
     name: "Test Dataset",
-    scale: [5, 5, 5],
+    created: 123,
+    dataSource: {
+      dataLayers: [],
+      scale: [5, 5, 5],
+      id: {
+        name: "Test Dataset",
+        team: "",
+      },
+    },
     isPublic: false,
+    isActive: true,
+    isEditable: true,
     dataStore: {
       name: "localhost",
       url: "http://localhost:9000",
       typ: "webknossos-store",
     },
-    dataLayers: [],
+    owningOrganization: "Connectomics department",
+    description: null,
+    displayName: "Awesome Test Dataset",
+    allowedTeams: [],
   },
   tracing: {
     annotationId: "",

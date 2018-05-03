@@ -38,44 +38,49 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
       });
     }
 
-    case "INITIALIZE_SETTINGS": {
+    case "SET_MOUSE_POSITION": {
       return update(state, {
-        datasetConfiguration: { $merge: action.initialDatasetSettings },
-        userConfiguration: { $merge: action.initialUserSettings },
+        temporaryConfiguration: { mousePosition: { $set: action.position } },
       });
     }
 
-    case "SET_DATASET": {
-      const dataset = {
-        dataStore: action.dataset.dataStore,
-        name: action.dataset.dataSource.id.name,
-        scale: action.dataset.dataSource.scale,
-        dataLayers: action.dataset.dataSource.dataLayers,
-      };
-
-      // set defaults for every data layer if not yet present
-      if (_.isEmpty(state.datasetConfiguration.layers)) {
-        const colorLayers = _.filter(dataset.dataLayers, layer => layer.category === "color");
-        const layerSettingsDefaults = _.transform(
-          colorLayers,
-          (result, layer) => {
+    case "INITIALIZE_SETTINGS": {
+      // Only color layers need layer settings
+      const colorLayers = _.filter(
+        state.dataset.dataSource.dataLayers,
+        layer => layer.category === "color",
+      );
+      const initialLayerSettings = action.initialDatasetSettings.layers;
+      const layerSettingsDefaults = _.transform(
+        colorLayers,
+        (result, layer) => {
+          if (initialLayerSettings != null && initialLayerSettings[layer.name] != null) {
+            result[layer.name] = initialLayerSettings[layer.name];
+          } else {
+            // Set defaults for each layer without settings
             result[layer.name] = {
               brightness: 0,
               contrast: 1,
               color: [255, 255, 255],
             };
-          },
-          {},
-        );
+          }
+        },
+        {},
+      );
 
-        return update(state, {
-          datasetConfiguration: { layers: { $set: layerSettingsDefaults } },
-          dataset: { $set: dataset },
-        });
-      }
+      const initialDatasetSettingsWithDefaults = Object.assign({}, action.initialDatasetSettings, {
+        layers: layerSettingsDefaults,
+      });
 
       return update(state, {
-        dataset: { $set: dataset },
+        datasetConfiguration: { $merge: initialDatasetSettingsWithDefaults },
+        userConfiguration: { $merge: action.initialUserSettings },
+      });
+    }
+
+    case "SET_DATASET": {
+      return update(state, {
+        dataset: { $set: action.dataset },
       });
     }
 
@@ -97,6 +102,16 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
     case "SET_CONTROL_MODE": {
       return update(state, {
         temporaryConfiguration: { controlMode: { $set: action.controlMode } },
+      });
+    }
+    case "SET_MAPPING_ENABLED": {
+      return update(state, {
+        temporaryConfiguration: { isMappingEnabled: { $set: action.isMappingEnabled } },
+      });
+    }
+    case "SET_MAPPING_SIZE": {
+      return update(state, {
+        temporaryConfiguration: { mappingSize: { $set: action.mappingSize } },
       });
     }
     default:

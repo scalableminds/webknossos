@@ -20,16 +20,16 @@ GET           /api/auth/logout                                                  
 GET           /api/auth/sso                                                     controllers.Authentication.singleSignOn(sso: String, sig: String)
 
 # Configurations
-GET           /api/userConfigurations/default                                   controllers.ConfigurationController.default
 GET           /api/user/userConfiguration                                       controllers.ConfigurationController.read
 POST          /api/user/userConfiguration                                       controllers.ConfigurationController.update
-GET           /api/dataSetConfigurations/default                                controllers.ConfigurationController.defaultDataSet
 GET           /api/dataSetConfigurations/:dataSetName                           controllers.ConfigurationController.readDataSet(dataSetName: String)
 POST          /api/dataSetConfigurations/:dataSetName                           controllers.ConfigurationController.updateDataSet(dataSetName: String)
+GET           /api/dataSetConfigurations/default/:dataSetName                   controllers.ConfigurationController.readDataSetDefault(dataSetName: String)
+POST          /api/dataSetConfigurations/default/:dataSetName                   controllers.ConfigurationController.updateDataSetDefault(dataSetName: String)
 
 # Users
 GET           /api/user/tasks/request                                           controllers.TaskController.request
-GET           /api/user/tasks/peek                                              controllers.TaskController.peekNext(limit: Int ?= 10)
+GET           /api/user/tasks/peek                                              controllers.TaskController.peekNext
 
 GET           /api/users                                                        controllers.UserController.list
 GET           /api/user                                                         controllers.UserController.current
@@ -55,9 +55,11 @@ GET           /api/teams/:id/progressOverview                                   
 POST          /api/datasets/:dataSetName/createExplorational                    controllers.AnnotationController.createExplorational(dataSetName: String)
 GET           /api/datasets                                                     controllers.DataSetController.list
 POST          /api/datasets                                                     controllers.DataSetController.create(typ: String)
-GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String)
+GET           /api/datasets/:dataSetName                                        controllers.DataSetController.read(dataSetName: String, sharingToken: Option[String])
 POST          /api/datasets/:dataSetName                                        controllers.DataSetController.update(dataSetName: String)
 GET           /api/datasets/:dataSetName/accessList                             controllers.DataSetController.accessList(dataSetName: String)
+GET           /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.getSharingToken(dataSetName: String)
+DELETE        /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.deleteSharingToken(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
 GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
 

@@ -54,7 +54,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
           if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
             logger.debug(s"Retrying SQL Query (${retryCount} remaining) due to ${msg}")
             Thread.sleep(20)
-            run(query, retryCount - 1)
+            run(query, retryCount - 1, retryIfErrorContains)
           }
           else {
             logError(e, query)

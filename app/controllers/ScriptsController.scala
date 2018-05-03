@@ -69,7 +69,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   def delete(scriptId: String) = SecuredAction.async { implicit request =>
     for {
       oldScript <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
-      _ <- (oldScript._owner == request.identity.id) ?~> Messages("script.notOwner")
+      _ <- (oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
       _ <- ScriptDAO.removeById(scriptId) ?~> Messages("script.notFound")
       _ <- TaskService.removeScriptFromTasks(scriptId) ?~> Messages("script.taskRemoval.failed")
     } yield {

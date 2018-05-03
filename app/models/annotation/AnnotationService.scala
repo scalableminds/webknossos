@@ -29,9 +29,6 @@ import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
 import scala.concurrent.Future
-import scala.collection.{IterableLike, TraversableLike}
-import scala.runtime.Tuple3Zipped
-import scala.collection.generic.Growable
 
 object AnnotationService
   extends BoxImplicits
@@ -174,7 +171,7 @@ object AnnotationService
 
   def abortInitializedAnnotationOnFailure(initializingAnnotationId: ObjectId, insertedAnnotationFox: Box[Annotation]) = {
     insertedAnnotationFox match {
-      case Full(_) => Fox.successful()
+      case Full(_) => Fox.successful(())
       case _ => AnnotationSQLDAO.abortInitializingAnnotation(initializingAnnotationId)
     }
   }
@@ -221,13 +218,17 @@ object AnnotationService
     AnnotationDAO.logTime(time, _annotation)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
-    val tracingsNamesAndScalesAsTuples = getTracingsScalesAndNamesFor(annotations)
+    val tracingsNamesAndScalesAsTuples = mapBatched(annotations, getTracingsScalesAndNamesFor, batchSize = 1000)
 
     for {
       tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale, Annotation)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
       nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._4, tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
+  }
+
+  private def mapBatched[T, R](inputList: List[T], block: List[T] => List[R], batchSize: Int): List[R] = {
+    inputList.grouped(batchSize).map(block(_)).toList.flatten
   }
 
   private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext) = {

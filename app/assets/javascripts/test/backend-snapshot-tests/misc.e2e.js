@@ -9,12 +9,22 @@ test.before("Change token", async () => {
   setCurrToken(tokenUserA);
 });
 
-test("Load all datastores", async t => {
+test("datastores()", async t => {
   const datastores = await api.getDatastores();
   t.snapshot(datastores, { id: "misc-datastores" });
 });
 
-test("Load active user", async t => {
+test("activeUser()", async t => {
   const activeUser = await api.getActiveUser();
   t.snapshot(activeUser, { id: "misc-activeUser" });
+});
+
+test("getBuildInfo()", async t => {
+  const buildInfo = await api.getBuildInfo();
+  t.snapshot(buildInfo, { id: "misc-getBuildInfo" });
+});
+
+test("getFeatureToggles()", async t => {
+  const features = await api.getFeatureToggles();
+  t.snapshot(features, { id: "misc-getFeatureToggles" });
 });

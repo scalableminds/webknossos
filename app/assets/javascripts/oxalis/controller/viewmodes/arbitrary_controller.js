@@ -48,7 +48,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
 import api from "oxalis/api/internal_api";
 
-const CANVAS_SELECTOR = "#render-canvas";
+const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
 
 type Props = {
   onRender: () => void,
@@ -100,7 +100,15 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    this.input.mouse = new InputMouse(CANVAS_SELECTOR, {
+    if (!document.querySelector(arbitraryViewportSelector)) {
+      setTimeout(() => {
+        this.initMouse();
+      }, 500);
+      console.log("retrying init mouse");
+      return;
+    }
+    console.log("succ retried init mouse");
+    this.input.mouse = new InputMouse(arbitraryViewportSelector, {
       leftDownMove: (delta: Point2) => {
         if (this.props.viewMode === constants.MODE_ARBITRARY) {
           Store.dispatch(

@@ -14,6 +14,66 @@ import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants"
 import SceneController from "oxalis/controller/scene_controller";
 import { getCanvasExtent, getViewportPositionsForLayout } from "./viewport_calculations";
 
+// viewport render utils
+
+export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
+  const rendererSize = renderer.getSize();
+  setupRenderArea(
+    renderer,
+    0,
+    0,
+    renderer.domElement.width,
+    rendererSize.width,
+    rendererSize.height,
+    0xffffff,
+  );
+  renderer.clear();
+};
+
+export const getXYForId = (id: string, curWidth: number) => {
+  const inputCatcherDOM = document.getElementById(`inputcatcher_${id}`);
+  const layoutContainerDOM = document.getElementById("layoutContainer");
+  if (!inputCatcherDOM || !layoutContainerDOM) {
+    return [0, 0, 0, 0];
+  }
+
+  // if (inputCatcherDOM.closest(".lm_item_container").style.display) {
+  //   return [0, 0, 0, 0];
+  // }
+  const itemContainer = inputCatcherDOM.closest(".lm_item_container");
+  if (!itemContainer) {
+    return [0, 0, 0, 0];
+  }
+
+  const { left: containerX, top: containerY } = layoutContainerDOM.getBoundingClientRect();
+  const { left, top } = inputCatcherDOM.getBoundingClientRect();
+  const { scrollWidth, scrollHeight } = itemContainer;
+
+  // Returns the viewport's coordinates relative to the layout container (and the canvas)
+  // Width and height is cropped to the visible width/height of the scrollable container
+  return [
+    left - containerX,
+    top - containerY,
+    Math.min(curWidth, scrollWidth),
+    Math.min(curWidth, scrollHeight),
+  ];
+};
+
+export const setupRenderArea = (
+  renderer: THREE.WebGLRenderer,
+  x: number,
+  y: number,
+  fullExtent: number,
+  width: number,
+  height: number,
+  color: number,
+) => {
+  renderer.setViewport(x, y, fullExtent, fullExtent);
+  renderer.setScissor(x, y, width, height);
+  renderer.setScissorTest(true);
+  renderer.setClearColor(color, 1);
+};
+
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -131,26 +191,6 @@ class PlaneView {
 
       this.trigger("render");
 
-      const getXYForId = (id, curWidth) => {
-        const domElement = document.getElementById(`inputcatcher_${id}`);
-        const layoutContainer = document.getElementById("layoutContainer");
-        if (!domElement || !layoutContainer) {
-          return [0, 0, 0, 0];
-        }
-        if (domElement.closest(".lm_item_container").style.display) {
-          return [0, 0, 0, 0];
-        }
-        const { x: containerX, y: containerY } = layoutContainer.getBoundingClientRect();
-        const { x, y } = domElement.getBoundingClientRect();
-        const { scrollWidth, scrollHeight } = domElement.closest(".lm_item_container");
-        return [
-          x - containerX,
-          y - containerY,
-          Math.min(curWidth, scrollWidth),
-          Math.min(curWidth, scrollHeight),
-        ];
-      };
-
       const viewport = {
         [OrthoViews.PLANE_XY]: getXYForId("PLANE_XY", this.curWidth),
         [OrthoViews.PLANE_YZ]: getXYForId("PLANE_YZ", this.curWidth),
@@ -159,29 +199,13 @@ class PlaneView {
       };
       renderer.autoClear = true;
 
-      const setupRenderArea = (x, y, fullExtent, width, height, color) => {
-        renderer.setViewport(x, y, fullExtent, fullExtent);
-        renderer.setScissor(x, y, width, height);
-        renderer.setScissorTest(true);
-        renderer.setClearColor(color, 1);
-      };
-
-      const rendererSize = renderer.getSize();
-      setupRenderArea(
-        0,
-        0,
-        renderer.domElement.width,
-        rendererSize.width,
-        rendererSize.height,
-        0xffffff,
-      );
-      renderer.clear();
+      clearCanvas(renderer);
 
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
         const [x, y, width, height] = viewport[plane];
         if (width > 0 && height > 0) {
-          setupRenderArea(x, y, this.curWidth, width, height, OrthoViewColors[plane]);
+          setupRenderArea(renderer, x, y, this.curWidth, width, height, OrthoViewColors[plane]);
           renderer.render(scene, this.cameras[plane]);
         }
       }
@@ -206,15 +230,11 @@ class PlaneView {
     );
     this.curWidth = viewportWidth;
 
-    const [canvasWidth, canvasHeight] = getCanvasExtent(
-      Store.getState().viewModeData.plane.activeLayout,
-      viewportWidth,
-    );
+    const [canvasWidth, canvasHeight] = getCanvasExtent(viewportWidth);
 
     const canvasAndLayoutContainer = document.getElementById("canvasAndLayoutContainer");
     if (canvasAndLayoutContainer) {
       const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
-      // document.body.clientWidth
       SceneController.renderer.setSize(width, height);
     }
 

@@ -1,0 +1,161 @@
+/**
+ * tracing_layout_view.js
+ * @flow
+ */
+
+import * as React from "react";
+import _ from "lodash";
+import OxalisController from "oxalis/controller";
+import SettingsView from "oxalis/view/settings/settings_view";
+import ActionBarView from "oxalis/view/action_bar_view";
+import TracingView from "oxalis/view/tracing_view";
+import { Layout, Icon, Row } from "antd";
+import { location } from "libs/window";
+import { withRouter } from "react-router-dom";
+import ButtonComponent from "oxalis/view/components/button_component";
+import { Provider, connect } from "react-redux";
+import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
+import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
+import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
+import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
+import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
+import InputCatcher from "oxalis/view/input_catcher";
+import Constants, { ControlModeEnum, OrthoViews } from "oxalis/constants";
+import GoldenLayoutAdapter from "./golden_layout_adapter";
+import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
+
+import Store from "oxalis/store";
+import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
+import type { ControlModeType, ModeType } from "oxalis/constants";
+
+const { Header, Sider } = Layout;
+
+type StateProps = {
+  viewMode: ModeType,
+  controlMode: ControlModeType,
+};
+
+type Props = {
+  ...StateProps,
+  initialTracingType: TracingTypeTracingType,
+  initialAnnotationId: string,
+  initialControlmode: ControlModeType,
+};
+
+type State = {
+  isSettingsCollapsed: boolean,
+};
+
+class TracingLayoutView extends React.PureComponent<Props, State> {
+  state = {
+    isSettingsCollapsed: true,
+  };
+
+  componentWillUnmount() {
+    // do a complete page refresh to make sure all tracing data is garbage
+    // collected and all events are canceled, etc.
+    location.reload();
+  }
+
+  handleSettingsCollapse = () => {
+    this.setState({
+      isSettingsCollapsed: !this.state.isSettingsCollapsed,
+    });
+  };
+
+  render() {
+    const layoutType = determineLayout(this.props.controlMode, this.props.viewMode);
+
+    function determineLayout(controlMode, viewMode) {
+      if (controlMode === ControlModeEnum.VIEW) {
+        return "orthogonalView";
+      }
+
+      if (!Constants.MODES_SKELETON.includes(viewMode)) {
+        return "VolumeTracingView";
+      }
+
+      const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
+      if (isArbitraryMode) {
+        return "arbitrary";
+      } else {
+        return "orthogonal";
+      }
+    }
+
+    return (
+      <div>
+        <OxalisController
+          initialTracingType={this.props.initialTracingType}
+          initialAnnotationId={this.props.initialAnnotationId}
+          initialControlmode={this.props.initialControlmode}
+        />
+
+        <Layout className="tracing-layout">
+          <Header style={{ flex: "0 1 auto", zIndex: 210, minHeight: 48 }}>
+            <ButtonComponent onClick={this.handleSettingsCollapse}>
+              <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
+              Settings
+            </ButtonComponent>
+            <ActionBarView />
+          </Header>
+          <Layout style={{ marginTop: 64 }} style={{ display: "flex" }}>
+            <Sider
+              collapsible
+              trigger={null}
+              collapsed={this.state.isSettingsCollapsed}
+              collapsedWidth={0}
+              width={350}
+              style={{ zIndex: 100 }}
+            >
+              <SettingsView />
+            </Sider>
+
+            <div
+              id="canvasAndLayoutContainer"
+              style={{ display: "flex", flexDirection: "column", flex: "1 1 auto" }}
+            >
+              <TracingView renderCanvas={true} />
+              <GoldenLayoutAdapter
+                id="layoutContainer"
+                style={{ display: "block", height: "100%", width: "100%", flex: "1 1 auto" }}
+                layoutKey={layoutType}
+                layoutConfigGetter={getLayoutConfig}
+                onLayoutChange={(layoutConfig, layoutKey) => {
+                  window.needsRerender = true;
+                  storeLayoutConfig(layoutConfig, layoutKey);
+                }}
+              >
+                <InputCatcher viewportID={OrthoViews.PLANE_XY} key="xy" portalKey="xy" />
+                <InputCatcher viewportID={OrthoViews.PLANE_YZ} key="yz" portalKey="yz" />
+                <InputCatcher viewportID={OrthoViews.PLANE_XZ} key="xz" portalKey="xz" />
+                <InputCatcher viewportID={OrthoViews.TDView} key="td" portalKey="td" />
+
+                <InputCatcher
+                  viewportID="arbitraryViewport"
+                  key="arbitraryViewport"
+                  portalKey="arbitraryViewport"
+                />
+
+                <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />
+                <TreesTabView key="TreesTabView" portalKey="TreesTabView" />
+                <CommentTabView key="CommentTabView" portalKey="CommentTabView" />
+                <AbstractTreeTabView key="AbstractTreeTabView" portalKey="AbstractTreeTabView" />
+                <MappingInfoView key="MappingInfoView" portalKey="MappingInfoView" />
+              </GoldenLayoutAdapter>
+            </div>
+          </Layout>
+        </Layout>
+      </div>
+    );
+  }
+}
+
+function mapStateToProps(state: OxalisState): StateProps {
+  return {
+    viewMode: state.temporaryConfiguration.viewMode,
+    controlMode: state.temporaryConfiguration.controlMode,
+  };
+}
+
+export default connect(mapStateToProps)(withRouter(TracingLayoutView));

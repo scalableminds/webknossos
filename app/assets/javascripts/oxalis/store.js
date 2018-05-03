@@ -298,13 +298,9 @@ export type PartialCameraData = {
   +position?: Vector3,
 };
 
-export type PlaneLayoutType = "two-rows-two-columns" | "one-row-four-columns";
-export const LayoutTypes: PlaneLayoutType[] = ["two-rows-two-columns", "one-row-four-columns"];
-
 export type PlaneModeData = {
   +activeViewport: OrthoViewType,
   +tdCamera: CameraData,
-  +activeLayout: PlaneLayoutType,
 };
 
 type ArbitraryModeData = null;
@@ -445,7 +441,6 @@ export const defaultState: OxalisState = {
         lookAt: [0, 0, 0],
         position: [0, 0, 0],
       },
-      activeLayout: "two-rows-two-columns",
     },
     arbitrary: null,
     flight: null,

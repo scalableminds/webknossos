@@ -14,7 +14,7 @@ import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
 import Imprint from "components/imprint";
 
-import TracingLayoutView from "oxalis/view/tracing_layout_view";
+import TracingLayoutView from "oxalis/view/layouting/tracing_layout_view";
 import DashboardView from "dashboard/dashboard_view";
 import SpotlightView from "dashboard/spotlight_view";
 import LoginView from "admin/auth/login_view";

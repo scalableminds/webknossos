@@ -12,6 +12,7 @@ import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import window from "libs/window";
+import { clearCanvas, getXYForId, setupRenderArea } from "./plane_view";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
@@ -143,10 +144,10 @@ class ArbitraryView {
       camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
 
-      renderer.setViewport(0, 0, this.width, this.width);
-      renderer.setScissor(0, 0, this.width, this.width);
-      renderer.setScissorTest(true);
-      renderer.setClearColor(0xffffff, 1);
+      clearCanvas(renderer);
+
+      const [x, y, width, height] = getXYForId("arbitraryViewport", this.width);
+      setupRenderArea(renderer, x, y, this.width, width, height, 0xffffff);
 
       renderer.render(scene, camera);
 
@@ -175,7 +176,14 @@ class ArbitraryView {
     // Call this after the canvas was resized to fix the viewport
     // Needs to be bound
     this.width = Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH;
-    SceneController.renderer.setSize(this.width, this.width);
+    // SceneController.renderer.setSize(this.width, this.width);
+
+    const canvasAndLayoutContainer = document.getElementById("canvasAndLayoutContainer");
+    if (canvasAndLayoutContainer) {
+      const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
+      SceneController.renderer.setSize(width, height);
+    }
+
     this.draw();
   }
 

@@ -114,17 +114,6 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
         temporaryConfiguration: { mappingSize: { $set: action.mappingSize } },
       });
     }
-    case "SET_PLANE_LAYOUT_ACTION": {
-      return update(state, {
-        viewModeData: {
-          plane: {
-            activeLayout: {
-              $set: action.layout,
-            },
-          },
-        },
-      });
-    }
     default:
     // pass;
   }

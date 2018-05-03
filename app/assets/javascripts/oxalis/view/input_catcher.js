@@ -16,7 +16,7 @@ type StateProps = {
 };
 
 type Props = StateProps & {
-  planeID: OrthoViewType,
+  viewportID: OrthoViewType | "arbitraryViewport",
 };
 
 function TDViewControls({ width }) {
@@ -39,51 +39,35 @@ function TDViewControls({ width }) {
   );
 }
 
-class InputCatchers extends React.PureComponent<Props, {}> {
-  handleContextMenu(event: SyntheticInputEvent<>) {
-    // hide contextmenu, while rightclicking a canvas
-    event.preventDefault();
-  }
+function ignoreContextMenu(event: SyntheticInputEvent<>) {
+  // hide contextmenu, while rightclicking a canvas
+  event.preventDefault();
+}
 
+class InputCatcher extends React.PureComponent<Props, {}> {
   render() {
     const width = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
+    const child =
+      this.props.viewportID === OrthoViews.TDView ? <TDViewControls width={width} /> : null;
 
-    const activeInputCatcher = this.props.activeViewport;
+    const { viewportID } = this.props;
+    const active = this.props.activeViewport === viewportID;
 
-    const InputCatcher = props => {
-      const { name, planeType } = props;
-      const active = activeInputCatcher === planeType;
-      return (
-        <div
-          id={`inputcatcher_${name}`}
-          onContextMenu={this.handleContextMenu}
-          data-value={planeType}
-          className="inputcatcher"
-          style={{
-            width,
-            height: width,
-            borderColor: active ? "#ff0" : "white",
-          }}
-        >
-          {props.children || null}
-        </div>
-      );
-    };
-
-    switch (this.props.planeID) {
-      case "xy":
-        return <InputCatcher name="PLANE_XY" planeType={OrthoViews.PLANE_XY} />;
-      case "yz":
-        return <InputCatcher name="PLANE_YZ" planeType={OrthoViews.PLANE_YZ} />;
-      case "xz":
-        return <InputCatcher name="PLANE_XZ" planeType={OrthoViews.PLANE_XZ} />;
-      case "td":
-        return (
-          <InputCatcher name="TDView" planeType={OrthoViews.TDView}>
-            <TDViewControls width={width} />
-          </InputCatcher>
-        );
-    }
+    return (
+      <div
+        id={`inputcatcher_${viewportID}`}
+        onContextMenu={ignoreContextMenu}
+        data-value={viewportID}
+        className="inputcatcher"
+        style={{
+          width,
+          height: width,
+          borderColor: active ? "#ff0" : "white",
+        }}
+      >
+        {child}
+      </div>
+    );
   }
 }
 
@@ -92,4 +76,4 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
   activeViewport: state.viewModeData.plane.activeViewport,
 });
 
-export default connect(mapStateToProps)(InputCatchers);
+export default connect(mapStateToProps)(InputCatcher);

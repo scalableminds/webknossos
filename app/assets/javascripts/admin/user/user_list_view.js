@@ -268,7 +268,17 @@ class UserListView extends React.PureComponent<Props, State> {
               render={(__, user: APIUserType) => (
                 <EditableTextLabel
                   value={user.email}
-                  onChange={newEmail => this.changeEmail(user, newEmail)}
+                  onChange={newEmail => {
+                    if (newEmail != user.email) {
+                      Modal.confirm({
+                        title: messages["users.change_email_title"],
+                        content: messages["users.change_email"]({
+                          newEmail: newEmail,
+                        }),
+                        onOk: () => this.changeEmail(user, newEmail),
+                      });
+                    }
+                  }}
                 />
               )}
             />

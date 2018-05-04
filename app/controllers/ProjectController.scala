@@ -70,7 +70,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
-        case Empty if request.identity.isTeamManagerOf(project._team) =>
+        case Empty if request.identity.isTeamManagerOfBLOCKING(project._team) =>
           for {
             _ <- ProjectDAO.insert(project)
             js <- Project.projectPublicWrites(project, request.identity)

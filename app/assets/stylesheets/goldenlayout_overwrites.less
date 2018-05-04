@@ -1,17 +1,47 @@
-.lm_content.lm_content.lm_content {
+.lm_goldenlayout.lm_goldenlayout.lm_goldenlayout,
+.lm_content.lm_content.lm_content.lm_content {
+  background: transparent;
+}
+
+.lm_content {
   // Panes should have a white background
   background: white;
   border: 1px solid #cccccc3d;
+
+  & > div,
+  & > div > div {
+    // Make sure that the wrapping divs within a content pane
+    // have the same height as the pane.
+    height: inherit;
+  }
+
+  & > div > div {
+    // By default, panes should get a scrollbar if the content is too large.
+    // This can be disabled (e.g., for the input catchers) by setting gl-dont-overflow
+    // as the class of the pane's child
+    overflow: auto;
+  }
+}
+
+.gl-dont-overflow {
+  overflow: hidden;
+  height: inherit;
 }
 
 .lm_header {
-  .lm_tab.lm_tab.lm_tab {
-    border: 1px solid #cccccc00;
-    background: #fafafa00;
-  }
+  background: white;
 
   .lm_tab {
-    .lm_title.lm_title.lm_title {
+    border: 1px solid #cccccc00;
+    background: white;
+    height: 25px !important;
+    line-height: 25px;
+
+    .lm_close_tab {
+      display: none;
+    }
+
+    .lm_title {
       // These properties are copied from antd's styling
       color: rgba(0, 0, 0, 0.65);
       font-size: 14px;
@@ -20,23 +50,17 @@
         "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
         Helvetica, Arial, sans-serif;
     }
-    .lm_close_tab {
-      display: none;
-    }
-
-    height: 25px !important;
-    line-height: 25px;
   }
 
-  .lm_tab.lm_active.lm_active.lm_active {
+  .lm_tab.lm_active {
     box-shadow: none;
   }
 }
 
-.lm_tab.lm_tab.lm_tab:hover,
-.lm_tab.lm_tab.lm_tab.lm_active {
+.lm_tab:hover,
+.lm_tab.lm_active {
   .lm_title {
-    background: #80808000 !important;
+    background: white !important;
     color: #1890ff !important;
     font-weight: 500;
   }

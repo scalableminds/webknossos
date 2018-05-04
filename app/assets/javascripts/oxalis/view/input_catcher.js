@@ -54,18 +54,20 @@ class InputCatcher extends React.PureComponent<Props, {}> {
     const active = this.props.activeViewport === viewportID;
 
     return (
-      <div
-        id={`inputcatcher_${viewportID}`}
-        onContextMenu={ignoreContextMenu}
-        data-value={viewportID}
-        className="inputcatcher"
-        style={{
-          width,
-          height: width,
-          borderColor: active ? "#ff0" : "white",
-        }}
-      >
-        {child}
+      <div className="gl-dont-overflow">
+        <div
+          id={`inputcatcher_${viewportID}`}
+          onContextMenu={ignoreContextMenu}
+          data-value={viewportID}
+          className="inputcatcher"
+          style={{
+            width,
+            height: width,
+            borderColor: active ? "#ff0" : "white",
+          }}
+        >
+          {child}
+        </div>
       </div>
     );
   }

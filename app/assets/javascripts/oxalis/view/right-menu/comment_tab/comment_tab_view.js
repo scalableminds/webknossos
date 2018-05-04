@@ -136,7 +136,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     const treesAndComments = this.getTreeComponents();
 
     return (
-      <div className="ignore-me flex-column">
+      <div className="flex-column" style={{ height: "inherit" }}>
         <InputGroup compact>
           <ButtonComponent onClick={this.previousComment}>
             <i className="fa fa-arrow-left" />
@@ -154,7 +154,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             <i className={sortingIconClass} />
           </ButtonComponent>
         </InputGroup>
-        <ul id="comment-list" className="ignore-me flex-overflow">
+        <ul id="comment-list" className="flex-overflow">
           {treesAndComments}
         </ul>
       </div>

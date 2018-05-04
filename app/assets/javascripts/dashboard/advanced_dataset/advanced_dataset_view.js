@@ -15,17 +15,11 @@ const { Column } = Table;
 type Props = {
   datasets: Array<DatasetType>,
   searchQuery: string,
-  updateDataset: DatasetType => void,
 };
 
-type State = {
-  selectedDataset: ?DatasetType,
-};
+type State = {};
 
 class AdvancedDatasetView extends React.PureComponent<Props, State> {
-  state = {
-    selectedDataset: null,
-  };
 
   render() {
     return (

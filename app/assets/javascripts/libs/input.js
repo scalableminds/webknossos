@@ -540,11 +540,8 @@ export class InputMouse {
   };
 
   getElementOffset() {
-    // Return the bounding rectangle relative to the top-left corner of the document
-    // todo: this is a workaround since inputcatchers are sometimes re-added to the dom and then
-    // the reference is outdated. touch support is probably broken due to this?
-    const domElement = document.getElementById(this.domElement.id);
-    const boundingRect = domElement.getBoundingClientRect();
+    const boundingRect = this.domElement.getBoundingClientRect();
+
     return _.extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,

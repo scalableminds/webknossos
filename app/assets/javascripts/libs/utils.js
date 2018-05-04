@@ -471,6 +471,18 @@ const Utils = {
     swap(arr, 3, 5);
     swap(arr, 3, 4);
   },
+
+  waitForSelector(selector: string): Promise<*> {
+    const tryToResolve = resolve => {
+      const el = document.querySelector(selector);
+      if (el) {
+        resolve(el);
+      } else {
+        window.requestAnimationFrame(() => tryToResolve(resolve));
+      }
+    };
+    return new Promise(tryToResolve);
+  },
 };
 
 export default Utils;

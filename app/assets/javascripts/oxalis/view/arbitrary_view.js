@@ -11,8 +11,9 @@ import Constants from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import window from "libs/window";
-import { clearCanvas, getXYForId, setupRenderArea } from "./plane_view";
+import { clearCanvas, getRelativeInputCatcherRect, setupRenderArea } from "./plane_view";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
@@ -146,8 +147,8 @@ class ArbitraryView {
 
       clearCanvas(renderer);
 
-      const [x, y, width, height] = getXYForId("arbitraryViewport", this.width);
-      setupRenderArea(renderer, x, y, this.width, width, height, 0xffffff);
+      const { left, top, width, height } = getRelativeInputCatcherRect("arbitraryViewport");
+      setupRenderArea(renderer, left, top, this.width, width, height, 0xffffff);
 
       renderer.render(scene, camera);
 
@@ -176,13 +177,10 @@ class ArbitraryView {
     // Call this after the canvas was resized to fix the viewport
     // Needs to be bound
     this.width = Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH;
-    // SceneController.renderer.setSize(this.width, this.width);
 
-    const canvasAndLayoutContainer = document.getElementById("canvasAndLayoutContainer");
-    if (canvasAndLayoutContainer) {
-      const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
-      SceneController.renderer.setSize(width, height);
-    }
+    getDesiredCanvasSize().map(([width, height]) =>
+      SceneController.renderer.setSize(width, height),
+    );
 
     this.draw();
   }

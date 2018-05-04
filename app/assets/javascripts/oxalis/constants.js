@@ -16,6 +16,12 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
+export type Rect = {
+  top: number,
+  left: number,
+  width: number,
+  height: number,
+};
 
 export const Vector2Indicies = [0, 1];
 export const Vector3Indicies = [0, 1, 2];

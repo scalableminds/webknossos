@@ -5,7 +5,7 @@ import { connect } from "react-redux";
 import { Button } from "antd";
 import Constants, { OrthoViews } from "oxalis/constants";
 import api from "oxalis/api/internal_api";
-import type { OrthoViewType } from "oxalis/constants";
+import type { Rect, OrthoViewType } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 
 const ButtonGroup = Button.Group;
@@ -42,6 +42,32 @@ function TDViewControls({ width }) {
 function ignoreContextMenu(event: SyntheticInputEvent<>) {
   // hide contextmenu, while rightclicking a canvas
   event.preventDefault();
+}
+
+export function getInputCatcherRect(id: string): ?Rect {
+  const inputCatcherDOM = document.getElementById(`inputcatcher_${id}`);
+  if (!inputCatcherDOM) {
+    return null;
+  }
+  const noneOverflowWrapper = inputCatcherDOM.closest(".gl-dont-overflow");
+  if (!noneOverflowWrapper) {
+    return null;
+  }
+
+  const { left, top, width, height } = inputCatcherDOM.getBoundingClientRect();
+  const {
+    width: wrapperWidth,
+    height: wrapperHeight,
+  } = noneOverflowWrapper.getBoundingClientRect();
+
+  // Returns the viewport's coordinates relative to the layout container (and the canvas)
+  // Width and height is cropped to the visible width/height of the scrollable container
+  return {
+    left,
+    top,
+    width: Math.min(width, wrapperWidth),
+    height: Math.min(height, wrapperHeight),
+  };
 }
 
 class InputCatcher extends React.PureComponent<Props, {}> {

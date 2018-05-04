@@ -12,8 +12,19 @@ import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
+import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
+import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
+import { getInputCatcherRect } from "oxalis/view/input_catcher";
 
 // viewport render utils
+
+export const getRelativeInputCatcherRect = (id: string) =>
+  makeRectRelativeToCanvas(getInputCatcherRect(id)) || {
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  };
 
 export const setupRenderArea = (
   renderer: THREE.WebGLRenderer,
@@ -42,35 +53,6 @@ export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
     0xffffff,
   );
   renderer.clear();
-};
-
-export const getXYForId = (id: string, curWidth: number) => {
-  const inputCatcherDOM = document.getElementById(`inputcatcher_${id}`);
-  const layoutContainerDOM = document.getElementById("layoutContainer");
-  if (!inputCatcherDOM || !layoutContainerDOM) {
-    return [0, 0, 0, 0];
-  }
-
-  // if (inputCatcherDOM.closest(".lm_item_container").style.display) {
-  //   return [0, 0, 0, 0];
-  // }
-  const itemContainer = inputCatcherDOM.closest(".lm_item_container");
-  if (!itemContainer) {
-    return [0, 0, 0, 0];
-  }
-
-  const { left: containerX, top: containerY } = layoutContainerDOM.getBoundingClientRect();
-  const { left, top } = inputCatcherDOM.getBoundingClientRect();
-  const { scrollWidth, scrollHeight } = itemContainer;
-
-  // Returns the viewport's coordinates relative to the layout container (and the canvas)
-  // Width and height is cropped to the visible width/height of the scrollable container
-  return [
-    left - containerX,
-    top - containerY,
-    Math.min(curWidth, scrollWidth),
-    Math.min(curWidth, scrollHeight),
-  ];
 };
 
 class PlaneView {
@@ -180,21 +162,37 @@ class PlaneView {
 
       this.trigger("render");
 
+      // const viewport = {
+      //   [OrthoViews.PLANE_XY]: getXYForId("PLANE_XY", this.curWidth),
+      //   [OrthoViews.PLANE_YZ]: getXYForId("PLANE_YZ", this.curWidth),
+      //   [OrthoViews.PLANE_XZ]: getXYForId("PLANE_XZ", this.curWidth),
+      //   [OrthoViews.TDView]: getXYForId("TDView", this.curWidth),
+      // };
+
       const viewport = {
-        [OrthoViews.PLANE_XY]: getXYForId("PLANE_XY", this.curWidth),
-        [OrthoViews.PLANE_YZ]: getXYForId("PLANE_YZ", this.curWidth),
-        [OrthoViews.PLANE_XZ]: getXYForId("PLANE_XZ", this.curWidth),
-        [OrthoViews.TDView]: getXYForId("TDView", this.curWidth),
+        [OrthoViews.PLANE_XY]: getRelativeInputCatcherRect("PLANE_XY"),
+        [OrthoViews.PLANE_YZ]: getRelativeInputCatcherRect("PLANE_YZ"),
+        [OrthoViews.PLANE_XZ]: getRelativeInputCatcherRect("PLANE_XZ"),
+        [OrthoViews.TDView]: getRelativeInputCatcherRect("TDView"),
       };
+
       renderer.autoClear = true;
 
       clearCanvas(renderer);
 
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
-        const [x, y, width, height] = viewport[plane];
+        const { left, top, width, height } = viewport[plane];
         if (width > 0 && height > 0) {
-          setupRenderArea(renderer, x, y, this.curWidth, width, height, OrthoViewColors[plane]);
+          setupRenderArea(
+            renderer,
+            left,
+            top,
+            this.curWidth,
+            width,
+            height,
+            OrthoViewColors[plane],
+          );
           renderer.render(scene, this.cameras[plane]);
         }
       }
@@ -219,11 +217,9 @@ class PlaneView {
     );
     this.curWidth = viewportWidth;
 
-    const canvasAndLayoutContainer = document.getElementById("canvasAndLayoutContainer");
-    if (canvasAndLayoutContainer) {
-      const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
-      SceneController.renderer.setSize(width, height);
-    }
+    getDesiredCanvasSize().map(([width, height]) =>
+      SceneController.renderer.setSize(width, height),
+    );
 
     for (const plane of OrthoViewValues) {
       this.cameras[plane].aspect = 1;

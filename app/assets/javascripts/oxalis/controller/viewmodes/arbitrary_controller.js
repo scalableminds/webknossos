@@ -100,39 +100,35 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    if (!document.querySelector(arbitraryViewportSelector)) {
-      setTimeout(() => {
-        this.initMouse();
-      }, 500);
-      return;
-    }
-    this.input.mouse = new InputMouse(arbitraryViewportSelector, {
-      leftDownMove: (delta: Point2) => {
-        if (this.props.viewMode === constants.MODE_ARBITRARY) {
-          Store.dispatch(
-            yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
-          );
-          Store.dispatch(
-            pitchFlycamAction(
-              delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-              true,
-            ),
-          );
-        } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-          const f =
-            Store.getState().flycam.zoomStep /
-            (this.arbitraryView.width / constants.VIEWPORT_WIDTH);
-          Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
-        }
-      },
-      scroll: this.scroll,
-      pinch: (delta: number) => {
-        if (delta < 0) {
-          Store.dispatch(zoomOutAction());
-        } else {
-          Store.dispatch(zoomInAction());
-        }
-      },
+    Utils.waitForSelector(arbitraryViewportSelector).then(() => {
+      this.input.mouse = new InputMouse(arbitraryViewportSelector, {
+        leftDownMove: (delta: Point2) => {
+          if (this.props.viewMode === constants.MODE_ARBITRARY) {
+            Store.dispatch(
+              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+            );
+            Store.dispatch(
+              pitchFlycamAction(
+                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                true,
+              ),
+            );
+          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+            const f =
+              Store.getState().flycam.zoomStep /
+              (this.arbitraryView.width / constants.VIEWPORT_WIDTH);
+            Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
+          }
+        },
+        scroll: this.scroll,
+        pinch: (delta: number) => {
+          if (delta < 0) {
+            Store.dispatch(zoomOutAction());
+          } else {
+            Store.dispatch(zoomInAction());
+          }
+        },
+      });
     });
   }
 

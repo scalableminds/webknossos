@@ -4,6 +4,7 @@
  */
 
 import * as React from "react";
+import Maybe from "data.maybe";
 import OxalisController from "oxalis/controller";
 import SettingsView from "oxalis/view/settings/settings_view";
 import ActionBarView from "oxalis/view/action_bar_view";
@@ -30,7 +31,6 @@ const { Header, Sider } = Layout;
 
 type StateProps = {
   viewMode: ModeType,
-  // controlMode: ControlModeType,
 };
 
 type Props = StateProps & {
@@ -42,6 +42,16 @@ type Props = StateProps & {
 type State = {
   isSettingsCollapsed: boolean,
 };
+
+const canvasAndLayoutContainerID = "canvasAndLayoutContainer";
+export function getDesiredCanvasSize(): Maybe<[number, number]> {
+  const canvasAndLayoutContainer = document.getElementById(canvasAndLayoutContainerID);
+  if (canvasAndLayoutContainer) {
+    const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
+    return Maybe.Just([width, height]);
+  }
+  return Maybe.Nothing();
+}
 
 class TracingLayoutView extends React.PureComponent<Props, State> {
   state = {
@@ -92,7 +102,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </Sider>
 
             <div
-              id="canvasAndLayoutContainer"
+              id={canvasAndLayoutContainerID}
               style={{ display: "flex", flexDirection: "column", flex: "1 1 auto" }}
             >
               <TracingView renderCanvas />

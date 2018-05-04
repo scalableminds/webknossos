@@ -3,7 +3,8 @@ import _ from "lodash";
 import defaultLayouts, { currentLayoutVersion } from "./default_layout_configs";
 import type { LayoutKeysType } from "./default_layout_configs";
 
-const disableLayoutPersistance = true;
+// For debugging purposes:
+const disableLayoutPersistance = false;
 
 const localStorageKeys = {
   currentLayoutVersion: "currentLayoutVersion",

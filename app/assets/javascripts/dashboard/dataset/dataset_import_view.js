@@ -28,15 +28,14 @@ import {
   updateDatasetDefaultConfiguration,
   getDatasetDatasource,
   updateDatasetDatasource,
-  updateDatasetTeams
+  updateDatasetTeams,
 } from "admin/admin_rest_api";
 import { Vector3Input } from "libs/vector_input";
 import type { DatasetConfigurationType } from "oxalis/store";
 import messages from "messages";
-import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
+import type { APIDatasetType, APIMessageType, APITeamType } from "admin/api_flow_types";
 import DatasourceSchema from "libs/datasource.schema.json";
 import TeamAssignment from "dashboard/dataset/team_assignment";
-
 
 const FormItem = Form.Item;
 const CollapsePanel = Collapse.Panel;
@@ -104,7 +103,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     sharingToken: "",
     isLoading: true,
     messages: [],
-    allowedTeams: []
+    allowedTeams: [],
   };
 
   componentDidMount() {
@@ -146,7 +145,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       sharingToken,
       dataset,
       messages: dataSourceMessages,
-      allowedTeams: dataset.allowedTeams
+      allowedTeams: dataset.allowedTeams,
     });
   }
 
@@ -170,7 +169,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
 
         const teamIds = this.state.allowedTeams.map(t => t.id);
-        await updateDatasetTeams(this.state.dataset.name, teamIds);
+        await updateDatasetTeams(dataset.name, teamIds);
 
         const verb = this.props.isEditingMode ? "updated" : "imported";
         Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
@@ -207,9 +206,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   getSharingLink() {
-    return `${window.location.origin}/datasets/${this.props.datasetName}/view?token=${
-      this.state.sharingToken
-    }`;
+    return `${window.location.origin}/datasets/${this.props.datasetName}/view?token=${this.state
+      .sharingToken}`;
   }
 
   getMessageComponents() {
@@ -340,15 +338,14 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             </FormItem>
             {this.props.isEditingMode ? this.getEditModeComponents() : null}
             <FormItem label="Allowed Teams">
-              <TeamAssignment 
-                dataset={this.state.dataset} 
-                allowedTeams={this.state.allowedTeams} 
-                onTeamsChange={(allowedTeams) => 
-                  {this.setState({
-                    allowedTeams: allowedTeams,
-                    });
-                  }}
-                />  
+              <TeamAssignment
+                allowedTeams={this.state.allowedTeams}
+                onTeamsChange={allowedTeams => {
+                  this.setState({
+                    allowedTeams,
+                  });
+                }}
+              />
             </FormItem>
             <FormItem>
               <Button type="primary" htmlType="submit">

@@ -232,22 +232,22 @@ class TaskListView extends React.PureComponent<Props, State> {
               width={80}
               render={(status, task: APITaskType) => (
                 <div className="nowrap">
-                  <span>
+                  <span title="Open Instances">
                     <Icon type="play-circle-o" />
                     {status.open}
                   </span>
                   <br />
-                  <span>
+                  <span title="Active Instances">
                     <Icon type="fork" />
                     {status.active}
                   </span>
                   <br />
-                  <span>
+                  <span title="Finished Instances">
                     <Icon type="check-circle-o" />
                     {status.finished}
                   </span>
                   <br />
-                  <span>
+                  <span title="Tracing Time">
                     <Icon type="clock-circle-o" />
                     {FormatUtils.formatSeconds(task.tracingTime / 1000)}
                   </span>

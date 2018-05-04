@@ -51,21 +51,18 @@ test("updateDatasetTeams", async t => {
   const newTeams = await api.getEditableTeams();
 
   const updatedDataset = api.updateDatasetTeams(dataset.name, newTeams.map(team => team.name));
-  console.log(dataset, updatedDataset);
   t.snapshot(updatedDataset, { id: "dataset-updateDatasetTeams" });
 
   // undo the Change
   api.updateDatasetTeams(dataset.name, dataset.allowedTeams.map(team => team.name));
 });
 
-test("getDatasetSharingToken", async t => {
+test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {
   const dataset = await getFirstDataset();
+
   const sharingToken = api.getDatasetSharingToken(dataset.name);
   t.snapshot(sharingToken, { id: "dataset-sharingToken" });
-});
 
-test("revokeDatasetSharingToken", async t => {
-  const dataset = await getFirstDataset();
   api.revokeDatasetSharingToken(dataset.name);
   t.pass();
 });

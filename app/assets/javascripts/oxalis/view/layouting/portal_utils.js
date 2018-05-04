@@ -2,6 +2,10 @@
 import * as React from "react";
 import ReactDOM from "react-dom";
 
+// The actual content of a layout pane is a portal target,
+// to which is rendered within GoldenLayoutAdapter.
+// The actual portal targets are reused to avoid that components
+// are re-mounted when the layout changes.
 const getPortalId = id => `portal-${id}`;
 const portalTargetNodes = {};
 function getOrCreatePortalTargetNode(id) {

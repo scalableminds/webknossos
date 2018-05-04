@@ -540,8 +540,8 @@ export class InputMouse {
   };
 
   getElementOffset() {
+    // Return the bounding rectangle relative to the top-left corner of the document
     const boundingRect = this.domElement.getBoundingClientRect();
-
     return _.extend({}, boundingRect, {
       left: boundingRect.left + window.scrollX,
       top: boundingRect.top + window.scrollY,

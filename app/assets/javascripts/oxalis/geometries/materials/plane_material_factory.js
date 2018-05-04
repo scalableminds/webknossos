@@ -202,10 +202,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     }
   }
 
-  getResolutions(): Array<Vector3> {
-    return _.first(Model.getColorBinaries()).layer.resolutions;
-  }
-
   makeMaterial(options?: ShaderMaterialOptionsType): void {
     super.makeMaterial(options);
 

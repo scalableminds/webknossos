@@ -16,8 +16,6 @@ import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view"
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import { getInputCatcherRect } from "oxalis/view/input_catcher";
 
-// viewport render utils
-
 export const getRelativeInputCatcherRect = (id: string) =>
   makeRectRelativeToCanvas(getInputCatcherRect(id)) || {
     left: 0,
@@ -161,13 +159,6 @@ class PlaneView {
       const { renderer, scene } = SceneController;
 
       this.trigger("render");
-
-      // const viewport = {
-      //   [OrthoViews.PLANE_XY]: getXYForId("PLANE_XY", this.curWidth),
-      //   [OrthoViews.PLANE_YZ]: getXYForId("PLANE_YZ", this.curWidth),
-      //   [OrthoViews.PLANE_XZ]: getXYForId("PLANE_XZ", this.curWidth),
-      //   [OrthoViews.TDView]: getXYForId("TDView", this.curWidth),
-      // };
 
       const viewport = {
         [OrthoViews.PLANE_XY]: getRelativeInputCatcherRect("PLANE_XY"),

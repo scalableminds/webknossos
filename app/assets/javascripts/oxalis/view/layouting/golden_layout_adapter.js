@@ -24,7 +24,6 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
 
   componentDidUpdate(prevProps: Props<*>) {
     if (prevProps.layoutKey !== this.props.layoutKey) {
-      console.log("destroy");
       this.gl.destroy();
       this.setupLayout();
     }

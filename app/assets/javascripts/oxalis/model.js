@@ -400,7 +400,6 @@ export class OxalisModel {
     // This method adds/merges the layers of the tracing into the dataset layers
     // Overwrite or extend layers with volumeTracingLayer
     let layers = _.clone(Store.getState().dataset.dataSource.dataLayers);
-
     const adaptResolutionInfoForLayer = layer => ({
       ...layer,
       // The server only provides the actual resolutions for a layer. However,

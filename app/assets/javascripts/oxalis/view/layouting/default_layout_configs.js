@@ -19,6 +19,9 @@ const LayoutSettings = {
   showMaximiseIcon: false,
 };
 
+// While the first parameter to `Pane` is the title of the pane, the second one is an id
+// which is used to match the children provided to GoldenLayoutAdapter (in tracing_layout_view)
+// with the panes in the layout config.
 const Panes = {
   xy: Pane("XY", "xy"),
   xz: Pane("XZ", "xz"),

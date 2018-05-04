@@ -116,6 +116,10 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                   storeLayoutConfig(layoutConfig, layoutKey);
                 }}
               >
+                {/*
+                   * All possible layout panes are passed here. Depending on the actual layout,
+                   *  the components are rendered or not.
+                   */}
                 <InputCatcher viewportID={OrthoViews.PLANE_XY} key="xy" portalKey="xy" />
                 <InputCatcher viewportID={OrthoViews.PLANE_YZ} key="yz" portalKey="yz" />
                 <InputCatcher viewportID={OrthoViews.PLANE_XZ} key="xz" portalKey="xz" />
@@ -144,7 +148,6 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 function mapStateToProps(state: OxalisState): StateProps {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
-    // controlMode: state.temporaryConfiguration.controlMode,
   };
 }
 

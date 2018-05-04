@@ -34,23 +34,11 @@ class BoundingBox {
   }
 
   getBoxForZoomStep = _.memoize((zoomStep: number): BoundingBoxType => {
-    const allResolutions = this.cube.layer.resolutions;
-    let resolution = allResolutions[zoomStep];
+    const resolution = this.cube.layer.resolutions[zoomStep];
 
     // No `map` for performance reasons
     const min = [0, 0, 0];
     const max = [0, 0, 0];
-    if (!resolution) {
-      // todo: this check should not be necessary
-      const missingZoomStepCount = allResolutions.length - zoomStep + 1;
-      const lastResolution = _.last(allResolutions);
-      const factor = Math.pow(2, missingZoomStepCount);
-      resolution = [
-        lastResolution[0] * factor,
-        lastResolution[1] * factor,
-        lastResolution[2] * factor,
-      ];
-    }
 
     for (let i = 0; i < 3; i++) {
       const divisor = constants.BUCKET_WIDTH * resolution[i];

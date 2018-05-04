@@ -60,8 +60,9 @@ export function getInputCatcherRect(id: string): ?Rect {
     height: wrapperHeight,
   } = noneOverflowWrapper.getBoundingClientRect();
 
-  // Returns the viewport's coordinates relative to the layout container (and the canvas)
-  // Width and height is cropped to the visible width/height of the scrollable container
+  // Returns the viewport's coordinates and position
+  // Width and height is cropped to the visible width/height of the scrollable container.
+  // Otherwise, the we would render to parts of the canvas which are outside of the pane.
   return {
     left,
     top,

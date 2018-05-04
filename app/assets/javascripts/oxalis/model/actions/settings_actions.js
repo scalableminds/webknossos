@@ -43,7 +43,6 @@ export type InitializeSettingsAction = {
   initialUserSettings: UserConfigurationType,
   initialDatasetSettings: DatasetConfigurationType,
 };
-
 type SetDatasetAction = { type: "SET_DATASET", dataset: APIDatasetType };
 type SetViewModeActionType = { type: "SET_VIEW_MODE", viewMode: ModeType };
 type SetFlightmodeRecordingActionType = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };

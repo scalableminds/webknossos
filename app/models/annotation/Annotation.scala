@@ -136,7 +136,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -149,18 +149,28 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     }
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}
                      order by _id desc limit ${limit}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
 
-  def findAllActiveFor(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
+  def findAllActiveForUser(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}""".as[AnnotationsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
+  def findAllFinishedForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select #${columnsWithPrefix("a.")} from #${existingCollectionName} a
+                     join webknossos.tasks_ t on a._task = t._id
+                     where t._project = ${projectId.id} and a.typ = '#${AnnotationType.Task.toString}' and a.state = '#${AnnotationState.Finished.toString}'""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -168,7 +178,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       r <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _task = ${taskId.id} and typ = '#${typ.toString}' and state != '#${AnnotationState.Cancelled.toString}' and #${accessQuery}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -177,7 +187,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       rList <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
@@ -192,7 +202,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       excludeTeamsQ = if (excludedTeamIds.isEmpty) "true" else s"(not t._id in ${writeStructTupleWithQuotes(excludedTeamIds.map(t => sanitize(t.id)))})"
       countList <- run(sql"""select count(*)
                          from (select a._id from
-                                  (select *
+                                  (select #${columns}
                                    from #${existingCollectionName}
                                    where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) a
                                   join webknossos.teams t on a._team = t._id where #${excludeTeamsQ}) q
@@ -488,7 +498,13 @@ object AnnotationDAO extends FoxImplicits {
   def findActiveAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     for {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
-      annotationsSQL <- AnnotationSQLDAO.findAllActiveFor(ObjectId.fromBsonId(_user), typ)
+      annotationsSQL <- AnnotationSQLDAO.findAllActiveForUser(ObjectId.fromBsonId(_user), typ)
+      annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
+    } yield annotations
+
+  def findFinishedForProject(projectId: String)(implicit ctx: DBAccessContext) =
+    for {
+      annotationsSQL <- AnnotationSQLDAO.findAllFinishedForProject(ObjectId(projectId))
       annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
     } yield annotations
 

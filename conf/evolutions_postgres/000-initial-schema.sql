@@ -1,7 +1,6 @@
 DROP SCHEMA IF EXISTS webknossos CASCADE;
 CREATE SCHEMA webknossos;
 
--- CREATE EXTENSION pgcrypto;
 
 CREATE TYPE webknossos.VECTOR3 AS (
   x DOUBLE PRECISION,
@@ -32,7 +31,7 @@ CREATE TABLE webknossos.analytics(
 
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
-CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
+CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled');
 CREATE TABLE webknossos.annotations(
   _id CHAR(24) PRIMARY KEY NOT NULL DEFAULT '',
   _dataSet CHAR(24) NOT NULL,
@@ -58,19 +57,17 @@ CREATE TABLE webknossos.annotations(
 CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _dataStore CHAR(256) NOT NULL ,
-  _organization CHAR(24) NOT NULL,
+  _team CHAR(24) NOT NULL,
   defaultConfiguration JSONB,
   description TEXT,
-  displayName VARCHAR(256),
   isPublic BOOLEAN NOT NULL DEFAULT false,
   isUsable BOOLEAN NOT NULL DEFAULT false,
   name VARCHAR(256) NOT NULL UNIQUE,
   scale webknossos.VECTOR3,
   status VARCHAR(1024) NOT NULL DEFAULT '',
-  sharingToken CHAR(256),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (name, _organization)
+  UNIQUE (name, _team)
 );
 
 CREATE TYPE webknossos.DATASET_LAYER_CATEGORY AS ENUM ('color', 'mask', 'segmentation');
@@ -170,11 +167,12 @@ CREATE VIEW webknossos.task_instances AS
 
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organization CHAR(24) NOT NULL,
-  name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
+  _owner CHAR(24) NOT NULL,
+  _parent CHAR(24),
+  name VARCHAR(256) NOT NULL UNIQUE CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
+  behavesLikeRootTeam BOOLEAN,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE (name, _organization)
+  isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE TABLE webknossos.timespans(
@@ -188,19 +186,10 @@ CREATE TABLE webknossos.timespans(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-CREATE TABLE webknossos.organizations(
-  _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organizationTeam CHAR(24) NOT NULL UNIQUE,
-  name VARCHAR(256) NOT NULL,
-  created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
-);
-
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');
 CREATE TYPE webknossos.USER_PASSWORDINFO_HASHERS AS ENUM ('SCrypt');
 CREATE TABLE webknossos.users(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organization CHAR(24) NOT NULL,
   email VARCHAR(512) NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   firstName VARCHAR(256) NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastName VARCHAR(256) NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
@@ -212,16 +201,16 @@ CREATE TABLE webknossos.users(
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password VARCHAR(512) NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT false,
-  isAdmin BOOLEAN NOT NULL DEFAULT false,
   isSuperUser BOOLEAN NOT NULL DEFAULT false,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
+CREATE TYPE webknossos.TEAM_ROLES AS ENUM ('user', 'admin');
 CREATE TABLE webknossos.user_team_roles(
   _user CHAR(24) NOT NULL,
   _team CHAR(24) NOT NULL,
-  isTeamManager BOOLEAN NOT NULL DEFAULT false,
+  role webknossos.TEAM_ROLES NOT NULL,
   PRIMARY KEY (_user, _team)
 );
 
@@ -265,7 +254,6 @@ CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NO
 CREATE VIEW webknossos.tasks_ AS SELECT * FROM webknossos.tasks WHERE NOT isDeleted;
 CREATE VIEW webknossos.teams_ AS SELECT * FROM webknossos.teams WHERE NOT isDeleted;
 CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NOT isDeleted;
-CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
 
@@ -316,40 +304,3 @@ CREATE INDEX ON webknossos.projects(_team);
 CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
 
-
--- ALTER TABLE webknossos.analytics
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.annotations
---   ADD FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.dataSets
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name);
--- ALTER TABLE webknossos.dataSet_layers
---   ADD FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.dataSet_allowedTeams
---   ADD FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.projects
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.scripts
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.taskTypes
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.tasks
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_project) REFERENCES webknossos.projects(_id),
---   ADD FOREIGN KEY(_script) REFERENCES webknossos.scripts(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.teams
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id),
---   ADD FOREIGN KEY(_parent) REFERENCES webknossos.teams(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.timespans
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.user_team_roles
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.user_experiences
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;

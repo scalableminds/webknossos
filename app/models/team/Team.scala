@@ -71,7 +71,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TeamsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[TeamsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -79,7 +79,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[TeamsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[TeamsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed
@@ -87,7 +87,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   override def findAll(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[TeamsRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[TeamsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
@@ -95,7 +95,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   def findAllByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where _organization = ${organizationId.id} and #${accessQuery}".as[TeamsRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where _organization = ${organizationId.id} and #${accessQuery}".as[TeamsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
@@ -120,7 +120,7 @@ case class Team(name: String,
   lazy val id = _id.stringify
 
   def isEditableBy(user: User) =
-    user.organization == organization && (user.isTeamManagerOf(_id) || user.isAdmin)
+    user.organization == organization && (user.isTeamManagerOfBLOCKING(_id) || user.isAdmin)
 
   def couldBeAdministratedBy(user: User) =
     user.organization == organization

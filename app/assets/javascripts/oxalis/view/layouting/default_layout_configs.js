@@ -1,9 +1,17 @@
+/*
+ * This file defines:
+ *  - the main panes which can be arranged in WK Core
+ *  - the different layout types which specify which panes exist in which layout and what their default arrangement is
+ *  - a `determineLayout` function which decides which layout type has to be chosen
+ */
+
 // @flow
-import _ from "lodash";
+import type { ControlModeType, ModeType } from "oxalis/constants";
+import Constants, { ControlModeEnum } from "oxalis/constants";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 3;
+export const currentLayoutVersion = 4;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -16,57 +24,63 @@ const Panes = {
   xz: Pane("XZ", "xz"),
   yz: Pane("YZ", "yz"),
   td: Pane("3D", "td"),
-  DatasetInfoTabView: Pane("Dataset Info", "DatasetInfoTabView"),
+  DatasetInfoTabView: Pane("Info", "DatasetInfoTabView"),
   TreesTabView: Pane("Trees", "TreesTabView"),
   CommentTabView: Pane("Comments", "CommentTabView"),
-  AbstractTreeTabView: Pane("Abstract Tree View", "AbstractTreeTabView"),
+  AbstractTreeTabView: Pane("Tree Viewer", "AbstractTreeTabView"),
   arbitraryViewport: Pane("Arbitrary View", "arbitraryViewport"),
-  Mappings: Pane("Mappings", "mappingsView"),
+  Mappings: Pane("Mappings", "MappingInfoView"),
 };
 
-const OrthoViewsGrid = {
-  type: "row",
-  content: [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)],
-};
+const OrthoViewsGrid = Row(Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td));
 
-const RightHandColumn = {
-  type: "column",
-  content: [
-    Stack(
-      Panes.DatasetInfoTabView,
-      Panes.TreesTabView,
-      Panes.CommentTabView,
-      Panes.AbstractTreeTabView,
-    ),
-  ],
-};
+const RightHandColumn = Stack(
+  Panes.DatasetInfoTabView,
+  Panes.TreesTabView,
+  Panes.CommentTabView,
+  Panes.AbstractTreeTabView,
+);
 
-const OrthoLayout = {
+const createLayout = (...content) => ({
   settings: LayoutSettings,
-  content: [Row(OrthoViewsGrid, RightHandColumn)],
-};
+  dimensions: {
+    headerHeight: 31,
+  },
+  content,
+});
 
-const OrthoLayoutView = {
-  settings: LayoutSettings,
-  content: [Row(OrthoViewsGrid, Panes.DatasetInfoTabView)],
-};
-
-const VolumeTracingView = {
-  settings: LayoutSettings,
-  content: [Row(OrthoViewsGrid, Panes.Mappings)],
-};
-
-const ArbitraryLayout = {
-  settings: LayoutSettings,
-  content: [Row(Panes.arbitraryViewport, RightHandColumn)],
-};
+const OrthoLayout = createLayout(Row(OrthoViewsGrid, RightHandColumn));
+const OrthoLayoutView = createLayout(Row(OrthoViewsGrid, Panes.DatasetInfoTabView));
+const VolumeTracingView = createLayout(
+  Row(OrthoViewsGrid, Stack(Panes.DatasetInfoTabView, Panes.Mappings)),
+);
+const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, RightHandColumn));
 
 const defaultLayouts = {
-  arbitrary: ArbitraryLayout,
-  orthogonal: OrthoLayout,
-  orthogonalView: OrthoLayoutView,
+  ArbitraryLayout,
+  OrthoLayout,
+  OrthoLayoutView,
   VolumeTracingView,
 };
+
+type LayoutType = $Keys<typeof defaultLayouts>;
+
+export function determineLayout(controlMode: ControlModeType, viewMode: ModeType): LayoutType {
+  if (controlMode === ControlModeEnum.VIEW) {
+    return "OrthoLayoutView";
+  }
+
+  if (!Constants.MODES_SKELETON.includes(viewMode)) {
+    return "VolumeTracingView";
+  }
+
+  const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
+  if (isArbitraryMode) {
+    return "ArbitraryLayout";
+  } else {
+    return "OrthoLayout";
+  }
+}
 
 export type LayoutKeysType = $Keys<typeof defaultLayouts>;
 export default defaultLayouts;

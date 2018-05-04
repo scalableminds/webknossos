@@ -1,23 +1,10 @@
 // @flow
 
 import * as React from "react";
-import ReactDOM from "react-dom";
 import GoldenLayout from "golden-layout/dist/goldenlayout.js";
 import "golden-layout/src/css/goldenlayout-base.css";
 import "golden-layout/src/css/goldenlayout-light-theme.css";
-
-// This is the placeholder component which is registered with and rendered by GoldenLayout
-class PortalTarget extends React.Component<*, *> {
-  render() {
-    return <div id={`portal-${this.props.portalId}`} />;
-  }
-}
-
-// This component is used to render the provided children into a PortalTarget (referenced by id) if that portal exists
-function RenderToPortal({ children, portalId }) {
-  const portalEl = document.getElementById(`portal-${portalId}`);
-  return portalEl && ReactDOM.createPortal(children, portalEl);
-}
+import { PortalTarget, RenderToPortal } from "./portal_utils.js";
 
 type Props<KeyType> = {
   id: string,
@@ -35,7 +22,7 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
     this.setupLayout();
   }
 
-  componentDidUpdate(prevProps: Props<*>, prevState: Props<*>) {
+  componentDidUpdate(prevProps: Props<*>) {
     if (prevProps.layoutKey !== this.props.layoutKey) {
       console.log("destroy");
       this.gl.destroy();
@@ -54,6 +41,7 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
     // while being in the middle of a react lifecycle (componentDidMount)
     setTimeout(() => {
       gl.init();
+      // Rerender since the portals just became available
       this.forceUpdate();
     }, 10);
 
@@ -68,13 +56,11 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
 
   render() {
     return [<div key="layoutContainer" id={this.props.id} style={this.props.style} />].concat(
-      React.Children.toArray(this.props.children).map(child => {
-        return (
-          <RenderToPortal key={child.props.portalKey} portalId={child.props.portalKey}>
-            {child}
-          </RenderToPortal>
-        );
-      }),
+      React.Children.toArray(this.props.children).map(child => (
+        <RenderToPortal key={child.props.portalKey} portalId={child.props.portalKey}>
+          {child}
+        </RenderToPortal>
+      )),
     );
   }
 }

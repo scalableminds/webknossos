@@ -10,11 +10,25 @@ import * as THREE from "three";
 import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
+import type { OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
-import { getCanvasExtent, getViewportPositionsForLayout } from "./viewport_calculations";
 
 // viewport render utils
+
+export const setupRenderArea = (
+  renderer: THREE.WebGLRenderer,
+  x: number,
+  y: number,
+  fullExtent: number,
+  width: number,
+  height: number,
+  color: number,
+) => {
+  renderer.setViewport(x, y, fullExtent, fullExtent);
+  renderer.setScissor(x, y, width, height);
+  renderer.setScissorTest(true);
+  renderer.setClearColor(color, 1);
+};
 
 export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
   const rendererSize = renderer.getSize();
@@ -59,21 +73,6 @@ export const getXYForId = (id: string, curWidth: number) => {
   ];
 };
 
-export const setupRenderArea = (
-  renderer: THREE.WebGLRenderer,
-  x: number,
-  y: number,
-  fullExtent: number,
-  width: number,
-  height: number,
-  color: number,
-) => {
-  renderer.setViewport(x, y, fullExtent, fullExtent);
-  renderer.setScissor(x, y, width, height);
-  renderer.setScissorTest(true);
-  renderer.setClearColor(color, 1);
-};
-
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
@@ -89,7 +88,7 @@ class PlaneView {
     _.extend(this, BackboneEvents);
 
     this.running = false;
-    const { scene, renderer } = SceneController;
+    const { scene } = SceneController;
 
     // Create a 4x4 grid
     this.curWidth = Constants.VIEWPORT_WIDTH;
@@ -115,16 +114,6 @@ class PlaneView {
     for (const plane of OrthoViewValues) {
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
     }
-
-    // Attach the canvas to the container
-    // listenToStoreProperty(
-    //   store => store.viewModeData.plane.activeLayout,
-    //   activeLayout => {
-    //     const [width, height] = getCanvasExtent(activeLayout, this.curWidth);
-    //     renderer.setSize(2000, 2000);
-    //   },
-    //   true,
-    // );
 
     this.needsRerender = true;
     app.vent.on("rerender", () => {
@@ -230,8 +219,6 @@ class PlaneView {
     );
     this.curWidth = viewportWidth;
 
-    const [canvasWidth, canvasHeight] = getCanvasExtent(viewportWidth);
-
     const canvasAndLayoutContainer = document.getElementById("canvasAndLayoutContainer");
     if (canvasAndLayoutContainer) {
       const { width, height } = canvasAndLayoutContainer.getBoundingClientRect();
@@ -239,7 +226,7 @@ class PlaneView {
     }
 
     for (const plane of OrthoViewValues) {
-      this.cameras[plane].aspect = canvasHeight / canvasWidth;
+      this.cameras[plane].aspect = 1;
       this.cameras[plane].updateProjectionMatrix();
     }
     this.draw();

@@ -107,7 +107,7 @@ class ArbitraryView {
 
     TWEEN.update();
 
-    if (this.needsRerender) {
+    if (this.needsRerender || window.needsRerender) {
       this.trigger("render");
 
       const { camera, geometries } = this;

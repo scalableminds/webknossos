@@ -13,13 +13,11 @@ import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_
 import type { OxalisState } from "oxalis/store";
 import type { ModeType } from "oxalis/constants";
 import type { Dispatch } from "redux";
-import { getCanvasExtent } from "./viewport_calculations";
 
 type Props = {
   flightmodeRecording: boolean,
   onChangeFlightmodeRecording: ?Function,
   viewMode: ModeType,
-  scale: number,
   isVolumeTracingDisallowed: boolean,
 };
 
@@ -41,10 +39,6 @@ class TracingView extends React.PureComponent<Props> {
 
   render() {
     const isArbitraryMode = Constants.MODES_ARBITRARY.includes(this.props.viewMode);
-    const scaledViewportWidth = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
-    const [width, height] = isArbitraryMode
-      ? [scaledViewportWidth, scaledViewportWidth]
-      : getCanvasExtent(scaledViewportWidth);
     const flightModeRecordingSwitch = isArbitraryMode ? this.getRecordingSwitch() : null;
     const divClassName = classnames({ "zoomstep-warning": this.props.isVolumeTracingDisallowed });
 
@@ -55,6 +49,7 @@ class TracingView extends React.PureComponent<Props> {
       left: 0,
     };
 
+    // todo! reactivate flightModeRecordingSwitch
     return this.props.renderCanvas ? (
       <div
         style={{ position: "relative" }}
@@ -78,7 +73,6 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 const mapStateToProps = (state: OxalisState) => ({
   viewMode: state.temporaryConfiguration.viewMode,
   flightmodeRecording: state.temporaryConfiguration.flightmodeRecording,
-  scale: state.userConfiguration.scale,
   isVolumeTracingDisallowed: state.tracing.type === "volume" && isVolumeTracingDisallowed(state),
 });
 

@@ -3,36 +3,41 @@ import _ from "lodash";
 import defaultLayouts, { currentLayoutVersion } from "./default_layout_configs";
 import type { LayoutKeysType } from "./default_layout_configs";
 
+const disableLayoutPersistance = true;
+
+const localStorageKeys = {
+  currentLayoutVersion: "currentLayoutVersion",
+  goldenWkLayouts: "goldenWkLayouts",
+};
+
 function readStoredLayoutConfigs() {
-  const storedLayoutVersion = localStorage.getItem("currentLayoutVersion");
-  if (!storedLayoutVersion) {
+  const storedLayoutVersion = localStorage.getItem(localStorageKeys.currentLayoutVersion);
+  if (!storedLayoutVersion || disableLayoutPersistance) {
     return {};
   }
   if (currentLayoutVersion > JSON.parse(storedLayoutVersion)) {
     return {};
   }
-  const layoutString = localStorage.getItem("golden-wk-layouts");
+  const layoutString = localStorage.getItem(localStorageKeys.goldenWkLayouts);
   return layoutString ? JSON.parse(layoutString) : {};
 }
 
+const storedLayouts = readStoredLayoutConfigs();
+
 function persistLayoutConfigs() {
-  localStorage.setItem("golden-wk-layouts", JSON.stringify(storedLayouts));
-  localStorage.setItem("currentLayoutVersion", JSON.stringify(currentLayoutVersion));
+  localStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
+  localStorage.setItem(localStorageKeys.currentLayoutVersion, JSON.stringify(currentLayoutVersion));
 }
 
 const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 2000);
 
 export function getLayoutConfig(layoutKey: LayoutKeysType) {
-  const restoreLayout = false;
-
   if (storedLayouts[layoutKey]) {
     return storedLayouts[layoutKey];
   }
 
   return defaultLayouts[layoutKey];
 }
-
-const storedLayouts = readStoredLayoutConfigs();
 
 export function storeLayoutConfig(layoutConfig: Object, layoutKey: string) {
   storedLayouts[layoutKey] = layoutConfig;

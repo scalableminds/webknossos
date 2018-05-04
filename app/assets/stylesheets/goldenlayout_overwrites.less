@@ -1,0 +1,43 @@
+.lm_content.lm_content.lm_content {
+  // Panes should have a white background
+  background: white;
+  border: 1px solid #cccccc3d;
+}
+
+.lm_header {
+  .lm_tab.lm_tab.lm_tab {
+    border: 1px solid #cccccc00;
+    background: #fafafa00;
+  }
+
+  .lm_tab {
+    .lm_title.lm_title.lm_title {
+      // These properties are copied from antd's styling
+      color: rgba(0, 0, 0, 0.65);
+      font-size: 14px;
+      font-weight: 400;
+      font-family: "Monospaced Number", "Chinese Quote", -apple-system, BlinkMacSystemFont,
+        "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue",
+        Helvetica, Arial, sans-serif;
+    }
+    .lm_close_tab {
+      display: none;
+    }
+
+    height: 25px !important;
+    line-height: 25px;
+  }
+
+  .lm_tab.lm_active.lm_active.lm_active {
+    box-shadow: none;
+  }
+}
+
+.lm_tab.lm_tab.lm_tab:hover,
+.lm_tab.lm_tab.lm_tab.lm_active {
+  .lm_title {
+    background: #80808000 !important;
+    color: #1890ff !important;
+    font-weight: 500;
+  }
+}

@@ -104,10 +104,8 @@ class ArbitraryController extends React.PureComponent<Props> {
       setTimeout(() => {
         this.initMouse();
       }, 500);
-      console.log("retrying init mouse");
       return;
     }
-    console.log("succ retried init mouse");
     this.input.mouse = new InputMouse(arbitraryViewportSelector, {
       leftDownMove: (delta: Point2) => {
         if (this.props.viewMode === constants.MODE_ARBITRARY) {

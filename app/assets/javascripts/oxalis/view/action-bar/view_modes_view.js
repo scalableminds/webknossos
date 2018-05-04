@@ -2,7 +2,7 @@
 import React, { PureComponent } from "react";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
-import { Icon, Menu, Radio, Dropdown } from "antd";
+import { Radio } from "antd";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import type { OxalisState, AllowedModeType } from "oxalis/store";
 import Store from "oxalis/store";

@@ -28,12 +28,15 @@ import {
   updateDatasetDefaultConfiguration,
   getDatasetDatasource,
   updateDatasetDatasource,
+  updateDatasetTeams
 } from "admin/admin_rest_api";
 import { Vector3Input } from "libs/vector_input";
 import type { DatasetConfigurationType } from "oxalis/store";
 import messages from "messages";
 import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
 import DatasourceSchema from "libs/datasource.schema.json";
+import TeamAssignment from "dashboard/dataset/team_assignment";
+
 
 const FormItem = Form.Item;
 const CollapsePanel = Collapse.Panel;
@@ -80,6 +83,7 @@ type State = {
   datasetDefaultConfiguration: ?DatasetConfigurationType,
   messages: Array<APIMessageType>,
   isLoading: boolean,
+  allowedTeams: Array<APITeamType>,
 };
 
 type FormData = {
@@ -100,6 +104,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     sharingToken: "",
     isLoading: true,
     messages: [],
+    allowedTeams: []
   };
 
   componentDidMount() {
@@ -141,6 +146,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       sharingToken,
       dataset,
       messages: dataSourceMessages,
+      allowedTeams: dataset.allowedTeams
     });
   }
 
@@ -162,6 +168,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
         const dataSource = JSON.parse(formValues.dataSourceJson);
         await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+
+        const teamIds = this.state.allowedTeams.map(t => t.id);
+        await updateDatasetTeams(this.state.dataset.name, teamIds);
 
         const verb = this.props.isEditingMode ? "updated" : "imported";
         Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
@@ -330,6 +339,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
               })(<Input.TextArea rows={20} style={jsonEditStyle} />)}
             </FormItem>
             {this.props.isEditingMode ? this.getEditModeComponents() : null}
+            <FormItem label="Allowed Teams">
+              <TeamAssignment 
+                dataset={this.state.dataset} 
+                allowedTeams={this.state.allowedTeams} 
+                onTeamsChange={(allowedTeams) => 
+                  {this.setState({
+                    allowedTeams: allowedTeams,
+                    });
+                  }}
+                />  
+            </FormItem>
             <FormItem>
               <Button type="primary" htmlType="submit">
                 {titleString}

@@ -106,7 +106,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[UserSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[UsersRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[UsersRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -114,7 +114,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   override def findAll(implicit ctx: DBAccessContext): Fox[List[UserSQL]] = {
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery}".as[UsersRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery}".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
@@ -122,7 +122,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[UserSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where email = ${email} and #${accessQuery}".as[UsersRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where email = ${email} and #${accessQuery}".as[UsersRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
@@ -135,7 +135,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       for {
         accessQuery <- readAccessQuery
         r <- run(sql"""select u.*
-                         from (select * from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
+                         from (select #${columns} from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
                                and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})""".as[UsersRow])
         parsed <- Fox.combined(r.toList.map(parse))
@@ -145,7 +145,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
   def findAllByIds(ids: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[UserSQL]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where _id in #${writeStructTupleWithQuotes(ids.map(_.id))} and #${accessQuery}".as[UsersRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where _id in #${writeStructTupleWithQuotes(ids.map(_.id))} and #${accessQuery}".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -323,7 +323,7 @@ case class User(
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate,
                  loginInfo: LoginInfo,
-                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity {
+                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity with FoxImplicits {
 
   def teamIds = teams.map(_._id)
 
@@ -342,7 +342,13 @@ case class User(
 
   lazy val teamManagerTeamIds = teamManagerTeams.map(_._id)
 
-  def isTeamManagerOf(_team: BSONObjectID) = {
+  def assertTeamManagerOrAdminOf(_team: BSONObjectID) =
+    for {
+      team <- TeamDAO.findOneById(_team)(GlobalAccessContext)
+      _ <- (teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization) ?~> Messages("notAllowed")
+    } yield ()
+
+  def isTeamManagerOfBLOCKING(_team: BSONObjectID) = {
     val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 500 millis).openOrThrowException("Keep the teamManager Query synchronous")
     teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
   }

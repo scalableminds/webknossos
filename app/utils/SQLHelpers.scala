@@ -54,7 +54,7 @@ trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
           if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
             logger.debug(s"Retrying SQL Query (${retryCount} remaining) due to ${msg}")
             Thread.sleep(20)
-            run(query, retryCount - 1)
+            run(query, retryCount - 1, retryIfErrorContains)
           }
           else {
             logError(e, query)
@@ -175,6 +175,10 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
   def collection: TableQuery[X]
   def collectionName = collection.shaped.value.schemaName.map(_ + ".").getOrElse("") + collection.shaped.value.tableName
 
+  def columnsList = collection.baseTableRow.create_*.map(_.name).toList
+  def columns = columnsList.mkString(", ")
+  def columnsWithPrefix(prefix: String) = columnsList.map(prefix + _).mkString(", ")
+  
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 

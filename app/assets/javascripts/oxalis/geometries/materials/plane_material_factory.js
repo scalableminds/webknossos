@@ -927,7 +927,11 @@ void main() {
   // Color map (<= to fight rounding mistakes)
   if ( id > 0.1 ) {
     // Increase cell opacity when cell is hovered
-    float hoverAlphaIncrement = cellIdUnderMouse == id && highlightHoveredCellId ? 0.2 : 0.0;
+    float hoverAlphaIncrement =
+      // Hover cell only if it's the active one, if the feature is enabled
+      // and if segmentation opacity is not zero
+      cellIdUnderMouse == id && highlightHoveredCellId && alpha > 0.0
+        ? 0.2 : 0.0;
     gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
   } else {
     gl_FragColor = vec4(data_color, 1.0);
@@ -965,7 +969,7 @@ void main() {
       floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
       formatNumberAsGLSLFloat,
       formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
-      resolutions: this.getResolutions(),
+      resolutions: Model.getResolutions(),
       datasetScale,
       brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
     });

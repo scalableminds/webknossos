@@ -7,7 +7,7 @@ import javax.inject.Inject
 
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationTypeSQL
+import models.annotation.{AnnotationSQLDAO, AnnotationTypeSQL}
 import models.project.ProjectDAO
 import models.team.TeamDAO
 import models.user.{User, UserDAO}
@@ -76,7 +76,7 @@ object ReportSQLDAO extends SimpleSQLDAO {
            FROM
              filteredProjects p
              join webknossos.tasks_ t on p._id = t._project
-             left join (select * from webknossos.annotations_ a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
+             left join (select #${AnnotationSQLDAO.columns} from webknossos.annotations_ a where a.state = 'Active' and a.typ = 'Task') a on t._id = a._task
            group by p._id
            )
 
@@ -101,7 +101,7 @@ object ReportSQLDAO extends SimpleSQLDAO {
         webknossos.tasks_ t
           join webknossos.task_instances ti on t._id = ti._id
         join
-        (select *
+        (select domain, value
           from webknossos.user_experiences
         where _user = ${userId.id})
         as ue on t.neededExperience_domain = ue.domain and t.neededExperience_value <= ue.value
@@ -132,7 +132,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
       users <- UserDAO.findByTeams(List(team._id), includeInactive = false)(GlobalAccessContext)
-      nonAdminUsers = users.filterNot(_.isTeamManagerOf(team._id))
+      nonAdminUsers = users.filterNot(_.isTeamManagerOfBLOCKING(team._id))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }

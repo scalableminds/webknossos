@@ -74,7 +74,7 @@ class DataSourceController @Inject()(
                 _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
                 zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
                 _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
-                //_ <- webKnossosServer.addAllowedTeams(allowedTeams) This is not necessary for the first step bc you import it afterwards anyways
+                //_ <- webKnossosServer.addAllowedTeams(allowedTeams) This is not necessary for the first step because you import it afterwards anyways
               } yield {
                 Ok
               }

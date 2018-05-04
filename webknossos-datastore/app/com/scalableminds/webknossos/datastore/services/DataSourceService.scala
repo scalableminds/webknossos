@@ -76,11 +76,11 @@ class DataSourceService @Inject()(
     ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true) match {
       case Full(_) =>
         dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
-        Future(Full(())).toFox
+        Fox.successful()
       case e =>
         val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
         logger.warn(errorMsg)
-        Future(Failure(errorMsg)).toFox
+        Fox.failure(errorMsg)
     }
   }
 

@@ -319,7 +319,7 @@ case class User(
                  _isSuperUser: Option[Boolean] = None,
                  _id: BSONObjectID = BSONObjectID.generate,
                  loginInfo: LoginInfo,
-                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity {
+                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity with FoxImplicits {
 
   def teamIds = teams.map(_._id)
 
@@ -338,7 +338,13 @@ case class User(
 
   lazy val teamManagerTeamIds = teamManagerTeams.map(_._id)
 
-  def isTeamManagerOf(_team: BSONObjectID) = {
+  def assertTeamManagerOrAdminOf(_team: BSONObjectID) =
+    for {
+      team <- TeamDAO.findOneById(_team)(GlobalAccessContext)
+      _ <- (teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization) ?~> Messages("notAllowed")
+    } yield ()
+
+  def isTeamManagerOfBLOCKING(_team: BSONObjectID) = {
     val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 500 millis).openOrThrowException("Keep the teamManager Query synchronous")
     teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
   }

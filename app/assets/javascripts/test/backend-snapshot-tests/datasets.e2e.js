@@ -69,4 +69,3 @@ test("revokeDatasetSharingToken", async t => {
   api.revokeDatasetSharingToken(dataset.name);
   t.pass();
 });
-

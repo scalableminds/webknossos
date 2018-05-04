@@ -57,7 +57,7 @@ CREATE TABLE webknossos.annotations(
 
 CREATE TABLE webknossos.dataSets(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _dataStore CHAR(256) NOT NULL ,
+  _dataStore CHAR(256) NOT NULL,
   _organization CHAR(24) NOT NULL,
   defaultConfiguration JSONB,
   description TEXT,
@@ -94,7 +94,7 @@ CREATE TABLE webknossos.dataSet_allowedTeams(
 
 CREATE TABLE webknossos.dataSet_resolutions(
   _dataSet CHAR(24) NOT NULL,
-  dataLayerName CHAR(24),
+  dataLayerName VARCHAR(256),
   resolution webknossos.VECTOR3 NOT NULL,
   PRIMARY KEY (_dataSet, dataLayerName, resolution)
 );
@@ -312,40 +312,47 @@ CREATE INDEX ON webknossos.projects(_team);
 CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
 
-
--- ALTER TABLE webknossos.analytics
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.annotations
---   ADD FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.dataSets
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name);
--- ALTER TABLE webknossos.dataSet_layers
---   ADD FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.dataSet_allowedTeams
---   ADD FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.projects
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.scripts
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
--- ALTER TABLE webknossos.taskTypes
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.tasks
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
---   ADD FOREIGN KEY(_project) REFERENCES webknossos.projects(_id),
---   ADD FOREIGN KEY(_script) REFERENCES webknossos.scripts(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.teams
---   ADD FOREIGN KEY(_owner) REFERENCES webknossos.users(_id),
---   ADD FOREIGN KEY(_parent) REFERENCES webknossos.teams(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.timespans
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE SET NULL;
--- ALTER TABLE webknossos.user_team_roles
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
--- ALTER TABLE webknossos.user_experiences
---   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.analytics
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
+ALTER TABLE webknossos.annotations
+  ADD CONSTRAINT task_ref FOREIGN KEY(_task) REFERENCES webknossos.tasks(_id) ON DELETE SET NULL,
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
+ALTER TABLE webknossos.dataSets
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id),
+  ADD CONSTRAINT dataStore_ref FOREIGN KEY(_dataStore) REFERENCES webknossos.dataStores(name);
+ALTER TABLE webknossos.dataSet_layers
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.dataSet_allowedTeams
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE,
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.dataSet_resolutions
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.projects
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
+  ADD CONSTRAINT user_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
+ALTER TABLE webknossos.scripts
+  ADD CONSTRAINT user_ref FOREIGN KEY(_owner) REFERENCES webknossos.users(_id);
+ALTER TABLE webknossos.taskTypes
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.tasks
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
+  ADD CONSTRAINT project_ref FOREIGN KEY(_project) REFERENCES webknossos.projects(_id),
+  ADD CONSTRAINT script_ref FOREIGN KEY(_script) REFERENCES webknossos.scripts(_id) ON DELETE SET NULL;
+ALTER TABLE webknossos.teams
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
+ALTER TABLE webknossos.timespans
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
+  ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE SET NULL;
+ALTER TABLE webknossos.organizations
+  ADD CONSTRAINT orgteam_ref FOREIGN KEY(_organizationTeam) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.users
+  ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
+ALTER TABLE webknossos.user_team_roles
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
+  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.user_experiences
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
+ALTER TABLE webknossos.user_dataSetConfigurations
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
+  ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;

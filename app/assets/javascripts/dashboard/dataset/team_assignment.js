@@ -50,7 +50,8 @@ class TeamAssignment extends React.PureComponent<Props, State> {
         onChange={this.onSelectTeams}
         value={this.props.allowedTeams.map(t => t.id)}
         filterOption={(input, option) =>
-          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0}
+          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
+        }
       >
         {this.state.teams.map(team => (
           <Option key={team.name} value={team.id}>

@@ -65,7 +65,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             key="scale"
             width={120}
             render={(__, dataset: DatasetType) =>
-              TemplateHelpers.formatTuple(dataset.dataSource.scale)}
+              TemplateHelpers.formatTuple(dataset.dataSource.scale)
+            }
           />
 
           <Column
@@ -81,7 +82,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                 >
                   {team.name}
                 </Tag>
-              ))}
+              ))
+            }
           />
           <Column
             title="Active"
@@ -113,7 +115,8 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                 <Tag key={layer.name}>
                   {layer.category} - {layer.elementClass}
                 </Tag>
-              ))}
+              ))
+            }
           />
 
           <Column

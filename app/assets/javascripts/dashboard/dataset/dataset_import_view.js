@@ -206,8 +206,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   }
 
   getSharingLink() {
-    return `${window.location.origin}/datasets/${this.props.datasetName}/view?token=${this.state
-      .sharingToken}`;
+    return `${window.location.origin}/datasets/${this.props.datasetName}/view?token=${
+      this.state.sharingToken
+    }`;
   }
 
   getMessageComponents() {

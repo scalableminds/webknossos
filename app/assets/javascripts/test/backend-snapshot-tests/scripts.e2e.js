@@ -34,7 +34,6 @@ test("createScript(), updateScript(), and deleteScript()", async t => {
 
   // Create New Script
   const createdScript = await api.createScript(data);
-  console.log("da script", createdScript);
 
   // Since the id will change after re-runs, we fix it here for easy
   // snapshotting
@@ -44,7 +43,6 @@ test("createScript(), updateScript(), and deleteScript()", async t => {
   // Update Script
   const newData = Object.assign({}, createdScript, { name: "MegaScript", owner: activeUser.id });
   const updatedScript = await api.updateScript(createdScript.id, newData);
-  console.log("updatedScript", updatedScript);
 
   const updatedScriptWithFixedId = Object.assign({}, updatedScript, { id: "fixed-script-id" });
   t.snapshot(updatedScriptWithFixedId, { id: "scripts-updatedScript" });

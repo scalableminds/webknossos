@@ -7,7 +7,6 @@ import Utils from "libs/utils";
 import { Table, Icon, Tag } from "antd";
 import DatasetActionView from "dashboard/advanced_dataset/dataset_action_view";
 import DatasetAccessListView from "dashboard/advanced_dataset/dataset_access_list_view";
-import TeamAssignmentModal from "dashboard/dataset/team_assignment_modal";
 import type { DatasetType } from "dashboard/dataset_view";
 import type { APITeamType } from "admin/api_flow_types";
 
@@ -20,13 +19,11 @@ type Props = {
 };
 
 type State = {
-  isTeamAssignmentModalVisible: boolean,
   selectedDataset: ?DatasetType,
 };
 
 class AdvancedDatasetView extends React.PureComponent<Props, State> {
   state = {
-    isTeamAssignmentModalVisible: false,
     selectedDataset: null,
   };
 
@@ -89,12 +86,6 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
                 <Tag
                   color={TemplateHelpers.stringToColor(team.name)}
                   key={`allowed_teams_${dataset.name}_${team.name}`}
-                  onClick={() =>
-                    this.setState({
-                      selectedDataset: dataset,
-                      isTeamAssignmentModalVisible: true,
-                    })
-                  }
                 >
                   {team.name}
                 </Tag>
@@ -142,23 +133,6 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             render={(__, dataset: DatasetType) => <DatasetActionView dataset={dataset} />}
           />
         </Table>
-        {this.state.isTeamAssignmentModalVisible && this.state.selectedDataset ? (
-          <TeamAssignmentModal
-            isVisible={this.state.isTeamAssignmentModalVisible}
-            dataset={this.state.selectedDataset}
-            onCancel={() =>
-              this.setState({
-                isTeamAssignmentModalVisible: false,
-              })
-            }
-            onOk={(updatedDataset: DatasetType) => {
-              this.props.updateDataset(updatedDataset);
-              this.setState({
-                isTeamAssignmentModalVisible: false,
-              });
-            }}
-          />
-        ) : null}
       </div>
     );
   }

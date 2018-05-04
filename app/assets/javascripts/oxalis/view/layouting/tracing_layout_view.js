@@ -23,6 +23,8 @@ import InputCatcher from "oxalis/view/input_catcher";
 import { OrthoViews } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType, ModeType } from "oxalis/constants";
+import RecordingSwitch from "oxalis/view/recording_switch";
+import TDViewControls from "oxalis/view/td_view_controls";
 import GoldenLayoutAdapter from "./golden_layout_adapter";
 import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
 import { determineLayout } from "./default_layout_configs";
@@ -123,13 +125,17 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 <InputCatcher viewportID={OrthoViews.PLANE_XY} key="xy" portalKey="xy" />
                 <InputCatcher viewportID={OrthoViews.PLANE_YZ} key="yz" portalKey="yz" />
                 <InputCatcher viewportID={OrthoViews.PLANE_XZ} key="xz" portalKey="xz" />
-                <InputCatcher viewportID={OrthoViews.TDView} key="td" portalKey="td" />
+                <InputCatcher viewportID={OrthoViews.TDView} key="td" portalKey="td">
+                  <TDViewControls />
+                </InputCatcher>
 
                 <InputCatcher
                   viewportID="arbitraryViewport"
                   key="arbitraryViewport"
                   portalKey="arbitraryViewport"
-                />
+                >
+                  <RecordingSwitch />
+                </InputCatcher>
 
                 <DatasetInfoTabView key="DatasetInfoTabView" portalKey="DatasetInfoTabView" />
                 <TreesTabView key="TreesTabView" portalKey="TreesTabView" />

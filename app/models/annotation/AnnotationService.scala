@@ -242,20 +242,22 @@ object AnnotationService
       }
     }
 
-    def getScales(annotations: List[Annotation]) = {
-      Fox.combined(annotations.map{ annotation =>
-        for {
-          dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName)
-          scale <- dataSet.dataSource.scaleOpt
-        } yield { scale }
-      })
+    def getDatasetScale(dataSetName: String) = {
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
+        scale <- dataSet.dataSource.scaleOpt
+      } yield scale
     }
 
     def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))
 
     val annotationsGrouped: Map[String, List[Annotation]] = annotations.groupBy(_.dataSetName)
     val tracings = annotationsGrouped.map {
-      case (dataSetName, annotations) => (getTracings(dataSetName, annotations.map(_.tracingReference)), getNames(annotations), getScales(annotations), Fox.successful(annotations))
+      case (dataSetName, annotations) => {
+        for {
+          scale <- getDatasetScale(dataSetName)
+        } yield (getTracings(dataSetName, annotations.map(_.tracingReference)), getNames(annotations), annotations.map(a => scale), Fox.successful(annotations))
+      }
     }
     tracings.toList
   }

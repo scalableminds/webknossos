@@ -3,11 +3,9 @@ package models.user
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
-import models.basics.SecuredBaseDAO
 import reactivemongo.play.json.BSONFormats._
 import models.binary.DataSetSQLDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}

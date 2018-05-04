@@ -29,11 +29,7 @@ class TracingView extends React.PureComponent<Props> {
     };
 
     return (
-      <div
-        style={{ position: "relative" }}
-        className={divClassName}
-        onContextMenu={this.handleContextMenu}
-      >
+      <div className={divClassName} onContextMenu={this.handleContextMenu}>
         <canvas key="render-canvas" id="render-canvas" style={canvasStyle} />
       </div>
     );

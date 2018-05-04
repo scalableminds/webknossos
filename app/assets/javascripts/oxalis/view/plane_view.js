@@ -229,13 +229,15 @@ class PlaneView {
     for (const plane of OrthoViewValues) {
       SceneController.scene.remove(this.cameras[plane]);
     }
+    window.removeEventListener("resize", this.resize);
   }
 
   start(): void {
     this.running = true;
-
     this.resize();
     this.animate();
+
+    window.addEventListener("resize", this.resize);
   }
 }
 

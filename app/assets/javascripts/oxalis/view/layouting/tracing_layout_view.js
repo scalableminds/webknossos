@@ -105,9 +105,14 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
             <div
               id={canvasAndLayoutContainerID}
-              style={{ display: "flex", flexDirection: "column", flex: "1 1 auto" }}
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                flex: "1 1 auto",
+                position: "relative",
+              }}
             >
-              <TracingView renderCanvas />
+              <TracingView />
               <GoldenLayoutAdapter
                 id="layoutContainer"
                 style={{ display: "block", height: "100%", width: "100%", flex: "1 1 auto" }}

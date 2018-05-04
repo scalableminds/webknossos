@@ -4,6 +4,8 @@ import * as React from "react";
 import GoldenLayout from "golden-layout/dist/goldenlayout.js";
 import "golden-layout/src/css/goldenlayout-base.css";
 import "golden-layout/src/css/goldenlayout-light-theme.css";
+import _ from "lodash";
+import Constants from "oxalis/constants";
 import { PortalTarget, RenderToPortal } from "./portal_utils.js";
 
 type Props<KeyType> = {
@@ -20,6 +22,12 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
 
   componentDidMount() {
     this.setupLayout();
+
+    const updateSizeDebounced = _.debounce(
+      () => this.gl.updateSize(),
+      Constants.RESIZE_THROTTLE_TIME,
+    );
+    window.addEventListener("resize", updateSizeDebounced);
   }
 
   componentDidUpdate(prevProps: Props<*>) {

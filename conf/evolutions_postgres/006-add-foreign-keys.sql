@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/2532 TODO
+-- https://github.com/scalableminds/webknossos/pull/2568
 
 -- UP:
 

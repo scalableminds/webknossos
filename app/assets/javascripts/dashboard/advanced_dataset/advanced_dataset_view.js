@@ -17,9 +17,7 @@ type Props = {
   searchQuery: string,
 };
 
-type State = {};
-
-class AdvancedDatasetView extends React.PureComponent<Props, State> {
+class AdvancedDatasetView extends React.PureComponent<Props> {
   render() {
     return (
       <div className="TestAdvancedDatasetView">

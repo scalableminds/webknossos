@@ -33,9 +33,9 @@ import {
 import { Vector3Input } from "libs/vector_input";
 import type { DatasetConfigurationType } from "oxalis/store";
 import messages from "messages";
-import type { APIDatasetType, APIMessageType, APITeamType } from "admin/api_flow_types";
+import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
 import DatasourceSchema from "libs/datasource.schema.json";
-import TeamAssignment from "dashboard/dataset/team_assignment";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 
 const FormItem = Form.Item;
 const CollapsePanel = Collapse.Panel;
@@ -82,7 +82,6 @@ type State = {
   datasetDefaultConfiguration: ?DatasetConfigurationType,
   messages: Array<APIMessageType>,
   isLoading: boolean,
-  allowedTeams: Array<APITeamType>,
 };
 
 type FormData = {
@@ -103,7 +102,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     sharingToken: "",
     isLoading: true,
     messages: [],
-    allowedTeams: [],
   };
 
   componentDidMount() {
@@ -145,7 +143,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       sharingToken,
       dataset,
       messages: dataSourceMessages,
-      allowedTeams: dataset.allowedTeams,
     });
   }
 
@@ -168,7 +165,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         const dataSource = JSON.parse(formValues.dataSourceJson);
         await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
 
-        const teamIds = this.state.allowedTeams.map(t => t.id);
+        const teamIds = dataset.allowedTeams.map(t => t.id);
         await updateDatasetTeams(dataset.name, teamIds);
 
         const verb = this.props.isEditingMode ? "updated" : "imported";
@@ -339,11 +336,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             </FormItem>
             {this.props.isEditingMode ? this.getEditModeComponents() : null}
             <FormItem label="Allowed Teams">
-              <TeamAssignment
-                allowedTeams={this.state.allowedTeams}
+              <TeamSelectionComponent
+                allowedTeams={this.state.dataset ? this.state.dataset.allowedTeams : []}
                 onTeamsChange={allowedTeams => {
                   this.setState({
-                    allowedTeams,
+                    dataset: Object.assign({}, this.state.dataset, { allowedTeams }),
                   });
                 }}
               />

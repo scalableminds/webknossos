@@ -1,5 +1,4 @@
 // @flow
-import _ from "lodash";
 import * as React from "react";
 import { Select } from "antd";
 import { getEditableTeams } from "admin/admin_rest_api";
@@ -16,7 +15,7 @@ type State = {
   teams: Array<APITeamType>,
 };
 
-class TeamAssignment extends React.PureComponent<Props, State> {
+class TeamSelectionComponent extends React.PureComponent<Props, State> {
   state = {
     teams: [],
   };
@@ -33,9 +32,7 @@ class TeamAssignment extends React.PureComponent<Props, State> {
   }
 
   onSelectTeams = (selectedTeamIds: Array<string>) => {
-    const uniqueIds = _.uniq(selectedTeamIds);
-
-    const allowedTeams = this.state.teams.filter(team => uniqueIds.includes(team.id));
+    const allowedTeams = this.state.teams.filter(team => selectedTeamIds.includes(team.id));
     this.props.onTeamsChange(allowedTeams);
   };
 
@@ -49,18 +46,12 @@ class TeamAssignment extends React.PureComponent<Props, State> {
         optionFilterProp="children"
         onChange={this.onSelectTeams}
         value={this.props.allowedTeams.map(t => t.id)}
-        filterOption={(input, option) =>
-          option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-        }
+        filterOption
       >
-        {this.state.teams.map(team => (
-          <Option key={team.name} value={team.id}>
-            {team.name}
-          </Option>
-        ))}
+        {this.state.teams.map(team => <Option key={team.id}>{team.name}</Option>)}
       </Select>
     );
   }
 }
 
-export default TeamAssignment;
+export default TeamSelectionComponent;

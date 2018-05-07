@@ -120,6 +120,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         displayName: dataset.displayName || undefined,
         isPublic: dataset.isPublic || false,
         description: dataset.description || undefined,
+        allowedTeams: dataset.allowedTeams || [],
       },
     });
 
@@ -165,7 +166,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         const dataSource = JSON.parse(formValues.dataSourceJson);
         await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
 
-        const teamIds = dataset.allowedTeams.map(t => t.id);
+        const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
         await updateDatasetTeams(dataset.name, teamIds);
 
         const verb = this.props.isEditingMode ? "updated" : "imported";
@@ -336,14 +337,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             </FormItem>
             {this.props.isEditingMode ? this.getEditModeComponents() : null}
             <FormItem label="Allowed Teams">
-              <TeamSelectionComponent
-                allowedTeams={this.state.dataset ? this.state.dataset.allowedTeams : []}
-                onTeamsChange={allowedTeams => {
-                  this.setState({
-                    dataset: Object.assign({}, this.state.dataset, { allowedTeams }),
-                  });
-                }}
-              />
+              {getFieldDecorator("dataset.allowedTeams", {})(
+                <TeamSelectionComponent
+                  value={[]}
+                  onChange={() => {}}
+                  mode="multiple"
+                />,
+              )}
             </FormItem>
             <FormItem>
               <Button type="primary" htmlType="submit">

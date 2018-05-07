@@ -12,7 +12,6 @@ type Props = {
 };
 
 class TeamSelectionView extends React.PureComponent<Props> {
-
   handleFormSubmit = (event: ?SyntheticInputEvent<*>) => {
     if (event) {
       event.preventDefault();
@@ -34,7 +33,7 @@ class TeamSelectionView extends React.PureComponent<Props> {
           <Col span={12}>
             <FormItem {...formItemLayout} label="Team" style={{ marginBottom: 0 }}>
               {getFieldDecorator("team", { initialValue: this.props.value })(
-                <TeamSelectionComponent value={[]} onChange={() => {}} />
+                <TeamSelectionComponent value={[]} onChange={() => {}} />,
               )}
             </FormItem>
           </Col>

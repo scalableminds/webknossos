@@ -9,18 +9,18 @@ const { Option } = Select;
 type Props = {
   value: Array<APITeamType>,
   onChange: (value: Array<APITeamType>) => void,
-  mode?: ?string
+  mode?: ?string,
 };
 
 type State = {
   teams: Array<APITeamType>,
-  allowedTeams: Array<APITeamType>
+  allowedTeams: Array<APITeamType>,
 };
 
 class TeamSelectionComponent extends React.PureComponent<Props, State> {
   state = {
     teams: [],
-    allowedTeams: this.props.value ? this.props.value : []
+    allowedTeams: this.props.value ? this.props.value : [],
   };
 
   componentDidMount() {
@@ -45,14 +45,14 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     this.props.onChange(allowedTeams);
     this.setState({
       allowedTeams,
-    })
+    });
   };
 
   render() {
     return (
       <Select
         showSearch
-        mode = {this.props.mode ? this.props.mode : "default"}
+        mode={this.props.mode ? this.props.mode : "default"}
         style={{ width: "100%" }}
         placeholder="Select a Team"
         optionFilterProp="children"

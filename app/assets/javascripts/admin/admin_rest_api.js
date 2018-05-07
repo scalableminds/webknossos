@@ -679,7 +679,7 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 }
 
 // ### Organizations
-export async function getOrganizations(): Promise<Array<APIOrganizationType>> {
+export async function getOrganizationNames(): Promise<Array<string>> {
   return Request.receiveJSON("/api/organizations");
 }
 

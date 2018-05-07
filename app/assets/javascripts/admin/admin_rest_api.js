@@ -26,7 +26,6 @@ import type {
   APITimeTrackingType,
   APIProjectProgressReportType,
   APIOpenTasksReportType,
-  APIOrganizationType,
   APIBuildInfoType,
   APITracingType,
   APIFeatureToggles,

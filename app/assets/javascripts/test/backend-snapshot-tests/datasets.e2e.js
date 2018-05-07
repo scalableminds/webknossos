@@ -63,6 +63,6 @@ test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {
   const sharingToken = api.getDatasetSharingToken(dataset.name);
   t.snapshot(sharingToken, { id: "dataset-sharingToken" });
 
-  api.revokeDatasetSharingToken(dataset.name);
+  await api.revokeDatasetSharingToken(dataset.name);
   t.pass();
 });

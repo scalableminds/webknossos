@@ -127,7 +127,7 @@ class TeamListView extends React.PureComponent<Props, State> {
             <Table
               dataSource={Utils.filterWithSearchQueryOR(
                 this.state.teams,
-                ["name", "owner", "parent"],
+                ["name"],
                 this.state.searchQuery,
               )}
               rowKey="id"

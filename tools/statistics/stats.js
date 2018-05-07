@@ -62,9 +62,9 @@ async function connect() {
         console.log(
           `Moved: ${moved}, Created: ${created}, Moved/Created: ${movedToCreatedRatio} - User: ${
             entry.firstname
-          } ${entry.lastname}, TaskId: ${entry._task}, AnnotationId: ${entry._id}, Modified: ${
-            entry.modified
-          }`,
+          } ${entry.lastname}, TaskId: ${entry._task}, AnnotationId: ${entry._id}, TracingId: ${
+            entry.tracing_id
+          } ,Modified: ${entry.modified}`,
         );
       }
     } catch (err) {

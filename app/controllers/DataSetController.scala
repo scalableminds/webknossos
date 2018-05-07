@@ -143,7 +143,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         teamsWithUpdate = teamsBson.filter(t => userTeams.exists(_._id == t))
         _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)
       } yield
-      Ok(Json.toJson(teamsWithUpdate ++ teamsWithoutUpdate))
+      Ok(Json.toJson((teamsWithUpdate ++ teamsWithoutUpdate).map(_.stringify)))
     }
   }
 

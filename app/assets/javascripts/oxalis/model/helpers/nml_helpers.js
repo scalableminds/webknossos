@@ -483,7 +483,6 @@ export function parseNml(
               groupId: attr.groupId,
               name: attr.name,
               children: [],
-              type: "group",
             };
             if (newGroup.groupId == null || newGroup.groupId.length === 0) {
               throw new NmlParseError(

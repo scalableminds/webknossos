@@ -82,18 +82,15 @@ const tracing = {
     {
       groupId: "1",
       name: "Axon 1",
-      type: "group",
       children: [
         {
           groupId: "3",
           name: "Blah",
-          type: "group",
           children: [],
         },
         {
           groupId: "4",
           name: "Blah 2",
-          type: "group",
           children: [],
         },
       ],
@@ -101,7 +98,6 @@ const tracing = {
     {
       groupId: "2",
       name: "Axon 2",
-      type: "group",
       children: [],
     },
   ],
@@ -223,7 +219,6 @@ test("NML Parser should throw errors for invalid nmls", async t => {
           {
             groupId: "3",
             name: "Group",
-            type: "group",
             children: [],
           },
         ],

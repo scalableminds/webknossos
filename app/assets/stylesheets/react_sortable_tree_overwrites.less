@@ -1,0 +1,43 @@
+.rst__rowWrapper {
+  padding: 5px 5px 5px 0px;
+}
+
+.rst__rowContents {
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  border: none;
+}
+
+.rst__moveHandle {
+  -webkit-box-shadow: none;
+  box-shadow: none;
+  border: none;
+  width: 15px;
+  background: none;
+  &:before {
+    content: "\f047";
+    font-family: FontAwesome;
+    left: 5px;
+    position: absolute;
+    top: 2px;
+  }
+}
+
+.rst__rowTitle {
+  font-weight: normal;
+}
+
+.rst__rowLabel {
+  border-radius: 2px;
+  &:hover {
+    background-color: #e6f7ff;
+    cursor: pointer;
+  }
+}
+
+.rst__rowSearchMatch {
+  outline: none;
+  .rst__rowLabel {
+    background-color: #bae7ff;
+  }
+}

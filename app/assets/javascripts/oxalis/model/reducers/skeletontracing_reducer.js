@@ -21,6 +21,7 @@ import {
   deleteComment,
   mergeTrees,
   toggleAllTreesReducer,
+  toggleTreeGroupReducer,
   addTreesAndGroups,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
@@ -519,6 +520,10 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               }),
             )
             .getOrElse(state);
+        }
+
+        case "TOGGLE_TREE_GROUP": {
+          return toggleTreeGroupReducer(state, skeletonTracing, action.groupId);
         }
 
         case "SET_TREE_GROUPS": {

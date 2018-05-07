@@ -660,3 +660,39 @@ export function toggleAllTreesReducer(
     },
   });
 }
+
+export function toggleTreeGroupReducer(
+  state: OxalisState,
+  skeletonTracing: SkeletonTracingType,
+  groupId: string,
+): OxalisState {
+  let toggledGroup;
+  forEachGroups(skeletonTracing.treeGroups, group => {
+    if (group.groupId === groupId) toggledGroup = group;
+  });
+  if (toggledGroup == null) return state;
+
+  // Assemble a list that contains the toggled groupId and the groupIds of all child groups
+  const affectedGroupIds = new Set(mapGroups([toggledGroup], group => group.groupId));
+
+  // Let's make all trees visible if there is one invisible tree in one of the affected groups
+  const shouldBecomeVisible = _.values(skeletonTracing.trees).some(
+    tree => affectedGroupIds.has(tree.groupId) && !tree.isVisible,
+  );
+
+  const updateTreeObject = {};
+  const isVisibleUpdater = {
+    isVisible: { $set: shouldBecomeVisible },
+  };
+  _.values(skeletonTracing.trees).forEach(tree => {
+    if (affectedGroupIds.has(tree.groupId)) {
+      updateTreeObject[tree.treeId] = isVisibleUpdater;
+    }
+  });
+
+  return update(state, {
+    tracing: {
+      trees: updateTreeObject,
+    },
+  });
+}

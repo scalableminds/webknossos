@@ -56,6 +56,7 @@ type DeleteBranchPointActionType = { type: "DELETE_BRANCHPOINT" };
 type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId?: number, timestamp: number };
 type ToggleAllTreesActionType = { type: "TOGGLE_ALL_TREES", timestamp: number };
 type ToggleInactiveTreesActionType = { type: "TOGGLE_INACTIVE_TREES", timestamp: number };
+type ToggleTreeGroupActionType = { type: "TOGGLE_TREE_GROUP", groupId: string };
 type RequestDeleteBranchPointActionType = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeActionType = { type: "CREATE_TREE", timestamp: number };
 type AddTreesAndGroupsActionType = {
@@ -107,6 +108,7 @@ export type SkeletonTracingActionType =
   | ToggleTreeActionType
   | ToggleAllTreesActionType
   | ToggleInactiveTreesActionType
+  | ToggleTreeGroupActionType
   | NoActionType
   | SetTracingActionType
   | SetTreeGroupsActionType
@@ -316,6 +318,11 @@ export const toggleInactiveTreesAction = (
 ): ToggleInactiveTreesActionType => ({
   type: "TOGGLE_INACTIVE_TREES",
   timestamp,
+});
+
+export const toggleTreeGroupAction = (groupId: string): ToggleTreeGroupActionType => ({
+  type: "TOGGLE_TREE_GROUP",
+  groupId,
 });
 
 export const setActiveTreeAction = (treeId: number): SetActiveTreeActionType => ({

@@ -87,7 +87,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
           <Header style={{ flex: "0 1 auto", zIndex: 210, minHeight: 48 }}>
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
-              Settings
+              <span className="hideOnSmallScreen">Settings</span>
             </ButtonComponent>
             <ActionBarView />
           </Header>

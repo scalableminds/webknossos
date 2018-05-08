@@ -129,6 +129,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 0,
       },
+      isArbitrary: {
+        type: "b",
+        value: false,
+      },
     });
 
     for (const name of Object.keys(Model.binary)) {
@@ -253,6 +257,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     );
 
     listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.viewMode,
+      viewMode => {
+        this.uniforms.isArbitrary.value = viewMode !== constants.MODE_PLANE_TRACING;
+      },
+    );
+
+    listenToStoreProperty(
       storeState => getPlaneScalingFactor(storeState.flycam) / storeState.userConfiguration.scale,
       pixelToVoxelFactor => {
         this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
@@ -371,6 +382,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   <% } %>
 <% } %>
 
+uniform bool isArbitrary;
 uniform float alpha;
 uniform bool highlightHoveredCellId;
 uniform vec3 globalPosition;
@@ -387,6 +399,8 @@ uniform float brushSizeInPixel;
 uniform float pixelToVoxelFactor;
 
 varying vec4 worldCoord;
+varying vec4 modelCoord;
+varying mat4 savedModelMatrix;
 
 const float bucketsPerDim = <%= bucketsPerDim %>;
 const float bucketWidth = <%= bucketWidth %>;
@@ -404,6 +418,48 @@ vec3 hsv_to_rgb(vec4 HSV)
   K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
   p = abs(fract(HSV.xxx + K.xyz) * 6.0 - K.www);
   return HSV.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), HSV.y);
+}
+
+// https://github.com/glslify/glsl-inverse/blob/master/index.glsl
+mat4 inverse(mat4 m) {
+  float
+      a00 = m[0][0], a01 = m[0][1], a02 = m[0][2], a03 = m[0][3],
+      a10 = m[1][0], a11 = m[1][1], a12 = m[1][2], a13 = m[1][3],
+      a20 = m[2][0], a21 = m[2][1], a22 = m[2][2], a23 = m[2][3],
+      a30 = m[3][0], a31 = m[3][1], a32 = m[3][2], a33 = m[3][3],
+
+      b00 = a00 * a11 - a01 * a10,
+      b01 = a00 * a12 - a02 * a10,
+      b02 = a00 * a13 - a03 * a10,
+      b03 = a01 * a12 - a02 * a11,
+      b04 = a01 * a13 - a03 * a11,
+      b05 = a02 * a13 - a03 * a12,
+      b06 = a20 * a31 - a21 * a30,
+      b07 = a20 * a32 - a22 * a30,
+      b08 = a20 * a33 - a23 * a30,
+      b09 = a21 * a32 - a22 * a31,
+      b10 = a21 * a33 - a23 * a31,
+      b11 = a22 * a33 - a23 * a32,
+
+      det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+
+  return mat4(
+      a11 * b11 - a12 * b10 + a13 * b09,
+      a02 * b10 - a01 * b11 - a03 * b09,
+      a31 * b05 - a32 * b04 + a33 * b03,
+      a22 * b04 - a21 * b05 - a23 * b03,
+      a12 * b08 - a10 * b11 - a13 * b07,
+      a00 * b11 - a02 * b08 + a03 * b07,
+      a32 * b02 - a30 * b05 - a33 * b01,
+      a20 * b05 - a22 * b02 + a23 * b01,
+      a10 * b10 - a11 * b08 + a13 * b06,
+      a01 * b08 - a00 * b10 - a03 * b06,
+      a30 * b04 - a31 * b02 + a33 * b00,
+      a21 * b02 - a20 * b04 - a23 * b00,
+      a11 * b07 - a10 * b09 - a12 * b06,
+      a00 * b09 - a01 * b07 + a02 * b06,
+      a31 * b01 - a30 * b03 - a32 * b00,
+      a20 * b03 - a21 * b01 + a22 * b00) / det;
 }
 
 float div(float a, float b) {
@@ -636,19 +692,36 @@ vec3 getRelativeCoords(vec3 worldCoordUVW, float usedZoomStep) {
   return coords;
 }
 
+vec3 scale(vec3 v, float length) {
+  return normalize(v) * length;
+}
+
 vec3 getWorldCoordUVW() {
+  vec3 worldCoordUVW = transDim(worldCoord.xyz);
+
+  if (isArbitrary) {
+    // return modelCoord.xyz;
+
+    worldCoordUVW = (inverse(savedModelMatrix) * vec4(worldCoordUVW, 1.0)).xyz;
+    float sphericalRadius = -140.0;
+    worldCoordUVW -= vec3(0, 0, sphericalRadius);
+    worldCoordUVW = scale(worldCoordUVW, sphericalRadius / length(worldCoordUVW));
+
+    worldCoordUVW = (savedModelMatrix * vec4(worldCoordUVW, 1.0)).xyz;
+  }
+
   vec3 datasetScaleUVW = transDim(datasetScale);
 
-  vec3 worldCoordUVW = vec3(
+  worldCoordUVW = vec3(
     // For u and w we need to divide by datasetScale because the threejs scene is scaled
-    worldCoord[<%= uvw[0] %>] / datasetScaleUVW.x,
-    worldCoord[<%= uvw[1] %>] / datasetScaleUVW.y,
+    worldCoordUVW.x / datasetScaleUVW.x,
+    worldCoordUVW.y / datasetScaleUVW.y,
 
     // globalPosition, however, gives us the coordinates we need
-    // Theoretically, worldCoord[<%= uvw[2] %>] could be used here. However, the plane is offset
+    // Theoretically, worldCoordUVW[<%= uvw[2] %>] could be used here. However, the plane is offset
     // in 3D space to allow skeletons to be rendered before the plane. Since w (e.g., z for xy plane) is
     // the same for all texels computed in this shader, we simply use globalPosition[w] instead
-    globalPosition[<%= uvw[2] %>]
+    isArbitrary ? worldCoordUVW.z / datasetScaleUVW.z : globalPosition[<%= uvw[2] %>]
   );
 
   return worldCoordUVW;
@@ -857,6 +930,8 @@ void main() {
   float color_value  = 0.0;
 
   vec3 worldCoordUVW = getWorldCoordUVW();
+  // gl_FragColor = vec4(worldCoordUVW, 1.0);
+  // return;
   vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
 
   vec3 bucketPosition = div(floor(coords), bucketWidth);

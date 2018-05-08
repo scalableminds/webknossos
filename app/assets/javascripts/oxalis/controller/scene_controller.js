@@ -235,7 +235,7 @@ class SceneController {
     }
   };
 
-  update = (): void => {
+  update = (optPlane): void => {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
@@ -255,12 +255,16 @@ class SceneController {
       [anchorPoint, fallbackAnchorPoint] = binary.updateDataTextures(gPos, zoomStep);
     }
 
-    for (const currentPlane of _.values(this.planes)) {
-      currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
-      // Update plane position
-      currentPlane.setPosition(globalPosVec);
-      // Update plane scale
-      currentPlane.setScale(planeScale);
+    if (optPlane) {
+      optPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+      optPlane.setPosition(globalPosVec);
+      optPlane.setScale(planeScale);
+    } else {
+      for (const currentPlane of _.values(this.planes)) {
+        currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
+        currentPlane.setPosition(globalPosVec);
+        currentPlane.setScale(planeScale);
+      }
     }
   };
 

@@ -39,6 +39,7 @@ class ArbitraryPlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 uniform sampler2D <%= colorName %>_texture;
 uniform float <%= colorName %>_brightness, <%= colorName %>_contrast;
 varying vec2 vUv;
+varying vec4 worldCoord;
 
 void main()
 {
@@ -56,6 +57,20 @@ void main()
 
   /* Set frag color */
   gl_FragColor = vec4(color_value, color_value, color_value, 1.0);
+
+
+  vec3 worldCoordUVW = vec3(
+    // For u and w we need to divide by datasetScale because the threejs scene is scaled
+    worldCoord[0] / 11.24,
+    worldCoord[1] / 11.24,
+    worldCoord[2] / 28.0
+  );
+// Resolution: 11.24 × 11.24 × 28 nm³
+
+
+  // gl_FragColor = vec4(worldCoordUVW / 100.0, 1.0);
+
+
 }\
 `,
     )({ colorName: this.getColorName() });

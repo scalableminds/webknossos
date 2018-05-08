@@ -7,13 +7,14 @@ import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
-import constants from "oxalis/constants";
+import constants, { OrthoViews } from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import SceneController from "oxalis/controller/scene_controller";
 
-import ArbitraryPlaneMaterialFactory from "oxalis/geometries/materials/arbitrary_plane_material_factory";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
 
 // Let's set up our trianglesplane.
 // It serves as a "canvas" where the brain images
@@ -64,6 +65,21 @@ class ArbitraryPlane {
       this.isDirty = true;
     });
   }
+
+  updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
+    if (anchorPoint) {
+      this.mesh.material.setAnchorPoint(anchorPoint);
+    }
+    if (fallbackAnchorPoint) {
+      this.mesh.material.setFallbackAnchorPoint(fallbackAnchorPoint);
+    }
+  }
+
+  setPosition = ({ x, y, z }: Vector3) => {
+    this.mesh.material.setGlobalPosition([x, y, z]);
+  };
+
+  setScale() {}
 
   setMode(mode: ModeType) {
     switch (mode) {
@@ -122,6 +138,8 @@ class ArbitraryPlane {
       mesh.matrixWorldNeedsUpdate = true;
 
       this.isDirty = false;
+
+      SceneController.update(this);
     }
   }
 
@@ -182,7 +200,10 @@ class ArbitraryPlane {
   }
 
   createMesh() {
-    this.textureMaterial = new ArbitraryPlaneMaterialFactory(this.width, {}).setup().getMaterial();
+    // this.textureMaterial = new PlaneMaterialFactory(this.width, {}).setup().getMaterial();
+    this.textureMaterial = new PlaneMaterialFactory(0, {}, OrthoViews.PLANE_XY)
+      .setup()
+      .getMaterial();
 
     // create mesh
     const plane = new THREE.Mesh(

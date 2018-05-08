@@ -78,7 +78,7 @@ test("teams_create_user_D", async t => {
   t.plan(1);
 
   const newTeam = {
-    name: "test-team-name"
+    name: "test-team-name",
   };
   await api.createTeam(newTeam).catch(err => {
     t.is(err.messages[0].error, "Access denied. Only admin users can execute this operation.");

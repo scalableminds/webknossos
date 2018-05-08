@@ -77,10 +77,8 @@ test("teams_create_user_D", async t => {
   await setCurrToken(tokenUserD);
   t.plan(1);
 
-  const organizations = await api.getOrganizations();
   const newTeam = {
-    name: "test-team-name",
-    organization: organizations[0].name,
+    name: "test-team-name"
   };
   await api.createTeam(newTeam).catch(err => {
     t.is(err.messages[0].error, "Access denied. Only admin users can execute this operation.");

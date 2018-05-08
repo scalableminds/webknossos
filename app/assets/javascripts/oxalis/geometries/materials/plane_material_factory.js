@@ -115,7 +115,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       },
       activeCellId: {
         type: "v4",
-        value: new THREE.Vector3(0, 0, 0, 0),
+        value: new THREE.Vector4(0, 0, 0, 0),
       },
       isMouseInActiveViewport: {
         type: "b",

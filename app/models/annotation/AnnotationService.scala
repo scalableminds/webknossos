@@ -28,6 +28,7 @@ import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
+import scala.collection.immutable
 import scala.concurrent.Future
 
 object AnnotationService
@@ -221,7 +222,7 @@ object AnnotationService
     val tracingsNamesAndScalesAsTuples = mapBatched(annotations, getTracingsScalesAndNamesFor, batchSize = 1000)
 
     for {
-      tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale, Annotation)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
+      tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale, Annotation)] <- flattenTupledLists(Fox.combined(tracingsNamesAndScalesAsTuples))
       nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._4, tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
@@ -229,6 +230,16 @@ object AnnotationService
 
   private def mapBatched[T, R](inputList: List[T], block: List[T] => List[R], batchSize: Int): List[R] = {
     inputList.grouped(batchSize).map(block(_)).toList.flatten
+  }
+
+  private def flattenTupledLists[A,B,C,D](tupledListsFox: Fox[List[(List[A], List[B], List[C], List[D])]]) = {
+    for {
+      tupledLists <- tupledListsFox
+    } yield (tupledLists.map(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4)).flatten)
+  }
+
+  private def zippedFourLists[A,B,C,D](l1: List[A], l2: List[B], l3: List[C], l4: List[D]): List[(A, B, C, D)] = {
+    ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
   }
 
   private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext) = {
@@ -242,46 +253,26 @@ object AnnotationService
       }
     }
 
-    def getScales(annotations: List[Annotation]) = {
-      Fox.combined(annotations.map{ annotation =>
-        for {
-          dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName)
-          scale <- dataSet.dataSource.scaleOpt
-        } yield { scale }
-      })
+    def getDatasetScale(dataSetName: String) = {
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
+        scale <- dataSet.dataSource.scaleOpt
+      } yield scale
     }
 
     def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))
 
     val annotationsGrouped: Map[String, List[Annotation]] = annotations.groupBy(_.dataSetName)
     val tracings = annotationsGrouped.map {
-      case (dataSetName, annotations) => (getTracings(dataSetName, annotations.map(_.tracingReference)), getNames(annotations), getScales(annotations), Fox.successful(annotations))
+      case (dataSetName, annotations) => {
+        for {
+          scale <- getDatasetScale(dataSetName)
+          tracings <- getTracings(dataSetName, annotations.map(_.tracingReference))
+          names <- getNames(annotations)
+        } yield (tracings, names, annotations.map(a => scale), annotations)
+      }
     }
     tracings.toList
-  }
-
-  def flattenListToListMap(listToListMap: List[(Fox[List[SkeletonTracing]], Fox[List[String]], Fox[List[Scale]], Fox[List[Annotation]])]):
-  Fox[List[(SkeletonTracing, String, Scale, Annotation)]] = {
-
-    def zippedFourLists[A,B,C,D](l1: List[A], l2: List[B], l3: List[C], l4: List[D]): List[(A, B, C, D)] = {
-      ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
-    }
-
-    val foxOfListsTuples: List[Fox[List[(SkeletonTracing, String, Scale, Annotation)]]] =
-      listToListMap.map {
-        case (tracingListFox, nameListFox, scaleListFox, annotationListFox) => {
-          for {
-            tracingList <- tracingListFox
-            nameList <- nameListFox
-            scaleList <- scaleListFox
-            annotationList <- annotationListFox
-          } yield {
-            zippedFourLists(tracingList, nameList, scaleList, annotationList)
-          }
-        }
-      }
-
-    Fox.combined(foxOfListsTuples).map(_.flatten)
   }
 
   private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {

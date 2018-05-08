@@ -132,7 +132,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
       users <- UserDAO.findByTeams(List(team._id), includeInactive = false)(GlobalAccessContext)
-      nonAdminUsers = users.filterNot(_.isTeamManagerOf(team._id))
+      nonAdminUsers = users.filterNot(_.isTeamManagerOfBLOCKING(team._id))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }

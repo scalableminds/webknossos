@@ -10,11 +10,6 @@ import { tracing, annotation } from "../fixtures/skeletontracing_server_objects"
 
 mockRequire.stopAll();
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
-mockRequire("libs/window", {
-  alert: console.log.bind(console),
-  requestAnimationFrame: resolve => resolve(),
-  app: null,
-});
 const Utils = mockRequire.reRequire("libs/utils").default;
 const NodeShader = mockRequire.reRequire("oxalis/geometries/materials/node_shader");
 const Store = mockRequire.reRequire("oxalis/store").default;

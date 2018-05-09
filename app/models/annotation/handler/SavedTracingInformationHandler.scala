@@ -17,7 +17,7 @@ object SavedTracingInformationHandler extends AnnotationInformationHandler with 
     case annotation: Annotation =>
       for {
         userName <- annotation.user.toFox.map(_.abreviatedName).getOrElse("")
-        task <- annotation.task.map(_.id).getOrElse("explorational")
+        task = annotation._task.map(_.stringify).getOrElse("explorational")
       } yield {
         val id = oxalis.view.helpers.formatHash(annotation.id)
         normalize(s"${annotation.dataSetName}__${task}__${userName}__${id}")

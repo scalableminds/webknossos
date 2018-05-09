@@ -54,12 +54,13 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   }
 
   def update(scriptId: String) = SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(scriptPublicReads) { script =>
+    withJsonBodyUsing(scriptPublicReads) { scriptFromForm =>
       for {
         oldScript <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+        updatedScript = scriptFromForm.copy(_id = oldScript._id)
         _ <- (oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
-        _ <- ScriptDAO.update(oldScript._id, script.copy(_id = oldScript._id))
-        js <- Script.scriptPublicWrites(script)
+        _ <- ScriptDAO.update(oldScript._id, updatedScript)
+        js <- Script.scriptPublicWrites(updatedScript)
       } yield {
         Ok(js)
       }
@@ -69,7 +70,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   def delete(scriptId: String) = SecuredAction.async { implicit request =>
     for {
       oldScript <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
-      _ <- (oldScript._owner == request.identity.id) ?~> Messages("script.notOwner")
+      _ <- (oldScript._owner == request.identity._id) ?~> Messages("script.notOwner")
       _ <- ScriptDAO.removeById(scriptId) ?~> Messages("script.notFound")
       _ <- TaskService.removeScriptFromTasks(scriptId) ?~> Messages("script.taskRemoval.failed")
     } yield {

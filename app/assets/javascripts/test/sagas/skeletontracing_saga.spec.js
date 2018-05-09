@@ -13,7 +13,6 @@ const DateMock = {
   now: () => TIMESTAMP,
 };
 
-mockRequire("libs/window", { alert: console.log.bind(console) });
 mockRequire("app", { currentUser: { firstName: "SCM", lastName: "Boy" } });
 mockRequire("libs/date", DateMock);
 mockRequire("oxalis/model/sagas/root_saga", function*() {
@@ -40,7 +39,9 @@ function testDiffing(prevTracing, nextTracing, flycam) {
 
 const initialState = {
   dataset: {
-    scale: [5, 5, 5],
+    dataSource: {
+      scale: [5, 5, 5],
+    },
   },
   task: {
     id: 1,

@@ -136,7 +136,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[AnnotationsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -149,18 +149,28 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     }
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _user = ${userId.id} and typ = '#${annotationType.toString}' and #${stateQuery} and #${accessQuery}
                      order by _id desc limit ${limit}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
 
-  def findAllActiveFor(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
+  def findAllActiveForUser(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}""".as[AnnotationsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+
+  // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
+  def findAllFinishedForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select #${columnsWithPrefix("a.")} from #${existingCollectionName} a
+                     join webknossos.tasks_ t on a._task = t._id
+                     where t._project = ${projectId.id} and a.typ = '#${AnnotationType.Task.toString}' and a.state = '#${AnnotationState.Finished.toString}'""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 
@@ -168,7 +178,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       r <- run(Annotations.filter(r => notdel(r) && r._Task === taskId.id && r.typ === typ.toString && r.state =!= AnnotationState.Cancelled.toString).result)
       accessQuery <- readAccessQuery
-      r <- run(sql"""select * from #${existingCollectionName}
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
                      where _task = ${taskId.id} and typ = '#${typ.toString}' and state != '#${AnnotationState.Cancelled.toString}' and #${accessQuery}""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
@@ -177,7 +187,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     for {
       rList <- run(Annotations.filter(r => notdel(r) && r.tracingId === tracingId).result.headOption)
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where tracing_id = ${tracingId} and #${accessQuery}".as[AnnotationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
@@ -192,7 +202,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       excludeTeamsQ = if (excludedTeamIds.isEmpty) "true" else s"(not t._id in ${writeStructTupleWithQuotes(excludedTeamIds.map(t => sanitize(t.id)))})"
       countList <- run(sql"""select count(*)
                          from (select a._id from
-                                  (select *
+                                  (select #${columns}
                                    from #${existingCollectionName}
                                    where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}) a
                                   join webknossos.teams t on a._team = t._id where #${excludeTeamsQ}) q
@@ -209,21 +219,43 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   // update operations
 
-  def insertOne(a: AnnotationSQL, overwrite: Boolean = false): Fox[Unit] = {
-    val deleteOldQ = if (overwrite) sqlu"delete from webknossos.annotations where _id = ${a._id.id} and state = '#${AnnotationState.Initializing.toString}'" else sqlu""
-    val insertQ = sqlu"""insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-                       values(${a._id.id}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
-                              '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
-                              '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
-                              ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})"""
-
-    val actions = for {
-      _ <- deleteOldQ
-      _ <- insertQ
-    } yield ()
-
+  def insertOne(a: AnnotationSQL): Fox[Unit] = {
     for {
-      _ <- run(actions.transactionally.withTransactionIsolation(Serializable))
+      _ <- run(
+        sqlu"""
+               insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
+               values(${a._id.id}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
+                   '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
+                   '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
+                   ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
+               """)
+    } yield ()
+  }
+
+  def updateInitialized(a: AnnotationSQL): Fox[Unit] = {
+    for {
+      _ <- run(
+        sqlu"""
+             update webknossos.annotations
+             set
+               _dataSet = ${a._dataset.id},
+               _team = ${a._team.id},
+               _user = ${a._user.id},
+               tracing_id = ${a.tracing.id},
+               tracing_typ = '#${a.tracing.typ.toString}',
+               description = ${a.description},
+               isPublic = ${a.isPublic},
+               name = ${a.name},
+               state = '#${a.state.toString}',
+               statistics = '#${sanitize(a.statistics.toString)}',
+               tags = '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}',
+               tracingTime = ${a.tracingTime},
+               typ = '#${a.typ.toString}',
+               created = ${new java.sql.Timestamp(a.created)},
+               modified = ${new java.sql.Timestamp(a.modified)},
+               isDeleted = ${a.isDeleted}
+             where _id = ${a._id.id}
+          """)
     } yield ()
   }
 
@@ -438,13 +470,19 @@ object AnnotationDAO extends FoxImplicits {
     } yield parsed
   }
 
-  def saveToDB(annotation: Annotation, overwrite: Boolean = false)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+  def saveToDB(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
       annotationSQL <- AnnotationSQL.fromAnnotation(annotation)
-      _ <- AnnotationSQLDAO.insertOne(annotationSQL, overwrite)
+      _ <- AnnotationSQLDAO.insertOne(annotationSQL)
     } yield annotation
   }
 
+  def updateInitialized(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    for {
+      annotationSQL <- AnnotationSQL.fromAnnotation(annotation)
+      _ <- AnnotationSQLDAO.updateInitialized(annotationSQL)
+    } yield annotation
+  }
 
   def findFor(_user: BSONObjectID, isFinished: Option[Boolean], annotationType: AnnotationType, limit: Int)(implicit ctx: DBAccessContext) =
     for {
@@ -460,7 +498,13 @@ object AnnotationDAO extends FoxImplicits {
   def findActiveAnnotationsFor(_user: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     for {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
-      annotationsSQL <- AnnotationSQLDAO.findAllActiveFor(ObjectId.fromBsonId(_user), typ)
+      annotationsSQL <- AnnotationSQLDAO.findAllActiveForUser(ObjectId.fromBsonId(_user), typ)
+      annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
+    } yield annotations
+
+  def findFinishedForProject(projectId: String)(implicit ctx: DBAccessContext) =
+    for {
+      annotationsSQL <- AnnotationSQLDAO.findAllFinishedForProject(ObjectId(projectId))
       annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
     } yield annotations
 

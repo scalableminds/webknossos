@@ -89,6 +89,11 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.segmentationOpacity}
             onChange={_.partial(this.props.onChange, "segmentationOpacity")}
           />
+          <SwitchSetting
+            label="Highlight Hovered Cells"
+            value={this.props.datasetConfiguration.highlightHoveredCellId}
+            onChange={_.partial(this.props.onChange, "highlightHoveredCellId")}
+          />
         </Panel>
         <Panel header="Quality" key="3">
           <SwitchSetting

@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, SkeletonTracings, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.webknossos.datastore.tracings._
@@ -17,7 +17,7 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
 import models.task.Task
 import models.user.User
 import net.liftweb.common.{Box, Full}
@@ -28,7 +28,6 @@ import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
-import scala.collection.immutable
 import scala.concurrent.Future
 
 object AnnotationService
@@ -219,38 +218,29 @@ object AnnotationService
     AnnotationDAO.logTime(time, _annotation)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
-    val tracingsNamesAndScalesAsTuples = mapBatched(annotations, getTracingsScalesAndNamesFor, batchSize = 1000)
-
     for {
-      tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale, Annotation)] <- flattenTupledLists(Fox.combined(tracingsNamesAndScalesAsTuples))
+      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
+      tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
       nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._4, tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }
 
-  private def mapBatched[T, R](inputList: List[T], block: List[T] => List[R], batchSize: Int): List[R] = {
-    inputList.grouped(batchSize).map(block(_)).toList.flatten
-  }
-
-  private def flattenTupledLists[A,B,C,D](tupledListsFox: Fox[List[(List[A], List[B], List[C], List[D])]]) = {
-    for {
-      tupledLists <- tupledListsFox
-    } yield (tupledLists.map(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4)).flatten)
+  private def flattenTupledLists[A,B,C,D](tupledLists: List[(List[A], List[B], List[C], List[D])]) = {
+    tupledLists.map(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4)).flatten
   }
 
   private def zippedFourLists[A,B,C,D](l1: List[A], l2: List[B], l3: List[C], l4: List[D]): List[(A, B, C, D)] = {
     ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
   }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext) = {
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Scale], List[Annotation])]] = {
 
     def getTracings(dataSetName: String, tracingReferences: List[TracingReference]) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-        tracingsContainer <- dataSet.dataStore.getSkeletonTracings(tracingReferences)
-      } yield {
-        tracingsContainer.tracings.toList
-      }
+        tracingContainers <- Fox.serialCombined(tracingReferences.grouped(1000).toList)(dataSet.dataStore.getSkeletonTracings)
+      } yield tracingContainers.flatMap(_.tracings)
     }
 
     def getDatasetScale(dataSetName: String) = {
@@ -272,7 +262,7 @@ object AnnotationService
         } yield (tracings, names, annotations.map(a => scale), annotations)
       }
     }
-    tracings.toList
+    Fox.combined(tracings.toList)
   }
 
   private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {

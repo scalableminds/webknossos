@@ -6,9 +6,10 @@ const HOST = "http://localhost:9000";
 const MIN_MOVE_ACTIONS = 50;
 const MIN_RATIO = 2;
 const LAST_X_DAYS = 7;
+const MIN_TRACING_MINUTES = 15;
 
 const ANNOTATIONS_SQL = `
-SELECT annotations._id, tracing_id, _user, _task, firstname, lastname, modified
+SELECT annotations._id, tracing_id, _user, _task, firstname, lastname, modified, tracingtime
 FROM webknossos.annotations
 JOIN webknossos.users ON webknossos.annotations._user=webknossos.users._id
 WHERE DATE_PART('day', now() - modified) <= ${LAST_X_DAYS}
@@ -37,6 +38,7 @@ async function connect() {
     `Configuration:
     Minimum number of move actions: ${MIN_MOVE_ACTIONS}
     Minimum ratio between moveActions/createNodeActions: ${MIN_RATIO}
+    Minimum number of minutes traced: ${MIN_TRACING_MINUTES}
     Annotations that were modified in the last ${LAST_X_DAYS} days.
     `,
   );
@@ -57,14 +59,23 @@ async function connect() {
 
       const { updateTracingActionCount: moved, createNodeActionCount: created } = parsedJSON;
       const movedToCreatedRatio = Math.round(moved / created * 10) / 10;
+      const tracingTimeMinutes = Math.floor(entry.tracingtime / 60000);
+      const tracingTimeSeconds = Math.round(entry.tracingtime / 1000) % (tracingTimeMinutes * 60);
 
-      if (moved > 0 && moved >= MIN_MOVE_ACTIONS && movedToCreatedRatio >= MIN_RATIO) {
+      if (
+        moved > 0 &&
+        moved >= MIN_MOVE_ACTIONS &&
+        movedToCreatedRatio >= MIN_RATIO &&
+        tracingTimeMinutes >= MIN_TRACING_MINUTES
+      ) {
         console.log(
           `Moved: ${moved}, Created: ${created}, Moved/Created: ${movedToCreatedRatio} - User: ${
             entry.firstname
-          } ${entry.lastname}, TaskId: ${entry._task}, AnnotationId: ${entry._id}, TracingId: ${
-            entry.tracing_id
-          } ,Modified: ${entry.modified}`,
+          } ${entry.lastname}, TracingTime: ${tracingTimeMinutes}m${tracingTimeSeconds}s, TaskId: ${
+            entry._task
+          }, AnnotationId: ${entry._id}, TracingId: ${entry.tracing_id} ,Modified: ${
+            entry.modified
+          }`,
         );
       }
     } catch (err) {

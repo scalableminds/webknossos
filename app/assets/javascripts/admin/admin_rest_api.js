@@ -514,7 +514,7 @@ export async function updateDatasetDatasource(
   dataStoreUrl: string,
   datasource: APIDataSourceType,
 ): Promise<void> {
-  return doWithToken(token =>
+  await doWithToken(token =>
     Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetName}?token=${token}`, {
       data: datasource,
     }),
@@ -580,7 +580,7 @@ export async function addNDStoreDataset(
 }
 
 export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
-  return doWithToken(token =>
+  await doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datatsetConfig,
       host: datatsetConfig.datastore,
@@ -598,7 +598,7 @@ export async function updateDatasetTeams(
 }
 
 export async function triggerDatasetCheck(datatstoreHost: string): Promise<void> {
-  return doWithToken(token =>
+  await doWithToken(token =>
     Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
       host: datatstoreHost,
     }),

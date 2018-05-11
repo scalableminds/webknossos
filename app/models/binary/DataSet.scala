@@ -482,7 +482,7 @@ object DataSetDAO {
     DataSetSQLDAO.updateDataSourceByName(name, dataStoreInfo.name, source, isActive)
 
   def updateTeams(name: String, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
-    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams.map(ObjectId.fromBsonId(_)))
+    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams.map(ObjectId.fromBsonId(_)).toSet.toList)
 
   def update(name: String, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[DataSet] = {
     for {

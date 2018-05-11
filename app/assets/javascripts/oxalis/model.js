@@ -346,18 +346,12 @@ export class OxalisModel {
     this.connectionInfo = new ConnectionInfo();
     this.binary = {};
     for (const layer of layers) {
-      let maxLayerZoomStep =
-        Math.log(Math.max(...layer.resolutions.map(r => Math.max(...r)))) / Math.LN2;
-      if (layer.category === "segmentation") {
-        maxLayerZoomStep = 1;
-      }
       const textureInformation = textureInformationPerLayer.get(layer);
       if (!textureInformation) {
         throw new Error("No texture information for layer?");
       }
       this.binary[layer.name] = new Binary(
         layer,
-        maxLayerZoomStep,
         this.connectionInfo,
         textureInformation.textureSize,
         textureInformation.textureCount,
@@ -409,13 +403,22 @@ export class OxalisModel {
     // This method adds/merges the layers of the tracing into the dataset layers
     // Overwrite or extend layers with volumeTracingLayer
     let layers = _.clone(Store.getState().dataset.dataSource.dataLayers);
+    const adaptResolutionInfoForLayer = layer => ({
+      ...layer,
+      // The server only provides the actual resolutions for a layer. However,
+      // we adapt these resolutions to the most extensive one (across all layers),
+      // since resolutions are used when converting positions between zoomSteps and this
+      // should be possible even if the layer does not support a resolution.
+      // To not lose the information, which resolution a layer truly supports, we add
+      // maxZoomStep as another flag here (derived by reading the resolutions array which
+      // the server provides)
+      resolutions,
+      maxZoomStep: layer.resolutions.length - 1,
+    });
 
     // $FlowFixMe TODO Why does Flow complain about this check
     if (tracing == null || tracing.elementClass == null) {
-      return layers.map(l => ({
-        ...l,
-        resolutions,
-      }));
+      return layers.map(adaptResolutionInfoForLayer);
     }
 
     // Flow doesn't understand that as the tracing has the elementClass property it has to be a volumeTracing
@@ -446,6 +449,7 @@ export class OxalisModel {
         depth: tracing.boundingBox.depth,
       },
       resolutions,
+      maxZoomStep: resolutions.length - 1,
       elementClass: tracing.elementClass,
       mappings:
         fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
@@ -461,7 +465,7 @@ export class OxalisModel {
       layers = layers.filter(layer => layer.category !== "segmentation");
       layers.push(tracingLayer);
     }
-    return layers;
+    return layers.map(adaptResolutionInfoForLayer);
   }
 
   shouldDisplaySegmentationData(): boolean {

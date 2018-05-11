@@ -478,6 +478,21 @@ const Utils = {
     swap(arr, 3, 5);
     swap(arr, 3, 4);
   },
+
+  convertDecToBase256(num: number): Vector4 {
+    const divMod = n => [Math.floor(n / 256), n % 256];
+    let tmp = num;
+    // eslint-disable-next-line
+    let r, g, b, a;
+
+    [tmp, r] = divMod(tmp); // eslint-disable-line
+    [tmp, g] = divMod(tmp); // eslint-disable-line
+    [tmp, b] = divMod(tmp); // eslint-disable-line
+    [tmp, a] = divMod(tmp); // eslint-disable-line
+
+    // Big endian
+    return [r, g, b, a];
+  },
 };
 
 export default Utils;

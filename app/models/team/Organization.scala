@@ -60,7 +60,7 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[OrganizationSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[OrganizationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[OrganizationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {

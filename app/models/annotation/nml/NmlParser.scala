@@ -47,6 +47,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         comments = parseComments(data \ "comments")
         branchPoints = parseBranchPoints(data \ "branchpoints", time)
         trees <- extractTrees(data \ "thing", branchPoints, comments)
+        treeGroups = extractTreeGroups(data \ "groups")
         volumes = extractVolumes(data \ "volume")
       } yield {
         val dataSetName = parseDataSetName(parameters \ "experiment")
@@ -63,7 +64,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
           (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel), volumes.head.location), description)
         } else {
           (Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
-            editPosition, editRotation, zoomLevel, version = 0, userBoundingBox)), description)
+            editPosition, editRotation, zoomLevel, version = 0, userBoundingBox, treeGroups)), description)
         }
       }
     } catch {
@@ -83,6 +84,18 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   def extractTrees(treeNodes: NodeSeq, branchPoints: Seq[BranchPoint], comments: Seq[Comment]): Box[Seq[Tree]] = {
     val trees = parseTrees(treeNodes, branchPoints, comments)
     TreeValidator.validateTrees(trees).map(_ => trees)
+  }
+
+  def extractTreeGroups(treeGroupContainerNodes: NodeSeq): Seq[TreeGroup] = {
+    val treeGroupNodes = treeGroupContainerNodes.flatMap(_ \ "group")
+    treeGroupNodes.map(parseTreeGroup)
+  }
+
+  def parseTreeGroup(node: XMLNode): TreeGroup = {
+    val name = (node \ "@name").text
+    val id = (node \ "@id").text
+    val children = (node \ "group").map(parseTreeGroup)
+    TreeGroup(name, id, children)
   }
 
   def extractVolumes(volumeNodes: NodeSeq) = {
@@ -189,6 +202,11 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     (node \ "@name").text
   }
 
+  private def parseGroupId(node: XMLNode) = {
+    val text = (node \ "@groupId").text
+    if (text == null || text.length == 0) None else Some(text)
+  }
+
   private def parseTree(
                          tree: XMLNode,
                          branchPoints: Seq[BranchPoint],
@@ -198,6 +216,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       id =>
         val color = parseColor(tree)
         val name = parseName(tree)
+        val groupId = parseGroupId(tree)
         logger.trace("Parsing tree Id: %d".format(id))
         (tree \ "nodes" \ "node").flatMap(parseNode) match {
           case parsedNodes if parsedNodes.nonEmpty =>
@@ -207,7 +226,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
             val treeBP = branchPoints.filter(bp => nodeIds.contains(bp.nodeId)).toList
             val treeComments = comments.filter(bp => nodeIds.contains(bp.nodeId)).toList
             val createdTimestamp = if (nodes.isEmpty) System.currentTimeMillis() else parsedNodes.minBy(_.createdTimestamp).createdTimestamp
-            Some(Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp))
+            Some(Tree(id, nodes, edges, color, treeBP, treeComments, name, createdTimestamp, groupId))
           case _ =>
             None
         }

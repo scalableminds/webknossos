@@ -163,7 +163,7 @@ object NmlWriter extends FoxImplicits {
         writer.writeAttribute("color.b", t.color.map(_.b.toString).getOrElse(""))
         writer.writeAttribute("color.a", t.color.map(_.a.toString).getOrElse(""))
         writer.writeAttribute("name", t.name)
-        t.groupId.map(writer.writeAttribute("group", _))
+        t.groupId.map(writer.writeAttribute("groupId", _))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
       }

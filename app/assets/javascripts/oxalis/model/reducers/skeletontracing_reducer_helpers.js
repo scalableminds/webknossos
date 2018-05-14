@@ -75,6 +75,11 @@ function* mapGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => any
   }
 }
 
+export function getMaximumGroupId(groups: Array<TreeGroupType>): number {
+  const maxGroupId = _.max(Array.from(mapGroups(groups, group => group.groupId)));
+  return maxGroupId >= 0 ? maxGroupId : 0;
+}
+
 function forEachGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => any) {
   if (groups == null || groups.length == null || groups.length === 0) {
     return;
@@ -450,13 +455,14 @@ export function addTreesAndGroups(
       const existingGroupIds = new Set(
         mapGroups(skeletonTracing.treeGroups, group => group.groupId),
       );
+      let nextGroupId = getMaximumGroupId(skeletonTracing.treeGroups) + 1;
 
       forEachGroups(treeGroups, (group: TreeGroupType) => {
         // Assign a new group id to groups whose id already exists
         if (existingGroupIds.has(group.groupId)) {
-          const newGroupId = Utils.randomId();
-          groupIdMap[group.groupId] = newGroupId;
-          group.groupId = newGroupId;
+          groupIdMap[group.groupId] = nextGroupId;
+          group.groupId = nextGroupId;
+          nextGroupId++;
         }
       });
 

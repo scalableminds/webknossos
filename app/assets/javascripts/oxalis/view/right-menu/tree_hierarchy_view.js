@@ -13,12 +13,12 @@ import {
   setTreeGroupsAction,
   setTreeGroupAction,
 } from "oxalis/model/actions/skeletontracing_actions";
-import Utils from "libs/utils";
+import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import SortableTree from "react-sortable-tree";
 import { AutoSizer } from "react-virtualized";
 import type { TreeType, TreeMapType, TreeGroupType, TreeGroupBaseType } from "oxalis/store";
 
-const MISSING_GROUP_ID = "__none__";
+const MISSING_GROUP_ID = -1;
 
 const TYPE_GROUP = "GROUP";
 const TYPE_TREE = "TREE";
@@ -46,21 +46,21 @@ type Props = {
   onSetActiveTree: number => void,
   onToggleTree: number => void,
   onToggleAllTrees: () => void,
-  onToggleTreeGroup: string => void,
+  onToggleTreeGroup: number => void,
   onUpdateTreeGroups: (Array<TreeGroupType>) => void,
-  onSetTreeGroup: (?string, number) => void,
+  onSetTreeGroup: (?number, number) => void,
 };
 
 type State = {
   prevProps: ?Props,
-  hoveredGroupId: ?string,
-  expandedGroupIds: { [string]: boolean },
+  hoveredGroupId: ?number,
+  expandedGroupIds: { [number]: boolean },
   groupTree: Array<ExtendedTreeGroupType>,
-  renamingGroup: ?{ groupId: string, name: string },
+  renamingGroup: ?{ groupId: number, name: string },
 };
 
 function makeBasicGroupObject(
-  groupId: string,
+  groupId: number,
   name: string,
   children: Array<TreeGroupType> = [],
 ): TreeGroupType {
@@ -72,14 +72,14 @@ function makeBasicGroupObject(
 }
 
 function makeExtendedGroupObject(
-  groupId: string | number,
+  groupId: number,
   name: string,
   type: TreeOrGroupType,
   timestamp?: number = 0,
   isChecked?: boolean = false,
 ): ExtendedTreeGroupType {
   return {
-    groupId: `${groupId}`,
+    groupId,
     type,
     name,
     timestamp,
@@ -110,8 +110,8 @@ function removeTreesAndTransform(groupTree: Array<ExtendedTreeGroupType>): Array
 
 function insertTreesAndTransform(
   groups: Array<TreeGroupType>,
-  groupToTreesMap: { [string]: Array<TreeType> },
-  expandedGroupIds: { [string]: boolean },
+  groupToTreesMap: { [number]: Array<TreeType> },
+  expandedGroupIds: { [number]: boolean },
   sortBy: string,
 ): Array<ExtendedTreeGroupType> {
   return groups.map(group => {
@@ -144,9 +144,9 @@ function insertTreesAndTransform(
 
 function callDeep(
   groups: Array<TreeGroupType>,
-  groupId: string,
-  callback: (TreeGroupType, number, Array<TreeGroupType>, ?string) => void,
-  parentGroupId: ?string = MISSING_GROUP_ID,
+  groupId: number,
+  callback: (TreeGroupType, number, Array<TreeGroupType>, ?number) => void,
+  parentGroupId: ?number = MISSING_GROUP_ID,
 ) {
   groups.forEach((group: TreeGroupType, index: number, array: Array<TreeGroupType>) => {
     if (group.groupId === groupId) {
@@ -158,7 +158,7 @@ function callDeep(
   });
 }
 
-function createGroupToTreesMap(trees: TreeMapType): { [string]: Array<TreeType> } {
+function createGroupToTreesMap(trees: TreeMapType): { [number]: Array<TreeType> } {
   return _.groupBy(trees, tree => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
 }
 
@@ -247,16 +247,16 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
 
   onMouseEnter = evt => {
     const { groupid } = evt.target.dataset;
-    this.setState({ hoveredGroupId: groupid });
+    this.setState({ hoveredGroupId: parseInt(groupid, 10) });
   };
 
   onMouseLeave = () => {
     this.setState({ hoveredGroupId: null });
   };
 
-  createGroup(groupId: string) {
+  createGroup(groupId: number) {
     const newTreeGroups = _.cloneDeep(this.props.treeGroups);
-    const newGroupId = Utils.randomId();
+    const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
     const newGroup = makeBasicGroupObject(newGroupId, "");
     if (groupId === MISSING_GROUP_ID) {
       newTreeGroups.push(newGroup);
@@ -269,7 +269,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.setState({ renamingGroup: { groupId: newGroupId, name: "" } });
   }
 
-  renameGroup(groupId: string, newName: string) {
+  renameGroup(groupId: number, newName: string) {
     const newTreeGroups = _.cloneDeep(this.props.treeGroups);
     callDeep(newTreeGroups, groupId, item => {
       item.name = newName;
@@ -277,7 +277,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onUpdateTreeGroups(newTreeGroups);
   }
 
-  deleteGroup(groupId: string) {
+  deleteGroup(groupId: number) {
     const newTreeGroups = _.cloneDeep(this.props.treeGroups);
     const groupToTreesMap = createGroupToTreesMap(this.props.trees);
     callDeep(newTreeGroups, groupId, (item, index, arr, parentGroupId) => {
@@ -307,6 +307,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
+  preventDefault = evt => evt.preventDefault();
+
   renderGroupActionsDropdown = (node: ExtendedTreeGroupType) => {
     // The root group must not be removed or renamed
     const { groupId, name } = node;
@@ -332,7 +334,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const isHovering = groupId === this.state.hoveredGroupId;
     const nameAndMaybeDropdown = isHovering ? (
       <Dropdown overlay={menu} placement="bottomCenter">
-        <a className="ant-dropdown-link" href="#" onClick={_.noop}>
+        <a className="ant-dropdown-link" href="#" onClick={this.preventDefault}>
           {displayableName} <Icon type="setting" />
         </a>
       </Dropdown>
@@ -354,11 +356,10 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onRenameOk = (newName: string = "") => {
-    this.renameGroup(
-      this.state.renamingGroup != null ? this.state.renamingGroup.groupId : "",
-      newName,
-    );
-    this.setState({ renamingGroup: null });
+    if (this.state.renamingGroup != null) {
+      this.renameGroup(this.state.renamingGroup.groupId, newName);
+      this.setState({ renamingGroup: null });
+    }
   };
 
   onRenameCancel = () => {
@@ -436,7 +437,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               onMoveNode={this.onMoveNode}
               onVisibilityToggle={this.onExpand}
               searchMethod={this.keySearchMethod}
-              searchQuery={`${this.props.activeTreeId}`}
+              searchQuery={this.props.activeTreeId}
               generateNodeProps={this.generateNodeProps}
               canDrop={this.canDrop}
               canDrag={this.canDrag}

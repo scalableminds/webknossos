@@ -74,29 +74,29 @@ const tracing = {
       comments: [],
       color: [30, 30, 30],
       isVisible: true,
-      groupId: "1",
+      groupId: 1,
     },
   },
   tracingType: "Explorational",
   treeGroups: [
     {
-      groupId: "1",
+      groupId: 1,
       name: "Axon 1",
       children: [
         {
-          groupId: "3",
+          groupId: 3,
           name: "Blah",
           children: [],
         },
         {
-          groupId: "4",
+          groupId: 4,
           name: "Blah 2",
           children: [],
         },
       ],
     },
     {
-      groupId: "2",
+      groupId: 2,
       name: "Axon 2",
       children: [],
     },
@@ -207,7 +207,7 @@ test("NML Parser should throw errors for invalid nmls", async t => {
     tracing: {
       trees: {
         "2": {
-          groupId: { $set: "missing" },
+          groupId: { $set: 9999 },
         },
       },
     },
@@ -217,7 +217,7 @@ test("NML Parser should throw errors for invalid nmls", async t => {
       treeGroups: {
         $push: [
           {
-            groupId: "3",
+            groupId: 3,
             name: "Group",
             children: [],
           },

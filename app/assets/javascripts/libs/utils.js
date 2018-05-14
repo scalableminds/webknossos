@@ -420,13 +420,6 @@ const Utils = {
     return deflator.result;
   },
 
-  // https://stackoverflow.com/a/44078785
-  randomId(): string {
-    return Math.random()
-      .toString(36)
-      .substring(2);
-  },
-
   median8(dataArray: Array<number>): number {
     // Returns the median of an already *sorted* array of size 8 (e.g., with sortArray8)
     return Math.round((dataArray[3] + dataArray[4]) / 2);

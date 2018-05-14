@@ -282,7 +282,7 @@ class NmlParseError extends Error {
 }
 
 function _parseInt(obj: Object, key: string, defaultValue?: number): number {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -293,7 +293,7 @@ function _parseInt(obj: Object, key: string, defaultValue?: number): number {
 }
 
 function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -304,7 +304,7 @@ function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
 }
 
 function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -363,7 +363,7 @@ export function parseNml(
     const existingEdges = new Set();
     let currentTree: ?TreeType = null;
     let currentGroup: ?TreeGroupType = null;
-    const groupIdToParent: { [string]: ?TreeGroupType } = {};
+    const groupIdToParent: { [number]: ?TreeGroupType } = {};
     parser
       .on("tagopen", node => {
         const attr = Saxophone.parseAttrs(node.attrs);
@@ -375,6 +375,7 @@ export function parseNml(
             break;
           }
           case "thing": {
+            const groupId = _parseInt(attr, "groupId", -1);
             currentTree = {
               treeId: _parseInt(attr, "id"),
               color: [
@@ -389,8 +390,7 @@ export function parseNml(
               timestamp: Date.now(),
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
-              groupId:
-                attr.groupId != null && attr.groupId.length > 0 ? attr.groupId : DEFAULT_GROUP_ID,
+              groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
@@ -480,15 +480,10 @@ export function parseNml(
           }
           case "group": {
             const newGroup = {
-              groupId: attr.groupId,
+              groupId: _parseInt(attr, "groupId"),
               name: attr.name,
               children: [],
             };
-            if (newGroup.groupId == null || newGroup.groupId.length === 0) {
-              throw new NmlParseError(
-                `${messages["nml.expected_attribute_missing"]} groupId in <group ...>`,
-              );
-            }
             if (existingGroupIds.has(newGroup.groupId))
               throw new NmlParseError(`${messages["nml.duplicate_group_id"]} ${newGroup.groupId}`);
             if (currentGroup != null) {

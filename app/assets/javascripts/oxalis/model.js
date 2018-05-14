@@ -84,7 +84,7 @@ export type ServerSkeletonTracingTreeType = {
   nodes: Array<ServerNodeType>,
   treeId: number,
   createdTimestamp: number,
-  groupId?: ?string,
+  groupId?: ?number,
 };
 
 type ServerTracingBaseType = {

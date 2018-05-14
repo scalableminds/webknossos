@@ -106,7 +106,7 @@ In order to restore the current window, a reload is necessary.`,
   "nml.edge_outside_tree":
     "NML contains <edge ...> tag that is not enclosed by a <thing ...> tag: Edge",
   "nml.expected_attribute_missing":
-    "Attribute with the following name was expected, but is missing:",
+    "Attribute with the following name was expected, but is missing or empty:",
   "nml.branchpoint_without_tree":
     "NML contains <branchpoint ...> with a node id that is not in any tree: Node with id",
   "nml.comment_without_tree":

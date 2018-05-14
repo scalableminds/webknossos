@@ -24,7 +24,7 @@ type UpdateTreeUpdateAction = {
     name: string,
     comments: Array<CommentType>,
     branchPoints: Array<BranchPointType>,
-    groupId: ?string,
+    groupId: ?number,
   },
 };
 type DeleteTreeUpdateAction = {

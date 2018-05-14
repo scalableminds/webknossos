@@ -37,7 +37,7 @@ case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Opti
         branchPoints = branchPoints.map(convertBranchPoint),
         comments = comments.map(convertComment),
         name = name,
-        groupId = if (groupId.isDefined) groupId else tree.groupId)
+        groupId = groupId)
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))
   }

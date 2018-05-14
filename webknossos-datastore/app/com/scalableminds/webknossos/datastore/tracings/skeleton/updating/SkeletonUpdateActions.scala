@@ -28,7 +28,7 @@ case class DeleteTreeSkeletonAction(id: Int, actionTimestamp: Option[Long] = Non
 
 case class UpdateTreeSkeletonAction(id: Int, updatedId: Option[Int], color: Option[com.scalableminds.util.image.Color], name: String,
                                     branchPoints: List[UpdateActionBranchPoint], comments: List[UpdateActionComment],
-                                    groupId: Option[String], actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
+                                    groupId: Option[Int], actionTimestamp: Option[Long] = None) extends UpdateAction.SkeletonUpdateAction with SkeletonUpdateActionHelper {
   override def applyOn(tracing: SkeletonTracing) = {
     def treeTransform(tree: Tree) =
       tree.copy(

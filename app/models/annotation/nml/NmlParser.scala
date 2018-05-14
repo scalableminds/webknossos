@@ -93,7 +93,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
 
   def parseTreeGroup(node: XMLNode): TreeGroup = {
     val name = (node \ "@name").text
-    val id = (node \ "@id").text
+    val id = (node \ "@id").text.toInt
     val children = (node \ "group").map(parseTreeGroup)
     TreeGroup(name, id, children)
   }
@@ -203,8 +203,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   }
 
   private def parseGroupId(node: XMLNode) = {
-    val text = (node \ "@groupId").text
-    if (text == null || text.length == 0) None else Some(text)
+    (node \ "@groupId").text.toIntOpt
   }
 
   private def parseTree(

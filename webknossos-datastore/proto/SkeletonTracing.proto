@@ -47,12 +47,12 @@ message Tree {
      repeated Comment comments = 6;
      required string name = 7;
      required int64 createdTimestamp = 8;
-     optional string groupId = 9;
+     optional int32 groupId = 9;
 }
 
 message TreeGroup {
   required string name = 1;
-  required string groupId = 2;
+  required int32 groupId = 2;
   repeated TreeGroup children = 3;
 }
 

@@ -40,29 +40,6 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
   }
 
   private def exploreResolutions(baseDir: Path)(implicit report: DataSourceImportReport[Path]): Box[List[(WKWHeader, Either[Int, Point3D])]] = {
-
-    def parseResolutionName(path: Path): Option[Either[Int, Point3D]] = {
-        path.getFileName.toString.toIntOpt match {
-        case Some(resolutionInt) => Some(Left(resolutionInt))
-        case None => {
-          val pattern = """(\d+)-(\d+)-(\d+)""".r
-          path.getFileName.toString match {
-            case pattern(x, y, z) => Some(Right(Point3D(x.toInt, y.toInt, z.toInt)))
-            case _ => None
-          }
-        }
-      }
-    }
-
-    def resolutionDirFilter(path: Path): Boolean = parseResolutionName(path).isDefined
-
-    def resolutionDirSortingKey(path: Path) = {
-      parseResolutionName(path).get match {
-        case Left(int) => int
-        case Right(point) => point.maxDim
-      }
-    }
-
     PathUtils.listDirectories(baseDir, resolutionDirFilter).flatMap { resolutionDirs =>
       val resolutionHeaders = resolutionDirs.sortBy(resolutionDirSortingKey).map { resolutionDir =>
         val resolutionIntOrPoint3 = parseResolutionName(resolutionDir).get
@@ -107,7 +84,7 @@ object WKWDataFormat extends DataSourceImporter with WKWDataFormatHelper {
       multiplierZ = resolution.cubeLength * resolution.resolution.fold(identity, _.z)
 
       resolutionDirs <- PathUtils.listDirectories(baseDir, filterGen(""))
-      resolutionDir <- resolveHead(baseDir, resolutionDirs)
+      resolutionDir <- resolveHead(baseDir, resolutionDirs.sortBy(resolutionDirSortingKey))
 
       zDirs <- PathUtils.listDirectories(resolutionDir, filterGen("z"))
       zHeadDir <- resolveHead(resolutionDir, zDirs)

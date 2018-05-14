@@ -260,7 +260,7 @@ function serializeComments(trees: Array<TreeType>): Array<string> {
 function serializeTreeGroups(treeGroups: Array<TreeGroupType>): Array<string> {
   return _.flatten(
     treeGroups.map(treeGroup => {
-      const groupObject = { groupId: treeGroup.groupId, name: treeGroup.name };
+      const groupObject = { id: treeGroup.groupId, name: treeGroup.name };
       return treeGroup.children.length > 0
         ? [
             serializeTag("group", groupObject, false),
@@ -480,7 +480,7 @@ export function parseNml(
           }
           case "group": {
             const newGroup = {
-              groupId: _parseInt(attr, "groupId"),
+              groupId: _parseInt(attr, "id"),
               name: attr.name,
               children: [],
             };

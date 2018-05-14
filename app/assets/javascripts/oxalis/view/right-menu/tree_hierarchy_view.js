@@ -234,9 +234,12 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onMoveNode = ({ nextParentNode, node, treeData }) => {
-    if (node.type === TYPE_TREE && nextParentNode.groupId) {
+    if (node.type === TYPE_TREE && nextParentNode.groupId != null) {
       // A tree was dragged - update the group of the dragged tree
-      this.props.onSetTreeGroup(nextParentNode.groupId, parseInt(node.groupId, 10));
+      this.props.onSetTreeGroup(
+        nextParentNode.groupId === MISSING_GROUP_ID ? null : nextParentNode.groupId,
+        parseInt(node.groupId, 10),
+      );
     } else {
       // A group was dragged - update the groupTree
       // Exclude root group and remove trees from groupTree object

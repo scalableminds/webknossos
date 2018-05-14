@@ -4,7 +4,8 @@ const fetch = require("node-fetch");
 const HOST = "http://localhost:9000";
 
 const MIN_MOVE_ACTIONS = 50;
-const MIN_RATIO = 2;
+const MIN_RATIO_FUNCTION = tracingTimeInHours =>
+  Math.max(1.5, Math.min(10.0, 10.0 / tracingTimeInHours));
 const LAST_X_DAYS = 7;
 const MIN_TRACING_MINUTES = 15;
 
@@ -37,7 +38,7 @@ async function connect() {
   console.log(
     `Configuration:
     Minimum number of move actions: ${MIN_MOVE_ACTIONS}
-    Minimum ratio between moveActions/createNodeActions: ${MIN_RATIO}
+    Minimum ratio between moveActions/createNodeActions: ${MIN_RATIO_FUNCTION}
     Minimum number of minutes traced: ${MIN_TRACING_MINUTES}
     Annotations that were modified in the last ${LAST_X_DAYS} days.
     `,
@@ -61,11 +62,12 @@ async function connect() {
       const movedToCreatedRatio = Math.round(moved / created * 10) / 10;
       const tracingTimeMinutes = Math.floor(entry.tracingtime / 60000);
       const tracingTimeSeconds = Math.round(entry.tracingtime / 1000) % (tracingTimeMinutes * 60);
+      const tracingTimeInHours = entry.tracingtime / 60000 / 60;
+      const dynamicMinRatio = MIN_RATIO_FUNCTION(tracingTimeInHours);
 
       if (
-        moved > 0 &&
         moved >= MIN_MOVE_ACTIONS &&
-        movedToCreatedRatio >= MIN_RATIO &&
+        movedToCreatedRatio >= dynamicMinRatio &&
         tracingTimeMinutes >= MIN_TRACING_MINUTES
       ) {
         console.log(

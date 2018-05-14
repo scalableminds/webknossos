@@ -20,17 +20,14 @@ test("getEditableTeams()", async t => {
   t.snapshot(editableTeams, { id: "teams-getEditableTeams()" });
 });
 
-test("getOrganizations()", async t => {
-  const organizations = await api.getOrganizations();
-  t.snapshot(organizations, { id: "teams-getOrganizations()" });
+test("getOrganizationNames()", async t => {
+  const organizations = await api.getOrganizationNames();
+  t.snapshot(organizations, { id: "teams-getOrganizationNames()" });
 });
 
 test("createTeam and deleteTeam", async t => {
-  const organizations = await api.getOrganizations();
   const newTeam = {
     name: "test-team-name",
-    parent: organizations[0].name,
-    roles: [{ name: "admin" }, { name: "user" }],
   };
 
   const createdTeam = await api.createTeam(newTeam);

@@ -1,17 +1,29 @@
 // @flow
 
 import * as React from "react";
-import { Input, Icon } from "antd";
+import { Input, Icon, ValidationRule } from "antd";
+import Request from "../../../libs/request";
+import Utils from "../../../libs/utils";
+import {setActiveUserAction} from "../../model/actions/user_actions";
+import Store from "../../throttled_store";
+import {getActiveUser} from "../../../admin/admin_rest_api";
+import Toast from "../../../libs/toast";
 
 type EditableTextLabelPropType = {
   value: string,
   onChange: Function,
+  rules?: Rule;
   rows?: number,
 };
 
 type State = {
   isEditing: boolean,
   value: string,
+};
+
+type Rule = {
+  message?: string;
+  type?: string;
 };
 
 class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, State> {
@@ -37,8 +49,21 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
   };
 
   handleOnChange = () => {
-    this.setState({ isEditing: false });
-    this.props.onChange(this.state.value);
+    if(this.validateFields()){
+      this.props.onChange(this.state.value);
+      this.setState({ isEditing: false });
+    }
+  };
+
+  validateFields(){
+    if(this.props.rules.type == "email") {
+      var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+      const matchesEmail = re.test(this.state.value);
+      if (!matchesEmail) Toast.error(this.props.rules.message);
+      return matchesEmail
+    } else {
+      return true;
+    }
   };
 
   render() {

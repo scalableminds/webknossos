@@ -128,7 +128,7 @@ In order to restore the current window, a reload is necessary.`,
   ),
   "users.change_email_title": "Do you really want to change the email?",
   "users.change_email": _.template(
-    "Doy you really want to change the email to '<%- newEmail %>' ?",
+    "Do you really want to change the email to '<%- newEmail %>' ?",
   ),
   "mapping.too_big":
     "The mapping contains too many values, currently only up to 2^24 values are supported.",

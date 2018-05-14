@@ -118,9 +118,6 @@ class Binary {
     fallbackAnchorPoint: [0, 0, 0, 0],
   };
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-
   constructor(
     layer: Layer,
     connectionInfo: ConnectionInfo,

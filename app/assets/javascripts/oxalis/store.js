@@ -135,18 +135,12 @@ export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 
-export type SkeletonTracingType = {
+type TracingBaseType = {
   +annotationId: string,
   +createdTimestamp: number,
-  +type: "skeleton",
-  +trees: TreeMapType,
   +name: string,
   +version: number,
   +tracingId: string,
-  +tracingType: TracingTypeTracingType,
-  +activeTreeId: ?number,
-  +activeNodeId: ?number,
-  +cachedMaxNodeId: number,
   +boundingBox: ?BoundingBoxType,
   +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
@@ -155,12 +149,18 @@ export type SkeletonTracingType = {
   +description: string,
 };
 
-export type VolumeTracingType = {
-  +annotationId: string,
-  +createdTimestamp: number,
+export type SkeletonTracingType = TracingBaseType & {
+  +type: "skeleton",
+  +tracingType: TracingTypeTracingType,
+  +trees: TreeMapType,
+  +activeTreeId: ?number,
+  +activeNodeId: ?number,
+  +cachedMaxNodeId: number,
+};
+
+export type VolumeTracingType = TracingBaseType & {
   +type: "volume",
-  +name: string,
-  +version: number,
+  +tracingType: TracingTypeTracingType,
   +maxCellId: number,
   +activeTool: VolumeToolType,
   +activeCellId: number,
@@ -168,30 +168,11 @@ export type VolumeTracingType = {
   +contourTracingMode: ContourModeType,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
-  +tracingId: string,
-  +tracingType: TracingTypeTracingType,
-  +boundingBox: ?BoundingBoxType,
-  +userBoundingBox: ?BoundingBoxType,
-  +restrictions: RestrictionsType & SettingsType,
-  +isPublic: boolean,
-  +tags: Array<string>,
-  +description: string,
 };
 
-export type ReadOnlyTracingType = {
-  +annotationId: string,
-  +createdTimestamp: number,
+export type ReadOnlyTracingType = TracingBaseType & {
   +type: "readonly",
-  +name: string,
-  +version: number,
-  +tracingId: string,
   +tracingType: "View",
-  +boundingBox: ?BoundingBoxType,
-  +userBoundingBox: ?BoundingBoxType,
-  +restrictions: RestrictionsType & SettingsType,
-  +isPublic: boolean,
-  +tags: Array<string>,
-  +description: string,
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;

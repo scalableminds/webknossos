@@ -165,7 +165,7 @@ export function toggleErrorHighlighting(state: boolean) {
 export function addVersionNumbers(
   updateActionsBatches: Array<SaveQueueEntryType>,
   lastVersion: number,
-) {
+): Array<SaveQueueEntryType> {
   return updateActionsBatches.map(batch => Object.assign({}, batch, { version: ++lastVersion }));
 }
 

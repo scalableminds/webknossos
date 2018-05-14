@@ -13,11 +13,8 @@ import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
-import play.api.mvc._
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class DataSourceController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
@@ -108,11 +105,4 @@ class DataSourceController @Inject()(
       }
   }
 
-  def getTeamIdFromString(str: String) = {
-    val teamId = BSONObjectID.parse(str)
-    if(teamId.isSuccess)
-      Fox.successful(teamId.get)
-    else
-      Fox.failure("Not a TeamId")
-  }
 }

@@ -67,7 +67,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
+  def handleUpload(id: DataSourceId, dataSetZip: File): Box[Unit] = {
     val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
     PathUtils.ensureDirectory(dataSourceDir)
 
@@ -76,11 +76,11 @@ class DataSourceService @Inject()(
     ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true) match {
       case Full(_) =>
         dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
-        Fox.successful()
+        Full(())
       case e =>
         val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
         logger.warn(errorMsg)
-        Fox.failure(errorMsg)
+        Failure(errorMsg)
     }
   }
 

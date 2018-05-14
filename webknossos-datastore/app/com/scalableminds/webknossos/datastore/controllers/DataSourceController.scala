@@ -9,10 +9,10 @@ import com.google.inject.Inject
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
-import play.api.data.{Form, Forms}
+import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
-import play.api.libs.json.{JsError, JsObject, JsSuccess, Json}
+import play.api.libs.json.Json
 import play.api.mvc._
 import reactivemongo.bson.BSONObjectID
 
@@ -59,22 +59,20 @@ class DataSourceController @Inject()(
       val uploadForm = Form(
         tuple(
           "name" -> nonEmptyText.verifying("dataSet.name.invalid", n => n.matches("[A-Za-z0-9_\\-]*")),
-          "organization" -> nonEmptyText,
-          "allowedTeams" -> Forms.list(nonEmptyText)
-        )).fill(("", "", List[String]()))
+          "organization" -> nonEmptyText
+        )).fill(("", ""))
 
       AllowRemoteOrigin {
         uploadForm.bindFromRequest(request.body.dataParts).fold(
           hasErrors =
             formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
           success = {
-            case (name, organization, allowedTeams) =>
+            case (name, organization) =>
               val id = DataSourceId(name, organization)
               for {
                 _ <- webKnossosServer.validateDataSourceUpload(id) ?~> Messages("dataSet.name.alreadyTaken")
                 zipFile <- request.body.file("zipFile[]") ?~> Messages("zip.file.notFound")
                 _ <- dataSourceService.handleUpload(id, new File(zipFile.ref.file.getAbsolutePath))
-                //_ <- webKnossosServer.addAllowedTeams(allowedTeams) This is not necessary for the first step because you import it afterwards anyways
               } yield {
                 Ok
               }

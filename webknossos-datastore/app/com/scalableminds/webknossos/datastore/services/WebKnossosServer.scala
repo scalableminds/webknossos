@@ -84,10 +84,4 @@ class WebKnossosServer @Inject()(
       .withQueryString("token" -> token)
       .postWithJsonResponse[UserAccessRequest, UserAccessAnswer](accessRequest)
   }
-
-  def addAllowedTeams(allowedTeams: List[String]): Fox[_] = {
-    RPC(s"$webKnossosUrl/api/datastores/$dataStoreName/datasources")
-      .withQueryString("key" -> dataStoreKey)
-      .post(allowedTeams)
-  }
 }

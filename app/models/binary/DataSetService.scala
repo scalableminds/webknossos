@@ -38,16 +38,15 @@ object DataSetService extends FoxImplicits with LazyLogging {
                      dataStore: DataStoreInfo,
                      owningOrganization: String,
                      dataSource: InboxDataSource,
-                     allowedTeams: List[BSONObjectID],
                      isActive: Boolean = false
                      )(implicit ctx: DBAccessContext) = {
     OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
-      case Full(organization) =>
+      case Full(_) =>
       DataSetDAO.insert(DataSet(
         dataStore,
         dataSource,
         owningOrganization,
-        allowedTeams,
+        List(),
         isActive = isActive,
         isPublic = false))(GlobalAccessContext)
       case _ => Fox.failure("org.notExist")
@@ -77,7 +76,6 @@ object DataSetService extends FoxImplicits with LazyLogging {
           dataStoreInfo,
           dataSource.id.team,
           dataSource,
-          List(),
           isActive = dataSource.isUsable).futureBox
     }
   }

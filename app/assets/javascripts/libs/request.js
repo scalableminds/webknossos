@@ -13,13 +13,11 @@ type RequestOptions = {
   headers?: { [key: string]: string },
   method?: methodType,
   timeout?: number,
+  compress?: boolean,
 };
 
-export type RequestOptionsWithData<T> = {
+export type RequestOptionsWithData<T> = RequestOptions & {
   data: T,
-  headers?: { [key: string]: string },
-  method?: methodType,
-  timeout?: number,
 };
 
 class Request {

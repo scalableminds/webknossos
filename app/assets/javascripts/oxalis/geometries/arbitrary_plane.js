@@ -8,7 +8,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import { M4x4, V3 } from "libs/mjs";
 import constants, { OrthoViews } from "oxalis/constants";
-import type { ModeType } from "oxalis/constants";
+import type { ModeType, Vector3, Vector4 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -45,7 +45,7 @@ class ArbitraryPlane {
   constructor() {
     this.isDirty = true;
     this.height = 0;
-    this.width = constants.VIEWPORT_WIDTH;
+    this.width = constants.VIEWPORT_WIDTH; //  * 1.125
     _.extend(this, BackboneEvents);
 
     this.mesh = this.createMesh();
@@ -57,9 +57,9 @@ class ArbitraryPlane {
       });
     }
 
-    if ((Math.log(this.width) / Math.LN2) % 1 === 1) {
-      throw new Error("width needs to be a power of 2");
-    }
+    // if ((Math.log(this.width) / Math.LN2) % 1 === 1) {
+    //   throw new Error("width needs to be a power of 2");
+    // }
 
     Store.subscribe(() => {
       this.isDirty = true;
@@ -109,11 +109,11 @@ class ArbitraryPlane {
 
       const matrix = getZoomedMatrix(Store.getState().flycam);
 
-      const queryMatrix = M4x4.scale1(1, matrix);
-      const newVertices = M4x4.transformPointsAffine(queryMatrix, this.queryVertices);
-      const colorBinary = Model.getColorBinaries()[0];
-      const newColors = colorBinary.getByVerticesSync(newVertices);
-      this.textureMaterial.setData(colorBinary.name, newColors);
+      // const queryMatrix = M4x4.scale1(1, matrix);
+      // const newVertices = M4x4.transformPointsAffine(queryMatrix, this.queryVertices);
+      // const colorBinary = Model.getColorBinaries()[0];
+      // const newColors = colorBinary.getByVerticesSync(newVertices);
+      // this.textureMaterial.setData(colorBinary.name, newColors);
 
       mesh.matrix.set(
         matrix[0],
@@ -162,13 +162,22 @@ class ArbitraryPlane {
         vertex[1] = y - Math.floor(this.width / 2);
         vertex[2] = 0;
 
-        vector = V3.sub(vertex, centerVertex, vector);
+        vector = V3.sub(vertex, centerVertex);
         const length = V3.length(vector);
-        vector = V3.scale(vector, sphericalCapRadius / length, vector);
+        vector = V3.scale(vector, sphericalCapRadius / length);
 
         queryVertices[currentIndex++] = centerVertex[0] + vector[0];
         queryVertices[currentIndex++] = centerVertex[1] + vector[1];
         queryVertices[currentIndex++] = centerVertex[2] + vector[2];
+
+        if (vertex[0] === -100 && vertex[1] === 0) {
+          console.log(
+            "special vertex",
+            centerVertex[0] + vector[0],
+            centerVertex[1] + vector[1],
+            centerVertex[2] + vector[2],
+          );
+        }
       }
     }
 
@@ -201,7 +210,7 @@ class ArbitraryPlane {
 
   createMesh() {
     // this.textureMaterial = new PlaneMaterialFactory(this.width, {}).setup().getMaterial();
-    this.textureMaterial = new PlaneMaterialFactory(0, {}, OrthoViews.PLANE_XY)
+    this.textureMaterial = new PlaneMaterialFactory(0, {}, OrthoViews.PLANE_XY, 4)
       .setup()
       .getMaterial();
 

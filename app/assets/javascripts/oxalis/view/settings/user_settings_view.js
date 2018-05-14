@@ -111,8 +111,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             <LogSliderSetting
               label="Viewport Scale"
               roundTo={3}
-              min={0.05}
-              max={20}
+              min={Constants.MIN_SCALE}
+              max={Constants.MAX_SCALE}
               step={0.1}
               value={this.props.userConfiguration.scale}
               onChange={this.onChangeUser.scale}
@@ -127,6 +127,23 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       default:
         return (
           <Panel header="Flight Options" key="2">
+            <LogSliderSetting
+              label="Zoom"
+              roundTo={3}
+              min={0.001}
+              max={this.props.maxZoomStep}
+              value={this.props.zoomStep}
+              onChange={this.props.onChangeZoomStep}
+            />
+            <LogSliderSetting
+              label="Viewport Scale"
+              roundTo={3}
+              min={Constants.MIN_SCALE}
+              max={Constants.MAX_SCALE}
+              step={0.1}
+              value={this.props.userConfiguration.scale}
+              onChange={this.onChangeUser.scale}
+            />
             <NumberSliderSetting
               label="Mouse Rotation"
               min={0.0001}

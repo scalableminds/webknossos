@@ -9,9 +9,11 @@ import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
 import type { CategoryType } from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
+import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
+import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import {
   PingStrategy,
@@ -34,10 +36,20 @@ import {
   setMappingSizeAction,
 } from "oxalis/model/actions/settings_actions";
 import { getAreas } from "oxalis/model/accessors/flycam_accessor";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import {
+  getResolutionsFactors,
+  zoomedAddressToAnotherZoomStep,
+  globalPositionToBucketPosition,
+  bucketPositionToGlobalAddress,
+} from "oxalis/model/helpers/position_converter";
 import PriorityQueue from "js-priority-queue";
 import messages from "messages";
+import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import { M4x4, V3 } from "libs/mjs";
+import { intersects } from "libs/collision_test";
+import { traverse } from "oxalis/model/binary/bucket_traversals";
 
+import type { Bucket } from "oxalis/model/binary/bucket";
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type Layer from "oxalis/model/binary/layers/layer";
@@ -120,6 +132,8 @@ class Binary {
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
+  current3DPingedBuckets: Array<PullQueueItemType> = [];
+  usedBuckets: Array<Bucket> = [];
 
   constructor(
     layer: Layer,
@@ -306,38 +320,158 @@ class Binary {
     const subBucketLocality = getSubBucketLocality(position, this.layer.resolutions[logZoomStep]);
     const areas = getAreas(Store.getState());
 
+    const matrix = getZoomedMatrix(Store.getState().flycam);
+
+    const isOrthoMode = false;
     if (
       isAnchorPointNew ||
       isFallbackAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
-      !_.isEqual(subBucketLocality, this.lastSubBucketLocality)
+      !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
+      (!isOrthoMode && !_.isEqual(this.lastZoomedMatrix, matrix))
     ) {
       this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
+      this.lastZoomedMatrix = matrix;
 
       const bucketQueue = new PriorityQueue({
         // small priorities take precedence
         comparator: (b, a) => b.priority - a.priority,
       });
 
-      this.addNecessaryBucketsToPriorityQueue(
-        bucketQueue,
-        logZoomStep,
-        this.anchorPointCache.anchorPoint,
-        false,
-        areas,
-        subBucketLocality,
-      );
-
-      if (isFallbackAvailable) {
+      if (isOrthoMode) {
         this.addNecessaryBucketsToPriorityQueue(
           bucketQueue,
-          logZoomStep + 1,
-          this.anchorPointCache.fallbackAnchorPoint,
-          true,
+          logZoomStep,
+          this.anchorPointCache.anchorPoint,
+          false,
           areas,
           subBucketLocality,
         );
+
+        if (isFallbackAvailable) {
+          this.addNecessaryBucketsToPriorityQueue(
+            bucketQueue,
+            logZoomStep + 1,
+            this.anchorPointCache.fallbackAnchorPoint,
+            true,
+            areas,
+            subBucketLocality,
+          );
+        }
+      } else {
+        const queryMatrix = M4x4.scale1(1, matrix);
+
+        const transformVectors = (m, points) =>
+          _.chunk(M4x4.transformPointsAffine(m, _.flatten(points)), 3);
+
+        console.time("check intersection");
+        const enlargementFactor = 1.1;
+        const enlargedExtent = 384; // * enlargementFactor;
+        // todo: tweak this number
+        const steps = 50;
+        const stepSize = enlargedExtent / steps;
+        const enlargedHalfExtent = enlargedExtent / 2;
+        const rotatedPlane = transformVectors(
+          queryMatrix,
+          _.flatten(
+            _.range(steps + 1).map(idx => [
+              [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 0],
+              [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 0],
+            ]),
+          ),
+        );
+
+        const priority = 1;
+
+        const unitVector = bucketPositionToGlobalAddress(
+          [1, 0, 0, logZoomStep],
+          this.layer.resolutions,
+        );
+        const unitDistance = unitVector[0];
+
+        let hits = 0;
+        let hasDataHits = 0;
+
+        console.time("pure traverse");
+        let traversedBuckets = _.flatten(
+          _.chunk(rotatedPlane, 2).map(([a, b]) =>
+            traverse(a, b, this.layer.resolutions, logZoomStep),
+          ),
+        );
+        console.time("uniq");
+        traversedBuckets = _.uniqBy(traversedBuckets, pos => pos.join("-"));
+        console.log("traversedBuckets.length", traversedBuckets.length);
+        console.timeEnd("uniq");
+        console.timeEnd("pure traverse");
+        traversedBuckets = traversedBuckets.map(addr => [...addr, logZoomStep]);
+
+        if (isFallbackAvailable) {
+          traversedBuckets = _.uniqBy(
+            _.flatMap(traversedBuckets, bucketAddress => {
+              return [
+                bucketAddress,
+                zoomedAddressToAnotherZoomStep(
+                  bucketAddress,
+                  this.layer.resolutions,
+                  fallbackZoomStep,
+                ),
+              ];
+            }),
+            pos => pos.join("-"),
+          );
+        }
+        console.log("logZoomStep", logZoomStep);
+
+        const centerAddress = globalPositionToBucketPosition(
+          getPosition(Store.getState().flycam),
+          this.layer.resolutions,
+          logZoomStep,
+        );
+
+        const centerAddressFallback = globalPositionToBucketPosition(
+          getPosition(Store.getState().flycam),
+          this.layer.resolutions,
+          fallbackZoomStep,
+        );
+
+        const missingBuckets = [];
+
+        // if (true) {
+        //   const bucket = this.cube.getOrCreateBucket(centerAddress);
+        //   if (bucket.type !== "null") {
+        //     bucketQueue.queue({ bucket, priority });
+        //   }
+        //   if (bucket.hasData()) {
+        //     hasDataHits++;
+        //   } else {
+        //     missingBuckets.push({ bucket: bucket.zoomedAddress, priority });
+        //   }
+        // }
+
+        for (const bucketAddress of traversedBuckets) {
+          const bucket = this.cube.getOrCreateBucket(bucketAddress);
+
+          if (bucket.type !== "null") {
+            const priority = V3.sub(bucketAddress, centerAddress).reduce(
+              (a, b) => a + Math.abs(b),
+              0,
+            );
+
+            bucketQueue.queue({ bucket, priority });
+
+            if (!bucket.hasData()) {
+              missingBuckets.push({ bucket: bucket.zoomedAddress, priority });
+            }
+          }
+        }
+
+        this.pullQueue.addAll(missingBuckets);
+        this.pullQueue.pull();
+
+        console.timeEnd("check intersection");
+        console.log("bucketQueue", bucketQueue.length);
+        console.log("hasDataHits", hasDataHits);
       }
 
       const buckets = consumeBucketsFromPriorityQueue(
@@ -394,16 +528,11 @@ class Binary {
     subBucketLocality: Vector3,
   ): void {
     const resolution = this.layer.resolutions[logZoomStep];
+    const previousResolution = this.layer.resolutions[logZoomStep - 1];
 
-    let resolutionChangeRatio = [1, 1, 1];
-    if (isFallback) {
-      const previousResolution = this.layer.resolutions[logZoomStep - 1];
-      resolutionChangeRatio = [
-        resolution[0] / previousResolution[0],
-        resolution[1] / previousResolution[1],
-        resolution[2] / previousResolution[2],
-      ];
-    }
+    const resolutionChangeRatio = isFallback
+      ? getResolutionsFactors(resolution, previousResolution)
+      : [1, 1, 1];
 
     for (const planeId of OrthoViewValuesWithoutTDView) {
       const [u, v, w] = Dimensions.getIndices(planeId);
@@ -562,7 +691,10 @@ class Binary {
         strategy.inRoundTripTimeRange(this.pullQueue.roundTripTime)
       ) {
         this.pullQueue.clearNormalPriorities();
-        this.pullQueue.addAll(strategy.ping(matrix, zoomStep));
+        const buckets = strategy.ping(matrix, zoomStep);
+        // console.log("buckets", buckets);
+        this.current3DPingedBuckets = buckets;
+        this.pullQueue.addAll(buckets);
         break;
       }
     }
@@ -578,16 +710,35 @@ class Binary {
   getByVerticesSync(vertices: Array<number>): Uint8Array {
     // A synchronized implementation of `get`. Cuz its faster.
 
-    const { buffer, missingBuckets } = InterpolationCollector.bulkCollect(
+    const { buffer, missingBuckets, usedBuckets } = InterpolationCollector.bulkCollect(
       vertices,
       this.cube.getArbitraryCube(),
     );
+    // _.flatMap(usedBuckets, address => [
+    //   address
+    // ]
+    this.usedBuckets = usedBuckets.map(bucketAddress => this.cube.getOrCreateBucket(bucketAddress));
+    console.log("usedBuckets", usedBuckets.length);
+
+    // todo: use correct center (actually, manhattan distance should be calculated alng the oblique plane)
+    const centerBucket = [0, 0, 0];
 
     this.pullQueue.addAll(
-      missingBuckets.map(bucket => ({
-        bucket,
-        priority: PullQueueConstants.PRIORITY_HIGHEST,
-      })),
+      // missingBuckets.map(bucket => ({
+      //   bucket,
+      //   priority: PullQueueConstants.PRIORITY_HIGHEST,
+      // })),
+      usedBuckets.map(bucketAddress => {
+        const [x, y, z] = bucketAddress;
+        const priority =
+          Math.abs(x - centerBucket[0]) +
+          Math.abs(y - centerBucket[1]) +
+          Math.abs(z - centerBucket[2]);
+        return {
+          bucket: bucketAddress,
+          priority,
+        };
+      }),
     );
     this.pullQueue.pull();
 

@@ -34,7 +34,7 @@ function ensureUpToDateTests {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $(find $testBundlePath -name "*.spec.js") "$@"
+  export NODE_PATH=$testBundlePath && BABEL_ENV=test ava $(find $testBundlePath -name "collisions.spec.js") "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests

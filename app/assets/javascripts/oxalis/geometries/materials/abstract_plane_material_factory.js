@@ -108,12 +108,14 @@ class AbstractPlaneMaterialFactory {
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
   tWidth: number;
+  shaderId: number;
 
-  constructor(tWidth: number, textures: TextureMapType) {
+  constructor(tWidth: number, textures: TextureMapType, shaderId: number) {
     this.tWidth = tWidth;
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
     this.textures = textures;
+    this.shaderId = shaderId;
   }
 
   setup() {
@@ -152,7 +154,7 @@ class AbstractPlaneMaterialFactory {
       }),
     );
 
-    shaderEditor.addMaterial(this.material);
+    shaderEditor.addMaterial(this.shaderId, this.material);
 
     this.material.setData = (name, data) => {
       const textureName = sanitizeName(name);
@@ -197,6 +199,8 @@ class AbstractPlaneMaterialFactory {
 
   getVertexShader(): string {
     return `
+precision highp float;
+
 varying vec4 worldCoord;
 varying vec4 modelCoord;
 varying vec2 vUv;

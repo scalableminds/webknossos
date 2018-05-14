@@ -12,6 +12,7 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
   OrthoViews,
+  OrthoViewValues,
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
@@ -51,7 +52,14 @@ class Plane {
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
-    const textureMaterial = new PlaneMaterialFactory(0, {}, this.planeID).setup().getMaterial();
+    const textureMaterial = new PlaneMaterialFactory(
+      0,
+      {},
+      this.planeID,
+      OrthoViewValues.indexOf(this.planeID),
+    )
+      .setup()
+      .getMaterial();
 
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 

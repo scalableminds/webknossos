@@ -22,7 +22,12 @@ import {
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import constants, { OrthoViews, VolumeToolEnum, volumeToolEnumToIndex } from "oxalis/constants";
+import constants, {
+  OrthoViews,
+  ModeValues,
+  VolumeToolEnum,
+  volumeToolEnumToIndex,
+} from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
 import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary";
@@ -44,8 +49,8 @@ function formatNumberAsGLSLFloat(aNumber: number): string {
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   planeID: OrthoViewType;
 
-  constructor(tWidth: number, textures: TextureMapType, planeID: OrthoViewType) {
-    super(tWidth, textures);
+  constructor(tWidth: number, textures: TextureMapType, planeID: OrthoViewType, shaderId: number) {
+    super(tWidth, textures, shaderId);
     this.planeID = planeID;
   }
 
@@ -61,13 +66,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "b",
         value: true,
       },
+      sphericalCapRadius: {
+        type: "f",
+        value: 140,
+      },
       globalPosition: {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
-      },
-      datasetScale: {
-        type: "v3",
-        value: Store.getState().dataset.dataSource.scale,
       },
       anchorPoint: {
         type: "v4",
@@ -129,9 +134,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 0,
       },
-      isArbitrary: {
-        type: "b",
-        value: false,
+      viewMode: {
+        type: "f",
+        value: 0,
       },
     });
 
@@ -243,6 +248,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     );
 
     listenToStoreProperty(
+      storeState => storeState.userConfiguration.sphericalCapRadius,
+      sphericalCapRadius => {
+        this.uniforms.sphericalCapRadius.value = sphericalCapRadius;
+      },
+    );
+
+    listenToStoreProperty(
       storeState => storeState.flycam.zoomStep,
       zoomStep => {
         this.uniforms.zoomValue.value = zoomStep;
@@ -259,7 +271,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     listenToStoreProperty(
       storeState => storeState.temporaryConfiguration.viewMode,
       viewMode => {
-        this.uniforms.isArbitrary.value = viewMode !== constants.MODE_PLANE_TRACING;
+        this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
       },
     );
 
@@ -382,7 +394,8 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   <% } %>
 <% } %>
 
-uniform bool isArbitrary;
+uniform float sphericalCapRadius;
+uniform float viewMode;
 uniform float alpha;
 uniform bool highlightHoveredCellId;
 uniform vec3 globalPosition;
@@ -392,7 +405,6 @@ uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
 uniform bool useBilinearFiltering;
-uniform vec3 datasetScale;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
@@ -407,6 +419,11 @@ const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
 const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
+
+// For some reason, taking the dataset scale from the uniform results in imprecise
+// rendering of the brush circle (and issues in the arbitrary modes). That's why it
+// is directly inserted into the source via templating.
+const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 
@@ -699,15 +716,26 @@ vec3 scale(vec3 v, float length) {
 vec3 getWorldCoordUVW() {
   vec3 worldCoordUVW = transDim(worldCoord.xyz);
 
-  if (isArbitrary) {
+  bool isArbitrary = viewMode == 1.0 || viewMode == 2.0;
+
+  // Only in flight mode
+  if (viewMode == 1.0) {
     // return modelCoord.xyz;
 
-    worldCoordUVW = (inverse(savedModelMatrix) * vec4(worldCoordUVW, 1.0)).xyz;
-    float sphericalRadius = -140.0;
-    worldCoordUVW -= vec3(0, 0, sphericalRadius);
-    worldCoordUVW = scale(worldCoordUVW, sphericalRadius / length(worldCoordUVW));
+    vec4 modelCoords = inverse(savedModelMatrix) * worldCoord;
+    // x and y are between -192 and +192 each
+    // z seems to depend on the actual orientation of the plane? flickers between -/+ 0.0001
+    // might want to clip to zero?
 
-    worldCoordUVW = (savedModelMatrix * vec4(worldCoordUVW, 1.0)).xyz;
+    float sphericalRadius = sphericalCapRadius;
+
+    vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);
+    modelCoords.z = 0.0;
+    modelCoords -= centerVertex;
+    modelCoords.xyz = modelCoords.xyz * (sphericalRadius / length(modelCoords.xyz));
+    modelCoords += centerVertex;
+
+    worldCoordUVW = (savedModelMatrix * modelCoords).xyz;
   }
 
   vec3 datasetScaleUVW = transDim(datasetScale);
@@ -721,7 +749,9 @@ vec3 getWorldCoordUVW() {
     // Theoretically, worldCoordUVW[<%= uvw[2] %>] could be used here. However, the plane is offset
     // in 3D space to allow skeletons to be rendered before the plane. Since w (e.g., z for xy plane) is
     // the same for all texels computed in this shader, we simply use globalPosition[w] instead
-    isArbitrary ? worldCoordUVW.z / datasetScaleUVW.z : globalPosition[<%= uvw[2] %>]
+    isArbitrary ?
+      worldCoordUVW.z / datasetScaleUVW.z
+      : globalPosition[<%= uvw[2] %>]
   );
 
   return worldCoordUVW;
@@ -777,6 +807,46 @@ vec4 getBilinearColorFor(
   return mix(ab, cd, bifilteringParams.y);
 }
 
+vec4 getTrilinearColorFor(
+  sampler2D lookUpTexture,
+  float layerIndex,
+  float d_texture_width,
+  float packingDegree,
+  vec3 coords
+) {
+  coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
+  vec3 bifilteringParams = transDim((coords - floor(coords))).xyz;
+  coords = floor(coords);
+
+  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
+  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), 0.0);
+  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), 0.0);
+  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), 0.0);
+
+  vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 0, 1)), 0.0);
+  vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 1)), 0.0);
+  vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 1)), 0.0);
+  vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 1)), 0.0);
+
+  if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0 ||
+    a2.a < 0.0 || b2.a < 0.0 || c2.a < 0.0 || d2.a < 0.0) {
+    // We need to check all four colors for a negative parts, because there will be black
+    // lines at the borders otherwise (black gets mixed with data)
+    return vec4(0.0, 0.0, 0.0, -1.0);
+  }
+
+  vec4 ab = mix(a, b, bifilteringParams.x);
+  vec4 cd = mix(c, d, bifilteringParams.x);
+  vec4 abcd = mix(ab, cd, bifilteringParams.y);
+
+  vec4 ab2 = mix(a2, b2, bifilteringParams.x);
+  vec4 cd2 = mix(c2, d2, bifilteringParams.x);
+
+  vec4 abcd2 = mix(ab2, cd2, bifilteringParams.y);
+
+  return mix(abcd, abcd2, bifilteringParams.z);
+}
+
 
 vec4 getMaybeFilteredColor(
   sampler2D lookUpTexture,
@@ -788,7 +858,9 @@ vec4 getMaybeFilteredColor(
 ) {
   vec4 color;
   if (!suppressBilinearFiltering && useBilinearFiltering) {
-    color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
+    // color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
+    color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
+
   } else {
     color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
   }
@@ -864,12 +936,8 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
       return brushOverlayColor;
     }
     vec3 flooredMousePos = floor(globalMousePosition);
-    // For some reason, taking the dataset scale from the uniform results in imprecise
-    // rendering of the brush circle. That's why it is directly inserted into the source
-    // via templating.
-    vec3 _datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
-    float baseVoxelSize = min(min(_datasetScale.x, _datasetScale.y), _datasetScale.z);
-    vec3 datasetScaleUVW = transDim(_datasetScale) / baseVoxelSize;
+    float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
+    vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
 
     float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
 

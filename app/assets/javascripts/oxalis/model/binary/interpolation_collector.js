@@ -10,6 +10,7 @@ import type { Vector4 } from "oxalis/constants";
 export type CollectedVertices = {
   buffer: Uint8Array,
   missingBuckets: Array<Vector4>,
+  usedBuckets: Array<Vector4>,
 };
 
 function templateFill(str: string, params: Array<string>): string {
@@ -24,26 +25,6 @@ function templateFill(str: string, params: Array<string>): string {
 
 // This provides interpolation mechanics. It's a lot of code. But it
 // should run fast.
-
-// See model/binary/data_cube to find out how this works
-// Parameters: pointIndex, x, y, z, zoomStep
-// Locals: coordMask
-const pointIndexMacro = _.template(
-  templateFill(
-    `\
-//-- pointIndexMacro(pointIndex, x, y, z, zoomStep)
-coordMask = 31 << zoomStep;
-
-pointIndex =
-  (
-    ((z & coordMask) << (10 - zoomStep)) +
-    ((y & coordMask) << (5 - zoomStep)) +
-    ((x & coordMask) >> (zoomStep))
-  ) >> 0;\
-`,
-    ["pointIndex", "x", "y", "z", "zoomStep"],
-  ),
-);
 
 // Finding points adjacent to the already found one.
 // We make use of the bucket structure and index arithmetic to optimize
@@ -103,66 +84,10 @@ sub_z = z0;
   }
 <% } %>
 
-var isBucketMissing = false;
-
-if (bucketIndex == lastBucketIndex) {
-
-  <%= pointIndexMacro({ pointIndex : "pointIndex", x : "sub_x", y : "sub_y", z : "sub_z", zoomStep : "lastBucketZoomStep" }) %>
-
-  <%= output %> = lastBucket.data[pointIndex];
-
-} else if ((bucket = buckets.getBucket(bucketIndex)) != null) {
-
-  bucketZoomStep = bucket.zoomStep || 0;
-  isBucketMissing = bucket.isTemporalData;
-
-  <%= pointIndexMacro({ pointIndex : "pointIndex", x : "sub_x", y : "sub_y", z : "sub_z", zoomStep : "bucketZoomStep" }) %>
-
-  lastBucket = bucket;
-  lastBucketIndex = bucketIndex;
-  lastBucketZoomStep = bucketZoomStep;
-
-  <%= output %> = bucket.data[pointIndex];
-
-} else {
-  isBucketMissing = true;
-}
-
-if (isBucketMissing) {
-  if(buckets.isValidBucket(bucketIndex) && missingBuckets.length < 100) {
-
-    missingBuckets.push([
-      Math.floor(bucketIndex / sizeZY),
-      Math.floor((bucketIndex % sizeZY) / sizeZ),
-      bucketIndex % sizeZ,
-      0
-    ])
-  }
-}\
-`,
-  { imports: { pointIndexMacro } },
-);
-
-// Trilinear interpolation (Point is in a cube)
-// Parameters: output, p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2
-const trilinearMacro = _.template(
-  templateFill(
-    `\
-//-- trilinearMacro(output, p000, p100, p010, p110, p001, p101, p011, p111, d0, d1, d2)
-
-output =
-  p000 * (1 - d0) * (1 - d1) * (1 - d2) +
-  p100 * d0 * (1 - d1) * (1 - d2) +
-  p010 * (1 - d0) * d1 * (1 - d2) +
-  p110 * d0 * d1 * (1 - d2) +
-  p001 * (1 - d0) * (1 - d1) * d2 +
-  p101 * d0 * (1 - d1) * d2 +
-  p011 * (1 - d0) * d1 * d2 +
-  p111 * d0 * d1 * d2;
+usedBuckets.add(bucketIndex);
 \
 `,
-    ["output", "p000", "p100", "p010", "p110", "p001", "p101", "p011", "p111", "d0", "d1", "d2"],
-  ),
+  { imports: {} },
 );
 
 // This macro is used for collecting and interpolating the data.
@@ -197,29 +122,13 @@ basePointIndex =
 
 // trilinear x,y,z
 <%= subPointMacro({ output : "output0", xd : 0,  yd : 0,  zd : 0 }) %>
-<%= subPointMacro({ output : "output1", xd : 1,  yd : 0,  zd : 0 }) %>
-<%= subPointMacro({ output : "output2", xd : 0,  yd : 1,  zd : 0 }) %>
-<%= subPointMacro({ output : "output3", xd : 1,  yd : 1,  zd : 0 }) %>
-<%= subPointMacro({ output : "output4", xd : 0,  yd : 0,  zd : 1 }) %>
-<%= subPointMacro({ output : "output5", xd : 1,  yd : 0,  zd : 1 }) %>
-<%= subPointMacro({ output : "output6", xd : 0,  yd : 1,  zd : 1 }) %>
-<%= subPointMacro({ output : "output7", xd : 1,  yd : 1,  zd : 1 }) %>
-
-<%= trilinearMacro({
-  output : "trilinearOutput",
-  p000 : "output0",
-  p100 : "output1",
-  p010 : "output2",
-  p110 : "output3",
-  p001 : "output4",
-  p101 : "output5",
-  p011 : "output6",
-  p111 : "output7",
-  d0 : "xd",
-  d1 : "yd",
-  d2 : "zd"
-}) %>
-buffer[j] = trilinearOutput;\
+// <%= subPointMacro({ output : "output1", xd : 1,  yd : 0,  zd : 0 }) %>
+// <%= subPointMacro({ output : "output2", xd : 0,  yd : 1,  zd : 0 }) %>
+// <%= subPointMacro({ output : "output3", xd : 1,  yd : 1,  zd : 0 }) %>
+// <%= subPointMacro({ output : "output4", xd : 0,  yd : 0,  zd : 1 }) %>
+// <%= subPointMacro({ output : "output5", xd : 1,  yd : 0,  zd : 1 }) %>
+// <%= subPointMacro({ output : "output6", xd : 0,  yd : 1,  zd : 1 }) %>
+// <%= subPointMacro({ output : "output7", xd : 1,  yd : 1,  zd : 1 }) %>
 `,
     [
       "x",
@@ -238,8 +147,9 @@ buffer[j] = trilinearOutput;\
       "sizeZY",
     ],
   ),
-  { imports: { trilinearMacro, subPointMacro } },
+  { imports: { subPointMacro } },
 );
+
 class InterpolationCollector {
   // eslint-disable-next-line no-new-func
   _bulkCollect: Function = new Function(
@@ -249,6 +159,7 @@ class InterpolationCollector {
       `\
 var buffer = new Uint8Array(vertices.length / 3);
 var missingBuckets = [];
+var usedBuckets = new Set();
 var x, y, z;
 var sub_x, sub_y, sub_z;
 var output0, output1, output2, output3, output4, output5, output6, output7, x0, y0, z0, xd, yd, zd, baseBucketIndex, basePointIndex;
@@ -304,14 +215,18 @@ if (buckets) {
 
 return {
   buffer : buffer,
-  missingBuckets : missingBuckets
+  missingBuckets : missingBuckets,
+  usedBuckets : Array.from(usedBuckets).map(idx => buckets.getBucketAddress(idx))
 };
 `,
     )({ collectLoopMacro }),
   );
 
   bulkCollect(vertices: Array<number>, buckets: ArbitraryCubeAdapter): CollectedVertices {
-    return this._bulkCollect(vertices, buckets);
+    console.time("bulkCollect");
+    const retVal = this._bulkCollect(vertices, buckets);
+    console.timeEnd("bulkCollect");
+    return retVal;
   }
 }
 

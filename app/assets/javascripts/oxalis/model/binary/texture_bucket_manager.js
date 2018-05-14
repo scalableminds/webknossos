@@ -279,6 +279,13 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
+    if (x < 0 || y < 0 || z < 0) {
+      window.outOfAnchorPoint = (window.outOfAnchorPoint || 0) + 1;
+      console.log("outOfAnchorPoint", window.outOfAnchorPoint, x, y, z);
+
+      // debugger;
+    }
+
     return (
       Math.pow(this.bucketsPerDim, 3) * zoomDiff +
       Math.pow(this.bucketsPerDim, 2) * z +

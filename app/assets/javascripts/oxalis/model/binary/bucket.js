@@ -54,6 +54,10 @@ export class DataBucket {
   isDirtyDueToDependent: WeakSet<Bucket> = new WeakSet();
   isDownSampled: boolean;
 
+  // Needed for interpolation collector
+  zoomStep: number = 0;
+  isTemporalData: boolean = false;
+
   constructor(
     BIT_DEPTH: number,
     zoomedAddress: Vector4,
@@ -73,6 +77,8 @@ export class DataBucket {
     this.isPartlyOutsideBoundingBox = false;
 
     this.data = null;
+
+    this.zoomStep = zoomedAddress[3];
   }
 
   shouldCollect(): boolean {
@@ -316,9 +322,11 @@ export class DataBucket {
 export class NullBucket {
   type: "null" = "null";
   isOutOfBoundingBox: boolean;
+  isTemporalData: true;
 
   constructor(isOutOfBoundingBox: boolean) {
     this.isOutOfBoundingBox = isOutOfBoundingBox;
+    this.isTemporalData = true;
   }
 
   hasData(): boolean {

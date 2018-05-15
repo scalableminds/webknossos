@@ -151,7 +151,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
         select ${columnsWithPrefix("webknossos.tasks_.")}
            from
              webknossos.tasks_
-             join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id
              join
                (select domain, value
                 from webknossos.user_experiences
@@ -159,7 +158,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
              left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
-           where webknossos.task_instances.openInstances > 0
+           where webknossos.tasks_.openInstances > 0
                  and webknossos.tasks_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
                  and not webknossos.projects_.paused
@@ -228,14 +227,14 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
   def countOpenInstancesForTask(taskId: ObjectId): Fox[Int] = {
     for {
-      result <- run(sql"select openInstances from webknossos.task_instances where _id = ${taskId.toString}".as[Int])
+      result <- run(sql"select openInstances from webknossos.tasks_ where _id = ${taskId.toString}".as[Int])
       firstResult <- result.headOption.toFox
     } yield firstResult
   }
 
   def countAllOpenInstances(implicit ctx: DBAccessContext): Fox[Int] = {
     for {
-      result <- run(sql"select sum(openInstances) from webknossos.task_instances".as[Int])
+      result <- run(sql"select sum(openInstances) from webknossos.tasks_".as[Int])
       firstResult <- result.headOption
     } yield firstResult
   }
@@ -243,9 +242,9 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def countOpenInstancesForProject(projectId: ObjectId): Fox[Int] = {
     for {
       result <- run(sql"""select sum(openInstances)
-                          from webknossos.task_instances i join webknossos.tasks t on i._id = t._id
-                          where t._project = ${projectId.id}
-                          group by t._project""".as[Int])
+                          from webknossos.tasks_
+                          where _project = ${projectId.id}
+                          group by _project""".as[Int])
       firstResult <- result.headOption
     } yield firstResult
   }
@@ -253,9 +252,9 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def countAllOpenInstancesGroupedByProjects(implicit ctx: DBAccessContext): Fox[List[(ObjectId, Int)]] = {
     for {
       rowsRaw <- run(
-        sql"""select webknossos.tasks_._project, sum(webknossos.task_instances.openInstances)
-              from webknossos.tasks_ join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id
-              group by webknossos.tasks_._project
+        sql"""select _project, sum(openInstances)
+              from webknossos.tasks_
+              group by _project
            """.as[(String, Int)])
     } yield {
       rowsRaw.toList.map(r => (ObjectId(r._1), r._2))
@@ -266,10 +265,10 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     for {
       _ <- run(
         sqlu"""insert into webknossos.tasks(_id, _project, _script, _taskType, _team, neededExperience_domain, neededExperience_value,
-                                             totalInstances, tracingTime, boundingBox, editPosition, editRotation, creationInfo, created, isDeleted)
+                                             totalInstances, openInstances, tracingTime, boundingBox, editPosition, editRotation, creationInfo, created, isDeleted)
                    values(${t._id.id}, ${t._project.id}, #${optionLiteral(t._script.map(s => sanitize(s.id)))}, ${t._taskType.id}, ${t._team.id},
                           ${t.neededExperience.domain}, ${t.neededExperience.value},
-                          ${t.totalInstances}, ${t.tracingTime}, #${optionLiteral(t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple(_)))},
+                          ${t.totalInstances}, ${t.totalInstances}, ${t.tracingTime}, #${optionLiteral(t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple(_)))},
                            '#${writeStructTuple(t.editPosition.toList.map(_.toString))}', '#${writeStructTuple(t.editRotation.toList.map(_.toString))}',
                            #${optionLiteral(t.creationInfo.map(sanitize(_)))}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
         """)

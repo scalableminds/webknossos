@@ -350,3 +350,53 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.user_experiences
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
+
+
+
+CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
+  BEGIN
+    IF NEW.totalInstances > OLD.totalInstances THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances);
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onUpdateTaskTrigger
+AFTER UPDATE ON webknossos.tasks
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateTask();
+
+
+CREATE FUNCTION webknossos.onInsertAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (NEW.typ = 'Task') AND (NEW.isDeleted = false) AND (NEW.state != 'Cancelled') THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onInsertAnnotationTrigger
+AFTER INSERT ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertAnnotation();
+
+
+CREATE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (NEW._task != OLD._task) OR (NEW.typ != OLD.typ) THEN
+        --TODO: immutable
+    END IF;
+    IF
+      (NEW.state = 'Cancelled' AND OLD.state != 'Cancelled')
+      OR
+      (NEW.isDeleted = true) AND (OLD.isDeleted = false)
+    THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onUpdateAnnotationTrigger
+AFTER UPDATE ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();

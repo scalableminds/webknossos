@@ -731,9 +731,9 @@ vec3 getWorldCoordUVW() {
 
     vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);
     modelCoords.z = 0.0;
-    modelCoords -= centerVertex;
-    modelCoords.xyz = modelCoords.xyz * (sphericalRadius / length(modelCoords.xyz));
     modelCoords += centerVertex;
+    modelCoords.xyz = modelCoords.xyz * (sphericalRadius / length(modelCoords.xyz));
+    modelCoords -= centerVertex;
 
     worldCoordUVW = (savedModelMatrix * modelCoords).xyz;
   }

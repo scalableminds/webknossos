@@ -365,24 +365,23 @@ class Binary {
         const transformVectors = (m, points) =>
           _.chunk(M4x4.transformPointsAffine(m, _.flatten(points)), 3);
 
-        console.time("check intersection");
         const enlargementFactor = 1.1;
-        const enlargedExtent = 384; // * enlargementFactor;
+        const enlargedExtent = 384 * enlargementFactor;
         // todo: tweak this number
-        const steps = 384;
+        const steps = 25;
         const stepSize = enlargedExtent / steps;
         const enlargedHalfExtent = enlargedExtent / 2;
         const rotatedPlane = transformVectors(
           queryMatrix,
           _.flatten(
             _.range(steps + 1).map(idx => [
-              [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 0],
-              [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 0],
+              [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, -10],
+              [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, -10],
+              [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 10],
+              [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 10],
             ]),
           ),
         );
-
-        const priority = 1;
 
         const unitVector = bucketPositionToGlobalAddress(
           [1, 0, 0, logZoomStep],
@@ -393,17 +392,13 @@ class Binary {
         let hits = 0;
         let hasDataHits = 0;
 
-        console.time("pure traverse");
         let traversedBuckets = _.flatten(
           _.chunk(rotatedPlane, 2).map(([a, b]) =>
             traverse(a, b, this.layer.resolutions, logZoomStep),
           ),
         );
-        console.time("uniq");
-        traversedBuckets = _.uniqBy(traversedBuckets, pos => pos.join("-"));
-        console.log("traversedBuckets.length", traversedBuckets.length);
-        console.timeEnd("uniq");
-        console.timeEnd("pure traverse");
+        const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
+        traversedBuckets = _.uniqBy(traversedBuckets, hashPosition);
         traversedBuckets = traversedBuckets.map(addr => [...addr, logZoomStep]);
 
         if (isFallbackAvailable) {
@@ -418,36 +413,16 @@ class Binary {
                 ),
               ];
             }),
-            pos => pos.join("-"),
+            hashPosition,
           );
         }
-        console.log("logZoomStep", logZoomStep);
 
+        const missingBuckets = [];
         const centerAddress = globalPositionToBucketPosition(
           getPosition(Store.getState().flycam),
           this.layer.resolutions,
           logZoomStep,
         );
-
-        const centerAddressFallback = globalPositionToBucketPosition(
-          getPosition(Store.getState().flycam),
-          this.layer.resolutions,
-          fallbackZoomStep,
-        );
-
-        const missingBuckets = [];
-
-        // if (true) {
-        //   const bucket = this.cube.getOrCreateBucket(centerAddress);
-        //   if (bucket.type !== "null") {
-        //     bucketQueue.queue({ bucket, priority });
-        //   }
-        //   if (bucket.hasData()) {
-        //     hasDataHits++;
-        //   } else {
-        //     missingBuckets.push({ bucket: bucket.zoomedAddress, priority });
-        //   }
-        // }
 
         for (const bucketAddress of traversedBuckets) {
           const bucket = this.cube.getOrCreateBucket(bucketAddress);
@@ -468,10 +443,6 @@ class Binary {
 
         this.pullQueue.addAll(missingBuckets);
         this.pullQueue.pull();
-
-        console.timeEnd("check intersection");
-        console.log("bucketQueue", bucketQueue.length);
-        console.log("hasDataHits", hasDataHits);
       }
 
       const buckets = consumeBucketsFromPriorityQueue(

@@ -30,6 +30,7 @@ services:
     command: >
       bash -c
       "sbt -v -d -jvm-debug 5005 \"run
+      -Dconfig.file=conf/standalone-datastore.conf
       -Djava.net.preferIPv4Stack=true
       -Dhttp.address=0.0.0.0
       -Dhttp.port=$${PORT}

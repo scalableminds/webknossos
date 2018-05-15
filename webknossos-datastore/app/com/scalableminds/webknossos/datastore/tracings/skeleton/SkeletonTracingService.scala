@@ -137,7 +137,8 @@ class SkeletonTracingService @Inject()(
     } yield {
       Json.obj(
         "updateTracingActionCount" -> updateActions.count(updateAction => updateAction match {case a: UpdateTracingSkeletonAction => true case _ => false}),
-        "createNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: CreateNodeSkeletonAction => true case _ => false})
+        "createNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: CreateNodeSkeletonAction => true case _ => false}),
+        "deleteNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: DeleteNodeSkeletonAction => true case _ => false})
       )
     }
   }

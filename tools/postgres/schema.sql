@@ -400,3 +400,17 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onUpdateAnnotationTrigger
 AFTER UPDATE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
+
+
+CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = OLD._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onDeleteAnnotationTrigger
+AFTER DELETE ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();

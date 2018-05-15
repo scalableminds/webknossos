@@ -161,7 +161,7 @@ CREATE TABLE webknossos.tasks(
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CHECK (openInstances <= totalinstances),
+  CHECK (openInstances <= totalInstances),
   CHECK (openInstances >= 0)
 );
 
@@ -383,15 +383,23 @@ AFTER INSERT ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertAnnotation();
 
 
-CREATE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
+CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
+  BEGIN
+    RETURN (a.state = 'Cancelled' AND a.isDeleted = false AND a.typ = 'Task');
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE OR REPLACE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
   BEGIN
     IF (NEW._task != OLD._task) OR (NEW.typ != OLD.typ) THEN
         RAISE EXCEPTION 'annotation columns _task and typ are immutable';
     END IF;
-    IF
-      (NEW.state = 'Cancelled' AND OLD.state != 'Cancelled')
-      OR
-      (NEW.isDeleted = true) AND (OLD.isDeleted = false)
+    IF (webknossos.countsAsTaskInstance(OLD) AND NOT webknossos.countsAsTaskInstance(NEW))
+    THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+    END IF;
+    IF (NOT webknossos.countsAsTaskInstance(OLD) AND webknossos.countsAsTaskInstance(NEW))
     THEN
       UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
     END IF;

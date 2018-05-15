@@ -369,7 +369,7 @@ class Binary {
         const enlargementFactor = 1.1;
         const enlargedExtent = 384; // * enlargementFactor;
         // todo: tweak this number
-        const steps = 50;
+        const steps = 384;
         const stepSize = enlargedExtent / steps;
         const enlargedHalfExtent = enlargedExtent / 2;
         const rotatedPlane = transformVectors(

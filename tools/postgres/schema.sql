@@ -384,7 +384,7 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertAnnotation();
 CREATE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
   BEGIN
     IF (NEW._task != OLD._task) OR (NEW.typ != OLD.typ) THEN
-        --TODO: immutable
+        RAISE EXCEPTION 'annotation columns _task and typ are immutable';
     END IF;
     IF
       (NEW.state = 'Cancelled' AND OLD.state != 'Cancelled')

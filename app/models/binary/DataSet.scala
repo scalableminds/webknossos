@@ -358,7 +358,7 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
                                                                      ${teamId.id})""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
-    for { //note that t.created is skipped
+    for {
       _ <- run(composedQuery.transactionally)
     } yield ()
   }

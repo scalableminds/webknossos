@@ -16,25 +16,18 @@ import {
 import { getMaximumGroupId } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import SortableTree from "react-sortable-tree";
 import { AutoSizer } from "react-virtualized";
-import type { TreeType, TreeMapType, TreeGroupType, TreeGroupBaseType } from "oxalis/store";
-
-const MISSING_GROUP_ID = -1;
-
-const TYPE_GROUP = "GROUP";
-const TYPE_TREE = "TREE";
-const GroupTypeEnum = {
-  [TYPE_GROUP]: TYPE_GROUP,
-  [TYPE_TREE]: TYPE_TREE,
-};
-type TreeOrGroupType = $Keys<typeof GroupTypeEnum>;
-
-type ExtendedTreeGroupType = TreeGroupBaseType & {
-  expanded: boolean,
-  isChecked: boolean,
-  timestamp: number,
-  type: TreeOrGroupType,
-  children: Array<ExtendedTreeGroupType>,
-};
+import {
+  createGroupToTreesMap,
+  insertTreesAndTransform,
+  removeTreesAndTransform,
+  callDeep,
+  makeBasicGroupObject,
+  MISSING_GROUP_ID,
+  TYPE_TREE,
+  TYPE_GROUP,
+} from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import type { TreeMapType, TreeGroupType } from "oxalis/store";
+import type { ExtendedTreeGroupType } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 
 type Props = {
   activeTreeId: number,
@@ -53,114 +46,10 @@ type Props = {
 
 type State = {
   prevProps: ?Props,
-  hoveredGroupId: ?number,
   expandedGroupIds: { [number]: boolean },
   groupTree: Array<ExtendedTreeGroupType>,
   renamingGroup: ?{ groupId: number, name: string },
 };
-
-function makeBasicGroupObject(
-  groupId: number,
-  name: string,
-  children: Array<TreeGroupType> = [],
-): TreeGroupType {
-  return {
-    groupId,
-    name,
-    children,
-  };
-}
-
-function makeExtendedGroupObject(
-  groupId: number,
-  name: string,
-  type: TreeOrGroupType,
-  timestamp?: number = 0,
-  isChecked?: boolean = false,
-): ExtendedTreeGroupType {
-  return {
-    groupId,
-    type,
-    name,
-    timestamp,
-    isChecked,
-    children: [],
-    expanded: true,
-  };
-}
-
-function makeExtendedGroupObjectFromTree(tree: TreeType): ExtendedTreeGroupType {
-  return makeExtendedGroupObject(tree.treeId, tree.name, TYPE_TREE, tree.timestamp, tree.isVisible);
-}
-
-function makeExtendedGroupObjectFromGroup(group: TreeGroupType): ExtendedTreeGroupType {
-  return makeExtendedGroupObject(group.groupId, group.name, TYPE_GROUP);
-}
-
-function removeTreesAndTransform(groupTree: Array<ExtendedTreeGroupType>): Array<TreeGroupType> {
-  return _.filter(groupTree, group => {
-    if (group.type === TYPE_GROUP) {
-      return true;
-    }
-    return false;
-  }).map(group =>
-    makeBasicGroupObject(group.groupId, group.name, removeTreesAndTransform(group.children)),
-  );
-}
-
-function insertTreesAndTransform(
-  groups: Array<TreeGroupType>,
-  groupToTreesMap: { [number]: Array<TreeType> },
-  expandedGroupIds: { [number]: boolean },
-  sortBy: string,
-): Array<ExtendedTreeGroupType> {
-  return groups.map(group => {
-    const { groupId } = group;
-    const transformedGroup = makeExtendedGroupObjectFromGroup(group);
-    // Ensure that groups are always at the top when sorting by timestamp
-    transformedGroup.timestamp = 0;
-    transformedGroup.expanded =
-      expandedGroupIds[groupId] != null ? expandedGroupIds[groupId] : true;
-    expandedGroupIds[groupId] = transformedGroup.expanded;
-    transformedGroup.children = insertTreesAndTransform(
-      group.children,
-      groupToTreesMap,
-      expandedGroupIds,
-      sortBy,
-    );
-    if (groupToTreesMap[groupId] != null) {
-      // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
-      transformedGroup.children = _.orderBy(transformedGroup.children, ["name"], ["asc"]).concat(
-        _.orderBy(groupToTreesMap[groupId], [sortBy], ["asc"]).map(makeExtendedGroupObjectFromTree),
-      );
-    }
-    transformedGroup.isChecked = _.every(
-      transformedGroup.children,
-      groupOrTree => groupOrTree.isChecked,
-    );
-    return transformedGroup;
-  });
-}
-
-function callDeep(
-  groups: Array<TreeGroupType>,
-  groupId: number,
-  callback: (TreeGroupType, number, Array<TreeGroupType>, ?number) => void,
-  parentGroupId: ?number = MISSING_GROUP_ID,
-) {
-  groups.forEach((group: TreeGroupType, index: number, array: Array<TreeGroupType>) => {
-    if (group.groupId === groupId) {
-      callback(group, index, array, parentGroupId);
-    }
-    if (group.children) {
-      callDeep(group.children, groupId, callback, group.groupId);
-    }
-  });
-}
-
-function createGroupToTreesMap(trees: TreeMapType): { [number]: Array<TreeType> } {
-  return _.groupBy(trees, tree => (tree.groupId != null ? tree.groupId : MISSING_GROUP_ID));
-}
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
   static getDerivedStateFromProps(nextProps: Props, prevState: State) {
@@ -198,7 +87,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   }
 
   state = {
-    hoveredGroupId: null,
     expandedGroupIds: {},
     groupTree: [],
     renamingGroup: null,
@@ -234,7 +122,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   };
 
   onMoveNode = ({ nextParentNode, node, treeData }) => {
-    if (node.type === TYPE_TREE && nextParentNode.groupId != null) {
+    if (node.type === TYPE_TREE) {
       // A tree was dragged - update the group of the dragged tree
       this.props.onSetTreeGroup(
         nextParentNode.groupId === MISSING_GROUP_ID ? null : nextParentNode.groupId,
@@ -246,15 +134,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       const newTreeGroups = removeTreesAndTransform(treeData[0].children);
       this.props.onUpdateTreeGroups(newTreeGroups);
     }
-  };
-
-  onMouseEnter = evt => {
-    const { groupid } = evt.target.dataset;
-    this.setState({ hoveredGroupId: parseInt(groupid, 10) });
-  };
-
-  onMouseLeave = () => {
-    this.setState({ hoveredGroupId: null });
   };
 
   createGroup(groupId: number) {
@@ -310,8 +189,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  preventDefault = evt => evt.preventDefault();
-
   renderGroupActionsDropdown = (node: ExtendedTreeGroupType) => {
     // The root group must not be removed or renamed
     const { groupId, name } = node;
@@ -330,30 +207,26 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
       </Menu>
     );
 
-    // Make sure the displayed name is not empty, otherwise the hover menu won't appear
+    // Make sure the displayed name is not empty
     const displayableName = name.trim() || "<no name>";
 
-    // Only show the group actions dropdown when hovering
-    const isHovering = groupId === this.state.hoveredGroupId;
-    const nameAndMaybeDropdown = isHovering ? (
+    const nameAndDropdown = (
       <Dropdown overlay={menu} placement="bottomCenter">
-        <a className="ant-dropdown-link" href="#" onClick={this.preventDefault}>
-          {displayableName} <Icon type="setting" />
-        </a>
+        <span className="ant-dropdown-link">
+          {displayableName} <Icon type="setting" className="group-actions-icon" />
+        </span>
       </Dropdown>
-    ) : (
-      displayableName
     );
 
     return (
-      <div data-groupid={groupId} onMouseEnter={this.onMouseEnter} onMouseLeave={this.onMouseLeave}>
+      <div>
         <Checkbox
           checked={node.isChecked}
           onChange={this.onCheck}
           node={node}
           style={{ verticalAlign: "middle" }}
         />{" "}
-        <Icon type="folder" /> {nameAndMaybeDropdown}
+        {nameAndDropdown}
       </div>
     );
   };
@@ -396,6 +269,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     const nodeProps = {};
     if (node.type === TYPE_GROUP) {
       nodeProps.title = this.renderGroupActionsDropdown(node);
+      nodeProps.className = "group-type";
     } else {
       const tree = this.props.trees[parseInt(node.groupId, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
@@ -407,17 +281,17 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
             node={node}
             style={{ verticalAlign: "middle" }}
           />
-          {` ${tree.nodes.size()} `}
-          <i className="fa fa-circle" style={{ color: `rgb(${rgbColorString})` }} />
-          {` ${tree.name} `}
+          {` (${tree.nodes.size()}) ${tree.name}`}
         </div>
       );
+      nodeProps.className = "tree-type";
+      nodeProps.style = { color: `rgb(${rgbColorString})` };
     }
     return nodeProps;
   };
 
   keySearchMethod({ node, searchQuery }) {
-    return node.groupId === searchQuery;
+    return node.type === TYPE_TREE && node.groupId === searchQuery;
   }
 
   canDrop({ nextParent }) {

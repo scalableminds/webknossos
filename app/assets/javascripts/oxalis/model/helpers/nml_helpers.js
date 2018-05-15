@@ -39,6 +39,19 @@ function indent(array: Array<string>): Array<string> {
   return array;
 }
 
+function serializeTagWithChildren(
+  name: string,
+  properties: { [string]: ?(string | number | boolean) },
+  children: Array<string>,
+): Array<string> {
+  // If there are no children, the tag will be self-closing
+  return _.compact([
+    serializeTag(name, properties, children.length === 0),
+    ...indent(children),
+    children.length === 0 ? null : `</${name}>`,
+  ]);
+}
+
 function serializeTag(
   name: string,
   properties: { [string]: ?(string | number | boolean) },
@@ -179,8 +192,8 @@ function serializeParameters(state: OxalisState): Array<string> {
 
 function serializeTrees(trees: Array<TreeType>): Array<string> {
   return _.flatten(
-    trees.map(tree => [
-      serializeTag(
+    trees.map(tree =>
+      serializeTagWithChildren(
         "thing",
         {
           id: tree.treeId,
@@ -191,18 +204,16 @@ function serializeTrees(trees: Array<TreeType>): Array<string> {
           name: tree.name,
           groupId: tree.groupId,
         },
-        false,
+        [
+          "<nodes>",
+          ...indent(serializeNodes(tree.nodes)),
+          "</nodes>",
+          "<edges>",
+          ...indent(serializeEdges(tree.edges)),
+          "</edges>",
+        ],
       ),
-      ...indent([
-        "<nodes>",
-        ...indent(serializeNodes(tree.nodes)),
-        "</nodes>",
-        "<edges>",
-        ...indent(serializeEdges(tree.edges)),
-        "</edges>",
-      ]),
-      "</thing>",
-    ]),
+    ),
   );
 }
 
@@ -259,16 +270,13 @@ function serializeComments(trees: Array<TreeType>): Array<string> {
 
 function serializeTreeGroups(treeGroups: Array<TreeGroupType>): Array<string> {
   return _.flatten(
-    treeGroups.map(treeGroup => {
-      const groupObject = { id: treeGroup.groupId, name: treeGroup.name };
-      return treeGroup.children.length > 0
-        ? [
-            serializeTag("group", groupObject, false),
-            ...indent(serializeTreeGroups(treeGroup.children)),
-            "</group>",
-          ]
-        : serializeTag("group", groupObject, true);
-    }),
+    treeGroups.map(treeGroup =>
+      serializeTagWithChildren(
+        "group",
+        { id: treeGroup.groupId, name: treeGroup.name },
+        serializeTreeGroups(treeGroup.children),
+      ),
+    ),
   );
 }
 

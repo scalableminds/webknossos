@@ -160,7 +160,9 @@ CREATE TABLE webknossos.tasks(
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CHECK (openInstances <= totalinstances),
+  CHECK (openInstances >= 0)
 );
 
 CREATE VIEW webknossos.task_instances AS

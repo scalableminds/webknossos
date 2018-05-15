@@ -356,7 +356,7 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
   BEGIN
     IF NEW.totalInstances > OLD.totalInstances THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances);
+      UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
     END IF;
     RETURN NULL;
   END;

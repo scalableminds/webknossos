@@ -6,6 +6,7 @@ const HOST = "http://localhost:9000";
 const MIN_MOVE_ACTIONS = 50;
 const MIN_RATIO_FUNCTION = tracingTimeInHours =>
   Math.max(1.5, Math.min(10.0, 10.0 / tracingTimeInHours));
+const MIN_NODES_PER_HOUR = 500;
 const LAST_X_DAYS = 7;
 const MIN_TRACING_MINUTES = 15;
 
@@ -38,7 +39,7 @@ async function connect() {
   console.log(
     `Configuration:
     Minimum number of move actions: ${MIN_MOVE_ACTIONS}
-    Minimum ratio between moveActions/createNodeActions: ${MIN_RATIO_FUNCTION}
+    Minimum number of nodes per hour: ${MIN_NODES_PER_HOUR}
     Minimum number of minutes traced: ${MIN_TRACING_MINUTES}
     Annotations that were modified in the last ${LAST_X_DAYS} days.
     `,
@@ -58,20 +59,30 @@ async function connect() {
       // eslint-disable-next-line no-await-in-loop
       const parsedJSON = await response.json();
 
-      const { updateTracingActionCount: moved, createNodeActionCount: created } = parsedJSON;
+      const {
+        updateTracingActionCount: moved,
+        createNodeActionCount: created,
+        deleteNodeActionCount: deleted,
+      } = parsedJSON;
       const movedToCreatedRatio = Math.round(moved / created * 10) / 10;
-      const tracingTimeMinutes = Math.floor(entry.tracingtime / 60000);
-      const tracingTimeSeconds = Math.round(entry.tracingtime / 1000) % (tracingTimeMinutes * 60);
-      const tracingTimeInHours = entry.tracingtime / 60000 / 60;
+      const effectivelyCreatedNodes = created - deleted;
+      const tracingTimeInSeconds = Math.round(entry.tracingtime / 1000);
+      const tracingTimeInHours = tracingTimeInSeconds / 3600;
+      const tracingTimeMinutes = Math.floor(tracingTimeInSeconds / 60);
+      const tracingTimeSeconds =
+        tracingTimeMinutes > 0
+          ? tracingTimeInSeconds % (tracingTimeMinutes * 60)
+          : tracingTimeInSeconds;
       const dynamicMinRatio = MIN_RATIO_FUNCTION(tracingTimeInHours);
+      const nodesPerHour = effectivelyCreatedNodes / tracingTimeInHours;
 
       if (
         moved >= MIN_MOVE_ACTIONS &&
-        movedToCreatedRatio >= dynamicMinRatio &&
+        nodesPerHour < MIN_NODES_PER_HOUR &&
         tracingTimeMinutes >= MIN_TRACING_MINUTES
       ) {
         console.log(
-          `Moved: ${moved}, Created: ${created}, Moved/Created: ${movedToCreatedRatio} - User: ${
+          `Moved: ${moved}, Created: ${created}, Deleted: ${deleted}, Nodes/Hour: ${nodesPerHour} - User: ${
             entry.firstname
           } ${entry.lastname}, TracingTime: ${tracingTimeMinutes}m${tracingTimeSeconds}s, TaskId: ${
             entry._task

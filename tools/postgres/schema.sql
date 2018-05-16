@@ -165,32 +165,6 @@ CREATE TABLE webknossos.tasks(
   CHECK (openInstances >= 0)
 );
 
-CREATE VIEW webknossos.task_instances AS
-  SELECT t._id, COUNT(annotations._id) assignedInstances, t.totalinstances - COUNT(annotations._id) openInstances
-  FROM webknossos.tasks t
-  left join (select * from webknossos.annotations a where typ = 'Task' and a.state != 'Cancelled' AND a.isDeleted = false) as annotations ON t._id = annotations._task
-  GROUP BY t._id, t.totalinstances;
-
-CREATE FUNCTION webknossos.checkOpenAssignments() RETURNS trigger AS $$
-  DECLARE
-    cur CURSOR for SELECT openInstances FROM webknossos.task_instances where NEW.typ = 'Task' and _id = NEW._task;
-  BEGIN
-    IF NEW.typ = 'Task' THEN
-      FOR rec IN cur LOOP
-        IF rec.openInstances < 0 THEN
-          RAISE EXCEPTION 'Negative openInstances for Task (%)', NEW._task;
-        END IF;
-      END LOOP;
-    END IF;
-    RETURN NULL;
-  END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER checkOpenAssignmentsTrigger
-AFTER INSERT ON webknossos.annotations
-FOR EACH ROW EXECUTE PROCEDURE webknossos.checkOpenAssignments();
-
-
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _organization CHAR(24) NOT NULL,
@@ -355,6 +329,14 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 
 
 
+
+CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
+  BEGIN
+    RETURN (a.state != 'Cancelled' AND a.isDeleted = false AND a.typ = 'Task');
+  END;
+$$ LANGUAGE plpgsql;
+
+
 CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
   BEGIN
     IF NEW.totalInstances > OLD.totalInstances THEN
@@ -383,12 +365,6 @@ AFTER INSERT ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertAnnotation();
 
 
-CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
-  BEGIN
-    RETURN (a.state = 'Cancelled' AND a.isDeleted = false AND a.typ = 'Task');
-  END;
-$$ LANGUAGE plpgsql;
-
 
 CREATE OR REPLACE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
   BEGIN
@@ -397,11 +373,11 @@ CREATE OR REPLACE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
     END IF;
     IF (webknossos.countsAsTaskInstance(OLD) AND NOT webknossos.countsAsTaskInstance(NEW))
     THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
     END IF;
     IF (NOT webknossos.countsAsTaskInstance(OLD) AND webknossos.countsAsTaskInstance(NEW))
     THEN
-      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
+      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
     END IF;
     RETURN NULL;
   END;
@@ -424,3 +400,10 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
+
+
+CREATE VIEW webknossos.task_instances AS
+  SELECT t._id, COUNT(annotations._id) assignedInstances, t.totalinstances - COUNT(annotations._id) openInstances
+  FROM webknossos.tasks t
+  left join (select * from webknossos.annotations a where webknossos.countsAsTaskInstance(a)) as annotations ON t._id = annotations._task
+  GROUP BY t._id, t.totalinstances;

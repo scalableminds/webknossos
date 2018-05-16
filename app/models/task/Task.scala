@@ -10,6 +10,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables._
+import models.annotation.AnnotationSQLDAO.transactionSerializationError
 import models.annotation._
 import models.basics.SecuredBaseDAO
 import models.project.{Project, ProjectDAO, ProjectSQLDAO}
@@ -279,14 +280,15 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     val q = for { c <- Tasks if c._Id === id.id } yield c.totalinstances
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q.update(newTotalInstances))
+      _ <- run(q.update(newTotalInstances).withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 
   def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for {
       accessQuery <- readAccessQuery
-      _ <- run(sqlu"update webknossos.tasks set totalInstances = totalInstances + ${delta} where _project = ${projectId.id} and #${accessQuery}")
+      _ <- run(sqlu"update webknossos.tasks set totalInstances = totalInstances + ${delta} where _project = ${projectId.id} and #${accessQuery}".withTransactionIsolation(Serializable),
+               retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 

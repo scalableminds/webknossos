@@ -1,7 +1,7 @@
 // @flow
 
 import _ from "lodash";
-import type { TreeType, TreeMapType, TreeGroupType, TreeGroupBaseType } from "oxalis/store";
+import type { TreeType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 export const MISSING_GROUP_ID = -1;
 
@@ -13,12 +13,14 @@ const GroupTypeEnum = {
 };
 type TreeOrGroupType = $Keys<typeof GroupTypeEnum>;
 
-export type ExtendedTreeGroupType = TreeGroupBaseType & {
+export type TreeNodeType = {
+  name: string,
+  id: number,
   expanded: boolean,
   isChecked: boolean,
   timestamp: number,
   type: TreeOrGroupType,
-  children: Array<ExtendedTreeGroupType>,
+  children: Array<TreeNodeType>,
 };
 
 export function makeBasicGroupObject(
@@ -33,15 +35,15 @@ export function makeBasicGroupObject(
   };
 }
 
-function makeExtendedGroupObject(
-  groupId: number,
+function makeTreeNode(
+  id: number,
   name: string,
   type: TreeOrGroupType,
-  optionalProperties: $Shape<ExtendedTreeGroupType>,
-): ExtendedTreeGroupType {
+  optionalProperties: $Shape<TreeNodeType>,
+): TreeNodeType {
   return _.extend(
     {
-      groupId,
+      id,
       type,
       name,
       timestamp: 0,
@@ -53,26 +55,24 @@ function makeExtendedGroupObject(
   );
 }
 
-function makeExtendedGroupObjectFromTree(tree: TreeType): ExtendedTreeGroupType {
-  return makeExtendedGroupObject(tree.treeId, tree.name, TYPE_TREE, {
+function makeTreeNodeFromTree(tree: TreeType): TreeNodeType {
+  return makeTreeNode(tree.treeId, tree.name, TYPE_TREE, {
     timestamp: tree.timestamp,
     isChecked: tree.isVisible,
   });
 }
 
-function makeExtendedGroupObjectFromGroup(
+function makeTreeNodeFromGroup(
   group: TreeGroupType,
-  optionalProperties: $Shape<ExtendedTreeGroupType>,
-): ExtendedTreeGroupType {
-  return makeExtendedGroupObject(group.groupId, group.name, TYPE_GROUP, optionalProperties);
+  optionalProperties: $Shape<TreeNodeType>,
+): TreeNodeType {
+  return makeTreeNode(group.groupId, group.name, TYPE_GROUP, optionalProperties);
 }
 
-export function removeTreesAndTransform(
-  groupTree: Array<ExtendedTreeGroupType>,
-): Array<TreeGroupType> {
+export function removeTreesAndTransform(groupTree: Array<TreeNodeType>): Array<TreeGroupType> {
   // Remove all trees from the group hierarchy and transform groups to their basic form
-  return _.filter(groupTree, group => group.type === TYPE_GROUP).map(group =>
-    makeBasicGroupObject(group.groupId, group.name, removeTreesAndTransform(group.children)),
+  return _.filter(groupTree, treeNode => treeNode.type === TYPE_GROUP).map(group =>
+    makeBasicGroupObject(group.id, group.name, removeTreesAndTransform(group.children)),
   );
 }
 
@@ -81,11 +81,11 @@ export function insertTreesAndTransform(
   groupToTreesMap: { [number]: Array<TreeType> },
   expandedGroupIds: { [number]: boolean },
   sortBy: string,
-): Array<ExtendedTreeGroupType> {
-  // Insert all trees into their respective groups in the group hierarchy and transform groups to their extended form
+): Array<TreeNodeType> {
+  // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
   return groups.map(group => {
     const { groupId } = group;
-    const transformedGroup = makeExtendedGroupObjectFromGroup(group, {
+    const treeNode = makeTreeNodeFromGroup(group, {
       // Ensure that groups are always at the top when sorting by timestamp
       timestamp: 0,
       expanded: expandedGroupIds[groupId] != null ? expandedGroupIds[groupId] : true,
@@ -93,15 +93,12 @@ export function insertTreesAndTransform(
     });
     if (groupToTreesMap[groupId] != null) {
       // Groups are always sorted by name and appear before the trees, trees are sorted according to the sortBy prop
-      transformedGroup.children = _.orderBy(transformedGroup.children, ["name"], ["asc"]).concat(
-        _.orderBy(groupToTreesMap[groupId], [sortBy], ["asc"]).map(makeExtendedGroupObjectFromTree),
+      treeNode.children = _.orderBy(treeNode.children, ["name"], ["asc"]).concat(
+        _.orderBy(groupToTreesMap[groupId], [sortBy], ["asc"]).map(makeTreeNodeFromTree),
       );
     }
-    transformedGroup.isChecked = _.every(
-      transformedGroup.children,
-      groupOrTree => groupOrTree.isChecked,
-    );
-    return transformedGroup;
+    treeNode.isChecked = _.every(treeNode.children, groupOrTree => groupOrTree.isChecked);
+    return treeNode;
   });
 }
 
@@ -111,7 +108,7 @@ export function callDeep(
   callback: (TreeGroupType, number, Array<TreeGroupType>, ?number) => void,
   parentGroupId: ?number = MISSING_GROUP_ID,
 ) {
-  // Deeply traverse the group hierarchy and execute the callback function when the group with id groupId is found
+  // Deeply traverse the group hierarchy and execute the callback function when the treeNode with id groupId is found
   groups.forEach((group: TreeGroupType, index: number, array: Array<TreeGroupType>) => {
     if (group.groupId === groupId) {
       callback(group, index, array, parentGroupId);

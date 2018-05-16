@@ -100,12 +100,9 @@ export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
 };
 
-export type TreeGroupBaseType = {
+export type TreeGroupType = {
   name: string,
   groupId: number,
-};
-
-export type TreeGroupType = TreeGroupBaseType & {
   children: Array<TreeGroupType>,
 };
 

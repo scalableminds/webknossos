@@ -27,7 +27,9 @@ import {
   TYPE_GROUP,
 } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
 import type { TreeMapType, TreeGroupType } from "oxalis/store";
-import type { ExtendedTreeGroupType } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+import type { TreeNodeType } from "oxalis/view/right-menu/tree_hierarchy_view_helpers";
+
+const CHECKBOX_STYLE = { verticalAlign: "middle" };
 
 type Props = {
   activeTreeId: number,
@@ -47,8 +49,9 @@ type Props = {
 type State = {
   prevProps: ?Props,
   expandedGroupIds: { [number]: boolean },
-  groupTree: Array<ExtendedTreeGroupType>,
+  groupTree: Array<TreeNodeType>,
   renamingGroup: ?{ groupId: number, name: string },
+  searchFocusOffset: number,
 };
 
 class TreeHierarchyView extends React.PureComponent<Props, State> {
@@ -93,40 +96,63 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
     // eslint-disable-next-line react/no-unused-state
     prevProps: null,
+    searchFocusOffset: 0,
   };
 
-  onChange = treeData => {
+  async componentDidUpdate(prevProps) {
+    // TODO: Workaround, remove after https://github.com/frontend-collective/react-sortable-tree/issues/305 is fixed
+    // Also remove the searchFocusOffset from the state and hard-code it as 0
+    if (
+      prevProps.trees !== this.props.trees &&
+      prevProps.activeTreeId !== this.props.activeTreeId
+    ) {
+      // eslint-disable-next-line react/no-did-update-set-state
+      await this.setState({ searchFocusOffset: 1 });
+      // eslint-disable-next-line react/no-did-update-set-state
+      this.setState({ searchFocusOffset: 0 });
+    }
+  }
+
+  onChange = (treeData: Array<TreeNodeType>) => {
     this.setState({ groupTree: treeData });
   };
 
   onCheck = evt => {
-    const { groupId, type } = evt.target.node;
+    const { id, type } = evt.target.node;
     if (type === TYPE_TREE) {
-      this.props.onToggleTree(parseInt(groupId, 10));
-    } else if (groupId === MISSING_GROUP_ID) {
+      this.props.onToggleTree(parseInt(id, 10));
+    } else if (id === MISSING_GROUP_ID) {
       this.props.onToggleAllTrees();
     } else {
-      this.props.onToggleTreeGroup(groupId);
+      this.props.onToggleTreeGroup(id);
     }
   };
 
   onSelect = evt => {
-    const treeId = evt.target.dataset.groupid;
+    const treeId = evt.target.dataset.id;
     this.props.onSetActiveTree(parseInt(treeId, 10));
   };
 
-  onExpand = ({ node, expanded }) => {
+  onExpand = (params: { node: TreeNodeType, expanded: boolean }) => {
+    // Cannot use object destructuring in the parameters here, because the linter will complain
+    // about the Flow types
+    const { node, expanded } = params;
     this.setState({
-      expandedGroupIds: update(this.state.expandedGroupIds, { [node.groupId]: { $set: expanded } }),
+      expandedGroupIds: update(this.state.expandedGroupIds, { [node.id]: { $set: expanded } }),
     });
   };
 
-  onMoveNode = ({ nextParentNode, node, treeData }) => {
+  onMoveNode = (params: {
+    nextParentNode: TreeNodeType,
+    node: TreeNodeType,
+    treeData: Array<TreeNodeType>,
+  }) => {
+    const { nextParentNode, node, treeData } = params;
     if (node.type === TYPE_TREE) {
       // A tree was dragged - update the group of the dragged tree
       this.props.onSetTreeGroup(
-        nextParentNode.groupId === MISSING_GROUP_ID ? null : nextParentNode.groupId,
-        parseInt(node.groupId, 10),
+        nextParentNode.id === MISSING_GROUP_ID ? null : nextParentNode.id,
+        parseInt(node.id, 10),
       );
     } else {
       // A group was dragged - update the groupTree
@@ -178,7 +204,8 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     this.props.onUpdateTreeGroups(newTreeGroups);
   }
 
-  handleDropdownClick = ({ item, key }) => {
+  handleDropdownClick = (params: { item: *, key: string }) => {
+    const { item, key } = params;
     const { groupId, name } = item.props;
     if (key === "create") {
       this.createGroup(groupId);
@@ -189,19 +216,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     }
   };
 
-  renderGroupActionsDropdown = (node: ExtendedTreeGroupType) => {
+  renderGroupActionsDropdown = (node: TreeNodeType) => {
     // The root group must not be removed or renamed
-    const { groupId, name } = node;
-    const isRoot = groupId === MISSING_GROUP_ID;
+    const { id, name } = node;
+    const isRoot = id === MISSING_GROUP_ID;
     const menu = (
       <Menu onClick={this.handleDropdownClick}>
-        <Menu.Item key="create" groupId={groupId} name={name}>
+        <Menu.Item key="create" groupId={id} name={name}>
           <Icon type="plus" />Create new group
         </Menu.Item>
-        <Menu.Item key="rename" groupId={groupId} name={name} disabled={isRoot}>
+        <Menu.Item key="rename" groupId={id} name={name} disabled={isRoot}>
           <Icon type="tool" />Rename
         </Menu.Item>
-        <Menu.Item key="delete" groupId={groupId} name={name} disabled={isRoot}>
+        <Menu.Item key="delete" groupId={id} name={name} disabled={isRoot}>
           <Icon type="delete" />Delete
         </Menu.Item>
       </Menu>
@@ -224,7 +251,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
           checked={node.isChecked}
           onChange={this.onCheck}
           node={node}
-          style={{ verticalAlign: "middle" }}
+          style={CHECKBOX_STYLE}
         />{" "}
         {nameAndDropdown}
       </div>
@@ -264,22 +291,23 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     );
   };
 
-  generateNodeProps = ({ node }) => {
+  generateNodeProps = (params: { node: TreeNodeType }) => {
     // This method can be used to add props to each node of the SortableTree component
+    const { node } = params;
     const nodeProps = {};
     if (node.type === TYPE_GROUP) {
       nodeProps.title = this.renderGroupActionsDropdown(node);
       nodeProps.className = "group-type";
     } else {
-      const tree = this.props.trees[parseInt(node.groupId, 10)];
+      const tree = this.props.trees[parseInt(node.id, 10)];
       const rgbColorString = tree.color.map(c => Math.round(c * 255)).join(",");
       nodeProps.title = (
-        <div data-groupid={node.groupId} onClick={this.onSelect}>
+        <div data-id={node.id} onClick={this.onSelect}>
           <Checkbox
             checked={tree.isVisible}
             onChange={this.onCheck}
             node={node}
-            style={{ verticalAlign: "middle" }}
+            style={CHECKBOX_STYLE}
           />
           {` (${tree.nodes.size()}) ${tree.name}`}
         </div>
@@ -290,16 +318,19 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     return nodeProps;
   };
 
-  keySearchMethod({ node, searchQuery }) {
-    return node.type === TYPE_TREE && node.groupId === searchQuery;
+  keySearchMethod(params: { node: TreeNodeType, searchQuery: number }) {
+    const { node, searchQuery } = params;
+    return node.type === TYPE_TREE && node.id === searchQuery;
   }
 
-  canDrop({ nextParent }) {
+  canDrop(params: { nextParent: TreeNodeType }) {
+    const { nextParent } = params;
     return nextParent != null && nextParent.type === TYPE_GROUP;
   }
 
-  canDrag({ node }) {
-    return node.groupId !== MISSING_GROUP_ID;
+  canDrag(params: { node: TreeNodeType }) {
+    const { node } = params;
+    return node.id !== MISSING_GROUP_ID;
   }
 
   render() {
@@ -321,7 +352,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               rowHeight={24}
               innerStyle={{ padding: 0 }}
               scaffoldBlockPxWidth={25}
-              searchFocusOffset={0}
+              searchFocusOffset={this.state.searchFocusOffset}
               reactVirtualizedListProps={{ scrollToAlignment: "auto" }}
             />
           </div>

@@ -62,7 +62,7 @@ function getMaximumTreeId(trees: TreeMapType): number {
   return _.max(_.map(trees, "treeId"));
 }
 
-function* mapGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => any) {
+function* mapGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => *) {
   for (const group of groups) {
     yield callback(group);
     if (group.children) {
@@ -77,10 +77,6 @@ export function getMaximumGroupId(groups: Array<TreeGroupType>): number {
 }
 
 function forEachGroups(groups: Array<TreeGroupType>, callback: TreeGroupType => *) {
-  if (groups == null || groups.length == null || groups.length === 0) {
-    return;
-  }
-
   for (const group of groups) {
     callback(group);
     if (group.children) {

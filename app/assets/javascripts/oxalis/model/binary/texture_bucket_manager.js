@@ -173,7 +173,6 @@ export default class TextureBucketManager {
       );
       this.committedBucketSet.add(bucket);
       window.needsRerender = true;
-      console.log("processWriterQueue");
       this.isRefreshBufferOutOfDate = true;
     }
 

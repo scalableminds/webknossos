@@ -709,24 +709,20 @@ vec3 getRelativeCoords(vec3 worldCoordUVW, float usedZoomStep) {
   return coords;
 }
 
-vec3 scale(vec3 v, float length) {
-  return normalize(v) * length;
+bool isArbitrary() {
+  return viewMode == 1.0 || viewMode == 2.0;
 }
+
+bool isFlightMode() {
+  return viewMode == 1.0;
+}
+
 
 vec3 getWorldCoordUVW() {
   vec3 worldCoordUVW = transDim(worldCoord.xyz);
 
-  bool isArbitrary = viewMode == 1.0 || viewMode == 2.0;
-
-  // Only in flight mode
-  if (viewMode == 1.0) {
-    // return modelCoord.xyz;
-
+  if (isFlightMode()) {
     vec4 modelCoords = inverse(savedModelMatrix) * worldCoord;
-    // x and y are between -192 and +192 each
-    // z seems to depend on the actual orientation of the plane? flickers between -/+ 0.0001
-    // might want to clip to zero?
-
     float sphericalRadius = sphericalCapRadius;
 
     vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);
@@ -745,11 +741,10 @@ vec3 getWorldCoordUVW() {
     worldCoordUVW.x / datasetScaleUVW.x,
     worldCoordUVW.y / datasetScaleUVW.y,
 
-    // globalPosition, however, gives us the coordinates we need
-    // Theoretically, worldCoordUVW[<%= uvw[2] %>] could be used here. However, the plane is offset
-    // in 3D space to allow skeletons to be rendered before the plane. Since w (e.g., z for xy plane) is
+    // In orthogonal mode, the planes are offset in 3D space to allow skeletons to be rendered before
+    // each plane. Since w (e.g., z for xy plane) is
     // the same for all texels computed in this shader, we simply use globalPosition[w] instead
-    isArbitrary ?
+    isArbitrary() ?
       worldCoordUVW.z / datasetScaleUVW.z
       : globalPosition[<%= uvw[2] %>]
   );
@@ -785,16 +780,17 @@ vec4 getBilinearColorFor(
   float layerIndex,
   float d_texture_width,
   float packingDegree,
-  vec3 coords
+  vec3 coords,
+  float isFallback
 ) {
   coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
 
-  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
-  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), 0.0);
-  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), 0.0);
-  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), 0.0);
+  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), isFallback);
+  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), isFallback);
+  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), isFallback);
   if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
     // We need to check all four colors for a negative parts, because there will be black
     // lines at the borders otherwise (black gets mixed with data)
@@ -812,21 +808,22 @@ vec4 getTrilinearColorFor(
   float layerIndex,
   float d_texture_width,
   float packingDegree,
-  vec3 coords
+  vec3 coords,
+  float isFallback
 ) {
   coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
   vec3 bifilteringParams = transDim((coords - floor(coords))).xyz;
   coords = floor(coords);
 
-  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
-  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), 0.0);
-  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), 0.0);
-  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), 0.0);
+  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), isFallback);
+  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), isFallback);
+  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), isFallback);
 
-  vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 0, 1)), 0.0);
-  vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 1)), 0.0);
-  vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 1)), 0.0);
-  vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 1)), 0.0);
+  vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 0, 1)), isFallback);
+  vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 1)), isFallback);
+  vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 1)), isFallback);
+  vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 1)), isFallback);
 
   if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0 ||
     a2.a < 0.0 || b2.a < 0.0 || c2.a < 0.0 || d2.a < 0.0) {
@@ -854,15 +851,18 @@ vec4 getMaybeFilteredColor(
   float d_texture_width,
   float packingDegree,
   vec3 coords,
-  bool suppressBilinearFiltering
+  bool suppressBilinearFiltering,
+  float isFallback
 ) {
   vec4 color;
   if (!suppressBilinearFiltering && useBilinearFiltering) {
-    // color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
-    color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
-
+    if (isArbitrary()) {
+      color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+    } else {
+      color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+    }
   } else {
-    color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
+    color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
   }
   return color;
 }
@@ -878,10 +878,11 @@ vec4 getMaybeFilteredColorOrFallback(
   bool suppressBilinearFiltering,
   vec4 fallbackColor
 ) {
-  vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, suppressBilinearFiltering);
+  vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, suppressBilinearFiltering, 0.0);
 
   if (color.a < 0.0 && hasFallback) {
-    color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, 1.0).rgba;
+    // color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, 1.0).rgba;
+    color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, suppressBilinearFiltering, 1.0).rgba;
     if (color.a < 0.0) {
       // Render gray for not-yet-existing data
       color = fallbackColor;

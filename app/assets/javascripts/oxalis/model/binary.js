@@ -119,6 +119,7 @@ class Binary {
   lastAreas: OrthoViewMapType<AreaType>;
   lastAreasPinged: OrthoViewMapType<AreaType>;
   lastZoomedMatrix: M4x4;
+  lastViewMode: ModeType;
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
   dataTextureCount: number;
@@ -332,11 +333,13 @@ class Binary {
       isFallbackAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
       !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
-      (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix))
+      (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix)) ||
+      viewMode !== this.lastViewMode
     ) {
       this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
       this.lastZoomedMatrix = matrix;
+      this.lastViewMode = viewMode;
 
       const bucketQueue = new PriorityQueue({
         // small priorities take precedence
@@ -393,10 +396,11 @@ class Binary {
       );
     }
 
-    return [
-      isAnchorPointNew || isArbitrary ? this.anchorPointCache.anchorPoint : null,
-      isFallbackAnchorPointNew || isArbitrary ? this.anchorPointCache.fallbackAnchorPoint : null,
-    ];
+    // return [
+    //   isAnchorPointNew || isArbitrary ? this.anchorPointCache.anchorPoint : null,
+    //   isFallbackAnchorPointNew || isArbitrary ? this.anchorPointCache.fallbackAnchorPoint : null,
+    // ];
+    return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
   }
 
   addNecessaryBucketsToPriorityQueueFlight(

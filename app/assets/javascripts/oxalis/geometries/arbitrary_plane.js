@@ -75,7 +75,7 @@ class ArbitraryPlane {
     }
   }
 
-  setPosition = ({ x, y, z }: Vector3) => {
+  setPosition = ({ x, y, z }: THREE.Vector3) => {
     this.mesh.material.setGlobalPosition([x, y, z]);
   };
 
@@ -108,12 +108,6 @@ class ArbitraryPlane {
       const { mesh } = this;
 
       const matrix = getZoomedMatrix(Store.getState().flycam);
-
-      // const queryMatrix = M4x4.scale1(1, matrix);
-      // const newVertices = M4x4.transformPointsAffine(queryMatrix, this.queryVertices);
-      // const colorBinary = Model.getColorBinaries()[0];
-      // const newColors = colorBinary.getByVerticesSync(newVertices);
-      // this.textureMaterial.setData(colorBinary.name, newColors);
 
       mesh.matrix.set(
         matrix[0],
@@ -169,15 +163,6 @@ class ArbitraryPlane {
         queryVertices[currentIndex++] = centerVertex[0] + vector[0];
         queryVertices[currentIndex++] = centerVertex[1] + vector[1];
         queryVertices[currentIndex++] = centerVertex[2] + vector[2];
-
-        if (vertex[0] === -100 && vertex[1] === 0) {
-          console.log(
-            "special vertex",
-            centerVertex[0] + vector[0],
-            centerVertex[1] + vector[1],
-            centerVertex[2] + vector[2],
-          );
-        }
       }
     }
 

@@ -6,7 +6,7 @@
 import _ from "lodash";
 import type DataCube from "oxalis/model/binary/data_cube";
 import { DataBucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB } from "oxalis/model/binary/bucket";
-import type { Vector3 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 
 const ARBITRARY_MAX_ZOOMSTEP = 2;
 const NOT_LOADED_BUCKET_INTENSITY = 100;
@@ -43,7 +43,7 @@ class ArbitraryCubeAdapter {
     ];
   };
 
-  getBucket = _.memoize((bucketIndex: number): DataBucket | NULL_BUCKET | null => {
+  getBucket = _.memoize((bucketIndex: number): DataBucket | typeof NULL_BUCKET | null => {
     let bucketAddress = this.getBucketAddress(bucketIndex);
 
     for (let zoomStep = 0; zoomStep <= ARBITRARY_MAX_ZOOMSTEP; zoomStep++) {

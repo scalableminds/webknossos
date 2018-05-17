@@ -145,7 +145,7 @@ class Plane {
     );
   };
 
-  setPosition = (posVec: Vector3): void => {
+  setPosition = (posVec: THREE.Vector3): void => {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);

@@ -414,7 +414,7 @@ varying vec4 worldCoord;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;
 
-const float bucketsPerDim = <%= bucketsPerDim %>;
+const float bucketsPerDim = 20.0; // todo! <%= bucketsPerDim %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;

@@ -130,4 +130,5 @@ In order to restore the current window, a reload is necessary.`,
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
   "mapping.too_few_textures":
     "Not enough textures available to support mappings. Mappings are disabled.",
+  "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
 };

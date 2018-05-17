@@ -106,12 +106,19 @@ function SettingsReducer(state: OxalisState, action: ActionType): OxalisState {
     }
     case "SET_MAPPING_ENABLED": {
       return update(state, {
-        temporaryConfiguration: { isMappingEnabled: { $set: action.isMappingEnabled } },
+        temporaryConfiguration: {
+          activeMapping: { isMappingEnabled: { $set: action.isMappingEnabled } },
+        },
       });
     }
-    case "SET_MAPPING_SIZE": {
+    case "SET_MAPPING": {
       return update(state, {
-        temporaryConfiguration: { mappingSize: { $set: action.mappingSize } },
+        temporaryConfiguration: {
+          activeMapping: {
+            mappingSize: { $set: action.mapping != null ? _.size(action.mapping) : 0 },
+            mapping: { $set: action.mapping },
+          },
+        },
       });
     }
     default:

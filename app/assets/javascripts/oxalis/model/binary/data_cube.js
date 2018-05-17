@@ -5,13 +5,9 @@
 
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
-import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
-import type { MappingType } from "oxalis/model/binary/mappings";
-import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
-import type Layer from "oxalis/model/binary/layers/layer";
 import {
   DataBucket,
   NullBucket,
@@ -19,14 +15,17 @@ import {
   NULL_BUCKET_OUT_OF_BB,
   BUCKET_SIZE_P,
 } from "oxalis/model/binary/bucket";
-import type { Bucket } from "oxalis/model/binary/bucket";
 import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
 import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
 import BoundingBox from "oxalis/model/binary/bounding_box";
 import Store from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import type { Vector3, Vector4 } from "oxalis/constants";
+import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
+import type Layer from "oxalis/model/binary/layers/layer";
+import type { Bucket } from "oxalis/model/binary/bucket";
+import type { MappingType } from "oxalis/store";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -57,10 +56,7 @@ class DataCube {
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
   layer: Layer;
-  // If the mapping is enabled, this.currentMapping === this.mapping
-  // Otherwise, it's null
-  currentMapping: ?MappingType;
-  mapping: ?MappingType;
+  mapping: ?MappingType = null;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -105,9 +101,6 @@ class DataCube {
     this.cubes = [];
     this.buckets = new Array(this.MAXIMUM_BUCKET_COUNT);
 
-    this.mapping = null;
-    this.currentMapping = null;
-
     // Initializing the cube-arrays with boundaries
     const cubeBoundary = [
       Math.ceil(this.upperBoundary[0] / constants.BUCKET_WIDTH),
@@ -136,6 +129,13 @@ class DataCube {
         this.forgetOutOfBoundaryBuckets();
       },
     );
+
+    if (layer.category === "segmentation") {
+      listenToStoreProperty(
+        state => state.temporaryConfiguration.activeMapping.mapping,
+        (mapping: ?MappingType) => this.setMapping(mapping),
+      );
+    }
   }
 
   initializeWithQueues(pullQueue: PullQueue, pushQueue: PushQueue): void {
@@ -155,28 +155,26 @@ class DataCube {
     }
   }
 
-  setMappingEnabled(isEnabled: boolean): void {
-    this.currentMapping = isEnabled ? this.mapping : null;
-    Store.dispatch(setMappingEnabledAction(isEnabled));
-  }
-
   hasMapping(): boolean {
     return this.mapping != null;
   }
 
-  setMapping(newMapping: MappingType): void {
-    if (this.currentMapping === this.mapping) {
-      this.currentMapping = newMapping;
-    }
+  setMapping(newMapping: ?MappingType): void {
     this.mapping = newMapping;
+  }
 
-    this.trigger("newMapping");
+  isMappingEnabled(): boolean {
+    console.log(
+      "mappingEnabled",
+      Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled,
+    );
+    return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
   }
 
   mapId(idToMap: number): number {
     let mappedId = null;
-    if (this.currentMapping != null) {
-      mappedId = this.currentMapping[idToMap];
+    if (this.mapping != null && this.isMappingEnabled()) {
+      mappedId = this.mapping[idToMap];
     }
     return mappedId != null ? mappedId : idToMap;
   }
@@ -391,7 +389,7 @@ class DataCube {
   }
 
   getMappedDataValue(voxel: Vector3): number {
-    return this.getDataValue(voxel, this.currentMapping);
+    return this.getDataValue(voxel, this.isMappingEnabled() ? this.mapping : null);
   }
 
   getVoxelIndex(voxel: Vector3): number {

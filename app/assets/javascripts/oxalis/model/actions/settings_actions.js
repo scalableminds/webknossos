@@ -9,6 +9,7 @@ import type {
   DatasetConfigurationType,
   DatasetLayerConfigurationType,
   TemporaryConfigurationType,
+  MappingType,
 } from "oxalis/store";
 import type { APIDatasetType } from "admin/api_flow_types";
 import type { ModeType, ControlModeType } from "oxalis/constants";
@@ -48,7 +49,7 @@ type SetViewModeActionType = { type: "SET_VIEW_MODE", viewMode: ModeType };
 type SetFlightmodeRecordingActionType = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeActionType = { type: "SET_CONTROL_MODE", controlMode: ControlModeType };
 type SetMappingEnabledActionType = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
-type SetMappingSizeActionType = { type: "SET_MAPPING_SIZE", mappingSize: number };
+type SetMappingActionType = { type: "SET_MAPPING", mapping: ?MappingType };
 export type SettingActionType =
   | UpdateUserSettingActionType
   | UpdateDatasetSettingActionType
@@ -61,7 +62,7 @@ export type SettingActionType =
   | SetFlightmodeRecordingActionType
   | SetControlModeActionType
   | SetMappingEnabledActionType
-  | SetMappingSizeActionType;
+  | SetMappingActionType;
 
 export const updateUserSettingAction = (
   propertyName: $Keys<UserConfigurationType>,
@@ -144,7 +145,7 @@ export const setMappingEnabledAction = (
   isMappingEnabled,
 });
 
-export const setMappingSizeAction = (mappingSize: number): SetMappingSizeActionType => ({
-  type: "SET_MAPPING_SIZE",
-  mappingSize,
+export const setMappingAction = (mapping: ?MappingType): SetMappingActionType => ({
+  type: "SET_MAPPING",
+  mapping,
 });

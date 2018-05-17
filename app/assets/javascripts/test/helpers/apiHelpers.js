@@ -52,7 +52,6 @@ mockRequire("app", app);
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
-const Store = mockRequire.reRequire("oxalis/store").default;
 
 const TOKEN = "secure-token";
 
@@ -74,7 +73,6 @@ export function setupOxalis(t, mode, apiVersion = 2) {
   UrlManager.initialState = { position: [1, 2, 3] };
   const model = new Model();
   t.context.model = model;
-  t.context.Store = Store;
 
   const webknossos = new OxalisApi(model);
 

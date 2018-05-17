@@ -224,14 +224,19 @@ export type UserConfigurationType = {
   +tdViewDisplayPlanes: boolean,
 };
 
+export type MappingType = { [key: number]: number };
+
 export type TemporaryConfigurationType = {
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
   +mousePosition: ?Vector2,
   +brushSize: number,
-  +isMappingEnabled: boolean,
-  +mappingSize: number,
+  +activeMapping: {
+    +mapping: ?MappingType,
+    +isMappingEnabled: boolean,
+    +mappingSize: number,
+  },
 };
 
 export type ScriptType = APIScriptType;
@@ -348,8 +353,11 @@ export const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
     brushSize: 50,
-    isMappingEnabled: false,
-    mappingSize: 0,
+    activeMapping: {
+      mapping: null,
+      isMappingEnabled: false,
+      mappingSize: 0,
+    },
   },
   task: null,
   dataset: {

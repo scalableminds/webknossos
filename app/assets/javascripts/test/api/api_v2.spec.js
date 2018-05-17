@@ -2,15 +2,12 @@
 import test from "ava";
 import sinon from "sinon";
 import { setupOxalis, KeyboardJS } from "test/helpers/apiHelpers";
-import mockRequire from "mock-require";
-
-const { createNodeAction, deleteNodeAction } = mockRequire.reRequire(
-  "oxalis/model/actions/skeletontracing_actions",
-);
+import Store from "oxalis/store";
+import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 
 // Most of the mocking is done in the helpers file, so it can be reused for both skeleton and volume API
-// Use API_VERSION 1
-test.beforeEach(t => setupOxalis(t, "skeleton", 1));
+// Use API_VERSION 2
+test.beforeEach(t => setupOxalis(t, "skeleton", 2));
 
 test("getActiveNodeId should get the active node id", t => {
   const api = t.context.api;
@@ -77,6 +74,9 @@ test("setMapping should set a mapping of a layer", t => {
   t.is(cube.hasMapping(), false);
   api.data.setMapping("segmentation", [1, 3]);
   t.is(cube.hasMapping(), true);
+  // Workaround: This is usually called after the mapping textures were created successfully
+  // and can be rendered, which doesn't happen in this test scenario
+  Store.dispatch(setMappingEnabledAction(true));
   t.is(cube.mapId(1), 3);
 });
 
@@ -92,23 +92,30 @@ test("getBoundingBox should get the bounding box of a layer", t => {
   t.deepEqual(boundingBox, correctBoundingBox);
 });
 
-test("getDataValue should throw an error if the layer name is not valid", t => {
+test("getDataValue should throw an error if the layer name is not valid", async t => {
   const api = t.context.api;
-  t.throws(() => api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
+  await t.throws(api.data.getDataValue("nonExistingLayer", [1, 2, 3]));
 });
 
 test("getDataValue should get the data value for a layer, position and zoomstep", t => {
-  // Currently, this test only makes sure pullQueue.pull is being called.
+  // Currently, this test only makes sure pullQueue.pull is being called and the bucketLoaded
+  // event is being triggered.
   // There is another spec for pullqueue.js
   const { api, model } = t.context;
   const cube = model.getBinaryByName("segmentation").cube;
+  const position = [100, 100, 100];
+  const zoomStep = 0;
+  const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+  const bucket = cube.getOrCreateBucket(bucketAddress);
 
   sinon.stub(cube.pullQueue, "pull").returns([Promise.resolve(true)]);
   sinon.stub(cube, "getDataValue").returns(1337);
 
-  return api.data.getDataValue("segmentation", [3840, 4220, 2304], 0).then(dataValue => {
+  const promise = api.data.getDataValue("segmentation", position, zoomStep).then(dataValue => {
     t.is(dataValue, 1337);
   });
+  bucket.trigger("bucketLoaded");
+  return promise;
 });
 
 test("User Api: setConfiguration should set and get a user configuration value", t => {
@@ -143,32 +150,29 @@ test("registerKeyHandler should register a key handler and return a handler to u
 });
 
 test("registerOverwrite should overwrite newAddNode", t => {
-  const { api } = t.context;
+  const api = t.context.api;
   let bool = false;
-  const newAddNode = function overwrite(oldFunc, args) {
+  api.utils.registerOverwrite("SET_ACTIVE_NODE", (store, call, action) => {
     bool = true;
-    oldFunc(...args);
-  };
-  api.utils.registerOverwrite("addNode", newAddNode);
+    call(action);
+  });
 
-  t.context.Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1));
-
+  api.tracing.setActiveNode(2);
   // The added instructions should have been executed
   t.true(bool);
+  // And the original method should have been called
+  t.is(api.tracing.getActiveNodeId(), 2);
 });
 
 test("registerOverwrite should overwrite deleteActiveNode", t => {
-  const { api } = t.context;
+  const api = t.context.api;
   let bool = false;
-  const deleteNode = function overwrite(oldFunc, args) {
+  api.utils.registerOverwrite("DELETE_NODE", (store, call, action) => {
     bool = true;
-    oldFunc(...args);
-  };
-  api.utils.registerOverwrite("deleteActiveNode", deleteNode);
+    call(action);
+  });
 
-  t.context.Store.dispatch(createNodeAction([0, 0, 0], [0, 0, 0], 1, 1, 0));
-  t.context.Store.dispatch(deleteNodeAction(0, 0));
-
+  api.tracing.deleteNode(0, 0);
   // The added instructions should have been executed
   t.true(bool);
 });

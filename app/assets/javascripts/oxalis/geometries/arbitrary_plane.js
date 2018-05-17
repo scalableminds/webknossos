@@ -6,9 +6,8 @@
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
-import { M4x4, V3 } from "libs/mjs";
 import constants, { OrthoViews } from "oxalis/constants";
-import type { ModeType, Vector3, Vector4 } from "oxalis/constants";
+import type { Vector4 } from "oxalis/constants";
 import Model from "oxalis/model";
 import Store from "oxalis/throttled_store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";

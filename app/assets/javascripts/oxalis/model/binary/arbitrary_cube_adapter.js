@@ -9,7 +9,6 @@ import { DataBucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB } from "oxalis/model/bin
 import type { Vector3, Vector4 } from "oxalis/constants";
 
 const ARBITRARY_MAX_ZOOMSTEP = 2;
-const NOT_LOADED_BUCKET_INTENSITY = 100;
 
 class ArbitraryCubeAdapter {
   cube: DataCube;
@@ -34,14 +33,13 @@ class ArbitraryCubeAdapter {
     return this.getBucket.cache.clear();
   }
 
-  getBucketAddress = (bucketIndex: number): Vector4 => {
-    return [
+  getBucketAddress = (bucketIndex: number): Vector4 =>
+    [
       Math.floor(bucketIndex / this.sizeZY),
       Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),
       bucketIndex % this.sizeZ,
       0,
-    ];
-  };
+    ]
 
   getBucket = _.memoize((bucketIndex: number): DataBucket | typeof NULL_BUCKET | null => {
     let bucketAddress = this.getBucketAddress(bucketIndex);

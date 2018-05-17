@@ -285,7 +285,6 @@ class ArbitraryController extends React.PureComponent<Props> {
         state => state.userConfiguration,
         userConfiguration => {
           const {
-            sphericalCapRadius,
             clippingDistanceArbitrary,
             displayCrosshair,
             crosshairSize,

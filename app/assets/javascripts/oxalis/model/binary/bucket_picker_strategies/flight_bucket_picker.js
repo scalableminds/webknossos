@@ -1,13 +1,11 @@
 // @flow
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
   globalPositionToBucketPosition,
   bucketPositionToGlobalAddress,
-  getBucketExtent,
 } from "oxalis/model/helpers/position_converter";
-import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import PriorityQueue from "js-priority-queue";
 import Binary from "oxalis/model/binary";
@@ -18,7 +16,7 @@ import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
 import constants from "oxalis/constants";
 import Store from "oxalis/store";
 
-export function determineBucketsForFlight(
+export default function determineBucketsForFlight(
   binary: Binary,
   bucketQueue: PriorityQueue,
   matrix: Matrix4x4,
@@ -51,18 +49,6 @@ export function determineBucketsForFlight(
   );
 
   const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
-  const cameraAddress = globalPositionToBucketPosition(
-    cameraPosition,
-    binary.layer.resolutions,
-    logZoomStep,
-  );
-
-  const centerPosition = M4x4.transformVectorsAffine(queryMatrix, [[0, 0, 0]])[0];
-  const centerBucket = globalPositionToBucketPosition(
-    centerPosition,
-    binary.layer.resolutions,
-    logZoomStep,
-  );
 
   const scale = Store.getState().dataset.dataSource.scale;
   const matrixScale = getMatrixScale(scale);
@@ -80,8 +66,6 @@ export function determineBucketsForFlight(
     cornerMin: aggregatePerDimension(Math.min),
     cornerMax: aggregatePerDimension(Math.max),
   };
-
-  const camToCenterDist = V3.sub(cameraPosition, centerPosition);
 
   let traversedBuckets = [];
 

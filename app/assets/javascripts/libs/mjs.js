@@ -189,16 +189,16 @@ V3.floor = v => v.map(number => Math.floor(number));
 
 V3.toString = v => v.join(", ");
 
-V3.scale3 = function V3_scale3(a, k, r) {
-  if (r == undefined) r = new Float32Array(3);
+V3.scale3 = function scale3(a, k, r) {
+  if (r == null) r = new Float32Array(3);
   r[0] = a[0] * k[0];
   r[1] = a[1] * k[1];
   r[2] = a[2] * k[2];
   return r;
 };
 
-V3.divide3 = function V3_divide3(a, k, r) {
-  if (r == undefined) r = new Float32Array(3);
+V3.divide3 = function divide3(a, k, r) {
+  if (r == null) r = new Float32Array(3);
   r[0] = a[0] / k[0];
   r[1] = a[1] / k[1];
   r[2] = a[2] / k[2];
@@ -206,7 +206,7 @@ V3.divide3 = function V3_divide3(a, k, r) {
 };
 
 const _tmpVec = [0, 0, 0];
-V3.scaledSquaredDist = function V3_squaredDist(a, b, scale) {
+V3.scaledSquaredDist = function squaredDist(a, b, scale) {
   // Computes the distance between two vectors while respecting a 3 dimensional scale
   // Use _tmpVec as result variable (third parameter) to avoid allocations
   V3.sub(a, b, _tmpVec);

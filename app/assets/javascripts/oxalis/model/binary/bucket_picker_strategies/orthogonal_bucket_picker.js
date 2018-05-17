@@ -5,15 +5,12 @@ import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
-  globalPositionToBucketPosition,
-  bucketPositionToGlobalAddress,
 } from "oxalis/model/helpers/position_converter";
 import Dimensions from "oxalis/model/dimensions";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import Binary from "oxalis/model/binary";
-import Utils from "libs/utils";
 
-export function determineBucketsForOrthogonal(
+export default function determineBucketsForOrthogonal(
   binary: Binary,
   bucketQueue: PriorityQueue,
   logZoomStep: number,

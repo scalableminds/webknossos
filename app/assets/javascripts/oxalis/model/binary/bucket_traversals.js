@@ -11,7 +11,7 @@ import {
 // The traverse function calculates the bucket positions which are traversed when building a ray
 // from startPosition to endPosition, while considering buckets of a given zoomStep.
 
-export function traverse(
+export default function traverse(
   startPosition: Vector3,
   endPosition: Vector3,
   resolutions: Array<Vector3>,
@@ -130,6 +130,7 @@ export function traverse(
       }
     } else {
       // tMaxX === tMaxY
+      /* eslint-disable no-lonely-if */
       if (tMaxZ < tMaxX) {
         Z = visitNextZ();
       } else if (tMaxZ > tMaxX) {
@@ -167,5 +168,5 @@ function initializeTMax(
     Math.abs((step[0] > 0 ? negativeRest[0] : positiveRest[0]) / v[0]),
     Math.abs((step[1] > 0 ? negativeRest[1] : positiveRest[1]) / v[1]),
     Math.abs((step[2] > 0 ? negativeRest[2] : positiveRest[2]) / v[2]),
-  ].map(el => (isNaN(el) ? Infinity : el));
+  ].map(el => (Number.isNaN(el) ? Infinity : el));
 }

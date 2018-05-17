@@ -1,19 +1,7 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
-import { V2 } from "libs/mjs";
-import { traverse } from "oxalis/model/binary/bucket_traversals";
-
-type Vector3 = [number, number, number];
-type Shape = {
-  normals: Vector3[],
-  corners: Vector3[],
-};
-
-const cube = {
-  normals: [[0, 1, 0], [0, 0, 1], [1, 0, 0]],
-  corners: [[0, 0, 0], [1, 0, 0], [0, 1, 0], [1, 1, 0], [0, 0, 1], [1, 0, 1], [0, 1, 1], [1, 1, 1]],
-};
+import traverse from "oxalis/model/binary/bucket_traversals";
 
 test("Traversal: diagonal line", t => {
   const buckets = traverse([0, 0, 0], [33, 33, 0], [[1, 1, 1]], 0);

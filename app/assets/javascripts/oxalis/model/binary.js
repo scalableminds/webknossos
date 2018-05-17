@@ -32,19 +32,17 @@ import {
   setMappingEnabledAction,
   setMappingSizeAction,
 } from "oxalis/model/actions/settings_actions";
-import { getAreas } from "oxalis/model/accessors/flycam_accessor";
 import PriorityQueue from "js-priority-queue";
 import messages from "messages";
 import { M4x4 } from "libs/mjs";
-import { determineBucketsForOrthogonal } from "oxalis/model/binary/bucket_picker_strategies/orthogonal_bucket_picker";
-import { determineBucketsForOblique } from "oxalis/model/binary/bucket_picker_strategies/oblique_bucket_picker";
-import { determineBucketsForFlight } from "oxalis/model/binary/bucket_picker_strategies/flight_bucket_picker";
-import { getZoomedMatrix } from "./accessors/flycam_accessor";
-
+import determineBucketsForOrthogonal from "oxalis/model/binary/bucket_picker_strategies/orthogonal_bucket_picker";
+import determineBucketsForOblique from "oxalis/model/binary/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForFlight from "oxalis/model/binary/bucket_picker_strategies/flight_bucket_picker";
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type Layer from "oxalis/model/binary/layers/layer";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
+import { getAreas, getZoomedMatrix } from "./accessors/flycam_accessor";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;

@@ -3,22 +3,18 @@ import PriorityQueue from "js-priority-queue";
 import { M4x4, V3 } from "libs/mjs";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
-  getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
   globalPositionToBucketPosition,
-  bucketPositionToGlobalAddress,
-  getBucketExtent,
 } from "oxalis/model/helpers/position_converter";
-import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
-import { traverse } from "oxalis/model/binary/bucket_traversals";
+import type { Vector3, Vector4 } from "oxalis/constants";
+import traverse from "oxalis/model/binary/bucket_traversals";
 import _ from "lodash";
 import type { Matrix4x4 } from "libs/mjs";
 import Binary from "oxalis/model/binary";
-import Utils from "libs/utils";
 import Store from "oxalis/store";
 import { chunk2 } from "oxalis/model/helpers/chunk";
 
-export function determineBucketsForOblique(
+export default function determineBucketsForOblique(
   binary: Binary,
   bucketQueue: PriorityQueue,
   matrix: Matrix4x4,
@@ -57,12 +53,10 @@ export function determineBucketsForOblique(
 
   if (isFallbackAvailable) {
     traversedBuckets = _.uniqBy(
-      _.flatMap(traversedBuckets, (bucketAddress: Vector4): Array<Vector4> => {
-        return [
-          bucketAddress,
-          zoomedAddressToAnotherZoomStep(bucketAddress, binary.layer.resolutions, fallbackZoomStep),
-        ];
-      }),
+      _.flatMap(traversedBuckets, (bucketAddress: Vector4): Array<Vector4> => [
+        bucketAddress,
+        zoomedAddressToAnotherZoomStep(bucketAddress, binary.layer.resolutions, fallbackZoomStep),
+      ]),
       hashPosition,
     );
   }

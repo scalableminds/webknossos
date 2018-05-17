@@ -4,7 +4,6 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import Base64 from "base64-js";
-import { DataBucket } from "oxalis/model/binary/bucket";
 
 mockRequire.stopAll();
 
@@ -30,7 +29,7 @@ const StoreMock = {
 mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 
-const { doWithToken } = mockRequire.reRequire("admin/admin_rest_api");
+const { DataBucket } = mockRequire.reRequire("oxalis/model/binary/bucket");
 const { requestFromStore, sendToStore, getBitDepth } = mockRequire.reRequire(
   "oxalis/model/binary/wkstore_adapter",
 );
@@ -68,18 +67,6 @@ function prepare() {
   return { batch, responseBuffer };
 }
 
-test.serial("requestFromStore: Token Handling should request a token first", t => {
-  prepare();
-  return doWithToken(token => {
-    t.is(RequestMock.receiveJSON.callCount, 1);
-
-    const [url] = RequestMock.receiveJSON.getCall(0).args;
-    t.is(url, "/api/userToken/generate");
-
-    t.is(token, "token");
-  });
-});
-
 test.serial("requestFromStore: Token Handling should re-request a token when it's invalid", t => {
   const { layer } = t.context;
   const { batch, responseBuffer } = prepare();
@@ -98,13 +85,9 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
     .onSecondCall()
     .returns(Promise.resolve({ token: "token2" }));
 
-  return doWithToken(token => {
-    t.is(token, "token");
-    return requestFromStore(layer, batch);
-  }).then(result => {
+  return requestFromStore(layer, batch).then(result => {
     t.deepEqual(result, responseBuffer);
 
-    t.is(RequestMock.receiveJSON.callCount, 2);
     t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
 
     const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];

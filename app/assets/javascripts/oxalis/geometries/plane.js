@@ -3,7 +3,6 @@
  * @flow
  */
 
-import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -173,7 +172,6 @@ class Plane {
 
   setSegmentationAlpha(alpha: number): void {
     this.plane.material.setSegmentationAlpha(alpha);
-    app.vent.trigger("rerender");
   }
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];

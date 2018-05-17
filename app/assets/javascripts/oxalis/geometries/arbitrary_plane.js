@@ -8,8 +8,7 @@ import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import constants, { OrthoViews } from "oxalis/constants";
 import type { Vector4 } from "oxalis/constants";
-import Model from "oxalis/model";
-// importing the throttled store, will result in flickering when zooming out,
+// Importing throttled_store, would result in flickering when zooming out,
 // since the plane is not updated fast enough
 import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -33,26 +32,13 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 class ArbitraryPlane {
   mesh: THREE.Mesh;
   isDirty: boolean;
-  width: number;
-  // TODO: Probably unused? Recheck when flow coverage is higher
-  height: number;
-  x: number;
   textureMaterial: THREE.RawShaderMaterial;
 
   constructor() {
     this.isDirty = true;
-    this.height = 0;
-    this.width = constants.VIEWPORT_WIDTH; //  * 1.125
     _.extend(this, BackboneEvents);
 
     this.mesh = this.createMesh();
-
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      binary.cube.on("bucketLoaded", () => {
-        this.isDirty = true;
-      });
-    }
 
     Store.subscribe(() => {
       this.isDirty = true;
@@ -117,13 +103,11 @@ class ArbitraryPlane {
       .setup()
       .getMaterial();
 
-    // create mesh
     const plane = new THREE.Mesh(
-      new THREE.PlaneGeometry(this.width, this.width, 1, 1),
+      new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
       this.textureMaterial,
     );
     plane.rotation.x = Math.PI;
-    this.x = 1;
 
     plane.matrixAutoUpdate = false;
     plane.doubleSided = true;

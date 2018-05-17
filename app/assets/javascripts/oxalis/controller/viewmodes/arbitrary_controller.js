@@ -284,11 +284,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       listenToStoreProperty(
         state => state.userConfiguration,
         userConfiguration => {
-          const {
-            clippingDistanceArbitrary,
-            displayCrosshair,
-            crosshairSize,
-          } = userConfiguration;
+          const { clippingDistanceArbitrary, displayCrosshair, crosshairSize } = userConfiguration;
           this.setClippingDistance(clippingDistanceArbitrary);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);

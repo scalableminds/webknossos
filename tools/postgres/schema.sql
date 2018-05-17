@@ -400,10 +400,3 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER onDeleteAnnotationTrigger
 AFTER DELETE ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
-
-
-CREATE VIEW webknossos.task_instances AS
-  SELECT t._id, COUNT(annotations._id) assignedInstances, t.totalinstances - COUNT(annotations._id) openInstances
-  FROM webknossos.tasks t
-  left join (select * from webknossos.annotations a where webknossos.countsAsTaskInstance(a)) as annotations ON t._id = annotations._task
-  GROUP BY t._id, t.totalinstances;

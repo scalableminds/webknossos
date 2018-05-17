@@ -22,8 +22,6 @@ import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsValue, Json}
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future

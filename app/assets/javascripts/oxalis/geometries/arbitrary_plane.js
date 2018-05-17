@@ -9,7 +9,9 @@ import * as THREE from "three";
 import constants, { OrthoViews } from "oxalis/constants";
 import type { Vector4 } from "oxalis/constants";
 import Model from "oxalis/model";
-import Store from "oxalis/throttled_store";
+// importing the throttled store, will result in flickering when zooming out,
+// since the plane is not updated fast enough
+import Store from "oxalis/store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import SceneController from "oxalis/controller/scene_controller";
 

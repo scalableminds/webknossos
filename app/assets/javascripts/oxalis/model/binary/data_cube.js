@@ -164,10 +164,6 @@ class DataCube {
   }
 
   isMappingEnabled(): boolean {
-    console.log(
-      "mappingEnabled",
-      Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled,
-    );
     return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
   }
 

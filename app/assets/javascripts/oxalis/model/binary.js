@@ -7,7 +7,6 @@ import _ from "lodash";
 import * as THREE from "three";
 import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
-import type { CategoryType } from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
 import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import DataCube from "oxalis/model/binary/data_cube";
@@ -22,7 +21,6 @@ import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_
 import Mappings from "oxalis/model/binary/mappings";
 import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
 import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
@@ -37,10 +35,11 @@ import { getAreas } from "oxalis/model/accessors/flycam_accessor";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import PriorityQueue from "js-priority-queue";
 import messages from "messages";
+import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
 
+import type { CategoryType, DataLayerType } from "oxalis/store";
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
-import type Layer from "oxalis/model/binary/layers/layer";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 
 const PING_THROTTLE_TIME = 50;
@@ -83,7 +82,7 @@ function consumeBucketsFromPriorityQueue(queue, capacity) {
 class Binary {
   cube: DataCube;
   tracingType: string;
-  layer: Layer;
+  layer: DataLayerType;
   category: CategoryType;
   name: string;
   targetBitDepth: number;
@@ -122,7 +121,7 @@ class Binary {
   listenTo: Function;
 
   constructor(
-    layer: Layer,
+    layer: DataLayerType,
     connectionInfo: ConnectionInfo,
     textureWidth: number,
     dataTextureCount: number,
@@ -138,20 +137,14 @@ class Binary {
     this.category = this.layer.category;
     this.name = this.layer.name;
 
-    this.targetBitDepth = this.category === "color" ? this.layer.bitDepth : 8;
+    const bitDepth = getBitDepth(this.layer);
+    this.targetBitDepth = this.category === "color" ? bitDepth : 8;
 
     const { topLeft, width, height, depth } = this.layer.boundingBox;
     this.lowerBoundary = topLeft;
-    this.layer.lowerBoundary = topLeft;
     this.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
-    this.layer.upperBoundary = this.upperBoundary;
 
-    this.cube = new DataCube(
-      this.upperBoundary,
-      layer.maxZoomStep + 1,
-      this.layer.bitDepth,
-      this.layer,
-    );
+    this.cube = new DataCube(this.upperBoundary, layer.maxZoomStep + 1, bitDepth, this.layer);
 
     const taskQueue = new AsyncTaskQueue(Infinity);
 
@@ -169,14 +162,6 @@ class Binary {
 
     this.pingStrategies = [new SkeletonPingStrategy(this.cube), new VolumePingStrategy(this.cube)];
     this.pingStrategies3d = [new DslSlowPingStrategy3d(this.cube)];
-
-    if (this.layer.dataStoreInfo.typ === "webknossos-store") {
-      listenToStoreProperty(
-        state => state.datasetConfiguration.fourBit,
-        fourBit => this.layer.setFourBit(fourBit),
-        true,
-      );
-    }
   }
 
   setupMappingTextures() {
@@ -253,7 +238,7 @@ class Binary {
   }
 
   getByteCount(): number {
-    return this.layer.bitDepth >> 3;
+    return getBitDepth(this.layer) >> 3;
   }
 
   setupDataTextures(): void {

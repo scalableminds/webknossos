@@ -44,8 +44,8 @@ import type {
   APIScriptType,
   APITaskType,
   APIUserType,
-  APIMappingType,
   APIDatasetType,
+  APIDataLayerType,
 } from "admin/api_flow_types";
 
 export type CommentType = {
@@ -108,14 +108,8 @@ export type VolumeCellMapType = { [number]: VolumeCellType };
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
 
-export type DataLayerType = {
-  +name: string,
-  +category: CategoryType,
-  +boundingBox: BoundingBoxObjectType,
-  +resolutions: Array<Vector3>,
-  +maxZoomStep: number, // denotes for which maximum zoomStep data exists
-  +elementClass: ElementClassType,
-  +mappings?: Array<APIMappingType>,
+export type DataLayerType = APIDataLayerType & {
+  +maxZoomStep: number,
 };
 
 export type SegmentationDataLayerType = DataLayerType & {

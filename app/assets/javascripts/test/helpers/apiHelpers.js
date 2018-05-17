@@ -48,6 +48,10 @@ mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
 
+const wkstoreAdapter = mockRequire.reRequire("oxalis/model/binary/wkstore_adapter");
+wkstoreAdapter.requestFromStore = () => new Uint8Array();
+mockRequire("oxalis/model/binary/wkstore_adapter", wkstoreAdapter);
+
 // Avoid node caching and make sure all mockRequires are applied
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const Model = mockRequire.reRequire("oxalis/model").OxalisModel;

@@ -41,8 +41,6 @@ import type { Vector3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
-import WkLayer from "oxalis/model/binary/layers/wk_layer";
-import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
 import {
   doWithToken,
@@ -50,9 +48,8 @@ import {
   getDataset,
   getSharingToken,
 } from "admin/admin_rest_api";
-
+import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
 import messages from "messages";
-import type Layer from "oxalis/model/binary/layers/layer";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
 import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
 import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
@@ -188,7 +185,9 @@ export class OxalisModel {
     this.applyState(UrlManager.initialState, tracing);
   }
 
-  validateSpecsForLayers(layers: Array<Layer>): Map<Layer, DataTextureSizeAndCount> {
+  validateSpecsForLayers(
+    layers: Array<DataLayerType>,
+  ): Map<DataLayerType, DataTextureSizeAndCount> {
     const specs = DataRenderingLogic.getSupportedTextureSpecs();
     DataRenderingLogic.validateMinimumRequirements(specs);
 
@@ -196,7 +195,7 @@ export class OxalisModel {
     const setupInfo = DataRenderingLogic.computeDataTexturesSetup(
       specs,
       layers,
-      layer => layer.bitDepth >> 3,
+      layer => getBitDepth(layer) >> 3,
       hasSegmentation,
     );
 
@@ -318,22 +317,7 @@ export class OxalisModel {
   }
 
   initializeModel(tracing: ?ServerTracingType, resolutions: Array<Vector3>) {
-    const { dataStore } = Store.getState().dataset;
-
-    const LayerClass = (() => {
-      switch (dataStore.typ) {
-        case "webknossos-store":
-          return WkLayer;
-        case "ndstore":
-          return NdStoreLayer;
-        default:
-          throw new Error(`${messages["datastore.unknown_type"]} ${dataStore.typ}`);
-      }
-    })();
-
-    const layers = this.getLayerInfos(tracing, resolutions).map(
-      layerInfo => new LayerClass(layerInfo, dataStore),
-    );
+    const layers = this.getLayerInfos(tracing, resolutions);
 
     const textureInformationPerLayer = this.validateSpecsForLayers(layers);
     this.maximumDataTextureCountForLayer = _.max(

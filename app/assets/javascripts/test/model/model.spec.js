@@ -31,10 +31,6 @@ class Binary {
   upperBoundary = [4, 5, 6];
 }
 
-class Layer {
-  resolutions = [];
-}
-
 mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
@@ -44,8 +40,7 @@ mockRequire("oxalis/model/skeletontracing/skeletontracing", _.noop);
 mockRequire("oxalis/model/volumetracing/volumetracing", _.noop);
 mockRequire("oxalis/model/user", User);
 mockRequire("oxalis/model/dataset_configuration", DatasetConfiguration);
-mockRequire("oxalis/model/binary/layers/wk_layer", Layer);
-mockRequire("oxalis/model/binary/layers/nd_store_layer", Layer);
+mockRequire("oxalis/model/binary/wkstore_adapter", {});
 
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;

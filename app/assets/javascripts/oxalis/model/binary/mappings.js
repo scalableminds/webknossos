@@ -8,8 +8,7 @@ import Store from "oxalis/store";
 import Request from "libs/request";
 import ErrorHandling from "libs/error_handling";
 import { doWithToken } from "admin/admin_rest_api";
-import type Layer from "oxalis/model/binary/layers/layer";
-import type { DataStoreInfoType } from "oxalis/store";
+import type { DataStoreInfoType, DataLayerType } from "oxalis/store";
 import type { APIMappingType } from "admin/api_flow_types";
 
 export type MappingType = { [key: number]: number };
@@ -21,7 +20,7 @@ class Mappings {
   } = {};
   baseUrl: string;
 
-  constructor(dataStoreInfo: DataStoreInfoType, layer: Layer) {
+  constructor(dataStoreInfo: DataStoreInfoType, layer: DataLayerType) {
     const dataset = Store.getState().dataset;
     if (dataset == null) {
       throw new Error("Dataset needs to be available.");

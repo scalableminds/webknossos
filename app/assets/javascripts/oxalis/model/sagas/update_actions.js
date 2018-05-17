@@ -9,7 +9,7 @@ import type {
   BoundingBoxObjectType,
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
+import type { BucketInfo } from "oxalis/model/binary/bucket_builder";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;

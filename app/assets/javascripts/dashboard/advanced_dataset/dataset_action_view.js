@@ -52,7 +52,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
       </Menu>
     );
 
-    const createVolumeTracingMenu = (
+    const voumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
         <a href="#" title="Create volume tracing">
           <img
@@ -98,7 +98,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
               />{" "}
               Start Skeleton Tracing
             </a>
-            {dataset.dataStore.typ !== "ndstore" ? createVolumeTracingMenu : null}
+            {voumeTracingMenu}
           </div>
         ) : null}
       </div>

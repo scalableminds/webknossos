@@ -10,7 +10,7 @@ import { M4x4, V3 } from "libs/mjs";
 import constants, { OrthoViews } from "oxalis/constants";
 import type { ModeType, Vector3, Vector4 } from "oxalis/constants";
 import Model from "oxalis/model";
-import Store from "oxalis/store";
+import Store from "oxalis/throttled_store";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import SceneController from "oxalis/controller/scene_controller";
 
@@ -32,7 +32,6 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 class ArbitraryPlane {
   mesh: THREE.Mesh;
   isDirty: boolean;
-  queryVertices: ?Float32Array;
   width: number;
   // TODO: Probably unused? Recheck when flow coverage is higher
   height: number;
@@ -57,10 +56,6 @@ class ArbitraryPlane {
       });
     }
 
-    // if ((Math.log(this.width) / Math.LN2) % 1 === 1) {
-    //   throw new Error("width needs to be a power of 2");
-    // }
-
     Store.subscribe(() => {
       this.isDirty = true;
     });
@@ -80,24 +75,6 @@ class ArbitraryPlane {
   };
 
   setScale() {}
-
-  setMode(mode: ModeType) {
-    switch (mode) {
-      case constants.MODE_ARBITRARY:
-        this.queryVertices = this.calculateSphereVertices(
-          Store.getState().userConfiguration.sphericalCapRadius,
-        );
-        break;
-      case constants.MODE_ARBITRARY_PLANE:
-        this.queryVertices = this.calculatePlaneVertices();
-        break;
-      default:
-        this.queryVertices = null;
-        break;
-    }
-
-    this.isDirty = true;
-  }
 
   addToScene(scene: THREE.Scene) {
     scene.add(this.mesh);
@@ -134,62 +111,6 @@ class ArbitraryPlane {
       this.isDirty = false;
 
       SceneController.update(this);
-    }
-  }
-
-  calculateSphereVertices = _.memoize(sphericalCapRadius => {
-    const queryVertices = new Float32Array(this.width * this.width * 3);
-
-    // so we have Point [0, 0, 0] centered
-    let currentIndex = 0;
-
-    const vertex = [0, 0, 0];
-    let vector = [0, 0, 0];
-    const centerVertex = [0, 0, -sphericalCapRadius];
-
-    // Transforming those normalVertices to become a spherical cap
-    // which is better more smooth for querying.
-    // http://en.wikipedia.org/wiki/Spherical_cap
-    for (let y = 0; y < this.width; y++) {
-      for (let x = 0; x < this.width; x++) {
-        vertex[0] = x - Math.floor(this.width / 2);
-        vertex[1] = y - Math.floor(this.width / 2);
-        vertex[2] = 0;
-
-        vector = V3.sub(vertex, centerVertex);
-        const length = V3.length(vector);
-        vector = V3.scale(vector, sphericalCapRadius / length);
-
-        queryVertices[currentIndex++] = centerVertex[0] + vector[0];
-        queryVertices[currentIndex++] = centerVertex[1] + vector[1];
-        queryVertices[currentIndex++] = centerVertex[2] + vector[2];
-      }
-    }
-
-    return queryVertices;
-  });
-
-  calculatePlaneVertices = _.memoize(() => {
-    const queryVertices = new Float32Array(this.width * this.width * 3);
-
-    // so we have Point [0, 0, 0] centered
-    let currentIndex = 0;
-
-    for (let y = 0; y < this.width; y++) {
-      for (let x = 0; x < this.width; x++) {
-        queryVertices[currentIndex++] = x - Math.floor(this.width / 2);
-        queryVertices[currentIndex++] = y - Math.floor(this.width / 2);
-        queryVertices[currentIndex++] = 0;
-      }
-    }
-
-    return queryVertices;
-  });
-
-  setSphericalCapRadius(sphericalCapRadius: number) {
-    if (Store.getState().temporaryConfiguration.viewMode === constants.MODE_ARBITRARY) {
-      this.queryVertices = this.calculateSphereVertices(sphericalCapRadius);
-      this.isDirty = true;
     }
   }
 

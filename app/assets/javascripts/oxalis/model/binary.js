@@ -9,8 +9,6 @@ import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
 import type { CategoryType } from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
-import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
 import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
@@ -22,11 +20,10 @@ import {
 } from "oxalis/model/binary/ping_strategy";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
-import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { createUpdatableTexture } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import { getRenderer } from "oxalis/controller/renderer";
@@ -47,9 +44,9 @@ import PriorityQueue from "js-priority-queue";
 import messages from "messages";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { M4x4, V3 } from "libs/mjs";
-import { intersects } from "libs/collision_test";
-import { traverse } from "oxalis/model/binary/bucket_traversals";
-import Utils from "libs/utils";
+import { determineBucketsForOrthogonal } from "oxalis/model/binary/bucket_picker_strategies/orthogonal_bucket_picker";
+import { determineBucketsForOblique } from "oxalis/model/binary/bucket_picker_strategies/oblique_bucket_picker";
+import { determineBucketsForFlight } from "oxalis/model/binary/bucket_picker_strategies/flight_bucket_picker";
 
 import type { Bucket } from "oxalis/model/binary/bucket";
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
@@ -347,7 +344,8 @@ class Binary {
       });
 
       if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-        this.addNecessaryBucketsToPriorityQueueOblique(
+        determineBucketsForOblique(
+          this,
           bucketQueue,
           matrix,
           logZoomStep,
@@ -355,7 +353,8 @@ class Binary {
           isFallbackAvailable,
         );
       } else if (viewMode === constants.MODE_ARBITRARY) {
-        this.addNecessaryBucketsToPriorityQueueFlight(
+        determineBucketsForFlight(
+          this,
           bucketQueue,
           matrix,
           logZoomStep,
@@ -363,25 +362,17 @@ class Binary {
           isFallbackAvailable,
         );
       } else {
-        this.addNecessaryBucketsToPriorityQueueOrthogonal(
+        determineBucketsForOrthogonal(
+          this,
           bucketQueue,
           logZoomStep,
+          fallbackZoomStep,
+          isFallbackAvailable,
           this.anchorPointCache.anchorPoint,
-          false,
+          this.anchorPointCache.fallbackAnchorPoint,
           areas,
           subBucketLocality,
         );
-
-        if (isFallbackAvailable) {
-          this.addNecessaryBucketsToPriorityQueueOrthogonal(
-            bucketQueue,
-            logZoomStep + 1,
-            this.anchorPointCache.fallbackAnchorPoint,
-            true,
-            areas,
-            subBucketLocality,
-          );
-        }
       }
 
       const buckets = consumeBucketsFromPriorityQueue(
@@ -396,250 +387,7 @@ class Binary {
       );
     }
 
-    // return [
-    //   isAnchorPointNew || isArbitrary ? this.anchorPointCache.anchorPoint : null,
-    //   isFallbackAnchorPointNew || isArbitrary ? this.anchorPointCache.fallbackAnchorPoint : null,
-    // ];
     return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
-  }
-
-  addNecessaryBucketsToPriorityQueueFlight(
-    bucketQueue: PriorityQueue,
-    matrix: Matrix4x4,
-    logZoomStep: number,
-    fallbackZoomStep: number,
-    isFallbackAvailable: boolean,
-  ): void {
-    const queryMatrix = M4x4.scale1(1, matrix);
-
-    const transformVectors = (m, points) =>
-      _.chunk(M4x4.transformPointsAffine(m, _.flatten(points)), 3);
-
-    const enlargementFactor = 1.0;
-    const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
-    const enlargedHalfExtent = enlargedExtent / 2;
-
-    const sphericalCapRadius = Store.getState().userConfiguration.sphericalCapRadius;
-    const cameraVertex = [0, 0, -sphericalCapRadius];
-    let rotatedPlane = transformVectors(
-      queryMatrix,
-      [
-        [-enlargedHalfExtent, -enlargedHalfExtent, 0],
-        [enlargedHalfExtent, -enlargedHalfExtent, 0],
-        [0, 0, 0],
-        [-enlargedHalfExtent, enlargedHalfExtent, 0],
-        [enlargedHalfExtent, enlargedHalfExtent, 0],
-      ].map(vec => {
-        V3.sub(vec, cameraVertex, vec);
-        V3.scale(vec, sphericalCapRadius / V3.length(vec), vec);
-        V3.add(vec, cameraVertex, vec);
-        return vec;
-      }),
-    );
-
-    const cameraPosition = transformVectors(queryMatrix, [cameraVertex])[0];
-    const cameraAddress = globalPositionToBucketPosition(
-      cameraPosition,
-      this.layer.resolutions,
-      logZoomStep,
-    );
-
-    const centerPosition = transformVectors(queryMatrix, [[0, 0, 0]])[0];
-    const centerBucket = globalPositionToBucketPosition(
-      centerPosition,
-      this.layer.resolutions,
-      logZoomStep,
-    );
-
-    const scale = Store.getState().dataset.dataSource.scale;
-    const matrixScale = getMatrixScale(scale);
-
-    const inverseScale = V3.divide3([1, 1, 1], matrixScale);
-
-    rotatedPlane = rotatedPlane.map((position: Vector3) =>
-      globalPositionToBucketPosition(position, this.layer.resolutions, logZoomStep),
-    );
-
-    const aggregatePerDimension = aggregateFn =>
-      [0, 1, 2].map(dim => aggregateFn(...rotatedPlane.map(pos => pos[dim])));
-
-    const boundingBoxBuckets = {
-      cornerMin: aggregatePerDimension(Math.min),
-      cornerMax: aggregatePerDimension(Math.max),
-    };
-
-    const camToCenterDist = V3.sub(cameraPosition, centerPosition);
-
-    let traversedBuckets = [];
-
-    const zoomStep = Store.getState().flycam.zoomStep;
-    const squaredRadius = (zoomStep * sphericalCapRadius) ** 2;
-    const tolerance = 1;
-
-    // iterate over all buckets within bounding box
-    for (
-      let x = boundingBoxBuckets.cornerMin[0] - tolerance;
-      x <= boundingBoxBuckets.cornerMax[0] + tolerance;
-      x++
-    ) {
-      for (
-        let y = boundingBoxBuckets.cornerMin[1] - tolerance;
-        y <= boundingBoxBuckets.cornerMax[1] + tolerance;
-        y++
-      ) {
-        for (
-          let z = boundingBoxBuckets.cornerMin[2] - tolerance;
-          z <= boundingBoxBuckets.cornerMax[2] + tolerance;
-          z++
-        ) {
-          const pos = bucketPositionToGlobalAddress([x, y, z, logZoomStep], this.layer.resolutions);
-          const nextPos = bucketPositionToGlobalAddress(
-            [x + 1, y + 1, z + 1, logZoomStep],
-            this.layer.resolutions,
-          );
-
-          const closest = [0, 1, 2].map(dim =>
-            Utils.clamp(pos[dim], cameraPosition[dim], nextPos[dim]),
-          );
-
-          const farthest = [0, 1, 2].map(
-            dim =>
-              Math.abs(pos[dim] - cameraPosition[dim]) >
-              Math.abs(nextPos[dim] - cameraPosition[dim])
-                ? pos[dim]
-                : nextPos[dim],
-          );
-
-          const closestDist = V3.scaledSquaredDist(cameraPosition, closest, inverseScale);
-          const farthestDist = V3.scaledSquaredDist(cameraPosition, farthest, inverseScale);
-
-          const collisionTolerance = 0.02;
-          const doesCollide =
-            (1 - collisionTolerance) * closestDist <= squaredRadius &&
-            (1 + collisionTolerance) * farthestDist >= squaredRadius;
-
-          if (doesCollide) {
-            traversedBuckets.push([x, y, z]);
-          }
-        }
-      }
-    }
-
-    traversedBuckets = traversedBuckets.map(addr => [...addr, logZoomStep]);
-
-    const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
-    const fallbackBuckets = isFallbackAvailable
-      ? _.uniqBy(
-          traversedBuckets.map((bucketAddress: Vector4) =>
-            zoomedAddressToAnotherZoomStep(bucketAddress, this.layer.resolutions, fallbackZoomStep),
-          ),
-          hashPosition,
-        )
-      : [];
-
-    traversedBuckets = traversedBuckets.concat(fallbackBuckets);
-
-    const missingBuckets = [];
-    const centerAddress = globalPositionToBucketPosition(
-      getPosition(Store.getState().flycam),
-      this.layer.resolutions,
-      logZoomStep,
-    );
-
-    for (const bucketAddress of traversedBuckets) {
-      const bucket = this.cube.getOrCreateBucket(bucketAddress);
-
-      if (bucket.type !== "null") {
-        const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);
-
-        bucketQueue.queue({ bucket, priority });
-
-        if (!bucket.hasData()) {
-          // Priority is set to -1 since we need these buckets need to be fetched immediately
-          missingBuckets.push({ bucket: bucket.zoomedAddress, priority: -1 });
-        }
-      }
-    }
-
-    this.pullQueue.addAll(missingBuckets);
-    this.pullQueue.pull();
-  }
-
-  addNecessaryBucketsToPriorityQueueOblique(
-    bucketQueue: PriorityQueue,
-    matrix: Matrix4x4,
-    logZoomStep: number,
-    fallbackZoomStep: number,
-    isFallbackAvailable: boolean,
-  ): void {
-    const queryMatrix = M4x4.scale1(1, matrix);
-
-    const transformVectors = (m, points) =>
-      _.chunk(M4x4.transformPointsAffine(m, _.flatten(points)), 3);
-
-    const enlargementFactor = 1.1;
-    const enlargedExtent = 384 * enlargementFactor;
-    // todo: tweak this number
-    const steps = 25;
-    const stepSize = enlargedExtent / steps;
-    const enlargedHalfExtent = enlargedExtent / 2;
-    const rotatedPlane = transformVectors(
-      queryMatrix,
-      _.flatten(
-        _.range(steps + 1).map(idx => [
-          [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, -10],
-          [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, -10],
-          [-enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 10],
-          [enlargedHalfExtent, -enlargedHalfExtent + idx * stepSize, 10],
-        ]),
-      ),
-    );
-
-    let traversedBuckets = _.flatten(
-      _.chunk(rotatedPlane, 2).map(([a, b]: [Vector3, Vector3]) =>
-        traverse(a, b, this.layer.resolutions, logZoomStep),
-      ),
-    );
-    const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
-    traversedBuckets = _.uniqBy(traversedBuckets, hashPosition);
-    traversedBuckets = traversedBuckets.map(addr => [...addr, logZoomStep]);
-
-    if (isFallbackAvailable) {
-      traversedBuckets = _.uniqBy(
-        _.flatMap(traversedBuckets, (bucketAddress: Vector4): Array<Vector4> => {
-          return [
-            bucketAddress,
-            zoomedAddressToAnotherZoomStep(bucketAddress, this.layer.resolutions, fallbackZoomStep),
-          ];
-        }),
-        hashPosition,
-      );
-    }
-
-    const missingBuckets = [];
-    const centerAddress = globalPositionToBucketPosition(
-      getPosition(Store.getState().flycam),
-      this.layer.resolutions,
-      logZoomStep,
-    );
-
-    for (const bucketAddress of traversedBuckets) {
-      const bucket = this.cube.getOrCreateBucket(bucketAddress);
-
-      if (bucket.type !== "null") {
-        const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);
-
-        bucketQueue.queue({ bucket, priority });
-
-        if (!bucket.hasData()) {
-          // Priority is set to -1 since we need these buckets need to be fetched immediately
-          missingBuckets.push({ bucket: bucket.zoomedAddress, priority: -1 });
-        }
-      }
-    }
-
-    this.pullQueue.addAll(missingBuckets);
-    this.pullQueue.pull();
   }
 
   yieldsNewZoomedAnchorPoint(
@@ -667,107 +415,6 @@ class Binary {
       Math.floor(position[2] - maximumRenderedBucketsHalf * resolution[2]),
     ];
     return anchorPoint;
-  }
-
-  addNecessaryBucketsToPriorityQueueOrthogonal(
-    bucketQueue: PriorityQueue,
-    logZoomStep: number,
-    zoomedAnchorPoint: Vector4,
-    isFallback: boolean,
-    areas: OrthoViewMapType<AreaType>,
-    subBucketLocality: Vector3,
-  ): void {
-    const resolution = this.layer.resolutions[logZoomStep];
-    const previousResolution = this.layer.resolutions[logZoomStep - 1];
-
-    const resolutionChangeRatio = isFallback
-      ? getResolutionsFactors(resolution, previousResolution)
-      : [1, 1, 1];
-
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [u, v, w] = Dimensions.getIndices(planeId);
-
-      const topLeftVector = [0, 0, 0, 0];
-      topLeftVector[v] = areas[planeId].top;
-      topLeftVector[u] = areas[planeId].left;
-
-      const bottomRightVector = [0, 0, 0, 0];
-      bottomRightVector[v] = areas[planeId].bottom;
-      bottomRightVector[u] = areas[planeId].right;
-
-      const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
-        topLeftVector,
-        this.layer.resolutions,
-        logZoomStep,
-      );
-      const scaledBottomRightVector = zoomedAddressToAnotherZoomStep(
-        bottomRightVector,
-        this.layer.resolutions,
-        logZoomStep,
-      );
-
-      const renderedBucketsPerDimension = Math.ceil(
-        constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / resolutionChangeRatio[w],
-      );
-      const topLeftBucket = zoomedAnchorPoint.slice();
-      topLeftBucket[w] += Math.floor((renderedBucketsPerDimension - 1) / 2);
-
-      const centerBucketUV = [
-        scaledTopLeftVector[u] + (scaledBottomRightVector[u] - scaledTopLeftVector[u]) / 2,
-        scaledTopLeftVector[v] + (scaledBottomRightVector[v] - scaledTopLeftVector[v]) / 2,
-      ];
-
-      // By subtracting and adding 1 (extraBucket) to the bounds of y and x, we move
-      // one additional bucket on each edge of the viewport to the GPU. This decreases the
-      // chance of showing gray data, when moving the viewport. However, it might happen that
-      // we do not have enough capacity to move these additional buckets to the GPU.
-      // That's why, we are using a priority queue which orders buckets by manhattan distance to
-      // the center bucket. We only consume that many items from the PQ, which we can handle on the
-      // GPU.
-      const extraBucket = 1;
-
-      // Always use buckets in the current w slice, but also load either the previous or the next
-      // slice (depending on locality within the current bucket).
-      // Similar to `extraBucket`, the PQ takes care of cases in which the additional slice can't be
-      // loaded.
-      const wSliceOffsets = isFallback ? [0] : [0, subBucketLocality[w]];
-      // fallback buckets should have lower priority
-      const additionalPriorityWeight = isFallback ? 1000 : 0;
-
-      // Build up priority queue
-      wSliceOffsets.forEach(wSliceOffset => {
-        for (
-          let y = scaledTopLeftVector[v] - extraBucket;
-          y <= scaledBottomRightVector[v] + extraBucket;
-          y++
-        ) {
-          for (
-            let x = scaledTopLeftVector[u] - extraBucket;
-            x <= scaledBottomRightVector[u] + extraBucket;
-            x++
-          ) {
-            const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
-            bucketAddress[u] = x;
-            bucketAddress[v] = y;
-            bucketAddress[w] += wSliceOffset;
-
-            const bucket = this.cube.getOrCreateBucket(bucketAddress);
-
-            if (bucket.type !== "null") {
-              const priority =
-                Math.abs(x - centerBucketUV[0]) +
-                Math.abs(y - centerBucketUV[1]) +
-                Math.abs(100 * wSliceOffset) +
-                additionalPriorityWeight;
-              bucketQueue.queue({
-                priority,
-                bucket,
-              });
-            }
-          }
-        }
-      });
-    }
   }
 
   setActiveMapping(mappingName: string): void {

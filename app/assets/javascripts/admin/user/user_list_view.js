@@ -21,7 +21,6 @@ import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
 import EditableTextLabel from "oxalis/view/components/editable_text_label";
 
-
 const { Column } = Table;
 const { Search } = Input;
 
@@ -278,7 +277,7 @@ class UserListView extends React.PureComponent<Props, State> {
                       Modal.confirm({
                         title: messages["users.change_email_title"],
                         content: messages["users.change_email"]({
-                          newEmail: newEmail,
+                          newEmail,
                         }),
                         onOk: () => this.changeEmail(user, newEmail),
                       });

@@ -16,6 +16,7 @@ import type { Matrix4x4 } from "libs/mjs";
 import Binary from "oxalis/model/binary";
 import Utils from "libs/utils";
 import Store from "oxalis/store";
+import { chunk2 } from "oxalis/model/helpers/chunk";
 
 export function determineBucketsForOblique(
   binary: Binary,
@@ -27,16 +28,13 @@ export function determineBucketsForOblique(
 ): void {
   const queryMatrix = M4x4.scale1(1, matrix);
 
-  const transformVectors = (m, points) =>
-    _.chunk(M4x4.transformPointsAffine(m, _.flatten(points)), 3);
-
   const enlargementFactor = 1.1;
   const enlargedExtent = 384 * enlargementFactor;
   // todo: tweak this number
   const steps = 25;
   const stepSize = enlargedExtent / steps;
   const enlargedHalfExtent = enlargedExtent / 2;
-  const rotatedPlane = transformVectors(
+  const rotatedPlane = M4x4.transformVectorsAffine(
     queryMatrix,
     _.flatten(
       _.range(steps + 1).map(idx => [
@@ -49,7 +47,7 @@ export function determineBucketsForOblique(
   );
 
   let traversedBuckets = _.flatten(
-    _.chunk(rotatedPlane, 2).map(([a, b]: [Vector3, Vector3]) =>
+    chunk2(rotatedPlane).map(([a, b]: [Vector3, Vector3]) =>
       traverse(a, b, binary.layer.resolutions, logZoomStep),
     ),
   );

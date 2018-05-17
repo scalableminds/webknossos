@@ -38,9 +38,6 @@ class ArbitraryPlane {
   x: number;
   textureMaterial: THREE.RawShaderMaterial;
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-
   constructor() {
     this.isDirty = true;
     this.height = 0;
@@ -63,6 +60,7 @@ class ArbitraryPlane {
 
   updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
     if (anchorPoint) {
+      console.log("setAnchorPoint");
       this.mesh.material.setAnchorPoint(anchorPoint);
     }
     if (fallbackAnchorPoint) {
@@ -73,8 +71,6 @@ class ArbitraryPlane {
   setPosition = ({ x, y, z }: THREE.Vector3) => {
     this.mesh.material.setGlobalPosition([x, y, z]);
   };
-
-  setScale() {}
 
   addToScene(scene: THREE.Scene) {
     scene.add(this.mesh);
@@ -111,11 +107,11 @@ class ArbitraryPlane {
       this.isDirty = false;
 
       SceneController.update(this);
+      console.log("trigger SceneController update");
     }
   }
 
   createMesh() {
-    // this.textureMaterial = new PlaneMaterialFactory(this.width, {}).setup().getMaterial();
     this.textureMaterial = new PlaneMaterialFactory(0, {}, OrthoViews.PLANE_XY, 4)
       .setup()
       .getMaterial();

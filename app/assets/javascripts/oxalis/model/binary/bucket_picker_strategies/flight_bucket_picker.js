@@ -28,16 +28,13 @@ export function determineBucketsForFlight(
 ): void {
   const queryMatrix = M4x4.scale1(1, matrix);
 
-  const transformVectors = (m, points) =>
-    _.chunk(M4x4.transformPointsAffine(m, _.flatten(points)), 3);
-
   const enlargementFactor = 1.0;
   const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
   const enlargedHalfExtent = enlargedExtent / 2;
 
   const sphericalCapRadius = Store.getState().userConfiguration.sphericalCapRadius;
   const cameraVertex = [0, 0, -sphericalCapRadius];
-  let rotatedPlane = transformVectors(
+  let rotatedPlane = M4x4.transformVectorsAffine(
     queryMatrix,
     [
       [-enlargedHalfExtent, -enlargedHalfExtent, 0],
@@ -53,14 +50,14 @@ export function determineBucketsForFlight(
     }),
   );
 
-  const cameraPosition = transformVectors(queryMatrix, [cameraVertex])[0];
+  const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
   const cameraAddress = globalPositionToBucketPosition(
     cameraPosition,
     binary.layer.resolutions,
     logZoomStep,
   );
 
-  const centerPosition = transformVectors(queryMatrix, [[0, 0, 0]])[0];
+  const centerPosition = M4x4.transformVectorsAffine(queryMatrix, [[0, 0, 0]])[0];
   const centerBucket = globalPositionToBucketPosition(
     centerPosition,
     binary.layer.resolutions,

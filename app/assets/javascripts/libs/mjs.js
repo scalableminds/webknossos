@@ -4,6 +4,8 @@
  */
 
 import type { Vector3 } from "oxalis/constants";
+import _ from "lodash";
+import { chunk3 } from "oxalis/model/helpers/chunk";
 
 const { M4x4, V2, V3 } = require("mjs")(Float32Array);
 
@@ -62,6 +64,16 @@ M4x4.transformPointsAffine = function transformPointsAffine(
   }
 
   return r;
+};
+
+// In contrast to transformPointsAffine, this function takes Array<Vector3>
+// and also returns Array<Vector3>
+M4x4.transformVectorsAffine = function transformVectorsAffine(
+  m: Matrix4x4,
+  _points: Vector3[],
+): Vector3[] {
+  const points: Array<Array<number>> = ((_points: any): Array<Array<number>>);
+  return chunk3(M4x4.transformPointsAffine(m, _.flatten(points)));
 };
 
 // Applies a transformation matrix on an array of points.

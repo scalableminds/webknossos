@@ -10,7 +10,7 @@ import Store from "oxalis/store";
 import type { CategoryType } from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
 import DataCube from "oxalis/model/binary/data_cube";
-import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
+import PullQueue from "oxalis/model/binary/pullqueue";
 import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import {
@@ -33,23 +33,15 @@ import {
   setMappingSizeAction,
 } from "oxalis/model/actions/settings_actions";
 import { getAreas } from "oxalis/model/accessors/flycam_accessor";
-import {
-  getResolutionsFactors,
-  zoomedAddressToAnotherZoomStep,
-  globalPositionToBucketPosition,
-  bucketPositionToGlobalAddress,
-  getBucketExtent,
-} from "oxalis/model/helpers/position_converter";
 import PriorityQueue from "js-priority-queue";
 import messages from "messages";
-import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import { M4x4, V3 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
 import { determineBucketsForOrthogonal } from "oxalis/model/binary/bucket_picker_strategies/orthogonal_bucket_picker";
 import { determineBucketsForOblique } from "oxalis/model/binary/bucket_picker_strategies/oblique_bucket_picker";
 import { determineBucketsForFlight } from "oxalis/model/binary/bucket_picker_strategies/flight_bucket_picker";
+import { getZoomedMatrix } from "./accessors/flycam_accessor";
 
-import type { Bucket } from "oxalis/model/binary/bucket";
-import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import type Layer from "oxalis/model/binary/layers/layer";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
@@ -109,6 +101,7 @@ class Binary {
   direction: Vector3;
   activeMapping: ?string;
   lastPosition: ?Vector3;
+  lastSphericalCapRadius: number;
   // Indicates whether the current position is closer to the previous or next bucket for each dimension
   // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
@@ -322,21 +315,24 @@ class Binary {
 
     const matrix = getZoomedMatrix(Store.getState().flycam);
 
-    const viewMode = Store.getState().temporaryConfiguration.viewMode;
+    const { viewMode } = Store.getState().temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
-
+    const { sphericalCapRadius } = Store.getState().userConfiguration;
+    console.log(viewMode);
     if (
       isAnchorPointNew ||
       isFallbackAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
       !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
       (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix)) ||
-      viewMode !== this.lastViewMode
+      viewMode !== this.lastViewMode ||
+      sphericalCapRadius !== this.lastSphericalCapRadius
     ) {
       this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
       this.lastZoomedMatrix = matrix;
       this.lastViewMode = viewMode;
+      this.lastSphericalCapRadius = sphericalCapRadius;
 
       const bucketQueue = new PriorityQueue({
         // small priorities take precedence
@@ -344,6 +340,7 @@ class Binary {
       });
 
       if (viewMode === constants.MODE_ARBITRARY_PLANE) {
+        console.log("determineBucketsForOblique");
         determineBucketsForOblique(
           this,
           bucketQueue,
@@ -353,6 +350,7 @@ class Binary {
           isFallbackAvailable,
         );
       } else if (viewMode === constants.MODE_ARBITRARY) {
+        console.log("determineBucketsForFlight");
         determineBucketsForFlight(
           this,
           bucketQueue,
@@ -362,6 +360,7 @@ class Binary {
           isFallbackAvailable,
         );
       } else {
+        console.log("determineBucketsForOrthogonal");
         determineBucketsForOrthogonal(
           this,
           bucketQueue,

@@ -29,6 +29,7 @@ import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRenderer } from "oxalis/controller/renderer";
+import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 
 const CUBE_COLOR = 0x999999;
 
@@ -235,7 +236,7 @@ class SceneController {
     }
   };
 
-  update = (optPlane): void => {
+  update = (optPlane?: ArbitraryPlane): void => {
     const gPos = getPosition(Store.getState().flycam);
     const globalPosVec = new THREE.Vector3(...gPos);
     const planeScale = getPlaneScalingFactor(Store.getState().flycam);
@@ -249,16 +250,15 @@ class SceneController {
     // coordinate system of the next zoomStep which is used for fallback rendering.
     let fallbackAnchorPoint;
 
+    const zoomStep = getRequestLogZoomStep(Store.getState());
     for (const name of Object.keys(Model.binary)) {
       const binary = Model.binary[name];
-      const zoomStep = getRequestLogZoomStep(Store.getState());
       [anchorPoint, fallbackAnchorPoint] = binary.updateDataTextures(gPos, zoomStep);
     }
 
     if (optPlane) {
       optPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);
       optPlane.setPosition(globalPosVec);
-      optPlane.setScale(planeScale);
     } else {
       for (const currentPlane of _.values(this.planes)) {
         currentPlane.updateAnchorPoints(anchorPoint, fallbackAnchorPoint);

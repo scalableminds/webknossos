@@ -51,7 +51,7 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
   };
 
   validateFields() {
-    if (this.props.rules.type === "email") {
+    if (this.props.rules && this.props.rules.type === "email") {
       const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
       const matchesEmail = re.test(this.state.value);
       if (!matchesEmail) Toast.error(this.props.rules.message);

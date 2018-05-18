@@ -25,10 +25,12 @@ class DataSourceRepository @Inject()(
   def findUsableByName(name: String): Option[DataSource] =
     find(name).flatMap(_.toUsable)
 
-  def updateDataSource(dataSource: InboxDataSource): Unit = {
-    insert(dataSource.id.name, dataSource)
-    webKnossosServer.reportDataSource(dataSource)
-  }
+  def updateDataSource(dataSource: InboxDataSource): Fox[Unit] =
+    for {
+      _ <- Fox.successful(())
+      _ = insert(dataSource.id.name, dataSource)
+      _ <- webKnossosServer.reportDataSource(dataSource)
+    } yield ()
 
   def updateDataSources(dataSources: List[InboxDataSource]): Fox[Unit] =
     for {

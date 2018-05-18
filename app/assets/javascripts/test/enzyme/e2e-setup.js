@@ -75,9 +75,12 @@ const jsdom = new JSDOM("<!doctype html><html><body></body></html>", {
 const { window } = jsdom;
 
 function copyProps(src, target) {
-  const props = Object.getOwnPropertyNames(src)
+  const props = {};
+  Object.getOwnPropertyNames(src)
     .filter(prop => typeof target[prop] === "undefined")
-    .map(prop => Object.getOwnPropertyDescriptor(src, prop));
+    .forEach(prop => {
+      props[prop] = Object.getOwnPropertyDescriptor(src, prop);
+    });
   Object.defineProperties(target, props);
 }
 

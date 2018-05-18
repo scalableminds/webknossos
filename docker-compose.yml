@@ -20,6 +20,13 @@ services:
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
 
+  webknossos-datastore:
+    build: webknossos-datastore
+    image: scalableminds/webknossos-datastore:${DOCKER_TAG:-master}
+    ports:
+      - "9090:9090"
+
+
   base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.4.10_node-9.x_jdk-8
     environment:

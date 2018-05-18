@@ -6,19 +6,15 @@ package com.scalableminds.webknossos.datastore.controllers
 import java.io.File
 
 import com.google.inject.Inject
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.services._
 import play.api.data.Form
 import play.api.data.Forms.{nonEmptyText, tuple}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.Json
-import play.api.mvc._
-import reactivemongo.bson.BSONObjectID
-
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
 
 class DataSourceController @Inject()(
                                       dataSourceRepository: DataSourceRepository,
@@ -26,7 +22,7 @@ class DataSourceController @Inject()(
                                       webKnossosServer: WebKnossosServer,
                                       val accessTokenService: AccessTokenService,
                                       val messagesApi: MessagesApi
-                                    ) extends TokenSecuredController {
+                                    ) extends TokenSecuredController with FoxImplicits {
 
   def list() = TokenSecuredAction(UserAccessRequest.listDataSources) {
     implicit request => {
@@ -66,7 +62,7 @@ class DataSourceController @Inject()(
     AllowRemoteOrigin {
       uploadForm.bindFromRequest(request.body.dataParts).fold(
         hasErrors =
-          formWithErrors => Future.successful(JsonBadRequest(formWithErrors.errors.head.message)),
+          formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
         success = {
           case (name, organization) =>
             val id = DataSourceId(name, organization)
@@ -96,11 +92,12 @@ class DataSourceController @Inject()(
       }
   }
 
-  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName))(validateJson[DataSource]) {
+  def update(dataSetName: String) = TokenSecuredAction(UserAccessRequest.writeDataSource(dataSetName)).async(validateJson[DataSource]) {
     implicit request =>
       AllowRemoteOrigin {
         for {
-          dataSource <- dataSourceRepository.findByName(dataSetName) ?~ Messages ("dataSource.notFound") ~> 404
+          _ <- Fox.successful(())
+          dataSource <- dataSourceRepository.findByName(dataSetName).toFox ?~> Messages ("dataSource.notFound") ~> 404
           _ <- dataSourceService.updateDataSource(request.body.copy(id = dataSource.id))
         } yield {
           Ok
@@ -108,11 +105,4 @@ class DataSourceController @Inject()(
       }
   }
 
-  def getTeamIdFromString(str: String) = {
-    val teamId = BSONObjectID.parse(str)
-    if(teamId.isSuccess)
-      Fox.successful(teamId.get)
-    else
-      Fox.failure("Not a TeamId")
-  }
 }

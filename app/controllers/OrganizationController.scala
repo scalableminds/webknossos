@@ -19,9 +19,8 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
   def listAllOrganizations = Action.async { implicit request =>
     for {
       allOrgs <- OrganizationDAO.findAll(GlobalAccessContext)
-      js <- Future.traverse(allOrgs)(Organization.organizationPublicWritesBasic(_)(GlobalAccessContext))
     } yield {
-      Ok(Json.toJson(js))
+      Ok(Json.toJson(allOrgs.map(_.name)))
     }
   }
 }

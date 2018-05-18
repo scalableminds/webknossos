@@ -2,8 +2,6 @@
 
 import * as React from "react";
 import GoldenLayout from "golden-layout/dist/goldenlayout.js";
-import "golden-layout/src/css/goldenlayout-base.css";
-import "golden-layout/src/css/goldenlayout-light-theme.css";
 import _ from "lodash";
 import Constants from "oxalis/constants";
 import { PortalTarget, RenderToPortal } from "./portal_utils.js";

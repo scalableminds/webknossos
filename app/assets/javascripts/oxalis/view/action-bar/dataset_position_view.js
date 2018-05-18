@@ -67,7 +67,7 @@ class DatasetPositionView extends PureComponent<Props> {
             <div style={{ marginLeft: 10 }}>
               <Input.Group compact>
                 <ButtonComponent onClick={this.copyRotationToClipboard}>
-                  <Icon type="enter" style={{ transform: "scale(-1, 1)" }} />
+                  <Icon type="reload" />
                 </ButtonComponent>
                 <Vector3Input
                   value={rotation}

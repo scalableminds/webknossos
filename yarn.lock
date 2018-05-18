@@ -6000,6 +6000,10 @@ nan@^2.3.0:
   version "2.10.0"
   resolved "https://registry.yarnpkg.com/nan/-/nan-2.10.0.tgz#96d0cd610ebd58d4b4de9cc0c6828cda99c7548f"
 
+nanoevents@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/nanoevents/-/nanoevents-1.0.2.tgz#5078a4f8d3e4318aa585c5f2c633cc57fc06ac0f"
+
 nanomatch@^1.2.9:
   version "1.2.9"
   resolved "https://registry.yarnpkg.com/nanomatch/-/nanomatch-1.2.9.tgz#879f7150cb2dab7a471259066c104eee6e0fa7c2"

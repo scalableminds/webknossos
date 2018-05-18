@@ -2,6 +2,9 @@
 import _ from "lodash";
 import defaultLayouts, { currentLayoutVersion } from "./default_layout_configs";
 import type { LayoutKeysType } from "./default_layout_configs";
+import NanoEvents from "nanoevents";
+
+export const resetLayoutEmitter = new NanoEvents();
 
 // For debugging purposes:
 const disableLayoutPersistance = false;
@@ -23,14 +26,23 @@ function readStoredLayoutConfigs() {
   return layoutString ? JSON.parse(layoutString) : {};
 }
 
-const storedLayouts = readStoredLayoutConfigs();
+let storedLayouts = readStoredLayoutConfigs();
 
 function persistLayoutConfigs() {
   localStorage.setItem(localStorageKeys.goldenWkLayouts, JSON.stringify(storedLayouts));
   localStorage.setItem(localStorageKeys.currentLayoutVersion, JSON.stringify(currentLayoutVersion));
 }
 
-const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 2000);
+function clearStoredLayouts() {
+  localStorage.removeItem(localStorageKeys.goldenWkLayouts);
+  storedLayouts = readStoredLayoutConfigs();
+}
+
+resetLayoutEmitter.on("resetLayout", () => {
+  clearStoredLayouts();
+});
+
+const persistLayoutConfigsDebounced = _.debounce(persistLayoutConfigs, 1000);
 
 export function getLayoutConfig(layoutKey: LayoutKeysType) {
   if (storedLayouts[layoutKey]) {

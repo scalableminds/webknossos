@@ -5,6 +5,7 @@ import GoldenLayout from "golden-layout/dist/goldenlayout.js";
 import _ from "lodash";
 import Constants from "oxalis/constants";
 import { PortalTarget, RenderToPortal } from "./portal_utils.js";
+import { resetLayoutEmitter } from "./layout_persistence";
 
 type Props<KeyType> = {
   id: string,
@@ -17,6 +18,7 @@ type Props<KeyType> = {
 
 class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
   gl: GoldenLayout;
+  unbindListener: Function;
 
   componentDidMount() {
     this.setupLayout();
@@ -26,13 +28,25 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
       Constants.RESIZE_THROTTLE_TIME,
     );
     window.addEventListener("resize", updateSizeDebounced);
+
+    this.unbindListener = resetLayoutEmitter.on("resetLayout", () => {
+      this.rebuildLayout();
+    });
+  }
+
+  componentWillUnmount() {
+    this.unbindListener();
   }
 
   componentDidUpdate(prevProps: Props<*>) {
     if (prevProps.layoutKey !== this.props.layoutKey) {
-      this.gl.destroy();
-      this.setupLayout();
+      this.rebuildLayout();
     }
+  }
+
+  rebuildLayout() {
+    this.gl.destroy();
+    this.setupLayout();
   }
 
   setupLayout() {

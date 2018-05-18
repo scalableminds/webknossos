@@ -127,7 +127,10 @@ In order to restore the current window, a reload is necessary.`,
     "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
   ),
   "users.change_email_title": "Do you really want to change the email?",
-  "users.change_email": _.template("Do you really want to change the email to '<%- newEmail %>' ?"),
+  "users.change_email": _.template(
+    "Do you really want to change the email to '<%- newEmail %>' ? The corresponding user will be logged out and unsaved changes might be lost.",
+  ),
+  "users.change_email_confirmation": "The email has been changed",
   "mapping.too_big":
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
   "mapping.too_few_textures":

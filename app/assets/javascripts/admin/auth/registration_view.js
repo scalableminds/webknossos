@@ -5,12 +5,11 @@ import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
 import messages from "messages";
 import Request from "libs/request";
 import Toast from "libs/toast";
-import { getOrganizations } from "admin/admin_rest_api";
-import type { APIOrganizationType } from "admin/api_flow_types";
+import { getOrganizationNames } from "admin/admin_rest_api";
 import type { RouterHistory } from "react-router-dom";
 
 const FormItem = Form.Item;
-const Option = Select.Option;
+const { Option } = Select;
 
 type Props = {
   form: Object,
@@ -19,7 +18,7 @@ type Props = {
 
 type State = {
   confirmDirty: boolean,
-  organizations: Array<APIOrganizationType>,
+  organizations: Array<string>,
 };
 
 class RegistrationView extends React.PureComponent<Props, State> {
@@ -33,7 +32,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const organizations = await getOrganizations();
+    const organizations = await getOrganizationNames();
 
     this.setState({ organizations });
   }
@@ -52,12 +51,12 @@ class RegistrationView extends React.PureComponent<Props, State> {
   };
 
   handleConfirmBlur = (e: SyntheticInputEvent<>) => {
-    const value = e.target.value;
+    const { value } = e.target;
     this.setState({ confirmDirty: this.state.confirmDirty || !!value });
   };
 
   checkPassword = (rule, value, callback) => {
-    const form = this.props.form;
+    const { form } = this.props;
     if (value && value !== form.getFieldValue("password.password1")) {
       callback(messages["auth.registration_password_missmatch"]);
     } else {
@@ -66,7 +65,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
   };
 
   checkConfirm = (rule, value, callback) => {
-    const form = this.props.form;
+    const { form } = this.props;
     if (value && this.state.confirmDirty) {
       form.validateFields(["confirm"], { force: true });
     }
@@ -88,8 +87,8 @@ class RegistrationView extends React.PureComponent<Props, State> {
         })(
           <Select placeholder="Organization">
             {this.state.organizations.map(organization => (
-              <Option value={organization.name} key={organization.name}>
-                {organization.name}
+              <Option value={organization} key={organization}>
+                {organization}
               </Option>
             ))}
           </Select>,

@@ -47,3 +47,15 @@ test("getLoggedTimes()", async t => {
   const loggedTimes = await api.getLoggedTimes(activeUser.id);
   t.snapshot(loggedTimes, { id: "users-loggedTimes" });
 });
+
+test("getAuthToken()", async t => {
+  const authToken = await api.getAuthToken();
+  t.snapshot(authToken, { id: "users-authToken" });
+});
+
+test("revokeAuthToken()", async t => {
+  // Don't revoke the authToken or all test will fail!!!
+  // Leave the test anyway to remind everyone of this.
+  // await api.revokeAuthToken();
+  t.pass();
+});

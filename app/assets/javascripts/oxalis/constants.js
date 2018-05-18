@@ -35,14 +35,14 @@ export const OrthoViews = {
   PLANE_XZ: "PLANE_XZ",
   TDView: "TDView",
 };
-export const OrthoViewValues = Object.keys(OrthoViews);
+export type OrthoViewType = $Keys<typeof OrthoViews>;
+export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
+export const OrthoViewValues: Array<OrthoViewType> = Object.keys(OrthoViews);
 export const OrthoViewValuesWithoutTDView = [
   OrthoViews.PLANE_XY,
   OrthoViews.PLANE_YZ,
   OrthoViews.PLANE_XZ,
 ];
-export type OrthoViewType = $Keys<typeof OrthoViews>;
-export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
 
 export const OrthoViewColors: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0xff0000,

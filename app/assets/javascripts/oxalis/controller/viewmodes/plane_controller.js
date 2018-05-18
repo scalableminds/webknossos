@@ -215,14 +215,6 @@ class PlaneController extends React.PureComponent<Props> {
 
     const getMoveValue = timeFactor => {
       const state = Store.getState();
-      if (this.activeViewport === OrthoViews.TDView) {
-        return (
-          state.userConfiguration.moveValue *
-          timeFactor /
-          getBaseVoxel(state.dataset.dataSource.scale) /
-          constants.FPS
-        );
-      }
       return (
         state.userConfiguration.moveValue *
         timeFactor /

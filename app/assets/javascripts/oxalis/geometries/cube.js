@@ -145,7 +145,7 @@ class Cube {
     }
   }
 
-  getMeshes() {
+  getMeshes(): Array<typeof THREE.Line> {
     return [this.cube].concat(_.values(this.crossSections));
   }
 

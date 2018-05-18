@@ -29,14 +29,14 @@ export const OrthoViews = {
   PLANE_XZ: "PLANE_XZ",
   TDView: "TDView",
 };
-export const OrthoViewValues = Object.keys(OrthoViews);
+export type OrthoViewType = $Keys<typeof OrthoViews>;
+export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
+export const OrthoViewValues: Array<OrthoViewType> = Object.keys(OrthoViews);
 export const OrthoViewValuesWithoutTDView = [
   OrthoViews.PLANE_XY,
   OrthoViews.PLANE_YZ,
   OrthoViews.PLANE_XZ,
 ];
-export type OrthoViewType = $Keys<typeof OrthoViews>;
-export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
 
 export const OrthoViewColors: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0xff0000,
@@ -67,6 +67,10 @@ export const VolumeToolEnum = {
 };
 export type VolumeToolType = $Keys<typeof VolumeToolEnum>;
 
+export function volumeToolEnumToIndex(volumeTool: ?VolumeToolType): number {
+  return Object.keys(VolumeToolEnum).indexOf(volumeTool);
+}
+
 export const ContourModeEnum = {
   IDLE: "IDLE",
   DRAW: "DRAW",
@@ -89,15 +93,23 @@ const Constants = {
 
   DEFAULT_SEG_ALPHA: 20,
 
+  BUCKET_WIDTH: 32,
+  BUCKET_SIZE: 32 ** 3,
   // The plane in orthogonal mode is a little smaller than the viewport
   // as there are two borders with width 2px each => 8px
   PLANE_WIDTH: 376,
   VIEWPORT_WIDTH: 384,
   // The size of the gap between the 4 viewports in the orthogonal mode
   VIEWPORT_GAP_WIDTH: 20,
-  TEXTURE_WIDTH: 512,
-  TEXTURE_SIZE_P: 9,
+
+  LOOK_UP_TEXTURE_WIDTH: 128,
+  MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION: 17,
+  // Historically, this width decided at which point which zoom step was picked.
+  // There is no specific reason why this exact size has to be chosen. As long as enough buckets are sent
+  // to the GPU (MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION) this width can be increased or decreased.
+  MAX_RENDERING_TARGET_WIDTH: 512 - 32 - 1,
   DISTANCE_3D: 140,
+  MAX_TEXTURE_COUNT_PER_LAYER: 1,
 
   TDView_MOVE_SPEED: 150,
   MIN_MOVE_VALUE: 30,
@@ -118,6 +130,11 @@ const Constants = {
   MAX_PARTICLE_SIZE: 20,
 
   ZOOM_DIFF: 0.1,
+
+  // We always add another (read: one) zoomstep level by downsampling buckets from the highest
+  // available zoomstep. This allows to zoom out far enough while still being able to load enough
+  // buckets to the GPU.
+  DOWNSAMPLED_ZOOM_STEP_COUNT: 1,
 
   RESIZE_THROTTLE_TIME: 250,
 

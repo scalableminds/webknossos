@@ -81,7 +81,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[ProjectSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[ProjectsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[ProjectsRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -89,7 +89,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
   override def findAll(implicit ctx: DBAccessContext): Fox[List[ProjectSQL]] = {
     for {
       accessQuery <- readAccessQuery
-      r <- run(sql"select * from #${existingCollectionName} where #${accessQuery} order by created".as[ProjectsRow])
+      r <- run(sql"select #${columns} from #${existingCollectionName} where #${accessQuery} order by created".as[ProjectsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
@@ -97,7 +97,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[ProjectSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[ProjectsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[ProjectsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed

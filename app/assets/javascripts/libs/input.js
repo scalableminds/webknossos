@@ -246,6 +246,7 @@ class InputMouseButton {
 
   handleMouseDown(event: MouseEvent): void {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
+    // $FlowFixMe Safari doesn't support evt.buttons, but only evt.which is non-standardized
     const eventWhich = event.which !== 0 ? event.which : 1;
     if (eventWhich === this.which) {
       document.activeElement.blur();
@@ -258,6 +259,7 @@ class InputMouseButton {
 
   handleMouseUp(event: MouseEvent, triggeredByTouch: boolean): void {
     // event.which is 0 on touch devices as there are no mouse buttons, interpret that as the left mouse button
+    // $FlowFixMe Safari doesn't support evt.buttons, but only evt.which is non-standardized
     const eventWhich = event.which !== 0 ? event.which : 1;
     if (eventWhich === this.which && this.down) {
       this.mouse.trigger(`${this.name}MouseUp`, event);
@@ -372,7 +374,9 @@ export class InputMouse {
       Utils.addEventListenerWithDelegation(document, "wheel", this.targetSelector, this.mouseWheel),
     );
 
-    this.hammerManager = new Hammer(this.domElement);
+    this.hammerManager = new Hammer(this.domElement, {
+      inputClass: Hammer.TouchInput,
+    });
     this.hammerManager.get("pan").set({ direction: Hammer.DIRECTION_ALL });
     this.hammerManager.get("pinch").set({ enable: true });
     this.hammerManager.on("panstart", (evt: HammerJsEvent) => this.mouseDown(evt.srcEvent));
@@ -479,8 +483,8 @@ export class InputMouse {
   isButtonPressed(evt: MouseEvent): boolean {
     if (evt.buttons != null) {
       return evt.buttons !== 0;
+      // $FlowFixMe Safari doesn't support evt.buttons, but only evt.which is non-standardized
     } else if (evt.which) {
-      // Safari doesn't support evt.buttons
       return evt.which !== 0;
     }
 

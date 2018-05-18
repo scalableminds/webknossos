@@ -60,7 +60,7 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[OrganizationSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select * from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[OrganizationsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[OrganizationsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield {
@@ -91,34 +91,6 @@ case class Organization(
 object Organization extends FoxImplicits {
 
   val organizationFormat = Json.format[Organization]
-
-  def organizationPublicWrites(organization: Organization, requestingUser: User)(implicit ctx: DBAccessContext): Future[JsObject] =
-    for {
-      teams <- Fox.combined(organization.teams.map(TeamDAO.findOneById(_).map(_.name))).futureBox
-    } yield {
-      Json.obj(
-        "id" -> organization.id,
-        "name" -> organization.name,
-        "teams" -> teams.toOption,
-        "organizationTeam" -> organization.organizationTeam)
-    }
-
-  def organizationPublicWritesBasic(organization: Organization)(implicit ctx: DBAccessContext): Future[JsObject] =
-    for {
-      teams <- Fox.combined(organization.teams.map(TeamDAO.findOneById(_).map(_.name))).futureBox
-    } yield {
-      Json.obj(
-        "id" -> organization.id,
-        "name" -> organization.name,
-        "teams" -> teams.toOption,
-        "organizationTeam" -> organization.organizationTeam)
-    }
-
-  def organizationsPublicReads(requestingUser: User): Reads[Organization] =
-    ((__ \ "name").read[String](Reads.minLength[String](3)) and
-      (__ \ "teams").read[List[BSONObjectID]] and
-      (__ \ "organizationTeam").read[String](JsonFormatHelper.StringObjectIdReads("organizationTeam"))
-      ) ((name, teams, organizationTeam) => Organization(name, teams, BSONObjectID(organizationTeam)))
 
   def fromOrganizationSQL(o: OrganizationSQL)(implicit ctx: DBAccessContext) = {
     for {

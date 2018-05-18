@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.tracings._
 import com.scalableminds.webknossos.datastore.tracings.skeleton.updating._
 import net.liftweb.common.{Empty, Full}
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.json.Json
+import play.api.libs.json.{Json, Writes}
 
 class SkeletonTracingService @Inject()(
                                         tracingDataStore: TracingDataStore,
@@ -34,9 +34,8 @@ class SkeletonTracingService @Inject()(
 
   def currentVersion(tracingId: String): Fox[Long] = tracingDataStore.skeletonUpdates.getVersion(tracingId, mayBeEmpty = Some(true)).getOrElse(0L)
 
-  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] = {
-    tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions)
-  }
+  def handleUpdateGroup(tracingId: String, updateActionGroup: UpdateActionGroup[SkeletonTracing]): Fox[_] =
+    tracingDataStore.skeletonUpdates.put(tracingId, updateActionGroup.version, updateActionGroup.actions.map(_.addTimestamp(updateActionGroup.timestamp)))
 
   override def applyPendingUpdates(tracing: SkeletonTracing, tracingId: String, desiredVersion: Option[Long]): Fox[SkeletonTracing] = {
     val existingVersion = tracing.version
@@ -84,7 +83,7 @@ class SkeletonTracingService @Inject()(
         case Full(tracing) => {
           remainingUpdates match {
             case List() => Fox.successful(tracing)
-            case RevertToVersionAction(sourceVersion) :: tail => {
+            case RevertToVersionAction(sourceVersion, actionTimestamp) :: tail => {
               val sourceTracing = find(tracingId, Some(sourceVersion), useCache = false, applyUpdates = true)
               updateIter(sourceTracing, tail)
             }
@@ -138,7 +137,8 @@ class SkeletonTracingService @Inject()(
     } yield {
       Json.obj(
         "updateTracingActionCount" -> updateActions.count(updateAction => updateAction match {case a: UpdateTracingSkeletonAction => true case _ => false}),
-        "createNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: CreateNodeSkeletonAction => true case _ => false})
+        "createNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: CreateNodeSkeletonAction => true case _ => false}),
+        "deleteNodeActionCount" -> updateActions.count(updateAction => updateAction match {case a: DeleteNodeSkeletonAction => true case _ => false})
       )
     }
   }

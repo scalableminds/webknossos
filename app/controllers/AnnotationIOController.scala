@@ -21,6 +21,7 @@ import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
+import utils.ObjectId
 
 import scala.concurrent.Future
 
@@ -164,17 +165,11 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
   def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext) = {
-    def createProjectZip(project: Project) =
-      for {
-        tasks <- TaskDAO.findAllByProject(project.name)
-        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state == Finished))
-        zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
-      } yield zip
-
     for {
       project <- ProjectDAO.findOneById(projectId) ?~> Messages("project.notFound", projectId)
-      _ <- user.teamManagerTeamIds.contains(project._team) ?~> Messages("notAllowed")
-      zip <- createProjectZip(project)
+      _ <- user.assertTeamManagerOrAdminOf(project._team)
+      annotations <- AnnotationDAO.findFinishedForProject(projectId)
+      zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {
       Ok.sendFile(zip.file)
     }

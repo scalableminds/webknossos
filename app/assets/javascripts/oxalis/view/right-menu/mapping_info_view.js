@@ -10,9 +10,11 @@ import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import type { Vector3 } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
+import _ from "lodash";
 
 type Props = {
   position: Vector3,
+  isMappingEnabled: boolean,
 };
 
 class MappingInfoView extends Component<Props> {
@@ -30,9 +32,9 @@ class MappingInfoView extends Component<Props> {
     cube.off("newMapping", this._forceUpdate);
   }
 
-  _forceUpdate = () => {
+  _forceUpdate = _.throttle(() => {
     this.forceUpdate();
-  };
+  }, 100);
 
   getCube(): Cube {
     return Model.getSegmentationBinary().cube;
@@ -63,7 +65,7 @@ class MappingInfoView extends Component<Props> {
         {hasMapping ? (
           <div>
             <SwitchSetting
-              value={cube.currentMapping != null}
+              value={this.props.isMappingEnabled}
               onChange={this.handleChangeMappingEnabled}
               label="Enable Mapping"
             />
@@ -75,7 +77,10 @@ class MappingInfoView extends Component<Props> {
 }
 
 function mapStateToProps(state: OxalisState): Props {
-  return { position: getPosition(state.flycam) };
+  return {
+    position: getPosition(state.flycam),
+    isMappingEnabled: state.temporaryConfiguration.isMappingEnabled,
+  };
 }
 
 export default connect(mapStateToProps)(MappingInfoView);

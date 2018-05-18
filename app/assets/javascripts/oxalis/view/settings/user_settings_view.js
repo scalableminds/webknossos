@@ -1,4 +1,5 @@
 /**
+
  * tracing_settings_view.js
  * @flow
  */
@@ -37,7 +38,7 @@ type UserSettingsViewProps = {
   userConfiguration: UserConfigurationType,
   tracing: TracingType,
   zoomStep: number,
-  state: OxalisState,
+  maxZoomStep: number,
   onChangeUser: (key: $Keys<UserConfigurationType>, value: any) => void,
   onChangeActiveNodeId: (value: number) => void,
   onChangeActiveTreeId: (value: number) => void,
@@ -68,7 +69,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               label="Zoom"
               roundTo={3}
               min={0.001}
-              max={getMaxZoomStep(this.props.state)}
+              max={this.props.maxZoomStep}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
@@ -103,7 +104,7 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               label="Zoom"
               roundTo={3}
               min={0.1}
-              max={getMaxZoomStep(this.props.state)}
+              max={this.props.maxZoomStep}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
@@ -336,7 +337,7 @@ const mapStateToProps = (state: OxalisState) => ({
   userConfiguration: state.userConfiguration,
   tracing: state.tracing,
   zoomStep: state.flycam.zoomStep,
-  state,
+  maxZoomStep: getMaxZoomStep(state),
   viewMode: state.temporaryConfiguration.viewMode,
   controlMode: state.temporaryConfiguration.controlMode,
 });

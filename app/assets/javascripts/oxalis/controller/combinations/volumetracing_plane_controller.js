@@ -22,7 +22,6 @@ import {
   startEditingAction,
   addToLayerAction,
   finishEditingAction,
-  setBrushPositionAction,
   hideBrushAction,
   setBrushSizeAction,
   setContourTracingMode,
@@ -200,14 +199,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
             this.calculateGlobalPos(pos),
           );
           this.handleCellSelection(cellId);
-        }
-      },
-
-      mouseMove: (delta: Point2, position: Point2) => {
-        const tool = getVolumeTool(Store.getState().tracing).get();
-
-        if (tool === VolumeToolEnum.BRUSH) {
-          Store.dispatch(setBrushPositionAction([position.x, position.y]));
         }
       },
 

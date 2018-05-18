@@ -3,7 +3,7 @@
  * @flow
  */
 import Maybe from "data.maybe";
-import { getIntegerZoomStep } from "oxalis/model/accessors/flycam_accessor";
+import { getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import type { TracingType, VolumeTracingType, OxalisState } from "oxalis/store";
 import type { VolumeToolType, ContourModeType } from "oxalis/constants";
 
@@ -40,5 +40,9 @@ export function getContourTracingMode(tracing: TracingType): Maybe<ContourModeTy
 }
 
 export function isVolumeTracingDisallowed(state: OxalisState) {
-  return getIntegerZoomStep(state) > 1;
+  return getRequestLogZoomStep(state) > 1;
+}
+
+export function displaysUnsampledVolumeData(state: OxalisState): boolean {
+  return getRequestLogZoomStep(state) === 1;
 }

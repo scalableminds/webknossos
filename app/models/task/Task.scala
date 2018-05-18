@@ -145,25 +145,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
   private def findNextTaskQ(userId: ObjectId, teamIds: List[ObjectId]) =
     s"""
-<<<<<<< HEAD
-        select webknossos.tasks_.*
-                   from
-                     (webknossos.tasks_
-                     join webknossos.task_instances on webknossos.tasks_._id = webknossos.task_instances._id)
-                     join
-                       (select *
-                        from webknossos.user_experiences
-                        where _user = '${userId.id}')
-                       as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
-                     join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-                     left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
-                   where webknossos.task_instances.openInstances > 0
-                         and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
-                         and userAnnotations._task is null
-                         and not webknossos.projects_.paused
-                   order by webknossos.projects_.priority desc
-                   limit 1
-=======
         select ${columnsWithPrefix("webknossos.tasks_.")}
            from
              webknossos.tasks_
@@ -176,12 +157,11 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
              left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.task_instances.openInstances > 0
-                 and webknossos.tasks_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+                 and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
                  and not webknossos.projects_.paused
            order by webknossos.projects_.priority desc
            limit 1
->>>>>>> 18573190984dff4d7085dfffeaec64744929b5de
       """
 
   def assignNext(userId: ObjectId, teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[(TaskSQL, ObjectId)] = {

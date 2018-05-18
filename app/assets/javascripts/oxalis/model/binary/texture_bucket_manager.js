@@ -22,7 +22,6 @@ import { getRenderer } from "oxalis/controller/renderer";
 // writing buckets to the data texture (i.e., "committing the buckets").
 
 const lookUpBufferWidth = constants.LOOK_UP_TEXTURE_WIDTH;
-const addressableCubesWidth = 20;
 
 // At the moment, we only store one float f per bucket.
 // If f >= 0, f denotes the index in the data texture where the bucket is stored.
@@ -280,17 +279,10 @@ export default class TextureBucketManager {
     const y = bucketPosition[1] - anchorPoint[1];
     const z = bucketPosition[2] - anchorPoint[2];
 
-    if (x < 0 || y < 0 || z < 0) {
-      window.outOfAnchorPoint = (window.outOfAnchorPoint || 0) + 1;
-      // console.log("outOfAnchorPoint", window.outOfAnchorPoint, x, y, z);
-
-      // debugger;
-    }
-
     return (
-      Math.pow(addressableCubesWidth, 3) * zoomDiff +
-      Math.pow(addressableCubesWidth, 2) * z +
-      addressableCubesWidth * y +
+      Math.pow(this.bucketsPerDim, 3) * zoomDiff +
+      Math.pow(this.bucketsPerDim, 2) * z +
+      this.bucketsPerDim * y +
       x
     );
   }

@@ -74,8 +74,6 @@ export class DslSlowPingStrategy3d extends PingStrategy3d {
       const bucketY = testAddresses[i++];
       const bucketZ = testAddresses[i++];
 
-      // todo: if testing shows that everything is fine, we can remove the polyhedron_rasterizer
-      // priority has always been 0? was testAddresses ordered implicitly by collectPointsOnion
       pullQueue.push({ bucket: [bucketX, bucketY, bucketZ, zoomStep], priority: 0 });
     }
     return pullQueue;

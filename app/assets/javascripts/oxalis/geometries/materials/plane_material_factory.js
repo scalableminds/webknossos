@@ -426,13 +426,13 @@ varying vec4 worldCoord;
 varying vec4 modelCoord;
 varying mat4 savedModelMatrix;
 
-const float bucketsPerDim = 20.0; // todo! <%= bucketsPerDim %>;
+const float bucketsPerDim = <%= bucketsPerDim %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
 const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
 
-// For some reason, taking the dataset scale from the uniform results in imprecise
+// For some reason, taking the dataset scale from the uniform results is imprecise
 // rendering of the brush circle (and issues in the arbitrary modes). That's why it
 // is directly inserted into the source via templating.
 const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
@@ -893,7 +893,6 @@ vec4 getMaybeFilteredColorOrFallback(
   vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, suppressBilinearFiltering, 0.0);
 
   if (color.a < 0.0 && hasFallback) {
-    // color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, 1.0).rgba;
     color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, suppressBilinearFiltering, 1.0).rgba;
     if (color.a < 0.0) {
       // Render gray for not-yet-existing data
@@ -1011,8 +1010,6 @@ void main() {
   float color_value  = 0.0;
 
   vec3 worldCoordUVW = getWorldCoordUVW();
-  // gl_FragColor = vec4(worldCoordUVW, 1.0);
-  // return;
   vec3 coords = getRelativeCoords(worldCoordUVW, zoomStep);
 
   vec3 bucketPosition = div(floor(coords), bucketWidth);

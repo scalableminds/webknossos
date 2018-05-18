@@ -49,8 +49,8 @@ function formatNumberAsGLSLFloat(aNumber: number): string {
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   planeID: OrthoViewType;
 
-  constructor(tWidth: number, textures: TextureMapType, planeID: OrthoViewType, shaderId: number) {
-    super(tWidth, textures, shaderId);
+  constructor(tWidth: number, planeID: OrthoViewType, shaderId: number) {
+    super(tWidth, shaderId);
     this.planeID = planeID;
   }
 

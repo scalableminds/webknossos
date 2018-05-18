@@ -92,7 +92,7 @@ class ArbitraryPlane {
   }
 
   createMesh() {
-    this.textureMaterial = new PlaneMaterialFactory(0, {}, OrthoViews.PLANE_XY, 4)
+    this.textureMaterial = new PlaneMaterialFactory(0, OrthoViews.PLANE_XY, 4)
       .setup()
       .getMaterial();
 

@@ -21,7 +21,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
-      (__ \ 'owner).read[String] (JsonFormatHelper.StringObjectIdReads("team"))) (Script.fromForm _)
+      (__ \ 'owner).read[String] (JsonFormatHelper.StringObjectIdReads("owner"))) (Script.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>

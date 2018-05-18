@@ -180,7 +180,8 @@ object AnnotationService
     taskFox: Fox[Task],
     userId: BSONObjectID,
     tracingReferenceBox: Box[TracingReference],
-    dataSetName: String
+    dataSetName: String,
+    description: Option[String]
     )(implicit ctx: DBAccessContext) = {
 
     for {
@@ -188,7 +189,7 @@ object AnnotationService
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
       _ <- Annotation(userId, tracingReference, dataSetName, task._team, taskType.settings,
-          typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
+          typ = AnnotationType.TracingBase, _task = Some(task._id), description = description.getOrElse("")).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
 

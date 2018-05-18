@@ -78,7 +78,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def create = SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
     createTasks(request.body.map { params =>
       val tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
-      (params, tracing, None)
+      (params, tracing, None, None)
     })
   }
 
@@ -96,17 +96,17 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       namedTracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
       namedTracings <- Fox.combined(namedTracingFoxes) ?~> Messages("task.create.failed")
-      result <- createTasks(namedTracings.map(t => (buildFullParams(params, t._1), t._1, Some(t._2))))
+      result <- createTasks(namedTracings.map(t => (buildFullParams(params, t._1), t._1, Some(t._2), Some(t._3))))
     } yield {
       result
     }
   }
 
-  private def parseResultToSkeletonTracingFox(parseResult: NmlService.NmlParseResult): Fox[(SkeletonTracing, String)] = parseResult match {
+  private def parseResultToSkeletonTracingFox(parseResult: NmlService.NmlParseResult): Fox[(SkeletonTracing, String, String)] = parseResult match {
     case NmlService.NmlParseFailure(fileName, error) =>
       Fox.failure(Messages("nml.file.invalid", fileName, error))
     case NmlService.NmlParseSuccess(fileName, (Left(skeletonTracing), description)) =>
-      Fox.successful((skeletonTracing, fileName))
+      Fox.successful((skeletonTracing, fileName, description))
     case _ =>
       Fox.failure(Messages("nml.file.invalid"))
   }
@@ -125,9 +125,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       tracing.editRotation)
   }
 
-  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing, Option[String])])(implicit request: SecuredRequest[_]): Fox[Result] = {
+  def createTasks(requestedTasks: List[(TaskParameters, SkeletonTracing, Option[String], Option[String])])(implicit request: SecuredRequest[_]): Fox[Result] = {
     def assertAllOnSameDataset(): Fox[String] = {
-      def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing, Option[String])], dataSetName: String): Boolean = {
+      def allOnSameDatasetIter(requestedTasksRest: List[(TaskParameters, SkeletonTracing, Option[String], Option[String])], dataSetName: String): Boolean = {
         requestedTasksRest match {
           case List() => true
           case head :: tail => head._1.dataSet == dataSetName && allOnSameDatasetIter(tail, dataSetName)
@@ -151,7 +151,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
         taskFox = tuple._3,
         request.identity._id,
         tracingReferenceBox = tuple._2,
-        dataSetName))
+        dataSetName,
+        description = tuple._1._4
+      ))
       zippedTasksAndAnnotations = taskObjects zip annotationBases
       taskJsons = zippedTasksAndAnnotations.map(tuple => Task.transformToJsonFoxed(tuple._1, tuple._2))
       result <- {

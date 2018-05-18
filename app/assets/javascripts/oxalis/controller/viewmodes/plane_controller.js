@@ -102,14 +102,16 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    for (const id of OrthoViewValues) {
+    OrthoViewValues.forEach(id => {
       const inputcatcherSelector = `#inputcatcher_${OrthoViews[id]}`;
-      this.input.mouseControllers[id] = new InputMouse(
-        inputcatcherSelector,
-        id !== OrthoViews.TDView ? this.getPlaneMouseControls(id) : this.getTDViewMouseControls(),
-        id,
-      );
-    }
+      Utils.waitForSelector(inputcatcherSelector).then(() => {
+        this.input.mouseControllers[id] = new InputMouse(
+          inputcatcherSelector,
+          id !== OrthoViews.TDView ? this.getPlaneMouseControls(id) : this.getTDViewMouseControls(),
+          id,
+        );
+      });
+    });
   }
 
   getTDViewMouseControls(): Object {
@@ -183,23 +185,24 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   initTrackballControls(): void {
-    const view = document.getElementById("inputcatcher_TDView");
-    const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
-    const tdCamera = this.planeView.getCameras()[OrthoViews.TDView];
-    this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
-      // write threeJS camera into store
-      Store.dispatch(setTDCameraAction(threeCameraToCameraData(tdCamera)));
+    Utils.waitForSelector("#inputcatcher_TDView").then(view => {
+      const pos = voxelToNm(this.props.scale, getPosition(this.props.flycam));
+      const tdCamera = this.planeView.getCameras()[OrthoViews.TDView];
+      this.controls = new TrackballControls(tdCamera, view, new THREE.Vector3(...pos), () => {
+        // write threeJS camera into store
+        Store.dispatch(setTDCameraAction(threeCameraToCameraData(tdCamera)));
+      });
+
+      this.controls.noZoom = true;
+      this.controls.noPan = true;
+      this.controls.staticMoving = true;
+
+      this.controls.target.set(...pos);
+
+      // This is necessary, since we instantiated this.controls now. This should be removed
+      // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
+      this.forceUpdate();
     });
-
-    this.controls.noZoom = true;
-    this.controls.noPan = true;
-    this.controls.staticMoving = true;
-
-    this.controls.target.set(...pos);
-
-    // This is necessary, since we instantiated this.controls now. This should be removed
-    // when the workaround with requestAnimationFrame(initInputHandlers) is removed.
-    this.forceUpdate();
   }
 
   initKeyboard(): void {

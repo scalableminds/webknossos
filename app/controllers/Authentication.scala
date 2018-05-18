@@ -316,8 +316,11 @@ class Authentication @Inject()(
     } yield result
   }
 
-  def logout = SecuredAction.async { implicit request =>
-    env.authenticatorService.discard(request.authenticator, Ok)
+  def logout = UserAwareAction.async { implicit request =>
+    request.authenticator match {
+      case Some(authenticator) => env.authenticatorService.discard(authenticator, Ok)
+      case _ => Future.successful(Ok)
+    }
   }
 
   def singleSignOn(sso: String, sig: String) = UserAwareAction.async { implicit request =>

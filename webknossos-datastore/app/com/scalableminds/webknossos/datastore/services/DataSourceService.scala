@@ -22,8 +22,6 @@ import net.liftweb.common._
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.inject.ApplicationLifecycle
-import play.api.libs.json.{JsValue, Json}
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -67,21 +65,24 @@ class DataSourceService @Inject()(
     }
   }
 
-  def handleUpload(id: DataSourceId, dataSetZip: File): Box[Unit] = {
+  def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
     val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
     PathUtils.ensureDirectory(dataSourceDir)
 
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
 
-    ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true) match {
-      case Full(_) =>
-        dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
-        Full(())
-      case e =>
-        val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
-        logger.warn(errorMsg)
-        Failure(errorMsg)
-    }
+    for {
+      _ <- Fox.successful(())
+      unzipResult = ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true)
+      _ <- unzipResult match {
+        case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
+        case e => {
+          val errorMsg = s"Error unzipping uploaded dataset to $dataSourceDir: $e"
+          logger.warn(errorMsg)
+          Fox.failure(errorMsg)
+        }
+      }
+    } yield ()
   }
 
   def exploreDataSource(id: DataSourceId, previous: Option[DataSource]): Box[(DataSource, List[(String, String)])] = {
@@ -123,13 +124,13 @@ class DataSourceService @Inject()(
     }
   }
 
-  def updateDataSource(dataSource: DataSource): Box[Unit] = {
-    validateDataSource(dataSource).flatMap { _ =>
-      val propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
-      JsonHelper.jsonToFile(propertiesFile, dataSource).map { _ =>
-        dataSourceRepository.updateDataSource(dataSource)
-      }
-    }
+  def updateDataSource(dataSource: DataSource): Fox[Unit] = {
+    for {
+      _ <- validateDataSource(dataSource).toFox
+      propertiesFile = dataBaseDir.resolve(dataSource.id.team).resolve(dataSource.id.name).resolve(propertiesFileName)
+      _ = JsonHelper.jsonToFile(propertiesFile, dataSource)
+      _ <- dataSourceRepository.updateDataSource(dataSource)
+    } yield ()
   }
 
   private def teamAwareInboxSources(path: Path): List[InboxDataSource] = {

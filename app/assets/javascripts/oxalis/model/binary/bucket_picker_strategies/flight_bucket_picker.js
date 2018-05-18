@@ -111,7 +111,7 @@ export default function determineBucketsForFlight(
         const closestDist = V3.scaledSquaredDist(cameraPosition, closest, inverseScale);
         const farthestDist = V3.scaledSquaredDist(cameraPosition, farthest, inverseScale);
 
-        const collisionTolerance = 0.02;
+        const collisionTolerance = 0.05;
         const doesCollide =
           (1 - collisionTolerance) * closestDist <= squaredRadius &&
           (1 + collisionTolerance) * farthestDist >= squaredRadius;

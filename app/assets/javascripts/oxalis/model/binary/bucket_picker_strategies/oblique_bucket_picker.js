@@ -26,11 +26,15 @@ export default function determineBucketsForOblique(
 
   const enlargementFactor = 1.1;
   const enlargedExtent = 384 * enlargementFactor;
-  // todo: tweak this number
   const steps = 25;
   const stepSize = enlargedExtent / steps;
   const enlargedHalfExtent = enlargedExtent / 2;
-  const rotatedPlane = M4x4.transformVectorsAffine(
+
+  // This array holds the start and end points
+  // of horizontal lines which cover the entire rendered plane.
+  // These "scan lines" are traversed to find out which buckets need to be
+  // sent to the GPU.
+  const scanLinesPoints = M4x4.transformVectorsAffine(
     queryMatrix,
     _.flatten(
       _.range(steps + 1).map(idx => [
@@ -43,7 +47,7 @@ export default function determineBucketsForOblique(
   );
 
   let traversedBuckets = _.flatten(
-    chunk2(rotatedPlane).map(([a, b]: [Vector3, Vector3]) =>
+    chunk2(scanLinesPoints).map(([a, b]: [Vector3, Vector3]) =>
       traverse(a, b, binary.layer.resolutions, logZoomStep),
     ),
   );
@@ -61,7 +65,6 @@ export default function determineBucketsForOblique(
     );
   }
 
-  const missingBuckets = [];
   const centerAddress = globalPositionToBucketPosition(
     getPosition(Store.getState().flycam),
     binary.layer.resolutions,
@@ -73,16 +76,7 @@ export default function determineBucketsForOblique(
 
     if (bucket.type !== "null") {
       const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);
-
       bucketQueue.queue({ bucket, priority });
-
-      if (!bucket.hasData()) {
-        // Priority is set to -1 since we need these buckets need to be fetched immediately
-        missingBuckets.push({ bucket: bucket.zoomedAddress, priority: -1 });
-      }
     }
   }
-
-  binary.pullQueue.addAll(missingBuckets);
-  binary.pullQueue.pull();
 }

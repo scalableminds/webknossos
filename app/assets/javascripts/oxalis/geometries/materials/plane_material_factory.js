@@ -245,6 +245,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       zoomStep => {
         this.uniforms.zoomStep.value = zoomStep;
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -252,6 +253,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       sphericalCapRadius => {
         this.uniforms.sphericalCapRadius.value = sphericalCapRadius;
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -259,6 +261,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       zoomStep => {
         this.uniforms.zoomValue.value = zoomStep;
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -266,6 +269,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       mappingSize => {
         this.uniforms.mappingSize.value = mappingSize;
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -273,6 +277,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       viewMode => {
         this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -280,6 +285,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       pixelToVoxelFactor => {
         this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -287,6 +293,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       isMouseInActiveViewport => {
         this.uniforms.isMouseInActiveViewport.value = isMouseInActiveViewport;
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -294,6 +301,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       highlightHoveredCellId => {
         this.uniforms.highlightHoveredCellId.value = highlightHoveredCellId;
       },
+      true,
     );
 
     const segmentationBinary = Model.getSegmentationBinary();
@@ -318,6 +326,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
           this.uniforms.globalMousePosition.value.set(x, y, z);
           this.uniforms.isMouseInCanvas.value = true;
         },
+        true,
       );
 
       listenToStoreProperty(
@@ -325,6 +334,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         brushSize => {
           this.uniforms.brushSizeInPixel.value = brushSize;
         },
+        true,
       );
 
       listenToStoreProperty(
@@ -334,6 +344,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
           // for high values
           this.uniforms.activeCellId.value = activeCellId % 256;
         },
+        true,
       );
 
       listenToStoreProperty(
@@ -341,6 +352,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         volumeTool => {
           this.uniforms.activeVolumeToolIndex.value = volumeTool;
         },
+        true,
       );
     }
   }

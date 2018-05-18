@@ -322,11 +322,9 @@ export class DataBucket {
 export class NullBucket {
   type: "null" = "null";
   isOutOfBoundingBox: boolean;
-  isTemporalData: true;
 
   constructor(isOutOfBoundingBox: boolean) {
     this.isOutOfBoundingBox = isOutOfBoundingBox;
-    this.isTemporalData = true;
   }
 
   hasData(): boolean {

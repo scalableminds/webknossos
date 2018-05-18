@@ -3,8 +3,6 @@
  * @flow
  */
 
-import _ from "lodash";
-import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import constants, { OrthoViews } from "oxalis/constants";
 import type { Vector4 } from "oxalis/constants";
@@ -36,8 +34,6 @@ class ArbitraryPlane {
 
   constructor() {
     this.isDirty = true;
-    _.extend(this, BackboneEvents);
-
     this.mesh = this.createMesh();
 
     Store.subscribe(() => {
@@ -47,7 +43,6 @@ class ArbitraryPlane {
 
   updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
     if (anchorPoint) {
-      console.log("setAnchorPoint");
       this.mesh.material.setAnchorPoint(anchorPoint);
     }
     if (fallbackAnchorPoint) {
@@ -68,7 +63,6 @@ class ArbitraryPlane {
       const { mesh } = this;
 
       const matrix = getZoomedMatrix(Store.getState().flycam);
-
       mesh.matrix.set(
         matrix[0],
         matrix[4],
@@ -94,7 +88,6 @@ class ArbitraryPlane {
       this.isDirty = false;
 
       SceneController.update(this);
-      console.log("trigger SceneController update");
     }
   }
 

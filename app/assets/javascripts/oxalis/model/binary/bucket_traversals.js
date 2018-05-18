@@ -3,7 +3,7 @@ import type { Vector3 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
   globalPositionToBucketPosition,
-  bucketPositionToGlobalAddress,
+  getBucketExtent
 } from "oxalis/model/helpers/position_converter";
 
 // This module implements the algorithm presented in this paper:
@@ -27,7 +27,7 @@ export default function traverse(
   // The integer variables X and Y are initialized to the starting voxel coordinates.
   let [X, Y, Z] = uBucket;
 
-  const voxelSize = bucketPositionToGlobalAddress([1, 1, 1, zoomStep], resolutions);
+  const voxelSize = getBucketExtent(resolutions, zoomStep);
 
   // In addition, the variables stepX and stepY are initialized to either 1 or -1 indicating whether X and Y are
   // incremented or decremented as the ray crosses voxel boundaries (this is determined by the sign of the x and y components of → v).

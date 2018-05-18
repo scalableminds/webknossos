@@ -16,8 +16,6 @@ import window from "libs/window";
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
-  on: Function;
-  listenTo: Function;
 
   animate: () => void;
   resize: () => void;

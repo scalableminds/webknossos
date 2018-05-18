@@ -5,13 +5,11 @@
 
 import _ from "lodash";
 import * as THREE from "three";
-import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
 import type { CategoryType } from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
 import DataCube from "oxalis/model/binary/data_cube";
 import PullQueue from "oxalis/model/binary/pullqueue";
-import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import {
   PingStrategy,
@@ -122,10 +120,6 @@ class Binary {
     fallbackAnchorPoint: [0, 0, 0, 0],
   };
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-  current3DPingedBuckets: Array<PullQueueItemType> = [];
-
   constructor(
     layer: Layer,
     connectionInfo: ConnectionInfo,
@@ -135,7 +129,6 @@ class Binary {
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
-    _.extend(this, BackboneEvents);
 
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
@@ -316,7 +309,6 @@ class Binary {
     const { viewMode } = Store.getState().temporaryConfiguration;
     const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
     const { sphericalCapRadius } = Store.getState().userConfiguration;
-    console.log(viewMode);
     if (
       isAnchorPointNew ||
       isFallbackAnchorPointNew ||
@@ -338,7 +330,6 @@ class Binary {
       });
 
       if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-        console.log("determineBucketsForOblique");
         determineBucketsForOblique(
           this,
           bucketQueue,
@@ -348,7 +339,6 @@ class Binary {
           isFallbackAvailable,
         );
       } else if (viewMode === constants.MODE_ARBITRARY) {
-        console.log("determineBucketsForFlight");
         determineBucketsForFlight(
           this,
           bucketQueue,
@@ -358,7 +348,6 @@ class Binary {
           isFallbackAvailable,
         );
       } else {
-        console.log("determineBucketsForOrthogonal");
         determineBucketsForOrthogonal(
           this,
           bucketQueue,
@@ -382,6 +371,13 @@ class Binary {
         this.anchorPointCache.anchorPoint,
         this.anchorPointCache.fallbackAnchorPoint,
       );
+
+      // In general, pull buckets which are not available but should be sent to the GPU
+      const missingBuckets = buckets
+        .filter(bucket => !bucket.hasData())
+        .map(bucket => ({ bucket: bucket.zoomedAddress, priority: -1 }));
+      this.pullQueue.addAll(missingBuckets);
+      this.pullQueue.pull();
     }
 
     return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
@@ -486,8 +482,6 @@ class Binary {
       ) {
         this.pullQueue.clearNormalPriorities();
         const buckets = strategy.ping(matrix, zoomStep);
-        // console.log("buckets", buckets);
-        this.current3DPingedBuckets = buckets;
         this.pullQueue.addAll(buckets);
         break;
       }

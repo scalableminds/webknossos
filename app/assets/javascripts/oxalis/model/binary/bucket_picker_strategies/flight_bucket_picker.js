@@ -32,7 +32,9 @@ export default function determineBucketsForFlight(
 
   const sphericalCapRadius = Store.getState().userConfiguration.sphericalCapRadius;
   const cameraVertex = [0, 0, -sphericalCapRadius];
-  let rotatedPlane = M4x4.transformVectorsAffine(
+
+  // This array holds the four corners and the center point of the rendered plane
+  let planePoints = M4x4.transformVectorsAffine(
     queryMatrix,
     [
       [-enlargedHalfExtent, -enlargedHalfExtent, 0],
@@ -55,12 +57,12 @@ export default function determineBucketsForFlight(
 
   const inverseScale = V3.divide3([1, 1, 1], matrixScale);
 
-  rotatedPlane = rotatedPlane.map((position: Vector3) =>
+  planePoints = planePoints.map((position: Vector3) =>
     globalPositionToBucketPosition(position, binary.layer.resolutions, logZoomStep),
   );
 
   const aggregatePerDimension = aggregateFn =>
-    [0, 1, 2].map(dim => aggregateFn(...rotatedPlane.map(pos => pos[dim])));
+    [0, 1, 2].map(dim => aggregateFn(...planePoints.map(pos => pos[dim])));
 
   const boundingBoxBuckets = {
     cornerMin: aggregatePerDimension(Math.min),
@@ -135,7 +137,6 @@ export default function determineBucketsForFlight(
 
   traversedBuckets = traversedBuckets.concat(fallbackBuckets);
 
-  const missingBuckets = [];
   const centerAddress = globalPositionToBucketPosition(
     getPosition(Store.getState().flycam),
     binary.layer.resolutions,
@@ -147,16 +148,7 @@ export default function determineBucketsForFlight(
 
     if (bucket.type !== "null") {
       const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);
-
       bucketQueue.queue({ bucket, priority });
-
-      if (!bucket.hasData()) {
-        // Priority is set to -1 since we need these buckets need to be fetched immediately
-        missingBuckets.push({ bucket: bucket.zoomedAddress, priority: -1 });
-      }
     }
   }
-
-  binary.pullQueue.addAll(missingBuckets);
-  binary.pullQueue.pull();
 }

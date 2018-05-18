@@ -408,7 +408,7 @@ object Task extends FoxImplicits {
 
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      dataSetName <- task.annotationBase.map(_.dataSetName)
+      dataSetName <- task.annotationBase.map(_.dataSetName) ?~> Messages("dataSet.notFound")
       status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))
       scriptInfo <- task._script.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull

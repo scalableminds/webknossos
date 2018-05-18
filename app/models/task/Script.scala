@@ -97,15 +97,15 @@ object Script extends FoxImplicits {
     Script(name, gist, BSONObjectID(_owner))
   }
 
-  def scriptPublicWrites(script: Script)(implicit ctx: DBAccessContext): Future[JsObject] =
+  def scriptPublicWrites(script: Script)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      owner <- UserDAO.findOneById(script._owner).map(User.userCompactWrites.writes).futureBox
+      owner <- UserDAO.findOneById(script._owner).map(User.userCompactWrites.writes)
     } yield {
       Json.obj(
         "id" -> script.id,
         "name" -> script.name,
         "gist" -> script.gist,
-        "owner" -> owner.toOption
+        "owner" -> owner
       )
     }
 

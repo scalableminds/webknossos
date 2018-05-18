@@ -25,6 +25,7 @@ case class TeamSQL(
                   _organization: ObjectId,
                   name: String,
                   created: Long = System.currentTimeMillis(),
+                  isOrganizationTeam: Boolean = false,
                   isDeleted: Boolean = false
                   )
 
@@ -32,12 +33,15 @@ object TeamSQL {
   def fromTeam(t: Team)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
     for {
       organization <- OrganizationSQLDAO.findOneByName(t.organization)
+      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeam(organization._id)
+      teamId = ObjectId.fromBsonId(t._id)
     } yield {
       TeamSQL(
-        ObjectId.fromBsonId(t._id),
+        teamId,
         organization._id,
         t.name,
         System.currentTimeMillis(),
+        organizationTeamId == teamId,
         false
       )
     }
@@ -103,8 +107,8 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   def insertOne(t: TeamSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
-        sqlu"""insert into webknossos.teams(_id, _organization, name, created, isDeleted)
-                  values(${t._id.id}, ${t._organization.id}, ${t.name}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+        sqlu"""insert into webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
+                  values(${t._id.id}, ${t._organization.id}, ${t.name}, ${new java.sql.Timestamp(t.created)}, ${t.isOrganizationTeam}, ${t.isDeleted})
             """)
     } yield ()
 

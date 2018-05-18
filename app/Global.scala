@@ -21,7 +21,7 @@ import play.api.libs.concurrent._
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import reactivemongo.bson.BSONObjectID
-import utils.SQLClient
+import utils.{ObjectId, SQLClient}
 
 import scala.concurrent.Future
 import sys.process._
@@ -113,6 +113,7 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
   val organizationTeamId = BSONObjectID.generate
   val defaultOrganization = Organization("Connectomics department", List(), organizationTeamId)
   val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)
+  val organizationTeamSQL = TeamSQL(ObjectId.fromBsonId(organizationTeamId), ObjectId.fromBsonId(defaultOrganization._id), defaultOrganization.name, isOrganizationTeam = true)
 
   def insert: Fox[Unit] =
     for {
@@ -160,7 +161,7 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
     TeamDAO.findAll(GlobalAccessContext).flatMap {
       teams =>
         if (teams.isEmpty)
-          TeamDAO.insert(organizationTeam)(GlobalAccessContext)
+          TeamSQLDAO.insertOne(organizationTeamSQL)(GlobalAccessContext)
         else
           Fox.successful(())
     }.toFox

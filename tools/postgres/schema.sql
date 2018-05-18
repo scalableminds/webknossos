@@ -26,10 +26,6 @@ CREATE TABLE webknossos.analytics(
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );
 
-
-
-
-
 CREATE TYPE webknossos.ANNOTATION_TRACING_TYPE AS ENUM ('skeleton', 'volume');
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
@@ -193,6 +189,7 @@ CREATE TABLE webknossos.teams(
   _organization CHAR(24) NOT NULL,
   name VARCHAR(256) NOT NULL CHECK (name ~* '^[A-Za-z0-9\-_\. ß]+$'),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  isOrganizationTeam BOOLEAN NOT NULL DEFAULT false,
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization)
 );
@@ -210,7 +207,6 @@ CREATE TABLE webknossos.timespans(
 
 CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
-  _organizationTeam CHAR(24) NOT NULL UNIQUE,
   name VARCHAR(256) NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
@@ -288,6 +284,7 @@ CREATE VIEW webknossos.timespans_ AS SELECT * FROM webknossos.timespans WHERE NO
 CREATE VIEW webknossos.organizations_ AS SELECT * FROM webknossos.organizations WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;
 CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDeleted;
+CREATE VIEW webknossos.organizationTeams AS SELECT * FROM webknossos.teams WHERE isOrganizationTeam AND NOT isDeleted;
 
 
 
@@ -344,8 +341,6 @@ ALTER TABLE webknossos.teams
 ALTER TABLE webknossos.timespans
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE SET NULL;
-ALTER TABLE webknossos.organizations
-  ADD CONSTRAINT orgteam_ref FOREIGN KEY(_organizationTeam) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 ALTER TABLE webknossos.users
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
 ALTER TABLE webknossos.user_team_roles

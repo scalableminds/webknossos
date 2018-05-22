@@ -246,7 +246,7 @@ object AnnotationService
     def getDatasetScale(dataSetName: String) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-        scale <- dataSet.dataSource.scaleOpt
+        scale <- dataSet.dataSource.scaleOpt ?~> Messages("nml.scaleNotFound")
       } yield scale
     }
 

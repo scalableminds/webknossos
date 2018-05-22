@@ -1,7 +1,4 @@
-/**
- * wk_layer.js
- * @flow
- */
+// @flow
 
 import Base64 from "base64-js";
 

@@ -21,8 +21,9 @@ object Dependencies {
   val commonsEmail = "org.apache.commons" % "commons-email" % "1.3.1"
   val commonsIo = "commons-io" % "commons-io" % "2.4"
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
-  val grpc = "io.grpc" % "grpc-netty" % com.trueaccord.scalapb.compiler.Version.grpcJavaVersion
-  val grpcRuntime = "com.trueaccord.scalapb" %% "scalapb-runtime-grpc" % com.trueaccord.scalapb.compiler.Version.scalapbVersion
+  val grpc = "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion
+  val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
+  val grpcRuntime = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
   val liftCommon = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
   val liftUtil = "net.liftweb" % "lift-util_2.10" % "3.0-M1"
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
@@ -74,6 +75,7 @@ object Dependencies {
     newrelicApi,
     webknossosWrap,
     grpc,
+    grpcServices,
     grpcRuntime,
     component("play-test")
   )

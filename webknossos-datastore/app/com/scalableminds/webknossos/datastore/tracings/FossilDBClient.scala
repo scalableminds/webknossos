@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import io.grpc.netty.NettyChannelBuilder
+import io.grpc.health.v1._
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
@@ -50,6 +51,7 @@ class FossilDBClient(collection: String, config: Configuration) extends FoxImpli
   val port = config.getInt("datastore.fossildb.port").getOrElse(7155)
   val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext(true).build
   val blockingStub = FossilDBGrpc.blockingStub(channel)
+  val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
 
   def checkHealth = {
     try {

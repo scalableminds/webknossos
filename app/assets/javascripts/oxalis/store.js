@@ -44,7 +44,6 @@ import type {
   APIScriptType,
   APITaskType,
   APIUserType,
-  APIMappingType,
   APIDatasetType,
 } from "admin/api_flow_types";
 

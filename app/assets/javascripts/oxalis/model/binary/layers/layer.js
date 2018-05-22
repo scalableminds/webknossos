@@ -15,7 +15,6 @@ import type {
   BoundingBoxObjectType,
   DataLayerType,
 } from "oxalis/store";
-import type { APIMappingType } from "admin/api_flow_types";
 import type { DataBucket } from "oxalis/model/binary/bucket";
 
 export type BucketRequestOptions = {

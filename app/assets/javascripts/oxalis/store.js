@@ -85,6 +85,7 @@ export type BoundingBoxObjectType = {
 
 type TreeTypeBase = {
   +treeId: number,
+  +groupId: ?number,
   +color: Vector3,
   +name: string,
   +timestamp: number,
@@ -96,6 +97,12 @@ type TreeTypeBase = {
 
 export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
+};
+
+export type TreeGroupType = {
+  name: string,
+  groupId: number,
+  children: Array<TreeGroupType>,
 };
 
 export type VolumeCellType = {
@@ -152,6 +159,7 @@ export type SkeletonTracingType = TracingBaseType & {
   +type: "skeleton",
   +tracingType: TracingTypeTracingType,
   +trees: TreeMapType,
+  +treeGroups: Array<TreeGroupType>,
   +activeTreeId: ?number,
   +activeNodeId: ?number,
   +cachedMaxNodeId: number,

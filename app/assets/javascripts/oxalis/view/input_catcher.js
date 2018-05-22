@@ -1,18 +1,16 @@
 // @flow
 
 import * as React from "react";
+import ReactDOM from "react-dom";
 import { connect } from "react-redux";
 import Constants from "oxalis/constants";
-import type { Rect, OrthoViewType } from "oxalis/constants";
+import { setInputCatcherRect } from "oxalis/model/actions/view_mode_actions";
+import type { Rect, ViewportType } from "oxalis/constants";
+import Store from "oxalis/store";
 import type { OxalisState } from "oxalis/store";
 
-type StateProps = {
-  scale: number,
-  activeViewport: OrthoViewType,
-};
-
-type Props = StateProps & {
-  viewportID: OrthoViewType | "arbitraryViewport",
+type Props = {
+  viewportID: ViewportType,
   children?: React.Node,
 };
 
@@ -21,51 +19,59 @@ function ignoreContextMenu(event: SyntheticInputEvent<>) {
   event.preventDefault();
 }
 
-export function getInputCatcherRect(id: string): ?Rect {
-  const inputCatcherDOM = document.getElementById(`inputcatcher_${id}`);
-  if (!inputCatcherDOM) {
-    return null;
-  }
+function makeInputCatcherQuadratic(inputCatcherDOM: HTMLElement): Rect {
   const noneOverflowWrapper = inputCatcherDOM.closest(".gl-dont-overflow");
   if (!noneOverflowWrapper) {
-    return null;
+    return { top: 0, left: 0, width: 0, height: 0 };
   }
 
-  const { left, top, width, height } = inputCatcherDOM.getBoundingClientRect();
   const {
     width: wrapperWidth,
     height: wrapperHeight,
   } = noneOverflowWrapper.getBoundingClientRect();
 
-  // Returns the viewport's coordinates and position
-  // Width and height is cropped to the visible width/height of the scrollable container.
-  // Otherwise, the we would render to parts of the canvas which are outside of the pane.
-  return {
-    left,
-    top,
-    width: Math.min(width, wrapperWidth),
-    height: Math.min(height, wrapperHeight),
-  };
+  const squareExtent = Math.min(wrapperWidth - 10, wrapperHeight - 10);
+  inputCatcherDOM.style.width = `${squareExtent}px`;
+  inputCatcherDOM.style.height = `${squareExtent}px`;
+
+  return inputCatcherDOM.getBoundingClientRect();
+}
+
+const renderedInputCatchers = new Map();
+
+export function recalculateInputCatcherSizes() {
+  for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
+    const rect = makeInputCatcherQuadratic(inputCatcher);
+    Store.dispatch(setInputCatcherRect(viewportID, rect));
+  }
 }
 
 class InputCatcher extends React.PureComponent<Props, {}> {
+  domElement: ?HTMLElement;
+
+  componentDidMount() {
+    if (this.domElement) {
+      renderedInputCatchers.set(this.props.viewportID, this.domElement);
+    }
+  }
+
+  componentWillUnmount() {
+    if (this.domElement) {
+      renderedInputCatchers.delete(this.props.viewportID);
+    }
+  }
+
   render() {
-    const width = Math.round(this.props.scale * Constants.VIEWPORT_WIDTH);
     const { viewportID } = this.props;
-    const active = this.props.activeViewport === viewportID;
 
     return (
       <div className="gl-dont-overflow">
         <div
           id={`inputcatcher_${viewportID}`}
+          ref={domElement => (this.domElement = domElement)}
           onContextMenu={ignoreContextMenu}
           data-value={viewportID}
           className="inputcatcher"
-          style={{
-            width,
-            height: width,
-            borderColor: active ? "#ff0" : "white",
-          }}
         >
           {this.props.children}
         </div>
@@ -74,9 +80,4 @@ class InputCatcher extends React.PureComponent<Props, {}> {
   }
 }
 
-const mapStateToProps = (state: OxalisState): StateProps => ({
-  scale: state.userConfiguration.scale,
-  activeViewport: state.viewModeData.plane.activeViewport,
-});
-
-export default connect(mapStateToProps)(InputCatcher);
+export default InputCatcher;

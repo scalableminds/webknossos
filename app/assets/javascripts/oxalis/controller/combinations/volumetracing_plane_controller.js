@@ -12,6 +12,7 @@ import {
   PlaneControllerClass,
   mapStateToProps,
 } from "oxalis/controller/viewmodes/plane_controller";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import SceneController from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -119,7 +120,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const contourTracingMode = getContourTracingMode(tracing).get();
 
         if (tool === VolumeToolEnum.MOVE) {
-          const viewportScale = Store.getState().userConfiguration.scale;
+          const viewportScale = getViewportScale(planeId);
           this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
         }
 

@@ -4,7 +4,7 @@ import type { Rect } from "oxalis/constants";
 
 export default function makeRectRelativeToCanvas(rect: ?Rect): ?Rect {
   if (!rect) {
-    return rect;
+    return null;
   }
   const layoutContainerDOM = document.getElementById("layoutContainer");
   if (!layoutContainerDOM) {

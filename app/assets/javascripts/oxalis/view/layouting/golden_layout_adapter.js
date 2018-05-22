@@ -49,6 +49,13 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
     this.setupLayout();
   }
 
+  onStateChange() {
+    const onLayoutChange = this.props.onLayoutChange;
+    if (onLayoutChange != null) {
+      onLayoutChange(this.gl.toConfig(), this.props.layoutKey);
+    }
+  }
+
   setupLayout() {
     const gl = new GoldenLayout(
       this.props.layoutConfigGetter(this.props.layoutKey),
@@ -63,24 +70,26 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
       // Rerender since the portals just became available
       this.forceUpdate();
     }, 10);
+    setTimeout(() => {
+      // Trigger initial state update so that input catcher can be set up
 
-    gl.on("stateChanged", () => {
-      const onLayoutChange = this.props.onLayoutChange;
-      if (onLayoutChange != null) {
-        onLayoutChange(gl.toConfig(), this.props.layoutKey);
-      }
-    });
+      this.onStateChange();
+    }, 2000);
+
+    gl.on("stateChanged", () => this.onStateChange());
     this.gl = gl;
   }
 
   render() {
-    return [<div key="layoutContainer" id={this.props.id} style={this.props.style} />].concat(
-      React.Children.toArray(this.props.children).map(child => (
-        <RenderToPortal key={child.props.portalKey} portalId={child.props.portalKey}>
-          {child}
-        </RenderToPortal>
-      )),
+    const layoutContainer = (
+      <div key="layoutContainer" id={this.props.id} style={this.props.style} />
     );
+    const portals = React.Children.toArray(this.props.children).map(child => (
+      <RenderToPortal key={child.props.portalKey} portalId={child.props.portalKey}>
+        {child}
+      </RenderToPortal>
+    ));
+    return [layoutContainer, ...portals];
   }
 }
 

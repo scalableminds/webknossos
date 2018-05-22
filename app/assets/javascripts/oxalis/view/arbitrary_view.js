@@ -7,7 +7,7 @@ import app from "app";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import Constants from "oxalis/constants";
+import Constants, { ArbitraryViewport } from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
@@ -30,8 +30,6 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: ?number = null;
 
-  width: number;
-  height: number;
   scaleFactor: number;
   camDistance: number;
 
@@ -147,12 +145,13 @@ class ArbitraryView {
 
       clearCanvas(renderer);
 
-      const { left, top, width, height } = getRelativeInputCatcherRect("arbitraryViewport");
-      setupRenderArea(renderer, left, top, this.width, width, height, 0xffffff);
+      const { left, top, width, height } = getRelativeInputCatcherRect(ArbitraryViewport);
+      setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
 
       renderer.render(scene, camera);
 
       this.needsRerender = false;
+      window.needsRerender = false;
     }
 
     this.animationRequestId = window.requestAnimationFrame(this.animate);
@@ -175,8 +174,6 @@ class ArbitraryView {
 
   resizeImpl(): void {
     // Call this after the canvas was resized to fix the viewport
-    // Needs to be bound
-    this.width = Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH;
 
     getDesiredCanvasSize().map(([width, height]) =>
       SceneController.renderer.setSize(width, height),

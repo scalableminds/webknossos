@@ -180,14 +180,6 @@ class Controller extends React.PureComponent<Props, State> {
     });
   }
 
-  scaleTrianglesPlane(delta: number): void {
-    let scale = Store.getState().userConfiguration.scale + delta;
-    scale = Math.min(constants.MAX_SCALE, scale);
-    scale = Math.max(constants.MIN_SCALE, scale);
-
-    Store.dispatch(updateUserSettingAction("scale", scale));
-  }
-
   isWebGlSupported() {
     return (
       window.WebGLRenderingContext &&
@@ -274,18 +266,7 @@ class Controller extends React.PureComponent<Props, State> {
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 
-    this.keyboard = new InputKeyboard({
-      // Scale planes
-      l: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(-scaleValue * timeFactor);
-      },
-
-      k: timeFactor => {
-        const scaleValue = Store.getState().userConfiguration.scaleValue;
-        this.scaleTrianglesPlane(scaleValue * timeFactor);
-      },
-    });
+    this.keyboard = new InputKeyboard({});
   }
 
   updateStats = () => this.stats.update();

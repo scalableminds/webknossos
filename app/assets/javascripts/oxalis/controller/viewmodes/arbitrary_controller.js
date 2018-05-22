@@ -13,6 +13,7 @@ import Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Model from "oxalis/model";
 import {
   updateUserSettingAction,
@@ -32,7 +33,7 @@ import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
 import app from "app";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import constants from "oxalis/constants";
+import constants, { ArbitraryViewport } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import {
   yawFlycamAction,
@@ -114,9 +115,7 @@ class ArbitraryController extends React.PureComponent<Props> {
               ),
             );
           } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const f =
-              Store.getState().flycam.zoomStep /
-              (this.arbitraryView.width / constants.VIEWPORT_WIDTH);
+            const f = Store.getState().flycam.zoomStep / getViewportScale(ArbitraryViewport);
             Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
           }
         },

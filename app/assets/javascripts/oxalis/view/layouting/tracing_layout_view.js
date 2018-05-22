@@ -19,8 +19,8 @@ import AbstractTreeTabView from "oxalis/view/right-menu/abstract_tree_tab_view";
 import TreesTabView from "oxalis/view/right-menu/trees_tab_view";
 import MappingInfoView from "oxalis/view/right-menu/mapping_info_view";
 import DatasetInfoTabView from "oxalis/view/right-menu/dataset_info_tab_view";
-import InputCatcher from "oxalis/view/input_catcher";
-import { OrthoViews } from "oxalis/constants";
+import InputCatcher, { recalculateInputCatcherSizes } from "oxalis/view/input_catcher";
+import { ArbitraryViewport, OrthoViews } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType, ModeType } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
@@ -119,6 +119,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 layoutKey={layoutType}
                 layoutConfigGetter={getLayoutConfig}
                 onLayoutChange={(layoutConfig, layoutKey) => {
+                  recalculateInputCatcherSizes();
                   window.needsRerender = true;
                   storeLayoutConfig(layoutConfig, layoutKey);
                 }}
@@ -135,7 +136,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 </InputCatcher>
 
                 <InputCatcher
-                  viewportID="arbitraryViewport"
+                  viewportID={ArbitraryViewport}
                   key="arbitraryViewport"
                   portalKey="arbitraryViewport"
                 >

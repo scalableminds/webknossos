@@ -10,13 +10,14 @@ import * as THREE from "three";
 import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
-import type { OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import type { OrthoViewType, OrthoViewMapType, ViewportType } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
 import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
-import { getInputCatcherRect } from "oxalis/view/input_catcher";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import Utils from "libs/utils";
 
-export const getRelativeInputCatcherRect = (id: string) =>
+export const getRelativeInputCatcherRect = (id: ViewportType) =>
   makeRectRelativeToCanvas(getInputCatcherRect(id)) || {
     left: 0,
     top: 0,
@@ -62,16 +63,12 @@ class PlaneView {
 
   running: boolean;
   needsRerender: boolean;
-  curWidth: number;
 
   constructor() {
     _.extend(this, BackboneEvents);
 
     this.running = false;
     const { scene } = SceneController;
-
-    // Create a 4x4 grid
-    this.curWidth = Constants.VIEWPORT_WIDTH;
 
     // Initialize main THREE.js components
     this.cameras = {};
@@ -105,15 +102,6 @@ class PlaneView {
         this.needsRerender = true;
       });
     });
-
-    listenToStoreProperty(
-      store => store.userConfiguration.scale,
-      () => {
-        if (this.running) {
-          this.resizeThrottled();
-        }
-      },
-    );
   }
 
   animate(): void {
@@ -130,16 +118,17 @@ class PlaneView {
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
-    renderer.setViewport(0, 0, this.curWidth, this.curWidth);
+    const { width, height } = getInputCatcherRect(plane);
+    renderer.setViewport(0, 0, width, height);
     renderer.setScissorTest(false);
     renderer.setClearColor(0x000000, 1);
 
-    const renderTarget = new THREE.WebGLRenderTarget(this.curWidth, this.curWidth);
-    const buffer = new Uint8Array(this.curWidth * this.curWidth * 4);
+    const renderTarget = new THREE.WebGLRenderTarget(width, height);
+    const buffer = new Uint8Array(width * height * 4);
 
     SceneController.updateSceneForCam(plane);
     renderer.render(scene, this.cameras[plane], renderTarget);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, this.curWidth, this.curWidth, buffer);
+    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
     return buffer;
   }
 
@@ -179,7 +168,7 @@ class PlaneView {
             renderer,
             left,
             top,
-            this.curWidth,
+            Math.min(width, height),
             width,
             height,
             OrthoViewColors[plane],
@@ -197,17 +186,12 @@ class PlaneView {
   }
 
   resizeThrottled = _.throttle((): void => {
+    // todo: is this still called?
     // throttle resize to avoid annoying flickering
     this.resize();
   }, Constants.RESIZE_THROTTLE_TIME);
 
   resize = (): void => {
-    // Call this after the canvas was resized to fix the viewport
-    const viewportWidth = Math.round(
-      Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH,
-    );
-    this.curWidth = viewportWidth;
-
     getDesiredCanvasSize().map(([width, height]) =>
       SceneController.renderer.setSize(width, height),
     );

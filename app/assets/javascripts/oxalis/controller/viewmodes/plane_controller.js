@@ -5,6 +5,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
@@ -31,6 +32,7 @@ import { voxelToNm, getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scale
 import CameraController from "oxalis/controller/camera_controller";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneView from "oxalis/view/plane_view";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import constants, {
   OrthoViews,
   OrthoViewValues,
@@ -130,7 +132,7 @@ class PlaneController extends React.PureComponent<Props> {
   getPlaneMouseControls(planeId: OrthoViewType): Object {
     return {
       leftDownMove: (delta: Point2) => {
-        const viewportScale = Store.getState().userConfiguration.scale;
+        const viewportScale = getViewportScale(planeId);
 
         return this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
       },
@@ -392,12 +394,13 @@ class PlaneController extends React.PureComponent<Props> {
     if (zoomToMouse) {
       zoomToPosition = this.input.mouseControllers[OrthoViews.TDView].position;
     }
-    Store.dispatch(zoomTDViewAction(value, zoomToPosition, this.planeView.curWidth));
+    const { width } = getInputCatcherRect(OrthoViews.TDView);
+    Store.dispatch(zoomTDViewAction(value, zoomToPosition, width));
   }
 
   moveTDView(delta: Point2): void {
     const state = Store.getState();
-    const scale = state.userConfiguration.scale;
+    const scale = getViewportScale(OrthoViews.TDView);
     Store.dispatch(moveTDViewXAction(delta.x / scale * -1));
     Store.dispatch(moveTDViewYAction(delta.y / scale * -1));
   }
@@ -501,13 +504,13 @@ export function calculateGlobalPos(clickPos: Point2): Vector3 {
   const activeViewport = state.viewModeData.plane.activeViewport;
   const curGlobalPos = getPosition(state.flycam);
   const zoomFactor = getPlaneScalingFactor(state.flycam);
-  const viewportScale = state.userConfiguration.scale;
+  const actualWidth = getInputCatcherRect(activeViewport).width;
+  const viewportScale = actualWidth / constants.VIEWPORT_WIDTH;
   const planeRatio = getBaseVoxelFactors(state.dataset.dataSource.scale);
 
-  const diffX =
-    (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.x) / viewportScale * zoomFactor;
-  const diffY =
-    (constants.VIEWPORT_WIDTH * viewportScale / 2 - clickPos.y) / viewportScale * zoomFactor;
+  const center = constants.VIEWPORT_WIDTH * viewportScale / 2;
+  const diffX = (center - clickPos.x) / viewportScale * zoomFactor;
+  const diffY = (center - clickPos.y) / viewportScale * zoomFactor;
 
   switch (activeViewport) {
     case OrthoViews.PLANE_XY:

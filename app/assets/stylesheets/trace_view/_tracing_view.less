@@ -17,8 +17,6 @@
   width: 100%;
 }
 .inputcatcher {
-  width: @standardViewportWidth;
-  height: @standardViewportWidth;
   border-style: solid;
   border-width: 2px;
   z-index: 20;
@@ -28,6 +26,11 @@
 
   margin-right: 20px;
   margin-bottom: 20px;
+  border-color: white;
+
+  &:hover {
+    border-color: #ff0;
+  }
 }
 
 #inputcatcher_TDView {
@@ -39,8 +42,10 @@
   position: absolute;
   top: 0px;
   z-index: 30;
+  width: 100%;
 
   .ant-btn {
+    width: 25%;
     & > .colored-dot {
       display: inline-block;
       width: 10px;

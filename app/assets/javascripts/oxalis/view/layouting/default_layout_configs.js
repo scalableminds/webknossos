@@ -11,7 +11,7 @@ import Constants, { ControlModeEnum } from "oxalis/constants";
 import { Pane, Column, Row, Stack } from "./golden_layout_helpers";
 
 // Increment this number to invalidate old layoutConfigs in localStorage
-export const currentLayoutVersion = 4;
+export const currentLayoutVersion = 5;
 
 const LayoutSettings = {
   showPopoutIcon: false,
@@ -35,7 +35,7 @@ const Panes = {
   Mappings: Pane("Mappings", "MappingInfoView"),
 };
 
-const OrthoViewsGrid = Row(Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td));
+const OrthoViewsGrid = [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)];
 
 const RightHandColumn = Stack(
   Panes.DatasetInfoTabView,
@@ -44,7 +44,7 @@ const RightHandColumn = Stack(
   Panes.AbstractTreeTabView,
 );
 
-const createLayout = (...content) => ({
+const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
   dimensions: {
     headerHeight: 31,
@@ -52,10 +52,10 @@ const createLayout = (...content) => ({
   content,
 });
 
-const OrthoLayout = createLayout(Row(OrthoViewsGrid, RightHandColumn));
-const OrthoLayoutView = createLayout(Row(OrthoViewsGrid, Panes.DatasetInfoTabView));
+const OrthoLayout = createLayout(Row(...OrthoViewsGrid, RightHandColumn));
+const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, Panes.DatasetInfoTabView));
 const VolumeTracingView = createLayout(
-  Row(OrthoViewsGrid, Stack(Panes.DatasetInfoTabView, Panes.Mappings)),
+  Row(...OrthoViewsGrid, Stack(Panes.DatasetInfoTabView, Panes.Mappings)),
 );
 const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, RightHandColumn));
 

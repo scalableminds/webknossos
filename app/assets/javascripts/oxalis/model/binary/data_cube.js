@@ -11,7 +11,6 @@ import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import type { MappingType } from "oxalis/model/binary/mappings";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
-import type Layer from "oxalis/model/binary/layers/layer";
 import {
   DataBucket,
   NullBucket,
@@ -27,6 +26,7 @@ import Store from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
+import type { DataLayerType } from "oxalis/store";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -56,7 +56,7 @@ class DataCube {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
-  layer: Layer;
+  layer: DataLayerType;
   // If the mapping is enabled, this.currentMapping === this.mapping
   // Otherwise, it's null
   currentMapping: ?MappingType;
@@ -84,7 +84,7 @@ class DataCube {
     upperBoundary: Vector3,
     extendedZoomStepCount: number,
     bitDepth: number,
-    layer: Layer,
+    layer: DataLayerType,
   ) {
     this.upperBoundary = upperBoundary;
     this.layer = layer;

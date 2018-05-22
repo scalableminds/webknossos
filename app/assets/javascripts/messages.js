@@ -55,8 +55,6 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos.",
-  "dataset.ndstore_success":
-    "The dataset was successfully added to webKnossos from the specified NDStore.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",

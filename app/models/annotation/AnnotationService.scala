@@ -22,6 +22,8 @@ import models.task.Task
 import models.user.User
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.Messages
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator

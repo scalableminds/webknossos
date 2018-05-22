@@ -19,6 +19,7 @@ declare module "antd" {
     static Group: React$ComponentType<P>;
     static Search: React$ComponentType<P>;
     static TextArea: React$ComponentType<P>;
+    focus: () => void;
   }
   declare class InputNumber<P> extends React$Component<P> {}
   declare class Form<P> extends React$Component<P> {
@@ -42,6 +43,7 @@ declare module "antd" {
     static info: Function;
   }
   declare var notification: Object;
+  declare class Popover<P> extends React$Component<P> {}
   declare class Progress<P> extends React$Component<P> {}
   declare class Radio<P> extends React$Component<P> {
     static Button: React$ComponentType<P>;
@@ -62,6 +64,9 @@ declare module "antd" {
     static TabPane: React$ComponentType<P>;
   }
   declare class Tag<P> extends React$Component<P> {}
+  declare class Tree<P> extends React$Component<P> {
+    static TreeNode: React$ComponentType<P>;
+  }
   declare class Tooltip<P> extends React$Component<P> {}
   declare class Upload<P> extends React$Component<P> {
     static Dragger: React$ComponentType<P>;

@@ -12,6 +12,7 @@ import type {
   TracingTypeTracingType,
   ElementClassType,
   DataLayerType,
+  TreeGroupType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
 import {
@@ -80,6 +81,7 @@ export type ServerSkeletonTracingTreeType = {
   nodes: Array<ServerNodeType>,
   treeId: number,
   createdTimestamp: number,
+  groupId?: ?number,
 };
 
 type ServerTracingBaseType = {
@@ -97,6 +99,7 @@ export type ServerSkeletonTracingType = ServerTracingBaseType & {
   activeNodeId?: number,
   boundingBox?: BoundingBoxObjectType,
   trees: Array<ServerSkeletonTracingTreeType>,
+  treeGroups: ?Array<TreeGroupType>,
 };
 
 export type ServerVolumeTracingType = ServerTracingBaseType & {

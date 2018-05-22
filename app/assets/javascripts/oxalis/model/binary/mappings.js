@@ -16,70 +16,57 @@ import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import messages from "messages";
 import type Layer from "oxalis/model/binary/layers/layer";
-import type { DataStoreInfoType, MappingType } from "oxalis/store";
+import type { MappingType } from "oxalis/store";
 import type { APIMappingType } from "admin/api_flow_types";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 
+type APIMappingsType = { [string]: APIMappingType };
+
 class Mappings {
-  mappings: {
-    [key: string]: APIMappingType,
-  };
   baseUrl: string;
+  availableMappings: Array<string>;
   mappingTexture: UpdatableTexture;
   mappingLookupTexture: UpdatableTexture;
 
-  constructor(dataStoreInfo: DataStoreInfoType, layer: Layer) {
+  constructor(layer: Layer) {
     const datasetName = Store.getState().dataset.name;
-    this.mappings =
-      layer.mappings != null
-        ? _.transform(
-            layer.mappings,
-            (result, mappingName) => {
-              result[mappingName] = { name: mappingName };
-            },
-            {},
-          )
-        : {};
-    this.baseUrl = `${dataStoreInfo.url}/data/datasets/${datasetName}/layers/${
-      layer.name
-    }/mappings/`;
+    const dataStoreUrl = Store.getState().dataset.dataStore.url;
+    this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
+    this.availableMappings = layer.mappings;
   }
 
   getMappingNames(): Array<string> {
-    return _.keys(this.mappings);
+    return this.availableMappings;
   }
 
   async activateMapping(mappingName: ?string) {
     if (mappingName == null) {
       Store.dispatch(setMappingAction(null));
     } else {
-      await this.fetchMappings(mappingName);
-      const mappingObject = this.buildMappingObject(mappingName);
+      const fetchedMappings = {};
+      await this.fetchMappings(mappingName, fetchedMappings);
+      const mappingObject = this.buildMappingObject(mappingName, fetchedMappings);
       Store.dispatch(setMappingAction(mappingObject));
     }
   }
 
-  async fetchMappings(mappingName: string): Promise<*> {
+  async fetchMappings(mappingName: string, fetchedMappings: APIMappingsType): Promise<*> {
     const mapping = await this.fetchMapping(mappingName);
+    if (mapping == null) return Promise.reject();
+    fetchedMappings[mappingName] = mapping;
     if (mapping.parent != null) {
-      return this.fetchMappings(mapping.parent);
+      return this.fetchMappings(mapping.parent, fetchedMappings);
     } else {
       return Promise.resolve();
     }
   }
 
   fetchMapping(mappingName: string): Promise<APIMappingType> {
-    const cachedMapping = this.mappings[mappingName];
-    if (cachedMapping != null && cachedMapping.classes != null) {
-      console.log("Activating mapping:", mappingName);
-      return Promise.resolve(cachedMapping);
-    }
     return doWithToken((token: string) => {
       console.log("Start downloading mapping:", mappingName);
       return Request.receiveJSON(`${this.baseUrl + mappingName}?token=${token}`).then(
         (mapping: APIMappingType) => {
-          this.mappings[mappingName] = mapping;
           console.log("Done downloading mapping:", mappingName);
           return mapping;
         },
@@ -88,11 +75,11 @@ class Mappings {
     });
   }
 
-  buildMappingObject(mappingName: string): MappingType {
+  buildMappingObject(mappingName: string, fetchedMappings: APIMappingsType): MappingType {
     const mappingObject: MappingType = {};
 
-    for (const currentMappingName of this.getMappingChain(mappingName)) {
-      const mapping = this.mappings[currentMappingName];
+    for (const currentMappingName of this.getMappingChain(mappingName, fetchedMappings)) {
+      const mapping = fetchedMappings[currentMappingName];
       ErrorHandling.assertExists(mapping.classes, "Mappings must have been fetched at this point");
       if (mapping.classes) {
         for (const mappingClass of mapping.classes) {
@@ -107,13 +94,13 @@ class Mappings {
     return mappingObject;
   }
 
-  getMappingChain(mappingName: string): Array<string> {
+  getMappingChain(mappingName: string, fetchedMappings: APIMappingsType): Array<string> {
     const chain = [mappingName];
-    const mapping = this.mappings[mappingName];
+    const mapping = fetchedMappings[mappingName];
     const parentMappingName = mapping.parent;
 
     if (parentMappingName != null) {
-      return chain.concat(this.getMappingChain(parentMappingName));
+      return chain.concat(this.getMappingChain(parentMappingName, fetchedMappings));
     }
     return chain;
   }

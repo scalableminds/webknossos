@@ -38,7 +38,7 @@ class Layer {
   elementClass: ElementClassType;
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
-  mappings: Array<APIMappingType>;
+  mappings: Array<string>;
   boundingBox: BoundingBoxObjectType;
   resolutions: Array<Vector3>;
   maxZoomStep: number;

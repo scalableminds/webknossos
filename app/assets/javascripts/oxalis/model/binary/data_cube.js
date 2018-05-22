@@ -56,7 +56,6 @@ class DataCube {
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
   layer: Layer;
-  mapping: ?MappingType = null;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -129,13 +128,6 @@ class DataCube {
         this.forgetOutOfBoundaryBuckets();
       },
     );
-
-    if (layer.category === "segmentation") {
-      listenToStoreProperty(
-        state => state.temporaryConfiguration.activeMapping.mapping,
-        (mapping: ?MappingType) => this.setMapping(mapping),
-      );
-    }
   }
 
   initializeWithQueues(pullQueue: PullQueue, pushQueue: PushQueue): void {
@@ -155,22 +147,23 @@ class DataCube {
     }
   }
 
-  hasMapping(): boolean {
-    return this.mapping != null;
-  }
-
-  setMapping(newMapping: ?MappingType): void {
-    this.mapping = newMapping;
-  }
-
   isMappingEnabled(): boolean {
-    return Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled;
+    return this.layer.category === "segmentation"
+      ? Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled
+      : false;
+  }
+
+  getMapping(): ?MappingType {
+    return this.layer.category === "segmentation"
+      ? Store.getState().temporaryConfiguration.activeMapping.mapping
+      : null;
   }
 
   mapId(idToMap: number): number {
     let mappedId = null;
-    if (this.mapping != null && this.isMappingEnabled()) {
-      mappedId = this.mapping[idToMap];
+    const mapping = this.getMapping();
+    if (mapping != null && this.isMappingEnabled()) {
+      mappedId = mapping[idToMap];
     }
     return mappedId != null ? mappedId : idToMap;
   }
@@ -385,7 +378,7 @@ class DataCube {
   }
 
   getMappedDataValue(voxel: Vector3): number {
-    return this.getDataValue(voxel, this.isMappingEnabled() ? this.mapping : null);
+    return this.getDataValue(voxel, this.isMappingEnabled() ? this.getMapping() : null);
   }
 
   getVoxelIndex(voxel: Vector3): number {

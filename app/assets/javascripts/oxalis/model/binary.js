@@ -144,7 +144,7 @@ class Binary {
     this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
     this.pushQueue = new PushQueue(this.cube, this.layer, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(datastoreInfo, this.layer);
+    this.mappings = new Mappings(this.layer);
     this.activeMapping = null;
     this.direction = [0, 0, 0];
 

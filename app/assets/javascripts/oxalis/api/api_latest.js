@@ -567,8 +567,8 @@ class DataApi {
       throw new Error(messages["mapping.too_few_textures"]);
     }
 
-    // TODO: As there is at most one segmentation layer now, the layerName is unneccessary
-    // We could switch the argument order in a future api version and make the layerName optional or remove it completely
+    // Note: As there is at most one segmentation layer now, the layerName is unneccessary
+    // However, we probably want to support multiple segmentation layers in the future
     const segmentationLayerName = this.model.getSegmentationBinary().name;
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);

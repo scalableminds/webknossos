@@ -22,13 +22,13 @@ type Props = {
 
 class MappingInfoView extends Component<Props> {
   componentDidMount() {
-    const cube = this.getCube();
+    const cube = this.getSegmentationCube();
     cube.on("bucketLoaded", this._forceUpdate);
     cube.on("volumeLabeled", this._forceUpdate);
   }
 
   componentWillUnmount() {
-    const cube = this.getCube();
+    const cube = this.getSegmentationCube();
     cube.off("bucketLoaded", this._forceUpdate);
     cube.off("volumeLabeled", this._forceUpdate);
   }
@@ -37,13 +37,13 @@ class MappingInfoView extends Component<Props> {
     this.forceUpdate();
   }, 100);
 
-  getCube(): Cube {
+  getSegmentationCube(): Cube {
     return Model.getSegmentationBinary().cube;
   }
 
   render() {
-    const cube = this.getCube();
-    const hasMapping = cube.hasMapping();
+    const cube = this.getSegmentationCube();
+    const hasMapping = this.props.mapping != null;
     const idWithMapping = cube.getDataValue(this.props.position, this.props.mapping);
     const idWithoutMapping = cube.getDataValue(this.props.position, null);
 

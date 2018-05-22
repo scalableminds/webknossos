@@ -115,7 +115,7 @@ export type DataLayerType = {
   +resolutions: Array<Vector3>,
   +maxZoomStep: number, // denotes for which maximum zoomStep data exists
   +elementClass: ElementClassType,
-  +mappings?: Array<APIMappingType>,
+  +mappings?: Array<string>,
 };
 
 export type SegmentationDataLayerType = DataLayerType & {

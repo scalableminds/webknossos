@@ -76,9 +76,9 @@ test("Data Api: setMapping should throw an error if the layer name is not valid"
 test("Data Api: setMapping should set a mapping of a layer", t => {
   const { api, model } = t.context;
   const cube = model.getBinaryByName("segmentation").cube;
-  t.is(cube.hasMapping(), false);
+  t.is(Store.getState().temporaryConfiguration.activeMapping.mapping, null);
   api.data.setMapping("segmentation", [1, 3]);
-  t.is(cube.hasMapping(), true);
+  t.not(Store.getState().temporaryConfiguration.activeMapping.mapping, null);
   // Workaround: This is usually called after the mapping textures were created successfully
   // and can be rendered, which doesn't happen in this test scenario
   Store.dispatch(setMappingEnabledAction(true));

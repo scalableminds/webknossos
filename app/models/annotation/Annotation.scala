@@ -14,6 +14,7 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.{DataSetDAO, DataSetSQLDAO}
+import models.task.TaskSQLDAO.transactionSerializationError
 import models.task.{TaskDAO, TaskSQLDAO, TaskTypeSQLDAO, _}
 import models.team.TeamSQLDAO
 import models.user.{User, UserService}
@@ -261,7 +262,8 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
 
   def abortInitializingAnnotation(id: ObjectId): Fox[Unit] = {
     for {
-      _ <- run(sqlu"delete from webknossos.annotations where _id = ${id.id} and state = '#${AnnotationState.Initializing.toString}'")
+      _ <- run(sqlu"delete from webknossos.annotations where _id = ${id.id} and state = '#${AnnotationState.Initializing.toString}'".withTransactionIsolation(Serializable),
+               retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 
@@ -274,7 +276,8 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext) =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set state = '#${state}' where _id = ${id.id}")
+      _ <- run(sqlu"update webknossos.annotations set state = '#${state}' where _id = ${id.id}".withTransactionIsolation(Serializable),
+              retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext) =

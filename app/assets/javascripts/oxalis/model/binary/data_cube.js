@@ -377,17 +377,20 @@ class DataCube {
         result += (1 << (8 * i)) * data[voxelIndex + i];
       }
 
-      if (mapping) {
-        const mappedValue = mapping[result];
-        if (mappedValue != null) {
-          return mappedValue;
-        }
-      }
-
-      return result;
+      return this.mapID(result, mapping);
     }
 
     return 0;
+  }
+
+  mapID(id: number, mapping: ?MappingType): number {
+    if (mapping) {
+      const mappedValue = mapping[id];
+      if (mappedValue != null) {
+        return mappedValue;
+      }
+    }
+    return id;
   }
 
   getMappedDataValue(voxel: Vector3): number {

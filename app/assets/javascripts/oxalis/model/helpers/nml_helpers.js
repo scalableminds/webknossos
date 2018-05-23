@@ -98,12 +98,12 @@ export function serializeToNml(
         serializeTrees(visibleTrees),
         serializeBranchPoints(visibleTrees),
         serializeComments(visibleTrees),
+        "<groups>",
+        indent(serializeTreeGroups(tracing.treeGroups)),
+        "</groups>",
       ),
     ),
     "</things>",
-    "<groups>",
-    ...indent(serializeTreeGroups(tracing.treeGroups)),
-    "</groups>",
   ].join("\n");
 }
 

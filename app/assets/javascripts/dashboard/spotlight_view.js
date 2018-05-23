@@ -48,11 +48,19 @@ class SpotlightView extends React.PureComponent<{}, State> {
           </div>
         </Header>
         <Content style={{ padding: 50 }}>
-          {this.state.isLoading ? (
-            <Spin size="large" />
-          ) : (
-            <GalleryDatasetView datasets={this.state.datasets} searchQuery="" />
-          )}
+          <Spin size="large" spinning={this.state.isLoading}>
+            <div style={{ minHeight: "100px" }}>
+              {this.state.datasets.length === 0 && !this.state.isLoading ? (
+                <p style={{ textAlign: "center" }}>
+                  There are no datasets available yet.<br />Check out{" "}
+                  <a href="https://demo.webknossos.org/">demo.webknossos.org</a> to see webKnossos
+                  in action.
+                </p>
+              ) : (
+                <GalleryDatasetView datasets={this.state.datasets} searchQuery="" />
+              )}
+            </div>
+          </Spin>
           <div id="spotlight-footnote">
             Visit <a href="https://www.webknossos.org/">webknossos.org</a> to learn more about
             webKnossos.
@@ -72,14 +80,14 @@ class SpotlightView extends React.PureComponent<{}, State> {
               <p>
                 <a href="https://www.brain.mpg.de/connectomics">
                   <img
-                    className="img-50"
+                    className="img-responsive"
                     alt="Max Planck Gesellschaft logo"
                     src="assets/images/Max-Planck-Gesellschaft.svg"
                   />
                 </a>
                 <a href="https://www.brain.mpg.de/connectomics">
                   <img
-                    className="img-50"
+                    className="img-responsive"
                     alt="Max Planck Institute for Brain Research logo"
                     src="assets/images/MPI-brain-research.svg"
                   />
@@ -113,8 +121,7 @@ class SpotlightView extends React.PureComponent<{}, State> {
                 </a>.
               </p>
               <p>
-                <Link to="/imprint">Imprint</Link> &bull;
-                <Link to="/privacy">Privacy</Link>
+                <Link to="/imprint">Imprint</Link> &bull; <Link to="/privacy">Privacy</Link>
               </p>
             </div>
           </div>

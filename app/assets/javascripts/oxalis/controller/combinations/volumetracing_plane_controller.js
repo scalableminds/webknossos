@@ -12,7 +12,6 @@ import {
   PlaneControllerClass,
   mapStateToProps,
 } from "oxalis/controller/viewmodes/plane_controller";
-import SceneController from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
@@ -30,12 +29,10 @@ import {
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  getActiveCellId,
   getVolumeTool,
   getContourTracingMode,
 } from "oxalis/model/accessors/volumetracing_accessor";
 import { InputKeyboardNoLoop } from "libs/input";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 import type { OrthoViewType, Point2 } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
@@ -51,25 +48,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
   componentDidMount() {
     super.componentDidMount();
-
-    listenToStoreProperty(
-      state => Utils.toNullable(getActiveCellId(state.tracing)),
-      () => {
-        getActiveCellId(Store.getState().tracing).map(activeCellId =>
-          SceneController.renderVolumeIsosurface(activeCellId),
-        );
-      },
-    );
-
-    // If a new mapping is activated the 3D cell has to be updated, although the activeCellId did not change
-    listenToStoreProperty(
-      state => state.temporaryConfiguration.activeMapping.mapping,
-      () => {
-        getActiveCellId(Store.getState().tracing).map(activeCellId =>
-          SceneController.renderVolumeIsosurface(activeCellId),
-        );
-      },
-    );
 
     this.keyboardNoLoop = new InputKeyboardNoLoop({
       w: () => {

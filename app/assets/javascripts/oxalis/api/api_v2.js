@@ -724,9 +724,6 @@ class UserApi {
     - displayCrosshair
     - scale
     - tdViewDisplayPlanes
-    - isosurfaceDisplay
-    - isosurfaceBBsize
-    - isosurfaceResolution
     - newNodeNewTree
     - keyboardDelay
     - particleSize

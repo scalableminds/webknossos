@@ -15,8 +15,7 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import messages from "messages";
-import type Layer from "oxalis/model/binary/layers/layer";
-import type { MappingType } from "oxalis/store";
+import type { MappingType, DataLayerType } from "oxalis/store";
 import type { APIMappingType } from "admin/api_flow_types";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
@@ -29,11 +28,11 @@ class Mappings {
   mappingTexture: UpdatableTexture;
   mappingLookupTexture: UpdatableTexture;
 
-  constructor(layer: Layer) {
+  constructor(layer: DataLayerType) {
     const datasetName = Store.getState().dataset.name;
     const dataStoreUrl = Store.getState().dataset.dataStore.url;
     this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
-    this.availableMappings = layer.mappings;
+    this.availableMappings = layer.mappings || [];
   }
 
   getMappingNames(): Array<string> {

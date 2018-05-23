@@ -23,9 +23,8 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
-import type Layer from "oxalis/model/binary/layers/layer";
 import type { Bucket } from "oxalis/model/binary/bucket";
-import type { MappingType } from "oxalis/store";
+import type { MappingType, DataLayerType } from "oxalis/store";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -55,7 +54,7 @@ class DataCube {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
-  layer: Layer;
+  layer: DataLayerType;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -79,7 +78,7 @@ class DataCube {
     upperBoundary: Vector3,
     extendedZoomStepCount: number,
     bitDepth: number,
-    layer: Layer,
+    layer: DataLayerType,
   ) {
     this.upperBoundary = upperBoundary;
     this.layer = layer;

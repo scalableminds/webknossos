@@ -103,7 +103,7 @@ class MappingInfoView extends Component<Props> {
     ]
       .map(idInfo => ({
         ...idInfo,
-        mapped: idInfo.unmapped && cube.mapID(idInfo.unmapped, cube.mapping),
+        mapped: idInfo.unmapped && cube.mapId(idInfo.unmapped),
       }))
       .map(idInfo => ({
         ...idInfo,
@@ -116,11 +116,12 @@ class MappingInfoView extends Component<Props> {
       }));
 
     const columnHelper = (title, dataIndex) => ({ title, dataIndex });
-    const idColumns = hasMapping
-      ? // Show an unmapped and mapped id column if there's a mapping
-        [columnHelper("Unmapped", "unmapped"), columnHelper("Mapped", "mapped")]
-      : // Otherwise, only show an ID column
-        [columnHelper("ID", "unmapped")];
+    const idColumns =
+      hasMapping && this.props.isMappingEnabled
+        ? // Show an unmapped and mapped id column if there's a mapping
+          [columnHelper("Unmapped", "unmapped"), columnHelper("Mapped", "mapped")]
+        : // Otherwise, only show an ID column
+          [columnHelper("ID", "unmapped")];
     const columns = [columnHelper("", "name"), ...idColumns];
     return (
       <Table
@@ -165,5 +166,5 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-const debounceTime = 200;
+const debounceTime = 100;
 export default connect(mapStateToProps)(debounceRender(MappingInfoView, debounceTime));

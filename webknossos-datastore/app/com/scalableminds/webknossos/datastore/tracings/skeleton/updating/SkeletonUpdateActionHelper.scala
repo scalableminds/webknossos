@@ -26,4 +26,6 @@ trait SkeletonUpdateActionHelper {
     case Some(aColor) => Some(convertColor(aColor))
     case None => None
   }
+  protected def convertTreeGroup(aTreeGroup: UpdateActionTreeGroup): TreeGroup =
+    TreeGroup(aTreeGroup.name, aTreeGroup.groupId, aTreeGroup.children.map(convertTreeGroup))
 }

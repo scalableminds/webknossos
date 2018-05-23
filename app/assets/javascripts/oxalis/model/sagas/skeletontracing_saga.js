@@ -24,6 +24,7 @@ import {
   createEdge,
   deleteEdge,
   updateSkeletonTracing,
+  updateTreeGroups,
 } from "oxalis/model/sagas/update_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode, getBranchPoints } from "oxalis/model/accessors/skeletontracing_accessor";
@@ -168,7 +169,8 @@ function updateTreePredicate(prevTree: TreeType, tree: TreeType): boolean {
     prevTree.color !== tree.color ||
     prevTree.name !== tree.name ||
     !_.isEqual(prevTree.comments, tree.comments) ||
-    !_.isEqual(prevTree.timestamp, tree.timestamp)
+    !_.isEqual(prevTree.timestamp, tree.timestamp) ||
+    prevTree.groupId !== tree.groupId
   );
 }
 
@@ -229,6 +231,9 @@ export function* diffSkeletonTracing(
 ): Generator<UpdateAction, *, *> {
   if (prevSkeletonTracing !== skeletonTracing) {
     yield* cachedDiffTrees(prevSkeletonTracing.trees, skeletonTracing.trees);
+    if (prevSkeletonTracing.treeGroups !== skeletonTracing.treeGroups) {
+      yield updateTreeGroups(skeletonTracing.treeGroups);
+    }
   }
   yield updateSkeletonTracing(
     skeletonTracing,

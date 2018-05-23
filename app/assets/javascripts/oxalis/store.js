@@ -136,19 +136,12 @@ export type TemporaryMutableTreeMapType = { [number]: TreeType };
 
 export type TracingTypeTracingType = APITracingType;
 
-export type SkeletonTracingType = {
+type TracingBaseType = {
   +annotationId: string,
   +createdTimestamp: number,
-  +type: "skeleton",
-  +trees: TreeMapType,
-  +treeGroups: Array<TreeGroupType>,
   +name: string,
   +version: number,
   +tracingId: string,
-  +tracingType: TracingTypeTracingType,
-  +activeTreeId: ?number,
-  +activeNodeId: ?number,
-  +cachedMaxNodeId: number,
   +boundingBox: ?BoundingBoxType,
   +userBoundingBox: ?BoundingBoxType,
   +restrictions: RestrictionsType & SettingsType,
@@ -157,12 +150,19 @@ export type SkeletonTracingType = {
   +description: string,
 };
 
-export type VolumeTracingType = {
-  +annotationId: string,
-  +createdTimestamp: number,
+export type SkeletonTracingType = TracingBaseType & {
+  +type: "skeleton",
+  +tracingType: TracingTypeTracingType,
+  +trees: TreeMapType,
+  +treeGroups: Array<TreeGroupType>,
+  +activeTreeId: ?number,
+  +activeNodeId: ?number,
+  +cachedMaxNodeId: number,
+};
+
+export type VolumeTracingType = TracingBaseType & {
   +type: "volume",
-  +name: string,
-  +version: number,
+  +tracingType: TracingTypeTracingType,
   +maxCellId: number,
   +activeTool: VolumeToolType,
   +activeCellId: number,
@@ -170,30 +170,11 @@ export type VolumeTracingType = {
   +contourTracingMode: ContourModeType,
   +contourList: Array<Vector3>,
   +cells: VolumeCellMapType,
-  +tracingId: string,
-  +tracingType: TracingTypeTracingType,
-  +boundingBox: ?BoundingBoxType,
-  +userBoundingBox: ?BoundingBoxType,
-  +restrictions: RestrictionsType & SettingsType,
-  +isPublic: boolean,
-  +tags: Array<string>,
-  +description: string,
 };
 
-export type ReadOnlyTracingType = {
-  +annotationId: string,
-  +createdTimestamp: number,
+export type ReadOnlyTracingType = TracingBaseType & {
   +type: "readonly",
-  +name: string,
-  +version: number,
-  +tracingId: string,
   +tracingType: "View",
-  +boundingBox: ?BoundingBoxType,
-  +userBoundingBox: ?BoundingBoxType,
-  +restrictions: RestrictionsType & SettingsType,
-  +isPublic: boolean,
-  +tags: Array<string>,
-  +description: string,
 };
 
 export type TracingType = SkeletonTracingType | VolumeTracingType | ReadOnlyTracingType;
@@ -242,14 +223,19 @@ export type UserConfigurationType = {
   +tdViewDisplayPlanes: boolean,
 };
 
+export type MappingType = { [key: number]: number };
+
 export type TemporaryConfigurationType = {
   +viewMode: ModeType,
   +flightmodeRecording: boolean,
   +controlMode: ControlModeType,
   +mousePosition: ?Vector2,
   +brushSize: number,
-  +isMappingEnabled: boolean,
-  +mappingSize: number,
+  +activeMapping: {
+    +mapping: ?MappingType,
+    +isMappingEnabled: boolean,
+    +mappingSize: number,
+  },
 };
 
 export type ScriptType = APIScriptType;
@@ -363,8 +349,11 @@ export const defaultState: OxalisState = {
     controlMode: ControlModeEnum.VIEW,
     mousePosition: null,
     brushSize: 50,
-    isMappingEnabled: false,
-    mappingSize: 0,
+    activeMapping: {
+      mapping: null,
+      isMappingEnabled: false,
+      mappingSize: 0,
+    },
   },
   task: null,
   dataset: {

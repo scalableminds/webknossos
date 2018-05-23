@@ -25,7 +25,7 @@ export type APIDataLayerType = {
   +boundingBox: BoundingBoxObjectType,
   +resolutions: Array<Vector3>,
   +elementClass: ElementClassType,
-  +mappings?: Array<APIMappingType>,
+  +mappings?: Array<string>,
 };
 
 export type APIDataSourceType = {

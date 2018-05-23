@@ -12,6 +12,7 @@ import Binary from "oxalis/model/binary";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
+  setMappingAction,
 } from "oxalis/model/actions/settings_actions";
 import {
   setActiveNodeAction,
@@ -31,7 +32,6 @@ import {
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeToolType, ControlModeType } from "oxalis/constants";
-import type { MappingType } from "oxalis/model/binary/mappings";
 import type {
   NodeType,
   UserConfigurationType,
@@ -39,6 +39,7 @@ import type {
   TreeMapType,
   TracingType,
   TracingTypeTracingType,
+  MappingType,
 } from "oxalis/store";
 import { overwriteAction } from "oxalis/model/helpers/overwrite_action_middleware";
 import Toast from "libs/toast";
@@ -566,8 +567,13 @@ class DataApi {
       throw new Error(messages["mapping.too_few_textures"]);
     }
 
-    const layer = this.__getLayer(layerName);
-    layer.cube.setMapping(mapping);
+    // Note: As there is at most one segmentation layer now, the layerName is unneccessary
+    // However, we probably want to support multiple segmentation layers in the future
+    const segmentationLayerName = this.model.getSegmentationBinary().name;
+    if (layerName !== segmentationLayerName) {
+      throw new Error(messages["mapping.unsupported_layer"]);
+    }
+    Store.dispatch(setMappingAction(mapping));
   }
 
   /**

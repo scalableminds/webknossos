@@ -327,7 +327,7 @@ class SceneController {
     );
 
     listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.isMappingEnabled,
+      storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
       isMappingEnabled => this.setIsMappingEnabled(isMappingEnabled),
     );
   }

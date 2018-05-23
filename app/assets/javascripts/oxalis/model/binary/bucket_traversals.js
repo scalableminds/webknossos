@@ -114,7 +114,7 @@ export default function traverse(
     }
 
     if (behindLastBucket(0, X) || behindLastBucket(1, Y) || behindLastBucket(2, Z)) {
-      console.warn("Skipped last bucket? This should not happen");
+      // We didn't cross the lastBucket for some reason?
       return intersectedBuckets;
     }
 

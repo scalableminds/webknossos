@@ -21,7 +21,8 @@ import {
   deleteComment,
   mergeTrees,
   toggleAllTreesReducer,
-  addTrees,
+  toggleTreeGroupReducer,
+  addTreesAndGroups,
 } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import { convertServerBoundingBoxToFrontend } from "oxalis/model/reducers/reducer_helpers";
 import {
@@ -85,6 +86,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
           isVisible: true,
           timestamp: tree.createdTimestamp,
+          groupId: tree.groupId,
         })),
         "treeId",
       );
@@ -135,6 +137,7 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
         activeTreeId,
         restrictions,
         trees,
+        treeGroups: action.tracing.treeGroups || [],
         name: action.annotation.name,
         tracingType: action.annotation.typ,
         tracingId: action.annotation.content.id,
@@ -315,12 +318,13 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
             .getOrElse(state);
         }
 
-        case "ADD_TREES": {
-          const { trees } = action;
-          return addTrees(state, trees)
-            .map(([updatedTrees, newMaxNodeId]) =>
+        case "ADD_TREES_AND_GROUPS": {
+          const { trees, treeGroups } = action;
+          return addTreesAndGroups(state, trees, treeGroups)
+            .map(([updatedTrees, updatedTreeGroups, newMaxNodeId]) =>
               update(state, {
                 tracing: {
+                  treeGroups: { $push: updatedTreeGroups },
                   trees: { $merge: updatedTrees },
                   cachedMaxNodeId: { $set: newMaxNodeId },
                 },
@@ -516,6 +520,26 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               }),
             )
             .getOrElse(state);
+        }
+
+        case "TOGGLE_TREE_GROUP": {
+          return toggleTreeGroupReducer(state, skeletonTracing, action.groupId);
+        }
+
+        case "SET_TREE_GROUPS": {
+          return update(state, {
+            tracing: {
+              treeGroups: {
+                $set: action.treeGroups,
+              },
+            },
+          });
+        }
+
+        case "SET_TREE_GROUP": {
+          return update(state, {
+            tracing: { trees: { [action.treeId]: { groupId: { $set: action.groupId } } } },
+          });
         }
 
         default:

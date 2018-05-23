@@ -109,15 +109,18 @@ In order to restore the current window, a reload is necessary.`,
   "nml.edge_outside_tree":
     "NML contains <edge ...> tag that is not enclosed by a <thing ...> tag: Edge",
   "nml.expected_attribute_missing":
-    "Attribute with the following name was expected, but is missing:",
+    "Attribute with the following name was expected, but is missing or empty:",
   "nml.branchpoint_without_tree":
     "NML contains <branchpoint ...> with a node id that is not in any tree: Node with id",
   "nml.comment_without_tree":
     "NML contains <comment ...> with a node id that is not in any tree: Node with id",
   "nml.edge_with_invalid_node":
     "NML contains <edge ...> with a node id that is not part of the tree: Edge",
+  "nml.tree_with_missing_group_id":
+    "NML contains <tree ...> with a non-existing group id: Group with id",
   "nml.duplicate_tree_id": "NML contains <thing ...> with duplicate tree id: Tree with id",
   "nml.duplicate_node_id": "NML contains <node ...> with duplicate node id: Node with id",
+  "nml.duplicate_group_id": "NML contains <group ...> with duplicate group id: Group with id",
   "nml.duplicate_edge": "NML contains a duplicate <edge ...>: Edge",
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",

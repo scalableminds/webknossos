@@ -118,7 +118,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
         tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference)
-        scale <- dataSet.dataSource.scaleOpt
+        scale <- dataSet.dataSource.scaleOpt ?~> Messages("nml.scaleNotFound")
       } yield {
         (NmlWriter.toNmlStream(Left(tracing), annotation, scale), name + ".nml")
       }

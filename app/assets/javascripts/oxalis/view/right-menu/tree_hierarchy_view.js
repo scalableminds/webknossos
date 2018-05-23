@@ -131,6 +131,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   onSelect = evt => {
     const treeId = evt.target.dataset.id;
     this.props.onSetActiveTree(parseInt(treeId, 10));
+    evt.target.blur();
   };
 
   onExpand = (params: { node: TreeNodeType, expanded: boolean }) => {
@@ -353,7 +354,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               innerStyle={{ padding: 0 }}
               scaffoldBlockPxWidth={25}
               searchFocusOffset={this.state.searchFocusOffset}
-              reactVirtualizedListProps={{ scrollToAlignment: "auto" }}
+              reactVirtualizedListProps={{ scrollToAlignment: "auto", tabIndex: null }}
             />
           </div>
         )}

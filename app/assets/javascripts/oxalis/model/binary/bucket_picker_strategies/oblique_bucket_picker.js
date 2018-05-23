@@ -7,12 +7,30 @@ import {
   globalPositionToBucketPosition,
 } from "oxalis/model/helpers/position_converter";
 import type { Vector3, Vector4 } from "oxalis/constants";
+import constants from "oxalis/constants";
 import traverse from "oxalis/model/binary/bucket_traversals";
 import _ from "lodash";
 import type { Matrix4x4 } from "libs/mjs";
 import Binary from "oxalis/model/binary";
 import Store from "oxalis/store";
 import { chunk2 } from "oxalis/model/helpers/chunk";
+
+const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
+const makeBucketsUnique = buckets => _.uniqBy(buckets, hashPosition);
+export const getFallbackBuckets = (
+  buckets: Vector4[],
+  resolutions: Vector3[],
+  fallbackZoomStep: number,
+  isFallbackAvailable: boolean,
+) =>
+  isFallbackAvailable
+    ? _.uniqBy(
+        buckets.map((bucketAddress: Vector4) =>
+          zoomedAddressToAnotherZoomStep(bucketAddress, resolutions, fallbackZoomStep),
+        ),
+        hashPosition,
+      )
+    : [];
 
 export default function determineBucketsForOblique(
   binary: Binary,
@@ -24,8 +42,10 @@ export default function determineBucketsForOblique(
 ): void {
   const queryMatrix = M4x4.scale1(1, matrix);
 
+  // Buckets adjacent to the current viewport are also loaded so that these
+  // buckets are already on the GPU when the user moves a little.
   const enlargementFactor = 1.1;
-  const enlargedExtent = 384 * enlargementFactor;
+  const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
   const steps = 25;
   const stepSize = enlargedExtent / steps;
   const enlargedHalfExtent = enlargedExtent / 2;
@@ -51,19 +71,18 @@ export default function determineBucketsForOblique(
       traverse(a, b, binary.layer.resolutions, logZoomStep),
     ),
   );
-  const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
-  traversedBuckets = _.uniqBy(traversedBuckets, hashPosition);
+
+  traversedBuckets = makeBucketsUnique(traversedBuckets);
   traversedBuckets = traversedBuckets.map(addr => [...addr, logZoomStep]);
 
-  if (isFallbackAvailable) {
-    traversedBuckets = _.uniqBy(
-      _.flatMap(traversedBuckets, (bucketAddress: Vector4): Array<Vector4> => [
-        bucketAddress,
-        zoomedAddressToAnotherZoomStep(bucketAddress, binary.layer.resolutions, fallbackZoomStep),
-      ]),
-      hashPosition,
-    );
-  }
+  const fallbackBuckets = getFallbackBuckets(
+    traversedBuckets,
+    binary.layer.resolutions,
+    fallbackZoomStep,
+    isFallbackAvailable,
+  );
+
+  traversedBuckets = traversedBuckets.concat(fallbackBuckets);
 
   const centerAddress = globalPositionToBucketPosition(
     getPosition(Store.getState().flycam),

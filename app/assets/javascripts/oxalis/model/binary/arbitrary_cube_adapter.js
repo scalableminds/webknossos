@@ -33,15 +33,14 @@ class ArbitraryCubeAdapter {
     return this.getBucket.cache.clear();
   }
 
-  getBucketAddress = (bucketIndex: number): Vector4 =>
-    [
-      Math.floor(bucketIndex / this.sizeZY),
-      Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),
-      bucketIndex % this.sizeZ,
-      0,
-    ]
+  getBucketAddress = (bucketIndex: number): Vector4 => [
+    Math.floor(bucketIndex / this.sizeZY),
+    Math.floor((bucketIndex % this.sizeZY) / this.sizeZ),
+    bucketIndex % this.sizeZ,
+    0,
+  ];
 
-  getBucket = _.memoize((bucketIndex: number): DataBucket | typeof NULL_BUCKET | null => {
+  getBucket = _.memoize((bucketIndex: number): DataBucket | typeof NULL_BUCKET => {
     let bucketAddress = this.getBucketAddress(bucketIndex);
 
     for (let zoomStep = 0; zoomStep <= ARBITRARY_MAX_ZOOMSTEP; zoomStep++) {

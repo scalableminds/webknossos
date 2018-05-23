@@ -92,9 +92,7 @@ class ArbitraryPlane {
   }
 
   createMesh() {
-    this.textureMaterial = new PlaneMaterialFactory(0, OrthoViews.PLANE_XY, 4)
-      .setup()
-      .getMaterial();
+    this.textureMaterial = new PlaneMaterialFactory(OrthoViews.PLANE_XY, 4).setup().getMaterial();
 
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),

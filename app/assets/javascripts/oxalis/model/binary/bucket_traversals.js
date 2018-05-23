@@ -3,8 +3,11 @@ import type { Vector3 } from "oxalis/constants";
 import { V3 } from "libs/mjs";
 import {
   globalPositionToBucketPosition,
-  getBucketExtent
+  getBucketExtent,
 } from "oxalis/model/helpers/position_converter";
+
+// Attention: Note that the implemented paper uses the term "voxel" for the unit
+// we usually refer to as bucket. This is reflected in comments as well as variable naming.
 
 // This module implements the algorithm presented in this paper:
 // "A Fast Voxel Traversal Algorithm for Ray Tracing" (http://www.cse.yorku.ca/~amana/research/grid.pdf)
@@ -45,7 +48,6 @@ export default function traverse(
   ];
 
   const intersectedBuckets = [[X, Y, Z]];
-  let protection = 0;
 
   const behindLastBucket = (dim, pos) => {
     if (step[dim] < 0) {
@@ -102,7 +104,11 @@ export default function traverse(
     return [_X, _Y, _Z];
   };
 
-  while (protection++ < 50000) {
+  // Since a small error in a while-loop can easily end in an endless loop,
+  // this loop is limited to a maximum of 50 000 iterations.
+  let loopProtection = 0;
+  const maximumIterations = 50000;
+  while (loopProtection++ < maximumIterations) {
     if (X === lastBucket[0] && Y === lastBucket[1] && Z === lastBucket[2]) {
       return intersectedBuckets;
     }
@@ -163,7 +169,7 @@ function initializeTMax(
     voxelSize[2] - u[2] % voxelSize[2],
   ];
 
-  // $FlowFixMe
+  // $FlowFixMe Flow does not understand that mapping a tuple returns a tuple
   return [
     Math.abs((step[0] > 0 ? negativeRest[0] : positiveRest[0]) / v[0]),
     Math.abs((step[1] > 0 ? negativeRest[1] : positiveRest[1]) / v[1]),

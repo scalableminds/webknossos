@@ -1,20 +1,19 @@
 // @flow
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import {
-  zoomedAddressToAnotherZoomStep,
   globalPositionToBucketPosition,
   bucketPositionToGlobalAddress,
 } from "oxalis/model/helpers/position_converter";
-import type { Vector3, Vector4 } from "oxalis/constants";
+import type { Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import PriorityQueue from "js-priority-queue";
 import Binary from "oxalis/model/binary";
-import _ from "lodash";
 import Utils from "libs/utils";
 import { M4x4, V3 } from "libs/mjs";
 import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
 import constants from "oxalis/constants";
 import Store from "oxalis/store";
+import { getFallbackBuckets } from "./oblique_bucket_picker";
 
 export default function determineBucketsForFlight(
   binary: Binary,
@@ -34,7 +33,7 @@ export default function determineBucketsForFlight(
   const cameraVertex = [0, 0, -sphericalCapRadius];
 
   // This array holds the four corners and the center point of the rendered plane
-  let planePoints = M4x4.transformVectorsAffine(
+  const planePoints = M4x4.transformVectorsAffine(
     queryMatrix,
     [
       [-enlargedHalfExtent, -enlargedHalfExtent, 0],
@@ -48,6 +47,8 @@ export default function determineBucketsForFlight(
       V3.add(vec, cameraVertex, vec);
       return vec;
     }),
+  ).map((position: Vector3) =>
+    globalPositionToBucketPosition(position, binary.layer.resolutions, logZoomStep),
   );
 
   const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
@@ -56,10 +57,6 @@ export default function determineBucketsForFlight(
   const matrixScale = getMatrixScale(scale);
 
   const inverseScale = V3.divide3([1, 1, 1], matrixScale);
-
-  planePoints = planePoints.map((position: Vector3) =>
-    globalPositionToBucketPosition(position, binary.layer.resolutions, logZoomStep),
-  );
 
   const aggregatePerDimension = aggregateFn =>
     [0, 1, 2].map(dim => aggregateFn(...planePoints.map(pos => pos[dim])));
@@ -125,15 +122,12 @@ export default function determineBucketsForFlight(
 
   traversedBuckets = traversedBuckets.map(addr => [...addr, logZoomStep]);
 
-  const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
-  const fallbackBuckets = isFallbackAvailable
-    ? _.uniqBy(
-        traversedBuckets.map((bucketAddress: Vector4) =>
-          zoomedAddressToAnotherZoomStep(bucketAddress, binary.layer.resolutions, fallbackZoomStep),
-        ),
-        hashPosition,
-      )
-    : [];
+  const fallbackBuckets = getFallbackBuckets(
+    traversedBuckets,
+    binary.layer.resolutions,
+    fallbackZoomStep,
+    isFallbackAvailable,
+  );
 
   traversedBuckets = traversedBuckets.concat(fallbackBuckets);
 

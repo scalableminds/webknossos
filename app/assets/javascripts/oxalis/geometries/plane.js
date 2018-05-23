@@ -52,7 +52,6 @@ class Plane {
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
     const textureMaterial = new PlaneMaterialFactory(
-      0,
       this.planeID,
       OrthoViewValues.indexOf(this.planeID),
     )

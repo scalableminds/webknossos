@@ -25,6 +25,7 @@ import {
 import constants, {
   OrthoViews,
   ModeValues,
+  ModeValuesIndices,
   VolumeToolEnum,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
@@ -49,8 +50,8 @@ function formatNumberAsGLSLFloat(aNumber: number): string {
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   planeID: OrthoViewType;
 
-  constructor(tWidth: number, planeID: OrthoViewType, shaderId: number) {
-    super(tWidth, shaderId);
+  constructor(planeID: OrthoViewType, shaderId: number) {
+    super(shaderId);
     this.planeID = planeID;
   }
 
@@ -722,13 +723,12 @@ vec3 getRelativeCoords(vec3 worldCoordUVW, float usedZoomStep) {
 }
 
 bool isArbitrary() {
-  return viewMode == 1.0 || viewMode == 2.0;
+  return viewMode == <%= ModeValuesIndices.Flight %> || viewMode == <%= ModeValuesIndices.Oblique %>;
 }
 
 bool isFlightMode() {
-  return viewMode == 1.0;
+  return viewMode == <%= ModeValuesIndices.Flight %>;
 }
-
 
 vec3 getWorldCoordUVW() {
   vec3 worldCoordUVW = transDim(worldCoord.xyz);
@@ -1105,6 +1105,7 @@ void main() {
       segmentationName,
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
       OrthoViews,
+      ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
       planeID: this.planeID,
       uvw: Dimensions.getIndices(this.planeID),
       bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),

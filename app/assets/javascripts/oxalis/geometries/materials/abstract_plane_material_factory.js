@@ -107,11 +107,9 @@ class AbstractPlaneMaterialFactory {
   textures: TextureMapType;
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
-  tWidth: number;
   shaderId: number;
 
-  constructor(tWidth: number, shaderId: number) {
-    this.tWidth = tWidth;
+  constructor(shaderId: number) {
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
     this.shaderId = shaderId;

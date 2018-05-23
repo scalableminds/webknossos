@@ -7486,6 +7486,12 @@ rc@^1.0.1, rc@^1.1.6, rc@^1.1.7:
     minimist "^1.2.0"
     strip-json-comments "~2.0.1"
 
+react-debounce-render@^4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/react-debounce-render/-/react-debounce-render-4.0.1.tgz#3a1814f67eca17e91d3101799805a7a4e2128a84"
+  dependencies:
+    lodash "^4.17.4"
+
 react-dom@15.5.4:
   version "15.5.4"
   resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-15.5.4.tgz#ba0c28786fd52ed7e4f2135fe0288d462aef93da"

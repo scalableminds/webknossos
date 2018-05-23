@@ -15,6 +15,7 @@ import { OrthoViews } from "oxalis/constants";
 import _ from "lodash";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import message from "messages";
+import debounceRender from "react-debounce-render";
 
 type Props = {
   position: Vector3,
@@ -164,4 +165,5 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-export default connect(mapStateToProps)(MappingInfoView);
+const debounceTime = 200;
+export default connect(mapStateToProps)(debounceRender(MappingInfoView, debounceTime));

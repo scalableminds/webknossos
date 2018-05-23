@@ -108,6 +108,7 @@
     "moment": "^2.21.0",
     "pako": "^0.2.8",
     "react": "^16.2.0",
+    "react-debounce-render": "^4.0.1",
     "react-dom": "^16.2.0",
     "react-google-charts": "^1.5.5",
     "react-redux": "^5.0.6",

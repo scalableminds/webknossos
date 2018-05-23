@@ -15,6 +15,7 @@ import type {
   TreeType,
   TreeMapType,
   TemporaryMutableTreeMapType,
+  TreeGroupType,
 } from "oxalis/store";
 import type { APIBuildInfoType } from "admin/api_flow_types";
 
@@ -26,6 +27,7 @@ const DEFAULT_BITDEPTH = 0;
 const DEFAULT_INTERPOLATION = false;
 const DEFAULT_TIMESTAMP = 0;
 const DEFAULT_ROTATION = [0, 0, 0];
+const DEFAULT_GROUP_ID = null;
 
 // SERIALIZE NML
 
@@ -35,6 +37,19 @@ function indent(array: Array<string>): Array<string> {
     array[index] = `  ${line}`;
   });
   return array;
+}
+
+function serializeTagWithChildren(
+  name: string,
+  properties: { [string]: ?(string | number | boolean) },
+  children: Array<string>,
+): Array<string> {
+  // If there are no children, the tag will be self-closing
+  return _.compact([
+    serializeTag(name, properties, children.length === 0),
+    ...indent(children),
+    children.length === 0 ? null : `</${name}>`,
+  ]);
 }
 
 function serializeTag(
@@ -86,6 +101,9 @@ export function serializeToNml(
       ),
     ),
     "</things>",
+    "<groups>",
+    ...indent(serializeTreeGroups(tracing.treeGroups)),
+    "</groups>",
   ].join("\n");
 }
 
@@ -174,8 +192,8 @@ function serializeParameters(state: OxalisState): Array<string> {
 
 function serializeTrees(trees: Array<TreeType>): Array<string> {
   return _.flatten(
-    trees.map(tree => [
-      serializeTag(
+    trees.map(tree =>
+      serializeTagWithChildren(
         "thing",
         {
           id: tree.treeId,
@@ -184,19 +202,18 @@ function serializeTrees(trees: Array<TreeType>): Array<string> {
           "color.b": tree.color[2],
           "color.a": 1.0,
           name: tree.name,
+          groupId: tree.groupId,
         },
-        false,
+        [
+          "<nodes>",
+          ...indent(serializeNodes(tree.nodes)),
+          "</nodes>",
+          "<edges>",
+          ...indent(serializeEdges(tree.edges)),
+          "</edges>",
+        ],
       ),
-      ...indent([
-        "<nodes>",
-        ...indent(serializeNodes(tree.nodes)),
-        "</nodes>",
-        "<edges>",
-        ...indent(serializeEdges(tree.edges)),
-        "</edges>",
-      ]),
-      "</thing>",
-    ]),
+    ),
   );
 }
 
@@ -251,6 +268,18 @@ function serializeComments(trees: Array<TreeType>): Array<string> {
   ];
 }
 
+function serializeTreeGroups(treeGroups: Array<TreeGroupType>): Array<string> {
+  return _.flatten(
+    treeGroups.map(treeGroup =>
+      serializeTagWithChildren(
+        "group",
+        { id: treeGroup.groupId, name: treeGroup.name },
+        serializeTreeGroups(treeGroup.children),
+      ),
+    ),
+  );
+}
+
 // PARSE NML
 
 class NmlParseError extends Error {
@@ -261,7 +290,7 @@ class NmlParseError extends Error {
 }
 
 function _parseInt(obj: Object, key: string, defaultValue?: number): number {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -272,7 +301,7 @@ function _parseInt(obj: Object, key: string, defaultValue?: number): number {
 }
 
 function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -283,7 +312,7 @@ function _parseFloat(obj: Object, key: string, defaultValue?: number): number {
 }
 
 function _parseBool(obj: Object, key: string, defaultValue?: boolean): boolean {
-  if (obj[key] == null) {
+  if (obj[key] == null || obj[key].length === 0) {
     if (defaultValue == null) {
       throw new NmlParseError(`${messages["nml.expected_attribute_missing"]} ${key}`);
     } else {
@@ -329,14 +358,20 @@ function getEdgeHash(source: number, target: number) {
   return source < target ? `${source}-${target}` : `${target}-${source}`;
 }
 
-export function parseNml(nmlString: string): Promise<TreeMapType> {
+export function parseNml(
+  nmlString: string,
+): Promise<{ trees: TreeMapType, treeGroups: Array<TreeGroupType> }> {
   return new Promise((resolve, reject) => {
     const parser = new Saxophone();
 
     const trees: TemporaryMutableTreeMapType = {};
+    const treeGroups: Array<TreeGroupType> = [];
     const existingNodeIds = new Set();
+    const existingGroupIds = new Set();
     const existingEdges = new Set();
     let currentTree: ?TreeType = null;
+    let currentGroup: ?TreeGroupType = null;
+    const groupIdToParent: { [number]: ?TreeGroupType } = {};
     parser
       .on("tagopen", node => {
         const attr = Saxophone.parseAttrs(node.attrs);
@@ -348,6 +383,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
             break;
           }
           case "thing": {
+            const groupId = _parseInt(attr, "groupId", -1);
             currentTree = {
               treeId: _parseInt(attr, "id"),
               color: [
@@ -362,6 +398,7 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
               timestamp: Date.now(),
               edges: new EdgeCollection(),
               isVisible: _parseFloat(attr, "color.a") !== 0,
+              groupId: groupId >= 0 ? groupId : DEFAULT_GROUP_ID,
             };
             if (trees[currentTree.treeId] != null)
               throw new NmlParseError(`${messages["nml.duplicate_tree_id"]} ${currentTree.treeId}`);
@@ -449,19 +486,63 @@ export function parseNml(nmlString: string): Promise<TreeMapType> {
             tree.branchPoints.push(currentBranchpoint);
             break;
           }
+          case "group": {
+            const newGroup = {
+              groupId: _parseInt(attr, "id"),
+              name: attr.name,
+              children: [],
+            };
+            if (existingGroupIds.has(newGroup.groupId))
+              throw new NmlParseError(`${messages["nml.duplicate_group_id"]} ${newGroup.groupId}`);
+            if (currentGroup != null) {
+              currentGroup.children.push(newGroup);
+            } else {
+              treeGroups.push(newGroup);
+            }
+            existingGroupIds.add(newGroup.groupId);
+            if (!node.isSelfClosing) {
+              // If the xml tag is self-closing, there won't be a separate tagclose event!
+              groupIdToParent[newGroup.groupId] = currentGroup;
+              currentGroup = newGroup;
+            }
+            break;
+          }
           default:
             break;
         }
       })
       .on("tagclose", node => {
-        if (node.name === "thing" && currentTree != null) {
-          if (!isTreeConnected(currentTree))
-            throw new NmlParseError(`${messages["nml.tree_not_connected"]} ${currentTree.treeId}`);
-          currentTree = null;
+        switch (node.name) {
+          case "thing": {
+            if (currentTree != null && !isTreeConnected(currentTree))
+              throw new NmlParseError(
+                `${messages["nml.tree_not_connected"]} ${currentTree.treeId}`,
+              );
+            currentTree = null;
+            break;
+          }
+          case "group": {
+            if (currentGroup != null) {
+              currentGroup = groupIdToParent[currentGroup.groupId];
+            }
+            break;
+          }
+          case "groups": {
+            _.forEach(trees, tree => {
+              if (tree.groupId != null && !existingGroupIds.has(tree.groupId)) {
+                throw new NmlParseError(
+                  `${messages["nml.tree_with_missing_group_id"]} ${tree.groupId}`,
+                );
+              }
+            });
+            break;
+          }
+          default:
+            break;
         }
       })
       .on("end", () => {
-        resolve(trees);
+        resolve({ trees, treeGroups });
       })
       .on("error", reject);
 

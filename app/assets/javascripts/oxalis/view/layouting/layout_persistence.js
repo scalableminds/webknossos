@@ -24,7 +24,15 @@ function readStoredLayoutConfigs() {
     return {};
   }
   const layoutString = localStorage.getItem(localStorageKeys.goldenWkLayouts);
-  return layoutString ? JSON.parse(layoutString) : {};
+  if (layoutString) {
+    try {
+      return JSON.parse(layoutString);
+    } catch (ex) {
+      // This should only happen if someone tinkers with localStorage manually
+      console.warn("Layout config could not be deserialized.");
+    }
+  }
+  return {};
 }
 
 let storedLayouts = readStoredLayoutConfigs();

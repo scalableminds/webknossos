@@ -4,6 +4,7 @@ import * as React from "react";
 import GoldenLayout from "golden-layout/dist/goldenlayout.js";
 import _ from "lodash";
 import Constants from "oxalis/constants";
+import Toast from "libs/toast";
 import { PortalTarget, RenderToPortal } from "./portal_utils.js";
 import { resetLayoutEmitter } from "./layout_persistence";
 
@@ -66,7 +67,16 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
     // The timeout is necessary since react cannot deal with react.render calls (which goldenlayout executes)
     // while being in the middle of a react lifecycle (componentDidMount)
     setTimeout(() => {
-      gl.init();
+      try {
+        gl.init();
+      } catch (exception) {
+        // This might happen when the serialized layout config is not compatible with the newest version.
+        // However, this should be mitigated by currentLayoutVersion in default_layout_configs.js
+        Toast.error("Layout couldn't be restored. The default layout is used instead.");
+        resetLayoutEmitter.emit("resetLayout");
+        console.error(exception);
+        return;
+      }
       // Rerender since the portals just became available
       this.forceUpdate();
     }, 10);

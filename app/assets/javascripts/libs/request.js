@@ -6,6 +6,7 @@
 import _ from "lodash";
 import Toast from "libs/toast";
 import Utils from "libs/utils";
+import messages from "messages";
 
 type methodType = "GET" | "POST" | "DELETE" | "HEAD" | "OPTIONS" | "PUT" | "PATCH";
 
@@ -232,6 +233,7 @@ class Request {
   };
 
   handleError = (error: Response | Error): Promise<void> => {
+    this.checkDataStoreHealth();
     if (error instanceof Response) {
       return error.text().then(
         text => {
@@ -269,6 +271,12 @@ class Request {
         return JSON.parse(responseText);
       }
     });
+
+  checkDataStoreHealth = _.throttle(() => {
+    this.triggerRequest("/data/health", { doNotCatch: true }).catch(() => {
+      Toast.warning(messages["datastore.health"]);
+    });
+  }, 10000);
 }
 
 export default new Request();

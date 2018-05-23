@@ -4,6 +4,8 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
+  "datastore.health":
+    "The datastore server does not seem to be available. This is likely due to an update. Please check back in five minutes.",
   "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
 Editing should be done in a single window only.
 

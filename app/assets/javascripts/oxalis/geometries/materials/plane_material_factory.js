@@ -306,11 +306,17 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       listenToStoreProperty(
         storeState => getActiveCellId(storeState.tracing).getOrElse(0),
-        activeCellId => {
-          // Convert the id into 4 bytes (little endian)
-          const [a, b, g, r] = Utils.convertDecToBase256(activeCellId);
-          this.uniforms.activeCellId.value.set(r, g, b, a);
-        },
+        () => this.updateActiveCellId(),
+      );
+
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
+        () => this.updateActiveCellId(),
+      );
+
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.mapping,
+        () => this.updateActiveCellId(),
       );
 
       listenToStoreProperty(
@@ -320,6 +326,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         },
       );
     }
+  }
+
+  updateActiveCellId() {
+    const activeCellId = getActiveCellId(Store.getState().tracing).getOrElse(0);
+    const mappedActiveCellId = Model.getSegmentationBinary().cube.mapId(activeCellId);
+    // Convert the id into 4 bytes (little endian)
+    const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
+    this.uniforms.activeCellId.value.set(r, g, b, a);
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {

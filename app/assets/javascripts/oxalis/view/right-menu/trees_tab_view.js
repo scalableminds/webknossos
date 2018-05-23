@@ -175,6 +175,10 @@ class TreesTabView extends React.PureComponent<Props, State> {
   }
 
   render() {
+    if (this.props.skeletonTracing.type !== "skeleton") {
+      // Extra guard to avoid that we try to render non-skeleton tracings
+      return null;
+    }
     const activeTreeName = getActiveTree(this.props.skeletonTracing)
       .map(activeTree => activeTree.name)
       .getOrElse("");

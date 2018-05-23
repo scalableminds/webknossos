@@ -12,7 +12,6 @@ import { V3 } from "libs/mjs";
 import {
   getPosition,
   getPlaneScalingFactor,
-  getViewportBoundingBox,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
 import Model from "oxalis/model";
@@ -22,10 +21,8 @@ import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Cube from "oxalis/geometries/cube";
 import ContourGeometry from "oxalis/geometries/contourgeometry";
-import VolumeGeometry from "oxalis/geometries/volumegeometry";
 import Dimensions from "oxalis/model/dimensions";
 import { OrthoViews, OrthoViewValues, OrthoViewValuesWithoutTDView } from "oxalis/constants";
-import PolygonFactory from "oxalis/view/polygons/polygon_factory";
 import type { Vector3, OrthoViewType, OrthoViewMapType, BoundingBoxType } from "oxalis/constants";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { getRenderer } from "oxalis/controller/renderer";
@@ -39,8 +36,6 @@ class SceneController {
   planeShift: Vector3;
   pingBinary: boolean;
   pingBinarySeg: boolean;
-  volumeMeshes: THREE.Object3D;
-  polygonFactory: ?PolygonFactory;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: ?Cube;
@@ -109,7 +104,6 @@ class SceneController {
     const taskBoundingBox = Store.getState().tracing.boundingBox;
     this.buildTaskingBoundingBox(taskBoundingBox);
 
-    this.volumeMeshes = new THREE.Object3D();
     if (Store.getState().tracing.type === "volume") {
       this.contour = new ContourGeometry();
       this.contour.getMeshes().forEach(mesh => this.rootNode.add(mesh));
@@ -151,52 +145,6 @@ class SceneController {
     }
   }
 
-  renderVolumeIsosurface(cellId: number): void {
-    const state = Store.getState();
-    if (!state.userConfiguration.isosurfaceDisplay || Model.getSegmentationBinary() == null) {
-      return;
-    }
-
-    if (this.polygonFactory != null) {
-      this.polygonFactory.cancel();
-    }
-
-    const factor = state.userConfiguration.isosurfaceBBsize;
-    const bb = getViewportBoundingBox(state);
-
-    for (let i = 0; i <= 2; i++) {
-      const width = bb.max[i] - bb.min[i];
-      const diff = (factor - 1) * width / 2;
-      bb.min[i] -= diff;
-      bb.max[i] += diff;
-    }
-
-    this.polygonFactory = new PolygonFactory(
-      Model.getSegmentationBinary().cube,
-      state.userConfiguration.isosurfaceResolution,
-      bb.min,
-      bb.max,
-      cellId,
-    );
-    this.polygonFactory.getTriangles().then(triangles => {
-      if (triangles == null) {
-        return;
-      }
-      this.rootNode.remove(this.volumeMeshes);
-      this.volumeMeshes = new THREE.Object3D();
-      this.rootNode.add(this.volumeMeshes);
-
-      for (const triangleIdString of Object.keys(triangles)) {
-        const triangleId = parseInt(triangleIdString, 10);
-        const mappedId = Model.getSegmentationBinary().cube.mapId(triangleId);
-        const volume = new VolumeGeometry(triangles[triangleId], mappedId);
-        volume.getMeshes().forEach(mesh => this.volumeMeshes.add(mesh));
-      }
-      app.vent.trigger("rerender");
-      this.polygonFactory = null;
-    });
-  }
-
   updateSceneForCam = (id: OrthoViewType): void => {
     // This method is called for each of the four cams. Even
     // though they are all looking at the same scene, some
@@ -208,7 +156,6 @@ class SceneController {
 
     if (id !== OrthoViews.TDView) {
       let ind;
-      this.volumeMeshes.visible = false;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         if (planeId === id) {
           this.planes[planeId].setOriginalCrosshairColor();
@@ -224,7 +171,6 @@ class SceneController {
         }
       }
     } else {
-      this.volumeMeshes.visible = true;
       for (const planeId of OrthoViewValuesWithoutTDView) {
         const pos = getPosition(Store.getState().flycam);
         this.planes[planeId].setPosition(new THREE.Vector3(pos[0], pos[1], pos[2]));

@@ -1,11 +1,10 @@
 // @flow
 
 import constants from "oxalis/constants";
-import type { OrthoViewType } from "oxalis/constants";
 import type { PartialCameraData } from "oxalis/store";
 import * as THREE from "three";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
-import type { Rect, ViewportType } from "oxalis/constants";
+import type { Rect, OrthoViewType, ViewportType } from "oxalis/constants";
 
 type SetViewportActionType = {
   type: "SET_VIEWPORT",

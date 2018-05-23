@@ -9,13 +9,11 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import type { OrthoViewType, OrthoViewMapType, ViewportType } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
 import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import Utils from "libs/utils";
 
 export const getRelativeInputCatcherRect = (id: ViewportType) =>
   makeRectRelativeToCanvas(getInputCatcherRect(id)) || {

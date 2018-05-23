@@ -1,10 +1,7 @@
 // @flow
-import { connect } from "react-redux";
 import * as React from "react";
-import type { OxalisState } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 import { Button } from "antd";
-import Constants from "oxalis/constants";
 
 const ButtonGroup = Button.Group;
 

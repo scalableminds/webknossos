@@ -34,15 +34,15 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
     });
   }
 
-  componentWillUnmount() {
-    this.unbindListener();
-  }
-
   componentDidUpdate(prevProps: Props<*>) {
     if (prevProps.layoutKey !== this.props.layoutKey) {
       this.rebuildLayout();
     }
   }
+
+    componentWillUnmount() {
+      this.unbindListener();
+    }
 
   rebuildLayout() {
     this.gl.destroy();

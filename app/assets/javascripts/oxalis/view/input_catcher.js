@@ -1,13 +1,9 @@
 // @flow
 
 import * as React from "react";
-import ReactDOM from "react-dom";
-import { connect } from "react-redux";
-import Constants from "oxalis/constants";
 import { setInputCatcherRect } from "oxalis/model/actions/view_mode_actions";
 import type { Rect, ViewportType } from "oxalis/constants";
 import Store from "oxalis/store";
-import type { OxalisState } from "oxalis/store";
 
 type Props = {
   viewportID: ViewportType,
@@ -68,7 +64,7 @@ class InputCatcher extends React.PureComponent<Props, {}> {
       <div className="gl-dont-overflow">
         <div
           id={`inputcatcher_${viewportID}`}
-          ref={domElement => (this.domElement = domElement)}
+          ref={domElement => {this.domElement = domElement}}
           onContextMenu={ignoreContextMenu}
           data-value={viewportID}
           className="inputcatcher"

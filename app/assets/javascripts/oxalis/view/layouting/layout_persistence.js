@@ -1,8 +1,9 @@
 // @flow
 import _ from "lodash";
+import NanoEvents from "nanoevents";
+
 import defaultLayouts, { currentLayoutVersion } from "./default_layout_configs";
 import type { LayoutKeysType } from "./default_layout_configs";
-import NanoEvents from "nanoevents";
 
 export const resetLayoutEmitter = new NanoEvents();
 

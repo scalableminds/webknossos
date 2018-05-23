@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
+import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
@@ -32,7 +32,6 @@ import { voxelToNm, getBaseVoxel, getBaseVoxelFactors } from "oxalis/model/scale
 import CameraController from "oxalis/controller/camera_controller";
 import Dimensions from "oxalis/model/dimensions";
 import PlaneView from "oxalis/view/plane_view";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 import constants, {
   OrthoViews,
   OrthoViewValues,
@@ -399,7 +398,6 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   moveTDView(delta: Point2): void {
-    const state = Store.getState();
     const scale = getViewportScale(OrthoViews.TDView);
     Store.dispatch(moveTDViewXAction(delta.x / scale * -1));
     Store.dispatch(moveTDViewYAction(delta.y / scale * -1));

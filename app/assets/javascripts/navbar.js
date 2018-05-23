@@ -133,6 +133,11 @@ class Navbar extends React.PureComponent<Props> {
             Keyboard Shortcuts
           </a>
         </Menu.Item>
+        <Menu.Item key="/help/credits">
+          <a target="_blank" href="https://webknossos.org">
+            About & Credits
+          </a>
+        </Menu.Item>
       </SubMenu>,
     );
 

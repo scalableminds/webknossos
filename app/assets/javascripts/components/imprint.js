@@ -2,7 +2,8 @@ import React from "react";
 
 const Imprint = () => (
   <div className="container" id="impressum">
-    <h2>Legal Notice</h2>
+    <h2>Imprint</h2>
+
     <h3>scalable minds UG (haftungsbeschränkt) & Co. KG</h3>
     <p>Amtsgericht Potsdam, HRA 5753</p>
     <p>Geschäftsführer: scalable minds Verwaltungs UG</p>

@@ -62,95 +62,59 @@ class SpotlightView extends React.PureComponent<{}, State> {
           <div id="credits">
             <div className="container">
               <h3>webKnossos Credits</h3>
-              <Row>
-                <Col span={8}>
-                  <h4>Max Planck Institute for Brain Research</h4>
-                  <p>
-                    Department of Connectomics<br />
-                    <a href="http://www.brain.mpg.de/connectomics">
-                      http://www.brain.mpg.de/connectomics
-                    </a>
-                  </p>
-                  <ul>
-                    <li>Moritz Helmstaedter</li>
-                    <li>Manuel Berning</li>
-                    <li>Kevin Boergens</li>
-                    <li>Heiko Wissler</li>
-                    <li>Alessandro Motta</li>
-                  </ul>
-                </Col>
-                <Col span={8}>
-                  <h4>scalable minds</h4>
-                  <p>
-                    <a href="http://scalableminds.com">http://scalableminds.com</a>
-                  </p>
-                  <ul>
-                    <li>Tom Bocklisch</li>
-                    <li>Dominic Bräunlein</li>
-                    <li>Johannes Frohnhofen</li>
-                    <li>Tom Herold</li>
-                    <li>Florian Meinel</li>
-                    <li>Philipp Otto</li>
-                    <li>Norman Rzepka</li>
-                    <li>Jonathan Striebel</li>
-                    <li>Thomas Werkmeister</li>
-                    <li>Daniel Werner</li>
-                    <li>Georg Wiese</li>
-                  </ul>
-                </Col>
-                <Col span={8}>
-                  <a href="http://www.brain.mpg.de/connectomics">
-                    <img
-                      className="img-50"
-                      alt="Max Planck Gesellschaft logo"
-                      src="assets/images/Max-Planck-Gesellschaft.svg"
-                    />
-                  </a>
-                  <a href="http://www.brain.mpg.de/connectomics">
-                    <img
-                      className="img-50"
-                      alt="Max Planck Institute for Brain Research logo"
-                      src="assets/images/MPI-brain-research.svg"
-                    />
-                  </a>
-                  <a href="http://www.scm.io">
-                    <img
-                      className="img-responsive"
-                      alt="scalable minds logo"
-                      src="assets/images/scalableminds_logo.svg"
-                      style={{ filter: "contrast(0)" }}
-                    />
-                  </a>
-                </Col>
-              </Row>
-              <section>
-                <p>
-                  webKnossos is using Brainflight technology for real time data delivery,
-                  implemented by <em>scalable minds</em>
-                </p>
-              </section>
-              <section>
-                <p>The webKnossos frontend was inspired by Knossos:</p>
-                <p>
-                  Helmstaedter, M., K.L. Briggman, and W. Denk,<br />
-                  High-accuracy neurite reconstruction for high-throughput neuroanatomy. <br />
-                  Nat. Neurosci. 14, 1081–1088, 2011.<br />
-                  <a href="http://www.knossostool.org">http://www.knossostool.org</a>
-                </p>
-              </section>
-              <section>
-                <p>
-                  For more information about our project, visit{" "}
-                  <a href="http://www.brainflight.net">http://www.brainflight.net</a> and{" "}
-                  <a href="http://www.brain.mpg.de/connectomics">
-                    http://www.brain.mpg.de/connectomics
-                  </a>
-                </p>
-
-                <p>&copy; Max Planck Institut for Brain Research</p>
-              </section>
               <p>
-                <Link to="/impressum">Legal Notice</Link>
+                Developed by{" "}
+                <a href="https://www.brain.mpg.de/connectomics">
+                  Max Planck Institute for Brain Research
+                </a>{" "}
+                and <a href="https://scalableminds.com">scalable minds</a>.
+              </p>
+              <p>
+                <a href="https://www.brain.mpg.de/connectomics">
+                  <img
+                    className="img-50"
+                    alt="Max Planck Gesellschaft logo"
+                    src="assets/images/Max-Planck-Gesellschaft.svg"
+                  />
+                </a>
+                <a href="https://www.brain.mpg.de/connectomics">
+                  <img
+                    className="img-50"
+                    alt="Max Planck Institute for Brain Research logo"
+                    src="assets/images/MPI-brain-research.svg"
+                  />
+                </a>
+                <a href="https://scalableminds.com">
+                  <img
+                    className="img-responsive"
+                    alt="scalable minds logo"
+                    src="assets/images/scalableminds_logo.svg"
+                    style={{ filter: "contrast(0)" }}
+                  />
+                </a>
+              </p>
+              <p>
+                webKnossos has been published in:{" "}
+                <a href="http://dx.doi.org/10.1038/NMETH.4331">
+                  Boergens Berning Bocklisch Bräunlein Drawitsch Frohnhofen Herold Otto Rzepka
+                  Werkmeister Werner Wiese Wissler & Helmstaedter, webKnossos: efficient online 3D
+                  data annotation for connectomics,. Nat. Meth. (2017) DOI:10.1038/NMETH.4331
+                </a>.
+              </p>
+              <p>
+                The webKnossos frontend was inspired by Knossos:{" "}
+                <a href="">
+                  Helmstaedter, M., K.L. Briggman, and W. Denk, Nat. Neurosci. (2011) 14, 1081-1088
+                </a>.
+              </p>
+              <p>
+                <a href="https://webknossos.org">
+                  More information about webKnossos and full credits at webknossos.org
+                </a>.
+              </p>
+              <p>
+                <Link to="/imprint">Imprint</Link> &bull;
+                <Link to="/privacy">Privacy</Link>
               </p>
             </div>
           </div>

@@ -13,6 +13,7 @@ import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
 import Imprint from "components/imprint";
+import Privacy from "components/privacy";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/dashboard_view";
@@ -329,7 +330,8 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
-              <Route path="/impressum" component={Imprint} />
+              <Route path="/imprint" component={Imprint} />
+              <Route path="/privacy" component={Privacy} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

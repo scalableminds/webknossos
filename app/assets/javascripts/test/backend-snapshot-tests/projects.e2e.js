@@ -79,6 +79,15 @@ test.serial("updateProject(projectName: string, project: APIProjectType)", async
   });
 });
 
+test.serial("increaseProjectTaskInstances", async t => {
+  const projectName = (await api.getProjects())[0].name;
+
+  const updatedProject = await api.increaseProjectTaskInstances(projectName, 10);
+  t.snapshot(updatedProject, {
+    id: "projects-increaseProjectTaskInstances(projectName: string, delta?: number)",
+  });
+});
+
 test.serial("pauseProject and resumeProject", async t => {
   const projectName = (await api.getProjects())[0].name;
 

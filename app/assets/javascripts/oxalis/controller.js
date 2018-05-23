@@ -266,7 +266,15 @@ class Controller extends React.PureComponent<Props, State> {
 
     this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
 
-    this.keyboard = new InputKeyboard({});
+    this.keyboard = new InputKeyboard({
+      l: timeFactor => {
+        Toast.warning(messages["tracing.no_viewport_scaling_setting"]);
+      },
+
+      k: timeFactor => {
+        Toast.warning(messages["tracing.no_viewport_scaling_setting"]);
+      },
+    });
   }
 
   updateStats = () => this.stats.update();

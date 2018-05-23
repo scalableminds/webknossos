@@ -57,7 +57,9 @@ class DatasetPositionView extends PureComponent<Props> {
               <Vector3Input
                 value={position}
                 onChange={this.handleChangePosition}
-                style={{ maxWidth: 130, textAlign: "center" }}
+                // The input field should be able to show at least xxxxx, yyyyy, zzzzz
+                // without scrolling
+                style={{ maxWidth: 140, textAlign: "center" }}
               />
             </Input.Group>
           </div>

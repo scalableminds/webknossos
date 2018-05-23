@@ -39,6 +39,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.merged": "Merging successfully done",
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
+  "tracing.no_viewport_scaling_setting":
+    "Scaling the viewports via k/l is not supported anymore. Instead you can increase the viewport size by dragging the borders between the panes. You can also rearrange the panes by dragging the tabs.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "task.user_script_retrieval_error": "Unable to retrieve script",

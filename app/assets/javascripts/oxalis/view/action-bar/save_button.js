@@ -7,12 +7,20 @@ type Props = {
   onClick: (SyntheticInputEvent<HTMLButtonElement>) => Promise<*>,
 };
 
-const SAVED_POLLING_INTERVAL = 1000;
+type State = {
+  isStateSaved: boolean,
+};
 
-class SaveButton extends React.PureComponent<Props> {
+const SAVE_POLLING_INTERVAL = 1000;
+
+class SaveButton extends React.PureComponent<Props, State> {
+  state = {
+    isStateSaved: false,
+  };
+
   componentDidMount() {
     // Polling can be removed once VolumeMode saving is reactive
-    this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVED_POLLING_INTERVAL);
+    this.savedPollingInterval = window.setInterval(this._forceUpdate, SAVE_POLLING_INTERVAL);
   }
 
   componentWillUnmount() {
@@ -21,14 +29,14 @@ class SaveButton extends React.PureComponent<Props> {
 
   savedPollingInterval: number = 0;
   _forceUpdate = () => {
-    this.forceUpdate();
+    this.setState({ isStateSaved: Model.stateSaved() });
   };
 
   getSaveButtonIcon() {
-    if (!Model.stateSaved()) {
-      return "hourglass";
-    } else {
+    if (this.state.isStateSaved) {
       return "check";
+    } else {
+      return "hourglass";
     }
   }
 

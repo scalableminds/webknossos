@@ -134,7 +134,7 @@ class Navbar extends React.PureComponent<Props> {
           </a>
         </Menu.Item>
         <Menu.Item key="/help/credits">
-          <a target="_blank" href="https://webknossos.org">
+          <a target="_blank" href="https://webknossos.org" rel="noopener noreferrer">
             About & Credits
           </a>
         </Menu.Item>

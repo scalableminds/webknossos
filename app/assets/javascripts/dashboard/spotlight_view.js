@@ -1,7 +1,7 @@
 // @flow
 import * as React from "react";
 import { Link } from "react-router-dom";
-import { Spin, Layout, Row, Col } from "antd";
+import { Spin, Layout } from "antd";
 import { transformDatasets } from "dashboard/dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import type { DatasetType } from "dashboard/dataset_view";

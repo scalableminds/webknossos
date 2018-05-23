@@ -40,9 +40,9 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
     }
   }
 
-    componentWillUnmount() {
-      this.unbindListener();
-    }
+  componentWillUnmount() {
+    this.unbindListener();
+  }
 
   rebuildLayout() {
     this.gl.destroy();

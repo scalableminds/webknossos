@@ -64,7 +64,9 @@ class InputCatcher extends React.PureComponent<Props, {}> {
       <div className="gl-dont-overflow">
         <div
           id={`inputcatcher_${viewportID}`}
-          ref={domElement => {this.domElement = domElement}}
+          ref={domElement => {
+            this.domElement = domElement;
+          }}
           onContextMenu={ignoreContextMenu}
           data-value={viewportID}
           className="inputcatcher"

@@ -1,6 +1,28 @@
 import React from "react";
+import type {APIOrganizationDataType} from "admin/api_flow_types"
+import { getOrganizationData } from "admin/admin_rest_api";
 
-const Imprint = () => (
+type State = {
+  organizationData: API,
+};
+
+class Imprint extends React.PureComponent<State> {
+  state = {
+    organizationData: {},
+  };
+
+  componentDidMount() {
+    this.fetchData();
+  }
+
+  async fetchData() {
+    const organizationData = await getOrganizationData();
+
+    this.setState({ organizationData });
+  }
+
+  render() {
+    const imprint = (
   <div className="container" id="impressum">
     <h2>Legal Notice</h2>
     <h3>scalable minds UG (haftungsbeschränkt) & Co. KG</h3>
@@ -24,16 +46,20 @@ const Imprint = () => (
     <p>Director</p>
 
     <h5>Visiting address</h5>
-    <p>Max-von-Laue-Str. 4</p>
+    <p>{this.state.organizationData.address}</p>
     <p>D-60438 Frankfurt am Main</p>
 
     <h5>Contact</h5>
-    <p>phone: +49 69 850033-3001</p>
+    <p>phone: {this.state.organizationData.contact}</p>
     <p>e-mail: mhoffice@brain.mpg.de</p>
     <p>
       web: <a href="http://www.brain.mpg.de/connectomics">www.brain.mpg.de/connectomics</a>
     </p>
   </div>
 );
+    return imprint;
+  }
+
+ } 
 
 export default Imprint;

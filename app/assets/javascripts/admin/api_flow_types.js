@@ -287,4 +287,9 @@ export type APIFeatureToggles = {
   +discussionBoard: boolean,
 };
 
+export type APIOrganizationDataType = {
+  +contact: string,
+  +address: string
+}
+
 export default {};

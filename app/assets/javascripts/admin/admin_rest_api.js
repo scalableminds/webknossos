@@ -29,6 +29,7 @@ import type {
   APIBuildInfoType,
   APITracingType,
   APIFeatureToggles,
+  APIOrganizationDataType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
@@ -690,4 +691,8 @@ export function getBuildInfo(): Promise<APIBuildInfoType> {
 // ### Feature Selection
 export async function getFeatureToggles(): Promise<APIFeatureToggles> {
   return Request.receiveJSON("/api/features");
+}
+
+export async function getOrganizationData(): Promise<APIOrganizationDataType> {
+  return Request.receiveJSON("/api/organizationData")
 }

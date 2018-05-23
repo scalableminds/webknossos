@@ -131,7 +131,6 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
   onSelect = evt => {
     const treeId = evt.target.dataset.id;
     this.props.onSetActiveTree(parseInt(treeId, 10));
-    evt.target.blur();
   };
 
   onExpand = (params: { node: TreeNodeType, expanded: boolean }) => {

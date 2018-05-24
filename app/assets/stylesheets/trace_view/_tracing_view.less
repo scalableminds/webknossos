@@ -77,10 +77,9 @@
 }
 
 .tracing-layout {
-  padding-bottom: 20px;
-  padding-right: 20px;
-  padding-right: 20px;
   height: ~"calc(100vh - 60px)";
+  display: flex;
+
   .ant-layout-header {
     height: auto;
     min-height: 64px;
@@ -95,6 +94,11 @@
   .ant-layout-sider {
     overflow-x: hidden;
     overflow-y: auto;
+  }
+  .ant-layout-has-sider {
+    overflow-y: hidden;
+    overflow-x: auto;
+    flex: 1 1 auto;
   }
 }
 .tracing-settings-menu {

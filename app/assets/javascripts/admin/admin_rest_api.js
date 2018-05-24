@@ -15,8 +15,7 @@ import type {
   APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
-  APIDatastoreType,
-  NDStoreConfigType,
+  APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
   APIDataSourceType,
@@ -571,14 +570,6 @@ export async function getDatasetAccessList(datasetName: string): Promise<Array<A
   return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
 
-export async function addNDStoreDataset(
-  ndstoreConfig: NDStoreConfigType,
-): Promise<APIAnnotationType> {
-  return Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore", {
-    data: ndstoreConfig,
-  });
-}
-
 export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
   await doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
@@ -615,7 +606,7 @@ export async function revokeDatasetSharingToken(datasetName: string): Promise<vo
 }
 
 // #### Datastores
-export async function getDatastores(): Promise<Array<APIDatastoreType>> {
+export async function getDatastores(): Promise<Array<APIDataStoreType>> {
   const datastores = await Request.receiveJSON("/api/datastores");
   assertResponseLimit(datastores);
 

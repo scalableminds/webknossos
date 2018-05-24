@@ -149,7 +149,6 @@ CREATE TABLE webknossos.tasks(
   _project CHAR(24) NOT NULL,
   _script CHAR(24),
   _taskType CHAR(24) NOT NULL,
-  _team CHAR(24) NOT NULL,
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,

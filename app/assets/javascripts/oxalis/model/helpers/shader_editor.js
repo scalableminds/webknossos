@@ -12,12 +12,13 @@ export default {
 window._setupShaderEditor = viewport => {
   const outer = document.createElement("div");
   const input = document.createElement("textarea");
-  input.value = window.materials[viewport].fragmentShader;
+  const material = window.nodeMaterial; // window.materials[viewport];
+  input.value = material.fragmentShader;
   const button = document.createElement("button");
   const buttonContainer = document.createElement("div");
   function overrideShader() {
-    window.materials[viewport].fragmentShader = input.value;
-    window.materials[viewport].needsUpdate = true;
+    material.fragmentShader = input.value;
+    material.needsUpdate = true;
     window.needsRerender = true;
   }
   button.addEventListener("click", () => overrideShader());
@@ -30,7 +31,7 @@ window._setupShaderEditor = viewport => {
     "style",
     `position: absolute;
         top: 0;
-        left: 500px;
+        right: 0px;
         z-index: 10000;
         background: white;`,
   );

@@ -81,6 +81,7 @@ class NodeShader {
   }
 
   getMaterial(): THREE.RawShaderMaterial {
+    window.nodeMaterial = this.material;
     return this.material;
   }
 
@@ -109,6 +110,10 @@ uniform sampler2D treeColors;
 attribute float radius;
 attribute vec3 position;
 attribute float type;
+attribute float isCommented;
+// Since attributes are only supported in vertex shader, we pass the attribute into a
+// varying to use in the fragment shader
+varying float v_isCommented;
 attribute float nodeId;
 attribute float treeId;
 
@@ -130,7 +135,7 @@ vec3 hsv2rgb(vec3 color) {
     return color.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), color.y);
 }
 
-vec3 shiftColor(vec3 color, float shiftValue) {
+vec3 shiftHue(vec3 color, float shiftValue) {
     vec3 hsvColor = rgb2hsv(color);
     hsvColor.x = fract(hsvColor.x + shiftValue);
     return hsv2rgb(hsvColor);
@@ -178,14 +183,26 @@ void main() {
 
     // NODE COLOR FOR ACTIVE NODE
     if (activeNodeId == nodeId) {
-      color = shiftColor(color, 0.25);
+      color = shiftHue(color, 0.25);
       gl_PointSize *= activeNodeScaleFactor;
     }
 
+    float isBranchpoint =
+      type == ${NodeTypes.BRANCH_POINT.toFixed(1)}
+      ? 1.0 : 0.0;
     // NODE COLOR FOR BRANCH_POINT
-    if (type == ${NodeTypes.BRANCH_POINT.toFixed(1)}) {
-      color = shiftColor(color, 0.5);
+    if (isBranchpoint == 1.0) {
+      color = shiftHue(color, 0.5);
     }
+    // Since attributes are only supported in vertex shader, we pass the attribute into a
+    // varying to use in the fragment shader
+    v_isCommented = isCommented;
+    if (isCommented == 1.0) {
+      // Make commented nodes twice as large so that the border can be displayed correctly
+      // and recognizable
+      gl_PointSize *= 2.0;
+    }
+
 }`;
   }
 
@@ -194,10 +211,20 @@ void main() {
 precision highp float;
 
 varying vec3 color;
+// Since attributes are only supported in vertex shader, we pass the attribute into a
+// varying to use in the fragment shader
+varying float v_isCommented;
 
 void main()
 {
     gl_FragColor = vec4(color, 1.0);
+    vec2 centerDistance = abs(gl_PointCoord - vec2(0.5));
+    bool isBorder = centerDistance.x < 0.20
+    // Since attributes are only supported in vertex shader, we pass the attribute into a
+    // varying to use in the fragment shader && centerDistance.y < 0.20;
+    if (v_isCommented == 1.0 && isBorder) {
+      gl_FragColor  = vec4(1.0);
+    };
 }`;
   }
 }

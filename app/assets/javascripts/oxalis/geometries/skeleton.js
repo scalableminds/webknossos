@@ -51,6 +51,7 @@ const NodeBufferHelperType = {
     geometry.addAttribute("position", new THREE.BufferAttribute(new Float32Array(capacity * 3), 3));
     geometry.addAttribute("radius", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.addAttribute("type", new THREE.BufferAttribute(new Float32Array(capacity), 1));
+    geometry.addAttribute("isCommented", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.addAttribute("nodeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
     geometry.addAttribute("treeId", new THREE.BufferAttribute(new Float32Array(capacity), 1));
   },
@@ -285,6 +286,11 @@ class Skeleton {
           if (isBranchpoint) {
             this.updateNodeType(treeId, nodeId, NodeTypes.BRANCH_POINT);
           }
+          const isCommented = tree.comments.find(bp => bp.nodeId === nodeId) != null;
+          if (isCommented) {
+            this.updateIsCommented(treeId, nodeId, true);
+          }
+
           break;
         }
         case "deleteNode":
@@ -313,24 +319,30 @@ class Skeleton {
           break;
         }
         case "updateTree": {
-          // diff branchpoints
+          // Helper function to act on created or deleted elements
+          const forEachCreatedOrDeletedId = <T: { +nodeId: number }>(
+            oldElements: Array<T>,
+            newElements: Array<T>,
+            callback: (number, boolean) => void,
+          ) => {
+            const oldIds = oldElements.map(el => el.nodeId);
+            const newIds = newElements.map(el => el.nodeId);
+            const { onlyA: deletedIds, onlyB: createdIds } = Utils.diffArrays(oldIds, newIds);
+            createdIds.forEach(id => callback(id, true));
+            deletedIds.forEach(id => callback(id, false));
+          };
+
           const treeId = update.value.id;
           const tree = skeletonTracing.trees[treeId];
           const prevTree = this.prevTracing.trees[treeId];
-          const oldBranchPoints = prevTree.branchPoints.map(branchPoint => branchPoint.nodeId);
-          const newBranchPoints = tree.branchPoints.map(branchPoint => branchPoint.nodeId);
-          const { onlyA: deletedBranchPoints, onlyB: createdBranchPoints } = Utils.diffArrays(
-            oldBranchPoints,
-            newBranchPoints,
-          );
 
-          for (const nodeId of deletedBranchPoints) {
-            this.updateNodeType(treeId, nodeId, NodeTypes.NORMAL);
-          }
+          forEachCreatedOrDeletedId(prevTree.branchPoints, tree.branchPoints, (id, isCreated) => {
+            this.updateNodeType(treeId, id, isCreated ? NodeTypes.BRANCH_POINT : NodeTypes.NORMAL);
+          });
 
-          for (const nodeId of createdBranchPoints) {
-            this.updateNodeType(treeId, nodeId, NodeTypes.BRANCH_POINT);
-          }
+          forEachCreatedOrDeletedId(prevTree.comments, tree.comments, (id, isCreated) => {
+            this.updateIsCommented(treeId, id, isCreated);
+          });
 
           if (tree.color !== prevTree.color) {
             this.updateTreeColor(treeId, update.value.color, tree.isVisible);
@@ -423,6 +435,9 @@ class Skeleton {
     for (const branchpoint of tree.branchPoints) {
       this.updateNodeType(tree.treeId, branchpoint.nodeId, NodeTypes.BRANCH_POINT);
     }
+    for (const comment of tree.comments) {
+      this.updateIsCommented(tree.treeId, comment.nodeId, true);
+    }
     for (const edge of tree.edges.all()) {
       const source = tree.nodes.get(edge.source);
       const target = tree.nodes.get(edge.target);
@@ -481,6 +496,15 @@ class Skeleton {
     this.update(id, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.type;
       attribute.array[index] = type;
+      return [attribute];
+    });
+  }
+
+  updateIsCommented(treeId: number, nodeId: number, isCommented: boolean) {
+    const id = this.combineIds(nodeId, treeId);
+    this.update(id, this.nodes, ({ buffer, index }) => {
+      const attribute = buffer.geometry.attributes.isCommented;
+      attribute.array[index] = isCommented;
       return [attribute];
     });
   }

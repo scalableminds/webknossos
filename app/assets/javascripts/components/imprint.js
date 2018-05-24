@@ -8,34 +8,38 @@ const Imprint = () => (
         <h2>Imprint</h2>
 
         <h3>scalable minds UG (haftungsbeschränkt) & Co. KG</h3>
-        <p>Amtsgericht Potsdam, HRA 5753</p>
-        <p>Geschäftsführer: scalable minds Verwaltungs UG</p>
-        <p>(vertreten durch Tom Bocklisch, Tom Herold, Norman Rzepka)</p>
-        <p>USt-Id. DE283513495</p>
-
-        <h5>Visiting address</h5>
-        <p>Großbeerenstraße 15</p>
-        <p>14482 Potsdam</p>
-
-        <h5>Contact</h5>
-        <p>e-mail: hello@scm.io</p>
         <p>
-          web: <a href="http://scm.io">scm.io</a>
+          Großbeerenstraße 15<br />14482 Potsdam<br />Germany
+        </p>
+        <p>
+          District Court Potsdam, HRA 5753<br />
+          Managing Director: scalable minds Verwaltungs UG<br />
+          (represented by Tom Bocklisch, Tom Herold, Norman Rzepka)<br />USt-Id. DE283513495
+        </p>
+        <p>
+          <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a>
+          <br />
+          <a href="https://scalableminds.com">https://scalableminds.com</a>
         </p>
 
         <h3>Max Planck Institute for Brain Research</h3>
-        <p>Dr. Moritz Helmstaedter</p>
-        <p>Director</p>
+        <p>
+          Dr. Moritz Helmstaedter<br />
+          Director
+        </p>
 
         <h5>Visiting address</h5>
-        <p>Max-von-Laue-Str. 4</p>
-        <p>D-60438 Frankfurt am Main</p>
+        <p>
+          Max-von-Laue-Str. 4<br />60438 Frankfurt am Main<br />Germany
+        </p>
 
         <h5>Contact</h5>
-        <p>phone: +49 69 850033-3001</p>
-        <p>e-mail: mhoffice@brain.mpg.de</p>
         <p>
-          web: <a href="http://www.brain.mpg.de/connectomics">www.brain.mpg.de/connectomics</a>
+          <a href="tel:">+49 69 850033-3001</a>
+          <br />
+          <a href="mailto:mhoffice@brain.mpg.de">mhoffice@brain.mpg.de</a>
+          <br />
+          <a href="http://www.brain.mpg.de/connectomics">www.brain.mpg.de/connectomics</a>
         </p>
       </Col>
     </Row>

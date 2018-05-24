@@ -92,8 +92,9 @@ const Privacy = () => (
                 analytics is the collection, gathering, and analysis of data about the behavior of
                 visitors to websites. A web analysis service collects, inter alia, data about which
                 features were uses, or how often and for what duration a feature has been used. Web
-                analytics are mainly used for the optimization and maintenance of a website. Read
-                more below.
+                analytics are used for the optimization and maintenance of a website. The legal
+                basis for using Google Analytics is a legitimate interest to provide and improve the
+                service. Read more below.
               </li>
               <li>
                 New Relic is a systems monitoring and diagnostics tool. Server requests and internal
@@ -171,12 +172,12 @@ const Privacy = () => (
         <ul>
           <li>
             If you wish to confirm, access, update/correct or request deletion of your personal
-            data, you can do so here or by contacting us.
+            data, you can do so by contacting us.
           </li>
           <li>
             You can always object to processing the of your personal data, please ask us to restrict
-            processing of your personal data or request a data export. Again, you can do so here or
-            by contacting us.
+            processing of your personal data or request a data export. Again, you can do so by
+            contacting us.
           </li>
           <li>
             You have the right to complain to a data protection authority about our collection and
@@ -184,8 +185,8 @@ const Privacy = () => (
             protection authority.
           </li>
           <li>
-            You can request an archive of the data we have stored about you. To file for such a
-            request please login to your account here and submit a data export request.
+            You can request an archive of the data we have stored about you. Again, to file for such
+            a request, please contact us.
           </li>
         </ul>
         <h3>Legal basis</h3>
@@ -212,17 +213,17 @@ const Privacy = () => (
         <ul>
           <li>
             Servers are actively maintained and updated with state-of-the-art technologies and
-            security patches to prevent malware and attackers.{" "}
+            security patches to prevent malware and attackers.
           </li>
           <li>Unusual resource consumption is regularly monitored. </li>
           <li>
-            Access control to the servers is implemented with encrypted challenge-response methods.{" "}
+            Access control to the servers is implemented with encrypted challenge-response methods.
           </li>
           <li>Employees are granted access to the servers only if they need it. </li>
           <li>Regular and encrypted backups are implemented and monitored. </li>
           <li>
             Employees are required to attend regular privacy trainings in order to ensure
-            responsible handling of personal data.{" "}
+            responsible handling of personal data.
           </li>
           <li>Suppliers and integrated services are evaluated and inspected on a regular basis.</li>
         </ul>
@@ -304,6 +305,8 @@ const Privacy = () => (
           http://www.google.com/analytics/terms/us.html. Google Analytics is further explained under
           the following Link https://www.google.com/analytics/.
         </p>
+
+        <p>Date: May 25, 2018</p>
       </Col>
     </Row>
   </div>

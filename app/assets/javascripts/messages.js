@@ -86,6 +86,8 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_firstName_input": "Please input your first name!",
   "auth.registration_lastName_input": "Please input your last name!",
   "auth.registration_org_input": "Please select an organization!",
+  "auth.privacy_check_required":
+    "Unfortunately, we cannot provide the service without your consent to the processing of your data.",
   "auth.reset_logout": "You will be logged out, after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",

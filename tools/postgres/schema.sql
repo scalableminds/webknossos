@@ -278,7 +278,7 @@ CREATE INDEX ON webknossos.dataSets(name);
 CREATE INDEX ON webknossos.tasks(_project);
 CREATE INDEX ON webknossos.tasks(isDeleted);
 CREATE INDEX ON webknossos.tasks(_project, isDeleted);
-CREATE INDEX ON webknossos.tasks(_team, neededExperience_domain, neededExperience_value);
+CREATE INDEX ON webknossos.tasks(neededExperience_domain, neededExperience_value);
 CREATE INDEX ON webknossos.tasks(_taskType);
 CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);

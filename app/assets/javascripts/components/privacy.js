@@ -5,10 +5,10 @@ const Privacy = () => (
   <div className="container text">
     <Row>
       <Col offset={6} span={12}>
-        <h2>Privacy Policy</h2>
+        <h2>Privacy Statement</h2>
 
         <p>
-          webKnossos is an team-based open-source tool for exploring and collaboratively annotating
+          webKnossos is a team-based open-source tool for exploring and collaboratively annotating
           3D image datasets. Viewing datasets is possible without a registration. However, if users
           want to create annotations or perform any other changes to the system, they need to have a
           registered account. Personal data is processed in webKnossos. This privacy statement
@@ -60,7 +60,7 @@ const Privacy = () => (
             organization-specific information (e.g. data of registered users).
           </li>
           <li>
-            webKnossos may be provided as a hosted service. In that case the hosting provider is a
+            webKnossos may be provided as a hosted service. In that case, the hosting provider is a
             &quot;<strong>processor</strong>&quot; within the meaning of GDPR (see GDPR Art. 4 (8)
             for full definition). The processor performs data processing on behalf of the
             controller.
@@ -84,14 +84,14 @@ const Privacy = () => (
         <h3>Your Data</h3>
         <ul>
           <li>
-            In order to provide the webKnossos application several external services are used. Some
+            In order to provide the webKnossos application, several external services are used. Some
             personal data of users may be transmitted to these services as described below.
             <ul>
               <li>
                 Google Analytics (with the anonymizer function) is a web analytics service. Web
                 analytics is the collection, gathering, and analysis of data about the behavior of
                 visitors to websites. A web analysis service collects, inter alia, data about which
-                features were uses, or how often and for what duration a feature has been used. Web
+                features were used, or how often and for what duration a feature has been used. Web
                 analytics are used for the optimization and maintenance of a website. The legal
                 basis for using Google Analytics is a legitimate interest to provide and improve the
                 service. Read more below.
@@ -99,7 +99,7 @@ const Privacy = () => (
               <li>
                 New Relic is a systems monitoring and diagnostics tool. Server requests and internal
                 systems diagnostics are logged in NewRelic. As part of this logging, personal data
-                including IP addresses is transmitted to NewRelic. Diagnostics are used for
+                including IP addresses are transmitted to NewRelic. Diagnostics are used for
                 resolving errors and monitoring unusual resource consumption and therefore to ensure
                 uninterrupted service. After 8 days only aggregated data is stored, thus anonymizing
                 any personal data. NewRelic is operated by New Relic, Inc., 188 Spear Street San
@@ -108,8 +108,8 @@ const Privacy = () => (
               </li>
               <li>
                 Airbrake is an error reporting tool. System errors that occur in the application are
-                logged in Airbrake. When an error occurs the IP address of the user as well as the
-                user account information of registered users are transmitted to Airbrake. The
+                logged in Airbrake. When an error occurs the IP address of the user, as well as the
+                user account information of registered users, are transmitted to Airbrake. The
                 purpose of error reporting is to resolve errors and therefore to ensure
                 uninterrupted service. Airbrake is operated by Airbrake Technologies, Inc., 535
                 Mission Street, 14th floor, San Francisco, CA 94105, USA. After 30 days data is
@@ -159,7 +159,7 @@ const Privacy = () => (
             scientific community. Users may unpublish their work at any time.
           </li>
           <li>
-            For scientific purposes it may be required to retain personal information in order to
+            For scientific purposes, it may be required to retain personal information in order to
             provide attribution and accountability.
           </li>
           <li>
@@ -193,13 +193,14 @@ const Privacy = () => (
         <p>
           Art. 6(1) lit. a GDPR serves as the legal basis for processing operations for which we
           obtain consent for a specific processing purpose. If the processing of personal data is
-          necessary for the performance of a contract to which the data subject is party, as is the
-          case, for example, when processing operations are necessary for the supply of goods or to
-          provide any other service, the processing is based on Article 6(1) lit. b GDPR. The same
-          applies to such processing operations which are necessary for carrying out pre-contractual
-          measures, for example in the case of inquiries concerning our products or services. Are we
-          subject to a legal obligation by which processing of personal data is required, such as
-          for the fulfillment of tax obligations, the processing is based on Art. 6(1) lit. c GDPR.
+          necessary for the performance of a contract to which the data subject is a party, as is
+          the case, for example, when processing operations are necessary for the supply of goods or
+          to provide any other service, the processing is based on Article 6(1) lit. b GDPR. The
+          same applies to such processing operations which are necessary for carrying out
+          pre-contractual measures, for example in the case of inquiries concerning our products or
+          services. Are we subject to a legal obligation by which processing of personal data is
+          required, such as for the fulfillment of tax obligations, the processing is based on Art.
+          6(1) lit. c GDPR.
         </p>
         <p>
           In case of a hosted webKnossos service, the processing is performed by the processor on
@@ -222,8 +223,8 @@ const Privacy = () => (
           <li>Employees are granted access to the servers only if they need it. </li>
           <li>Regular and encrypted backups are implemented and monitored. </li>
           <li>
-            Employees are required to attend regular privacy trainings in order to ensure
-            responsible handling of personal data.
+            Employees are required to attend regular privacy training in order to ensure responsible
+            handling of personal data.
           </li>
           <li>Suppliers and integrated services are evaluated and inspected on a regular basis.</li>
         </ul>
@@ -243,16 +244,16 @@ const Privacy = () => (
         <h3>More information on the use of Google Analytics</h3>
         <p>
           For the web analytics through Google Analytics the controller uses the option
-          &quot;anonymizeIp&quot;. By means of this option the IP address of the Internet connection
-          of the data subject is abridged by Google and anonymised when accessing our websites from
-          a Member State of the European Union or another Contracting State to the Agreement on the
-          European Economic Area.
+          &quot;anonymizeIp&quot;. By means of this option, the IP address of the Internet
+          connection of the data subject is abridged by Google and anonymized when accessing our
+          websites from a Member State of the European Union or another Contracting State to the
+          Agreement on the European Economic Area.
         </p>
         <p>
           The purpose of the Google Analytics component is to analyze the traffic on our website.
-          Google uses the collected data and information, inter alia, to evaluate the use of our
-          website and to provide online reports, which show the activities on our websites, and to
-          provide other services concerning the use of our Internet site for us.
+          Google uses the collected data and information, inter alia, to evaluate the use to the
+          application and to provide online reports, which show the activities on our websites, and
+          to provide other services concerning the use of our Internet site for us.
         </p>
         <p>
           Google Analytics places a cookie on the information technology system of the data subject.

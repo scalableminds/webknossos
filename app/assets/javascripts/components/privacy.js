@@ -250,6 +250,10 @@ const Privacy = () => (
           Agreement on the European Economic Area.
         </p>
         <p>
+          The operator of the Google Analytics component is Google Inc., 1600 Amphitheatre Pkwy,
+          Mountain View, CA 94043-1351, USA.
+        </p>
+        <p>
           The purpose of the Google Analytics component is to analyze the traffic on our website.
           Google uses the collected data and information, inter alia, to evaluate the use to the
           application and to provide online reports, which show the activities on our websites, and

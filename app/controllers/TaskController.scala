@@ -89,7 +89,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      _ <- ensureTeamAdministration(request.identity, project._team) //ensureTeamAdministration(request.identity, teamBSON)
+      _ <- ensureTeamAdministration(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       namedTracingFoxes = parseResults.map(parseResultToSkeletonTracingFox)
       namedTracings <- Fox.combined(namedTracingFoxes) ?~> Messages("task.create.failed")

@@ -12,6 +12,8 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
 });
 mockRequire("libs/request", RequestMock);
+const WkstoreAdapterMock = { requestFromStore: sinon.stub() };
+mockRequire("oxalis/model/binary/wkstore_adapter", WkstoreAdapterMock);
 
 // Avoid node caching and make sure all mockRequires are applied
 const PullQueue = mockRequire.reRequire("oxalis/model/binary/pullqueue").default;
@@ -22,7 +24,6 @@ test.beforeEach(t => {
     url: "url",
     name: "layername",
     category: "color",
-    requestFromStore: sinon.stub(),
   };
   const cube = {
     BUCKET_LENGTH: 32 * 32 * 32,
@@ -50,16 +51,16 @@ test.beforeEach(t => {
     cube.getOrCreateBucket.withArgs(bucket.zoomedAddress).returns(bucket);
   }
 
-  t.context = { buckets, pullQueue, layer };
+  t.context = { buckets, pullQueue };
 });
 
-test("Successful pulling: should receive the correct data", t => {
-  const { pullQueue, buckets, layer } = t.context;
+test.serial("Successful pulling: should receive the correct data", t => {
+  const { pullQueue, buckets } = t.context;
   const bucketData1 = _.range(0, 32 * 32 * 32).map(i => i % 256);
   const bucketData2 = _.range(0, 32 * 32 * 32).map(i => (2 * i) % 256);
   const responseBuffer = new Uint8Array(bucketData1.concat(bucketData2));
-  layer.requestFromStore = sinon.stub();
-  layer.requestFromStore.returns(Promise.resolve(responseBuffer));
+  WkstoreAdapterMock.requestFromStore = sinon.stub();
+  WkstoreAdapterMock.requestFromStore.returns(Promise.resolve(responseBuffer));
 
   pullQueue.pull();
 
@@ -73,37 +74,38 @@ test("Successful pulling: should receive the correct data", t => {
   ]);
 });
 
-function prepare(t) {
-  const { layer } = t.context;
-  layer.requestFromStore = sinon.stub();
-  layer.requestFromStore.onFirstCall().returns(Promise.reject());
-  layer.requestFromStore.onSecondCall().returns(Promise.resolve(new Uint8Array(32 * 32 * 32)));
+function prepare() {
+  WkstoreAdapterMock.requestFromStore = sinon.stub();
+  WkstoreAdapterMock.requestFromStore.onFirstCall().returns(Promise.reject());
+  WkstoreAdapterMock.requestFromStore
+    .onSecondCall()
+    .returns(Promise.resolve(new Uint8Array(32 * 32 * 32)));
 }
 
-test("Request Failure: should not request twice if not bucket dirty", t => {
-  const { pullQueue, buckets, layer } = t.context;
-  prepare(t);
+test.serial("Request Failure: should not request twice if not bucket dirty", t => {
+  const { pullQueue, buckets } = t.context;
+  prepare();
   pullQueue.pull();
 
   return runAsync([
     () => {
-      t.is(layer.requestFromStore.callCount, 1);
+      t.is(WkstoreAdapterMock.requestFromStore.callCount, 1);
       t.is(buckets[0].state, BucketStateEnum.UNREQUESTED);
       t.is(buckets[1].state, BucketStateEnum.UNREQUESTED);
     },
   ]);
 });
 
-test("Request Failure: should reinsert dirty buckets", t => {
-  const { pullQueue, buckets, layer } = t.context;
-  prepare(t);
+test.serial("Request Failure: should reinsert dirty buckets", t => {
+  const { pullQueue, buckets } = t.context;
+  prepare();
   buckets[0].dirty = true;
   buckets[0].data = new Uint8Array(32 * 32 * 32);
   pullQueue.pull();
 
   return runAsync([
     () => {
-      t.is(layer.requestFromStore.callCount, 2);
+      t.is(WkstoreAdapterMock.requestFromStore.callCount, 2);
       t.is(buckets[0].state, BucketStateEnum.LOADED);
       t.is(buckets[1].state, BucketStateEnum.UNREQUESTED);
     },

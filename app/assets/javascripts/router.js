@@ -28,7 +28,7 @@ import DatasetImportView from "dashboard/dataset/dataset_import_view";
 
 // admin
 import KeyboardShortcutView from "admin/help/keyboardshortcut_view";
-import DatasetAddView from "admin/dataset/dataset_add_view";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import UserListView from "admin/user/user_list_view";
 import TeamListView from "admin/team/team_list_view";
 import TaskListView from "admin/task/task_list_view";
@@ -238,7 +238,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
-                component={DatasetAddView}
+                component={DatasetUploadView}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}

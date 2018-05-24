@@ -21,6 +21,9 @@ In order to restore the current window, a reload is necessary.`,
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "tracing.copy_position": "Click this button to copy the position.",
   "tracing.copy_rotation": "Click this button to copy the rotation.",
+  "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
+  "tracing.copy_maybe_mapped_cell_id":
+    "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
@@ -57,8 +60,6 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos.",
-  "dataset.ndstore_success":
-    "The dataset was successfully added to webKnossos from the specified NDStore.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",
@@ -135,4 +136,5 @@ In order to restore the current window, a reload is necessary.`,
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
   "mapping.too_few_textures":
     "Not enough textures available to support mappings. Mappings are disabled.",
+  "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
 };

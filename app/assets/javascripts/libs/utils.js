@@ -496,7 +496,7 @@ const Utils = {
     [tmp, a] = divMod(tmp); // eslint-disable-line
 
     // Big endian
-    return [r, g, b, a];
+    return [a, b, g, r];
   },
 };
 

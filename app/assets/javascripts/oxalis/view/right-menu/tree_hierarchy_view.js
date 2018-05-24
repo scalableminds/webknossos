@@ -353,7 +353,7 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
               innerStyle={{ padding: 0 }}
               scaffoldBlockPxWidth={25}
               searchFocusOffset={this.state.searchFocusOffset}
-              reactVirtualizedListProps={{ scrollToAlignment: "auto" }}
+              reactVirtualizedListProps={{ scrollToAlignment: "auto", tabIndex: null }}
             />
           </div>
         )}

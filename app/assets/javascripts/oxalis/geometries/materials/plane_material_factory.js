@@ -26,7 +26,7 @@ import {
 import constants, { OrthoViews, VolumeToolEnum, volumeToolEnumToIndex } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
-import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary/mappings";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 
@@ -176,7 +176,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       const [
         mappingTexture,
         mappingLookupTexture,
-      ] = Model.getSegmentationBinary().getMappingTextures();
+      ] = Model.getSegmentationBinary().mappings.getMappingTextures();
       this.uniforms[sanitizeName(`${Model.getSegmentationBinary().name}_mapping_texture`)] = {
         type: "t",
         value: mappingTexture,
@@ -247,7 +247,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     );
 
     listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.mappingSize,
+      storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
       mappingSize => {
         this.uniforms.mappingSize.value = mappingSize;
       },
@@ -308,11 +308,17 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       listenToStoreProperty(
         storeState => getActiveCellId(storeState.tracing).getOrElse(0),
-        activeCellId => {
-          // Convert the id into 4 bytes (little endian)
-          const [a, b, g, r] = Utils.convertDecToBase256(activeCellId);
-          this.uniforms.activeCellId.value.set(r, g, b, a);
-        },
+        () => this.updateActiveCellId(),
+      );
+
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
+        () => this.updateActiveCellId(),
+      );
+
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.mapping,
+        () => this.updateActiveCellId(),
       );
 
       listenToStoreProperty(
@@ -322,6 +328,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         },
       );
     }
+  }
+
+  updateActiveCellId() {
+    const activeCellId = getActiveCellId(Store.getState().tracing).getOrElse(0);
+    const mappedActiveCellId = Model.getSegmentationBinary().cube.mapId(activeCellId);
+    // Convert the id into 4 bytes (little endian)
+    const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
+    this.uniforms.activeCellId.value.set(r, g, b, a);
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {

@@ -11,12 +11,14 @@ import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import {
   PlaneControllerClass,
   mapStateToProps,
+  calculateGlobalPos,
 } from "oxalis/controller/viewmodes/plane_controller";
 import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
-import SceneController from "oxalis/controller/scene_controller";
 import Model from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
+import Clipboard from "clipboard-js";
+import Toast from "libs/toast";
 import {
   createCellAction,
   setToolAction,
@@ -31,7 +33,6 @@ import {
   setActiveCellAction,
 } from "oxalis/model/actions/volumetracing_actions";
 import {
-  getActiveCellId,
   getVolumeTool,
   getContourTracingMode,
 } from "oxalis/model/accessors/volumetracing_accessor";
@@ -51,21 +52,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
   componentDidMount() {
     super.componentDidMount();
-
-    let lastActiveCellId = getActiveCellId(Store.getState().tracing).get();
-    Store.subscribe(() => {
-      getActiveCellId(Store.getState().tracing).map(cellId => {
-        if (lastActiveCellId !== cellId) {
-          SceneController.renderVolumeIsosurface(cellId);
-          lastActiveCellId = cellId;
-        }
-      });
-    });
-
-    // If a new mapping is activated the 3D cell has to be updated, although the activeCellId did not change
-    this.listenTo(Model.getSegmentationBinary().cube, "newMapping", () =>
-      SceneController.renderVolumeIsosurface(lastActiveCellId),
-    );
 
     this.keyboardNoLoop = new InputKeyboardNoLoop({
       w: () => {
@@ -223,6 +209,20 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
       c: () => Store.dispatch(createCellAction()),
+      "ctrl + i": async event => {
+        const mousePosition = Store.getState().temporaryConfiguration.mousePosition;
+        if (mousePosition) {
+          const [x, y] = mousePosition;
+          const globalMousePosition = calculateGlobalPos({ x, y });
+          const cube = Model.getSegmentationBinary().cube;
+          const mapping = event.altKey ? cube.mapping : null;
+          const hoveredId = cube.getDataValue(globalMousePosition, mapping);
+          await Clipboard.copy(String(hoveredId));
+          Toast.success(`Cell id ${hoveredId} copied to clipboard.`);
+        } else {
+          Toast.warning("No cell under cursor.");
+        }
+      },
     });
   }
 

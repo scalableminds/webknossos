@@ -1,5 +1,5 @@
 // @flow
-import type { Vector3, OrthoViewType, BoundingBoxType, OrthoViewMapType } from "oxalis/constants";
+import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { FlycamType, OxalisState } from "oxalis/store";
 import constants, { OrthoViews } from "oxalis/constants";
 import Maybe from "data.maybe";
@@ -96,21 +96,6 @@ export function getRotationOrtho(planeId: OrthoViewType): Vector3 {
     case OrthoViews.PLANE_XY:
       return [0, 0, 0];
   }
-}
-
-export function getViewportBoundingBox(state: OxalisState): BoundingBoxType {
-  const position = getPosition(state.flycam);
-  const offset = getPlaneScalingFactor(state.flycam) * constants.PLANE_WIDTH / 2;
-  const baseVoxelFactors = scaleInfo.getBaseVoxelFactors(state.dataset.dataSource.scale);
-  const min = [0, 0, 0];
-  const max = [0, 0, 0];
-
-  for (let i = 0; i <= 2; i++) {
-    min[i] = position[i] - offset * baseVoxelFactors[i];
-    max[i] = position[i] + offset * baseVoxelFactors[i];
-  }
-
-  return { min, max };
 }
 
 export type AreaType = { left: number, top: number, right: number, bottom: number };

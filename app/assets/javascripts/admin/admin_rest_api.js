@@ -33,6 +33,7 @@ import type {
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
 import type { DatasetConfigurationType } from "oxalis/store";
+import _ from "lodash";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -620,6 +621,7 @@ export async function getDatastores(): Promise<Array<APIDatastoreType>> {
 
   return datastores;
 }
+export const getDataStoresCached = _.memoize(getDatastores);
 
 // ### Active User
 export async function getActiveUser(options: Object = {}) {

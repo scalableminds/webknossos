@@ -83,7 +83,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       </Menu>
     );
 
-    const createVolumeTracingMenu = (
+    const volumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
         <a href="#" title="Create Volume Tracing">
           <img src="/assets/images/volume.svg" alt="Volume" />
@@ -119,7 +119,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           >
             <img src="/assets/images/skeleton.svg" alt="Skeleton" />
           </a>
-          {dataset.dataStore.typ !== "ndstore" ? createVolumeTracingMenu : null}
+          {volumeTracingMenu}
         </div>
         <div className="dataset-description">
           <h3>

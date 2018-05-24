@@ -41,7 +41,7 @@ test("getActiveDatasets", async t => {
 
 test("getDatasetAccessList", async t => {
   const dataset = await getFirstDataset();
-  const accessList = await api.getDatasetAccessList(dataset.name);
+  const accessList = _.sortBy(await api.getDatasetAccessList(dataset.name), user => user.id);
 
   t.snapshot(accessList, { id: "dataset-getDatasetAccessList" });
 });

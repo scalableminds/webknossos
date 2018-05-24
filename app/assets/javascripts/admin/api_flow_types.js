@@ -4,19 +4,14 @@
  */
 import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Vector3, Vector6 } from "oxalis/constants";
-import type { DataLayerType, SettingsType, BoundingBoxObjectType } from "oxalis/store";
+import type {
+  SettingsType,
+  BoundingBoxObjectType,
+  CategoryType,
+  ElementClassType,
+} from "oxalis/store";
 
 export type APIMessageType = { ["info" | "warning" | "error"]: string };
-
-export type APIDataSourceType = {
-  +id: {
-    +name: string,
-    +team: string,
-  },
-  +status?: string,
-  +dataLayers: Array<DataLayerType>,
-  +scale: Vector3,
-};
 
 export type APIMappingType = {
   +parent?: string,
@@ -24,10 +19,29 @@ export type APIMappingType = {
   +classes?: Array<Array<number>>,
 };
 
+export type APIDataLayerType = {
+  +name: string,
+  +category: CategoryType,
+  +boundingBox: BoundingBoxObjectType,
+  +resolutions: Array<Vector3>,
+  +elementClass: ElementClassType,
+  +mappings?: Array<string>,
+};
+
+export type APIDataSourceType = {
+  +id: {
+    +name: string,
+    +team: string,
+  },
+  +status?: string,
+  +dataLayers: Array<APIDataLayerType>,
+  +scale: Vector3,
+};
+
 export type APIDataStoreType = {
   +name: string,
   +url: string,
-  +typ: "webknossos-store" | "nd-store",
+  +typ: "webknossos-store",
   +accessToken?: string,
 };
 
@@ -206,19 +220,6 @@ export type APIAnnotationType = {
 
 export type APITaskWithAnnotationType = APITaskType & {
   +annotation: APIAnnotationType,
-};
-
-export type APIDatastoreType = {
-  +name: string,
-  +url: string,
-  +typ: string,
-};
-
-export type NDStoreConfigType = {
-  +name: string,
-  +team: string,
-  +server: string,
-  +token: string,
 };
 
 export type DatasetConfigType = {

@@ -8,7 +8,7 @@ import messages from "messages";
 import Utils from "libs/utils";
 import { getDatastores, addDataset } from "admin/admin_rest_api";
 
-import type { APIDatastoreType, APIUserType, DatasetConfigType } from "admin/api_flow_types";
+import type { APIDataStoreType, APIUserType, DatasetConfigType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
 
@@ -25,7 +25,7 @@ type Props = StateProps & {
 };
 
 type State = {
-  datastores: Array<APIDatastoreType>,
+  datastores: Array<APIDataStoreType>,
   isUploading: boolean,
 };
 
@@ -110,7 +110,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                     optionFilterProp="children"
                     style={{ width: "100%" }}
                   >
-                    {this.state.datastores.map((datastore: APIDatastoreType) => (
+                    {this.state.datastores.map((datastore: APIDataStoreType) => (
                       <Option key={datastore.name} value={datastore.url}>
                         {`${datastore.name}`}
                       </Option>

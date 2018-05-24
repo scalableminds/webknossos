@@ -58,6 +58,7 @@ const tracing = {
       comments: [{ content: "comment", nodeId: 0 }],
       color: [23, 23, 23],
       isVisible: true,
+      groupId: null,
     },
     "2": {
       treeId: 2,
@@ -73,9 +74,33 @@ const tracing = {
       comments: [],
       color: [30, 30, 30],
       isVisible: true,
+      groupId: 1,
     },
   },
   tracingType: "Explorational",
+  treeGroups: [
+    {
+      groupId: 1,
+      name: "Axon 1",
+      children: [
+        {
+          groupId: 3,
+          name: "Blah",
+          children: [],
+        },
+        {
+          groupId: 4,
+          name: "Blah 2",
+          children: [],
+        },
+      ],
+    },
+    {
+      groupId: 2,
+      name: "Axon 2",
+      children: [],
+    },
+  ],
   name: "",
   activeTreeId: 1,
   activeNodeId: 1,
@@ -113,9 +138,10 @@ async function throwsAsyncParseError(t, fn) {
 
 test("NML serializing and parsing should yield the same state", async t => {
   const serializedNml = serializeToNml(initialState, initialState.tracing, buildInfo);
-  const importedTrees = await parseNml(serializedNml);
+  const { trees, treeGroups } = await parseNml(serializedNml);
 
-  t.deepEqual(initialState.tracing.trees, importedTrees);
+  t.deepEqual(initialState.tracing.trees, trees);
+  t.deepEqual(initialState.tracing.treeGroups, treeGroups);
 });
 
 test("NML Serializer should only serialize visible trees", async t => {
@@ -123,12 +149,12 @@ test("NML Serializer should only serialize visible trees", async t => {
     tracing: { trees: { "1": { isVisible: { $set: false } } } },
   });
   const serializedNml = serializeToNml(state, state.tracing, buildInfo);
-  const importedTrees = await parseNml(serializedNml);
+  const { trees } = await parseNml(serializedNml);
 
   // Tree 1 should not be exported as it is not visible
   delete state.tracing.trees["1"];
-  t.deepEqual(Object.keys(state.tracing.trees), Object.keys(importedTrees));
-  t.deepEqual(state.tracing.trees, importedTrees);
+  t.deepEqual(Object.keys(state.tracing.trees), Object.keys(trees));
+  t.deepEqual(state.tracing.trees, trees);
 });
 
 test("NML serializer should produce correct NMLs", t => {
@@ -177,6 +203,28 @@ test("NML Parser should throw errors for invalid nmls", async t => {
       trees: { "2": { edges: { $set: EdgeCollection.loadFromArray([{ source: 4, target: 5 }]) } } },
     },
   });
+  const missingGroupIdState = update(initialState, {
+    tracing: {
+      trees: {
+        "2": {
+          groupId: { $set: 9999 },
+        },
+      },
+    },
+  });
+  const duplicateGroupIdState = update(initialState, {
+    tracing: {
+      treeGroups: {
+        $push: [
+          {
+            groupId: 3,
+            name: "Group",
+            children: [],
+          },
+        ],
+      },
+    },
+  });
   const nmlWithInvalidComment = serializeToNml(
     invalidCommentState,
     invalidCommentState.tracing,
@@ -198,6 +246,16 @@ test("NML Parser should throw errors for invalid nmls", async t => {
     disconnectedTreeState.tracing,
     buildInfo,
   );
+  const nmlWithMissingGroup = serializeToNml(
+    missingGroupIdState,
+    missingGroupIdState.tracing,
+    buildInfo,
+  );
+  const nmlWithDuplicateGroup = serializeToNml(
+    duplicateGroupIdState,
+    duplicateGroupIdState.tracing,
+    buildInfo,
+  );
 
   // TODO AVAs t.throws doesn't properly work with async functions yet, see https://github.com/avajs/ava/issues/1371
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidComment));
@@ -205,10 +263,12 @@ test("NML Parser should throw errors for invalid nmls", async t => {
   await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidEdge));
   await throwsAsyncParseError(t, () => parseNml(nmlWithDuplicateEdge));
   await throwsAsyncParseError(t, () => parseNml(nmlWithDisconnectedTree));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithMissingGroup));
+  await throwsAsyncParseError(t, () => parseNml(nmlWithDuplicateGroup));
 });
 
-test("addTrees reducer should assign new node and tree ids", t => {
-  const action = SkeletonTracingActions.addTreesAction(initialState.tracing.trees);
+test("addTreesAndGroups reducer should assign new node and tree ids", t => {
+  const action = SkeletonTracingActions.addTreesAndGroupsAction(initialState.tracing.trees, []);
   const newState = SkeletonTracingReducer(initialState, action);
 
   t.not(newState, initialState);
@@ -246,4 +306,25 @@ test("addTrees reducer should assign new node and tree ids", t => {
   ]);
   // The cachedMaxNodeId should be correct afterwards as well
   t.is(newState.tracing.cachedMaxNodeId, 14);
+});
+
+test("addTreesAndGroups reducer should assign new group ids", t => {
+  const action = SkeletonTracingActions.addTreesAndGroupsAction(
+    initialState.tracing.trees,
+    _.cloneDeep(initialState.tracing.treeGroups),
+  );
+  const newState = SkeletonTracingReducer(initialState, action);
+
+  t.not(newState, initialState);
+
+  // This should be unchanged / sanity check
+  t.is(newState.tracing.name, initialState.tracing.name);
+  t.is(newState.tracing.activeTreeId, initialState.tracing.activeTreeId);
+
+  // New node and tree ids should have been assigned
+  t.is(_.size(newState.tracing.treeGroups), 4);
+  t.not(newState.tracing.treeGroups[2].groupId, newState.tracing.treeGroups[0].groupId);
+  t.not(newState.tracing.treeGroups[3].groupId, newState.tracing.treeGroups[1].groupId);
+  t.is(newState.tracing.trees[3].groupId, null);
+  t.is(newState.tracing.trees[4].groupId, newState.tracing.treeGroups[2].groupId);
 });

@@ -4,6 +4,8 @@
 package utils
 
 
+import java.util.UUID
+
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -16,13 +18,18 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
-import slick.jdbc.PostgresProfile
+import slick.driver
+import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
-import scala.collection.JavaConverters._
 
+import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
 
+
+object SQLClient {
+  lazy val db: PostgresProfile.backend.Database = Database.forConfig("postgres", play.api.Play.configuration.underlying)
+}
 
 case class ObjectId(id: String) {
   def toBSONObjectId = BSONObjectID.parse(id).toOption
@@ -35,11 +42,13 @@ object ObjectId {
   def generate = fromBsonId(BSONObjectID.generate)
 }
 
-object SQLClient {
-  lazy val db: PostgresProfile.backend.Database = Database.forConfig("postgres", play.api.Play.configuration.underlying)
+trait SQLTypeImplicits {
+  implicit object SetObjectId extends SetParameter[ObjectId] {
+    def apply(v: ObjectId, pp: PositionedParameters) { pp.setString(v.id) }
+  }
 }
 
-trait SimpleSQLDAO extends FoxImplicits with LazyLogging {
+trait SimpleSQLDAO extends FoxImplicits with LazyLogging with SQLTypeImplicits {
 
   lazy val transactionSerializationError = "could not serialize access"
 
@@ -178,7 +187,7 @@ trait SQLDAO[C, R, X <: AbstractTable[R]] extends SecuredSQLDAO {
   def columnsList = collection.baseTableRow.create_*.map(_.name).toList
   def columns = columnsList.mkString(", ")
   def columnsWithPrefix(prefix: String) = columnsList.map(prefix + _).mkString(", ")
-  
+
   def idColumn(x: X): Rep[String]
   def isDeletedColumn(x: X): Rep[Boolean]
 

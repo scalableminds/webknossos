@@ -152,40 +152,17 @@ CREATE TABLE webknossos.tasks(
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
+  openInstances BIGINT NOT NULL,
   tracingTime BIGINT,
   boundingBox webknossos.BOUNDING_BOX,
   editPosition webknossos.VECTOR3 NOT NULL,
   editRotation webknossos.VECTOR3 NOT NULL,
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  CHECK (openInstances <= totalInstances),
+  CHECK (openInstances >= 0)
 );
-
-CREATE VIEW webknossos.task_instances AS
-  SELECT t._id, COUNT(annotations._id) assignedInstances, t.totalinstances - COUNT(annotations._id) openInstances
-  FROM webknossos.tasks t
-  left join (select * from webknossos.annotations a where typ = 'Task' and a.state != 'Cancelled' AND a.isDeleted = false) as annotations ON t._id = annotations._task
-  GROUP BY t._id, t.totalinstances;
-
-CREATE FUNCTION webknossos.checkOpenAssignments() RETURNS trigger AS $$
-  DECLARE
-    cur CURSOR for SELECT openInstances FROM webknossos.task_instances where NEW.typ = 'Task' and _id = NEW._task;
-  BEGIN
-    IF NEW.typ = 'Task' THEN
-      FOR rec IN cur LOOP
-        IF rec.openInstances < 0 THEN
-          RAISE EXCEPTION 'Negative openInstances for Task (%)', NEW._task;
-        END IF;
-      END LOOP;
-    END IF;
-    RETURN NULL;
-  END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER checkOpenAssignmentsTrigger
-AFTER INSERT ON webknossos.annotations
-FOR EACH ROW EXECUTE PROCEDURE webknossos.checkOpenAssignments();
-
 
 CREATE TABLE webknossos.teams(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
@@ -348,3 +325,77 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.user_experiences
 --   ADD FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE;
+
+
+
+
+CREATE FUNCTION webknossos.countsAsTaskInstance(a webknossos.annotations) RETURNS BOOLEAN AS $$
+  BEGIN
+    RETURN (a.state != 'Cancelled' AND a.isDeleted = false AND a.typ = 'Task');
+  END;
+$$ LANGUAGE plpgsql;
+
+
+CREATE FUNCTION webknossos.onUpdateTask() RETURNS trigger AS $$
+  BEGIN
+    IF NEW.totalInstances > OLD.totalInstances THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + (NEW.totalInstances - OLD.totalInstances) WHERE _id = NEW._id;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onUpdateTaskTrigger
+AFTER UPDATE ON webknossos.tasks
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateTask();
+
+
+CREATE FUNCTION webknossos.onInsertAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (NEW.typ = 'Task') AND (NEW.isDeleted = false) AND (NEW.state != 'Cancelled') THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onInsertAnnotationTrigger
+AFTER INSERT ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onInsertAnnotation();
+
+
+
+CREATE OR REPLACE FUNCTION webknossos.onUpdateAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (NEW._task != OLD._task) OR (NEW.typ != OLD.typ) THEN
+        RAISE EXCEPTION 'annotation columns _task and typ are immutable';
+    END IF;
+    IF (webknossos.countsAsTaskInstance(OLD) AND NOT webknossos.countsAsTaskInstance(NEW))
+    THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = NEW._task;
+    END IF;
+    IF (NOT webknossos.countsAsTaskInstance(OLD) AND webknossos.countsAsTaskInstance(NEW))
+    THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances - 1 WHERE _id = NEW._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onUpdateAnnotationTrigger
+AFTER UPDATE ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onUpdateAnnotation();
+
+
+CREATE FUNCTION webknossos.onDeleteAnnotation() RETURNS trigger AS $$
+  BEGIN
+    IF (OLD.typ = 'Task') AND (OLD.isDeleted = false) AND (OLD.state != 'Cancelled') THEN
+      UPDATE webknossos.tasks SET openInstances = openInstances + 1 WHERE _id = OLD._task;
+    END IF;
+    RETURN NULL;
+  END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER onDeleteAnnotationTrigger
+AFTER DELETE ON webknossos.annotations
+FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();

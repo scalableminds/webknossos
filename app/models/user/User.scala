@@ -2,12 +2,9 @@ package models.user
 
 import com.mohiva.play.silhouette.api.util.PasswordInfo
 import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
-import com.mohiva.play.silhouette.impl.providers.CredentialsProvider
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
 import com.scalableminds.util.reactivemongo._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
-import models.basics.SecuredBaseDAO
 import reactivemongo.play.json.BSONFormats._
 import models.binary.DataSetSQLDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
@@ -18,7 +15,6 @@ import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
@@ -26,7 +22,7 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Await
 import scala.concurrent.duration._
 
 
@@ -97,16 +93,16 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     ))
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')))
-        or (_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
+    s"""(_id in (select _user from webknossos.user_team_roles where _team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId}')))
+        or (_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId}' and isAdmin))"""
   override def deleteAccessQ(requestingUserId: ObjectId) =
-    s"_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)"
+    s"_organization in (select _organization from webknossos.users_ where _id = '${requestingUserId}' and isAdmin)"
 
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[UserSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id.id} and #${accessQuery}".as[UsersRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where _id = ${id} and #${accessQuery}".as[UsersRow])
       r <- rList.headOption.toFox ?~> ("Could not find object " + id + " in " + collectionName)
       parsed <- parse(r) ?~> ("SQLDAO Error: Could not parse database row for object " + id + " in " + collectionName)
     } yield parsed
@@ -155,7 +151,7 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       _ <- run(
         sqlu"""insert into webknossos.users(_id, _organization, email, firstName, lastName, lastActivity, userConfiguration, md5hash, loginInfo_providerID,
                                             loginInfo_providerKey, passwordInfo_hasher, passwordInfo_password, isDeactivated, isAdmin, isSuperUser, created, isDeleted)
-                                            values(${u._id.id}, ${u._organization.id}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(u.lastActivity)},
+                                            values(${u._id}, ${u._organization}, ${u.email}, ${u.firstName}, ${u.lastName}, ${new java.sql.Timestamp(u.lastActivity)},
                                                    '#${sanitize(Json.toJson(u.userConfiguration).toString)}', ${u.md5hash}, '#${sanitize(u.loginInfo.providerID)}', ${u.loginInfo.providerKey},
                                                    '#${sanitize(u.passwordInfo.hasher)}', ${u.passwordInfo.password}, ${u.isDeactivated}, ${u.isAdmin}, ${u.isSuperUser},
                                                    ${new java.sql.Timestamp(u.created)}, ${u.isDeleted})
@@ -166,13 +162,12 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
     updateTimestampCol(userId, _.lastactivity, new java.sql.Timestamp(lastActivity))
 
   def updatePasswordInfo(userId: ObjectId, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val q = for {row <- collection if (notdel(row) && idColumn(row) === userId.id)} yield (row.passwordinfoHasher, row.passwordinfoPassword)
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(sqlu"""update webknossos.users set
                           passwordInfo_hasher = '#${sanitize(passwordInfo.hasher)}',
                           passwordInfo_password = ${passwordInfo.password}
-                      where _id = ${userId.id}""")
+                      where _id = ${userId}""")
     } yield ()
   }
 
@@ -182,21 +177,17 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
       _ <- run(
         sqlu"""update webknossos.users
                set userConfiguration = '#${sanitize(Json.toJson(userConfiguration.configuration).toString)}'
-               where _id = ${userId.id}""")
+               where _id = ${userId}""")
     } yield ()
 
-  def updateValues(userId: ObjectId, firstName: String, lastName: String, isAdmin: Boolean, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
-    val q = for {row <- Users if (notdel(row) && idColumn(row) === userId.id)} yield (row.firstname, row.lastname, row.isadmin, row.isdeactivated)
+  def updateValues(userId: ObjectId, firstName: String, lastName: String, email: String, isAdmin: Boolean, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
+    val q = for {row <- Users if (notdel(row) && idColumn(row) === userId.id)} yield (row.firstname, row.lastname, row.email, row.logininfoProviderkey, row.isadmin, row.isdeactivated)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, isAdmin, isDeactivated))
+      _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDeactivated))
     } yield ()
   }
-
 }
-
-
-
 
 object UserTeamRolesSQLDAO extends SimpleSQLDAO {
 
@@ -213,10 +204,10 @@ object UserTeamRolesSQLDAO extends SimpleSQLDAO {
   }
 
   private def insertQuery(userId: ObjectId, teamMembership: TeamMembershipSQL) =
-    sqlu"insert into webknossos.user_team_roles(_user, _team, isTeamManager) values(${userId.id}, ${teamMembership.teamId.id}, ${teamMembership.isTeamManager})"
+    sqlu"insert into webknossos.user_team_roles(_user, _team, isTeamManager) values(${userId}, ${teamMembership.teamId}, ${teamMembership.isTeamManager})"
 
   def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: List[TeamMembershipSQL])(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.user_team_roles where _user = ${userId.id}"
+    val clearQuery = sqlu"delete from webknossos.user_team_roles where _user = ${userId}"
     val insertQueries = teamMemberships.map(insertQuery(userId, _))
     for {
       _ <- UserSQLDAO.assertUpdateAccess(userId)
@@ -233,7 +224,7 @@ object UserTeamRolesSQLDAO extends SimpleSQLDAO {
 
   def removeTeamFromAllUsers(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      r <- run(sqlu"delete from webknossos.user_team_roles where _team = ${teamId.id}")
+      r <- run(sqlu"delete from webknossos.user_team_roles where _team = ${teamId}")
     } yield ()
 
 }
@@ -249,8 +240,8 @@ object UserExperiencesSQLDAO extends SimpleSQLDAO {
   }
 
   def updateExperiencesForUser(userId: ObjectId, experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val clearQuery = sqlu"delete from webknossos.user_experiences where _user = ${userId.id}"
-    val insertQueries = experiences.map { case (domain, value) => sqlu"insert into webknossos.user_experiences(_user, domain, value) values(${userId.id}, ${domain}, ${value})"}
+    val clearQuery = sqlu"delete from webknossos.user_experiences where _user = ${userId}"
+    val insertQueries = experiences.map { case (domain, value) => sqlu"insert into webknossos.user_experiences(_user, domain, value) values(${userId}, ${domain}, ${value})"}
     for {
       _ <- UserSQLDAO.assertUpdateAccess(userId)
       _ <- run(DBIO.sequence(List(clearQuery) ++ insertQueries).transactionally)
@@ -273,9 +264,9 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
     for {
       _ <- UserSQLDAO.assertUpdateAccess(userId)
       deleteQuery = sqlu"""delete from webknossos.user_dataSetConfigurations
-               where _user = ${userId.id} and _dataSet = ${dataSetId.id}"""
+               where _user = ${userId} and _dataSet = ${dataSetId}"""
       insertQuery  = sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
-               values(${userId.id}, ${dataSetId.id}, '#${sanitize(Json.toJson(configuration).toString)}')"""
+               values(${userId}, ${dataSetId}, '#${sanitize(Json.toJson(configuration).toString)}')"""
       _ <- run(DBIO.sequence(List(deleteQuery, insertQuery)).transactionally
               .withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
@@ -299,7 +290,7 @@ object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
       _ <- UserSQLDAO.assertUpdateAccess(userId)
       _ <- run(
         sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
-               values ('#${sanitize(configuration.toString)}', ${userId.id} and _dataSet = ${dataSetId.id})""")
+               values ('#${sanitize(configuration.toString)}', ${userId} and _dataSet = ${dataSetId})""")
     } yield ()
   }
 
@@ -499,11 +490,11 @@ object UserDAO {
       users <- Fox.combined(usersSQL.map(User.fromUserSQL(_)))
     } yield users
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, email: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
     for {
       teamMembershipsSQL <- Fox.combined(teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       id = ObjectId.fromBsonId(_user)
-      _ <- UserSQLDAO.updateValues(id, firstName, lastName, isAdmin, !activated)
+      _ <- UserSQLDAO.updateValues(id, firstName, lastName, email, isAdmin, !activated)
       _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(id, teamMembershipsSQL)
       _ <- UserExperiencesSQLDAO.updateExperiencesForUser(id, experiences)
       updated <- findOneById(_user.stringify)
@@ -577,5 +568,4 @@ object UserDAO {
     for {
       _ <- UserSQLDAO.deleteOne(ObjectId.fromBsonId(id))
     } yield ()
-
 }

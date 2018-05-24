@@ -21,6 +21,9 @@ In order to restore the current window, a reload is necessary.`,
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "tracing.copy_position": "Click this button to copy the position.",
   "tracing.copy_rotation": "Click this button to copy the rotation.",
+  "tracing.copy_cell_id": "Hit CTRL + I to copy the currently hovered cell id",
+  "tracing.copy_maybe_mapped_cell_id":
+    "Hit CTRL + I to copy the currently hovered cell id. Press CTRL + ALT + I if you want to copy the mapped id.",
   "tracing.no_more_branchpoints": "No more branchpoints",
   "tracing.branchpoint_set": "Branchpoint set",
   "tracing.branchpoint_jump_twice":
@@ -55,8 +58,6 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos.",
-  "dataset.ndstore_success":
-    "The dataset was successfully added to webKnossos from the specified NDStore.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",
@@ -106,15 +107,18 @@ In order to restore the current window, a reload is necessary.`,
   "nml.edge_outside_tree":
     "NML contains <edge ...> tag that is not enclosed by a <thing ...> tag: Edge",
   "nml.expected_attribute_missing":
-    "Attribute with the following name was expected, but is missing:",
+    "Attribute with the following name was expected, but is missing or empty:",
   "nml.branchpoint_without_tree":
     "NML contains <branchpoint ...> with a node id that is not in any tree: Node with id",
   "nml.comment_without_tree":
     "NML contains <comment ...> with a node id that is not in any tree: Node with id",
   "nml.edge_with_invalid_node":
     "NML contains <edge ...> with a node id that is not part of the tree: Edge",
+  "nml.tree_with_missing_group_id":
+    "NML contains <tree ...> with a non-existing group id: Group with id",
   "nml.duplicate_tree_id": "NML contains <thing ...> with duplicate tree id: Tree with id",
   "nml.duplicate_node_id": "NML contains <node ...> with duplicate node id: Node with id",
+  "nml.duplicate_group_id": "NML contains <group ...> with duplicate group id: Group with id",
   "nml.duplicate_edge": "NML contains a duplicate <edge ...>: Edge",
   "nml.edge_with_same_source_target":
     "NML contains <edge ...> with same source and target id: Edge",
@@ -126,8 +130,14 @@ In order to restore the current window, a reload is necessary.`,
   "users.grant_admin_rights": _.template(
     "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
   ),
+  "users.change_email_title": "Do you really want to change the email?",
+  "users.change_email": _.template(
+    "Do you really want to change the email to '<%- newEmail %>' ? The corresponding user will be logged out and unsaved changes might be lost.",
+  ),
+  "users.change_email_confirmation": "The email has been changed",
   "mapping.too_big":
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
   "mapping.too_few_textures":
     "Not enough textures available to support mappings. Mappings are disabled.",
+  "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
 };

@@ -22,8 +22,8 @@ import models.task.Task
 import models.user.User
 import utils.ObjectId
 import play.api.i18n.Messages
+import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
-
 import scala.concurrent.Future
 import scala.collection.{IterableLike, TraversableLike}
 import scala.runtime.Tuple3Zipped
@@ -184,7 +184,8 @@ object AnnotationService
     taskFox: Fox[Task],
     userId: BSONObjectID,
     tracingReferenceBox: Box[TracingReference],
-    dataSetName: String
+    dataSetName: String,
+    description: Option[String]
     )(implicit ctx: DBAccessContext) = {
 
     for {
@@ -193,7 +194,7 @@ object AnnotationService
       tracingReference <- tracingReferenceBox.toFox
       project <- task.project
       _ <- Annotation(userId, tracingReference, dataSetName, project._team, taskType.settings,
-          typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
+          typ = AnnotationType.TracingBase, _task = Some(task._id), description = description.getOrElse("")).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
 
@@ -251,7 +252,7 @@ object AnnotationService
     def getDatasetScale(dataSetName: String) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-        scale <- dataSet.dataSource.scaleOpt
+        scale <- dataSet.dataSource.scaleOpt ?~> Messages("nml.scaleNotFound")
       } yield scale
     }
 

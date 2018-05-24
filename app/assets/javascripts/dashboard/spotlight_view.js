@@ -102,23 +102,19 @@ class SpotlightView extends React.PureComponent<{}, State> {
                 </a>
               </p>
               <p>
-                webKnossos has been published in:{" "}
-                <a href="http://dx.doi.org/10.1038/NMETH.4331">
-                  Boergens Berning Bocklisch Bräunlein Drawitsch Frohnhofen Herold Otto Rzepka
-                  Werkmeister Werner Wiese Wissler & Helmstaedter, webKnossos: efficient online 3D
-                  data annotation for connectomics,. Nat. Meth. (2017) DOI:10.1038/NMETH.4331
-                </a>.
+                webKnossos has been published in: Boergens Berning Bocklisch Bräunlein Drawitsch
+                Frohnhofen Herold Otto Rzepka Werkmeister Werner Wiese Wissler & Helmstaedter,
+                webKnossos: efficient online 3D data annotation for connectomics.{" "}
+                <a href="https://dx.doi.org/10.1038/nmeth.4331">Nat. Meth. (2017) 14, 691–694</a>.
               </p>
               <p>
-                The webKnossos frontend was inspired by Knossos:{" "}
-                <a href="">
-                  Helmstaedter, M., K.L. Briggman, and W. Denk, Nat. Neurosci. (2011) 14, 1081-1088
-                </a>.
+                The webKnossos frontend was inspired by Knossos: Helmstaedter, M., K.L. Briggman,
+                and W. Denk, High-accuracy neurite reconstruction for high-throughput neuroanatomy.{" "}
+                <a href="https://dx.doi.org/10.1038/nn.2868">Nat. Neurosci. (2011) 14, 1081-1088</a>.
               </p>
               <p>
-                <a href="https://webknossos.org">
-                  More information about webKnossos and full credits at webknossos.org
-                </a>.
+                More information about webKnossos and full credits at{" "}
+                <a href="https://webknossos.org">webknossos.org</a>.
               </p>
               <p>
                 <Link to="/imprint">Imprint</Link> &bull; <Link to="/privacy">Privacy</Link>

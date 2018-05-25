@@ -5,13 +5,13 @@ type Props = {};
 
 type State = {
   operatorData: string,
-  organizationData: string
+  organizationData: string,
 };
 
 class Imprint extends React.PureComponent<Props, State> {
   state = {
     operatorData: "",
-    organizationData: ""
+    organizationData: "",
   };
 
   componentDidMount() {
@@ -29,8 +29,8 @@ class Imprint extends React.PureComponent<Props, State> {
     return (
       <div className="container" id="impressum">
         <h2>Legal Notice</h2>
-        <div dangerouslySetInnerHTML={{ __html: this.state.operatorData }}/>
-        <div dangerouslySetInnerHTML={{ __html: this.state.organizationData }}/>
+        <div dangerouslySetInnerHTML={{ __html: this.state.operatorData }} />
+        <div dangerouslySetInnerHTML={{ __html: this.state.organizationData }} />
       </div>
     );
   }

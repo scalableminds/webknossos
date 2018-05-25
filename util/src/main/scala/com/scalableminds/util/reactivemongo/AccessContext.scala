@@ -28,5 +28,4 @@ object DBAccessContext{
       case _ => UnAuthorizedAccessContext
     }
   }
-
 }

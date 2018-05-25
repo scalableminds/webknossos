@@ -7,10 +7,12 @@ import com.scalableminds.util.tools.DefaultConverters._
 import models.team._
 import models.user.UserService
 import oxalis.security.WebknossosSilhouette.SecuredAction
+import play.api.Play
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import play.api.mvc.Action
+import play.api.Play.current
 
 import scala.concurrent.Future
 
@@ -21,6 +23,23 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
       allOrgs <- OrganizationDAO.findAll(GlobalAccessContext)
     } yield {
       Ok(Json.toJson(allOrgs.map(_.name)))
+    }
+  }
+
+  def getOrganizationData = SecuredAction.async{ implicit request =>
+    val organizationName = request.identity.organization
+    for {
+      org <- OrganizationDAO.findOneByName(organizationName)(GlobalAccessContext)
+    } yield {
+      Ok(Json.toJson(org.additionalInformation))
+    }
+  }
+
+  def getOperatorData = Action.async { implicit request =>
+    for {
+      data <- Play.configuration.getString("operator").toFox
+    } yield {
+      Ok(Json.toJson(data))
     }
   }
 }

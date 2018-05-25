@@ -12,8 +12,7 @@ import { APITracingTypeEnum } from "admin/api_flow_types";
 import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
-import Imprint from "components/imprint";
-import Privacy from "components/privacy";
+import { Imprint, Privacy } from "components/legal";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/dashboard_view";

@@ -190,7 +190,8 @@ CREATE TABLE webknossos.organizations(
   _organizationTeam CHAR(24) NOT NULL UNIQUE,
   name VARCHAR(256) NOT NULL,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  isDeleted BOOLEAN NOT NULL DEFAULT false
+  isDeleted BOOLEAN NOT NULL DEFAULT false,
+  additionalInformation VARCHAR(2048) NOT NULL DEFAULT ''
 );
 
 CREATE TYPE webknossos.USER_LOGININFO_PROVDERIDS AS ENUM ('credentials');

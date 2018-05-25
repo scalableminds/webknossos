@@ -26,26 +26,20 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
     }
   }
 
-  def getOrganizationData(organizationName: String) = Action.async{ implicit request =>
+  def getOrganizationData = SecuredAction.async{ implicit request =>
+    val organizationName = request.identity.organization
     for {
       org <- OrganizationDAO.findOneByName(organizationName)(GlobalAccessContext)
     } yield {
-      Ok(Json.toJson(org)(Organization.organizationFormat))
+      Ok(Json.toJson(org.additionalInformation))
     }
   }
 
   def getOperatorData = Action.async { implicit request =>
     for {
-      name <- Play.configuration.getString("operator.name").toFox
-      additonalInformation = Play.configuration.getString("operator.additionalInformation")
-      contact = Json.obj("email" -> Play.configuration.getString("operator.contact.email"),
-        "phone" -> Play.configuration.getString("operator.contact.phone"),
-        "web" -> Play.configuration.getString("operator.contact.web"))
-      street <- Play.configuration.getString("operator.address.street").toFox
-      town <- Play.configuration.getString("operator.address.town").toFox
-      address = Json.obj("street" -> street, "town" -> town)
+      data <- Play.configuration.getString("operator").toFox
     } yield {
-      Ok(Json.obj("name" -> name, "additionalInformation" -> additonalInformation, "contact" -> contact, "address" -> address))
+      Ok(Json.toJson(data))
     }
   }
 }

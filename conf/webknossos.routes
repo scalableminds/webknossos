@@ -143,7 +143,7 @@ GET           /assets/*file                                                     
 
 #Organizations
 GET           /api/organizations                                                controllers.OrganizationController.listAllOrganizations
-GET           /api/organizations/:name                                          controllers.OrganizationController.getOrganizationData(name: String)
+GET           /api/organizationData                                             controllers.OrganizationController.getOrganizationData
 GET           /api/operatorData                                                 controllers.OrganizationController.getOperatorData
 
 #Timelogging

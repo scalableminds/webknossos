@@ -35,7 +35,11 @@ export default class TreeSearchPopover extends React.PureComponent<Props, *> {
         placement="rightTop"
         visible={this.state.isVisible}
         mouseLeaveDelay={1}
-        onVisibleChange={isVisible => this.setState({ isVisible })}
+        onVisibleChange={isVisible => {
+          // Workaround: Wait a bit when hiding the popover, so that clicking
+          // an option will be accepted as a select event.
+          setTimeout(() => this.setState({ isVisible }), isVisible ? 0 : 100);
+        }}
         content={
           // Only render autocomplete when the popover is visible
           // This ensures that the component is completely re-mounted when

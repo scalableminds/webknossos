@@ -311,7 +311,6 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 -- ALTER TABLE webknossos.taskTypes
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.tasks
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
 --   ADD FOREIGN KEY(_project) REFERENCES webknossos.projects(_id),
 --   ADD FOREIGN KEY(_script) REFERENCES webknossos.scripts(_id) ON DELETE SET NULL;
 -- ALTER TABLE webknossos.teams

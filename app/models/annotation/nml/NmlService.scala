@@ -6,9 +6,14 @@ import java.nio.file.{Files, StandardCopyOption}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
-import net.liftweb.common.{Empty, Failure, Full}
+import net.liftweb.common.{Box, Empty, Failure, Full}
+import play.api.i18n.Messages
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.Files.TemporaryFile
+import scala.concurrent.ExecutionContext.Implicits.global
 
 
 object NmlService extends LazyLogging {
@@ -16,15 +21,26 @@ object NmlService extends LazyLogging {
   sealed trait NmlParseResult {
     def fileName: String
 
-    def tracing: Option[(Either[SkeletonTracing, (VolumeTracing, String)], String)] = None
+    def tracing: Option[Either[SkeletonTracing, (VolumeTracing, String)]] = None
+    def description: Option[String] = None
 
     def succeeded: Boolean
+
+    def toSkeletonSuccessFox: Fox[NmlParseSuccess] = this match {
+      case NmlParseFailure(fileName, error) =>
+        Fox.failure(Messages("nml.file.invalid", fileName, error))
+      case NmlParseSuccess(fileName, Left(skeletonTracing), description) =>
+        Fox.successful(NmlParseSuccess(fileName, Left(skeletonTracing), description))
+      case _ =>
+        Fox.failure(Messages("nml.file.invalid"))
+    }
   }
 
-  case class NmlParseSuccess(fileName: String, _tracing: (Either[SkeletonTracing, (VolumeTracing, String)], String)) extends NmlParseResult {
+  case class NmlParseSuccess(fileName: String, _tracing: Either[SkeletonTracing, (VolumeTracing, String)], _description: String) extends NmlParseResult {
     def succeeded = true
 
     override def tracing = Some(_tracing)
+    override def description = Some(_description)
   }
 
   case class NmlParseFailure(fileName: String, error: String) extends NmlParseResult {
@@ -58,7 +74,7 @@ object NmlService extends LazyLogging {
 
   def extractFromNml(inputStream: InputStream, name: String): NmlParseResult = {
     NmlParser.parse(name, inputStream) match {
-      case Full(tracing) => NmlParseSuccess(name, tracing)
+      case Full((tracing, description)) => NmlParseSuccess(name, tracing, description)
       case Failure(msg, _, _) => NmlParseFailure(name, msg)
       case Empty => NmlParseEmpty(name)
     }
@@ -90,7 +106,7 @@ object NmlService extends LazyLogging {
     if (parseResults.length > 1) {
       parseResults.map(r =>
         r match {
-          case NmlParseSuccess(name, (Left(skeletonTracing), description)) => NmlParseSuccess(name, (Left(renameTrees(name, skeletonTracing)), description))
+          case NmlParseSuccess(name, Left(skeletonTracing), description) => NmlParseSuccess(name, Left(renameTrees(name, skeletonTracing)), description)
           case _ => r
         }
       )
@@ -110,8 +126,8 @@ object NmlService extends LazyLogging {
     }
   }
 
-  def splitVolumeAndSkeletonTracings(tracings: List[(Either[SkeletonTracing, (VolumeTracing, String)], String)]): (List[(SkeletonTracing, String)], List[(VolumeTracing, String, String)]) = {
-    val (skeletons, volumes) = tracings.partition(_._1.isLeft)
-    (skeletons.map(s => (s._1.left.get, s._2)), volumes.map(v => (v._1.right.get._1, v._1.right.get._2, v._2)))
+  def splitVolumeAndSkeletonTracings(tracings: List[Either[SkeletonTracing, (VolumeTracing, String)]]): (List[SkeletonTracing], List[(VolumeTracing, String)]) = {
+    val (skeletons, volumes) = tracings.partition(_.isLeft)
+    (skeletons.map(_.left.get), volumes.map(_.right.get))
   }
 }

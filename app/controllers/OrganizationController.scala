@@ -28,7 +28,7 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
 
   def getOperatorData = Action.async { implicit request =>
     for {
-      data <- Play.configuration.getString("operator").toFox
+      data <- Play.configuration.getString("operatorData").toFox
     } yield {
       Ok(Json.toJson(data))
     }

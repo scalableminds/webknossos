@@ -15,7 +15,6 @@ import Constants, { ControlModeEnum } from "oxalis/constants";
 import type { OxalisState } from "oxalis/store";
 import { connect } from "react-redux";
 import Model from "oxalis/model";
-import _ from "lodash";
 
 const TabPane = Tabs.TabPane;
 

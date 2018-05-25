@@ -13,6 +13,7 @@ import { getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
 import Imprint from "components/imprint";
+import Privacy from "components/privacy";
 
 import TracingLayoutView from "oxalis/view/tracing_layout_view";
 import DashboardView from "dashboard/dashboard_view";
@@ -27,7 +28,7 @@ import DatasetImportView from "dashboard/dataset/dataset_import_view";
 
 // admin
 import KeyboardShortcutView from "admin/help/keyboardshortcut_view";
-import DatasetAddView from "admin/dataset/dataset_add_view";
+import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import UserListView from "admin/user/user_list_view";
 import TeamListView from "admin/team/team_list_view";
 import TaskListView from "admin/task/task_list_view";
@@ -237,7 +238,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
-                component={DatasetAddView}
+                component={DatasetUploadView}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -329,7 +330,8 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/auth/finishResetPassword" component={FinishResetPasswordView} />
               <Route path="/spotlight" component={SpotlightView} />
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
-              <Route path="/impressum" component={Imprint} />
+              <Route path="/imprint" component={Imprint} />
+              <Route path="/privacy" component={Privacy} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

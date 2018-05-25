@@ -1,4 +1,5 @@
 import React from "react";
+import { Row, Col } from "antd";
 import { getOperatorData, getOrganizationData } from "admin/admin_rest_api";
 
 type Props = {};
@@ -11,7 +12,7 @@ type State = {
 class Imprint extends React.PureComponent<Props, State> {
   state = {
     operatorData: "",
-    organizationData: "",
+    organizationData: [],
   };
 
   componentDidMount() {
@@ -27,10 +28,16 @@ class Imprint extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <div className="container" id="impressum">
-        <h2>Legal Notice</h2>
-        <div dangerouslySetInnerHTML={{ __html: this.state.operatorData }} />
-        <div dangerouslySetInnerHTML={{ __html: this.state.organizationData }} />
+      <div className="container text">
+        <Row>
+          <Col offset={6} span={12}>
+            <h2>Imprint</h2>
+            <div dangerouslySetInnerHTML={{ __html: this.state.operatorData }} />
+            {this.state.organizationData.map(data => (
+              <div key={data} dangerouslySetInnerHTML={{ __html: data }} />
+            ))}
+          </Col>
+        </Row>
       </div>
     );
   }

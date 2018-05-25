@@ -26,12 +26,11 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
     }
   }
 
-  def getOrganizationData = SecuredAction.async{ implicit request =>
-    val organizationName = request.identity.organization
+  def getOrganizationData = Action.async{ implicit request =>
     for {
-      org <- OrganizationDAO.findOneByName(organizationName)(GlobalAccessContext)
+      org <- OrganizationDAO.findAll(GlobalAccessContext)
     } yield {
-      Ok(Json.toJson(org.additionalInformation))
+      Ok(Json.toJson(org.map(_.additionalInformation)))
     }
   }
 

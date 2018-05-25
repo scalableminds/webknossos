@@ -254,9 +254,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               following format:
               <br />
               <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
-              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
-              minX, minY, minZ, width, height, depth,{" "}
-              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>]
+              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY,
+              minZ, width, height, depth, <a href="/projects">project</a> [,{" "}
+              <a href="/scripts">scriptId</a>]
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>

@@ -56,10 +56,6 @@ class Controller extends React.PureComponent<Props, State> {
   keyboardNoLoop: InputKeyboardNoLoop;
   stats: Stats;
 
-  // Copied from backbone events (TODO: handle this better)
-  listenTo: Function;
-  stopListening: Function;
-
   state = {
     ready: false,
   };

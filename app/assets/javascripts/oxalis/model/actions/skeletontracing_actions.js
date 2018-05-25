@@ -11,7 +11,7 @@ import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
 import type { ServerSkeletonTracingType } from "oxalis/model";
 import type { APIAnnotationType } from "admin/api_flow_types";
-import type { SkeletonTracingType, TreeMapType } from "oxalis/store";
+import type { SkeletonTracingType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {
   type: "INITIALIZE_SKELETONTRACING",
@@ -56,9 +56,14 @@ type DeleteBranchPointActionType = { type: "DELETE_BRANCHPOINT" };
 type ToggleTreeActionType = { type: "TOGGLE_TREE", treeId?: number, timestamp: number };
 type ToggleAllTreesActionType = { type: "TOGGLE_ALL_TREES", timestamp: number };
 type ToggleInactiveTreesActionType = { type: "TOGGLE_INACTIVE_TREES", timestamp: number };
+type ToggleTreeGroupActionType = { type: "TOGGLE_TREE_GROUP", groupId: string };
 type RequestDeleteBranchPointActionType = { type: "REQUEST_DELETE_BRANCHPOINT" };
 type CreateTreeActionType = { type: "CREATE_TREE", timestamp: number };
-type AddTreesActionType = { type: "ADD_TREES", trees: TreeMapType };
+type AddTreesAndGroupsActionType = {
+  type: "ADD_TREES_AND_GROUPS",
+  trees: TreeMapType,
+  treeGroups: Array<TreeGroupType>,
+};
 type DeleteTreeActionType = { type: "DELETE_TREE", treeId?: number, timestamp: number };
 type SetActiveTreeActionType = { type: "SET_ACTIVE_TREE", treeId: number };
 type MergeTreesActionType = { type: "MERGE_TREES", sourceNodeId: number, targetNodeId: number };
@@ -74,6 +79,8 @@ type CreateCommentActionType = {
 };
 type DeleteCommentActionType = { type: "DELETE_COMMENT", nodeId: ?number, treeId?: number };
 type SetTracingActionType = { type: "SET_TRACING", tracing: SkeletonTracingType };
+type SetTreeGroupsActionType = { type: "SET_TREE_GROUPS", treeGroups: Array<TreeGroupType> };
+type SetTreeGroupActionType = { type: "SET_TREE_GROUP", groupId: ?string, treeId: number };
 type NoActionType = { type: "NONE" };
 
 export type SkeletonTracingActionType =
@@ -87,7 +94,7 @@ export type SkeletonTracingActionType =
   | DeleteBranchPointActionType
   | RequestDeleteBranchPointActionType
   | CreateTreeActionType
-  | AddTreesActionType
+  | AddTreesAndGroupsActionType
   | DeleteTreeActionType
   | SetActiveTreeActionType
   | MergeTreesActionType
@@ -101,8 +108,11 @@ export type SkeletonTracingActionType =
   | ToggleTreeActionType
   | ToggleAllTreesActionType
   | ToggleInactiveTreesActionType
+  | ToggleTreeGroupActionType
   | NoActionType
-  | SetTracingActionType;
+  | SetTracingActionType
+  | SetTreeGroupsActionType
+  | SetTreeGroupActionType;
 
 export const SkeletonTracingSaveRelevantActions = [
   "INITIALIZE_SKELETONTRACING",
@@ -114,7 +124,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_BRANCHPOINT",
   "DELETE_BRANCHPOINT",
   "CREATE_TREE",
-  "ADD_TREES",
+  "ADD_TREES_AND_GROUPS",
   "DELETE_TREE",
   "SET_ACTIVE_TREE",
   "SET_TREE_NAME",
@@ -125,6 +135,8 @@ export const SkeletonTracingSaveRelevantActions = [
   "CREATE_COMMENT",
   "DELETE_COMMENT",
   "SET_USER_BOUNDING_BOX",
+  "SET_TREE_GROUPS",
+  "SET_TREE_GROUP",
 ];
 
 const noAction = (): NoActionType => ({
@@ -244,9 +256,13 @@ export const createTreeAction = (timestamp: number = Date.now()): CreateTreeActi
   timestamp,
 });
 
-export const addTreesAction = (trees: TreeMapType): AddTreesActionType => ({
-  type: "ADD_TREES",
+export const addTreesAndGroupsAction = (
+  trees: TreeMapType,
+  treeGroups: Array<TreeGroupType>,
+): AddTreesAndGroupsActionType => ({
+  type: "ADD_TREES_AND_GROUPS",
   trees,
+  treeGroups,
 });
 
 export const deleteTreeAction = (
@@ -302,6 +318,11 @@ export const toggleInactiveTreesAction = (
 ): ToggleInactiveTreesActionType => ({
   type: "TOGGLE_INACTIVE_TREES",
   timestamp,
+});
+
+export const toggleTreeGroupAction = (groupId: string): ToggleTreeGroupActionType => ({
+  type: "TOGGLE_TREE_GROUP",
+  groupId,
 });
 
 export const setActiveTreeAction = (treeId: number): SetActiveTreeActionType => ({
@@ -361,4 +382,15 @@ export const deleteCommentAction = (nodeId?: number, treeId?: number): DeleteCom
 export const setTracingAction = (tracing: SkeletonTracingType): SetTracingActionType => ({
   type: "SET_TRACING",
   tracing,
+});
+
+export const setTreeGroupsAction = (treeGroups: Array<TreeGroupType>): SetTreeGroupsActionType => ({
+  type: "SET_TREE_GROUPS",
+  treeGroups,
+});
+
+export const setTreeGroupAction = (groupId: ?string, treeId: number): SetTreeGroupActionType => ({
+  type: "SET_TREE_GROUP",
+  groupId,
+  treeId,
 });

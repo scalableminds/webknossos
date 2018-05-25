@@ -69,6 +69,7 @@ object NmlWriter extends FoxImplicits {
       _ = writeTreesAsXml(skeletonTracing.trees.filterNot(_.nodes.isEmpty))
       _ = Xml.withinElementSync("branchpoints")(writeBranchPointsAsXml(skeletonTracing.trees.flatMap(_.branchPoints).sortBy(-_.createdTimestamp)))
       _ = Xml.withinElementSync("comments")(writeCommentsAsXml(skeletonTracing.trees.flatMap(_.comments)))
+      _ = Xml.withinElementSync("groups")(writeTreeGroupsAsXml(skeletonTracing.treeGroups))
     } yield ()
   }
 
@@ -162,6 +163,7 @@ object NmlWriter extends FoxImplicits {
         writer.writeAttribute("color.b", t.color.map(_.b.toString).getOrElse(""))
         writer.writeAttribute("color.a", t.color.map(_.a.toString).getOrElse(""))
         writer.writeAttribute("name", t.name)
+        t.groupId.map(groupId => writer.writeAttribute("groupId", groupId.toString))
         Xml.withinElementSync("nodes")(writeNodesAsXml(t.nodes.sortBy(_.id)))
         Xml.withinElementSync("edges")(writeEdgesAsXml(t.edges))
       }
@@ -211,6 +213,16 @@ object NmlWriter extends FoxImplicits {
       Xml.withinElementSync("comment") {
         writer.writeAttribute("node", c.nodeId.toString)
         writer.writeAttribute("content", c.content)
+      }
+    }
+  }
+
+  def writeTreeGroupsAsXml(treeGroups: Seq[TreeGroup])(implicit writer: XMLStreamWriter): Unit = {
+    treeGroups.foreach { t =>
+      Xml.withinElementSync("group") {
+        writer.writeAttribute("name", t.name)
+        writer.writeAttribute("id", t.groupId.toString)
+        writeTreeGroupsAsXml(t.children)
       }
     }
   }

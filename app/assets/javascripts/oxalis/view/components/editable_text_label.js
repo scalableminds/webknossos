@@ -2,10 +2,17 @@
 
 import * as React from "react";
 import { Input, Icon } from "antd";
+import Toast from "../../../libs/toast";
+
+type Rule = {
+  message?: string,
+  type?: string,
+};
 
 type EditableTextLabelPropType = {
   value: string,
   onChange: Function,
+  rules?: Rule,
   rows?: number,
 };
 
@@ -37,9 +44,23 @@ class EditableTextLabel extends React.PureComponent<EditableTextLabelPropType, S
   };
 
   handleOnChange = () => {
-    this.setState({ isEditing: false });
-    this.props.onChange(this.state.value);
+    if (this.validateFields()) {
+      this.props.onChange(this.state.value);
+      this.setState({ isEditing: false });
+    }
   };
+
+  validateFields() {
+    if (this.props.rules && this.props.rules.type === "email") {
+      const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+      const matchesEmail = re.test(this.state.value);
+      if (!matchesEmail && this.props.rules && this.props.rules.message)
+        Toast.error(this.props.rules.message);
+      return matchesEmail;
+    } else {
+      return true;
+    }
+  }
 
   render() {
     const iconStyle = { cursor: "pointer" };

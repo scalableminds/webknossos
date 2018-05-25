@@ -7,9 +7,10 @@ import type {
   TreeType,
   NodeType,
   BoundingBoxObjectType,
+  TreeGroupType,
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import type { BucketInfo } from "oxalis/model/binary/layers/bucket_builder";
+import type { BucketInfo } from "oxalis/model/binary/bucket_builder";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
@@ -23,6 +24,7 @@ type UpdateTreeUpdateAction = {
     name: string,
     comments: Array<CommentType>,
     branchPoints: Array<BranchPointType>,
+    groupId: ?number,
   },
 };
 type DeleteTreeUpdateAction = {
@@ -108,6 +110,12 @@ type UpdateBucketUpdateAction = {
     base64Data: string,
   },
 };
+type UpdateTreeGroupsUpdateAction = {
+  name: "updateTreeGroups",
+  value: {
+    treeGroups: Array<TreeGroupType>,
+  },
+};
 type UpdateTracingUpdateAction =
   | UpdateSkeletonTracingUpdateAction
   | UpdateVolumeTracingUpdateAction;
@@ -124,7 +132,8 @@ export type UpdateAction =
   | DeleteEdgeUpdateAction
   | UpdateTracingUpdateAction
   | UpdateBucketUpdateAction
-  | ToggleTreeUpdateAction;
+  | ToggleTreeUpdateAction
+  | UpdateTreeGroupsUpdateAction;
 
 export function createTree(tree: TreeType): UpdateTreeUpdateAction {
   return {
@@ -137,6 +146,7 @@ export function createTree(tree: TreeType): UpdateTreeUpdateAction {
       timestamp: tree.timestamp,
       comments: tree.comments,
       branchPoints: tree.branchPoints,
+      groupId: tree.groupId,
     },
   };
 }
@@ -159,6 +169,7 @@ export function updateTree(tree: TreeType): UpdateTreeUpdateAction {
       timestamp: tree.timestamp,
       comments: tree.comments,
       branchPoints: tree.branchPoints,
+      groupId: tree.groupId,
     },
   };
 }
@@ -280,5 +291,13 @@ export function updateBucket(bucketInfo: BucketInfo, base64Data: string) {
     value: Object.assign({}, bucketInfo, {
       base64Data,
     }),
+  };
+}
+export function updateTreeGroups(treeGroups: Array<TreeGroupType>): UpdateTreeGroupsUpdateAction {
+  return {
+    name: "updateTreeGroups",
+    value: {
+      treeGroups,
+    },
   };
 }

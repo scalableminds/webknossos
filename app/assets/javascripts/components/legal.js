@@ -1,13 +1,13 @@
 import React from "react";
 import Markdown from "react-remarkable";
 import { Row, Col, Card } from "antd";
-import { getOperatorData, getOrganizationNames, getOrganizationData } from "admin/admin_rest_api";
+import { getOperatorData, getOrganizations } from "admin/admin_rest_api";
 
 type Props = {};
 
 type State = {
   operatorData: string,
-  organizationData: Array<{ name: string, additionalInformation: string }>,
+  organizationData: Array<APIOrganizationType>,
 };
 
 class LegalBase extends React.PureComponent<Props, State> {
@@ -22,14 +22,7 @@ class LegalBase extends React.PureComponent<Props, State> {
 
   async fetchData() {
     const operatorData = await getOperatorData();
-    const organizationNames = await getOrganizationNames();
-    const organizationData = [];
-    for (const organizationName of organizationNames) {
-      organizationData.push({
-        name: organizationName,
-        additionalInformation: await getOrganizationData(organizationName),
-      });
-    }
+    const organizationData = await getOrganizations();
 
     this.setState({ operatorData, organizationData });
   }

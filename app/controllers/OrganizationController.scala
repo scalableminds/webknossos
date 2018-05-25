@@ -22,16 +22,7 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
     for {
       allOrgs <- OrganizationDAO.findAll(GlobalAccessContext)
     } yield {
-      Ok(Json.toJson(allOrgs.map(_.name)))
-    }
-  }
-
-  def getOrganizationData = SecuredAction.async{ implicit request =>
-    val organizationName = request.identity.organization
-    for {
-      org <- OrganizationDAO.findOneByName(organizationName)(GlobalAccessContext)
-    } yield {
-      Ok(Json.toJson(org.additionalInformation))
+      Ok(Json.toJson(allOrgs.map(org => Json.obj("id" -> org.id, "name" -> org.name, "additionalInformation" -> org.additionalInformation))))
     }
   }
 

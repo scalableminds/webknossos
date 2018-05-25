@@ -115,7 +115,6 @@ Sample Street 123
 Sampletown
 Samplecountry
 """
-
   val organizationTeamId = BSONObjectID.generate
   val defaultOrganization = Organization(additionalInformation, "Connectomics department", List(), organizationTeamId)
   val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)

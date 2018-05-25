@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, Tree}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, SkeletonTracings, Tree}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.webknossos.datastore.tracings._
@@ -17,11 +17,13 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
-import models.binary.{DataSet, DataSetDAO}
+import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
 import models.task.Task
 import models.user.User
 import net.liftweb.common.{Box, Full}
 import play.api.i18n.Messages
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
@@ -180,7 +182,8 @@ object AnnotationService
     taskFox: Fox[Task],
     userId: BSONObjectID,
     tracingReferenceBox: Box[TracingReference],
-    dataSetName: String
+    dataSetName: String,
+    description: Option[String]
     )(implicit ctx: DBAccessContext) = {
 
     for {
@@ -188,7 +191,7 @@ object AnnotationService
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
       _ <- Annotation(userId, tracingReference, dataSetName, task._team, taskType.settings,
-          typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
+          typ = AnnotationType.TracingBase, _task = Some(task._id), description = description.getOrElse("")).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
 
@@ -218,70 +221,51 @@ object AnnotationService
     AnnotationDAO.logTime(time, _annotation)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
-    val tracingsNamesAndScalesAsTuples = mapBatched(annotations, getTracingsScalesAndNamesFor, batchSize = 1000)
-
     for {
-      tracingsAndNamesFlattened: List[(SkeletonTracing, String, Scale, Annotation)] <- flattenListToListMap(tracingsNamesAndScalesAsTuples)
+      tracingsNamesAndScalesAsTuples <- getTracingsScalesAndNamesFor(annotations)
+      tracingsAndNamesFlattened = flattenTupledLists(tracingsNamesAndScalesAsTuples)
       nmlsAndNames = tracingsAndNamesFlattened.map(tuple => (NmlWriter.toNmlStream(Left(tuple._1), tuple._4, tuple._3), tuple._2))
       zip <- createZip(nmlsAndNames, zipFileName)
     } yield zip
   }
 
-  private def mapBatched[T, R](inputList: List[T], block: List[T] => List[R], batchSize: Int): List[R] = {
-    inputList.grouped(batchSize).map(block(_)).toList.flatten
+  private def flattenTupledLists[A,B,C,D](tupledLists: List[(List[A], List[B], List[C], List[D])]) = {
+    tupledLists.map(tuple => zippedFourLists(tuple._1, tuple._2, tuple._3, tuple._4)).flatten
   }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext) = {
+  private def zippedFourLists[A,B,C,D](l1: List[A], l2: List[B], l3: List[C], l4: List[D]): List[(A, B, C, D)] = {
+    ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
+  }
+
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Scale], List[Annotation])]] = {
 
     def getTracings(dataSetName: String, tracingReferences: List[TracingReference]) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-        tracingsContainer <- dataSet.dataStore.getSkeletonTracings(tracingReferences)
-      } yield {
-        tracingsContainer.tracings.toList
-      }
+        tracingContainers <- Fox.serialCombined(tracingReferences.grouped(1000).toList)(dataSet.dataStore.getSkeletonTracings)
+      } yield tracingContainers.flatMap(_.tracings)
     }
 
-    def getScales(annotations: List[Annotation]) = {
-      Fox.combined(annotations.map{ annotation =>
-        for {
-          dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName)
-          scale <- dataSet.dataSource.scaleOpt
-        } yield { scale }
-      })
+    def getDatasetScale(dataSetName: String) = {
+      for {
+        dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
+        scale <- dataSet.dataSource.scaleOpt ?~> Messages("nml.scaleNotFound")
+      } yield scale
     }
 
     def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))
 
     val annotationsGrouped: Map[String, List[Annotation]] = annotations.groupBy(_.dataSetName)
     val tracings = annotationsGrouped.map {
-      case (dataSetName, annotations) => (getTracings(dataSetName, annotations.map(_.tracingReference)), getNames(annotations), getScales(annotations), Fox.successful(annotations))
-    }
-    tracings.toList
-  }
-
-  def flattenListToListMap(listToListMap: List[(Fox[List[SkeletonTracing]], Fox[List[String]], Fox[List[Scale]], Fox[List[Annotation]])]):
-  Fox[List[(SkeletonTracing, String, Scale, Annotation)]] = {
-
-    def zippedFourLists[A,B,C,D](l1: List[A], l2: List[B], l3: List[C], l4: List[D]): List[(A, B, C, D)] = {
-      ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
-    }
-
-    val foxOfListsTuples: List[Fox[List[(SkeletonTracing, String, Scale, Annotation)]]] =
-      listToListMap.map {
-        case (tracingListFox, nameListFox, scaleListFox, annotationListFox) => {
-          for {
-            tracingList <- tracingListFox
-            nameList <- nameListFox
-            scaleList <- scaleListFox
-            annotationList <- annotationListFox
-          } yield {
-            zippedFourLists(tracingList, nameList, scaleList, annotationList)
-          }
-        }
+      case (dataSetName, annotations) => {
+        for {
+          scale <- getDatasetScale(dataSetName)
+          tracings <- getTracings(dataSetName, annotations.map(_.tracingReference))
+          names <- getNames(annotations)
+        } yield (tracings, names, annotations.map(a => scale), annotations)
       }
-
-    Fox.combined(foxOfListsTuples).map(_.flatten)
+    }
+    Fox.combined(tracings.toList)
   }
 
   private def createZip(nmls: List[(Enumerator[Array[Byte]],String)], zipFileName: String): Future[TemporaryFile] = {

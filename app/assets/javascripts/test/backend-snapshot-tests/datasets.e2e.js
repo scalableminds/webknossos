@@ -5,12 +5,20 @@ import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
+import type { APIDatasetType } from "admin/api_flow_types";
+
+async function getFirstDataset(): Promise<APIDatasetType> {
+  const datasets = await api.getActiveDatasets();
+  const dataset = _.sortBy(datasets, d => d.name)[0];
+
+  return dataset;
+}
 
 test.before("Change token", async () => {
   setCurrToken(tokenUserA);
 });
 
-test.serial("Load datasets", async t => {
+test.serial("getDatasets", async t => {
   let datasets = await api.getDatasets();
 
   let retry = 0;
@@ -21,20 +29,40 @@ test.serial("Load datasets", async t => {
   }
   datasets = _.sortBy(datasets, d => d.name);
 
-  t.snapshot(datasets, { id: "datasets" });
+  t.snapshot(datasets, { id: "datasets-getDatasets" });
 });
 
-test("Load active datasets", async t => {
+test("getActiveDatasets", async t => {
   let datasets = await api.getActiveDatasets();
   datasets = _.sortBy(datasets, d => d.name);
 
-  t.snapshot(datasets, { id: "active-datasets" });
+  t.snapshot(datasets, { id: "datasets-getActiveDatasets" });
 });
 
-test("Get Dataset Access List", async t => {
-  const datasets = await api.getActiveDatasets();
-  const dataset = _.sortBy(datasets, d => d.name)[0];
-  const accessList = api.getDatasetAccessList(dataset.name);
+test("getDatasetAccessList", async t => {
+  const dataset = await getFirstDataset();
+  const accessList = _.sortBy(await api.getDatasetAccessList(dataset.name), user => user.id);
 
-  t.snapshot(accessList, { id: "dataset-accessList" });
+  t.snapshot(accessList, { id: "dataset-getDatasetAccessList" });
 });
+
+test("updateDatasetTeams", async t => {
+  const dataset = await getFirstDataset();
+  const newTeams = await api.getEditableTeams();
+
+  const updatedDataset = await api.updateDatasetTeams(dataset.name, newTeams.map(team => team.id));
+  t.snapshot(updatedDataset, { id: "dataset-updateDatasetTeams" });
+
+  // undo the Change
+  await api.updateDatasetTeams(dataset.name, dataset.allowedTeams.map(team => team.id));
+});
+
+// test("getDatasetSharingToken and revokeDatasetSharingToken", async t => {
+//   const dataset = await getFirstDataset();
+
+//   const sharingToken = api.getDatasetSharingToken(dataset.name);
+//   t.snapshot(sharingToken, { id: "dataset-sharingToken" });
+
+//   await api.revokeDatasetSharingToken(dataset.name);
+//   t.pass();
+// });

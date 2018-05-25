@@ -19,6 +19,8 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
+import oxalis.security.WebknossosSilhouette
 
 import scala.concurrent.Future
 
@@ -28,6 +30,8 @@ object UserService extends FoxImplicits with IdentityService[User] {
     Akka.system(play.api.Play.current).actorSelection("/user/mailActor")
 
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").get
+
+  val tokenDAO = WebknossosSilhouette.environment.tokenDAO
 
   def defaultUser = {
     UserDAO.findOneByEmail(defaultUserEmail)(GlobalAccessContext)
@@ -69,6 +73,7 @@ object UserService extends FoxImplicits with IdentityService[User] {
               user: User,
               firstName: String,
               lastName: String,
+              email: String,
               activated: Boolean,
               isAdmin: Boolean,
               teams: List[TeamMembership],
@@ -77,9 +82,11 @@ object UserService extends FoxImplicits with IdentityService[User] {
     if (!user.isActive && activated) {
       Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
     }
-    UserDAO.update(user._id, firstName, lastName, activated, isAdmin, teams, experiences).map {
+    UserDAO.update(user._id, firstName, lastName, email, activated, isAdmin, teams, experiences).map {
       result =>
         UserCache.invalidateUser(user.id)
+        if(user.email != email)
+          WebknossosSilhouette.environment.tokenDAO.updateEmail(user.email, email)
         result
     }
   }

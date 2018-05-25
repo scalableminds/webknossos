@@ -25,7 +25,7 @@ import {
 import constants, { OrthoViews, VolumeToolEnum, volumeToolEnumToIndex } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
-import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary/mappings";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 
@@ -114,8 +114,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: 0,
       },
       activeCellId: {
-        type: "f",
-        value: 0,
+        type: "v4",
+        value: new THREE.Vector4(0, 0, 0, 0),
       },
       isMouseInActiveViewport: {
         type: "b",
@@ -175,7 +175,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       const [
         mappingTexture,
         mappingLookupTexture,
-      ] = Model.getSegmentationBinary().getMappingTextures();
+      ] = Model.getSegmentationBinary().mappings.getMappingTextures();
       this.uniforms[sanitizeName(`${Model.getSegmentationBinary().name}_mapping_texture`)] = {
         type: "t",
         value: mappingTexture,
@@ -246,7 +246,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     );
 
     listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.mappingSize,
+      storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
       mappingSize => {
         this.uniforms.mappingSize.value = mappingSize;
       },
@@ -306,11 +306,17 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       listenToStoreProperty(
         storeState => getActiveCellId(storeState.tracing).getOrElse(0),
-        activeCellId => {
-          // Mod the id since we do so anyway in the shader and floats are imprecise
-          // for high values
-          this.uniforms.activeCellId.value = activeCellId % 256;
-        },
+        () => this.updateActiveCellId(),
+      );
+
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
+        () => this.updateActiveCellId(),
+      );
+
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.mapping,
+        () => this.updateActiveCellId(),
       );
 
       listenToStoreProperty(
@@ -320,6 +326,14 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         },
       );
     }
+  }
+
+  updateActiveCellId() {
+    const activeCellId = getActiveCellId(Store.getState().tracing).getOrElse(0);
+    const mappedActiveCellId = Model.getSegmentationBinary().cube.mapId(activeCellId);
+    // Convert the id into 4 bytes (little endian)
+    const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
+    this.uniforms.activeCellId.value.set(r, g, b, a);
   }
 
   updateUniformsForLayer(settings: DatasetLayerConfigurationType, name: string): void {
@@ -355,7 +369,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
 <% }) %>
 
 <% if (hasSegmentation) { %>
-  uniform float activeCellId;
+  uniform vec4 activeCellId;
   uniform bool isMouseInActiveViewport;
   uniform float activeVolumeToolIndex;
   uniform sampler2D <%= segmentationName %>_lookup_texture;
@@ -808,7 +822,7 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
     return brushOverlayColor;
   }
 
-  float getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
+  vec4 getSegmentationId(vec3 coords, vec3 fallbackCoords, bool hasFallback) {
     vec4 volume_color =
       getMaybeFilteredColorOrFallback(
         <%= segmentationName %>_lookup_texture,
@@ -840,16 +854,15 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
       }
     <% } %>
 
-    // Only consider the last 8 bit (little endian)
-    float id = volume_color.r * 255.0;
-    return id;
+    return volume_color * 255.0;
   }
 <% } %>
 
 
-vec3 convertCellIdToRGB(float id) {
+vec3 convertCellIdToRGB(vec4 id) {
   float golden_ratio = 0.618033988749895;
-  vec4 HSV = vec4( mod( id * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
+  float lastEightBits = id.r;
+  vec4 HSV = vec4( mod( lastEightBits * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
   return hsv_to_rgb(HSV);
 }
 
@@ -867,15 +880,15 @@ void main() {
   vec3 fallbackCoords = floor(getRelativeCoords(worldCoordUVW, fallbackZoomStep));
 
   <% if (hasSegmentation) { %>
-    float id = getSegmentationId(coords, fallbackCoords, hasFallback);
+    vec4 id = getSegmentationId(coords, fallbackCoords, hasFallback);
 
     vec3 flooredMousePosUVW = transDim(floor(globalMousePosition));
     vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
 
-    float cellIdUnderMouse = getSegmentationId(mousePosCoords, fallbackCoords, false);
+    vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, fallbackCoords, false);
   <% } else { %>
-    float id = 0.0;
-    float cellIdUnderMouse = 0.0;
+    vec4 id = vec4(0.0);
+    vec4 cellIdUnderMouse = vec4(0.0);
   <% } %>
 
   // Get Color Value(s)
@@ -921,7 +934,7 @@ void main() {
   <% } %>
 
   // Color map (<= to fight rounding mistakes)
-  if ( id > 0.1 ) {
+  if ( length(id) > 0.1 ) {
     // Increase cell opacity when cell is hovered
     float hoverAlphaIncrement =
       // Hover cell only if it's the active one, if the feature is enabled

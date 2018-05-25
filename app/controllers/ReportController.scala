@@ -64,11 +64,10 @@ object ReportSQLDAO extends SimpleSQLDAO {
                p.paused paused,
                count(t._id) totalTasks,
                sum(t.totalInstances) totalInstances,
-               sum(ti.openInstances) openInstances
+               sum(t.openInstances) openInstances
           from
             filteredProjects p
             join webknossos.tasks_ t on p._id = t._project
-            join webknossos.task_instances ti on t._id = ti._id
           group by p._id, p.name, p.paused)
 
           ,s2 as (select p._id,
@@ -99,7 +98,6 @@ object ReportSQLDAO extends SimpleSQLDAO {
         select p._id, p.name, t.neededExperience_domain, t.neededExperience_value, count(t._id)
         from
         webknossos.tasks_ t
-          join webknossos.task_instances ti on t._id = ti._id
         join
         (select domain, value
           from webknossos.user_experiences
@@ -107,7 +105,7 @@ object ReportSQLDAO extends SimpleSQLDAO {
         as ue on t.neededExperience_domain = ue.domain and t.neededExperience_value <= ue.value
         join webknossos.projects_ p on t._project = p._id
         left join (select _task from webknossos.annotations_ where _user = ${userId.id} and typ = '#${AnnotationTypeSQL.Task}') as userAnnotations ON t._id = userAnnotations._task
-        where ti.openInstances > 0
+        where t.openInstances > 0
         and userAnnotations._task is null
         and not p.paused
         group by p._id, p.name, t.neededExperience_domain, t.neededExperience_value
@@ -132,7 +130,7 @@ class ReportController @Inject()(val messagesApi: MessagesApi) extends Controlle
     for {
       team <- TeamDAO.findOneById(id)(GlobalAccessContext)
       users <- UserDAO.findByTeams(List(team._id), includeInactive = false)(GlobalAccessContext)
-      nonAdminUsers = users.filterNot(_.isTeamManagerOf(team._id))
+      nonAdminUsers = users.filterNot(_.isTeamManagerOfBLOCKING(team._id))
       entries: List[OpenTasksEntry] <- getAllAvailableTaskCountsAndProjects(nonAdminUsers)(GlobalAccessContext)
     } yield Ok(Json.toJson(entries))
   }

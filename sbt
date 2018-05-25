@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+exit_code=1
 trap 'exit $exit_code' INT TERM
 trap 'exit_code=$?; kill 0' EXIT
 

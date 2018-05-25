@@ -21,6 +21,7 @@ import play.utils.UriEncoding
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
@@ -355,8 +356,8 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
                                                                      ${teamId.id})""")
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
-    for { //note that t.created is skipped
-      _ <- run(composedQuery.transactionally)
+    for {
+      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 }
@@ -479,7 +480,7 @@ object DataSetDAO {
     DataSetSQLDAO.updateDataSourceByName(name, dataStoreInfo.name, source, isActive)
 
   def updateTeams(name: String, teams: List[BSONObjectID])(implicit ctx: DBAccessContext) =
-    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams.map(ObjectId.fromBsonId(_)))
+    DataSetAllowedTeamsSQLDAO.updateAllowedTeamsForDataSetByName(name, teams.map(ObjectId.fromBsonId(_)).distinct)
 
   def update(name: String, description: Option[String], displayName: Option[String], isPublic: Boolean)(implicit ctx: DBAccessContext): Fox[DataSet] = {
     for {

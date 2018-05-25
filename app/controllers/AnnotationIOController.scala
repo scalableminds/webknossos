@@ -21,6 +21,7 @@ import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import play.api.libs.json.Json
+import utils.ObjectId
 
 import scala.concurrent.Future
 
@@ -36,6 +37,9 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       fileNames.headOption.map(_.replaceAll("\\.nml$", ""))
     else
       None
+
+  private def descriptionForNMLs(descriptions: Seq[Option[String]]) =
+    if (descriptions.size == 1) descriptions.headOption.flatten.getOrElse("") else ""
 
 
   def upload = SecuredAction.async(parse.multipartFormData) { implicit request =>
@@ -67,28 +71,29 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
     val parseResultsPrefixed = NmlService.addPrefixesToTreeNames(parsedFiles.parseResults)
 
+    val parseSuccess = parseResultsPrefixed.filter(_.succeeded)
+
     if (!parsedFiles.isEmpty) {
-      val parseSuccess = parseResultsPrefixed.filter(_.succeeded)
-      val fileNames = parseSuccess.map(_.fileName)
       val tracings = parseSuccess.flatMap(_.tracing)
       val (skeletonTracings, volumeTracings) = NmlService.splitVolumeAndSkeletonTracings(tracings)
-      val name = nameForNmls(fileNames)
+      val name = nameForNmls(parseSuccess.map(_.fileName))
+      val description = descriptionForNMLs(parseSuccess.map(_.description))
       if (volumeTracings.nonEmpty) {
         for {
           dataSet: DataSet <- DataSetDAO.findOneBySourceName(volumeTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", volumeTracings.head._1.dataSetName)
           tracingReference <- dataSet.dataStore.saveVolumeTracing(volumeTracings.head._1, parsedFiles.otherFiles.get(volumeTracings.head._2).map(_.file))
           annotation <- AnnotationService.createFrom(
-            request.identity, dataSet, tracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(tracingReference.typ), name, volumeTracings.head._3)
+            request.identity, dataSet, tracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(tracingReference.typ), name, description)
         } yield JsonOk(
           Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
           Messages("nml.file.uploadSuccess")
         )
       } else if (skeletonTracings.nonEmpty) {
         for {
-          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head._1.dataSetName).toFox ?~> Messages("dataSet.notFound", skeletonTracings.head._1.dataSetName)
-          mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings.map(_._1), dataSet)
+          dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head.dataSetName).toFox ?~> Messages("dataSet.notFound", skeletonTracings.head.dataSetName)
+          mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings, dataSet)
           annotation <- AnnotationService.createFrom(
-            request.identity, dataSet, mergedTracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(mergedTracingReference.typ), name, skeletonTracings.head._2)
+            request.identity, dataSet, mergedTracingReference, AnnotationType.Explorational, AnnotationSettings.defaultFor(mergedTracingReference.typ), name, description)
         } yield JsonOk(
           Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
           Messages("nml.file.uploadSuccess")
@@ -117,7 +122,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     def skeletonToDownloadStream(dataSet: DataSet, annotation: Annotation, name: String) = {
       for {
         tracing <- dataSet.dataStore.getSkeletonTracing(annotation.tracingReference)
-        scale <- dataSet.dataSource.scaleOpt
+        scale <- dataSet.dataSource.scaleOpt ?~> Messages("nml.scaleNotFound")
       } yield {
         (NmlWriter.toNmlStream(Left(tracing), annotation, scale), name + ".nml")
       }
@@ -164,17 +169,11 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
   def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext) = {
-    def createProjectZip(project: Project) =
-      for {
-        tasks <- TaskDAO.findAllByProject(project.name)
-        annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state == Finished))
-        zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
-      } yield zip
-
     for {
       project <- ProjectDAO.findOneById(projectId) ?~> Messages("project.notFound", projectId)
-      _ <- user.teamManagerTeamIds.contains(project._team) ?~> Messages("notAllowed")
-      zip <- createProjectZip(project)
+      _ <- user.assertTeamManagerOrAdminOf(project._team)
+      annotations <- AnnotationDAO.findFinishedForProject(projectId)
+      zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {
       Ok.sendFile(zip.file)
     }

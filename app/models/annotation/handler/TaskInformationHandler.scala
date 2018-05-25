@@ -30,7 +30,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.exists(_.isTeamManagerOf(task._team))
+          user.exists(_.isTeamManagerOfBLOCKING(task._team))
       }
     }
 }

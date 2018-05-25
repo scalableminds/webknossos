@@ -15,8 +15,7 @@ import type {
   APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
-  APIDatastoreType,
-  NDStoreConfigType,
+  APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
   APIDataSourceType,
@@ -26,7 +25,6 @@ import type {
   APITimeTrackingType,
   APIProjectProgressReportType,
   APIOpenTasksReportType,
-  APIOrganizationType,
   APIBuildInfoType,
   APITracingType,
   APIFeatureToggles,
@@ -514,7 +512,7 @@ export async function updateDatasetDatasource(
   dataStoreUrl: string,
   datasource: APIDataSourceType,
 ): Promise<void> {
-  return doWithToken(token =>
+  await doWithToken(token =>
     Request.sendJSONReceiveJSON(`${dataStoreUrl}/data/datasets/${datasetName}?token=${token}`, {
       data: datasource,
     }),
@@ -571,16 +569,8 @@ export async function getDatasetAccessList(datasetName: string): Promise<Array<A
   return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
 
-export async function addNDStoreDataset(
-  ndstoreConfig: NDStoreConfigType,
-): Promise<APIAnnotationType> {
-  return Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore", {
-    data: ndstoreConfig,
-  });
-}
-
 export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
-  doWithToken(token =>
+  await doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
       data: datatsetConfig,
       host: datatsetConfig.datastore,
@@ -598,7 +588,7 @@ export async function updateDatasetTeams(
 }
 
 export async function triggerDatasetCheck(datatstoreHost: string): Promise<void> {
-  doWithToken(token =>
+  await doWithToken(token =>
     Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
       host: datatstoreHost,
     }),
@@ -615,7 +605,7 @@ export async function revokeDatasetSharingToken(datasetName: string): Promise<vo
 }
 
 // #### Datastores
-export async function getDatastores(): Promise<Array<APIDatastoreType>> {
+export async function getDatastores(): Promise<Array<APIDataStoreType>> {
   const datastores = await Request.receiveJSON("/api/datastores");
   assertResponseLimit(datastores);
 
@@ -679,7 +669,7 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 }
 
 // ### Organizations
-export async function getOrganizations(): Promise<Array<APIOrganizationType>> {
+export async function getOrganizationNames(): Promise<Array<string>> {
   return Request.receiveJSON("/api/organizations");
 }
 

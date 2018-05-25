@@ -47,6 +47,13 @@ message Tree {
      repeated Comment comments = 6;
      required string name = 7;
      required int64 createdTimestamp = 8;
+     optional int32 groupId = 9;
+}
+
+message TreeGroup {
+  required string name = 1;
+  required int32 groupId = 2;
+  repeated TreeGroup children = 3;
 }
 
 message SkeletonTracing {
@@ -60,6 +67,7 @@ message SkeletonTracing {
     required double zoomLevel = 8;
     required int64 version = 9;
     optional BoundingBox userBoundingBox = 10;
+    repeated TreeGroup treeGroups = 11;
 }
 
 message SkeletonTracings {

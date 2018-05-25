@@ -47,7 +47,7 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         annotation.isPublic || user.exists {
           user =>
-            annotation._user == user._id || user.isTeamManagerOf(annotation._team)
+            annotation._user == user._id || user.isTeamManagerOfBLOCKING(annotation._team)
         }
       }
 
@@ -61,7 +61,7 @@ object AnnotationRestrictions {
       override def allowFinish(user: Option[User]) = {
         user.exists {
           user =>
-            (annotation._user == user._id || user.isTeamManagerOf(annotation._team)) && !(annotation.state == Finished)
+            (annotation._user == user._id || user.isTeamManagerOfBLOCKING(annotation._team)) && !(annotation.state == Finished)
         }
       }
     }

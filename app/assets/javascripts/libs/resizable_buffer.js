@@ -94,7 +94,7 @@ class ResizableBuffer<T: $TypedArray> {
     this.length += subarray.length;
   }
 
-  pop(r: ?Array<number>) {
+  pop(r: ?Array<number>): ?Array<number> {
     if (r == null) {
       r = new Array(this.elementLength);
     }
@@ -114,7 +114,7 @@ class ResizableBuffer<T: $TypedArray> {
     return r;
   }
 
-  top(r: ?Array<number>) {
+  top(r: ?Array<number>): ?Array<number> {
     if (r == null) {
       r = new Array(this.elementLength);
     }

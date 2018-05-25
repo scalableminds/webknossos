@@ -287,9 +287,22 @@ export type APIFeatureToggles = {
   +discussionBoard: boolean,
 };
 
+export type APIContactType = {
+  +phone: ?string,
+  +email: ?string,
+  +web: ?string,
+};
+
+export type APIAddressType = {
+  +street: string,
+  +town: string,
+};
+
 export type APIOrganizationDataType = {
-  +contact: string,
-  +address: string
-}
+  +name: string,
+  +additionalInformation: ?string,
+  +contact: APIContactType,
+  +address: APIAddressType,
+};
 
 export default {};

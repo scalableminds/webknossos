@@ -1,14 +1,16 @@
 import React from "react";
-import type {APIOrganizationDataType} from "admin/api_flow_types"
-import { getOrganizationData } from "admin/admin_rest_api";
+import type { APIOrganizationDataType } from "admin/api_flow_types";
+import { getOperatorData } from "admin/admin_rest_api";
+
+type Props = {};
 
 type State = {
-  organizationData: API,
+  operatorData: APIOrganizationDataType,
 };
 
-class Imprint extends React.PureComponent<State> {
+class Imprint extends React.PureComponent<Props, State> {
   state = {
-    organizationData: {},
+    operatorData: {},
   };
 
   componentDidMount() {
@@ -16,50 +18,50 @@ class Imprint extends React.PureComponent<State> {
   }
 
   async fetchData() {
-    const organizationData = await getOrganizationData();
+    const operatorData = await getOperatorData();
 
-    this.setState({ organizationData });
+    this.setState({ operatorData });
   }
 
   render() {
-    const imprint = (
-  <div className="container" id="impressum">
-    <h2>Legal Notice</h2>
-    <h3>scalable minds UG (haftungsbeschränkt) & Co. KG</h3>
-    <p>Amtsgericht Potsdam, HRA 5753</p>
-    <p>Geschäftsführer: scalable minds Verwaltungs UG</p>
-    <p>(vertreten durch Tom Bocklisch, Tom Herold, Norman Rzepka)</p>
-    <p>USt-Id. DE283513495</p>
+    return (
+      <div className="container" id="impressum">
+        <h2>Legal Notice</h2>
+        <h3>{this.state.operatorData.name}</h3>
+        <div dangerouslySetInnerHTML={{__html: this.state.operatorData.additionalInformation}} />
 
-    <h5>Visiting address</h5>
-    <p>Großbeerenstraße 15</p>
-    <p>14482 Potsdam</p>
+        <h5>Visiting address</h5>
+        <p>{this.state.operatorData.address ? this.state.operatorData.address.street : null}</p>
+        <p>{this.state.operatorData.address ? this.state.operatorData.address.town : null}</p>
 
-    <h5>Contact</h5>
-    <p>e-mail: hello@scm.io</p>
-    <p>
-      web: <a href="http://scm.io">scm.io</a>
-    </p>
+        <h5>Contact</h5>
+        {this.state.operatorData.contact && this.state.operatorData.contact.email ? (
+          <p>e-mail: {this.state.operatorData.contact.email}</p>
+        ) : null}
+        {this.state.operatorData.contact && this.state.operatorData.contact.web ? (
+          <p dangerouslySetInnerHTML={{__html: `web: ${this.state.operatorData.contact.web}` }}/>
+        ) : null}
+        {this.state.operatorData.contact && this.state.operatorData.contact.phone ? (
+          <p>phone: {this.state.operatorData.contact.phone}</p>
+        ) : null}
 
-    <h3>Max Planck Institute for Brain Research</h3>
-    <p>Dr. Moritz Helmstaedter</p>
-    <p>Director</p>
+        <h3>Max Planck Institute for Brain Research</h3>
+        <p>Dr. Moritz Helmstaedter</p>
+        <p>Director</p>
 
-    <h5>Visiting address</h5>
-    <p>{this.state.organizationData.address}</p>
-    <p>D-60438 Frankfurt am Main</p>
+        <h5>Visiting address</h5>
+        <p>Max-von-Laue-Str. 4</p>
+        <p>D-60438 Frankfurt am Main</p>
 
-    <h5>Contact</h5>
-    <p>phone: {this.state.organizationData.contact}</p>
-    <p>e-mail: mhoffice@brain.mpg.de</p>
-    <p>
-      web: <a href="http://www.brain.mpg.de/connectomics">www.brain.mpg.de/connectomics</a>
-    </p>
-  </div>
-);
-    return imprint;
+        <h5>Contact</h5>
+        <p>phone: +49 69 850033-3001</p>
+        <p>e-mail: mhoffice@brain.mpg.de</p>
+        <p>
+          web: <a href="http://www.brain.mpg.de/connectomics">www.brain.mpg.de/connectomics</a>
+        </p>
+      </div>
+    );
   }
-
- } 
+}
 
 export default Imprint;

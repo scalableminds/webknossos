@@ -26,12 +26,18 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
     }
   }
 
-  def getOrganizationData = Action.async { implicit request =>
+  def getOperatorData = Action.async { implicit request =>
     for {
-      contact <- Play.configuration.getString("organization.contact").toFox
-      address <- Play.configuration.getString("organization.address").toFox
+      name <- Play.configuration.getString("operator.name").toFox
+      additonalInformation = Play.configuration.getString("operator.additionalInformation")
+      contact = Json.obj("email" -> Play.configuration.getString("operator.contact.email"),
+        "phone" -> Play.configuration.getString("operator.contact.phone"),
+        "web" -> Play.configuration.getString("operator.contact.web"))
+      street <- Play.configuration.getString("operator.address.street").toFox
+      town <- Play.configuration.getString("operator.address.town").toFox
+      address = Json.obj("street" -> street, "town" -> town)
     } yield {
-      Ok(Json.obj("contact" -> contact, "address" -> address))
+      Ok(Json.obj("name" -> name, "additionalInformation" -> additonalInformation, "contact" -> contact, "address" -> address))
     }
   }
 }

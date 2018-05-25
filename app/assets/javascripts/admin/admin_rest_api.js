@@ -693,6 +693,6 @@ export async function getFeatureToggles(): Promise<APIFeatureToggles> {
   return Request.receiveJSON("/api/features");
 }
 
-export async function getOrganizationData(): Promise<APIOrganizationDataType> {
-  return Request.receiveJSON("/api/organizationData")
+export async function getOperatorData(): Promise<APIOrganizationDataType> {
+  return Request.receiveJSON("/api/operatorData");
 }

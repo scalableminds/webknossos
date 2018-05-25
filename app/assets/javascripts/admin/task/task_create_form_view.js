@@ -18,7 +18,6 @@ import {
 import {
   getActiveDatasets,
   getProjects,
-  getEditableTeams,
   getScripts,
   getTaskTypes,
   getTask,
@@ -33,7 +32,6 @@ import type {
   APITaskTypeType,
   APIProjectType,
   APIScriptType,
-  APITeamType,
 } from "admin/api_flow_types";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import type { Vector6 } from "oxalis/constants";

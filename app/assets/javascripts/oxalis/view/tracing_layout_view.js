@@ -14,6 +14,7 @@ import { location } from "libs/window";
 import ButtonComponent from "oxalis/view/components/button_component";
 import type { TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
+import Toast from "libs/toast";
 
 const { Header, Sider } = Layout;
 
@@ -43,6 +44,12 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
       isSettingsCollapsed: !this.state.isSettingsCollapsed,
     });
   };
+
+  componentDidCatch() {
+    Toast.error(
+      "Unfortunateley, we encountered an error. We cannot guarantee that your work is persisted. Please reload the page and try again.",
+    );
+  }
 
   render() {
     return (

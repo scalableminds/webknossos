@@ -28,7 +28,7 @@ class Imprint extends React.PureComponent<Props, State> {
       <div className="container" id="impressum">
         <h2>Legal Notice</h2>
         <h3>{this.state.operatorData.name}</h3>
-        <div dangerouslySetInnerHTML={{__html: this.state.operatorData.additionalInformation}} />
+        <div dangerouslySetInnerHTML={{ __html: this.state.operatorData.additionalInformation }} />
 
         <h5>Visiting address</h5>
         <p>{this.state.operatorData.address ? this.state.operatorData.address.street : null}</p>
@@ -39,7 +39,7 @@ class Imprint extends React.PureComponent<Props, State> {
           <p>e-mail: {this.state.operatorData.contact.email}</p>
         ) : null}
         {this.state.operatorData.contact && this.state.operatorData.contact.web ? (
-          <p dangerouslySetInnerHTML={{__html: `web: ${this.state.operatorData.contact.web}` }}/>
+          <p dangerouslySetInnerHTML={{ __html: `web: ${this.state.operatorData.contact.web}` }} />
         ) : null}
         {this.state.operatorData.contact && this.state.operatorData.contact.phone ? (
           <p>phone: {this.state.operatorData.contact.phone}</p>

@@ -26,6 +26,14 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
     }
   }
 
+  def getOrganizationData(organizationName: String) = Action.async{ implicit request =>
+    for {
+      org <- OrganizationDAO.findOneByName(organizationName)(GlobalAccessContext)
+    } yield {
+      Ok(Json.toJson(org)(Organization.organizationFormat))
+    }
+  }
+
   def getOperatorData = Action.async { implicit request =>
     for {
       name <- Play.configuration.getString("operator.name").toFox

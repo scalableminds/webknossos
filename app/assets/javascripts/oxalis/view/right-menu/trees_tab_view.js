@@ -3,9 +3,10 @@
  * @flow
  */
 
+import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
-import { Button, Dropdown, Input, Menu, Icon, Spin, Modal } from "antd";
+import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, AutoComplete, Popover } from "antd";
 import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -21,6 +22,7 @@ import {
   selectNextTreeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -31,6 +33,7 @@ import Toast from "libs/toast";
 import { getBuildInfo } from "admin/admin_rest_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
+const Option = AutoComplete.Option;
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -46,12 +49,74 @@ type Props = {
   onChangeTreeName: string => void,
   skeletonTracing: SkeletonTracingType,
   userConfiguration: UserConfigurationType,
+  onSetActiveTree: number => void,
 };
 
 type State = {
   isUploading: boolean,
   isDownloading: boolean,
 };
+
+const maxSearchResults = 10;
+class TreeSearchPopover extends React.PureComponent<*, *> {
+  autoComplete: *;
+
+  constructor() {
+    super();
+    this.state = {
+      isVisible: false,
+      searchQuery: "",
+    };
+  }
+
+  render() {
+    const filterOption = (inputValue, option) => option.props.text.indexOf(inputValue) > -1;
+    const filterTree = tree => tree.name.indexOf(this.state.searchQuery) > -1;
+
+    return (
+      <Popover
+        title="Search Trees"
+        trigger="click"
+        placement="rightTop"
+        visible={this.state.isVisible}
+        mouseLeaveDelay={1}
+        onVisibleChange={isVisible => this.setState({ isVisible })}
+        content={
+          // Only render autocomplete when the popover is visible
+          // This ensures that the component is completely re-mounted when
+          // the popover is opened. Thus, autoFocus works and unnecessary
+          // computations are avoided.
+          this.state.isVisible && (
+            <AutoComplete
+              autoFocus
+              onSearch={searchQuery => this.setState({ searchQuery })}
+              dataSource={_.values(this.props.trees)
+                .filter(filterTree)
+                .slice(0, maxSearchResults)
+                .map(tree => (
+                  <Option key={tree.treeId} text={tree.name}>
+                    {tree.name}
+                  </Option>
+                ))}
+              style={{ width: "500px" }}
+              ref={autoComplete => (this.autoComplete = autoComplete)}
+              onSelect={(value, option) => {
+                console.log("onSelect", value, option);
+                this.props.onSetActiveTree(option.key);
+                this.setState({ isVisible: false });
+                if (this.autoComplete) this.autoComplete.blur();
+              }}
+              placeholder="Input here to search trees"
+              filterOption={filterOption}
+            />
+          )
+        }
+      >
+        {this.props.children}
+      </Popover>
+    );
+  }
+}
 
 class TreesTabView extends React.PureComponent<Props, State> {
   state = {
@@ -200,6 +265,14 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <Spin />
         </Modal>
         <ButtonGroup>
+          <TreeSearchPopover
+            onSetActiveTree={this.props.onSetActiveTree}
+            trees={this.props.skeletonTracing.trees}
+          >
+            <ButtonComponent>
+              <Icon type="search" />
+            </ButtonComponent>
+          </TreeSearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>
@@ -275,6 +348,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));
+  },
+  onSetActiveTree(treeId) {
+    dispatch(setActiveTreeAction(treeId));
   },
 });
 

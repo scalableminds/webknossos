@@ -211,17 +211,13 @@ void main() {
 precision highp float;
 
 varying vec3 color;
-// Since attributes are only supported in vertex shader, we pass the attribute into a
-// varying to use in the fragment shader
 varying float v_isCommented;
 
 void main()
 {
     gl_FragColor = vec4(color, 1.0);
     vec2 centerDistance = abs(gl_PointCoord - vec2(0.5));
-    bool isBorder = centerDistance.x < 0.20
-    // Since attributes are only supported in vertex shader, we pass the attribute into a
-    // varying to use in the fragment shader && centerDistance.y < 0.20;
+    bool isBorder = centerDistance.x < 0.20 && centerDistance.y < 0.20;
     if (v_isCommented == 1.0 && isBorder) {
       gl_FragColor  = vec4(1.0);
     };

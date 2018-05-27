@@ -388,6 +388,9 @@ class ArbitraryController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
+    // my code changes: opens a Toast with a notification that the move value changed
+     Toast.warning(messages["tracing.branchpoint_set"]);
+    // Toast.warning(messages["keyevent.changed_move_value"] + moveValue);
   }
 
   setParticleSize(delta: number): void {

@@ -8,6 +8,7 @@ import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
+import Toast from "libs/toast"; // added this import
 import { document } from "libs/window";
 import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
 import * as THREE from "three";
@@ -444,6 +445,9 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
+    // my code changes: opens a Toast with a notification that the move value changed
+     Toast.info(messages["tracing.branchpoint_set"]);
+    // Toast.warning(messages["keyevent.changed_move_value"] + moveValue);
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

@@ -140,4 +140,6 @@ In order to restore the current window, a reload is necessary.`,
   "mapping.too_few_textures":
     "Not enough textures available to support mappings. Mappings are disabled.",
   "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
+  "keyevent.changed_move_value": "The move value was changed to: ",
+  // would concider naming it changed_move_speed_value
 };

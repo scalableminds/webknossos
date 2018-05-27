@@ -71,9 +71,11 @@ class ArbitraryController extends React.PureComponent<Props> {
   };
   storePropertyUnsubscribers: Array<Function>;
 
+
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
+  keypressedNotification: notification; // added this to store a notification displayed when h/g is pressed
 
   componentDidMount() {
     _.extend(this, BackboneEvents);
@@ -389,8 +391,10 @@ class ArbitraryController extends React.PureComponent<Props> {
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
     // my code changes: opens a Toast with a notification that the move value changed
-     Toast.warning(messages["tracing.branchpoint_set"]);
-    // Toast.warning(messages["keyevent.changed_move_value"] + moveValue);
+    if(!this.keypressedNotification){
+      this.keypressedNotification.destroy();
+    }
+    this.keypressedNotification = Toast.success(messages["keyevent.changed_move_value"] + moveValue);
   }
 
   setParticleSize(delta: number): void {

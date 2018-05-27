@@ -5,6 +5,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
+import { notification} from "antd";// added this to store a reference to a notification
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
@@ -47,6 +48,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import messages from "messages"; // added this import
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 
 type OwnProps = {
@@ -76,6 +78,7 @@ class PlaneController extends React.PureComponent<Props> {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
+  keypressedNotification: notification; 
 
   constructor(...args: any) {
     super(...args);
@@ -255,6 +258,9 @@ class PlaneController extends React.PureComponent<Props> {
         // Zoom in/out
         i: () => this.zoom(1, false),
         o: () => this.zoom(-1, false),
+        // moved them here just for a test
+        h: () => this.changeMoveValue(25),
+        g: () => this.changeMoveValue(-25),
       },
       Store.getState().userConfiguration.keyboardDelay,
     );
@@ -272,8 +278,8 @@ class PlaneController extends React.PureComponent<Props> {
   getKeyboardControls(): Object {
     return {
       // Change move value
-      h: () => this.changeMoveValue(25),
-      g: () => this.changeMoveValue(-25),
+      // h: () => this.changeMoveValue(25),
+      // g: () => this.changeMoveValue(-25),
     };
   }
 
@@ -446,8 +452,10 @@ class PlaneController extends React.PureComponent<Props> {
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
     // my code changes: opens a Toast with a notification that the move value changed
-     Toast.info(messages["tracing.branchpoint_set"]);
-    // Toast.warning(messages["keyevent.changed_move_value"] + moveValue);
+    if(!this.keypressedNotification){
+      this.keypressedNotification.destroy();
+    }
+    this.keypressedNotification = Toast.success(messages["keyevent.changed_move_value"] + moveValue);
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

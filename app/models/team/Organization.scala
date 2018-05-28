@@ -21,8 +21,10 @@ import scala.concurrent.Future
 case class OrganizationSQL(
                             _id: ObjectId,
                             name: String,
+                            additionalInformation: String,
                             created: Long = System.currentTimeMillis(),
-                            isDeleted: Boolean = false)
+                            isDeleted: Boolean = false
+                          )
 
 
 object OrganizationSQL {
@@ -30,7 +32,8 @@ object OrganizationSQL {
     Fox.successful(
       OrganizationSQL(
         ObjectId.fromBsonId(o._id),
-        o.name
+        o.name,
+        o.additionalInformation
       )
     )
   }
@@ -40,16 +43,19 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   val collection = Organizations
 
   def idColumn(x: Organizations): Rep[String] = x._Id
+
   def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
-  def parse(r: OrganizationsRow): Fox[OrganizationSQL] = {
-    Fox.successful(OrganizationSQL(
-      ObjectId(r._Id),
-      r.name,
-      r.created.getTime,
-      r.isdeleted)
+
+  def parse(r: OrganizationsRow): Fox[OrganizationSQL] =
+    Fox.successful(
+      OrganizationSQL(
+        ObjectId(r._Id),
+        r.name,
+        r.additionalinformation,
+        r.created.getTime,
+        r.isdeleted)
     )
-  }
 
   override def readAccessQ(requestingUserId: ObjectId) =
     s"(_id in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"
@@ -67,8 +73,9 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   def insertOne(o: OrganizationSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
-        sqlu"""insert into webknossos.organizations(_id, name, created, isDeleted)
-                  values(${o._id.id}, ${o.name}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
+
+        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, created, isDeleted)
+                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
             """)
     } yield ()
 
@@ -82,6 +89,7 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
 
 
 case class Organization(
+                         additionalInformation: String,
                          name: String,
                          teams: List[BSONObjectID],
                          _organizationTeam: BSONObjectID,
@@ -104,6 +112,7 @@ object Organization extends FoxImplicits {
       teamBsonIds <- Fox.combined(teams.map(_._id.toBSONObjectId.toFox))
     } yield {
       Organization(
+        o.additionalInformation,
         o.name,
         teamBsonIds,
         organizationTeamIdBson,

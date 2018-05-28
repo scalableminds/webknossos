@@ -24,8 +24,8 @@ case class TeamSQL(
                   _id: ObjectId,
                   _organization: ObjectId,
                   name: String,
-                  created: Long = System.currentTimeMillis(),
                   isOrganizationTeam: Boolean = false,
+                  created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
                   )
 
@@ -40,8 +40,8 @@ object TeamSQL {
         teamId,
         organization._id,
         t.name,
-        System.currentTimeMillis(),
         organizationTeamId == teamId,
+        System.currentTimeMillis(),
         false
       )
     }
@@ -59,6 +59,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
       ObjectId(r._Id),
       ObjectId(r._Organization),
       r.name,
+      r.isorganizationteam,
       r.created.getTime,
       r.isdeleted
     ))

@@ -109,9 +109,14 @@ object InitialData extends GlobalDBAccess with FoxImplicits with LazyLogging {
 
   val defaultUserEmail = Play.configuration.getString("application.authentication.defaultUser.email").getOrElse("scmboy@scalableminds.com")
   val defaultUserPassword = Play.configuration.getString("application.authentication.defaultUser.password").getOrElse("secret")
+  val additionalInformation = """**Sample Organization**
 
+Sample Street 123
+Sampletown
+Samplecountry
+"""
   val organizationTeamId = BSONObjectID.generate
-  val defaultOrganization = Organization("Connectomics department", List(), organizationTeamId)
+  val defaultOrganization = Organization(additionalInformation, "Connectomics department", List(), organizationTeamId)
   val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)
   val organizationTeamSQL = TeamSQL(ObjectId.fromBsonId(organizationTeamId), ObjectId.fromBsonId(defaultOrganization._id), defaultOrganization.name, isOrganizationTeam = true)
 

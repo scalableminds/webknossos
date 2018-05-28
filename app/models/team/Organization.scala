@@ -75,8 +75,8 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   def insertOne(o: OrganizationSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
-        sqlu"""insert into webknossos.organizations(_id, _organizationTeam, name, created, isDeleted, additionalInformation)
-                  values(${o._id.id}, ${o._organizationTeam.id}, ${o.name}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted}, ${o.additionalInformation})
+        sqlu"""insert into webknossos.organizations(_id, _organizationTeam, name, additionalInformation, created, isDeleted)
+                  values(${o._id.id}, ${o._organizationTeam}, ${o.name}, ${o.additionalInformation}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
             """)
     } yield ()
 

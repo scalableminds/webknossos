@@ -149,7 +149,6 @@ CREATE TABLE webknossos.tasks(
   _project CHAR(24) NOT NULL,
   _script CHAR(24),
   _taskType CHAR(24) NOT NULL,
-  _team CHAR(24) NOT NULL,
   neededExperience_domain VARCHAR(256) NOT NULL CHECK (neededExperience_domain ~* '^.{2,}$'),
   neededExperience_value INT NOT NULL,
   totalInstances BIGINT NOT NULL,
@@ -279,7 +278,7 @@ CREATE INDEX ON webknossos.dataSets(name);
 CREATE INDEX ON webknossos.tasks(_project);
 CREATE INDEX ON webknossos.tasks(isDeleted);
 CREATE INDEX ON webknossos.tasks(_project, isDeleted);
-CREATE INDEX ON webknossos.tasks(_team, neededExperience_domain, neededExperience_value);
+CREATE INDEX ON webknossos.tasks(neededExperience_domain, neededExperience_value);
 CREATE INDEX ON webknossos.tasks(_taskType);
 CREATE INDEX ON webknossos.timespans(_user);
 CREATE INDEX ON webknossos.timespans(_annotation);
@@ -312,7 +311,6 @@ CREATE INDEX ON webknossos.projects(_team, isDeleted);
 -- ALTER TABLE webknossos.taskTypes
 --   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 -- ALTER TABLE webknossos.tasks
---   ADD FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
 --   ADD FOREIGN KEY(_project) REFERENCES webknossos.projects(_id),
 --   ADD FOREIGN KEY(_script) REFERENCES webknossos.scripts(_id) ON DELETE SET NULL;
 -- ALTER TABLE webknossos.teams

@@ -38,7 +38,6 @@ export type NewTaskType = {
   +projectName: string,
   +scriptId: ?string,
   +openInstances: number,
-  +teamName: string,
   +taskTypeId: string,
   +csvFile?: File,
   +nmlFile?: File,
@@ -69,7 +68,6 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
       !_.isString(task.neededExperience.domain) ||
       !_.isString(task.dataSet) ||
       !_.isString(task.taskTypeId) ||
-      !_.isString(task.teamName) ||
       !_.isString(task.projectName) ||
       task.editPosition.some(Number.isNaN) ||
       task.editRotation.some(Number.isNaN) ||
@@ -127,15 +125,14 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const rotY = parseInt(words[8]);
     const rotZ = parseInt(words[9]);
     const openInstances = parseInt(words[10]);
-    const teamName = words[11];
-    const boundingBoxX = parseInt(words[12]);
-    const boundingBoxY = parseInt(words[13]);
-    const boundingBoxZ = parseInt(words[14]);
-    const width = parseInt(words[15]);
-    const height = parseInt(words[16]);
-    const depth = parseInt(words[17]);
-    const projectName = words[18];
-    const scriptId = words[19] || undefined;
+    const boundingBoxX = parseInt(words[11]);
+    const boundingBoxY = parseInt(words[12]);
+    const boundingBoxZ = parseInt(words[13]);
+    const width = parseInt(words[14]);
+    const height = parseInt(words[15]);
+    const depth = parseInt(words[16]);
+    const projectName = words[17];
+    const scriptId = words[18] || undefined;
 
     // BoundingBox is optional and can be set to null by using the format [0, 0, 0, 0, 0, 0]
     const boundingBox =
@@ -150,7 +147,6 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
 
     return {
       dataSet,
-      teamName,
       taskTypeId,
       scriptId,
       openInstances,
@@ -258,9 +254,9 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               following format:
               <br />
               <a href="/dashboard">dataSet</a>, <a href="/taskTypes">taskTypeId</a>,{" "}
-              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances,{" "}
-              <a href="/teams">team</a>, minX, minY, minZ, width, height, depth,{" "}
-              <a href="/projects">project</a> [, <a href="/scripts">scriptId</a>]
+              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY,
+              minZ, width, height, depth, <a href="/projects">project</a> [,{" "}
+              <a href="/scripts">scriptId</a>]
             </p>
             <Form onSubmit={this.handleSubmit} layout="vertical">
               <FormItem label="Bulk Task Specification" hasFeedback>
@@ -284,7 +280,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
                 })(
                   <TextArea
                     className="input-monospace"
-                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, team, minX, minY, minZ, width, height, depth, project[, scriptId]"
+                    placeholder="dataSet, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId]"
                     autosize={{ minRows: 6 }}
                     style={{
                       fontFamily: 'Monaco, Consolas, "Lucida Console", "Courier New", monospace',

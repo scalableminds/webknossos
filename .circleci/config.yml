@@ -30,13 +30,14 @@ jobs:
           name: Build webknossos (sbt and webpack)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker-compose run -T compile sbt clean compile stage
+              docker-compose run compile sbt clean compile stage
             else
-              docker-compose run -T compile sbt compile stage
+              docker-compose run compile sbt compile stage
             fi
+          no_output_timeout: 30m
       - run:
           name: Build webknossos-datastore (sbt)
-          command: docker-compose run -T base sbt "project webknossosDatastore" compile stage
+          command: docker-compose run base sbt "project webknossosDatastore" compile stage
 
       - save_cache:
           key: cache-{{ checksum ".circleci/cache_version" }}-{{ .Branch }}-{{ .Revision }}

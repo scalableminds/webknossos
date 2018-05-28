@@ -22,9 +22,9 @@ case class OrganizationSQL(
                             _id: ObjectId,
                             _organizationTeam: ObjectId,
                             name: String,
+                            additionalInformation: String,
                             created: Long = System.currentTimeMillis(),
-                            isDeleted: Boolean = false,
-                            additionalInformation: String
+                            isDeleted: Boolean = false
                           )
 
 
@@ -54,9 +54,9 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
         ObjectId(r._Id),
         ObjectId(r._Organizationteam),
         r.name,
+        r.additionalinformation,
         r.created.getTime,
-        r.isdeleted,
-        r.additionalinformation)
+        r.isdeleted)
     )
 
   override def readAccessQ(requestingUserId: ObjectId) =

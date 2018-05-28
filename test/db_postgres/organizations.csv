@@ -1,3 +1,3 @@
-_id,_organizationteam,name,created,isdeleted
-'5ab0c6a674d0af7b003b23ac','570b9f4b2a7c0e3b008da6ec','Organization_X','2018-03-20 09:30:31.91+01',f
-'6bb0c6a674d0af7b003b23bd','70882b370d889b84020efd5f','Organization_Y','2018-03-24 09:30:31.91+01',f
+_id,_organizationteam,name,created,isdeleted, additionalinformation
+'5ab0c6a674d0af7b003b23ac','570b9f4b2a7c0e3b008da6ec','Organization_X','lorem ipsum','2018-03-20 09:30:31.91+01',f
+'6bb0c6a674d0af7b003b23bd','70882b370d889b84020efd5f','Organization_Y','foo bar','2018-03-24 09:30:31.91+01',f

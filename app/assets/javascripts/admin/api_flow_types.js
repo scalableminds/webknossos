@@ -260,8 +260,7 @@ export type APIOpenTasksReportType = {
 export type APIOrganizationType = {
   +id: string,
   +name: string,
-  +teams: Array<string>,
-  +organizationTeam: string,
+  +additionalInformation: string,
 };
 
 export type APIBuildInfoType = {

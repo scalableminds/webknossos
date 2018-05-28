@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/2594 TODO PR number
+-- https://github.com/scalableminds/webknossos/pull/2635
 
 -- UP:
 

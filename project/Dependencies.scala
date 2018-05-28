@@ -23,7 +23,8 @@ object Dependencies {
   val commonsLang = "org.apache.commons" % "commons-lang3" % "3.1"
   val grpc = "io.grpc" % "grpc-netty" % scalapb.compiler.Version.grpcJavaVersion
   val grpcServices = "io.grpc" % "grpc-services" % scalapb.compiler.Version.grpcJavaVersion
-  val grpcRuntime = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
+  val scalapbRuntime = "com.thesamet.scalapb" %% "scalapb-runtime" % scalapb.compiler.Version.scalapbVersion
+  val scalapbRuntimeGrpc = "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapb.compiler.Version.scalapbVersion
   val liftCommon = "net.liftweb" % "lift-common_2.10" % "2.6-M3"
   val liftUtil = "net.liftweb" % "lift-util_2.10" % "3.0-M1"
   val log4jApi = "org.apache.logging.log4j" % "log4j-core" % log4jVersion
@@ -35,7 +36,6 @@ object Dependencies {
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
-  val scalapbJson = "com.scalableminds" %% "scalapb-json4s" % "0.3.2.0-scm"
   val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
@@ -63,8 +63,8 @@ object Dependencies {
     playFramework,
     reactiveBson,
     reactivePlay,
+    scalapbRuntime,
     scalaLogging,
-    scalapbJson,
     ws
   )
 
@@ -76,7 +76,7 @@ object Dependencies {
     webknossosWrap,
     grpc,
     grpcServices,
-    grpcRuntime,
+    scalapbRuntimeGrpc,
     component("play-test")
   )
 

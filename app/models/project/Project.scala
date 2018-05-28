@@ -6,7 +6,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState
 import models.task.{TaskDAO, TaskService}
-import models.team.TeamSQLDAO
+import models.team.{Team, TeamDAO, TeamSQLDAO}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import play.api.Play.current
@@ -171,10 +171,12 @@ object Project extends FoxImplicits {
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
     for {
       owner <- project.owner.map(User.userCompactWrites.writes).futureBox
+      teamNameOption <- TeamDAO.findOneById(project._team)(GlobalAccessContext).map(_.name).toFutureOption
     } yield {
       Json.obj(
         "name" -> project.name,
         "team" -> project.team,
+        "teamName" -> teamNameOption,
         "owner" -> owner.toOption,
         "priority" -> project.priority,
         "paused" -> project.paused,

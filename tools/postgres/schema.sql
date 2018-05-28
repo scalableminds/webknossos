@@ -188,6 +188,7 @@ CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   _organizationTeam CHAR(24) NOT NULL UNIQUE,
   name VARCHAR(256) NOT NULL,
+  additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

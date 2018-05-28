@@ -26,7 +26,6 @@ ALTER TABLE webknossos.scripts
 ALTER TABLE webknossos.taskTypes
   ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 ALTER TABLE webknossos.tasks
-  ADD CONSTRAINT team_ref FOREIGN KEY(_team) REFERENCES webknossos.teams(_id),
   ADD CONSTRAINT project_ref FOREIGN KEY(_project) REFERENCES webknossos.projects(_id),
   ADD CONSTRAINT script_ref FOREIGN KEY(_script) REFERENCES webknossos.scripts(_id) ON DELETE SET NULL;
 ALTER TABLE webknossos.teams
@@ -34,8 +33,6 @@ ALTER TABLE webknossos.teams
 ALTER TABLE webknossos.timespans
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
   ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE SET NULL;
-ALTER TABLE webknossos.organizations
-  ADD CONSTRAINT orgteam_ref FOREIGN KEY(_organizationTeam) REFERENCES webknossos.teams(_id) ON DELETE CASCADE;
 ALTER TABLE webknossos.users
   ADD CONSTRAINT organization_ref FOREIGN KEY(_organization) REFERENCES webknossos.organizations(_id);
 ALTER TABLE webknossos.user_team_roles
@@ -73,7 +70,6 @@ ALTER TABLE webknossos.scripts
 ALTER TABLE webknossos.taskTypes
   DROP CONSTRAINT team_ref;
 ALTER TABLE webknossos.tasks
-  DROP CONSTRAINT team_ref,
   DROP CONSTRAINT project_ref,
   DROP CONSTRAINT script_ref;
 ALTER TABLE webknossos.teams
@@ -81,8 +77,6 @@ ALTER TABLE webknossos.teams
 ALTER TABLE webknossos.timespans
   DROP CONSTRAINT user_ref,
   DROP CONSTRAINT annotation_ref;
-ALTER TABLE webknossos.organizations
-  DROP CONSTRAINT orgteam_ref;
 ALTER TABLE webknossos.users
   DROP CONSTRAINT organization_ref;
 ALTER TABLE webknossos.user_team_roles

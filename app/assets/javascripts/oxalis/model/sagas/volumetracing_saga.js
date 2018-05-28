@@ -11,10 +11,7 @@ import type { CopySegmentationLayerActionType } from "oxalis/model/actions/volum
 import VolumeLayer from "oxalis/model/volumetracing/volumelayer";
 import Dimensions from "oxalis/model/dimensions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import {
-  isVolumeTracingDisallowed,
-  getActiveCellId,
-} from "oxalis/model/accessors/volumetracing_accessor";
+import { isVolumeTracingDisallowed } from "oxalis/model/accessors/volumetracing_accessor";
 import { updateVolumeTracing } from "oxalis/model/sagas/update_actions";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -25,24 +22,8 @@ import type { OrthoViewType, VolumeToolType, ContourModeType } from "oxalis/cons
 import type { VolumeTracingType, FlycamType } from "oxalis/store";
 import api from "oxalis/api/internal_api";
 
-export function* updateIsosurface(): Generator<*, *, *> {
-  const shouldDisplayIsosurface = yield select(state => state.userConfiguration.isosurfaceDisplay);
-  const activeCellIdMaybe = yield select(state => getActiveCellId(state.tracing));
-
-  if (shouldDisplayIsosurface) {
-    activeCellIdMaybe.map(
-      activeCellId =>
-        // importing SceneController breaks webpack (circular dependency)
-        // TODO fix later
-        // SceneController.renderVolumeIsosurface(activeCellId),
-        activeCellId,
-    );
-  }
-}
-
 export function* watchVolumeTracingAsync(): Generator<*, *, *> {
   yield take("WK_READY");
-  yield takeEvery(["FINISH_EDITING"], updateIsosurface);
   yield takeEvery("COPY_SEGMENTATION_LAYER", copySegmentationLayer);
   yield fork(warnOfTooLowOpacity);
 }

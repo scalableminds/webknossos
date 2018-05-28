@@ -15,8 +15,7 @@ import type {
   APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
-  APIDatastoreType,
-  NDStoreConfigType,
+  APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
   APIDataSourceType,
@@ -29,6 +28,7 @@ import type {
   APIBuildInfoType,
   APITracingType,
   APIFeatureToggles,
+  APIOrganizationType,
 } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
@@ -570,14 +570,6 @@ export async function getDatasetAccessList(datasetName: string): Promise<Array<A
   return Request.receiveJSON(`/api/datasets/${datasetName}/accessList`);
 }
 
-export async function addNDStoreDataset(
-  ndstoreConfig: NDStoreConfigType,
-): Promise<APIAnnotationType> {
-  return Request.sendJSONReceiveJSON("/api/datasets?typ=ndstore", {
-    data: ndstoreConfig,
-  });
-}
-
 export async function addDataset(datatsetConfig: DatasetConfigType): Promise<void> {
   await doWithToken(token =>
     Request.sendMultipartFormReceiveJSON(`/data/datasets?token=${token}`, {
@@ -614,7 +606,7 @@ export async function revokeDatasetSharingToken(datasetName: string): Promise<vo
 }
 
 // #### Datastores
-export async function getDatastores(): Promise<Array<APIDatastoreType>> {
+export async function getDatastores(): Promise<Array<APIDataStoreType>> {
   const datastores = await Request.receiveJSON("/api/datastores");
   assertResponseLimit(datastores);
 
@@ -678,8 +670,13 @@ export async function getOpenTasksReport(teamId: string): Promise<Array<APIOpenT
 }
 
 // ### Organizations
-export async function getOrganizationNames(): Promise<Array<string>> {
+export async function getOrganizations(): Promise<Array<APIOrganizationType>> {
   return Request.receiveJSON("/api/organizations");
+}
+
+export async function getOrganizationNames(): Promise<Array<string>> {
+  const organizations = await getOrganizations();
+  return organizations.map(org => org.name);
 }
 
 // ### BuildInfo
@@ -690,4 +687,8 @@ export function getBuildInfo(): Promise<APIBuildInfoType> {
 // ### Feature Selection
 export async function getFeatureToggles(): Promise<APIFeatureToggles> {
   return Request.receiveJSON("/api/features");
+}
+
+export async function getOperatorData(): Promise<string> {
+  return Request.receiveJSON("/api/operatorData");
 }

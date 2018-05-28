@@ -4,13 +4,14 @@
  */
 
 import _ from "lodash";
-import type Layer from "oxalis/model/binary/layers/layer";
+import Toast from "libs/toast";
+import { document } from "libs/window";
 import AsyncTaskQueue from "libs/async_task_queue";
+import { sendToStore } from "oxalis/model/binary/wkstore_adapter";
 import type { Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { DataBucket } from "oxalis/model/binary/bucket";
-import Toast from "libs/toast";
-import { document } from "libs/window";
+import type { DataLayerType } from "oxalis/store";
 
 const BATCH_SIZE = 32;
 const DEBOUNCE_TIME = 1000;
@@ -18,12 +19,17 @@ const DEBOUNCE_TIME = 1000;
 class PushQueue {
   dataSetName: string;
   cube: DataCube;
-  layer: Layer;
+  layer: DataLayerType;
   taskQueue: AsyncTaskQueue;
   sendData: boolean;
   queue: Set<DataBucket>;
 
-  constructor(cube: DataCube, layer: Layer, taskQueue: AsyncTaskQueue, sendData: boolean = true) {
+  constructor(
+    cube: DataCube,
+    layer: DataLayerType,
+    taskQueue: AsyncTaskQueue,
+    sendData: boolean = true,
+  ) {
     this.cube = cube;
     this.layer = layer;
     this.taskQueue = taskQueue;
@@ -96,7 +102,7 @@ class PushQueue {
   push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
   pushBatch(batch: Array<DataBucket>): Promise<void> {
-    return this.layer.sendToStore(batch);
+    return sendToStore(this.layer, batch);
   }
 }
 

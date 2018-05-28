@@ -18,6 +18,7 @@
     "babel-plugin-dynamic-import-webpack": "^1.0.1",
     "babel-plugin-import": "^1.1.0",
     "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "lint-staged": "^7.1.2",
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
     "babel-polyfill": "^6.23.0",
@@ -47,7 +48,7 @@
     "less-loader": "^4.1.0",
     "mock-require": "^1.2.1",
     "node-fetch": "^1.7.2",
-    "prettier": "^1.11.1",
+    "prettier": "1.11.1",
     "react-test-renderer": "^16.2.0",
     "redux-mock-store": "^1.2.2",
     "sinon": "^1.17.3",
@@ -83,11 +84,14 @@
     "import-db": "./tools/import_export/import.sh webknossos-testing ./test/db/",
     "drop-db": "./tools/dropDB.sh webknossos-testing"
   },
+  "lint-staged": {
+     "*.js": ["eslint --fix"]
+  },
   "dependencies": {
     "@scalableminds/prop-types": "^15.6.1",
     "@scalableminds/saxophone": "^0.5.0",
     "airbrake-js": "^0.5.8",
-    "antd": "^3.4.3",
+    "antd": "~3.2.3",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
     "classnames": "^2.2.5",
@@ -108,6 +112,7 @@
     "moment": "^2.21.0",
     "pako": "^0.2.8",
     "react": "^16.3.0",
+    "react-debounce-render": "^4.0.1",
     "react-dom": "^16.3.0",
     "react-google-charts": "^1.5.5",
     "react-redux": "^5.0.6",

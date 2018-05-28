@@ -24,6 +24,7 @@ import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
@@ -361,7 +362,7 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
-      _ <- run(composedQuery.transactionally)
+      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 }

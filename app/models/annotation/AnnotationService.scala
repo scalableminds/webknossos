@@ -20,15 +20,19 @@ import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
 import models.task.Task
 import models.user.User
-import net.liftweb.common.{Box, Full}
+import utils.ObjectId
 import play.api.i18n.Messages
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
+import scala.concurrent.Future
+import scala.collection.{IterableLike, TraversableLike}
+import scala.runtime.Tuple3Zipped
+import scala.collection.generic.Growable
+import net.liftweb.common.{Box, Full}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
-import utils.ObjectId
-
-import scala.concurrent.Future
 
 object AnnotationService
   extends BoxImplicits
@@ -180,15 +184,17 @@ object AnnotationService
     taskFox: Fox[Task],
     userId: BSONObjectID,
     tracingReferenceBox: Box[TracingReference],
-    dataSetName: String
+    dataSetName: String,
+    description: Option[String]
     )(implicit ctx: DBAccessContext) = {
 
     for {
       task <- taskFox
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
-      _ <- Annotation(userId, tracingReference, dataSetName, task._team, taskType.settings,
-          typ = AnnotationType.TracingBase, _task = Some(task._id)).saveToDB ?~> "Failed to insert annotation."
+      project <- task.project
+      _ <- Annotation(userId, tracingReference, dataSetName, project._team, taskType.settings,
+          typ = AnnotationType.TracingBase, _task = Some(task._id), description = description.getOrElse("")).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
 
@@ -246,7 +252,7 @@ object AnnotationService
     def getDatasetScale(dataSetName: String) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-        scale <- dataSet.dataSource.scaleOpt
+        scale <- dataSet.dataSource.scaleOpt ?~> Messages("nml.scaleNotFound")
       } yield scale
     }
 

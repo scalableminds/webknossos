@@ -5,10 +5,10 @@
 
 import _ from "lodash";
 import BinaryDataConnectionInfo from "oxalis/model/binarydata_connection_info";
-import type Layer from "oxalis/model/binary/layers/layer";
+import { requestFromStore } from "oxalis/model/binary/wkstore_adapter";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector4 } from "oxalis/constants";
-import type { DataStoreInfoType } from "oxalis/store";
+import type { DataStoreInfoType, DataLayerType } from "oxalis/store";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
@@ -26,20 +26,21 @@ export const PullQueueConstants = {
   BATCH_LIMIT: 6,
 };
 
+const BATCH_SIZE = 3;
+
 class PullQueue {
-  BATCH_SIZE: number;
   cube: DataCube;
   queue: Array<PullQueueItemType>;
   batchCount: number;
   roundTripTime: number;
-  layer: Layer;
+  layer: DataLayerType;
   whitenEmptyBuckets: boolean;
   connectionInfo: BinaryDataConnectionInfo;
   datastoreInfo: DataStoreInfoType;
 
   constructor(
     cube: DataCube,
-    layer: Layer,
+    layer: DataLayerType,
     connectionInfo: BinaryDataConnectionInfo,
     datastoreInfo: DataStoreInfoType,
   ) {
@@ -48,7 +49,6 @@ class PullQueue {
     this.connectionInfo = connectionInfo;
     this.datastoreInfo = datastoreInfo;
     this.queue = [];
-    this.BATCH_SIZE = this.isNDstore() ? 1 : 3;
     this.batchCount = 0;
     this.roundTripTime = 0;
 
@@ -65,7 +65,7 @@ class PullQueue {
     const promises = [];
     while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.queue.length) {
       const batch = [];
-      while (batch.length < this.BATCH_SIZE && this.queue.length) {
+      while (batch.length < BATCH_SIZE && this.queue.length) {
         const address = this.queue.shift().bucket;
         const bucket = this.cube.getOrCreateBucket(address);
         if (bucket.type === "data" && bucket.needsRequest()) {
@@ -89,7 +89,7 @@ class PullQueue {
     const roundTripBeginTime = new Date();
 
     try {
-      const responseBuffer = await this.layer.requestFromStore(batch);
+      const responseBuffer = await requestFromStore(this.layer, batch);
       let bucketData;
       this.connectionInfo.log(
         this.layer.name,
@@ -159,10 +159,6 @@ class PullQueue {
 
   addAll(items: Array<PullQueueItemType>): void {
     this.queue = this.queue.concat(items);
-  }
-
-  isNDstore(): boolean {
-    return this.datastoreInfo.typ === "ndstore";
   }
 
   maybeWhitenEmptyBucket(bucketData: Uint8Array) {

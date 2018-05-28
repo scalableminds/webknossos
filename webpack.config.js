@@ -58,11 +58,29 @@ module.exports = function(env = {}) {
         },
         {
           test: /\.less$/,
-          use: [MiniCssExtractPlugin.loader, "css-loader", "less-loader"],
+          use: [
+            MiniCssExtractPlugin.loader,
+            "css-loader",
+            {
+              loader: "less-loader",
+              options: {
+                javascriptEnabled: true,
+              },
+            },
+          ],
         },
         {
           test: /\.css$/,
-          use: [MiniCssExtractPlugin.loader, "css-loader", "less-loader"],
+          use: [
+            MiniCssExtractPlugin.loader,
+            "css-loader",
+            {
+              loader: "less-loader",
+              options: {
+                javascriptEnabled: true,
+              },
+            },
+          ],
         },
         {
           test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,

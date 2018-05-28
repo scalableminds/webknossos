@@ -91,7 +91,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
     }
   }
 
-  def getProto(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
+  def getProto(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.readTracing(tracingId)).async {
     implicit request => {
       AllowRemoteOrigin {
         for {

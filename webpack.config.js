@@ -1,5 +1,5 @@
 module.exports = function(env = {}) {
-  /* eslint no-var:0, import/no-extraneous-dependencies:0 */
+  /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   var webpack = require("webpack");
   var fs = require("fs");
   var path = require("path");
@@ -8,6 +8,7 @@ module.exports = function(env = {}) {
 
   var srcPath = path.resolve(__dirname, "app/assets/javascripts/");
   var nodePath = path.join(__dirname, "node_modules/");
+  const protoPath = path.join(__dirname, "webknossos-datastore/proto/");
 
   fs.writeFileSync(path.join(__dirname, "target", "webpack.pid"), process.pid, "utf8");
 
@@ -79,10 +80,11 @@ module.exports = function(env = {}) {
         },
         { test: /\.png$/, use: { loader: "url-loader", options: { limit: 100000 } } },
         { test: /\.jpg$/, use: "file-loader" },
+        { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
       ],
     },
     resolve: {
-      modules: [srcPath, nodePath],
+      modules: [srcPath, nodePath, protoPath],
     },
     optimization: {
       splitChunks: {

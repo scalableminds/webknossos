@@ -32,13 +32,15 @@ services:
     environment:
       # - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - HOME=/root
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"
       - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
       - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
       - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
-      - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
+      - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/root/.cache/yarn"
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   compile:
     extends:

@@ -1,7 +1,7 @@
 // @flow
 import React from "react";
 import { Link, withRouter } from "react-router-dom";
-import { Form, Input, Button, Row, Col, Icon, Card, Select } from "antd";
+import { Form, Input, Button, Row, Col, Icon, Card, Select, Checkbox } from "antd";
 import messages from "messages";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -201,6 +201,29 @@ class RegistrationView extends React.PureComponent<Props, State> {
                   prefix={<Icon type="lock" style={{ fontSize: 13 }} />}
                   placeholder="Confirm Password"
                 />,
+              )}
+            </FormItem>
+            <FormItem>
+              {getFieldDecorator("privacy_check", {
+                valuePropName: "checked",
+                initialValue: false,
+                rules: [
+                  {
+                    validator: (rule, value, callback) => {
+                      if (value) {
+                        callback();
+                      } else {
+                        callback(new Error());
+                      }
+                    },
+                    message: messages["auth.privacy_check_required"],
+                  },
+                ],
+              })(
+                <Checkbox>
+                  I agree to storage and processing of my personal data as described in the{" "}
+                  <Link to="/privacy">privacy statement</Link>.
+                </Checkbox>,
               )}
             </FormItem>
             <FormItem>

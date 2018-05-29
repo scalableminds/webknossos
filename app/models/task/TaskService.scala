@@ -7,7 +7,6 @@ import models.project.Project
 import models.user.{User, UserDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.Future
 

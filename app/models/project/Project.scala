@@ -1,14 +1,12 @@
 package models.project
 
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext, JsonFormatHelper}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, JsonFormatHelper}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState
-import models.basics.SecuredBaseDAO
 import models.task.{TaskDAO, TaskService}
-import models.team.TeamSQLDAO
+import models.team.{Team, TeamDAO, TeamSQLDAO}
 import models.user.{User, UserService}
 import net.liftweb.common.Full
 import play.api.Play.current
@@ -17,7 +15,6 @@ import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
-import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
@@ -174,10 +171,12 @@ object Project extends FoxImplicits {
   def projectPublicWrites(project: Project, requestingUser: User): Future[JsObject] =
     for {
       owner <- project.owner.map(User.userCompactWrites.writes).futureBox
+      teamNameOption <- TeamDAO.findOneById(project._team)(GlobalAccessContext).map(_.name).toFutureOption
     } yield {
       Json.obj(
         "name" -> project.name,
         "team" -> project.team,
+        "teamName" -> teamNameOption,
         "owner" -> owner.toOption,
         "priority" -> project.priority,
         "paused" -> project.paused,

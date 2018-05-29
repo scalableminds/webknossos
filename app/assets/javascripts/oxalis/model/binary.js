@@ -4,12 +4,10 @@
  */
 
 import _ from "lodash";
-import BackboneEvents from "backbone-events-standalone";
 import Store from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
-import InterpolationCollector from "oxalis/model/binary/interpolation_collector";
 import DataCube from "oxalis/model/binary/data_cube";
-import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
+import PullQueue from "oxalis/model/binary/pullqueue";
 import PushQueue from "oxalis/model/binary/pushqueue";
 import {
   PingStrategy,
@@ -18,20 +16,21 @@ import {
 } from "oxalis/model/binary/ping_strategy";
 import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
 import Mappings from "oxalis/model/binary/mappings";
-import constants, { OrthoViewValuesWithoutTDView } from "oxalis/constants";
+import constants from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
-import Dimensions from "oxalis/model/dimensions";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-import { getAreas } from "oxalis/model/accessors/flycam_accessor";
-import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
 import PriorityQueue from "js-priority-queue";
-import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
-
+import { M4x4 } from "libs/mjs";
+import determineBucketsForOrthogonal from "oxalis/model/binary/bucket_picker_strategies/orthogonal_bucket_picker";
+import determineBucketsForOblique from "oxalis/model/binary/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForFlight from "oxalis/model/binary/bucket_picker_strategies/flight_bucket_picker";
+import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { CategoryType, DataLayerType } from "oxalis/store";
-import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
 import type { Matrix4x4 } from "libs/mjs";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
+import { getAreas, getZoomedMatrix } from "./accessors/flycam_accessor";
 
 const PING_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -87,12 +86,15 @@ class Binary {
   direction: Vector3;
   activeMapping: ?string;
   lastPosition: ?Vector3;
+  lastSphericalCapRadius: number;
   // Indicates whether the current position is closer to the previous or next bucket for each dimension
   // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
   lastZoomStep: ?number;
   lastAreas: OrthoViewMapType<AreaType>;
   lastAreasPinged: OrthoViewMapType<AreaType>;
+  lastZoomedMatrix: M4x4;
+  lastViewMode: ModeType;
   textureBucketManager: TextureBucketManager;
   textureWidth: number;
   dataTextureCount: number;
@@ -114,7 +116,6 @@ class Binary {
     this.tracingType = Store.getState().tracing.type;
     this.layer = layer;
     this.connectionInfo = connectionInfo;
-    _.extend(this, BackboneEvents);
 
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
@@ -199,35 +200,58 @@ class Binary {
     const subBucketLocality = getSubBucketLocality(position, this.layer.resolutions[logZoomStep]);
     const areas = getAreas(Store.getState());
 
+    const matrix = getZoomedMatrix(Store.getState().flycam);
+
+    const { viewMode } = Store.getState().temporaryConfiguration;
+    const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
+    const { sphericalCapRadius } = Store.getState().userConfiguration;
     if (
       isAnchorPointNew ||
       isFallbackAnchorPointNew ||
       !_.isEqual(areas, this.lastAreas) ||
-      !_.isEqual(subBucketLocality, this.lastSubBucketLocality)
+      !_.isEqual(subBucketLocality, this.lastSubBucketLocality) ||
+      (isArbitrary && !_.isEqual(this.lastZoomedMatrix, matrix)) ||
+      viewMode !== this.lastViewMode ||
+      sphericalCapRadius !== this.lastSphericalCapRadius
     ) {
       this.lastSubBucketLocality = subBucketLocality;
       this.lastAreas = areas;
+      this.lastZoomedMatrix = matrix;
+      this.lastViewMode = viewMode;
+      this.lastSphericalCapRadius = sphericalCapRadius;
 
       const bucketQueue = new PriorityQueue({
         // small priorities take precedence
         comparator: (b, a) => b.priority - a.priority,
       });
 
-      this.addNecessaryBucketsToPriorityQueue(
-        bucketQueue,
-        logZoomStep,
-        this.anchorPointCache.anchorPoint,
-        false,
-        areas,
-        subBucketLocality,
-      );
-
-      if (isFallbackAvailable) {
-        this.addNecessaryBucketsToPriorityQueue(
+      if (viewMode === constants.MODE_ARBITRARY_PLANE) {
+        determineBucketsForOblique(
+          this,
           bucketQueue,
-          logZoomStep + 1,
+          matrix,
+          logZoomStep,
+          fallbackZoomStep,
+          isFallbackAvailable,
+        );
+      } else if (viewMode === constants.MODE_ARBITRARY) {
+        determineBucketsForFlight(
+          this,
+          bucketQueue,
+          matrix,
+          logZoomStep,
+          fallbackZoomStep,
+          isFallbackAvailable,
+        );
+      } else {
+        determineBucketsForOrthogonal(
+          this,
+          bucketQueue,
+          logZoomStep,
+          fallbackZoomStep,
+          isFallbackAvailable,
+          this.anchorPointCache.anchorPoint,
           this.anchorPointCache.fallbackAnchorPoint,
-          true,
           areas,
           subBucketLocality,
         );
@@ -243,12 +267,16 @@ class Binary {
         this.anchorPointCache.anchorPoint,
         this.anchorPointCache.fallbackAnchorPoint,
       );
+
+      // In general, pull buckets which are not available but should be sent to the GPU
+      const missingBuckets = buckets
+        .filter(bucket => !bucket.hasData())
+        .map(bucket => ({ bucket: bucket.zoomedAddress, priority: -1 }));
+      this.pullQueue.addAll(missingBuckets);
+      this.pullQueue.pull();
     }
 
-    return [
-      isAnchorPointNew ? this.anchorPointCache.anchorPoint : null,
-      isFallbackAnchorPointNew ? this.anchorPointCache.fallbackAnchorPoint : null,
-    ];
+    return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
   }
 
   yieldsNewZoomedAnchorPoint(
@@ -276,112 +304,6 @@ class Binary {
       Math.floor(position[2] - maximumRenderedBucketsHalf * resolution[2]),
     ];
     return anchorPoint;
-  }
-
-  addNecessaryBucketsToPriorityQueue(
-    bucketQueue: PriorityQueue,
-    logZoomStep: number,
-    zoomedAnchorPoint: Vector4,
-    isFallback: boolean,
-    areas: OrthoViewMapType<AreaType>,
-    subBucketLocality: Vector3,
-  ): void {
-    const resolution = this.layer.resolutions[logZoomStep];
-
-    let resolutionChangeRatio = [1, 1, 1];
-    if (isFallback) {
-      const previousResolution = this.layer.resolutions[logZoomStep - 1];
-      resolutionChangeRatio = [
-        resolution[0] / previousResolution[0],
-        resolution[1] / previousResolution[1],
-        resolution[2] / previousResolution[2],
-      ];
-    }
-
-    for (const planeId of OrthoViewValuesWithoutTDView) {
-      const [u, v, w] = Dimensions.getIndices(planeId);
-
-      const topLeftVector = [0, 0, 0, 0];
-      topLeftVector[v] = areas[planeId].top;
-      topLeftVector[u] = areas[planeId].left;
-
-      const bottomRightVector = [0, 0, 0, 0];
-      bottomRightVector[v] = areas[planeId].bottom;
-      bottomRightVector[u] = areas[planeId].right;
-
-      const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
-        topLeftVector,
-        this.layer.resolutions,
-        logZoomStep,
-      );
-      const scaledBottomRightVector = zoomedAddressToAnotherZoomStep(
-        bottomRightVector,
-        this.layer.resolutions,
-        logZoomStep,
-      );
-
-      const renderedBucketsPerDimension = Math.ceil(
-        constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION / resolutionChangeRatio[w],
-      );
-      const topLeftBucket = zoomedAnchorPoint.slice();
-      topLeftBucket[w] += Math.floor((renderedBucketsPerDimension - 1) / 2);
-
-      const centerBucketUV = [
-        scaledTopLeftVector[u] + (scaledBottomRightVector[u] - scaledTopLeftVector[u]) / 2,
-        scaledTopLeftVector[v] + (scaledBottomRightVector[v] - scaledTopLeftVector[v]) / 2,
-      ];
-
-      // By subtracting and adding 1 (extraBucket) to the bounds of y and x, we move
-      // one additional bucket on each edge of the viewport to the GPU. This decreases the
-      // chance of showing gray data, when moving the viewport. However, it might happen that
-      // we do not have enough capacity to move these additional buckets to the GPU.
-      // That's why, we are using a priority queue which orders buckets by manhattan distance to
-      // the center bucket. We only consume that many items from the PQ, which we can handle on the
-      // GPU.
-      const extraBucket = 1;
-
-      // Always use buckets in the current w slice, but also load either the previous or the next
-      // slice (depending on locality within the current bucket).
-      // Similar to `extraBucket`, the PQ takes care of cases in which the additional slice can't be
-      // loaded.
-      const wSliceOffsets = isFallback ? [0] : [0, subBucketLocality[w]];
-      // fallback buckets should have lower priority
-      const additionalPriorityWeight = isFallback ? 1000 : 0;
-
-      // Build up priority queue
-      wSliceOffsets.forEach(wSliceOffset => {
-        for (
-          let y = scaledTopLeftVector[v] - extraBucket;
-          y <= scaledBottomRightVector[v] + extraBucket;
-          y++
-        ) {
-          for (
-            let x = scaledTopLeftVector[u] - extraBucket;
-            x <= scaledBottomRightVector[u] + extraBucket;
-            x++
-          ) {
-            const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
-            bucketAddress[u] = x;
-            bucketAddress[v] = y;
-            bucketAddress[w] += wSliceOffset;
-
-            const bucket = this.cube.getOrCreateBucket(bucketAddress);
-
-            if (bucket.type !== "null") {
-              const priority =
-                Math.abs(x - centerBucketUV[0]) +
-                Math.abs(y - centerBucketUV[1]) +
-                Math.abs(100 * wSliceOffset) +
-                additionalPriorityWeight;
-              bucketQueue.queue({
-                priority,
-                bucket,
-              });
-            }
-          }
-        }
-      });
-    }
   }
 
   setActiveMapping(mappingName: ?string): void {
@@ -446,7 +368,8 @@ class Binary {
         strategy.inRoundTripTimeRange(this.pullQueue.roundTripTime)
       ) {
         this.pullQueue.clearNormalPriorities();
-        this.pullQueue.addAll(strategy.ping(matrix, zoomStep));
+        const buckets = strategy.ping(matrix, zoomStep);
+        this.pullQueue.addAll(buckets);
         break;
       }
     }
@@ -458,25 +381,6 @@ class Binary {
     this.arbitraryPing = _.throttle(this.arbitraryPingImpl, PING_THROTTLE_TIME);
     this.arbitraryPing(matrix, zoomStep);
   });
-
-  getByVerticesSync(vertices: Array<number>): Uint8Array {
-    // A synchronized implementation of `get`. Cuz its faster.
-
-    const { buffer, missingBuckets } = InterpolationCollector.bulkCollect(
-      vertices,
-      this.cube.getArbitraryCube(),
-    );
-
-    this.pullQueue.addAll(
-      missingBuckets.map(bucket => ({
-        bucket,
-        priority: PullQueueConstants.PRIORITY_HIGHEST,
-      })),
-    );
-    this.pullQueue.pull();
-
-    return buffer;
-  }
 }
 
 export default Binary;

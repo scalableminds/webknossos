@@ -3,7 +3,6 @@
  * @flow
  */
 
-import app from "app";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import * as THREE from "three";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
@@ -12,6 +11,7 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 import Dimensions from "oxalis/model/dimensions";
 import constants, {
   OrthoViews,
+  OrthoViewValues,
   OrthoViewColors,
   OrthoViewCrosshairColors,
   OrthoViewGrayCrosshairColor,
@@ -51,7 +51,12 @@ class Plane {
     // create plane
     const planeGeo = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
-    const textureMaterial = new PlaneMaterialFactory(0, {}, this.planeID).setup().getMaterial();
+    const textureMaterial = new PlaneMaterialFactory(
+      this.planeID,
+      OrthoViewValues.indexOf(this.planeID),
+    )
+      .setup()
+      .getMaterial();
 
     this.plane = new THREE.Mesh(planeGeo, textureMaterial);
 
@@ -137,7 +142,7 @@ class Plane {
     );
   };
 
-  setPosition = (posVec: Vector3): void => {
+  setPosition = (posVec: THREE.Vector3): void => {
     this.TDViewBorders.position.copy(posVec);
     this.crosshair[0].position.copy(posVec);
     this.crosshair[1].position.copy(posVec);
@@ -165,7 +170,6 @@ class Plane {
 
   setSegmentationAlpha(alpha: number): void {
     this.plane.material.setSegmentationAlpha(alpha);
-    app.vent.trigger("rerender");
   }
 
   getMeshes = () => [this.plane, this.TDViewBorders, this.crosshair[0], this.crosshair[1]];

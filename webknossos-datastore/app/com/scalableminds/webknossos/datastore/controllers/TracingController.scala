@@ -85,7 +85,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         for {
           tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
         } yield {
-          Ok(tracings.toByteArray)
+          Ok(tracings.toByteArray).as("application/x-protobuf")
         }
       }
     }
@@ -97,7 +97,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(tracing.toByteArray)
+          Ok(tracing.toByteArray).as("application/x-protobuf")
         }
       }
     }

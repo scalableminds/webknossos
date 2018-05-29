@@ -117,15 +117,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
-            <LogSliderSetting
-              label="Viewport Scale"
-              roundTo={3}
-              min={Constants.MIN_SCALE}
-              max={Constants.MAX_SCALE}
-              step={0.1}
-              value={this.props.userConfiguration.scale}
-              onChange={this.onChangeUser.scale}
-            />
             <NumberSliderSetting
               label="Mouse Rotation"
               min={0.0001}

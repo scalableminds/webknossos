@@ -43,14 +43,13 @@ import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";
 import {
-  doWithToken,
+  getTracing,
   getAnnotationInformation,
   getDataset,
   getSharingToken,
 } from "admin/admin_rest_api";
 import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
 import messages from "messages";
-import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
 import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
 import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
@@ -168,19 +167,7 @@ export class OxalisModel {
     // Fetch the actual tracing from the datastore, if there is an annotation
     let tracing: ?ServerTracingType;
     if (annotation != null) {
-      // Make flow happy
-      const nonNullAnnotation = annotation;
-      const annotationType = nonNullAnnotation.content.typ;
-      const tracingArrayBuffer = await doWithToken(token =>
-        Request.receiveArraybuffer(
-          `${nonNullAnnotation.dataStore.url}/data/tracings/${annotationType}/${
-            nonNullAnnotation.content.id
-          }/getProto?token=${token}`,
-        ),
-      );
-
-      tracing = parseProtoTracing(tracingArrayBuffer, annotationType);
-      tracing.id = annotation.content.id;
+      tracing = await getTracing(annotation);
     }
 
     // Only initialize the model once.

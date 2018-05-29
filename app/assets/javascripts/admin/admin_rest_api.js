@@ -5,6 +5,7 @@ import type { MessageType } from "libs/toast";
 import Utils from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
+import { parseProtoTracing } from "oxalis/model/helpers/proto_helpers";
 import type {
   APIUserType,
   APIScriptType,
@@ -33,6 +34,7 @@ import type {
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
 import type { DatasetConfigurationType } from "oxalis/store";
+import type { ServerTracingType } from "oxalis/model";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -490,6 +492,23 @@ export async function createExplorational(
   const url = `/api/datasets/${dataset.name}/createExplorational`;
 
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
+}
+
+export async function getTracing(annotation: APIAnnotationType): Promise<ServerTracingType> {
+  const annotationType = annotation.content.typ;
+  const tracingArrayBuffer = await doWithToken(token =>
+    Request.receiveArraybuffer(
+      `${annotation.dataStore.url}/data/tracings/${annotationType}/${
+        annotation.content.id
+      }/getProto?token=${token}`,
+      { headers: { Accept: "application/x-protobuf" } },
+    ),
+  );
+
+  const tracing = parseProtoTracing(tracingArrayBuffer, annotationType);
+  // The tracing id is not contained in the server tracing, but in the annotation content
+  tracing.id = annotation.content.id;
+  return tracing;
 }
 
 // ### Datasets

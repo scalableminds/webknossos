@@ -18,6 +18,7 @@
     "babel-plugin-dynamic-import-webpack": "^1.0.1",
     "babel-plugin-import": "^1.1.0",
     "babel-plugin-transform-async-to-generator": "^6.24.1",
+    "lint-staged": "^7.1.2",
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
     "babel-polyfill": "^6.23.0",
@@ -80,8 +81,10 @@
     "lint-fix": "node_modules/.bin/eslint --cache --fix --quiet app/assets/javascripts/",
     "flow-coverage": "node_modules/flow-coverage-report/bin/flow-coverage-report.js -i \"./app/assets/javascripts/**/*.js\" -i \"./app/assets/javascripts/**/*.jsx\" -x \"./app/assets/javascripts/test/**/*.js\" -t html -t text",
     "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
-    "import-db": "./tools/import_export/import.sh webknossos-testing ./test/db/",
-    "drop-db": "./tools/dropDB.sh webknossos-testing"
+    "refresh-schema": "./tools/postgres/refresh_schema.sh"
+  },
+  "lint-staged": {
+     "*.js": ["eslint --fix"]
   },
   "dependencies": {
     "@scalableminds/prop-types": "^15.6.1",
@@ -108,8 +111,8 @@
     "moment": "^2.21.0",
     "pako": "^0.2.8",
     "react": "^16.3.0",
-    "react-dom": "^16.3.0",
     "react-debounce-render": "^4.0.1",
+    "react-dom": "^16.3.0",
     "react-google-charts": "^1.5.5",
     "react-redux": "^5.0.6",
     "react-remarkable": "^1.1.3",

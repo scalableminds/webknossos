@@ -15,7 +15,6 @@ import org.specs2.mutable._
 import org.specs2.specification._
 import scala.io.Source
 
-import reactivemongo.api._
 import play.api.libs.concurrent.Execution.Implicits._
 import sys.process._
 
@@ -24,11 +23,9 @@ import com.typesafe.scalalogging.LazyLogging
 class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
 
   val argumentMapRead = parseCustomJavaArgs(arguments)
-  val mongoUri  = argumentMapRead.getOrElse("mongodb.uri", "mongodb://localhost:27017/webknossos-testing")
   val testPort = 9000
   val argumentMap = argumentMapRead +
-                 ("mongodb.uri"  -> mongoUri,
-                  "http.port"    -> testPort,
+                 ("http.port"    -> testPort,
                   "play.modules.disabled" -> List("com.scalableminds.webknossos.datastore.DataStoreModule"),
                   "play.http.router" -> "webknossos.Routes",
                   "datastore.enabled" -> false)

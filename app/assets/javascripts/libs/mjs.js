@@ -4,6 +4,8 @@
  */
 
 import type { Vector3 } from "oxalis/constants";
+import _ from "lodash";
+import { chunk3 } from "oxalis/model/helpers/chunk";
 
 const { M4x4, V2, V3 } = require("mjs")(Float32Array);
 
@@ -62,6 +64,16 @@ M4x4.transformPointsAffine = function transformPointsAffine(
   }
 
   return r;
+};
+
+// In contrast to transformPointsAffine, this function takes Array<Vector3>
+// and also returns Array<Vector3>
+M4x4.transformVectorsAffine = function transformVectorsAffine(
+  m: Matrix4x4,
+  _points: Vector3[],
+): Vector3[] {
+  const points: Array<Array<number>> = ((_points: any): Array<Array<number>>);
+  return chunk3(M4x4.transformPointsAffine(m, _.flatten(points)));
 };
 
 // Applies a transformation matrix on an array of points.
@@ -176,5 +188,30 @@ V3.round = function round(v: Vector3 | Float32Array, r: ?Float32Array): Float32A
 V3.floor = v => v.map(number => Math.floor(number));
 
 V3.toString = v => v.join(", ");
+
+V3.scale3 = function scale3(a, k, r) {
+  if (r == null) r = new Float32Array(3);
+  r[0] = a[0] * k[0];
+  r[1] = a[1] * k[1];
+  r[2] = a[2] * k[2];
+  return r;
+};
+
+V3.divide3 = function divide3(a, k, r) {
+  if (r == null) r = new Float32Array(3);
+  r[0] = a[0] / k[0];
+  r[1] = a[1] / k[1];
+  r[2] = a[2] / k[2];
+  return r;
+};
+
+const _tmpVec = [0, 0, 0];
+V3.scaledSquaredDist = function squaredDist(a, b, scale) {
+  // Computes the distance between two vectors while respecting a 3 dimensional scale
+  // Use _tmpVec as result variable (third parameter) to avoid allocations
+  V3.sub(a, b, _tmpVec);
+  V3.scale3(_tmpVec, scale, _tmpVec);
+  return V3.lengthSquared(_tmpVec);
+};
 
 export { M4x4, V2, V3 };

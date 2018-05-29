@@ -64,7 +64,7 @@
     "build": "node_modules/.bin/webpack --env.production",
     "build-watch": "node_modules/.bin/webpack -w",
     "test": "tools/test.sh prepare -q && tools/test.sh test --timeout=30s",
-    "test-verbose": "tools/test.sh prepare -q && tools/test.sh test --timeout=60s --verbose",
+    "test-verbose": "tools/test.sh prepare -q && xvfb-run -s '-ac -screen 0 1280x1024x24' tools/test.sh test --timeout=60s --verbose",
     "test-only": "tools/test.sh test --timeout=30s",
     "test-watch": "tools/test.sh test --watch",
     "test-debug": "tools/test.sh test --debug",

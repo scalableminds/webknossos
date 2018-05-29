@@ -2,6 +2,7 @@
 
 const THREE = require("three");
 const PNG = require("pngjs").PNG;
+import GL from "gl";
 import fs from "fs";
 
 const dumpToPng = (gl, width, height) => {
@@ -39,8 +40,7 @@ export function renderShader(glslFn, fragColorExpr) {
   const pWidth = 10;
   const width = pWidth;
   const height = pWidth;
-  let gl = require("gl")(width, height, { preserveDrawingBuffer: true });
-  const fs = require("fs");
+  let gl = GL(width, height, { preserveDrawingBuffer: true });
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(
     -pWidth / 2,
@@ -58,6 +58,7 @@ export function renderShader(glslFn, fragColorExpr) {
   const canvas = {
     addEventListener: () => {},
   };
+  console.log("gl", gl);
   const renderer = new THREE.WebGLRenderer({
     antialias: false,
     width: 0,

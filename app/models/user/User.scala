@@ -16,7 +16,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
@@ -133,7 +132,8 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
         r <- run(sql"""select u.*
                          from (select #${columns} from #${existingCollectionName} where #${accessQuery}) u join webknossos.user_team_roles on u._id = webknossos.user_team_roles._user
                          where webknossos.user_team_roles._team in #${writeStructTupleWithQuotes(teams.map(_.id))}
-                               and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})""".as[UsersRow])
+                               and (u.isDeactivated = false or u.isDeactivated = ${includeDeactivated})
+                         order by _id""".as[UsersRow])
         parsed <- Fox.combined(r.toList.map(parse))
       } yield parsed
   }
@@ -180,18 +180,14 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
                where _id = ${userId}""")
     } yield ()
 
-  def updateValues(userId: ObjectId, firstName: String, lastName: String, isAdmin: Boolean, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
-    val q = for {row <- Users if (notdel(row) && idColumn(row) === userId.id)} yield (row.firstname, row.lastname, row.isadmin, row.isdeactivated)
+  def updateValues(userId: ObjectId, firstName: String, lastName: String, email: String, isAdmin: Boolean, isDeactivated: Boolean)(implicit ctx: DBAccessContext) = {
+    val q = for {row <- Users if (notdel(row) && idColumn(row) === userId.id)} yield (row.firstname, row.lastname, row.email, row.logininfoProviderkey, row.isadmin, row.isdeactivated)
     for {
       _ <- assertUpdateAccess(userId)
-      _ <- run(q.update(firstName, lastName, isAdmin, isDeactivated))
+      _ <- run(q.update(firstName, lastName, email, email, isAdmin, isDeactivated))
     } yield ()
   }
-
 }
-
-
-
 
 object UserTeamRolesSQLDAO extends SimpleSQLDAO {
 
@@ -494,11 +490,11 @@ object UserDAO {
       users <- Fox.combined(usersSQL.map(User.fromUserSQL(_)))
     } yield users
 
-  def update(_user: BSONObjectID, firstName: String, lastName: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
+  def update(_user: BSONObjectID, firstName: String, lastName: String, email: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
     for {
       teamMembershipsSQL <- Fox.combined(teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       id = ObjectId.fromBsonId(_user)
-      _ <- UserSQLDAO.updateValues(id, firstName, lastName, isAdmin, !activated)
+      _ <- UserSQLDAO.updateValues(id, firstName, lastName, email, isAdmin, !activated)
       _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(id, teamMembershipsSQL)
       _ <- UserExperiencesSQLDAO.updateExperiencesForUser(id, experiences)
       updated <- findOneById(_user.stringify)
@@ -572,5 +568,4 @@ object UserDAO {
     for {
       _ <- UserSQLDAO.deleteOne(ObjectId.fromBsonId(id))
     } yield ()
-
 }

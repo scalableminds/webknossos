@@ -23,7 +23,13 @@ import {
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import constants, { OrthoViews, VolumeToolEnum, volumeToolEnumToIndex } from "oxalis/constants";
+import constants, {
+  OrthoViews,
+  ModeValues,
+  ModeValuesIndices,
+  VolumeToolEnum,
+  volumeToolEnumToIndex,
+} from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
 import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary/mappings";
@@ -45,8 +51,8 @@ function formatNumberAsGLSLFloat(aNumber: number): string {
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   planeID: OrthoViewType;
 
-  constructor(tWidth: number, textures: TextureMapType, planeID: OrthoViewType) {
-    super(tWidth, textures);
+  constructor(planeID: OrthoViewType, shaderId: number) {
+    super(shaderId);
     this.planeID = planeID;
   }
 
@@ -62,13 +68,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "b",
         value: true,
       },
+      sphericalCapRadius: {
+        type: "f",
+        value: 140,
+      },
       globalPosition: {
         type: "v3",
         value: new THREE.Vector3(0, 0, 0),
-      },
-      datasetScale: {
-        type: "v3",
-        value: Store.getState().dataset.dataSource.scale,
       },
       anchorPoint: {
         type: "v4",
@@ -127,6 +133,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         value: false,
       },
       activeVolumeToolIndex: {
+        type: "f",
+        value: 0,
+      },
+      viewMode: {
         type: "f",
         value: 0,
       },
@@ -237,6 +247,15 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       zoomStep => {
         this.uniforms.zoomStep.value = zoomStep;
       },
+      true,
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.userConfiguration.sphericalCapRadius,
+      sphericalCapRadius => {
+        this.uniforms.sphericalCapRadius.value = sphericalCapRadius;
+      },
+      true,
     );
 
     listenToStoreProperty(
@@ -244,6 +263,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       zoomStep => {
         this.uniforms.zoomValue.value = zoomStep;
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -251,6 +271,15 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       mappingSize => {
         this.uniforms.mappingSize.value = mappingSize;
       },
+      true,
+    );
+
+    listenToStoreProperty(
+      storeState => storeState.temporaryConfiguration.viewMode,
+      viewMode => {
+        this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+      },
+      true,
     );
 
     listenToStoreProperty(
@@ -266,6 +295,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       isMouseInActiveViewport => {
         this.uniforms.isMouseInActiveViewport.value = isMouseInActiveViewport;
       },
+      true,
     );
 
     listenToStoreProperty(
@@ -273,6 +303,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       highlightHoveredCellId => {
         this.uniforms.highlightHoveredCellId.value = highlightHoveredCellId;
       },
+      true,
     );
 
     const segmentationBinary = Model.getSegmentationBinary();
@@ -297,6 +328,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
           this.uniforms.globalMousePosition.value.set(x, y, z);
           this.uniforms.isMouseInCanvas.value = true;
         },
+        true,
       );
 
       listenToStoreProperty(
@@ -304,11 +336,13 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         brushSize => {
           this.uniforms.brushSizeInPixel.value = brushSize;
         },
+        true,
       );
 
       listenToStoreProperty(
         storeState => getActiveCellId(storeState.tracing).getOrElse(0),
         () => this.updateActiveCellId(),
+        true,
       );
 
       listenToStoreProperty(
@@ -326,6 +360,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         volumeTool => {
           this.uniforms.activeVolumeToolIndex.value = volumeTool;
         },
+        true,
       );
     }
   }
@@ -387,6 +422,8 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
   <% } %>
 <% } %>
 
+uniform float sphericalCapRadius;
+uniform float viewMode;
 uniform float alpha;
 uniform bool highlightHoveredCellId;
 uniform vec3 globalPosition;
@@ -396,19 +433,25 @@ uniform float zoomStep;
 uniform float zoomValue;
 uniform vec3 uvw;
 uniform bool useBilinearFiltering;
-uniform vec3 datasetScale;
 uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float pixelToVoxelFactor;
 
 varying vec4 worldCoord;
+varying vec4 modelCoord;
+varying mat4 savedModelMatrix;
 
 const float bucketsPerDim = <%= bucketsPerDim %>;
 const float bucketWidth = <%= bucketWidth %>;
 const float bucketSize = <%= bucketSize %>;
 const float l_texture_width = <%= l_texture_width %>;
 const float floatsPerLookUpEntry = <%= floatsPerLookUpEntry %>;
+
+// For some reason, taking the dataset scale from the uniform results is imprecise
+// rendering of the brush circle (and issues in the arbitrary modes). That's why it
+// is directly inserted into the source via templating.
+const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 
@@ -420,6 +463,48 @@ vec3 hsv_to_rgb(vec4 HSV)
   K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
   p = abs(fract(HSV.xxx + K.xyz) * 6.0 - K.www);
   return HSV.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), HSV.y);
+}
+
+// https://github.com/glslify/glsl-inverse/blob/master/index.glsl
+mat4 inverse(mat4 m) {
+  float
+      a00 = m[0][0], a01 = m[0][1], a02 = m[0][2], a03 = m[0][3],
+      a10 = m[1][0], a11 = m[1][1], a12 = m[1][2], a13 = m[1][3],
+      a20 = m[2][0], a21 = m[2][1], a22 = m[2][2], a23 = m[2][3],
+      a30 = m[3][0], a31 = m[3][1], a32 = m[3][2], a33 = m[3][3],
+
+      b00 = a00 * a11 - a01 * a10,
+      b01 = a00 * a12 - a02 * a10,
+      b02 = a00 * a13 - a03 * a10,
+      b03 = a01 * a12 - a02 * a11,
+      b04 = a01 * a13 - a03 * a11,
+      b05 = a02 * a13 - a03 * a12,
+      b06 = a20 * a31 - a21 * a30,
+      b07 = a20 * a32 - a22 * a30,
+      b08 = a20 * a33 - a23 * a30,
+      b09 = a21 * a32 - a22 * a31,
+      b10 = a21 * a33 - a23 * a31,
+      b11 = a22 * a33 - a23 * a32,
+
+      det = b00 * b11 - b01 * b10 + b02 * b09 + b03 * b08 - b04 * b07 + b05 * b06;
+
+  return mat4(
+      a11 * b11 - a12 * b10 + a13 * b09,
+      a02 * b10 - a01 * b11 - a03 * b09,
+      a31 * b05 - a32 * b04 + a33 * b03,
+      a22 * b04 - a21 * b05 - a23 * b03,
+      a12 * b08 - a10 * b11 - a13 * b07,
+      a00 * b11 - a02 * b08 + a03 * b07,
+      a32 * b02 - a30 * b05 - a33 * b01,
+      a20 * b05 - a22 * b02 + a23 * b01,
+      a10 * b10 - a11 * b08 + a13 * b06,
+      a01 * b08 - a00 * b10 - a03 * b06,
+      a30 * b04 - a31 * b02 + a33 * b00,
+      a21 * b02 - a20 * b04 - a23 * b00,
+      a11 * b07 - a10 * b09 - a12 * b06,
+      a00 * b09 - a01 * b07 + a02 * b06,
+      a31 * b01 - a30 * b03 - a32 * b00,
+      a20 * b03 - a21 * b01 + a22 * b00) / det;
 }
 
 float div(float a, float b) {
@@ -652,19 +737,43 @@ vec3 getRelativeCoords(vec3 worldCoordUVW, float usedZoomStep) {
   return coords;
 }
 
+bool isArbitrary() {
+  return viewMode == <%= ModeValuesIndices.Flight %> || viewMode == <%= ModeValuesIndices.Oblique %>;
+}
+
+bool isFlightMode() {
+  return viewMode == <%= ModeValuesIndices.Flight %>;
+}
+
 vec3 getWorldCoordUVW() {
+  vec3 worldCoordUVW = transDim(worldCoord.xyz);
+
+  if (isFlightMode()) {
+    vec4 modelCoords = inverse(savedModelMatrix) * worldCoord;
+    float sphericalRadius = sphericalCapRadius;
+
+    vec4 centerVertex = vec4(0.0, 0.0, -sphericalRadius, 0.0);
+    modelCoords.z = 0.0;
+    modelCoords += centerVertex;
+    modelCoords.xyz = modelCoords.xyz * (sphericalRadius / length(modelCoords.xyz));
+    modelCoords -= centerVertex;
+
+    worldCoordUVW = (savedModelMatrix * modelCoords).xyz;
+  }
+
   vec3 datasetScaleUVW = transDim(datasetScale);
 
-  vec3 worldCoordUVW = vec3(
+  worldCoordUVW = vec3(
     // For u and w we need to divide by datasetScale because the threejs scene is scaled
-    worldCoord[<%= uvw[0] %>] / datasetScaleUVW.x,
-    worldCoord[<%= uvw[1] %>] / datasetScaleUVW.y,
+    worldCoordUVW.x / datasetScaleUVW.x,
+    worldCoordUVW.y / datasetScaleUVW.y,
 
-    // globalPosition, however, gives us the coordinates we need
-    // Theoretically, worldCoord[<%= uvw[2] %>] could be used here. However, the plane is offset
-    // in 3D space to allow skeletons to be rendered before the plane. Since w (e.g., z for xy plane) is
+    // In orthogonal mode, the planes are offset in 3D space to allow skeletons to be rendered before
+    // each plane. Since w (e.g., z for xy plane) is
     // the same for all texels computed in this shader, we simply use globalPosition[w] instead
-    globalPosition[<%= uvw[2] %>]
+    isArbitrary() ?
+      worldCoordUVW.z / datasetScaleUVW.z
+      : globalPosition[<%= uvw[2] %>]
   );
 
   return worldCoordUVW;
@@ -698,16 +807,17 @@ vec4 getBilinearColorFor(
   float layerIndex,
   float d_texture_width,
   float packingDegree,
-  vec3 coords
+  vec3 coords,
+  float isFallback
 ) {
   coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
   vec2 bifilteringParams = transDim((coords - floor(coords))).xy;
   coords = floor(coords);
 
-  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
-  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), 0.0);
-  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), 0.0);
-  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), 0.0);
+  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), isFallback);
+  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), isFallback);
+  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), isFallback);
   if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0) {
     // We need to check all four colors for a negative parts, because there will be black
     // lines at the borders otherwise (black gets mixed with data)
@@ -720,6 +830,47 @@ vec4 getBilinearColorFor(
   return mix(ab, cd, bifilteringParams.y);
 }
 
+vec4 getTrilinearColorFor(
+  sampler2D lookUpTexture,
+  float layerIndex,
+  float d_texture_width,
+  float packingDegree,
+  vec3 coords,
+  float isFallback
+) {
+  coords = coords + transDim(vec3(-0.5, -0.5, 0.0));
+  vec3 bifilteringParams = transDim((coords - floor(coords))).xyz;
+  coords = floor(coords);
+
+  vec4 a = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+  vec4 b = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 0)), isFallback);
+  vec4 c = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 0)), isFallback);
+  vec4 d = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 0)), isFallback);
+
+  vec4 a2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 0, 1)), isFallback);
+  vec4 b2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 0, 1)), isFallback);
+  vec4 c2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(0, 1, 1)), isFallback);
+  vec4 d2 = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords + transDim(vec3(1, 1, 1)), isFallback);
+
+  if (a.a < 0.0 || b.a < 0.0 || c.a < 0.0 || d.a < 0.0 ||
+    a2.a < 0.0 || b2.a < 0.0 || c2.a < 0.0 || d2.a < 0.0) {
+    // We need to check all four colors for a negative parts, because there will be black
+    // lines at the borders otherwise (black gets mixed with data)
+    return vec4(0.0, 0.0, 0.0, -1.0);
+  }
+
+  vec4 ab = mix(a, b, bifilteringParams.x);
+  vec4 cd = mix(c, d, bifilteringParams.x);
+  vec4 abcd = mix(ab, cd, bifilteringParams.y);
+
+  vec4 ab2 = mix(a2, b2, bifilteringParams.x);
+  vec4 cd2 = mix(c2, d2, bifilteringParams.x);
+
+  vec4 abcd2 = mix(ab2, cd2, bifilteringParams.y);
+
+  return mix(abcd, abcd2, bifilteringParams.z);
+}
+
 
 vec4 getMaybeFilteredColor(
   sampler2D lookUpTexture,
@@ -727,13 +878,18 @@ vec4 getMaybeFilteredColor(
   float d_texture_width,
   float packingDegree,
   vec3 coords,
-  bool suppressBilinearFiltering
+  bool suppressBilinearFiltering,
+  float isFallback
 ) {
   vec4 color;
   if (!suppressBilinearFiltering && useBilinearFiltering) {
-    color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords);
+    if (isArbitrary()) {
+      color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+    } else {
+      color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+    }
   } else {
-    color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, 0.0);
+    color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
   }
   return color;
 }
@@ -749,10 +905,10 @@ vec4 getMaybeFilteredColorOrFallback(
   bool suppressBilinearFiltering,
   vec4 fallbackColor
 ) {
-  vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, suppressBilinearFiltering);
+  vec4 color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, suppressBilinearFiltering, 0.0);
 
   if (color.a < 0.0 && hasFallback) {
-    color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, 1.0).rgba;
+    color = getMaybeFilteredColor(lookUpTexture, layerIndex, d_texture_width, packingDegree, fallbackCoords, suppressBilinearFiltering, 1.0).rgba;
     if (color.a < 0.0) {
       // Render gray for not-yet-existing data
       color = fallbackColor;
@@ -807,12 +963,8 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
       return brushOverlayColor;
     }
     vec3 flooredMousePos = floor(globalMousePosition);
-    // For some reason, taking the dataset scale from the uniform results in imprecise
-    // rendering of the brush circle. That's why it is directly inserted into the source
-    // via templating.
-    vec3 _datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
-    float baseVoxelSize = min(min(_datasetScale.x, _datasetScale.y), _datasetScale.z);
-    vec3 datasetScaleUVW = transDim(_datasetScale) / baseVoxelSize;
+    float baseVoxelSize = min(min(datasetScale.x, datasetScale.y), datasetScale.z);
+    vec3 datasetScaleUVW = transDim(datasetScale) / baseVoxelSize;
 
     float dist = length((floor(worldCoordUVW.xy) - transDim(flooredMousePos).xy) * datasetScaleUVW.xy);
 
@@ -968,6 +1120,7 @@ void main() {
       segmentationName,
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
       OrthoViews,
+      ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
       planeID: this.planeID,
       uvw: Dimensions.getIndices(this.planeID),
       bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),

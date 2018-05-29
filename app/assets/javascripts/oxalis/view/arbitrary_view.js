@@ -18,8 +18,6 @@ import { clearCanvas, getRelativeInputCatcherRect, setupRenderArea } from "./pla
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
-  on: Function;
-  listenTo: Function;
 
   animate: () => void;
   resize: () => void;

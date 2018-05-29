@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, MongoHelpers}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
@@ -20,11 +20,11 @@ import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
-import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.Future
 
@@ -32,7 +32,6 @@ case class TaskParameters(
                            taskTypeId: String,
                            neededExperience: Experience,
                            openInstances: Int,
-                           teamName: String,
                            projectName: String,
                            scriptId: Option[String],
                            boundingBox: Option[BoundingBox],
@@ -51,7 +50,6 @@ case class NmlTaskParameters(
                               taskTypeId: String,
                               neededExperience: Experience,
                               openInstances: Int,
-                              teamName: String,
                               projectName: String,
                               scriptId: Option[String],
                               boundingBox: Option[BoundingBox])
@@ -93,8 +91,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      team <- TeamDAO.findOneByName(params.teamName) ?~> Messages("team.notFound")
-      _ <- ensureTeamAdministration(request.identity, team._id)
+      _ <- ensureTeamAdministration(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> Messages("task.create.failed")
       result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.tracing.get.left.get, s.fileName, s.description), s.tracing.get.left.get)))
@@ -108,7 +105,6 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       nmlParams.taskTypeId,
       nmlParams.neededExperience,
       nmlParams.openInstances,
-      nmlParams.teamName,
       nmlParams.projectName,
       nmlParams.scriptId,
       nmlParams.boundingBox,
@@ -174,12 +170,10 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     for {
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
-      team <- TeamDAO.findOneByName(params.teamName) ?~> Messages("team.notFound")
       _ <- validateScript(params.scriptId)
-      _ <- ensureTeamAdministration(request.identity, team._id)
+      _ <- ensureTeamAdministration(request.identity, project._team)
       task = Task(
         taskType._id,
-        team._id,
         params.neededExperience,
         params.openInstances,
         params.openInstances,
@@ -198,7 +192,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     val params = request.body
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.identity, task._team) ?~> Messages("notAllowed")
+      project <- task.project
+      _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
       updatedTask <- TaskDAO.updateInstances(task._id, task.instances + params.openInstances - task.openInstances)
       json <- Task.transformToJson(updatedTask)
     } yield {
@@ -209,7 +204,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def delete(taskId: String) = SecuredAction.async { implicit request =>
     for {
       task <- TaskService.findOneById(taskId) ?~> Messages("task.notFound")
-      _ <- ensureTeamAdministration(request.identity, task._team) ?~> Messages("notAllowed")
+      project <- task.project
+      _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
       _ <- TaskService.removeOne(task._id)
     } yield {
       JsonOk(Messages("task.removed"))

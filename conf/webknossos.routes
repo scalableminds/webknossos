@@ -143,6 +143,7 @@ GET           /assets/*file                                                     
 
 #Organizations
 GET           /api/organizations                                                controllers.OrganizationController.listAllOrganizations
+GET           /api/operatorData                                                 controllers.OrganizationController.getOperatorData
 
 #Timelogging
 GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])

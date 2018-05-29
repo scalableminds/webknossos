@@ -11,7 +11,6 @@ export default function makeRectRelativeToCanvas(rect: Rect): Rect {
 
   const borderWidth = 2;
 
-
   // Since we want to paint inside the InputCatcher we have to subtract the border
   return {
     left: rect.left - containerX + borderWidth + 1, // it's not entirely clear to my why the +1

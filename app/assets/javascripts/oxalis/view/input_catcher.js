@@ -16,7 +16,6 @@ function ignoreContextMenu(event: SyntheticInputEvent<>) {
   event.preventDefault();
 }
 
-
 // makes the input catcher a square and returns its position within the document
 // relative to the rendering canvas
 function makeInputCatcherQuadratic(inputCatcherDOM: HTMLElement): Rect {

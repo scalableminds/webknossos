@@ -440,7 +440,7 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
-    if(this.moveKeyNotification != null){
+    if (this.moveKeyNotification != null) {
       Toast.close(this.moveKeyNotification);
     }
     this.moveKeyNotification = messages["keyevent.changed_move_value"] + moveValue;

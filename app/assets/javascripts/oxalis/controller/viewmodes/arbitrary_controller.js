@@ -196,7 +196,8 @@ class ArbitraryController extends React.PureComponent<Props> {
     });
 
     // Own InputKeyboard with delay for changing the Move Value, because otherwise the values chnages to drastically
-    this.input.keyboardLoopDelayed = new InputKeyboard({
+    this.input.keyboardLoopDelayed = new InputKeyboard(
+      {
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
       },
@@ -396,7 +397,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
 
-    if(this.moveKeyNotification != null){
+    if (this.moveKeyNotification != null) {
       Toast.close(this.moveKeyNotification);
     }
     this.moveKeyNotification = messages["keyevent.changed_move_value"] + moveValue;

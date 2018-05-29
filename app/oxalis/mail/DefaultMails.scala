@@ -68,7 +68,7 @@ object DefaultMails {
   def resetPasswordMail(name: String, receiver: String, token: String) = {
     Mail(
       from = defaultFrom,
-      subject = "Your webKnossos password was reset",
+      subject = "Confirm resetting your webKnossos password",
       bodyText = html.mail.resetPassword(name, uri, token).body,
       recipients = List(receiver))
   }

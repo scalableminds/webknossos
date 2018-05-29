@@ -79,7 +79,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
   }
 
   getKeyboardControls(): Object {
-    return _.extend(super.getKeyboardControls(), {
+    return /* _.extend(super.getKeyboardControls(), */ {
       "1": () => Store.dispatch(toggleAllTreesAction()),
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
@@ -95,7 +95,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
         api.tracing.centerNode();
         api.tracing.centerTDView();
       },
-    });
+    } /* ) */;
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

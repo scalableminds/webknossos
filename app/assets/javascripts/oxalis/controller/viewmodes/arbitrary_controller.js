@@ -70,12 +70,11 @@ class ArbitraryController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
-
+  moveKeyNotification: string;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
-  keypressedNotification: notification; // added this to store a notification displayed when h/g is pressed
 
   componentDidMount() {
     _.extend(this, BackboneEvents);
@@ -390,11 +389,12 @@ class ArbitraryController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
-    // my code changes: opens a Toast with a notification that the move value changed
-    if(!this.keypressedNotification){
-      this.keypressedNotification.destroy();
+
+    if(this.moveKeyNotification != null){
+      Toast.close(this.moveKeyNotification);
     }
-    this.keypressedNotification = Toast.success(messages["keyevent.changed_move_value"] + moveValue);
+    this.moveKeyNotification = messages["keyevent.changed_move_value"] + moveValue;
+    Toast.success(messages["keyevent.changed_move_value"] + moveValue);
   }
 
   setParticleSize(delta: number): void {

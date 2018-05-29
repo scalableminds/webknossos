@@ -5,7 +5,6 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import { notification} from "antd";// added this to store a reference to a notification
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
@@ -78,7 +77,7 @@ class PlaneController extends React.PureComponent<Props> {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
-  keypressedNotification: notification; 
+  moveKeyNotification: string;
 
   constructor(...args: any) {
     super(...args);
@@ -265,22 +264,12 @@ class PlaneController extends React.PureComponent<Props> {
       Store.getState().userConfiguration.keyboardDelay,
     );
 
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
-
     Store.subscribe(() => {
       const keyboardLoopDelayed = this.input.keyboardLoopDelayed;
       if (keyboardLoopDelayed != null) {
         keyboardLoopDelayed.delay = Store.getState().userConfiguration.keyboardDelay;
       }
     });
-  }
-
-  getKeyboardControls(): Object {
-    return {
-      // Change move value
-      // h: () => this.changeMoveValue(25),
-      // g: () => this.changeMoveValue(-25),
-    };
   }
 
   init(): void {
@@ -451,11 +440,11 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
-    // my code changes: opens a Toast with a notification that the move value changed
-    if(!this.keypressedNotification){
-      this.keypressedNotification.destroy();
+    if(this.moveKeyNotification != null){
+      Toast.close(this.moveKeyNotification);
     }
-    this.keypressedNotification = Toast.success(messages["keyevent.changed_move_value"] + moveValue);
+    this.moveKeyNotification = messages["keyevent.changed_move_value"] + moveValue;
+    Toast.success(messages["keyevent.changed_move_value"] + moveValue);
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

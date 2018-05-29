@@ -108,6 +108,10 @@ const KeyboardShortcutView = () => {
       keybinding: "Shift + Mousewheel",
       action: "Change Node Radius",
     },
+    {
+      keybinding: "h, g",
+      action: "Increase/Decrease the Move Value",
+    },
   ];
 
   const flightModeShortcuts = [

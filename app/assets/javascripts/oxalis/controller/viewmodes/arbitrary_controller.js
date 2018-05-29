@@ -67,6 +67,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   input: {
     mouse?: InputMouse,
     keyboard?: InputKeyboard,
+    keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
@@ -192,11 +193,15 @@ class ArbitraryController extends React.PureComponent<Props> {
       o: () => {
         Store.dispatch(zoomOutAction());
       },
-
-      // Change move value
-      h: () => this.changeMoveValue(25),
-      g: () => this.changeMoveValue(-25),
     });
+
+    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values chnages to drastically
+    this.input.keyboardLoopDelayed = new InputKeyboard({
+        h: () => this.changeMoveValue(25),
+        g: () => this.changeMoveValue(-25),
+      },
+      Store.getState().userConfiguration.keyboardDelay,
+    );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
       "1": () => {
@@ -370,6 +375,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   destroyInput() {
     Utils.__guard__(this.input.mouse, x => x.destroy());
     Utils.__guard__(this.input.keyboard, x => x.destroy());
+    Utils.__guard__(this.input.keyboardLoopDelayed, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
   }
 

@@ -13,7 +13,8 @@ import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import window from "libs/window";
-import { clearCanvas, getRelativeInputCatcherRect, setupRenderArea } from "./plane_view";
+import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
+import { clearCanvas, setupRenderArea } from "./plane_view";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
@@ -143,7 +144,7 @@ class ArbitraryView {
 
       clearCanvas(renderer);
 
-      const { left, top, width, height } = getRelativeInputCatcherRect(ArbitraryViewport);
+      const { left, top, width, height } = getInputCatcherRect(ArbitraryViewport);
       setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
 
       renderer.render(scene, camera);

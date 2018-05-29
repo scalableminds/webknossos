@@ -9,19 +9,10 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OrthoViewType, OrthoViewMapType, ViewportType } from "oxalis/constants";
+import type { OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
 import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
-import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-
-export const getRelativeInputCatcherRect = (id: ViewportType) =>
-  makeRectRelativeToCanvas(getInputCatcherRect(id)) || {
-    left: 0,
-    top: 0,
-    width: 0,
-    height: 0,
-  };
 
 export const setupRenderArea = (
   renderer: THREE.WebGLRenderer,
@@ -148,10 +139,10 @@ class PlaneView {
       this.trigger("render");
 
       const viewport = {
-        [OrthoViews.PLANE_XY]: getRelativeInputCatcherRect("PLANE_XY"),
-        [OrthoViews.PLANE_YZ]: getRelativeInputCatcherRect("PLANE_YZ"),
-        [OrthoViews.PLANE_XZ]: getRelativeInputCatcherRect("PLANE_XZ"),
-        [OrthoViews.TDView]: getRelativeInputCatcherRect("TDView"),
+        [OrthoViews.PLANE_XY]: getInputCatcherRect("PLANE_XY"),
+        [OrthoViews.PLANE_YZ]: getInputCatcherRect("PLANE_YZ"),
+        [OrthoViews.PLANE_XZ]: getInputCatcherRect("PLANE_XZ"),
+        [OrthoViews.TDView]: getInputCatcherRect("TDView"),
       };
 
       renderer.autoClear = true;

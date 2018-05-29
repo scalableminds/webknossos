@@ -4,6 +4,7 @@ import * as React from "react";
 import { setInputCatcherRect } from "oxalis/model/actions/view_mode_actions";
 import type { Rect, ViewportType } from "oxalis/constants";
 import Store from "oxalis/store";
+import makeRectRelativeToCanvas from "oxalis/view/layouting/layout_canvas_adapter";
 
 type Props = {
   viewportID: ViewportType,
@@ -15,6 +16,9 @@ function ignoreContextMenu(event: SyntheticInputEvent<>) {
   event.preventDefault();
 }
 
+
+// makes the input catcher a square and returns its position within the document
+// relative to the rendering canvas
 function makeInputCatcherQuadratic(inputCatcherDOM: HTMLElement): Rect {
   const noneOverflowWrapper = inputCatcherDOM.closest(".gl-dont-overflow");
   if (!noneOverflowWrapper) {
@@ -30,7 +34,7 @@ function makeInputCatcherQuadratic(inputCatcherDOM: HTMLElement): Rect {
   inputCatcherDOM.style.width = `${squareExtent}px`;
   inputCatcherDOM.style.height = `${squareExtent}px`;
 
-  return inputCatcherDOM.getBoundingClientRect();
+  return makeRectRelativeToCanvas(inputCatcherDOM.getBoundingClientRect());
 }
 
 const renderedInputCatchers = new Map();

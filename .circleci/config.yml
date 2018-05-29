@@ -32,7 +32,7 @@ jobs:
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
               docker-compose run compile sbt -v clean compile stage
             else
-              docker-compose run -v $(pwd)/dumps:/home/circleci/webknossos/dumps compile sbt -v -Dgraal.TruffleCompilationExceptionsAreFatal=true compile stage
+              docker-compose run -v $(pwd)/dumps:/home/circleci/webknossos/dumps compile bash -c 'SBT_OPTS="$$SBT_OPTS -Dgraal.TruffleCompilationExceptionsAreFatal=true" sbt -v compile stage'
             fi
           no_output_timeout: 30m
       - store_artifacts:

@@ -127,7 +127,7 @@ export class InputKeyboard {
   bindings: Array<KeyboardBindingDownUp> = [];
   isStarted: boolean = true;
   delay: number = 0;
-  supportInputElements: boolean;
+  supportInputElements: boolean = false;
 
   constructor(
     initialBindings: BindingMap<KeyboardLoopHandler>,

@@ -24,6 +24,8 @@ import {
   ColorSetting,
 } from "oxalis/view/settings/setting_input_views";
 import Utils from "libs/utils";
+import constants from "oxalis/constants";
+import type { ModeType } from "oxalis/constants";
 
 const Panel = Collapse.Panel;
 const Option = Select.Option;
@@ -36,6 +38,7 @@ type DatasetSettingsProps = {
     propertyName: $Keys<DatasetLayerConfigurationType>,
     value: any,
   ) => void,
+  viewMode: ModeType,
 };
 
 class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
@@ -101,11 +104,13 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps> {
             value={this.props.datasetConfiguration.fourBit}
             onChange={_.partial(this.props.onChange, "fourBit")}
           />
-          <SwitchSetting
-            label="Interpolation"
-            value={this.props.datasetConfiguration.interpolation}
-            onChange={_.partial(this.props.onChange, "interpolation")}
-          />
+          {constants.MODES_ARBITRARY.includes(this.props.viewMode) ? null : (
+            <SwitchSetting
+              label="Interpolation"
+              value={this.props.datasetConfiguration.interpolation}
+              onChange={_.partial(this.props.onChange, "interpolation")}
+            />
+          )}
           <DropdownSetting
             label="Quality"
             value={this.props.datasetConfiguration.quality}

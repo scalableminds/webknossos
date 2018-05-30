@@ -28,7 +28,7 @@ services:
 
 
   base:
-    image: scalableminds/sbt:graal__22
+    image: scalableminds/sbt:graal__29
     environment:
       # - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos

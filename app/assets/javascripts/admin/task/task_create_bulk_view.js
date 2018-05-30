@@ -183,6 +183,11 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
     const formValues = this.props.form.getFieldsValue();
 
     if (formValues.csvFile) {
+      // Workaround: Antd replaces file objects in the formValues with a wrapper file
+      // The original file object is contained in the originFileObj property
+      // This is most likely not intentional and may change in a future Antd version
+      formValues.csvFile = formValues.csvFile.map(wrapperFile => wrapperFile.originFileObj)
+
       tasks = await this.readCSVFile(formValues.csvFile[0]);
     } else {
       tasks = this.parseText(formValues.bulkText);

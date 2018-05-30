@@ -60,6 +60,11 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
     this.props.form.validateFields(async (err, formValues) => {
       const activeUser = this.props.activeUser;
 
+      // Workaround: Antd replaces file objects in the formValues with a wrapper file
+      // The original file object is contained in the originFileObj property
+      // This is most likely not intentional and may change in a future Antd version
+      formValues.zipFile = formValues.zipFile.map(wrapperFile => wrapperFile.originFileObj)
+
       if (!err && activeUser != null) {
         Toast.info("Uploading datasets");
         this.setState({

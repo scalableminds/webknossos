@@ -84,12 +84,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.start();
   }
 
-  componentDidUpdate(prevProps: Props) {
-    if (prevProps.viewMode !== this.props.viewMode) {
-      this.plane.setMode(this.props.viewMode);
-    }
-  }
-
   componentWillUnmount() {
     this.stop();
   }
@@ -297,13 +291,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       listenToStoreProperty(
         state => state.userConfiguration,
         userConfiguration => {
-          const {
-            sphericalCapRadius,
-            clippingDistanceArbitrary,
-            displayCrosshair,
-            crosshairSize,
-          } = userConfiguration;
-          this.plane.setSphericalCapRadius(sphericalCapRadius);
+          const { clippingDistanceArbitrary, displayCrosshair, crosshairSize } = userConfiguration;
           this.setClippingDistance(clippingDistanceArbitrary);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
@@ -328,7 +316,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.arbitraryView.start();
 
     this.plane = new ArbitraryPlane();
-    this.plane.setMode(this.props.viewMode);
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
 

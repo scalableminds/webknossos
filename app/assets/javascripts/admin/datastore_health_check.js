@@ -10,7 +10,7 @@ import _ from "lodash";
 // Create a throttled function which depends on its arguments.
 // That way, each datastore is checked for health in a throttled and isolated manner
 const memoizedThrottle = (func, wait = 0, options = {}): Function => {
-  // Memoze the creation of a throttling function
+  // Memoize the creation of a throttling function
   const mem = _.memoize(() => _.throttle(func, wait, options), options.resolver);
   return (...args: Array<*>) => {
     // look up (or create) the throttling function and invoke it

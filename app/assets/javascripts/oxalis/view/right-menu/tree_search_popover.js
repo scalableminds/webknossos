@@ -3,6 +3,7 @@ import _ from "lodash";
 import * as React from "react";
 import { AutoComplete, Popover } from "antd";
 import type { TreeMapType } from "oxalis/store";
+import Shortcut from "libs/shortcut_component";
 
 const Option = AutoComplete.Option;
 
@@ -14,8 +15,6 @@ type Props = {
 };
 
 export default class TreeSearchPopover extends React.PureComponent<Props, *> {
-  autoComplete: ?AutoComplete<*>;
-
   constructor() {
     super();
     this.state = {
@@ -29,52 +28,65 @@ export default class TreeSearchPopover extends React.PureComponent<Props, *> {
     const filterTree = tree => tree.name.indexOf(this.state.searchQuery) > -1;
 
     return (
-      <Popover
-        title="Search Trees"
-        trigger="click"
-        placement="rightTop"
-        visible={this.state.isVisible}
-        mouseLeaveDelay={1}
-        onVisibleChange={isVisible => {
-          // Workaround: Wait a bit when hiding the popover, so that clicking
-          // an option will be accepted as a select event.
-          setTimeout(() => this.setState({ isVisible }), isVisible ? 0 : 100);
-        }}
-        content={
-          // Only render autocomplete when the popover is visible
-          // This ensures that the component is completely re-mounted when
-          // the popover is opened. Thus, autoFocus works and unnecessary
-          // computations are avoided.
-          this.state.isVisible && (
-            <AutoComplete
-              autoFocus
-              onSearch={searchQuery => this.setState({ searchQuery })}
-              dataSource={_.values(this.props.trees)
-                .filter(filterTree)
-                .slice(0, this.props.maxSearchResults)
-                .map(tree => (
-                  <Option key={tree.treeId} text={tree.name}>
-                    {tree.name}
-                  </Option>
-                ))}
-              style={{ width: "500px" }}
-              ref={autoComplete => {
-                this.autoComplete = autoComplete;
-              }}
-              onSelect={(value, option) => {
-                console.log("onSelect", value, option);
-                this.props.onSelect(option.key);
-                this.setState({ isVisible: false });
-                if (this.autoComplete) this.autoComplete.blur();
-              }}
-              placeholder="Input here to search trees"
-              filterOption={filterOption}
-            />
-          )
-        }
-      >
-        {this.props.children}
-      </Popover>
+      <React.Fragment>
+        <Shortcut
+          supportInputElements
+          keys="ctrl + shift + f"
+          onTrigger={() => {
+            this.setState({ isVisible: true });
+          }}
+        />
+        <Popover
+          title="Search Trees"
+          trigger="click"
+          placement="rightTop"
+          visible={this.state.isVisible}
+          mouseLeaveDelay={10}
+          onVisibleChange={isVisible => {
+            // Workaround: Wait a bit when hiding the popover, so that clicking
+            // an option will be accepted as a select event.
+            setTimeout(() => this.setState({ isVisible }), isVisible ? 0 : 300);
+          }}
+          content={
+            // Only render autocomplete when the popover is visible
+            // This ensures that the component is completely re-mounted when
+            // the popover is opened. Thus, autoFocus works and unnecessary
+            // computations are avoided.
+            this.state.isVisible && (
+              <React.Fragment>
+                <Shortcut
+                  supportInputElements
+                  keys="escape"
+                  onTrigger={() => {
+                    this.setState({ isVisible: false });
+                  }}
+                />
+                <AutoComplete
+                  autoFocus
+                  onSearch={searchQuery => this.setState({ searchQuery })}
+                  dataSource={_.values(this.props.trees)
+                    .filter(filterTree)
+                    .slice(0, this.props.maxSearchResults)
+                    .map(tree => (
+                      <Option key={tree.treeId} text={tree.name}>
+                        {tree.name}
+                      </Option>
+                    ))}
+                  style={{ width: "500px" }}
+                  onSelect={(value, option) => {
+                    this.props.onSelect(option.key);
+                    this.setState({ isVisible: false });
+                  }}
+                  placeholder="Input here to search trees"
+                  filterOption={filterOption}
+                />
+              </React.Fragment>
+            )
+          }
+        >
+          {this.props.children}
+        </Popover>
+      </React.Fragment>
     );
   }
 }

@@ -69,8 +69,15 @@ function shouldIgnore(event: KeyboardEvent, key: KeyboardKey) {
 export class InputKeyboardNoLoop {
   bindings: Array<KeyboardBindingPress> = [];
   isStarted: boolean = true;
+  supportInputElements: boolean = false;
 
-  constructor(initialBindings: BindingMap<KeyboardHandler>) {
+  constructor(
+    initialBindings: BindingMap<KeyboardHandler>,
+    options?: { supportInputElements?: boolean },
+  ) {
+    if (options) {
+      this.supportInputElements = options.supportInputElements || this.supportInputElements;
+    }
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];
       this.attach(key, callback);
@@ -84,7 +91,7 @@ export class InputKeyboardNoLoop {
         if (!this.isStarted) {
           return;
         }
-        if (!Utils.isNoElementFocussed()) {
+        if (!this.supportInputElements && !Utils.isNoElementFocussed()) {
           return;
         }
         if (shouldIgnore(event, key)) {
@@ -120,9 +127,16 @@ export class InputKeyboard {
   bindings: Array<KeyboardBindingDownUp> = [];
   isStarted: boolean = true;
   delay: number = 0;
+  supportInputElements: boolean;
 
-  constructor(initialBindings: BindingMap<KeyboardLoopHandler>, delay: number = 0) {
-    this.delay = delay;
+  constructor(
+    initialBindings: BindingMap<KeyboardLoopHandler>,
+    options?: { delay?: number, supportInputElements?: boolean },
+  ) {
+    if (options) {
+      this.delay = options.delay || this.delay;
+      this.supportInputElements = options.supportInputElements || this.supportInputElements;
+    }
 
     for (const key of Object.keys(initialBindings)) {
       const callback = initialBindings[key];

@@ -79,7 +79,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
   }
 
   getKeyboardControls(): Object {
-    return /* _.extend(super.getKeyboardControls(), */ {
+    return {
       "1": () => Store.dispatch(toggleAllTreesAction()),
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
 

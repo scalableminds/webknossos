@@ -206,7 +206,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   }
 
   getKeyboardControls(): Object {
-    return /* _.extend(super.getKeyboardControls(), */ {
+    return {
       c: () => Store.dispatch(createCellAction()),
       "ctrl + i": async event => {
         const mousePosition = Store.getState().temporaryConfiguration.mousePosition;

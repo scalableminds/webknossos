@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import { Button, Dropdown, Input, Menu, Icon, Spin, Modal } from "antd";
+import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
 import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -208,9 +208,11 @@ class TreesTabView extends React.PureComponent<Props, State> {
             trees={this.props.skeletonTracing.trees}
             maxSearchResults={10}
           >
-            <ButtonComponent>
-              <Icon type="search" />
-            </ButtonComponent>
+            <Tooltip title="Open the search via CTRL + Shift + F">
+              <ButtonComponent>
+                <Icon type="search" />
+              </ButtonComponent>
+            </Tooltip>
           </TreeSearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create

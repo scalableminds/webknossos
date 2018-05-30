@@ -1,21 +1,22 @@
 // @flow
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
-const THREE = require("three");
-const PNG = require("pngjs").PNG;
+import THREE from "three";
+import { PNG } from "pngjs";
 import GL from "gl";
 import fs from "fs";
 
-const dumpToPng = (gl, width, height) => {
+export const dumpToPng = (gl: GL, width: number, height: number) => {
   const path = "out.png";
   const png = new PNG({
-    width: width,
-    height: height,
+    width,
+    height,
   });
   const pixels = new Uint8Array(4 * width * height);
 
   gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-  for (let j = 0; 0 <= height ? j < height : j > height; 0 <= height ? j++ : j--) {
-    for (let i = 0; 0 <= width ? i < width : i > width; 0 <= width ? i++ : i--) {
+  for (let j = 0; height >= 0 ? j < height : j > height; height >= 0 ? j++ : j--) {
+    for (let i = 0; width >= 0 ? i < width : i > width; width >= 0 ? i++ : i--) {
       const k = j * width + i;
       const r = pixels[4 * k];
       const g = pixels[4 * k + 1];
@@ -31,16 +32,14 @@ const dumpToPng = (gl, width, height) => {
 
   const stream = fs.createWriteStream(path);
   png.pack().pipe(stream);
-  stream.on("close", function() {
-    return console.log("Image written: " + path);
-  });
+  stream.on("close", () => console.log(`Image written: ${path}`));
 };
 
-export function renderShader(glslFn, fragColorExpr) {
+export function renderShader(glslFn: string, fragColorExpr: string) {
   const pWidth = 10;
   const width = pWidth;
   const height = pWidth;
-  let gl = GL(width, height, { preserveDrawingBuffer: true });
+  const gl = GL(width, height, { preserveDrawingBuffer: true });
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(
     -pWidth / 2,
@@ -63,7 +62,7 @@ export function renderShader(glslFn, fragColorExpr) {
     antialias: false,
     width: 0,
     height: 0,
-    canvas: canvas,
+    canvas,
     context: gl,
   });
   const geometry = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);

@@ -16,8 +16,6 @@ import window from "libs/window";
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
   trigger: Function;
-  on: Function;
-  listenTo: Function;
 
   animate: () => void;
   resize: () => void;
@@ -106,7 +104,7 @@ class ArbitraryView {
 
     TWEEN.update();
 
-    if (this.needsRerender) {
+    if (this.needsRerender || window.needsRerender) {
       this.trigger("render");
 
       const { camera, geometries } = this;
@@ -151,6 +149,7 @@ class ArbitraryView {
       renderer.render(scene, camera);
 
       this.needsRerender = false;
+      window.needsRerender = false;
     }
 
     this.animationRequestId = window.requestAnimationFrame(this.animate);

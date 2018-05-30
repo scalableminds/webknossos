@@ -83,7 +83,7 @@ function rotateReducer(
   });
 }
 
-function getMatrixScale(dataSetScale: Vector3): Vector3 {
+export function getMatrixScale(dataSetScale: Vector3): Vector3 {
   const scale = [1 / dataSetScale[0], 1 / dataSetScale[1], 1 / dataSetScale[2]];
   const maxScale = Math.max(scale[0], scale[1], scale[2]);
   const multi = 1 / maxScale;

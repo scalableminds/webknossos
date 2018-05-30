@@ -107,13 +107,12 @@ class AbstractPlaneMaterialFactory {
   textures: TextureMapType;
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
-  tWidth: number;
+  shaderId: number;
 
-  constructor(tWidth: number, textures: TextureMapType) {
-    this.tWidth = tWidth;
+  constructor(shaderId: number) {
     this.minFilter = THREE.NearestFilter;
     this.maxFilter = THREE.NearestFilter;
-    this.textures = textures;
+    this.shaderId = shaderId;
   }
 
   setup() {
@@ -152,7 +151,7 @@ class AbstractPlaneMaterialFactory {
       }),
     );
 
-    shaderEditor.addMaterial(this.material);
+    shaderEditor.addMaterial(this.shaderId, this.material);
 
     this.material.setData = (name, data) => {
       const textureName = sanitizeName(name);
@@ -197,11 +196,17 @@ class AbstractPlaneMaterialFactory {
 
   getVertexShader(): string {
     return `
+precision highp float;
+
 varying vec4 worldCoord;
+varying vec4 modelCoord;
 varying vec2 vUv;
+varying mat4 savedModelMatrix;
 
 void main() {
   vUv = uv;
+  modelCoord = vec4(position, 1.0);
+  savedModelMatrix = modelMatrix;
   worldCoord = modelMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }`;

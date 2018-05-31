@@ -90,7 +90,7 @@ test("taskTypes_userDefault", async t => {
   await setCurrToken(tokenUserA);
   const taskTypes = _.sortBy(await api.getTaskTypes(), taskType => taskType.id);
   t.is(taskTypes[0].description, "Check those cells out!");
-  t.is(taskTypes.length, 1);
+  t.is(taskTypes.length, 2);
 });
 
 test("taskTypes_user_D", async t => {

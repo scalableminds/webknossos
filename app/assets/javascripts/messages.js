@@ -4,6 +4,9 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
+  "datastore.health": _.template(
+    "The datastore server at <%- url %> does not seem to be available. This is likely due to an update. Please check back in five minutes.",
+  ),
   "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
 Editing should be done in a single window only.
 
@@ -11,6 +14,8 @@ In order to restore the current window, a reload is necessary.`,
   "save.failed_client_error": `We've encountered a permanent error while trying to save.
 
 In order to restore the current window, a reload is necessary.`,
+  "react.rendering_error":
+    "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
   "save.leave_page_unfinished":
     "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.",
   "save.failed": "Failed to save tracing. Retrying.",

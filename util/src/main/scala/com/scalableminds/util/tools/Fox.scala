@@ -3,6 +3,7 @@
  */
 package com.scalableminds.util.tools
 
+import com.scalableminds.util.tools.Fox.sequenceOfFulls
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
@@ -125,6 +126,17 @@ object Fox{
         case (Full(e), l) => e :: l
       }
     }
+
+  def filterNot[T](seq: List[T])(f: T => Fox[Boolean])(implicit ec: ExecutionContext) =
+    filter(seq, inverted= true)(f)
+
+  def filter[T](seq: List[T], inverted: Boolean = false)(f: T => Fox[Boolean])(implicit ec: ExecutionContext) = {
+    for {
+      results <- serialCombined(seq)(f)
+      zipped = results.zip(seq)
+    } yield (zipped.filter(_._1 != inverted).map(_._2))
+  }
+
 }
 
 class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {

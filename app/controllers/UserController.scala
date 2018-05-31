@@ -205,7 +205,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t => issuingUser.isTeamManagerOrAdminOf(t._1._id))
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
-          updatedTeams <- ensureOrganizationTeamIsPresent(issuingUser, teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate)
+          updatedTeams <- ensureOrganizationTeamIsPresent(user, teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate)
           updatedUser <- UserService.update(user, firstName.trim, lastName.trim, email, isActive, isAdmin, updatedTeams, trimmedExperiences)
         } yield {
           Ok(User.userPublicWrites(request.identity).writes(updatedUser))

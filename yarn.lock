@@ -4176,9 +4176,9 @@ github-username@^4.0.0:
   dependencies:
     gh-got "^6.0.0"
 
-gl@scalableminds/headless-gl@4.0.4:
-  version "4.0.4"
-  resolved "https://registry.yarnpkg.com/gl/-/gl-4.0.4.tgz#46745f365a230672b2f988d85018f737e64c3343"
+gl@scalableminds/headless-gl#4.0.5:
+  version "4.0.5"
+  resolved "https://codeload.github.com/scalableminds/headless-gl/tar.gz/c159880b28ca2b287a447c1d787ff8b26da36ff0"
   dependencies:
     bindings "^1.2.1"
     bit-twiddle "^1.0.2"

@@ -109,7 +109,6 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
       { position: [64, 64, 64], zoomStep: 1, cubeSize: 32, fourBit: false },
     ],
     timeout: 30000,
-    doNotCatch: true,
   };
 
   return requestFromStore(layer, batch).then(() => {

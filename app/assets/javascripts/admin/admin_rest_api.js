@@ -500,7 +500,7 @@ export async function getTracing(annotation: APIAnnotationType): Promise<ServerT
     Request.receiveArraybuffer(
       `${annotation.dataStore.url}/data/tracings/${annotationType}/${
         annotation.content.id
-      }/getProto?token=${token}`,
+      }?token=${token}`,
       { headers: { Accept: "application/x-protobuf" } },
     ),
   );

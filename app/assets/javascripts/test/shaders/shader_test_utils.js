@@ -1,10 +1,13 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 
-import THREE from "three";
+import * as THREE from "three";
 import { PNG } from "pngjs";
 import GL from "gl";
 import fs from "fs";
+import compileShader from "oxalis/shaders/shader_module_system";
+
+import type { ShaderModuleType } from "oxalis/shaders/shader_module_system";
 
 export const dumpToPng = (gl: GL, width: number, height: number) => {
   const path = "out.png";
@@ -35,7 +38,7 @@ export const dumpToPng = (gl: GL, width: number, height: number) => {
   stream.on("close", () => console.log(`Image written: ${path}`));
 };
 
-export function renderShader(glslFn: string, fragColorExpr: string) {
+export function renderShader(fragColorExpr: string, shaderModule: ShaderModuleType) {
   const pWidth = 10;
   const width = pWidth;
   const height = pWidth;
@@ -57,14 +60,16 @@ export function renderShader(glslFn: string, fragColorExpr: string) {
   const canvas = {
     addEventListener: () => {},
   };
-  console.log("gl", gl);
+
   const renderer = new THREE.WebGLRenderer({
     antialias: false,
-    width: 0,
-    height: 0,
     canvas,
     context: gl,
   });
+  const canvasWidth = 1;
+  const canvasHeight = 1;
+
+  renderer.setSize(canvasWidth, canvasHeight, false);
   const geometry = new THREE.PlaneGeometry(pWidth, pWidth, 1, 1);
 
   const material = new THREE.ShaderMaterial();
@@ -77,7 +82,7 @@ export function renderShader(glslFn: string, fragColorExpr: string) {
   material.fragmentShader = `
     uniform vec4 solidColor;
 
-    ${glslFn}
+    ${compileShader(shaderModule)}
 
     void main() {
       gl_FragColor = ${fragColorExpr};
@@ -105,9 +110,9 @@ export function renderShader(glslFn: string, fragColorExpr: string) {
 
   // dumpToPng(gl, width, height);
 
-  const pixels = new Uint8Array(4 * width * height);
+  const pixels = new Uint8Array(4 * canvasWidth * canvasHeight);
 
-  gl.readPixels(0, 0, width, height, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  gl.readPixels(0, 0, canvasWidth, canvasHeight, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
   console.timeEnd("render and read");
 
   return pixels;

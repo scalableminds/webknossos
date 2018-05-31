@@ -12,27 +12,13 @@ import constants, {
 } from "oxalis/constants";
 
 import compileShader from "./shader_module_system";
-import {
-  convertCellIdToRGB,
-  getBrushOverlay,
-  getSegmentationId,
-} from "./segmentation.glsl";
-import {
-  inverse,
-  round,
-  div,
-  isNan,
-  transDim,
-  isArbitrary,
-  isFlightMode,
-} from "./utils.glsl";
+import { convertCellIdToRGB, getBrushOverlay, getSegmentationId } from "./segmentation.glsl";
+import { inverse, round, div, isNan, transDim, isArbitrary, isFlightMode } from "./utils.glsl";
 import { getRelativeCoords, getWorldCoordUVW } from "./coords.glsl";
 import { getMaybeFilteredColorOrFallback } from "./filtering.glsl";
 
 type ParamsType = {|
-  layerNamesWithSegmentation: string[],
-  segmentationLayerIndex: number,
-  layers: string[],
+  colorLayerNames: string[],
   hasSegmentation: boolean,
   segmentationName: string,
   isRgb: boolean,
@@ -121,9 +107,13 @@ const vec3 datasetScale = <%= formatVector3AsVec3(datasetScale) %>;
 
 const vec4 fallbackGray = vec4(0.5, 0.5, 0.5, 1.0);
 
-${compileShader(inverse, div, round, isNan, isArbitrary, isFlightMode)}
-
 ${compileShader(
+      inverse,
+      div,
+      round,
+      isNan,
+      isArbitrary,
+      isFlightMode,
       transDim,
       getRelativeCoords,
       getWorldCoordUVW,
@@ -223,6 +213,13 @@ void main() {
   `,
   )({
     ...params,
+    layers: params.colorLayerNames,
+    layerNamesWithSegmentation: params.colorLayerNames.concat(
+      params.hasSegmentation ? [params.segmentationName] : [],
+    ),
+    // Since we concat the segmentation to the color layers, its index is equal
+    // to the length of the colorLayer array
+    segmentationLayerIndex: params.colorLayerNames.length,
     ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),

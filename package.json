@@ -86,7 +86,9 @@
     "refresh-schema": "./tools/postgres/refresh_schema.sh"
   },
   "lint-staged": {
-     "*.js": ["eslint --fix"]
+    "*.js": [
+      "eslint --fix"
+    ]
   },
   "dependencies": {
     "@scalableminds/prop-types": "^15.6.1",
@@ -102,6 +104,7 @@
     "es6-promise": "^3.0.2",
     "file-saver": "^1.3.3",
     "font-awesome": "^4.5.0",
+    "glsl-parser": "git+https://github.com/anvaka/glslx.git#glsl-parser",
     "glslify": "^6.1.1",
     "hammerjs": "^2.0.8",
     "history": "^4.7.2",

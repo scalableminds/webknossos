@@ -4348,6 +4348,10 @@ glsl-inject-defines@^1.0.1:
     glsl-token-string "^1.0.1"
     glsl-tokenizer "^2.0.2"
 
+"glsl-parser@git+https://github.com/anvaka/glslx.git#glsl-parser":
+  version "0.1.0"
+  resolved "git+https://github.com/anvaka/glslx.git#3991baef1ae335388807764f8bd9207c6323c460"
+
 glsl-resolve@0.0.1:
   version "0.0.1"
   resolved "https://registry.yarnpkg.com/glsl-resolve/-/glsl-resolve-0.0.1.tgz#894bef73910d792c81b5143180035d0a78af76d3"

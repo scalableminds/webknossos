@@ -75,9 +75,7 @@ export const getRgbaAtXYIndex: ShaderModuleType = {
             return texture2D(<%= name + "_textures" %>[<%= textureIndex %>], accessPoint).rgba;
           }
           <% }) %>
-          else {
-            return vec4(0.5, 0.0, 0.0, 0.0);
-          }
+          return vec4(0.5, 0.0, 0.0, 0.0);
         <% } %>
       }
     <% }); %>
@@ -90,6 +88,7 @@ export const getRgbaAtXYIndex: ShaderModuleType = {
           return getRgbaAtXYIndex_<%= name %>(textureIdx, textureWidth, x, y);
         }
       <% }); %>
+      return vec4(0.0);
     }
   `,
 };
@@ -178,6 +177,8 @@ const getColorFor: ShaderModuleType = {
       } else if (rgbaIndex == 3.0) {
         return vec4(vec3(bucketColor.a), 1.0);
       }
+
+      return vec4(0.0);
     }
   `,
 };

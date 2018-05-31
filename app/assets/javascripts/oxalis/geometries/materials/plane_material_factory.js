@@ -22,11 +22,7 @@ import {
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import {
-  OrthoViews,
-  ModeValues,
-  volumeToolEnumToIndex,
-} from "oxalis/constants";
+import { OrthoViews, ModeValues, volumeToolEnumToIndex } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
@@ -374,12 +370,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     const datasetScale = Store.getState().dataset.dataSource.scale;
     const hasSegmentation = segmentationBinary != null;
 
-    return getMainFragmentShader({
-      layerNamesWithSegmentation: colorLayerNames.concat(hasSegmentation ? [segmentationName] : []),
-      // Since we concat the segmentation to the color layers, its index is equal
-      // to the length of the colorLayer array
-      segmentationLayerIndex: colorLayerNames.length,
-      layers: colorLayerNames,
+    const code = getMainFragmentShader({
+      colorLayerNames,
       hasSegmentation,
       segmentationName,
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
@@ -389,6 +381,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       resolutions: Model.getResolutions(),
       datasetScale,
     });
+
+    return code;
   }
 }
 

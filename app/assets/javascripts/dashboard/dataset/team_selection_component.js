@@ -10,7 +10,7 @@ const { Option } = Select;
 type Props = {
   value?: APITeamType | Array<APITeamType>,
   onChange?: (value: APITeamType | Array<APITeamType>) => void,
-  mode?: string,
+  mode?: "default" | "multiple",
 };
 
 type State = {
@@ -58,7 +58,7 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     });
   };
 
-  getAllTeams = () => _.uniqBy(this.state.editableTeams.concat(this.state.allowedTeams), t => t.id);
+  getAllTeams = () => _.unionBy(this.state.editableTeams, this.state.allowedTeams, t => t.id);
 
   render() {
     return (
@@ -66,7 +66,9 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         showSearch
         mode={this.props.mode ? this.props.mode : "default"}
         style={{ width: "100%" }}
-        placeholder="Select a Team"
+        placeholder={
+          this.props.mode && this.props.mode === "multiple" ? "Select Teams" : "Select a Team"
+        }
         optionFilterProp="children"
         onChange={this.onSelectTeams}
         value={this.state.allowedTeams.map(t => t.id)}

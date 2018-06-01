@@ -338,7 +338,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             {this.props.isEditingMode ? this.getEditModeComponents() : null}
             <FormItem label="Allowed Teams">
               {getFieldDecorator("dataset.allowedTeams", {})(
-                <TeamSelectionComponent value={[]} onChange={() => {}} mode="multiple" />,
+                <TeamSelectionComponent mode="multiple" />,
               )}
             </FormItem>
             <FormItem>

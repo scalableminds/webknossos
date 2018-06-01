@@ -24,8 +24,8 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
       this.setState({ data: [] });
     } else {
       this.setState({ isLoading: true });
-      const progessData = await getOpenTasksReport(teamId);
-      this.setState({ data: progessData, isLoading: false });
+      const progressData = await getOpenTasksReport(teamId);
+      this.setState({ data: progressData, isLoading: false });
     }
   }
 

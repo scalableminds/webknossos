@@ -8,9 +8,9 @@ import type { APITeamType } from "admin/api_flow_types";
 const { Option } = Select;
 
 type Props = {
-  value: Array<APITeamType>,
-  onChange: (value: Array<APITeamType>) => void,
-  mode?: ?string,
+  value?: Array<APITeamType>,
+  onChange?: (value: APITeamType | Array<APITeamType>) => void,
+  mode?: string,
 };
 
 type State = {
@@ -21,7 +21,7 @@ type State = {
 class TeamSelectionComponent extends React.PureComponent<Props, State> {
   state = {
     editableTeams: [],
-    allowedTeams: this.props.value ? this.props.value : [],
+    allowedTeams: this.props.value ? _.flatten([this.props.value]) : [],
   };
 
   componentDidMount() {
@@ -29,9 +29,11 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
   }
 
   componentWillReceiveProps(newProps: Props) {
-    this.setState({
-      allowedTeams: newProps.value,
-    });
+    if (newProps.value) {
+      this.setState({
+        allowedTeams: _.flatten([newProps.value]),
+      });
+    }
   }
 
   async fetchData() {
@@ -41,17 +43,22 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     });
   }
 
-
-  onSelectTeams = (selectedTeamIds: Array<string>) => {
-    const allTeams  = this.getAllTeams();
-    const allowedTeams = _.compact(selectedTeamIds.map(id => allTeams.find(t => t.id === id)))
-    this.props.onChange(allowedTeams);
+  onSelectTeams = (selectedTeamIdsOrId: string | Array<string>) => {
+    // we can't use this.props.mode because of flow
+    const selectedTeamIds = Array.isArray(selectedTeamIdsOrId)
+      ? selectedTeamIdsOrId
+      : [selectedTeamIdsOrId];
+    const allTeams = this.getAllTeams();
+    const allowedTeams = _.compact(selectedTeamIds.map(id => allTeams.find(t => t.id === id)));
+    if (this.props.onChange) {
+      this.props.onChange(Array.isArray(selectedTeamIdsOrId) ? allowedTeams : allowedTeams[0]);
+    }
     this.setState({
       allowedTeams,
     });
   };
 
-  getAllTeams = () => _.uniqBy(this.state.editableTeams.concat(this.state.allowedTeams), t => t.id)
+  getAllTeams = () => _.uniqBy(this.state.editableTeams.concat(this.state.allowedTeams), t => t.id);
 
   render() {
     return (
@@ -65,7 +72,14 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         value={this.state.allowedTeams.map(t => t.id)}
         filterOption
       >
-        {this.getAllTeams().map(team => <Option disabled={this.state.editableTeams.find(t => t.id === team.id) == null} key={team.id}>{team.name}</Option>)}
+        {this.getAllTeams().map(team => (
+          <Option
+            disabled={this.state.editableTeams.find(t => t.id === team.id) == null}
+            key={team.id}
+          >
+            {team.name}
+          </Option>
+        ))}
       </Select>
     );
   }

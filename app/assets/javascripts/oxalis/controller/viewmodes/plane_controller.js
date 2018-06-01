@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
-import Toast from "libs/toast"; // added this import
+import Toast from "libs/toast";
 import { document } from "libs/window";
 import { InputMouse, InputKeyboard } from "libs/input";
 import * as THREE from "three";
@@ -47,7 +47,7 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
-import messages from "messages"; // added this import
+import messages from "messages";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 
 type OwnProps = {
@@ -256,7 +256,7 @@ class PlaneController extends React.PureComponent<Props> {
         // Zoom in/out
         i: () => this.zoom(1, false),
         o: () => this.zoom(-1, false),
-        // moved them here just for a test
+
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
       },

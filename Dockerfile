@@ -1,6 +1,6 @@
 FROM openjdk:8-jdk
 RUN apt-get update \
-    && apt-get -y install postgresql-client pkg-config \
+    && apt-get -y install postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /srv/webknossos

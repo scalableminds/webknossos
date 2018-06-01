@@ -95,7 +95,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
         api.tracing.centerNode();
         api.tracing.centerTDView();
       },
-    } /* ) */;
+    };
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

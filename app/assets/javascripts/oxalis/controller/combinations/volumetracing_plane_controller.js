@@ -222,7 +222,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
           Toast.warning("No cell under cursor.");
         }
       },
-    } /* ) */;
+    };
   }
 
   handleCellSelection(cellId: number) {

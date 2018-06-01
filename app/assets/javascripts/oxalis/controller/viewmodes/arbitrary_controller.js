@@ -195,7 +195,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
     });
 
-    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values chnages to drastically
+    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
     this.input.keyboardLoopDelayed = new InputKeyboard(
       {
         h: () => this.changeMoveValue(25),
@@ -400,8 +400,9 @@ class ArbitraryController extends React.PureComponent<Props> {
     if (this.moveKeyNotification != null) {
       Toast.close(this.moveKeyNotification);
     }
-    this.moveKeyNotification = messages["keyevent.changed_move_value"] + moveValue;
-    Toast.success(messages["keyevent.changed_move_value"] + moveValue);
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    this.moveKeyNotification = moveValueMessage;
+    Toast.success(moveValueMessage);
   }
 
   setParticleSize(delta: number): void {

@@ -42,6 +42,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.merged": "Merging successfully done",
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
+  "tracing.changed_move_value": "The move value was changed to: ",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "task.user_script_retrieval_error": "Unable to retrieve script",
@@ -139,7 +140,5 @@ In order to restore the current window, a reload is necessary.`,
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
   "mapping.too_few_textures":
     "Not enough textures available to support mappings. Mappings are disabled.",
-  "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
-  "keyevent.changed_move_value": "The move value was changed to: ",
-  // would concider naming it changed_move_speed_value
+  "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",  
 };

@@ -109,7 +109,7 @@ const KeyboardShortcutView = () => {
       action: "Change Node Radius",
     },
     {
-      keybinding: "h, g",
+      keybinding: "H, G",
       action: "Increase/Decrease the Move Value",
     },
   ];

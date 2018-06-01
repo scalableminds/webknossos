@@ -2,13 +2,14 @@
 import * as React from "react";
 import { Row, Col, Form, Button } from "antd";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import type { APITeamType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
 
 type Props = {
   form: Object,
-  value?: ?string,
-  onChange: (teamId: string) => Promise<*> | void,
+  value?: ?APITeamType,
+  onChange: (team: APITeamType) => Promise<*> | void,
 };
 
 class TeamSelectionForm extends React.PureComponent<Props> {
@@ -17,7 +18,7 @@ class TeamSelectionForm extends React.PureComponent<Props> {
       event.preventDefault();
     }
     this.props.form.validateFields((err, formValues) => {
-      this.props.onChange(formValues.team.id);
+      this.props.onChange(formValues.team);
     });
   };
 

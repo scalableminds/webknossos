@@ -35,7 +35,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
         <h3>Open Tasks</h3>
 
         <Card>
-          <TeamSelectionForm onChange={teamId => this.fetchData(teamId)} />
+          <TeamSelectionForm onChange={team => this.fetchData(team.id)} />
         </Card>
 
         <Spin spinning={this.state.isLoading}>

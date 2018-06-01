@@ -8,7 +8,7 @@ import type { APITeamType } from "admin/api_flow_types";
 const { Option } = Select;
 
 type Props = {
-  value?: Array<APITeamType>,
+  value?: APITeamType | Array<APITeamType>,
   onChange?: (value: APITeamType | Array<APITeamType>) => void,
   mode?: string,
 };

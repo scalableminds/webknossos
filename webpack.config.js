@@ -20,6 +20,15 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
+
+    // GoldenLayout requires these libraries to be available in
+    // the global scope
+    new webpack.ProvidePlugin({
+      React: "react",
+      ReactDOM: "react-dom",
+      $: "jquery",
+      jQuery: "jquery",
+    }),
   ];
 
   if (env.production) {

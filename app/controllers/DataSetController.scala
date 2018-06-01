@@ -138,7 +138,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- allowedToAdministrate(request.identity, dataSet)
         teamsBson <- Fox.combined(teams.map(MongoHelpers.parseBsonToFox))
-        userTeams <- TeamDAO.findAll.map(_.filter(team => team.isEditableBy(request.identity)))
+        userTeams <- TeamDAO.findAllEditable
         teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = teamsBson.filter(t => userTeams.exists(_._id == t))
         _ <- DataSetService.updateTeams(dataSet, teamsWithUpdate ++ teamsWithoutUpdate)

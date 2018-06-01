@@ -12,7 +12,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
@@ -92,6 +91,18 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     } yield parsed
   }
 
+  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
+    for {
+      requestingUserId <- userIdFromCtx
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
+                     where (_id in (select _team from webknossos.user_team_roles where _user = ${requestingUserId.id} and isTeamManager)
+                           or _organization in (select _organization from webknossos.users_ where _id = ${requestingUserId.id} and isAdmin))
+                     and #${accessQuery}""".as[TeamsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
   def findAllByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
     for {
       accessQuery <- readAccessQuery
@@ -118,9 +129,6 @@ case class Team(name: String,
                 _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
-
-  def isEditableBy(user: User) =
-    user.organization == organization && (user.isTeamManagerOfBLOCKING(_id) || user.isAdmin)
 
   def couldBeAdministratedBy(user: User) =
     user.organization == organization
@@ -198,6 +206,12 @@ object TeamDAO {
   def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       teamsSQL <- TeamSQLDAO.findAll
+      teams <- Fox.combined(teamsSQL.map(Team.fromTeamSQL(_)))
+    } yield teams
+
+  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] =
+    for {
+      teamsSQL <- TeamSQLDAO.findAllEditable
       teams <- Fox.combined(teamsSQL.map(Team.fromTeamSQL(_)))
     } yield teams
 

@@ -12,6 +12,8 @@ import TracingView from "oxalis/view/tracing_view";
 import { Layout, Icon } from "antd";
 import { location } from "libs/window";
 import { withRouter } from "react-router-dom";
+import Toast from "libs/toast";
+import messages from "messages";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { connect } from "react-redux";
 import CommentTabView from "oxalis/view/right-menu/comment_tab/comment_tab_view";
@@ -71,6 +73,10 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
       isSettingsCollapsed: !this.state.isSettingsCollapsed,
     });
   };
+
+  componentDidCatch() {
+    Toast.error(messages["react.rendering_error"]);
+  }
 
   render() {
     const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);

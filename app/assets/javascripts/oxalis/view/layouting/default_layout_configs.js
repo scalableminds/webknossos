@@ -32,17 +32,20 @@ const Panes = {
   CommentTabView: Pane("Comments", "CommentTabView"),
   AbstractTreeTabView: Pane("Tree Viewer", "AbstractTreeTabView"),
   arbitraryViewport: Pane("Arbitrary View", "arbitraryViewport"),
-  Mappings: Pane("Mappings", "MappingInfoView"),
+  Mappings: Pane("Segmentation", "MappingInfoView"),
 };
 
 const OrthoViewsGrid = [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)];
 
-const RightHandColumn = Stack(
+const SkeletonRightHandColumn = Stack(
   Panes.DatasetInfoTabView,
   Panes.TreesTabView,
   Panes.CommentTabView,
   Panes.AbstractTreeTabView,
+  Panes.Mappings,
 );
+
+const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
 
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
@@ -52,12 +55,10 @@ const createLayout = (...content: Array<*>) => ({
   content,
 });
 
-const OrthoLayout = createLayout(Row(...OrthoViewsGrid, RightHandColumn));
-const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, Panes.DatasetInfoTabView));
-const VolumeTracingView = createLayout(
-  Row(...OrthoViewsGrid, Stack(Panes.DatasetInfoTabView, Panes.Mappings)),
-);
-const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, RightHandColumn));
+const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
+const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
+const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
 
 const defaultLayouts = {
   ArbitraryLayout,

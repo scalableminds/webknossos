@@ -333,10 +333,16 @@ case class User(
 
   lazy val teamManagerTeamIds = teamManagerTeams.map(_._id)
 
-  def assertTeamManagerOrAdminOf(_team: BSONObjectID) =
+  def isTeamManagerOrAdminOf(_team: BSONObjectID): Fox[Boolean] = {
     for {
       team <- TeamDAO.findOneById(_team)(GlobalAccessContext)
-      _ <- (teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization) ?~> Messages("notAllowed")
+    } yield (teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization)
+  }
+
+  def assertTeamManagerOrAdminOf(_team: BSONObjectID) =
+    for {
+      asBoolean <- isTeamManagerOrAdminOf(_team)
+      _ <- asBoolean ?~> Messages("notAllowed")
     } yield ()
 
   def isTeamManagerOfBLOCKING(_team: BSONObjectID) = {

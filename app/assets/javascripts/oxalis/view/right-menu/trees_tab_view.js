@@ -5,7 +5,7 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import { Button, Dropdown, Input, Menu, Icon, Spin, Modal } from "antd";
+import { Button, Dropdown, Input, Menu, Icon, Spin, Modal, Tooltip } from "antd";
 import TreeHierarchyView from "oxalis/view/right-menu/tree_hierarchy_view";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
@@ -21,6 +21,7 @@ import {
   selectNextTreeAction,
   toggleAllTreesAction,
   toggleInactiveTreesAction,
+  setActiveTreeAction,
 } from "oxalis/model/actions/skeletontracing_actions";
 import Store from "oxalis/store";
 import { serializeToNml, getNmlName, parseNml } from "oxalis/model/helpers/nml_helpers";
@@ -31,6 +32,7 @@ import Toast from "libs/toast";
 import { getBuildInfo } from "admin/admin_rest_api";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, UserConfigurationType } from "oxalis/store";
+import TreeSearchPopover from "./tree_search_popover";
 
 const ButtonGroup = Button.Group;
 const InputGroup = Input.Group;
@@ -46,6 +48,7 @@ type Props = {
   onChangeTreeName: string => void,
   skeletonTracing: SkeletonTracingType,
   userConfiguration: UserConfigurationType,
+  onSetActiveTree: number => void,
 };
 
 type State = {
@@ -204,6 +207,17 @@ class TreesTabView extends React.PureComponent<Props, State> {
           <Spin />
         </Modal>
         <ButtonGroup>
+          <TreeSearchPopover
+            onSelect={this.props.onSetActiveTree}
+            trees={this.props.skeletonTracing.trees}
+            maxSearchResults={10}
+          >
+            <Tooltip title="Open the search via CTRL + Shift + F">
+              <ButtonComponent>
+                <Icon type="search" />
+              </ButtonComponent>
+            </Tooltip>
+          </TreeSearchPopover>
           <ButtonComponent onClick={this.props.onCreateTree} title="Create Tree">
             <i className="fa fa-plus" /> Create
           </ButtonComponent>
@@ -279,6 +293,9 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));
+  },
+  onSetActiveTree(treeId) {
+    dispatch(setActiveTreeAction(treeId));
   },
 });
 

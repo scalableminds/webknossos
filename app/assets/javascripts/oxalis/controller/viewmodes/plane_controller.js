@@ -251,7 +251,7 @@ class PlaneController extends React.PureComponent<Props> {
         i: () => this.zoom(1, false),
         o: () => this.zoom(-1, false),
       },
-      Store.getState().userConfiguration.keyboardDelay,
+      { delay: Store.getState().userConfiguration.keyboardDelay },
     );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());

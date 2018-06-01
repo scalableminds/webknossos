@@ -297,8 +297,8 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
   def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}")
+      _ <- assertUpdateAccess(id) ?~> "FAILED: TaskSQLDAO.assertUpdateAccess"
+      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}") ?~> "FAILED: run in TaskSQLDAO.logTime"
     } yield ()
 
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
@@ -533,7 +533,7 @@ object TaskDAO {
     TaskSQLDAO.removeScriptFromAllTasks(ObjectId(_script))
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    TaskSQLDAO.logTime(ObjectId.fromBsonId(_task), time)
+    TaskSQLDAO.logTime(ObjectId.fromBsonId(_task), time) ?~> "FAILED: TaskSQLDAO.logTime"
 
   def updateInstances(_task: BSONObjectID, instances: Int)(implicit ctx: DBAccessContext): Fox[Task] =
     for {

@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import * as React from "react";
 import { Select } from "antd";
 import { getEditableTeams } from "admin/admin_rest_api";
@@ -15,14 +16,12 @@ type Props = {
 type State = {
   editableTeams: Array<APITeamType>,
   allowedTeams: Array<APITeamType>,
-  uneditableTeams: Array<APITeamType>,
 };
 
 class TeamSelectionComponent extends React.PureComponent<Props, State> {
   state = {
     editableTeams: [],
     allowedTeams: this.props.value ? this.props.value : [],
-    uneditableTeams: [],
   };
 
   componentDidMount() {
@@ -33,7 +32,6 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     this.setState({
       allowedTeams: newProps.value,
     });
-    this.getUneditableTeams();
   }
 
   async fetchData() {
@@ -41,29 +39,19 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
     this.setState({
       editableTeams,
     });
-    this.getUneditableTeams();
   }
 
-  getUneditableTeams = () => {
-    const uneditableTeams = this.state.allowedTeams.filter(team =>
-      this.state.editableTeams.every(editableTeam => editableTeam.id !== team.id),
-    );
-    this.setState({
-      uneditableTeams,
-    });
-  };
 
   onSelectTeams = (selectedTeamIds: Array<string>) => {
-    const allowedTeams = this.state.editableTeams.filter(team => selectedTeamIds.includes(team.id));
-    this.state.uneditableTeams.forEach(uneditableTeam => {
-      if (allowedTeams.every(allowedTeam => allowedTeam.id !== uneditableTeam.id))
-        allowedTeams.push(uneditableTeam);
-    });
+    const allTeams  = this.getAllTeams();
+    const allowedTeams = _.compact(selectedTeamIds.map(id => allTeams.find(t => t.id === id)))
     this.props.onChange(allowedTeams);
     this.setState({
       allowedTeams,
     });
   };
+
+  getAllTeams = () => _.uniqBy(this.state.editableTeams.concat(this.state.allowedTeams), t => t.id)
 
   render() {
     return (
@@ -74,10 +62,10 @@ class TeamSelectionComponent extends React.PureComponent<Props, State> {
         placeholder="Select a Team"
         optionFilterProp="children"
         onChange={this.onSelectTeams}
-        value={this.state.allowedTeams.map(t => t.name)}
+        value={this.state.allowedTeams.map(t => t.id)}
         filterOption
       >
-        {this.state.editableTeams.map(team => <Option key={team.id}>{team.name}</Option>)}
+        {this.getAllTeams().map(team => <Option disabled={this.state.editableTeams.find(t => t.id === team.id) == null} key={team.id}>{team.name}</Option>)}
       </Select>
     );
   }

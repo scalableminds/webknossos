@@ -487,7 +487,7 @@ export async function createExplorational(
   dataset: APIDatasetType,
   typ: "volume" | "skeleton",
   withFallback: boolean,
-) {
+): Promise<APIAnnotationType> {
   const url = `/api/datasets/${dataset.name}/createExplorational`;
 
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });

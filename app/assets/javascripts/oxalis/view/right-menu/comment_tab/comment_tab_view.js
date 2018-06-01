@@ -136,7 +136,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     const treesAndComments = this.getTreeComponents();
 
     return (
-      <div className="flex-column">
+      <div className="flex-column" style={{ height: "inherit" }}>
         <InputGroup compact>
           <ButtonComponent onClick={this.previousComment}>
             <i className="fa fa-arrow-left" />

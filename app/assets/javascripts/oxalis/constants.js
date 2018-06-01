@@ -17,6 +17,12 @@ export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
 };
+export type Rect = {
+  top: number,
+  left: number,
+  width: number,
+  height: number,
+};
 
 export const Vector2Indicies = [0, 1];
 export const Vector3Indicies = [0, 1, 2];
@@ -30,8 +36,10 @@ export const OrthoViews = {
   PLANE_XZ: "PLANE_XZ",
   TDView: "TDView",
 };
+export const ArbitraryViewport = "arbitraryViewport";
 export type OrthoViewType = $Keys<typeof OrthoViews>;
 export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
+export type ViewportType = OrthoViewType | typeof ArbitraryViewport;
 export const OrthoViewValues: Array<OrthoViewType> = Object.keys(OrthoViews);
 export const OrthoViewValuesWithoutTDView = [
   OrthoViews.PLANE_XY,
@@ -118,9 +126,6 @@ const Constants = {
   MAX_MOVE_VALUE_SLIDER: 1500,
 
   FPS: 50,
-
-  MIN_SCALE: 0.5,
-  MAX_SCALE: 20,
 
   // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
   MIN_NODE_RADIUS: 1,

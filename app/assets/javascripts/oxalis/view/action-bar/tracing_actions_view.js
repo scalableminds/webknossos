@@ -17,6 +17,7 @@ import { copyAnnotationToUserAccount, finishAnnotation } from "admin/admin_rest_
 import { location } from "libs/window";
 import type { OxalisState, RestrictionsType, SettingsType, TaskType } from "oxalis/store";
 import type { APIUserType, APITracingType } from "admin/api_flow_types";
+import { resetLayoutEmitter } from "oxalis/view/layouting/layout_persistence";
 
 type StateProps = {
   tracingType: APITracingType,
@@ -233,6 +234,15 @@ class TracingActionsView extends PureComponent<StateProps, State> {
         />,
       );
     }
+
+    elements.push(
+      <Menu.Item key="reset-layout">
+        <div onClick={() => resetLayoutEmitter.emit("resetLayout")}>
+          <Icon type="laptop" />
+          Reset Layout
+        </div>
+      </Menu.Item>,
+    );
 
     const menu = <Menu>{elements}</Menu>;
 

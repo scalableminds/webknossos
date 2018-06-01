@@ -11,6 +11,8 @@ In order to restore the current window, a reload is necessary.`,
   "save.failed_client_error": `We've encountered a permanent error while trying to save.
 
 In order to restore the current window, a reload is necessary.`,
+  "react.rendering_error":
+    "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
   "save.leave_page_unfinished":
     "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.",
   "save.failed": "Failed to save tracing. Retrying.",
@@ -88,6 +90,8 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_firstName_input": "Please input your first name!",
   "auth.registration_lastName_input": "Please input your last name!",
   "auth.registration_org_input": "Please select an organization!",
+  "auth.privacy_check_required":
+    "Unfortunately, we cannot provide the service without your consent to the processing of your data.",
   "auth.reset_logout": "You will be logged out, after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",

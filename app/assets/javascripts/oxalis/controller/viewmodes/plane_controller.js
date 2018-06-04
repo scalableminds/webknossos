@@ -71,6 +71,7 @@ class PlaneController extends React.PureComponent<Props> {
     keyboard?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
     keyboardLoopDelayed?: InputKeyboard,
+    keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;

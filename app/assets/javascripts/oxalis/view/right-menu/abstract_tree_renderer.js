@@ -598,6 +598,7 @@ class AbstractTreeRenderer {
    * @param {Number} height
    */
   setDimensions(width: number, height: number): void {
+    this.canvas.style.width = `${width}px`;
     this.canvas.style.height = `${height}px`;
     this.canvas.width = width;
     this.canvas.height = height;

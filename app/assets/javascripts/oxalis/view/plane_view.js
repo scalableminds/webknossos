@@ -9,39 +9,9 @@ import TWEEN from "tween.js";
 import * as THREE from "three";
 import Store from "oxalis/store";
 import Constants, { OrthoViews, OrthoViewValues, OrthoViewColors } from "oxalis/constants";
-import type { OrthoViewType, OrthoViewMapType } from "oxalis/constants";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import type { OrthoViewType, OrthoViewMapType, Vector2 } from "oxalis/constants";
 import SceneController from "oxalis/controller/scene_controller";
-import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-
-export const setupRenderArea = (
-  renderer: THREE.WebGLRenderer,
-  x: number,
-  y: number,
-  fullExtent: number,
-  width: number,
-  height: number,
-  color: number,
-) => {
-  renderer.setViewport(x, y, fullExtent, fullExtent);
-  renderer.setScissor(x, y, width, height);
-  renderer.setScissorTest(true);
-  renderer.setClearColor(color, 1);
-};
-
-export const clearCanvas = (renderer: THREE.WebGLRenderer) => {
-  const rendererSize = renderer.getSize();
-  setupRenderArea(
-    renderer,
-    0,
-    0,
-    renderer.domElement.width,
-    rendererSize.width,
-    rendererSize.height,
-    0xffffff,
-  );
-  renderer.clear();
-};
 
 class PlaneView {
   // Copied form backbone events (TODO: handle this better)
@@ -52,12 +22,16 @@ class PlaneView {
 
   running: boolean;
   needsRerender: boolean;
+  curWidth: number;
 
   constructor() {
     _.extend(this, BackboneEvents);
 
     this.running = false;
-    const { scene } = SceneController;
+    const { scene, renderer } = SceneController;
+
+    // Create a 4x4 grid
+    this.curWidth = Constants.VIEWPORT_WIDTH;
 
     // Initialize main THREE.js components
     this.cameras = {};
@@ -81,6 +55,12 @@ class PlaneView {
       this.cameras[plane].lookAt(new THREE.Vector3(0, 0, 0));
     }
 
+    // Attach the canvas to the container
+    renderer.setSize(
+      2 * this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+      2 * this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+    );
+
     this.needsRerender = true;
     app.vent.on("rerender", () => {
       this.needsRerender = true;
@@ -91,6 +71,15 @@ class PlaneView {
         this.needsRerender = true;
       });
     });
+
+    listenToStoreProperty(
+      store => store.userConfiguration.scale,
+      () => {
+        if (this.running) {
+          this.resizeThrottled();
+        }
+      },
+    );
   }
 
   animate(): void {
@@ -107,20 +96,16 @@ class PlaneView {
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(plane);
-    width = Math.round(width);
-    height = Math.round(height);
-
-    renderer.setViewport(0, 0, width, height);
+    renderer.setViewport(0, 0, this.curWidth, this.curWidth);
     renderer.setScissorTest(false);
     renderer.setClearColor(0x000000, 1);
 
-    const renderTarget = new THREE.WebGLRenderTarget(width, height);
-    const buffer = new Uint8Array(width * height * 4);
+    const renderTarget = new THREE.WebGLRenderTarget(this.curWidth, this.curWidth);
+    const buffer = new Uint8Array(this.curWidth * this.curWidth * 4);
 
     SceneController.updateSceneForCam(plane);
     renderer.render(scene, this.cameras[plane], renderTarget);
-    renderer.readRenderTargetPixels(renderTarget, 0, 0, width, height, buffer);
+    renderer.readRenderTargetPixels(renderTarget, 0, 0, this.curWidth, this.curWidth, buffer);
     return buffer;
   }
 
@@ -141,32 +126,37 @@ class PlaneView {
 
       this.trigger("render");
 
-      const viewport = {
-        [OrthoViews.PLANE_XY]: getInputCatcherRect("PLANE_XY"),
-        [OrthoViews.PLANE_YZ]: getInputCatcherRect("PLANE_YZ"),
-        [OrthoViews.PLANE_XZ]: getInputCatcherRect("PLANE_XZ"),
-        [OrthoViews.TDView]: getInputCatcherRect("TDView"),
+      const viewport: OrthoViewMapType<Vector2> = {
+        [OrthoViews.PLANE_XY]: [0, 0],
+        [OrthoViews.PLANE_YZ]: [this.curWidth + Constants.VIEWPORT_GAP_WIDTH, 0],
+        [OrthoViews.PLANE_XZ]: [0, this.curWidth + Constants.VIEWPORT_GAP_WIDTH],
+        [OrthoViews.TDView]: [
+          this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+          this.curWidth + Constants.VIEWPORT_GAP_WIDTH,
+        ],
       };
-
       renderer.autoClear = true;
 
-      clearCanvas(renderer);
+      const setupRenderArea = (x, y, width, color) => {
+        renderer.setViewport(x, y, width, width);
+        renderer.setScissor(x, y, width, width);
+        renderer.setScissorTest(true);
+        renderer.setClearColor(color, 1);
+      };
+
+      setupRenderArea(0, 0, renderer.domElement.width, 0xffffff);
+      renderer.clear();
 
       for (const plane of OrthoViewValues) {
         SceneController.updateSceneForCam(plane);
-        const { left, top, width, height } = viewport[plane];
-        if (width > 0 && height > 0) {
-          setupRenderArea(
-            renderer,
-            left,
-            top,
-            Math.min(width, height),
-            width,
-            height,
-            OrthoViewColors[plane],
-          );
-          renderer.render(scene, this.cameras[plane]);
-        }
+
+        setupRenderArea(
+          viewport[plane][0],
+          viewport[plane][1],
+          this.curWidth,
+          OrthoViewColors[plane],
+        );
+        renderer.render(scene, this.cameras[plane]);
       }
 
       this.needsRerender = false;
@@ -178,18 +168,21 @@ class PlaneView {
   }
 
   resizeThrottled = _.throttle((): void => {
-    // todo: is this still called?
     // throttle resize to avoid annoying flickering
     this.resize();
   }, Constants.RESIZE_THROTTLE_TIME);
 
   resize = (): void => {
-    getDesiredCanvasSize().map(([width, height]) =>
-      SceneController.renderer.setSize(width, height),
+    // Call this after the canvas was resized to fix the viewport
+    const viewportWidth = Math.round(
+      Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH,
     );
+    const canvasWidth = viewportWidth * 2 + Constants.VIEWPORT_GAP_WIDTH;
+    this.curWidth = viewportWidth;
 
+    SceneController.renderer.setSize(canvasWidth, canvasWidth);
     for (const plane of OrthoViewValues) {
-      this.cameras[plane].aspect = 1;
+      this.cameras[plane].aspect = canvasWidth / canvasWidth;
       this.cameras[plane].updateProjectionMatrix();
     }
     this.draw();
@@ -205,15 +198,13 @@ class PlaneView {
     for (const plane of OrthoViewValues) {
       SceneController.scene.remove(this.cameras[plane]);
     }
-    window.removeEventListener("resize", this.resize);
   }
 
   start(): void {
     this.running = true;
+
     this.resize();
     this.animate();
-
-    window.addEventListener("resize", this.resize);
   }
 }
 

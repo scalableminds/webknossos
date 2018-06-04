@@ -1,10 +1,10 @@
 // @flow
 
 import constants from "oxalis/constants";
+import type { OrthoViewType } from "oxalis/constants";
 import type { PartialCameraData } from "oxalis/store";
 import * as THREE from "three";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
-import type { Rect, OrthoViewType, ViewportType } from "oxalis/constants";
 
 type SetViewportActionType = {
   type: "SET_VIEWPORT",
@@ -31,12 +31,6 @@ type MoveTDViewByVectorActionType = {
   type: "MOVE_TD_VIEW_BY_VECTOR",
   x: number,
   y: number,
-};
-
-type SetInputCatcherRect = {
-  type: "SET_INPUT_CATCHER_RECT",
-  viewport: ViewportType,
-  rect: Rect,
 };
 
 export const setViewportAction = (viewport: OrthoViewType): SetViewportActionType => ({
@@ -76,18 +70,11 @@ export const moveTDViewXAction = (x: number): MoveTDViewByVectorActionType =>
 export const moveTDViewYAction = (y: number): MoveTDViewByVectorActionType =>
   moveTDViewByVectorAction(0, -y * getTDViewportSize() / constants.VIEWPORT_WIDTH);
 
-export const setInputCatcherRect = (viewport: ViewportType, rect: Rect): SetInputCatcherRect => ({
-  type: "SET_INPUT_CATCHER_RECT",
-  viewport,
-  rect,
-});
-
 export type ViewModeActionType =
   | SetViewportActionType
   | SetTDCameraActionType
   | CenterTDViewActionType
   | ZoomTDViewActionType
-  | MoveTDViewByVectorActionType
-  | SetInputCatcherRect;
+  | MoveTDViewByVectorActionType;
 
 export default {};

@@ -15,6 +15,7 @@ import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefau
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType._
+import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
@@ -43,7 +44,7 @@ object AnnotationService
   with LazyLogging {
 
   private def selectSuitableTeam(user: User, dataSet: DataSet): BSONObjectID = {
-      dataSet.allowedTeams.intersect(user.teamIds).head
+    dataSet.allowedTeams.intersect(user.teamIds).head
   }
 
   private def createVolumeTracing(dataSource: DataSource, withFallback: Boolean): VolumeTracing = {
@@ -204,21 +205,24 @@ object AnnotationService
 
   def createFrom(
                 user: User,
+                dataSetId: ObjectId,
                 dataSet: DataSet,
                 tracingReference: TracingReference,
-                annotationType: AnnotationType,
+                annotationType: AnnotationTypeSQL,
                 name: Option[String],
                 description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     val annotation = AnnotationSQL(
-      user._id,
+      ObjectId.generate,
+      dataSetId,
+      None,
+      ObjectId.fromBsonId(selectSuitableTeam(user, dataSet)),
+      ObjectId.fromBsonId(user._id),
       tracingReference,
-      dataSet.name,
-      _team = selectSuitableTeam(user, dataSet),
-      _name = name,
-      description = description,
+      description,
+      name = name.getOrElse(""),
       typ = annotationType)
     for {
-      _ <- annotation.saveToDB
+      _ <- AnnotationSQLDAO.insertOne(annotation)
     } yield annotation
   }
 

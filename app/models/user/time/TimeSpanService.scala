@@ -9,7 +9,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, AnnotationDAO, AnnotationService}
-import models.task.TaskService
+import models.task.TaskSQLDAO
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
@@ -19,6 +19,7 @@ import play.api.Play.current
 import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
+import utils.ObjectId
 
 import scala.collection.mutable
 import scala.concurrent.duration._
@@ -149,7 +150,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
           Mailer ! Send(DefaultMails.overLimitMail(
             user,
             project.name,
-            task.id,
+            task._id.toString,
             annotation.id))
         }
       }
@@ -162,7 +163,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       annotation.flatMap(_._task) match {
         case Some(taskId) =>
           for {
-            _ <- TaskService.logTime(duration, taskId)(GlobalAccessContext)
+            _ <- TaskSQLDAO.logTime(ObjectId.fromBsonId(taskId), duration)(GlobalAccessContext)
             _ <- signalOverTime(duration, annotation)(GlobalAccessContext)
           } yield {}
         case _ =>

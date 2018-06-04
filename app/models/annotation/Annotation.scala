@@ -15,7 +15,7 @@ import models.annotation.AnnotationType.AnnotationType
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.task.TaskSQLDAO.transactionSerializationError
-import models.task.{TaskDAO, TaskSQLDAO, TaskTypeSQLDAO, _}
+import models.task.{TaskSQLDAO, TaskTypeSQLDAO, _}
 import models.team.TeamSQLDAO
 import models.user.{User, UserService}
 import net.liftweb.common.Full
@@ -356,8 +356,8 @@ case class Annotation(
   def user: Fox[User] =
     UserService.findOneById(_user.stringify, useCache = true)(GlobalAccessContext)
 
-  def task: Fox[Task] =
-    _task.toFox.flatMap(id => TaskDAO.findOneById(id.stringify)(GlobalAccessContext))
+  def task: Fox[TaskSQL] =
+    _task.toFox.flatMap(taskId => TaskSQLDAO.findOne(ObjectId.fromBsonId(taskId))(GlobalAccessContext))
 
   val tracingType = tracingReference.typ
 
@@ -374,7 +374,7 @@ case class Annotation(
 
   def toJson(requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      taskJson <- task.flatMap(t => Task.transformToJson(t)).getOrElse(JsNull)
+      taskJson <- task.flatMap(_.publicWrites).getOrElse(JsNull)
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> "Could not find DataSet for Annotation"
       userJson <- user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
     } yield {
@@ -517,10 +517,10 @@ object AnnotationDAO extends FoxImplicits {
       count <- AnnotationSQLDAO.countActiveAnnotationsFor(ObjectId.fromBsonId(_user), typ, excludeTeams.map(ObjectId.fromBsonId(_)))
     } yield count
 
-  def findByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = {
+  def findByTaskIdAndType(taskId: ObjectId, annotationType: AnnotationType)(implicit ctx: DBAccessContext) = {
     val fox = for {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
-      annotationsSQL <- AnnotationSQLDAO.findAllByTaskIdAndType(ObjectId.fromBsonId(_task), typ)
+      annotationsSQL <- AnnotationSQLDAO.findAllByTaskIdAndType(taskId, typ)
       annotations <- Fox.combined(annotationsSQL.map(Annotation.fromAnnotationSQL(_)))
     } yield annotations
 
@@ -541,10 +541,10 @@ object AnnotationDAO extends FoxImplicits {
       annotation <- Annotation.fromAnnotationSQL(annotationSQL)
     } yield annotation
 
-  def countActiveByTaskIdAndType(_task: BSONObjectID, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
+  def countActiveByTaskIdAndType(taskId: ObjectId, annotationType: AnnotationType)(implicit ctx: DBAccessContext) =
     for {
       typ <- AnnotationTypeSQL.fromString(annotationType).toFox
-      count <- AnnotationSQLDAO.countActiveByTask(ObjectId.fromBsonId(_task), typ)
+      count <- AnnotationSQLDAO.countActiveByTask(taskId, typ)
     } yield count
 
   def updateState(_annotation: BSONObjectID, state: AnnotationState.Value)(implicit ctx: DBAccessContext) =

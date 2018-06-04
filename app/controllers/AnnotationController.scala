@@ -1,19 +1,19 @@
 package controllers
 
 import javax.inject.Inject
-
 import akka.util.Timeout
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation.{Annotation, _}
 import models.binary.DataSetDAO
-import models.task.TaskDAO
+import models.task.TaskSQLDAO
 import models.user.time._
 import models.user.{User, UserDAO}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
+import utils.ObjectId
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
@@ -195,7 +195,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def annotationsForTask(taskId: String) = SecuredAction.async { implicit request =>
     for {
-      task <- TaskDAO.findOneById(taskId) ?~> Messages("task.notFound")
+      taskIdValidated <- ObjectId.parse(taskId)
+      task <- TaskSQLDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
       project <- task.project
       _ <- ensureTeamAdministration(request.identity, project._team)
       annotations <- task.annotations

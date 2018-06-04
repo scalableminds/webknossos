@@ -206,7 +206,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   }
 
   getKeyboardControls(): Object {
-    return {
+    return _.extend(super.getKeyboardControls(), {
       c: () => Store.dispatch(createCellAction()),
       "ctrl + i": async event => {
         const mousePosition = Store.getState().temporaryConfiguration.mousePosition;
@@ -222,7 +222,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
           Toast.warning("No cell under cursor.");
         }
       },
-    };
+    });
   }
 
   handleCellSelection(cellId: number) {

@@ -44,6 +44,10 @@ declare module "antd" {
   }
   declare var notification: Object;
   declare class Popover<P> extends React$Component<P> {}
+  declare class AutoComplete<P> extends React$Component<P> {
+    static Option: React$ComponentType<*>;
+    blur: () => void;
+  }
   declare class Progress<P> extends React$Component<P> {}
   declare class Radio<P> extends React$Component<P> {
     static Button: React$ComponentType<P>;

@@ -12,6 +12,7 @@ import Store from "oxalis/store";
 import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
+import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 
 export class VoxelIterator {
   hasNext: boolean = true;
@@ -289,7 +290,7 @@ class VolumeLayer {
   pixelsToVoxels(pixels: number): number {
     const state = Store.getState();
     const zoomFactor = getPlaneScalingFactor(state.flycam);
-    const viewportScale = state.userConfiguration.scale;
+    const viewportScale = getViewportScale(this.plane);
     return pixels / viewportScale * zoomFactor;
   }
 }

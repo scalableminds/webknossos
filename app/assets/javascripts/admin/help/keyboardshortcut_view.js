@@ -42,10 +42,6 @@ const KeyboardShortcutView = () => {
       action: "Delete Edge/split Trees",
     },
     {
-      keybinding: "K, L",
-      action: "Scale Up/down Viewport Size",
-    },
-    {
       keybinding: "B, J",
       action: "Set/jump To Last Branchpoint",
     },
@@ -111,6 +107,10 @@ const KeyboardShortcutView = () => {
     {
       keybinding: "H, G",
       action: "Increase/Decrease the Move Value",
+    },
+    {
+      keybinding: "CTRL + Shift + F",
+      action: "Open Tree Search (if Tree List is visible)",
     },
   ];
 

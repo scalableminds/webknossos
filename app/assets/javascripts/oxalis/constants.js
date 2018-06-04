@@ -4,6 +4,7 @@
  */
 
 export const ModeValues = ["orthogonal", "flight", "oblique", "volume"]; //   MODE_PLANE_TRACING | MODE_ARBITRARY | MODE_ARBITRARY_PLANE | MODE_VOLUME
+export const ModeValuesIndices = { Orthogonal: 0, Flight: 1, Oblique: 2, Volume: 3 };
 export type ModeType = "orthogonal" | "oblique" | "flight" | "volume";
 export type Vector2 = [number, number];
 export type Vector3 = [number, number, number];
@@ -15,6 +16,12 @@ export type Point3 = { x: number, y: number, z: number };
 export type BoundingBoxType = {
   min: Vector3,
   max: Vector3,
+};
+export type Rect = {
+  top: number,
+  left: number,
+  width: number,
+  height: number,
 };
 
 export const Vector2Indicies = [0, 1];
@@ -29,8 +36,10 @@ export const OrthoViews = {
   PLANE_XZ: "PLANE_XZ",
   TDView: "TDView",
 };
+export const ArbitraryViewport = "arbitraryViewport";
 export type OrthoViewType = $Keys<typeof OrthoViews>;
 export type OrthoViewMapType<T> = { [key: OrthoViewType]: T };
+export type ViewportType = OrthoViewType | typeof ArbitraryViewport;
 export const OrthoViewValues: Array<OrthoViewType> = Object.keys(OrthoViews);
 export const OrthoViewValuesWithoutTDView = [
   OrthoViews.PLANE_XY,
@@ -117,9 +126,6 @@ const Constants = {
   MAX_MOVE_VALUE_SLIDER: 1500,
 
   FPS: 50,
-
-  MIN_SCALE: 0.5,
-  MAX_SCALE: 20,
 
   // The node radius is the actual radius of the node in nm, it's dependent on zoom and dataset scale
   MIN_NODE_RADIUS: 1,

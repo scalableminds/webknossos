@@ -3,8 +3,6 @@
  */
 package com.scalableminds.webknossos.datastore.controllers
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing.Color
-import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
 import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, UserAccessRequest, WebKnossosServer}
 import com.scalableminds.webknossos.datastore.tracings.{TracingSelector, _}
 import com.scalableminds.util.tools.Fox
@@ -63,7 +61,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         for {
           tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
         } yield {
-          Ok(Json.obj()) // TODO
+          Ok(tracing.toByteArray).as("application/x-protobuf")
         }
       }
     }
@@ -75,19 +73,7 @@ trait TracingController[T <: GeneratedMessage with Message[T], Ts <: GeneratedMe
         for {
           tracings <- tracingService.findMultiple(request.body, applyUpdates = true)
         } yield {
-          Ok(tracings.toByteArray)
-        }
-      }
-    }
-  }
-
-  def getProto(tracingId: String, version: Option[Long]) = TokenSecuredAction(UserAccessRequest.webknossos).async {
-    implicit request => {
-      AllowRemoteOrigin {
-        for {
-          tracing <- tracingService.find(tracingId, version, applyUpdates = true) ?~> Messages("tracing.notFound")
-        } yield {
-          Ok(tracing.toByteArray)
+          Ok(tracings.toByteArray).as("application/x-protobuf")
         }
       }
     }

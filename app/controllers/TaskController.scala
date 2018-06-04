@@ -5,7 +5,7 @@ import javax.inject.Inject
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, MongoHelpers}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
@@ -20,11 +20,11 @@ import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
-import reactivemongo.play.json.BSONFormats._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.Future
 

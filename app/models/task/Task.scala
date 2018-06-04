@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationSQLDAO.transactionSerializationError
 import models.annotation._
-import models.project.{Project, ProjectDAO, ProjectSQLDAO}
+import models.project.{ProjectSQLDAO}
 import models.team.TeamSQLDAO
 import models.user.{Experience, User}
 import org.joda.time.DateTime
@@ -361,7 +361,7 @@ case class Task(
   def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
   def project(implicit ctx: DBAccessContext) =
-    ProjectDAO.findOneByName(_project)
+    ProjectSQLDAO.findOneByName(_project)
 
   def annotations(implicit ctx: DBAccessContext) =
     AnnotationService.annotationsFor(this)
@@ -467,10 +467,9 @@ object TaskDAO {
       tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
     } yield tasks
 
-  def findAllByProject(projectName: String)(implicit ctx: DBAccessContext) =
+  def findAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      project <- ProjectSQLDAO.findOneByName(projectName)
-      tasksSQL <- TaskSQLDAO.findAllByProject(project._id)
+      tasksSQL <- TaskSQLDAO.findAllByProject(projectId)
       tasks <- Fox.combined(tasksSQL.map(Task.fromTaskSQL(_)))
     } yield tasks
 
@@ -505,12 +504,6 @@ object TaskDAO {
     }
   }
 
-  def countOpenInstancesForProject(projectName: String)(implicit ctx: DBAccessContext): Fox[Int] =
-    for {
-      project <- ProjectSQLDAO.findOneByName(projectName)
-      openInstanceCount <- TaskSQLDAO.countOpenInstancesForProject(project._id)
-    } yield openInstanceCount
-
   def insert(task: Task)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       taskSQL <- TaskSQL.fromTask(task)
@@ -523,9 +516,6 @@ object TaskDAO {
   def removeAllWithTaskTypeAndItsAnnotations(taskType: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
     TaskSQLDAO.removeAllWithTaskTypeAndItsAnnotations(ObjectId.fromBsonId(taskType._id))
 
-  def removeAllWithProjectAndItsAnnotations(project: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
-    TaskSQLDAO.removeAllWithProjectAndItsAnnotations(ObjectId.fromBsonId(project._id))
-
   def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) =
     TaskSQLDAO.removeScriptFromAllTasks(ObjectId(_script))
 
@@ -537,11 +527,5 @@ object TaskDAO {
       _ <- TaskSQLDAO.updateTotalInstances(ObjectId.fromBsonId(_task), instances)
       updated <- findOneById(_task.stringify)
     } yield updated
-
-  def incrementTotalInstancesOfAllWithProject(projectName: String, delta: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      project <- ProjectSQLDAO.findOneByName(projectName)
-      _ <- TaskSQLDAO.incrementTotalInstancesOfAllWithProject(project._id, delta)
-    } yield ()
 
 }

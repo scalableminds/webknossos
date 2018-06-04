@@ -3,10 +3,10 @@ package models.task
 import com.scalableminds.util.reactivemongo.{DBAccessContext, MongoHelpers}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.project.Project
 import models.user.{User, UserDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
+import utils.ObjectId
 
 import scala.concurrent.Future
 
@@ -31,14 +31,11 @@ object TaskService
   def removeAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
     TaskDAO.removeAllWithTaskTypeAndItsAnnotations(taskType)
 
-  def removeAllWithProject(project: Project)(implicit ctx: DBAccessContext) =
-    TaskDAO.removeAllWithProjectAndItsAnnotations(project)
-
   def removeScriptFromTasks(_script: String)(implicit ctx: DBAccessContext) = {
     TaskDAO.removeScriptFromTasks(_script)
   }
 
-  def insert(task: Task, project: Project)(implicit ctx: DBAccessContext) = {
+  def insert(task: Task)(implicit ctx: DBAccessContext) = {
     for {
       _ <- TaskDAO.insert(task)
     } yield task

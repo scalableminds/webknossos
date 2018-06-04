@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import models.binary._
-import models.project.{Project, ProjectDAO}
+import models.project.{ProjectSQL, ProjectSQLDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user._
@@ -21,7 +21,7 @@ import play.api.libs.concurrent._
 import play.api.mvc.Results.Ok
 import play.api.mvc._
 import reactivemongo.bson.BSONObjectID
-import utils.SQLClient
+import utils.{ObjectId, SQLClient}
 
 import scala.concurrent.Future
 import sys.process._
@@ -186,12 +186,12 @@ Samplecountry
   }
 
   def insertProject = {
-    ProjectDAO.findAll(GlobalAccessContext).flatMap {
+    ProjectSQLDAO.findAll(GlobalAccessContext).flatMap {
       projects =>
         if (projects.isEmpty) {
           UserService.defaultUser.flatMap { user =>
-            val project = Project("sampleProject", organizationTeam._id, user._id, 100, false, Some(5400000))
-            for {_ <- ProjectDAO.insert(project)(GlobalAccessContext)} yield ()
+            val project = ProjectSQL(ObjectId.generate, ObjectId.fromBsonId(organizationTeam._id), ObjectId.fromBsonId(user._id), "sampleProject", 100, false, Some(5400000))
+            for {_ <- ProjectSQLDAO.insertOne(project)(GlobalAccessContext)} yield ()
           }
         } else Fox.successful(())
     }.toFox

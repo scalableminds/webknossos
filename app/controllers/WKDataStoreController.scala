@@ -90,7 +90,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       userTokenOpt = (request.body \ "userToken").asOpt[String]
       _ <- statisticsOpt match {
         case Some(statistics) => AnnotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
-        case None => Fox.successful()
+        case None => Fox.successful(())
       }
       _ <- AnnotationDAO.updateModifiedTimestamp(annotation._id)(GlobalAccessContext)
       userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox

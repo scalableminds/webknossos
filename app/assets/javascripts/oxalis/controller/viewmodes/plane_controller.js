@@ -9,8 +9,9 @@ import { getViewportScale, getInputCatcherRect } from "oxalis/model/accessors/vi
 import BackboneEvents from "backbone-events-standalone";
 import _ from "lodash";
 import Utils from "libs/utils";
+import Toast from "libs/toast";
 import { document } from "libs/window";
-import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
+import { InputMouse, InputKeyboard } from "libs/input";
 import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
@@ -47,7 +48,9 @@ import {
   moveTDViewYAction,
   moveTDViewByVectorAction,
 } from "oxalis/model/actions/view_mode_actions";
+import messages from "messages";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 type OwnProps = {
   onRender: () => void,
@@ -66,9 +69,9 @@ class PlaneController extends React.PureComponent<Props> {
   input: {
     mouseControllers: OrthoViewMapType<InputMouse>,
     keyboard?: InputKeyboard,
-    keyboardNoLoop?: InputKeyboardNoLoop,
     keyboardLoopDelayed?: InputKeyboard,
   };
+  storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
   oldNmPos: Vector3;
   zoomPos: Vector3;
@@ -76,10 +79,12 @@ class PlaneController extends React.PureComponent<Props> {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
+  moveKeyNotification: string;
 
   constructor(...args: any) {
     super(...args);
     _.extend(this, BackboneEvents);
+    this.storePropertyUnsubscribers = [];
   }
 
   componentDidMount() {
@@ -250,26 +255,24 @@ class PlaneController extends React.PureComponent<Props> {
         // Zoom in/out
         i: () => this.zoom(1, false),
         o: () => this.zoom(-1, false),
+
+        h: () => this.changeMoveValue(25),
+        g: () => this.changeMoveValue(-25),
       },
       { delay: Store.getState().userConfiguration.keyboardDelay },
     );
 
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
-
-    Store.subscribe(() => {
-      const keyboardLoopDelayed = this.input.keyboardLoopDelayed;
-      if (keyboardLoopDelayed != null) {
-        keyboardLoopDelayed.delay = Store.getState().userConfiguration.keyboardDelay;
-      }
-    });
-  }
-
-  getKeyboardControls(): Object {
-    return {
-      // Change move value
-      h: () => this.changeMoveValue(25),
-      g: () => this.changeMoveValue(-25),
-    };
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          const { keyboardLoopDelayed } = this.input;
+          if (keyboardLoopDelayed != null) {
+            keyboardLoopDelayed.delay = keyboardDelay;
+          }
+        },
+      ),
+    );
   }
 
   init(): void {
@@ -438,6 +441,12 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
+    if (this.moveKeyNotification != null) {
+      Toast.close(this.moveKeyNotification);
+    }
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    this.moveKeyNotification = moveValueMessage;
+    Toast.success(moveValueMessage);
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
@@ -452,14 +461,19 @@ class PlaneController extends React.PureComponent<Props> {
     }
   }
 
+  unsubscribeStoreListeners() {
+    this.storePropertyUnsubscribers.forEach(unsubscribe => unsubscribe());
+    this.storePropertyUnsubscribers = [];
+  }
+
   destroyInput() {
     for (const mouse of _.values(this.input.mouseControllers)) {
       mouse.destroy();
     }
     this.input.mouseControllers = {};
     Utils.__guard__(this.input.keyboard, x => x.destroy());
-    Utils.__guard__(this.input.keyboardNoLoop, x1 => x1.destroy());
     Utils.__guard__(this.input.keyboardLoopDelayed, x2 => x2.destroy());
+    this.unsubscribeStoreListeners();
   }
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos);

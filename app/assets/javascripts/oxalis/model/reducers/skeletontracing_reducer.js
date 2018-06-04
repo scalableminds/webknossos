@@ -48,8 +48,8 @@ import ErrorHandling from "libs/error_handling";
 function serverNodeToNode(n: ServerNodeType): NodeType {
   return {
     id: n.id,
-    position: n.position,
-    rotation: n.rotation,
+    position: Utils.point3ToVector3(n.position),
+    rotation: Utils.point3ToVector3(n.rotation),
     bitDepth: n.bitDepth,
     viewport: n.viewport,
     resolution: n.resolution,
@@ -82,7 +82,10 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           name: tree.name,
           treeId: tree.treeId,
           nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
-          color: tree.color || ColorGenerator.distinctColorForId(tree.treeId),
+          color:
+            tree.color != null
+              ? [tree.color.r, tree.color.g, tree.color.b]
+              : ColorGenerator.distinctColorForId(tree.treeId),
           branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
           isVisible: true,
           timestamp: tree.createdTimestamp,

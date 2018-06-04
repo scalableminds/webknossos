@@ -18,6 +18,7 @@ import DATASET from "../fixtures/dataset_server_object";
 const Request = {
   receiveJSON: sinon.stub(),
   sendJSONReceiveJSON: sinon.stub(),
+  receiveArraybuffer: sinon.stub(),
   always: () => Promise.resolve(),
 };
 const ErrorHandling = {
@@ -28,6 +29,10 @@ const ErrorHandling = {
 
 const app = {
   vent: Object.assign({}, BackboneEvents),
+};
+
+const protoHelpers = {
+  parseProtoTracing: sinon.stub(),
 };
 
 export const KeyboardJS = {
@@ -47,6 +52,7 @@ mockRequire(
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
+mockRequire("oxalis/model/helpers/proto_helpers", protoHelpers);
 
 const wkstoreAdapter = mockRequire.reRequire("oxalis/model/binary/wkstore_adapter");
 wkstoreAdapter.requestFromStore = () => new Uint8Array();
@@ -87,13 +93,7 @@ export function setupOxalis(t, mode, apiVersion = 2) {
   Request.receiveJSON
     .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
     .returns(Promise.resolve(_.cloneDeep(DATASET)));
-  Request.receiveJSON
-    .withArgs(
-      `${ANNOTATION.dataStore.url}/data/tracings/${ANNOTATION.content.typ}/${
-        ANNOTATION.content.id
-      }?token=${TOKEN}`,
-    )
-    .returns(Promise.resolve(_.cloneDeep(modelData[mode].tracing)));
+  protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
   Request.receiveJSON
     .withArgs("/api/userToken/generate")
     .returns(Promise.resolve({ token: TOKEN }));

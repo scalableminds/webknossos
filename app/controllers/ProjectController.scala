@@ -70,13 +70,12 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       ProjectDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
-        case Empty if request.identity.isTeamManagerOfBLOCKING(project._team) =>
+        case Empty =>
           for {
+            _ <- request.identity.assertTeamManagerOrAdminOf(project._team) ?~> "team.notAllowed"
             _ <- ProjectDAO.insert(project)
             js <- Project.projectPublicWrites(project, request.identity)
           } yield Ok(js)
-        case Empty =>
-          Future.successful(JsonBadRequest(Messages("team.notAllowed")))
         case _ =>
           Future.successful(JsonBadRequest(Messages("project.name.alreadyTaken")))
       }

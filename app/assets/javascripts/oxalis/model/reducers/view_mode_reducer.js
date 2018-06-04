@@ -4,6 +4,8 @@ import update from "immutability-helper";
 import type { OxalisState, PartialCameraData } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 import * as THREE from "three";
+import { ArbitraryViewport } from "oxalis/constants";
+import type { Rect, ViewportType } from "oxalis/constants";
 import { getTDViewportSize } from "oxalis/model/accessors/view_mode_accessor";
 
 function ViewModeReducer(state: OxalisState, action: ActionType): OxalisState {
@@ -29,8 +31,37 @@ function ViewModeReducer(state: OxalisState, action: ActionType): OxalisState {
     case "MOVE_TD_VIEW_BY_VECTOR": {
       return moveTDViewByVectorReducer(state, action.x, action.y);
     }
+    case "SET_INPUT_CATCHER_RECT": {
+      return setInputCatcherRect(state, action.viewport, action.rect);
+    }
     default:
       return state;
+  }
+}
+
+function setInputCatcherRect(state: OxalisState, viewport: ViewportType, rect: Rect) {
+  if (viewport === ArbitraryViewport) {
+    return update(state, {
+      viewModeData: {
+        arbitrary: {
+          inputCatcherRect: {
+            $set: rect,
+          },
+        },
+      },
+    });
+  } else {
+    return update(state, {
+      viewModeData: {
+        plane: {
+          inputCatcherRects: {
+            [viewport]: {
+              $set: rect,
+            },
+          },
+        },
+      },
+    });
   }
 }
 

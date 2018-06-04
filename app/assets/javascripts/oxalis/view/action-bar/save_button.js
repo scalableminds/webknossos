@@ -48,7 +48,7 @@ class SaveButton extends React.PureComponent<Props, State> {
         onClick={this.props.onClick}
         icon={this.getSaveButtonIcon()}
       >
-        Save
+        <span className="hide-on-small-screen">Save</span>
       </ButtonComponent>
     );
   }

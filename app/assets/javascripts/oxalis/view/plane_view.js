@@ -107,10 +107,7 @@ class PlaneView {
     const { renderer } = SceneController;
 
     renderer.autoClear = true;
-    let { width, height } = getInputCatcherRect(plane);
-    width = Math.round(width);
-    height = Math.round(height);
-
+    const { width, height } = getInputCatcherRect(plane);
     renderer.setViewport(0, 0, width, height);
     renderer.setScissorTest(false);
     renderer.setClearColor(0x000000, 1);

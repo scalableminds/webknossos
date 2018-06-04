@@ -78,12 +78,6 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     Toast.error(messages["react.rendering_error"]);
   }
 
-  onLayoutChange = (layoutConfig, layoutKey) => {
-    recalculateInputCatcherSizes();
-    window.needsRerender = true;
-    storeLayoutConfig(layoutConfig, layoutKey);
-  };
-
   render() {
     const layoutType = determineLayout(this.props.initialControlmode, this.props.viewMode);
 
@@ -130,7 +124,11 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
                 style={{ display: "block", height: "100%", width: "100%", flex: "1 1 auto" }}
                 layoutKey={layoutType}
                 layoutConfigGetter={getLayoutConfig}
-                onLayoutChange={this.onLayoutChange}
+                onLayoutChange={(layoutConfig, layoutKey) => {
+                  recalculateInputCatcherSizes();
+                  window.needsRerender = true;
+                  storeLayoutConfig(layoutConfig, layoutKey);
+                }}
               >
                 {/*
                    * All possible layout panes are passed here. Depending on the actual layout,

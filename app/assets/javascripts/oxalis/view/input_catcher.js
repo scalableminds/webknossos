@@ -29,7 +29,7 @@ function makeInputCatcherQuadratic(inputCatcherDOM: HTMLElement): Rect {
     height: wrapperHeight,
   } = noneOverflowWrapper.getBoundingClientRect();
 
-  const squareExtent = Math.round(Math.min(wrapperWidth - 10, wrapperHeight - 10));
+  const squareExtent = Math.min(wrapperWidth - 10, wrapperHeight - 10);
   inputCatcherDOM.style.width = `${squareExtent}px`;
   inputCatcherDOM.style.height = `${squareExtent}px`;
 

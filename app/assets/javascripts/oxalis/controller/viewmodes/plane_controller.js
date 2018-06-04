@@ -11,7 +11,7 @@ import _ from "lodash";
 import Utils from "libs/utils";
 import Toast from "libs/toast";
 import { document } from "libs/window";
-import { InputMouse, InputKeyboard, InputKeyboardNoLoop } from "libs/input";
+import { InputMouse, InputKeyboard } from "libs/input";
 import * as THREE from "three";
 import TrackballControls from "libs/trackball_controls";
 import Model from "oxalis/model";
@@ -70,7 +70,6 @@ class PlaneController extends React.PureComponent<Props> {
     mouseControllers: OrthoViewMapType<InputMouse>,
     keyboard?: InputKeyboard,
     keyboardLoopDelayed?: InputKeyboard,
-    keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
@@ -263,8 +262,6 @@ class PlaneController extends React.PureComponent<Props> {
       { delay: Store.getState().userConfiguration.keyboardDelay },
     );
 
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(this.getKeyboardControls());
-
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
         state => state.userConfiguration.keyboardDelay,
@@ -276,10 +273,6 @@ class PlaneController extends React.PureComponent<Props> {
         },
       ),
     );
-  }
-
-  getKeyboardControls(): Object {
-    return {};
   }
 
   init(): void {
@@ -479,7 +472,6 @@ class PlaneController extends React.PureComponent<Props> {
     }
     this.input.mouseControllers = {};
     Utils.__guard__(this.input.keyboard, x => x.destroy());
-    Utils.__guard__(this.input.keyboardNoLoop, x1 => x1.destroy());
     Utils.__guard__(this.input.keyboardLoopDelayed, x2 => x2.destroy());
     this.unsubscribeStoreListeners();
   }

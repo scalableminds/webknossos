@@ -1,4 +1,5 @@
 // @flow
+import _ from "lodash";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import type { MessageType } from "libs/toast";
@@ -631,6 +632,7 @@ export async function getDatastores(): Promise<Array<APIDataStoreType>> {
 
   return datastores;
 }
+export const getDataStoresCached = _.memoize(getDatastores);
 
 // ### Active User
 export async function getActiveUser(options: Object = {}) {

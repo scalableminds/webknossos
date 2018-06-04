@@ -107,8 +107,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   getTreeComponents() {
     return _.values(this.props.skeletonTracing.trees)
-      .sort(Utils.localeCompareBy("name", this.state.isSortedAscending))
       .filter(tree => tree.comments.length > 0)
+      .sort(Utils.localeCompareBy("name", this.state.isSortedAscending))
       .map(tree => (
         // one tree and its comments
         <TreeCommentList
@@ -136,7 +136,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     const treesAndComments = this.getTreeComponents();
 
     return (
-      <div className="flex-column">
+      <div className="flex-column" style={{ height: "inherit" }}>
         <InputGroup compact>
           <ButtonComponent onClick={this.previousComment}>
             <i className="fa fa-arrow-left" />

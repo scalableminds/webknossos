@@ -57,6 +57,13 @@ export function getDesiredCanvasSize(): Maybe<[number, number]> {
   return Maybe.Nothing();
 }
 
+const GOLDEN_LAYOUT_ADAPTER_STYLE = {
+  display: "block",
+  height: "100%",
+  width: "100%",
+  flex: "1 1 auto",
+};
+
 class TracingLayoutView extends React.PureComponent<Props, State> {
   state = {
     isSettingsCollapsed: true,
@@ -127,7 +134,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
               <TracingView />
               <GoldenLayoutAdapter
                 id="layoutContainer"
-                style={{ display: "block", height: "100%", width: "100%", flex: "1 1 auto" }}
+                style={GOLDEN_LAYOUT_ADAPTER_STYLE}
                 layoutKey={layoutType}
                 layoutConfigGetter={getLayoutConfig}
                 onLayoutChange={this.onLayoutChange}

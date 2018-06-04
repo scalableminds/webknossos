@@ -425,7 +425,7 @@ export async function editAnnotation(
   annotationId: string,
   annotationType: APITracingType,
   data: $Shape<EditableAnnotationType>,
-): Promise<APIAnnotationType> {
+): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
     data,
   });
@@ -484,11 +484,11 @@ export async function getAnnotationInformation(
 }
 
 export async function createExplorational(
-  dataset: APIDatasetType,
+  datasetName: string,
   typ: "volume" | "skeleton",
   withFallback: boolean,
 ): Promise<APIAnnotationType> {
-  const url = `/api/datasets/${dataset.name}/createExplorational`;
+  const url = `/api/datasets/${datasetName}/createExplorational`;
 
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }

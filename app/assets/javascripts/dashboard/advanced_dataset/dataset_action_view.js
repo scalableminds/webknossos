@@ -19,7 +19,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
     typ: "volume" | "skeleton",
     withFallback: boolean,
   ) => {
-    const annotation = await createExplorational(dataset, typ, withFallback);
+    const annotation = await createExplorational(dataset.name, typ, withFallback);
     window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
   };
 

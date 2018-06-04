@@ -4,6 +4,9 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
+  "datastore.health": _.template(
+    "The datastore server at <%- url %> does not seem to be available. This is likely due to an update. Please check back in five minutes.",
+  ),
   "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
 Editing should be done in a single window only.
 
@@ -44,6 +47,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.merged": "Merging successfully done",
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
+  "tracing.changed_move_value": "The move value was changed to: ",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "task.user_script_retrieval_error": "Unable to retrieve script",

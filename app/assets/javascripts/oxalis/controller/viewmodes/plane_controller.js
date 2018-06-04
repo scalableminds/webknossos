@@ -49,6 +49,7 @@ import {
 } from "oxalis/model/actions/view_mode_actions";
 import messages from "messages";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 type OwnProps = {
   onRender: () => void,
@@ -69,6 +70,7 @@ class PlaneController extends React.PureComponent<Props> {
     keyboard?: InputKeyboard,
     keyboardLoopDelayed?: InputKeyboard,
   };
+  storePropertyUnsubscribers: Array<Function>;
   isStarted: boolean;
   oldNmPos: Vector3;
   zoomPos: Vector3;
@@ -81,6 +83,7 @@ class PlaneController extends React.PureComponent<Props> {
   constructor(...args: any) {
     super(...args);
     _.extend(this, BackboneEvents);
+    this.storePropertyUnsubscribers = [];
   }
 
   componentDidMount() {
@@ -263,12 +266,17 @@ class PlaneController extends React.PureComponent<Props> {
       Store.getState().userConfiguration.keyboardDelay,
     );
 
-    Store.subscribe(() => {
-      const keyboardLoopDelayed = this.input.keyboardLoopDelayed;
-      if (keyboardLoopDelayed != null) {
-        keyboardLoopDelayed.delay = Store.getState().userConfiguration.keyboardDelay;
-      }
-    });
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          const { keyboardLoopDelayed } = this.input;
+          if (keyboardLoopDelayed != null) {
+            keyboardLoopDelayed.delay = keyboardDelay;
+          }
+        },
+      ),
+    );
   }
 
   init(): void {
@@ -459,6 +467,11 @@ class PlaneController extends React.PureComponent<Props> {
     }
   }
 
+  unsubscribeStoreListeners() {
+    this.storePropertyUnsubscribers.forEach(unsubscribe => unsubscribe());
+    this.storePropertyUnsubscribers = [];
+  }
+
   destroyInput() {
     for (const mouse of _.values(this.input.mouseControllers)) {
       mouse.destroy();
@@ -466,6 +479,7 @@ class PlaneController extends React.PureComponent<Props> {
     this.input.mouseControllers = {};
     Utils.__guard__(this.input.keyboard, x => x.destroy());
     Utils.__guard__(this.input.keyboardLoopDelayed, x2 => x2.destroy());
+    this.unsubscribeStoreListeners();
   }
 
   calculateGlobalPos = (clickPos: Point2): Vector3 => calculateGlobalPos(clickPos);

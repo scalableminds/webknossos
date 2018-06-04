@@ -308,6 +308,15 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       ),
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          const { keyboardLoopDelayed } = this.input;
+          if (keyboardLoopDelayed != null) {
+            keyboardLoopDelayed.delay = keyboardDelay;
+          }
+        },
+      ),
     );
   }
 

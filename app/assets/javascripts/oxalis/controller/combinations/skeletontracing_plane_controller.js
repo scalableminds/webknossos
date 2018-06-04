@@ -80,14 +80,13 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
   }
 
   getKeyboardControls(): Object {
-    return {
+    return _.extend(super.getKeyboardControls(), {
       "1": () => Store.dispatch(toggleAllTreesAction()),
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
       // Delete active node
       delete: () => Store.dispatch(deleteNodeWithConfirmAction()),
       c: () => Store.dispatch(createTreeAction()),
-
       // Branches
       b: () => Store.dispatch(createBranchPointAction()),
       j: () => Store.dispatch(requestDeleteBranchPointAction()),
@@ -96,7 +95,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
         api.tracing.centerNode();
         api.tracing.centerTDView();
       },
-    };
+    });
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
@@ -127,7 +126,10 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     const pickingScene = new THREE.Scene();
     pickingScene.add(pickingNode);
 
-    const { width, height } = getInputCatcherRect(plane);
+    let { width, height } = getInputCatcherRect(plane);
+    width = Math.round(width);
+    height = Math.round(height);
+
     const buffer = this.planeView.renderOrthoViewToTexture(plane, pickingScene);
     // Beware of the fact that new browsers yield float numbers for the mouse position
     const [x, y] = [Math.round(position.x), Math.round(position.y)];

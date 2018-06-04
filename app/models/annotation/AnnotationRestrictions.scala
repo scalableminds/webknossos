@@ -42,12 +42,12 @@ object AnnotationRestrictions {
   def restrictEverything =
     new AnnotationRestrictions()
 
-  def defaultAnnotationRestrictions(annotation: Annotation) =
+  def defaultAnnotationRestrictions(annotation: AnnotationSQL) =
     new AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         annotation.isPublic || user.exists {
           user =>
-            annotation._user == user._id || user.isTeamManagerOfBLOCKING(annotation._team)
+            annotation._user == user._id || annotation._team.toBSONObjectId.map(user.isTeamManagerOfBLOCKING(_)).getOrElse(false)
         }
       }
 
@@ -61,7 +61,7 @@ object AnnotationRestrictions {
       override def allowFinish(user: Option[User]) = {
         user.exists {
           user =>
-            (annotation._user == user._id || user.isTeamManagerOfBLOCKING(annotation._team)) && !(annotation.state == Finished)
+            (annotation._user == user._id || annotation._team.toBSONObjectId.map(user.isTeamManagerOfBLOCKING(_)).getOrElse(false)) && !(annotation.state == Finished)
         }
       }
     }

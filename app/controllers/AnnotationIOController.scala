@@ -150,7 +150,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
 
     for {
-      annotation <- findAnnotation(AnnotationIdentifier(typ, annotationId))
+      annotation <- provideAnnotation(typ, annotationId)
       name <- nameForAnnotation(annotation) ?~> Messages("annotation.name.impossible")
       restrictions <- restrictionsFor(AnnotationIdentifier(typ, annotationId))
       _ <- restrictions.allowDownload(user) ?~> Messages("annotation.download.notAllowed")

@@ -1,13 +1,21 @@
 package models.annotation
 
-import play.api.libs.json.Json
+import com.scalableminds.util.tools.Fox
+import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
+import utils.ObjectId
 
-case class AnnotationIdentifier(annotationType: String, identifier: String) {
+case class AnnotationIdentifier(annotationType: AnnotationTypeSQL, identifier: ObjectId) {
 
   def toUniqueString =
     annotationType + "__" + identifier
+
 }
 
 object AnnotationIdentifier {
-  implicit val annotationIdentifierFormat = Json.format[AnnotationIdentifier]
+
+  def parse(typ: String, id: String): Fox[AnnotationIdentifier] = for {
+    identifier <- ObjectId.parse(id)
+    typ <- AnnotationTypeSQL.fromString(typ)
+  } yield AnnotationIdentifier(typ, identifier)
+
 }

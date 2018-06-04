@@ -4,7 +4,6 @@
 package models.annotation
 
 import javax.management.relation.Role
-
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -13,7 +12,7 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationType.AnnotationType
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
-import models.binary.{DataSetDAO, DataSetSQLDAO}
+import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO}
 import models.task.TaskSQLDAO.transactionSerializationError
 import models.task.{TaskSQLDAO, TaskTypeSQLDAO, _}
 import models.team.TeamSQLDAO
@@ -36,12 +35,11 @@ import utils.{ObjectId, SQLDAO}
 
 case class AnnotationSQL(
                           _id: ObjectId,
-                          _dataset: ObjectId,
+                          _dataSet: ObjectId,
                           _task: Option[ObjectId] = None,
                           _team: ObjectId,
                           _user: ObjectId,
                           tracing: TracingReference,
-
                           description: String = "",
                           isPublic: Boolean = false,
                           name: String = "",
@@ -50,43 +48,88 @@ case class AnnotationSQL(
                           tags: Set[String] = Set.empty,
                           tracingTime: Option[Long] = None,
                           typ: AnnotationTypeSQL.Value = AnnotationTypeSQL.Explorational,
-
                           created: Long = System.currentTimeMillis,
                           modified: Long = System.currentTimeMillis,
                           isDeleted: Boolean = false
-                        )
+                        ) extends FoxImplicits {
 
+  lazy val muta = new AnnotationMutations(this)
 
-object AnnotationSQL extends FoxImplicits {
-  implicit val jsonFormat = Json.format[AnnotationSQL]
+  lazy val id = _id.toString
+  lazy val team = _team.toString
 
-  //note that annotation settings are dropped here, because on reading, they will be reconstructed from the db relations directly
-  def fromAnnotation(a: Annotation)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
+  def user: Fox[User] =
+    UserService.findOneById(_user.toString, useCache = true)(GlobalAccessContext)
+
+  def task: Fox[TaskSQL] =
+    _task.toFox.flatMap(taskId => TaskSQLDAO.findOne(taskId)(GlobalAccessContext))
+
+  def dataSet: Fox[DataSet] =
+    DataSetDAO.findOneById(_dataSet) ?~> "dataSet.notFound"
+
+  val tracingType = tracing.typ
+
+  def isRevertPossible: Boolean = {
+    // Unfortunately, we can not revert all tracings, because we do not have the history for all of them
+    // hence we need a way to decide if a tracing can safely be reverted. We will use the created date of the
+    // annotation to do so
+    created > 1470002400000L  // 1.8.2016, 00:00:00
+  }
+
+  private def findSettings(implicit ctx: DBAccessContext) = {
+    if (typ == AnnotationTypeSQL.Explorational)
+      Fox.successful(AnnotationSettings.defaultFor(tracing.typ))
+    else
+      for {
+        taskId <- _task.toFox
+        task: TaskSQL <- TaskSQLDAO.findOne(taskId) ?~> Messages("task.notFound")
+        taskType <- TaskTypeSQLDAO.findOne(task._taskType) ?~> Messages("taskType.notFound")
+      } yield {
+        taskType.settings
+      }
+  }
+
+  private def composeRestrictions(restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {
+    if (readOnly.getOrElse(false))
+      AnnotationRestrictions.readonlyAnnotation()
+    else
+      restrictions.getOrElse(AnnotationRestrictions.defaultAnnotationRestrictions(this))
+  }
+
+  def publicWrites(requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      dataSet <- DataSetSQLDAO.findOneByName(a.dataSetName)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
-      typ <- AnnotationTypeSQL.fromString(a.typ)
+      taskJson <- task.flatMap(_.publicWrites).getOrElse(JsNull)
+      dataSet <- dataSet
+      userJson <- user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
+      settings <- findSettings
     } yield {
-      AnnotationSQL(
-        ObjectId.fromBsonId(a._id),
-        dataSet._id,
-        a._task.map(ObjectId.fromBsonId),
-        ObjectId.fromBsonId(a._team),
-        ObjectId.fromBsonId(a._user),
-        a.tracingReference,
-        a.description,
-        a.isPublic,
-        a.name,
-        a.state,
-        a.statistics.getOrElse(Json.obj()),
-        a.tags,
-        a.tracingTime,
-        typ,
-        a.createdTimestamp,
-        a.modifiedTimestamp,
-        !a.isActive
+      Json.obj(
+        "modified" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(modified),
+        "state" -> state,
+        "id" -> id,
+        "name" -> name,
+        "description" -> description,
+        "typ" -> typ,
+        "task" -> taskJson,
+        "stats" -> statistics,
+        "restrictions" -> AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser),
+        "formattedHash" -> Formatter.formatHash(id),
+        "content" -> tracing,
+        "dataSetName" -> dataSet.name,
+        "dataStore" -> dataSet.dataStoreInfo,
+        "isPublic" -> isPublic,
+        "settings" -> settings,
+        "tracingTime" -> tracingTime,
+        "tags" -> (tags ++ Set(dataSet.name, tracing.typ.toString)),
+        "user" -> userJson
       )
     }
   }
+}
+
+
+object AnnotationSQL extends FoxImplicits {
+
 }
 
 object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotations] {
@@ -225,7 +268,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       _ <- run(
         sqlu"""
                insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-               values(${a._id.id}, ${a._dataset.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
+               values(${a._id.id}, ${a._dataSet.id}, ${a._task.map(_.id)}, ${a._team.id}, ${a._user.id}, ${a.tracing.id},
                    '#${a.tracing.typ.toString}', ${a.description}, ${a.isPublic}, ${a.name}, '#${a.state.toString}', '#${sanitize(a.statistics.toString)}',
                    '#${writeArrayTuple(a.tags.toList.map(sanitize(_)))}', ${a.tracingTime}, '#${a.typ.toString}', ${new java.sql.Timestamp(a.created)},
                    ${new java.sql.Timestamp(a.modified)}, ${a.isDeleted})
@@ -239,7 +282,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
         sqlu"""
              update webknossos.annotations
              set
-               _dataSet = ${a._dataset.id},
+               _dataSet = ${a._dataSet.id},
                _team = ${a._team.id},
                _user = ${a._user.id},
                tracing_id = ${a.tracing.id},
@@ -342,7 +385,6 @@ case class Annotation(
                      ) extends FoxImplicits {
 
 
-  lazy val muta = new AnnotationMutations(this)
 
   /**
     * Easy access methods
@@ -430,7 +472,7 @@ object Annotation extends FoxImplicits {
 
   def fromAnnotationSQL(s: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[Annotation] = {
     for {
-      dataset <- DataSetSQLDAO.findOne(s._dataset)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
+      dataset <- DataSetSQLDAO.findOne(s._dataSet)(GlobalAccessContext) ?~> Messages("dataSet.notFound")
       settings <- findSettingsFor(s)(GlobalAccessContext)
       name: Option[String] = if (s.name.isEmpty) None else Some(s.name)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)

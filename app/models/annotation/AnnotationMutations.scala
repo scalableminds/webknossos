@@ -10,9 +10,7 @@ import models.annotation.AnnotationState._
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 
-class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
-
-  type AType = Annotation
+class AnnotationMutations(val annotation: AnnotationSQL) extends BoxImplicits with FoxImplicits {
 
   def finishAnnotation(user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
     def executeFinish(annotation: Annotation): Fox[(Annotation, String)] = {
@@ -36,8 +34,8 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     }
   }
 
-  def reopen()(implicit ctx: DBAccessContext) = {
-    AnnotationDAO.updateState(annotation._id, AnnotationState.Active)
+  def reopen(implicit ctx: DBAccessContext) = {
+    AnnotationSQLDAO.updateState(annotation._id, AnnotationState.Active)
   }
 
   def rename(name: String)(implicit ctx: DBAccessContext) =

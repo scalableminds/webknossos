@@ -459,6 +459,13 @@ object DataSet extends FoxImplicits {
 
 object DataSetDAO {
 
+  def findOneById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] = {
+    for {
+      dataSetSQL <- DataSetSQLDAO.findOne(id)
+      dataSet <- DataSet.fromDataSetSQL(dataSetSQL)
+    } yield dataSet
+  }
+
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext): Fox[DataSet] = {
     for {
       dataSetSQL <- DataSetSQLDAO.findOneByName(name)

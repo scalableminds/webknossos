@@ -71,36 +71,37 @@ object AnnotationService
 
   def createExplorationalFor(
     user: User,
-    dataSet: DataSet,
+    _dataSet: ObjectId,
     tracingType: TracingType.Value,
-    withFallback: Boolean,
-    id: String = "")(implicit ctx: DBAccessContext): Fox[Annotation] = {
+    withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
 
-    def createTracing(dataSource: DataSource) = tracingType match {
+    def createTracing(dataSet: DataSet, dataSource: DataSource) = tracingType match {
       case TracingType.skeleton =>
         dataSet.dataStore.saveSkeletonTracing(SkeletonTracingDefaults.createInstance.copy(dataSetName = dataSet.name, editPosition = dataSource.center))
       case TracingType.volume =>
         dataSet.dataStore.saveVolumeTracing(createVolumeTracing(dataSource, withFallback))
     }
     for {
+      dataSet <- DataSetDAO.findOneById(_dataSet)
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
-      tracing <- createTracing(dataSource)
-      annotation = Annotation(
-        user._id,
-        tracing,
-        dataSet.name,
-        selectSuitableTeam(user, dataSet),
-        AnnotationSettings.defaultFor(tracingType),
-        _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
-      _ <- annotation.saveToDB
+      tracing <- createTracing(dataSet, dataSource)
+      annotation = AnnotationSQL(
+        ObjectId.generate,
+        _dataSet,
+        None,
+        ObjectId.fromBsonId(selectSuitableTeam(user, dataSet)),
+        ObjectId.fromBsonId(user._id),
+        tracing
+      )
+      _ <- AnnotationSQLDAO.insertOne(annotation)
     } yield {
       annotation
     }
   }
 
-  def finish(annotation: Annotation)(implicit ctx: DBAccessContext) = {
+  def finish(annotation: AnnotationSQL)(implicit ctx: DBAccessContext) = {
     // WARNING: needs to be repeatable, might be called multiple times for an annotation
-    AnnotationDAO.finish(annotation._id)
+    AnnotationSQLDAO.updateState(annotation._id, AnnotationState.Finished)
   }
 
   def baseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
@@ -109,7 +110,7 @@ object AnnotationService
     } yield list.headOption.toFox).flatten
 
   def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
-      AnnotationDAO.findByTaskIdAndType(taskId, AnnotationType.Task)
+      AnnotationSQLDAO.findAllByTaskIdAndType(taskId, AnnotationTypeSQL.Task)
 
   def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
     AnnotationDAO.countActiveByTaskIdAndType(taskId, AnnotationType.Task)
@@ -222,9 +223,6 @@ object AnnotationService
       _ <- annotation.saveToDB
     } yield annotation
   }
-
-  def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.logTime(time, _annotation)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
     for {

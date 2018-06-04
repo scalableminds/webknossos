@@ -105,6 +105,10 @@ const KeyboardShortcutView = () => {
       action: "Change Node Radius",
     },
     {
+      keybinding: "H, G",
+      action: "Increase/Decrease the Move Value",
+    },
+    {
       keybinding: "CTRL + Shift + F",
       action: "Open Tree Search (if Tree List is visible)",
     },

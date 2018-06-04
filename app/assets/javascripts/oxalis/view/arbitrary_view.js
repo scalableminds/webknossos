@@ -7,14 +7,11 @@ import app from "app";
 import BackboneEvents from "backbone-events-standalone";
 import * as THREE from "three";
 import TWEEN from "tween.js";
-import Constants, { ArbitraryViewport } from "oxalis/constants";
+import Constants from "oxalis/constants";
 import Store from "oxalis/store";
 import SceneController from "oxalis/controller/scene_controller";
 import { getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
-import { getDesiredCanvasSize } from "oxalis/view/layouting/tracing_layout_view";
 import window from "libs/window";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
-import { clearCanvas, setupRenderArea } from "./plane_view";
 
 class ArbitraryView {
   // Copied form backbone events (TODO: handle this better)
@@ -29,6 +26,8 @@ class ArbitraryView {
   isRunning: boolean = false;
   animationRequestId: ?number = null;
 
+  width: number;
+  height: number;
   scaleFactor: number;
   camDistance: number;
 
@@ -142,10 +141,10 @@ class ArbitraryView {
       camera.matrix.multiply(new THREE.Matrix4().makeTranslation(...this.cameraPosition));
       camera.matrixWorldNeedsUpdate = true;
 
-      clearCanvas(renderer);
-
-      const { left, top, width, height } = getInputCatcherRect(ArbitraryViewport);
-      setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
+      renderer.setViewport(0, 0, this.width, this.width);
+      renderer.setScissor(0, 0, this.width, this.width);
+      renderer.setScissorTest(true);
+      renderer.setClearColor(0xffffff, 1);
 
       renderer.render(scene, camera);
 
@@ -173,11 +172,9 @@ class ArbitraryView {
 
   resizeImpl(): void {
     // Call this after the canvas was resized to fix the viewport
-
-    getDesiredCanvasSize().map(([width, height]) =>
-      SceneController.renderer.setSize(width, height),
-    );
-
+    // Needs to be bound
+    this.width = Store.getState().userConfiguration.scale * Constants.VIEWPORT_WIDTH;
+    SceneController.renderer.setSize(this.width, this.width);
     this.draw();
   }
 

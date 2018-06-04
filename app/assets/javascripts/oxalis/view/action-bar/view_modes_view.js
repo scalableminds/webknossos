@@ -2,7 +2,7 @@
 import React, { PureComponent } from "react";
 import constants from "oxalis/constants";
 import type { ModeType } from "oxalis/constants";
-import { Menu, Radio, Icon, Dropdown } from "antd";
+import { Radio } from "antd";
 import { setViewModeAction } from "oxalis/model/actions/settings_actions";
 import type { OxalisState, AllowedModeType } from "oxalis/store";
 import Store from "oxalis/store";
@@ -14,26 +14,7 @@ type Props = {
   allowedModes: Array<AllowedModeType>,
 };
 
-type State = {
-  arbitraryModeLabel: ModeType,
-};
-
-class ViewModesView extends PureComponent<Props, State> {
-  constructor() {
-    super();
-    this.state = {
-      arbitraryModeLabel: constants.MODE_ARBITRARY,
-    };
-  }
-
-  componentWillReceiveProps(nextProps: Props) {
-    if (nextProps.viewMode !== constants.MODE_PLANE_TRACING) {
-      this.setState({
-        arbitraryModeLabel: nextProps.viewMode,
-      });
-    }
-  }
-
+class ViewModesView extends PureComponent<Props> {
   blurElement = (event: SyntheticInputEvent<>) => {
     event.target.blur();
   };
@@ -47,39 +28,19 @@ class ViewModesView extends PureComponent<Props, State> {
   }
 
   render() {
-    const arbitraryMenu = (
-      <Menu
-        selectedKeys={[this.props.viewMode]}
-        onClick={({ key }) => Store.dispatch(setViewModeAction(key))}
-      >
-        <Menu.Item key={constants.MODE_ARBITRARY}>Flight</Menu.Item>
-        <Menu.Item key={constants.MODE_ARBITRARY_PLANE}>Oblique</Menu.Item>
-      </Menu>
-    );
-
     const viewMode = this.props.viewMode;
-
     return (
       <Radio.Group onChange={this.handleChange} value={viewMode}>
-        <Radio.Button
-          onClick={this.blurElement}
-          key={constants.MODE_PLANE_TRACING}
-          disabled={this.isDisabled(constants.MODE_PLANE_TRACING)}
-          value={constants.MODE_PLANE_TRACING}
-        >
-          {Utils.capitalize(constants.MODE_PLANE_TRACING)}
-        </Radio.Button>
-        <Dropdown key="arbitrary" overlay={arbitraryMenu}>
+        {constants.MODES_SKELETON.map(mode => (
           <Radio.Button
             onClick={this.blurElement}
-            key={this.state.arbitraryModeLabel}
-            disabled={this.isDisabled(this.state.arbitraryModeLabel)}
-            value={this.state.arbitraryModeLabel}
-            style={{ paddingRight: 0 }}
+            key={mode}
+            disabled={this.isDisabled(mode)}
+            value={mode}
           >
-            {Utils.capitalize(this.state.arbitraryModeLabel)} <Icon type="down" />
+            {Utils.capitalize(mode)}
           </Radio.Button>
-        </Dropdown>
+        ))}
       </Radio.Group>
     );
   }

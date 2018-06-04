@@ -207,15 +207,13 @@ object AnnotationService
                 dataSet: DataSet,
                 tracingReference: TracingReference,
                 annotationType: AnnotationType,
-                settings: AnnotationSettings,
                 name: Option[String],
                 description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
-    val annotation = Annotation(
+    val annotation = AnnotationSQL(
       user._id,
       tracingReference,
       dataSet.name,
       _team = selectSuitableTeam(user, dataSet),
-      settings = settings,
       _name = name,
       description = description,
       typ = annotationType)

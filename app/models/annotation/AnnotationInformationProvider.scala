@@ -15,7 +15,7 @@ trait AnnotationInformationProvider
   def provideAnnotation(typ: String, id: String)(implicit request: UserAwareRequest[_]): Fox[AnnotationSQL] =
     for {
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
-      annotation <- provideAnnotation(annotationIdentifier)
+      annotation <- provideAnnotation(annotationIdentifier) ?~> "annotation.notFound"
     } yield annotation
 
   def provideAnnotation(annotationIdentifier: AnnotationIdentifier)(implicit request: UserAwareRequest[_]): Fox[AnnotationSQL] = {

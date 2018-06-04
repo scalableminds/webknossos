@@ -196,7 +196,7 @@ class ArbitraryController extends React.PureComponent<Props> {
         h: () => this.changeMoveValue(25),
         g: () => this.changeMoveValue(-25),
       },
-      Store.getState().userConfiguration.keyboardDelay,
+      { delay: Store.getState().userConfiguration.keyboardDelay },
     );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({

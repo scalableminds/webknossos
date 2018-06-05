@@ -22,21 +22,6 @@ module.exports = function(env = {}) {
     }),
   ];
 
-  if (env.production) {
-    plugins.push(
-      new UglifyJsPlugin({
-        cache: true,
-        parallel: true,
-        sourceMap: true,
-        uglifyOptions: {
-          compress: {
-            inline: 1,
-          },
-        },
-      }),
-    );
-  }
-
   return {
     entry: {
       main: "main.js",

@@ -3,6 +3,9 @@
  - **If the PR is not relevant to the mailing list, remove this whole paragraph.**
  - e.g. *- Deleting large trees will no longer cause webknossos to freeze.*
 
+### URL of deployed dev instance (used for testing):
+- `http://___.webknossos.xyz`
+
 ### Steps to test:
 - abc
 

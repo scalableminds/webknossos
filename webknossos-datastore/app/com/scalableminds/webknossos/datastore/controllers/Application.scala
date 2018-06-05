@@ -11,10 +11,12 @@ import play.api.mvc.Action
 
 class Application @Inject()(tracingDataStore: TracingDataStore, val messagesApi: MessagesApi) extends Controller {
 
-  def health = Action.async { implicit request =>
-    for {
-      _ <- tracingDataStore.healthClient.checkHealth
-    } yield Ok
+  def health = Action { implicit request =>
+    AllowRemoteOrigin {
+      for {
+        _ <- tracingDataStore.healthClient.checkHealth
+      } yield Ok
+    }
   }
 
 }

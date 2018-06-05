@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.tracings.{TracingReference, Tracin
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationType.AnnotationType
+import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.DataSetDAO
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
@@ -13,15 +13,11 @@ import utils.ObjectId
 object AnnotationMerger extends FoxImplicits with LazyLogging {
 
   def mergeTwoByIds(
-    idA: String,
-    typA: AnnotationType,
-    idB: String,
-    typB: AnnotationType,
-    persistTracing: Boolean
-    )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[AnnotationSQL] = {
+                    identifierA: AnnotationIdentifier,
+                    identifierB: AnnotationIdentifier,
+                    persistTracing: Boolean
+                   )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[AnnotationSQL] = {
     for {
-      identifierA <- AnnotationIdentifier.parse(typA, idA)
-      identifierB <- AnnotationIdentifier.parse(typB, idB)
       annotationA: AnnotationSQL <- AnnotationStore.requestAnnotation(identifierA, Some(request.identity)) ?~> "Request Annotation in AnnotationStore failed"
       annotationB: AnnotationSQL <- AnnotationStore.requestAnnotation(identifierB, Some(request.identity)) ?~> "Request Annotation in AnnotationStore failed"
       mergedAnnotation <- mergeTwo(annotationA, annotationB, persistTracing)
@@ -39,7 +35,7 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
       ObjectId.fromBsonId(request.identity._id),
       annotationB._dataSet,
       annotationB._team,
-      AnnotationType.Explorational,
+      AnnotationTypeSQL.Explorational,
       List(annotationA, annotationB)
     )
   }
@@ -50,7 +46,7 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
     _user: ObjectId,
     _dataSet: ObjectId,
     _team: ObjectId,
-    typ: AnnotationType,
+    typ: AnnotationTypeSQL,
     annotations: List[AnnotationSQL]
     )(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
     if (annotations.isEmpty)
@@ -65,7 +61,8 @@ object AnnotationMerger extends FoxImplicits with LazyLogging {
           None,
           _team,
           _user,
-          mergedTracingReference
+          mergedTracingReference,
+          typ = typ
         )
       }
     }

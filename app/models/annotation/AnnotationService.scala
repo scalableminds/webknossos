@@ -14,7 +14,6 @@ import com.scalableminds.webknossos.datastore.tracings.skeleton.{NodeDefaults, S
 import com.scalableminds.webknossos.datastore.tracings.volume.VolumeTracingDefaults
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationState._
-import models.annotation.AnnotationType._
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter

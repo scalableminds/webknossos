@@ -23,7 +23,7 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
       project <- ProjectSQLDAO.findOne(task._project)
       _dataSet = finishedAnnotations.head._dataSet
       mergedAnnotation <- AnnotationMerger.mergeN(task._id, persistTracing=false, ObjectId.fromBsonId(user._id),
-        _dataSet, project._team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+        _dataSet, project._team, AnnotationTypeSQL.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =

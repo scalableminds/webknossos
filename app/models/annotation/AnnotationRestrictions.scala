@@ -1,10 +1,10 @@
 package models.annotation
 
 import javax.management.relation.Role
-
 import models.user.User
 import play.api.libs.json._
 import models.annotation.AnnotationState._
+import utils.ObjectId
 
 /**
  * Company: scalableminds
@@ -47,21 +47,21 @@ object AnnotationRestrictions {
       override def allowAccess(user: Option[User]) = {
         annotation.isPublic || user.exists {
           user =>
-            annotation._user == user._id || annotation._team.toBSONObjectId.map(user.isTeamManagerOfBLOCKING(_)).getOrElse(false)
+            annotation._user == ObjectId.fromBsonId(user._id) || annotation._team.toBSONObjectId.map(user.isTeamManagerOfBLOCKING(_)).getOrElse(false)
         }
       }
 
       override def allowUpdate(user: Option[User]) = {
         user.exists {
           user =>
-            annotation._user == user._id && !(annotation.state == Finished)
+            annotation._user == ObjectId.fromBsonId(user._id) && !(annotation.state == Finished)
         }
       }
 
       override def allowFinish(user: Option[User]) = {
         user.exists {
           user =>
-            (annotation._user == user._id || annotation._team.toBSONObjectId.map(user.isTeamManagerOfBLOCKING(_)).getOrElse(false)) && !(annotation.state == Finished)
+            (annotation._user == ObjectId.fromBsonId(user._id) || annotation._team.toBSONObjectId.map(user.isTeamManagerOfBLOCKING(_)).getOrElse(false)) && !(annotation.state == Finished)
         }
       }
     }

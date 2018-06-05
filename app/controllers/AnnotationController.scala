@@ -52,7 +52,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def merge(typ: String, id: String, mergedTyp: String, mergedId: String) = SecuredAction.async { implicit request =>
     for {
-      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(id, typ, mergedId, mergedTyp, true)
+      identifierA <- AnnotationIdentifier.parse(typ, id)
+      identifierB <- AnnotationIdentifier.parse(mergedTyp, mergedId)
+      mergedAnnotation <- AnnotationMerger.mergeTwoByIds(identifierA, identifierB, true)
       restrictions = AnnotationRestrictions.defaultAnnotationRestrictions(mergedAnnotation)
       _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
       _ <- AnnotationSQLDAO.insertOne(mergedAnnotation)
@@ -204,7 +206,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def cancel(typ: String, id: String) = SecuredAction.async { implicit request =>
     def tryToCancel(annotation: AnnotationSQL) = {
       annotation match {
-        case t if t.typ == AnnotationType.Task =>
+        case t if t.typ == AnnotationTypeSQL.Task.toString =>
           annotation.muta.cancel.map { _ =>
             JsonOk(Messages("task.finished"))
           }

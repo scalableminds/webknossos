@@ -10,7 +10,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
-import models.annotation.AnnotationType.AnnotationType
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO}
 import models.task.TaskSQLDAO.transactionSerializationError
@@ -214,7 +213,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       accessQuery <- readAccessQuery
       r <- run(sql"""select #${columnsWithPrefix("a.")} from #${existingCollectionName} a
                      join webknossos.tasks_ t on a._task = t._id
-                     where t._project = ${projectId.id} and a.typ = '#${AnnotationType.Task.toString}' and a.state = '#${AnnotationState.Finished.toString}'""".as[AnnotationsRow])
+                     where t._project = ${projectId.id} and a.typ = '#${AnnotationTypeSQL.Task.toString}' and a.state = '#${AnnotationState.Finished.toString}'""".as[AnnotationsRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
 

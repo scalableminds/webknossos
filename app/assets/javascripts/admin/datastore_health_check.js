@@ -26,9 +26,11 @@ export const pingDataStoreIfAppropriate = memoizedThrottle(async (requestedUrl: 
   if (usedDataStore != null) {
     const { url } = usedDataStore;
     const healthEndpoint = `${url}/data/health`;
-    Request.triggerRequest(healthEndpoint, { doNotCatch: true, mode: "cors", timeout: 5000 }).catch(() => {
-      Toast.warning(messages["datastore.health"]({ url }));
-    });
+    Request.triggerRequest(healthEndpoint, { doNotCatch: true, mode: "cors", timeout: 5000 }).catch(
+      () => {
+        Toast.warning(messages["datastore.health"]({ url }));
+      },
+    );
   }
 }, 5000);
 

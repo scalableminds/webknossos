@@ -76,9 +76,7 @@ case class AnnotationSQL(
   }
 
   private def findSettings(implicit ctx: DBAccessContext) = {
-    if (typ == AnnotationTypeSQL.Explorational)
-      Fox.successful(AnnotationSettings.defaultFor(tracing.typ))
-    else
+    if (typ == AnnotationTypeSQL.Task || typ == AnnotationTypeSQL.TracingBase)
       for {
         taskId <- _task.toFox
         task: TaskSQL <- TaskSQLDAO.findOne(taskId) ?~> Messages("task.notFound")
@@ -86,6 +84,8 @@ case class AnnotationSQL(
       } yield {
         taskType.settings
       }
+    else
+      Fox.successful(AnnotationSettings.defaultFor(tracing.typ))
   }
 
   private def composeRestrictions(restrictions: Option[AnnotationRestrictions], readOnly: Option[Boolean]) = {

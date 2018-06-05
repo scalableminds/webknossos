@@ -4,14 +4,13 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.{Annotation, AnnotationDAO}
+import models.annotation.{AnnotationSQL, AnnotationSQLDAO}
 import models.binary._
 import models.user.time.TimeSpanService
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
@@ -83,16 +82,16 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
   def handleTracingUpdateReport(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       tracingId <- (request.body \ "tracingId").asOpt[String].toFox
-      annotation: Annotation <- AnnotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
+      annotation <- AnnotationSQLDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
       _ <- ensureAnnotationNotFinished(annotation)
       timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
       statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
       userTokenOpt = (request.body \ "userToken").asOpt[String]
       _ <- statisticsOpt match {
-        case Some(statistics) => AnnotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
+        case Some(statistics) => AnnotationSQLDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
         case None => Fox.successful(())
       }
-      _ <- AnnotationDAO.updateModifiedTimestamp(annotation._id)(GlobalAccessContext)
+      _ <- AnnotationSQLDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
       userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
     } yield {
       userBox.map(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
@@ -100,7 +99,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  private def ensureAnnotationNotFinished(annotation: Annotation) = {
+  private def ensureAnnotationNotFinished(annotation: AnnotationSQL) = {
     if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
   }

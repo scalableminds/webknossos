@@ -3,7 +3,7 @@ package models.user.time
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.annotation.{Annotation, AnnotationSQL}
+import models.annotation.AnnotationSQL
 import org.joda.time.DateTime
 import play.api.Play.current
 import play.api.i18n.Messages

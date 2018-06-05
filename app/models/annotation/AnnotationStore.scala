@@ -14,7 +14,7 @@ object AnnotationStore extends LazyLogging {
 
   private val cacheTimeout = 5 minutes
 
-  case class StoredResult(result: Fox[Annotation], timestamp: Long = System.currentTimeMillis)
+  case class StoredResult(result: Fox[AnnotationSQL], timestamp: Long = System.currentTimeMillis)
 
   def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     requestFromCache(id)

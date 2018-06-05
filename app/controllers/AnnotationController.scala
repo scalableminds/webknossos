@@ -5,12 +5,12 @@ import akka.util.Timeout
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
-import models.annotation.{Annotation, _}
+import models.annotation._
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.task.TaskSQLDAO
 import models.user.time._
 import models.user.{User, UserDAO}
-import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
 import utils.ObjectId
@@ -65,8 +65,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def loggedTime(typ: String, id: String) = SecuredAction.async { implicit request =>
       for {
-        annotation <- provideAnnotation(typ, id) //TODO: (securedRequestToUserAwareRequest)
-        restrictions <- restrictionsFor(typ, id)
+        annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+        restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
         _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
         loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(id, TimeSpan.groupByMonth)
       } yield {
@@ -82,7 +82,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def revert(typ: String, id: String, version: Int) = SecuredAction.async { implicit request =>
     for {
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      restrictions <- restrictionsFor(typ, id)
+      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowUpdate(request.identity) ?~> Messages("notAllowed")
       _ <- annotation.isRevertPossible ?~> Messages("annotation.revert.toOld")
       dataSet <- DataSetDAO.findOneById(annotation._dataSet).toFox ?~> Messages("dataSet.notFound", annotation._dataSet)
@@ -96,10 +96,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def reset(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- ensureTeamAdministration(request.identity, annotation._team)
-      reset <- annotation.muta.resetToBase() ?~> Messages("annotation.reset.failed")
-      json <- reset.toJson(Some(request.identity))
+      _ <- annotation.muta.resetToBase ?~> Messages("annotation.reset.failed")
+      updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      json <- updated.publicWrites(Some(request.identity))
     } yield {
       JsonOk(json, Messages("annotation.reset.success"))
     }
@@ -112,11 +113,11 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     } yield (annotation._user == user._id || isAdminOrTeamManager)
 
     for {
-      annotation <- provideAnnotation(typ, id)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       isAllowed <- isReopenAllowed(request.identity, annotation)
       _ <- isAllowed ?~> "reopen.notAllowed"
       _ <- annotation.muta.reopen ?~> "annotation.invalid"
-      updatedAnnotation <- provideAnnotation(typ, id)
+      updatedAnnotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updatedAnnotation.publicWrites(Some(request.identity))
     } yield {
       JsonOk(json, Messages("annotation.reopened"))
@@ -139,12 +140,12 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       }
     }
 
-  private def finishAnnotation(typ: String, id: String, user: User)(implicit ctx: DBAccessContext): Fox[(AnnotationSQL, String)] = {
+  private def finishAnnotation(typ: String, id: String, user: User)(implicit request: SecuredRequest[_]): Fox[(AnnotationSQL, String)] = {
     for {
-      annotation <- provideAnnotation(typ, id)
-      restrictions <- restrictionsFor(typ, id)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       message <- annotation.muta.finishAnnotation(user, restrictions)
-      updated <- provideAnnotation(typ, id)
+      updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
     } yield {
       TimeSpanService.logUserInteraction(user, annotation) // log time on tracing end
       (updated, message)
@@ -153,8 +154,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def finish(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
-      (updated, message) <- finishAnnotation(typ, id, request.identity)(GlobalAccessContext)
-      restrictions <- restrictionsFor(typ, id)
+      (updated, message) <- finishAnnotation(typ, id, request.identity)
+      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(json, Messages(message))
@@ -164,7 +165,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def finishAll(typ: String) = SecuredAction.async(parse.json) { implicit request =>
     withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
       val results = Fox.serialSequence(annotationIds.value.toList){jsValue =>
-        jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity)(GlobalAccessContext))
+        jsValue.asOpt[String].toFox.flatMap(id => finishAnnotation(typ, id, request.identity))
       }
 
       results.map { results =>
@@ -175,7 +176,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def editAnnotation(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       muta = annotation.muta
       _ <- (request.body \ "name").asOpt[String].map(muta.rename).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
       _ <- (request.body \ "description").asOpt[String].map(muta.setDescription).getOrElse(Fox.successful(())) ?~> Messages("annotation.edit.failed")
@@ -213,7 +214,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
 
     for {
-      annotation <- provideAnnotation(typ, id)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       _ <- ensureTeamAdministration(request.identity, annotation._team)
       result <- tryToCancel(annotation)
     } yield result
@@ -221,12 +222,12 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def transfer(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       newUserId <- (request.body \ "userId").asOpt[String].toFox
       newUser <- UserDAO.findOneById(newUserId) ?~> Messages("user.notFound")
       _ <- annotation.muta.transferToUser(newUser)
-      updated <- provideAnnotation(typ, id)
-      restrictions <- restrictionsFor(typ, id)
+      updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       json <- annotation.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(json)
@@ -235,9 +236,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def duplicate(typ: String, id: String) = SecuredAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)
+      annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       newAnnotation <- duplicateAnnotation(annotation, request.identity)
-      restrictions <- restrictionsFor(typ, id)
+      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       json <- newAnnotation.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(json)

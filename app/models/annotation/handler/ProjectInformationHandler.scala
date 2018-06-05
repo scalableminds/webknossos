@@ -11,10 +11,10 @@ import utils.ObjectId
 
 object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  def provideAnnotation(projectId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
+  override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
   {
     for {
-      project <- ProjectSQLDAO.findOne(ObjectId(projectId)) ?~> "project.notFound"
+      project <- ProjectSQLDAO.findOne(projectId) ?~> "project.notFound"
       annotations <- AnnotationSQLDAO.findAllFinishedForProject(project._id)
       _ <- assertAllOnSameDataset(annotations)
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
@@ -22,14 +22,14 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       teamIdBson <- project._team.toBSONObjectId.toFox
       _ <- user.assertTeamManagerOrAdminOf(teamIdBson)
       _dataSet = annotations.head._dataSet
-      mergedAnnotation <- AnnotationMerger.mergeN(ObjectId(projectId), persistTracing=false, ObjectId.fromBsonId(user._id),
+      mergedAnnotation <- AnnotationMerger.mergeN(projectId, persistTracing=false, ObjectId.fromBsonId(user._id),
         _dataSet, project._team, AnnotationType.CompoundProject, annotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
   }
 
-  override def restrictionsFor(projectId: String)(implicit ctx: DBAccessContext) =
+  override def restrictionsFor(projectId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      project <- ProjectSQLDAO.findOne(ObjectId(projectId))
+      project <- ProjectSQLDAO.findOne(projectId)
       teamIdBson <- project._team.toBSONObjectId.toFox
     } yield {
       new AnnotationRestrictions {

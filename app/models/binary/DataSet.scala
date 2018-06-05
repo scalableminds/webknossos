@@ -144,6 +144,13 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
       parsed
     }
 
+  def getIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    for {
+      accessQuery <- readAccessQuery
+      rList <- run(sql"select _id from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[String])
+      r <- rList.headOption.toFox
+    } yield ObjectId(r)
+
   def getSharingTokenByName(name: String)(implicit ctx: DBAccessContext): Fox[Option[String]] = {
     for {
       accessQuery <- readAccessQuery

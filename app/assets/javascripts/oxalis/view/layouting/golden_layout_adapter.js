@@ -17,7 +17,7 @@ type Props<KeyType> = {
   style: Object,
 };
 
-class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
+export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
   gl: GoldenLayout;
   unbindListener: Function;
 
@@ -103,4 +103,6 @@ class GoldenLayoutAdapter extends React.Component<Props<*>, *> {
   }
 }
 
-export default GoldenLayoutAdapter;
+// Warning: Don't use a default export for this component. Otherwise, when webpack is run in prod mode,
+// UglifyJS will break this component be re-mounting it on every state change of the parent
+export default {};

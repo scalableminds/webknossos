@@ -27,7 +27,7 @@ import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType, ModeType } from "oxalis/constants";
 import RecordingSwitch from "oxalis/view/recording_switch";
 import TDViewControls from "oxalis/view/td_view_controls";
-import GoldenLayoutAdapter from "./golden_layout_adapter";
+import { GoldenLayoutAdapter } from "./golden_layout_adapter";
 import { getLayoutConfig, storeLayoutConfig } from "./layout_persistence";
 import { determineLayout } from "./default_layout_configs";
 

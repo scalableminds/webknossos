@@ -35,7 +35,6 @@ import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/co
 import type { ModifierKeys } from "libs/input";
 import api from "oxalis/api/internal_api";
 import { connect } from "react-redux";
-import { getInputCatcherRect } from "oxalis/model/accessors/view_mode_accessor";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -80,7 +79,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
   }
 
   getKeyboardControls(): Object {
-    return {
+    return _.extend(super.getKeyboardControls(), {
       "1": () => Store.dispatch(toggleAllTreesAction()),
       "2": () => Store.dispatch(toggleInactiveTreesAction()),
 
@@ -96,7 +95,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
         api.tracing.centerNode();
         api.tracing.centerTDView();
       },
-    };
+    });
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
@@ -127,13 +126,12 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
     const pickingScene = new THREE.Scene();
     pickingScene.add(pickingNode);
 
-    const { width, height } = getInputCatcherRect(plane);
     const buffer = this.planeView.renderOrthoViewToTexture(plane, pickingScene);
     // Beware of the fact that new browsers yield float numbers for the mouse position
     const [x, y] = [Math.round(position.x), Math.round(position.y)];
     // compute the index of the pixel under the cursor,
     // while inverting along the y-axis, because OpenGL has its origin bottom-left :/
-    const index = (x + (height - y) * width) * 4;
+    const index = (x + (this.planeView.curWidth - y) * this.planeView.curWidth) * 4;
     // the nodeId can be reconstructed by interpreting the RGB values of the pixel as a base-255 number
     const nodeId = buffer.subarray(index, index + 3).reduce((a, b) => a * 255 + b, 0);
     SceneController.skeleton.stopPicking();

@@ -10,7 +10,7 @@ import { V3 } from "libs/mjs";
 import Store from "oxalis/store";
 import { setPositionAction, setRotationAction } from "oxalis/model/actions/flycam_actions";
 import { getPosition, getRotation } from "oxalis/model/accessors/flycam_accessor";
-import { Input, Tooltip, Icon } from "antd";
+import { Input, Tooltip } from "antd";
 import { Vector3Input } from "libs/vector_input";
 import ButtonComponent from "oxalis/view/components/button_component";
 import message from "messages";
@@ -51,15 +51,11 @@ class DatasetPositionView extends PureComponent<Props> {
         <Tooltip title={message["tracing.copy_position"]} placement="bottomLeft">
           <div>
             <Input.Group compact>
-              <ButtonComponent onClick={this.copyPositionToClipboard}>
-                <Icon type="pushpin" style={{ transform: "rotate(45deg)" }} />
-              </ButtonComponent>
+              <ButtonComponent onClick={this.copyPositionToClipboard}>Position</ButtonComponent>
               <Vector3Input
                 value={position}
                 onChange={this.handleChangePosition}
-                // The input field should be able to show at least xxxxx, yyyyy, zzzzz
-                // without scrolling
-                style={{ maxWidth: 140, textAlign: "center" }}
+                style={{ maxWidth: "160px", textAlign: "center" }}
               />
             </Input.Group>
           </div>
@@ -68,13 +64,11 @@ class DatasetPositionView extends PureComponent<Props> {
           <Tooltip title={message["tracing.copy_rotation"]} placement="bottomLeft">
             <div style={{ marginLeft: 10 }}>
               <Input.Group compact>
-                <ButtonComponent onClick={this.copyRotationToClipboard}>
-                  <Icon type="reload" />
-                </ButtonComponent>
+                <ButtonComponent onClick={this.copyRotationToClipboard}>Rotation</ButtonComponent>
                 <Vector3Input
                   value={rotation}
                   onChange={this.handleChangeRotation}
-                  style={{ width: 100 }}
+                  style={{ width: "120px" }}
                 />
               </Input.Group>
             </div>

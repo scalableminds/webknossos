@@ -34,8 +34,8 @@ import {
 import { saveNowAction } from "oxalis/model/actions/save_actions";
 import window from "libs/window";
 import Utils from "libs/utils";
-import Binary from "oxalis/model/binary";
-import ConnectionInfo from "oxalis/model/binarydata_connection_info";
+import DataLayer from "oxalis/model/data_layer";
+import ConnectionInfo from "oxalis/model/data_connection_info";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
 import type { Vector3, Point3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
@@ -48,11 +48,11 @@ import {
   getDataset,
   getSharingToken,
 } from "admin/admin_rest_api";
-import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
+import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import messages from "messages";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
-import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
-import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
+import type { DataTextureSizeAndCount } from "./model/bucket_data_handling/data_rendering_logic";
+import * as DataRenderingLogic from "./model/bucket_data_handling/data_rendering_logic";
 
 export type ServerNodeType = {
   id: number,
@@ -123,8 +123,8 @@ export class OxalisModel {
   HANDLED_ERROR = "error_was_handled";
 
   connectionInfo: ConnectionInfo;
-  binary: {
-    [key: string]: Binary,
+  dataLayers: {
+    [key: string]: DataLayer,
   };
   lowerBoundary: Vector3;
   upperBoundary: Vector3;
@@ -242,11 +242,11 @@ export class OxalisModel {
     _.extend(annotation.settings, { allowedModes, preferredMode });
 
     const isVolume = annotation.content.typ === "volume";
-    const controlMode = Store.getState().temporaryConfiguration.controlMode;
+    const { controlMode } = Store.getState().temporaryConfiguration;
     if (controlMode === ControlModeEnum.TRACE) {
       if (isVolume) {
         ErrorHandling.assert(
-          this.getSegmentationBinary() != null,
+          this.getSegmentationLayer() != null,
           messages["tracing.volume_missing_segmentation"],
         );
         const volumeTracing: ServerVolumeTracingType = (tracing: any);
@@ -292,7 +292,7 @@ export class OxalisModel {
     const [dataset, highestResolutions] = adaptResolutions(rawDataset);
 
     // Make sure subsequent fetch calls are always for the same dataset
-    if (!_.isEmpty(this.binary)) {
+    if (!_.isEmpty(this.dataLayers)) {
       ErrorHandling.assert(
         _.isEqual(dataset.dataSource.id.name, Store.getState().dataset.name),
         messages["dataset.changed_without_reload"],
@@ -325,13 +325,13 @@ export class OxalisModel {
     );
 
     this.connectionInfo = new ConnectionInfo();
-    this.binary = {};
+    this.dataLayers = {};
     for (const layer of layers) {
       const textureInformation = textureInformationPerLayer.get(layer);
       if (!textureInformation) {
         throw new Error("No texture information for layer?");
       }
-      this.binary[layer.name] = new Binary(
+      this.dataLayers[layer.name] = new DataLayer(
         layer,
         this.connectionInfo,
         textureInformation.textureSize,
@@ -341,7 +341,7 @@ export class OxalisModel {
 
     this.buildMappingsObject();
 
-    if (this.getColorBinaries().length === 0) {
+    if (this.getColorLayers().length === 0) {
       Toast.error(messages["dataset.no_data"]);
       throw this.HANDLED_ERROR;
     }
@@ -351,33 +351,33 @@ export class OxalisModel {
 
   // For now, since we have no UI for this
   buildMappingsObject() {
-    const segmentationBinary = this.getSegmentationBinary();
+    const segmentationLayer = this.getSegmentationLayer();
 
-    if (segmentationBinary != null && this.isMappingSupported) {
+    if (segmentationLayer != null && this.isMappingSupported) {
       window.mappings = {
         getAll() {
-          return segmentationBinary.mappings.getMappingNames();
+          return segmentationLayer.mappings.getMappingNames();
         },
         getActive() {
-          return segmentationBinary.activeMapping;
+          return segmentationLayer.activeMapping;
         },
         activate(mapping) {
-          return segmentationBinary.setActiveMapping(mapping);
+          return segmentationLayer.setActiveMapping(mapping);
         },
       };
     }
   }
 
-  getColorBinaries() {
-    return _.filter(this.binary, binary => binary.category === "color");
+  getColorLayers() {
+    return _.filter(this.dataLayers, dataLayer => dataLayer.category === "color");
   }
 
-  getSegmentationBinary() {
-    return _.find(this.binary, binary => binary.category === "segmentation");
+  getSegmentationLayer() {
+    return _.find(this.dataLayers, dataLayer => dataLayer.category === "segmentation");
   }
 
-  getBinaryByName(name: string) {
-    return this.binary[name];
+  getLayerByName(name: string) {
+    return this.dataLayers[name];
   }
 
   getLayerInfos(tracing: ?ServerTracingType, resolutions: Array<Vector3>): Array<DataLayerType> {
@@ -409,7 +409,8 @@ export class OxalisModel {
     // The tracing always contains the layer information for the user segmentation.
     // layers (dataset.dataLayers) contains information about all existing layers of the dataset.
     // Two possible cases:
-    // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer.
+    // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer - it needs
+    //    to be created and inserted.
     // 2) Segmentation exists: In that case layers already contains dataLayer and the fallbackLayer
     //    property specifies its name, to be able to merge the two layers
     const fallbackLayerName = tracing.fallbackLayer;
@@ -450,7 +451,7 @@ export class OxalisModel {
   }
 
   shouldDisplaySegmentationData(): boolean {
-    const segmentationOpacity = Store.getState().datasetConfiguration.segmentationOpacity;
+    const { segmentationOpacity } = Store.getState().datasetConfiguration;
     if (segmentationOpacity === 0) {
       return false;
     }
@@ -458,18 +459,18 @@ export class OxalisModel {
 
     // Currently segmentation data can only be displayed in orthogonal and volume mode
     const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
-    return this.getSegmentationBinary() != null && canModeDisplaySegmentationData;
+    return this.getSegmentationLayer() != null && canModeDisplaySegmentationData;
   }
 
   computeBoundaries() {
     this.lowerBoundary = [Infinity, Infinity, Infinity];
     this.upperBoundary = [-Infinity, -Infinity, -Infinity];
 
-    for (const key of Object.keys(this.binary)) {
-      const binary = this.binary[key];
+    for (const key of Object.keys(this.dataLayers)) {
+      const dataLayer = this.dataLayers[key];
       for (const i of Vector3Indicies) {
-        this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], binary.lowerBoundary[i]);
-        this.upperBoundary[i] = Math.max(this.upperBoundary[i], binary.upperBoundary[i]);
+        this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], dataLayer.lowerBoundary[i]);
+        this.upperBoundary[i] = Math.max(this.upperBoundary[i], dataLayer.upperBoundary[i]);
       }
     }
   }
@@ -531,8 +532,8 @@ export class OxalisModel {
     // However, if resolutions are subset of each other, everything should be fine.
     // For that case, returning the longest resolutions array should suffice
 
-    return _.chain(this.binary)
-      .map(b => b.layer.resolutions)
+    return _.chain(this.dataLayers)
+      .map(dataLayer => dataLayer.layerInfo.resolutions)
       .sortBy(resolutions => resolutions.length)
       .last()
       .valueOf();
@@ -542,8 +543,8 @@ export class OxalisModel {
     const state = Store.getState();
     const storeStateSaved = !state.save.isBusy && state.save.queue.length === 0;
     const pushQueuesSaved = _.reduce(
-      this.binary,
-      (saved, binary) => saved && binary.pushQueue.stateSaved(),
+      this.dataLayers,
+      (saved, dataLayer) => saved && dataLayer.pushQueue.stateSaved(),
       true,
     );
     return storeStateSaved && pushQueuesSaved;

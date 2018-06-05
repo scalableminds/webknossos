@@ -90,8 +90,8 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   pingBinaries(): void {
     const matrix = Store.getState().flycam.currentMatrix;
-    Model.getColorBinaries().forEach(binary =>
-      binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality),
+    Model.getColorLayers().forEach(colorLayer =>
+      colorLayer.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality),
     );
   }
 
@@ -282,9 +282,9 @@ class ArbitraryController extends React.PureComponent<Props> {
       app.vent.trigger("rerender");
     };
 
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      this.listenTo(binary.cube, "bucketLoaded", onBucketLoaded);
+    for (const name of Object.keys(Model.dataLayers)) {
+      const dataLayer = Model.dataLayers[name];
+      this.listenTo(dataLayer.cube, "bucketLoaded", onBucketLoaded);
     }
 
     this.storePropertyUnsubscribers.push(

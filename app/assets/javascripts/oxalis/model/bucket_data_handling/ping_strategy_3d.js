@@ -6,9 +6,9 @@
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 import type { BoundingBoxType } from "oxalis/constants";
-import PolyhedronRasterizer from "oxalis/model/binary/polyhedron_rasterizer";
-import { AbstractPingStrategy } from "oxalis/model/binary/ping_strategy";
-import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
+import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
+import { AbstractPingStrategy } from "oxalis/model/bucket_data_handling/ping_strategy";
+import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqueue";
 
 export class PingStrategy3d extends AbstractPingStrategy {
   getExtentObject(

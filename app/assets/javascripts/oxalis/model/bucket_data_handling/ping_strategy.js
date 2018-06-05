@@ -5,10 +5,10 @@
 
 import _ from "lodash";
 import Dimensions from "oxalis/model/dimensions";
-import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
+import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqueue";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
-import type DataCube from "oxalis/model/binary/data_cube";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 
@@ -137,7 +137,7 @@ export class PingStrategy extends AbstractPingStrategy {
 
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
         widthHeightVector,
-        this.cube.layer.resolutions,
+        this.cube.layerInfo.resolutions,
         zoomStep,
       );
 

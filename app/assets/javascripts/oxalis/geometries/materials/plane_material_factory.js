@@ -30,8 +30,8 @@ import constants, {
   volumeToolEnumToIndex,
 } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
-import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
-import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary/mappings";
+import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 
@@ -141,11 +141,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       },
     });
 
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
+    for (const name of Object.keys(Model.dataLayers)) {
+      const dataLayer = Model.dataLayers[name];
       this.uniforms[sanitizeName(`${name}_maxZoomStep`)] = {
         type: "f",
-        value: binary.cube.MAX_ZOOM_STEP,
+        value: dataLayer.cube.MAX_ZOOM_STEP,
       };
     }
   }
@@ -159,9 +159,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     this.textures = textures;
 
     // Add data and look up textures for each layer
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      const [lookUpTexture, ...dataTextures] = binary.getDataTextures();
+    for (const name of Object.keys(Model.dataLayers)) {
+      const dataLayer = Model.dataLayers[name];
+      const [lookUpTexture, ...dataTextures] = dataLayer.getDataTextures();
 
       this.uniforms[`${sanitizeName(name)}_textures`] = {
         type: "tv",
@@ -170,7 +170,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
         type: "f",
-        value: binary.textureWidth,
+        value: dataLayer.textureWidth,
       };
 
       this.uniforms[sanitizeName(`${name}_lookup_texture`)] = {
@@ -180,26 +180,26 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     }
 
     // Add mapping
-    const segmentationBinary = Model.getSegmentationBinary();
-    if (segmentationBinary != null && Model.isMappingSupported) {
+    const segmentationLayer = Model.getSegmentationLayer();
+    if (segmentationLayer != null && Model.isMappingSupported) {
       const [
         mappingTexture,
         mappingLookupTexture,
-      ] = Model.getSegmentationBinary().mappings.getMappingTextures();
-      this.uniforms[sanitizeName(`${Model.getSegmentationBinary().name}_mapping_texture`)] = {
+      ] = segmentationLayer.mappings.getMappingTextures();
+      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_texture`)] = {
         type: "t",
         value: mappingTexture,
       };
-      this.uniforms[
-        sanitizeName(`${Model.getSegmentationBinary().name}_mapping_lookup_texture`)
-      ] = {
+      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_lookup_texture`)] = {
         type: "t",
         value: mappingLookupTexture,
       };
     }
 
     // Add weight/color uniforms
-    const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
+    const colorLayerNames = _.map(Model.getColorLayers(), colorLayer =>
+      sanitizeName(colorLayer.name),
+    );
     for (const name of colorLayerNames) {
       this.uniforms[`${name}_weight`] = {
         type: "f",
@@ -305,9 +305,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       true,
     );
 
-    const segmentationBinary = Model.getSegmentationBinary();
-    const hasSegmentation = segmentationBinary != null;
-
+    const hasSegmentation = Model.getSegmentationLayer() != null;
     if (hasSegmentation) {
       listenToStoreProperty(
         storeState => storeState.temporaryConfiguration.mousePosition,
@@ -366,7 +364,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
   updateActiveCellId() {
     const activeCellId = getActiveCellId(Store.getState().tracing).getOrElse(0);
-    const mappedActiveCellId = Model.getSegmentationBinary().cube.mapId(activeCellId);
+    const mappedActiveCellId = Model.getSegmentationLayer().cube.mapId(activeCellId);
     // Convert the id into 4 bytes (little endian)
     const [a, b, g, r] = Utils.convertDecToBase256(mappedActiveCellId);
     this.uniforms.activeCellId.value.set(r, g, b, a);
@@ -382,11 +380,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   getFragmentShader(): string {
-    const colorLayerNames = _.map(Model.getColorBinaries(), b => sanitizeName(b.name));
-    const segmentationBinary = Model.getSegmentationBinary();
-    const segmentationName = sanitizeName(segmentationBinary ? segmentationBinary.name : "");
+    const colorLayerNames = _.map(Model.getColorLayers(), b => sanitizeName(b.name));
+    const segmentationLayer = Model.getSegmentationLayer();
+    const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const datasetScale = Store.getState().dataset.dataSource.scale;
-    const hasSegmentation = segmentationBinary != null;
+    const hasSegmentation = segmentationLayer != null;
 
     return _.template(
       `\
@@ -1117,7 +1115,7 @@ void main() {
       layers: colorLayerNames,
       hasSegmentation,
       segmentationName,
-      isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
+      isRgb: Utils.__guard__(Model.dataLayers.color, x1 => x1.targetBitDepth) === 24,
       OrthoViews,
       ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
       planeID: this.planeID,

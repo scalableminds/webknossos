@@ -333,17 +333,6 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   onPlaneViewRender(): void {
-    const state = Store.getState();
-    const { activeViewport } = state.viewModeData.plane;
-    for (const dataLayerName of Object.keys(Model.dataLayers)) {
-      if (SceneController.shouldPingDataLayer(dataLayerName)) {
-        Model.dataLayers[dataLayerName].ping(getPosition(state.flycam), {
-          zoomStep: getRequestLogZoomStep(state),
-          activePlane: activeViewport,
-        });
-      }
-    }
-
     SceneController.update();
     this.props.onRender();
   }

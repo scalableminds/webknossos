@@ -40,7 +40,6 @@ class PullQueue {
   queue: Array<PullQueueItemType>;
   priorityQueue: PriorityQueue;
   batchCount: number;
-  roundTripTime: number;
   layerInfo: DataLayerType;
   whitenEmptyBuckets: boolean;
   connectionInfo: ConnectionInfo;
@@ -58,7 +57,6 @@ class PullQueue {
     this.datastoreInfo = datastoreInfo;
     this.priorityQueue = createPriorityQueue();
     this.batchCount = 0;
-    this.roundTripTime = 0;
 
     // Debug option.
     // If true, buckets of all 0 will be transformed to have 255 bytes everywhere.

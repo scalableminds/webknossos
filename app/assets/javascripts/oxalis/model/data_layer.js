@@ -9,15 +9,6 @@ import AsyncTaskQueue from "libs/async_task_queue";
 import DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
 import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
-import {
-  PingStrategy,
-  SkeletonPingStrategy,
-  VolumePingStrategy,
-} from "oxalis/model/bucket_data_handling/ping_strategy";
-import {
-  PingStrategy3d,
-  DslSlowPingStrategy3d,
-} from "oxalis/model/bucket_data_handling/ping_strategy_3d";
 import Mappings from "oxalis/model/bucket_data_handling/mappings";
 import constants from "oxalis/constants";
 import ConnectionInfo from "oxalis/model/data_connection_info";
@@ -28,20 +19,11 @@ import { M4x4 } from "libs/mjs";
 import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType, ModeType } from "oxalis/constants";
-import type { CategoryType, DataLayerType } from "oxalis/store";
 import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
-import type { Matrix4x4 } from "libs/mjs";
+import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
+import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/constants";
+import type { CategoryType, DataLayerType } from "oxalis/store";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
-import { getAreas, getZoomedMatrix } from "./accessors/flycam_accessor";
-
-const PING_THROTTLE_TIME = 50;
-const DIRECTION_VECTOR_SMOOTHER = 0.125;
-
-type PingOptions = {
-  zoomStep: number,
-  activePlane: OrthoViewType,
-};
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -73,7 +55,6 @@ function consumeBucketsFromPriorityQueue(queue, capacity) {
 // TODO: Non-reactive
 class DataLayer {
   cube: DataCube;
-  tracingType: string;
   layerInfo: DataLayerType;
   category: CategoryType;
   name: string;
@@ -84,18 +65,12 @@ class DataLayer {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   mappings: Mappings;
-  pingStrategies: Array<PingStrategy>;
-  pingStrategies3d: Array<PingStrategy3d>;
-  direction: Vector3;
   activeMapping: ?string;
-  lastPosition: ?Vector3;
   lastSphericalCapRadius: number;
   // Indicates whether the current position is closer to the previous or next bucket for each dimension
   // For example, if the current position is [31, 10, 25] the value would be [1, -1, 1]
   lastSubBucketLocality: Vector3 = [-1, -1, -1];
-  lastZoomStep: ?number;
   lastAreas: OrthoViewMapType<AreaType>;
-  lastAreasPinged: OrthoViewMapType<AreaType>;
   lastZoomedMatrix: M4x4;
   lastViewMode: ModeType;
   textureBucketManager: TextureBucketManager;
@@ -116,7 +91,6 @@ class DataLayer {
     textureWidth: number,
     dataTextureCount: number,
   ) {
-    this.tracingType = Store.getState().tracing.type;
     this.layerInfo = layerInfo;
     this.connectionInfo = connectionInfo;
 
@@ -148,10 +122,6 @@ class DataLayer {
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
     this.mappings = new Mappings(this.layerInfo);
     this.activeMapping = null;
-    this.direction = [0, 0, 0];
-
-    this.pingStrategies = [new SkeletonPingStrategy(this.cube), new VolumePingStrategy(this.cube)];
-    this.pingStrategies3d = [new DslSlowPingStrategy3d(this.cube)];
   }
 
   getByteCount(): number {
@@ -321,77 +291,6 @@ class DataLayer {
     this.activeMapping = mappingName;
     this.mappings.activateMapping(mappingName);
   }
-
-  pingStop(): void {
-    this.pullQueue.clearNormalPriorities();
-  }
-
-  ping = _.throttle(this.pingImpl, PING_THROTTLE_TIME);
-
-  pingImpl(position: Vector3, { zoomStep, activePlane }: PingOptions): void {
-    if (this.lastPosition != null) {
-      this.direction = [
-        (1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[0] +
-          DIRECTION_VECTOR_SMOOTHER * (position[0] - this.lastPosition[0]),
-        (1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[1] +
-          DIRECTION_VECTOR_SMOOTHER * (position[1] - this.lastPosition[1]),
-        (1 - DIRECTION_VECTOR_SMOOTHER) * this.direction[2] +
-          DIRECTION_VECTOR_SMOOTHER * (position[2] - this.lastPosition[2]),
-      ];
-    }
-
-    const areas = getAreas(Store.getState());
-
-    if (
-      !_.isEqual(position, this.lastPosition) ||
-      zoomStep !== this.lastZoomStep ||
-      !_.isEqual(areas, this.lastAreasPinged)
-    ) {
-      this.lastPosition = _.clone(position);
-      this.lastZoomStep = zoomStep;
-      this.lastAreasPinged = areas;
-
-      for (const strategy of this.pingStrategies) {
-        if (
-          strategy.forContentType(this.tracingType) &&
-          strategy.inVelocityRange(this.connectionInfo.bandwidth) &&
-          strategy.inRoundTripTimeRange(this.connectionInfo.roundTripTime)
-        ) {
-          if (zoomStep != null && activePlane != null) {
-            this.pullQueue.clearNormalPriorities();
-            this.pullQueue.addAll(
-              strategy.ping(position, this.direction, zoomStep, activePlane, areas),
-            );
-          }
-          break;
-        }
-      }
-
-      this.pullQueue.pull();
-    }
-  }
-
-  arbitraryPingImpl(matrix: Matrix4x4, zoomStep: number): void {
-    for (const strategy of this.pingStrategies3d) {
-      if (
-        strategy.forContentType(this.tracingType) &&
-        strategy.inVelocityRange(1) &&
-        strategy.inRoundTripTimeRange(this.pullQueue.roundTripTime)
-      ) {
-        this.pullQueue.clearNormalPriorities();
-        const buckets = strategy.ping(matrix, zoomStep);
-        this.pullQueue.addAll(buckets);
-        break;
-      }
-    }
-
-    this.pullQueue.pull();
-  }
-
-  arbitraryPing = _.once(function(matrix: Matrix4x4, zoomStep: number) {
-    this.arbitraryPing = _.throttle(this.arbitraryPingImpl, PING_THROTTLE_TIME);
-    this.arbitraryPing(matrix, zoomStep);
-  });
 }
 
 export default DataLayer;

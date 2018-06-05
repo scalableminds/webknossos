@@ -18,7 +18,15 @@
         "transform-flow-strip-types",
         ["import", { libraryName: "antd" }],
         "syntax-dynamic-import",
-        ["transform-object-rest-spread", { "useBuiltIns": true }]
+        ["transform-object-rest-spread", { "useBuiltIns": true }],
+        [
+          "file-loader",
+          {
+            "extensions": ["proto"],
+            "outputPath": "/public/test-bundle",
+            "publicPath": "",
+          }
+        ]
       ],
     }
   },

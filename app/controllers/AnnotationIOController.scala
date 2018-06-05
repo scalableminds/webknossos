@@ -91,7 +91,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
       } else if (skeletonTracings.nonEmpty) {
         for {
           dataSet: DataSet <- DataSetDAO.findOneBySourceName(skeletonTracings.head.dataSetName).toFox ?~> Messages("dataSet.notFound", skeletonTracings.head.dataSetName)
-          dataSetId <- DataSetSQLDAO.getIdByName(volumeTracings.head._1.dataSetName)
+          dataSetId <- DataSetSQLDAO.getIdByName(skeletonTracings.head.dataSetName)
           mergedTracingReference <- storeMergedSkeletonTracing(skeletonTracings, dataSet)
           annotation <- AnnotationService.createFrom(
             request.identity, dataSetId, dataSet, mergedTracingReference, AnnotationTypeSQL.Explorational, name, description)

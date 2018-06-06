@@ -17,13 +17,9 @@ test("Shader syntax: Ortho Mode", t => {
     resolutions,
     datasetScale: [1, 1, 1],
   });
-  console.log("code.length", code.length);
 
-  console.time("check");
   const parseResult = glslParser.check(code);
-  console.timeEnd("check");
 
-  // console.log("diagnostics", parseResult.log.diagnostics);
   t.is(parseResult.log.warningCount, 0);
   t.is(parseResult.log.errorCount, 0);
 });
@@ -40,11 +36,9 @@ test("Shader syntax: Ortho Mode + Segmentation", t => {
     resolutions,
     datasetScale: [1, 1, 1],
   });
-  console.log("code.length", code.length);
 
   const parseResult = glslParser.check(code);
 
-  // console.log("diagnostics", parseResult.log.diagnostics);
   t.is(parseResult.log.warningCount, 0);
   t.is(parseResult.log.errorCount, 0);
 });

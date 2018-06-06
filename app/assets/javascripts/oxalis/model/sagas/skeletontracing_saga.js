@@ -97,8 +97,8 @@ export function* watchTreeNames(): Generator<*, *, *> {
 }
 
 export function* watchSkeletonTracingAsync(): Generator<*, *, *> {
-  yield takeEvery(["INITIALIZE_SKELETONTRACING"], watchTreeNames);
-  yield take("WK_READY");
+  yield take("INITIALIZE_SKELETONTRACING");
+  yield takeEvery("WK_READY", watchTreeNames);
   yield takeEvery(
     [
       "SET_ACTIVE_TREE",

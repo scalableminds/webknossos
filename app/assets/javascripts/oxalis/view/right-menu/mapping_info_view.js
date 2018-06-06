@@ -2,7 +2,7 @@
  * mapping_info_view.js
  * @flow
  */
-import React, { Component } from "react";
+import React from "react";
 import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Cube from "oxalis/model/binary/data_cube";
@@ -40,14 +40,22 @@ const convertCellIdToHSV = id => {
   return `hsla(${value}, 100%, 50%, 0.15)`;
 };
 
-class MappingInfoView extends Component<Props> {
+const hasSegmentation = () => Model.getSegmentationBinary() != null;
+
+class MappingInfoView extends React.Component<Props> {
   componentDidMount() {
+    if (!hasSegmentation()) {
+      return;
+    }
     const cube = this.getSegmentationCube();
     cube.on("bucketLoaded", this._forceUpdate);
     cube.on("volumeLabeled", this._forceUpdate);
   }
 
   componentWillUnmount() {
+    if (!hasSegmentation()) {
+      return;
+    }
     const cube = this.getSegmentationCube();
     cube.off("bucketLoaded", this._forceUpdate);
     cube.off("volumeLabeled", this._forceUpdate);
@@ -133,6 +141,9 @@ class MappingInfoView extends Component<Props> {
   }
 
   render() {
+    if (!hasSegmentation()) {
+      return "No segmentation available";
+    }
     const hasMapping = this.props.mapping != null;
 
     return (
@@ -170,6 +181,6 @@ function mapStateToProps(state: OxalisState) {
 }
 
 const debounceTime = 100;
-export default connect(mapStateToProps, mapDispatchToProps)(
+export default connect(mapStateToProps, mapDispatchToProps, null, { pure: false })(
   debounceRender(MappingInfoView, debounceTime),
 );

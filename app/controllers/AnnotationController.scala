@@ -114,13 +114,14 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def reopen(typ: String, id: String) = SecuredAction.async { implicit request =>
     // Reopening an annotation is allowed if either the user owns the annotation or the user is allowed to administrate
     // the team the annotation belongs to
-    def isReopenAllowed(user: User, annotation: Annotation) = {
-       annotation._user == user._id || user.isTeamManagerOfBLOCKING(annotation._team)
-    }
+    def isReopenAllowed(user: User, annotation: Annotation) = for {
+      isAdminOrTeamManager <- user.isTeamManagerOrAdminOf(annotation._team)
+    } yield (annotation._user == user._id || isAdminOrTeamManager)
 
     withAnnotation(AnnotationIdentifier(typ, id)) { annotation =>
       for {
-        _ <- isReopenAllowed(request.identity, annotation) ?~> "reopen.notAllowed"
+        isAllowed <- isReopenAllowed(request.identity, annotation)
+        _ <- isAllowed ?~> "reopen.notAllowed"
         reopenedAnnotation <- annotation.muta.reopen() ?~> "annotation.invalid"
         json <- reopenedAnnotation.toJson(Some(request.identity))
       } yield {

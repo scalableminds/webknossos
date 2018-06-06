@@ -1,5 +1,5 @@
 module.exports = function(env = {}) {
-  /* eslint no-var:0, import/no-extraneous-dependencies:0 */
+  /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   var webpack = require("webpack");
   var fs = require("fs");
   var path = require("path");
@@ -19,6 +19,15 @@ module.exports = function(env = {}) {
     new MiniCssExtractPlugin({
       filename: "[name].css",
       chunkFilename: "[name].css",
+    }),
+
+    // GoldenLayout requires these libraries to be available in
+    // the global scope
+    new webpack.ProvidePlugin({
+      React: "react",
+      ReactDOM: "react-dom",
+      $: "jquery",
+      jQuery: "jquery",
     }),
   ];
 
@@ -97,6 +106,7 @@ module.exports = function(env = {}) {
         },
         { test: /\.png$/, use: { loader: "url-loader", options: { limit: 100000 } } },
         { test: /\.jpg$/, use: "file-loader" },
+        { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
       ],
     },
     resolve: {

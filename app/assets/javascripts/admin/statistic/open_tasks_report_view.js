@@ -59,7 +59,7 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
               dataIndex="totalAssignments"
               defaultSortOrder="ascend"
               sorter={Utils.compareBy("totalAssignments")}
-              width={100}
+              width={150}
             />
             <Column
               title=""

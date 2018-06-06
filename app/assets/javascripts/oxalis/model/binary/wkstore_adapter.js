@@ -42,7 +42,6 @@ export async function requestFromStore(
       {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,
-        doNotCatch: true,
       },
     );
 

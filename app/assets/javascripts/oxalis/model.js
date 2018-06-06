@@ -50,6 +50,9 @@ import {
 } from "admin/admin_rest_api";
 import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
 import messages from "messages";
+import * as THREE from "three";
+import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
+import { getRenderer } from "oxalis/controller/renderer";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
 import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
 import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
@@ -164,17 +167,19 @@ export class OxalisModel {
     const highestResolutions = await this.initializeDataset(datasetName);
     await this.initializeSettings(datasetName);
 
-    // Fetch the actual tracing from the datastore, if there is an annotation
-    let tracing: ?ServerTracingType;
-    if (annotation != null) {
-      tracing = await getTracing(annotation);
-    }
-
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
+    let tracing: ?ServerTracingType;
     if (initialFetch) {
       this.initializeModel(tracing, highestResolutions);
       if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
+    }
+
+    this.precompileShaders();
+
+    // Fetch the actual tracing from the datastore, if there is an annotation
+    if (annotation != null) {
+      tracing = await getTracing(annotation);
     }
 
     // There is no need to initialize the tracing if there is no tracing (View mode).
@@ -183,6 +188,22 @@ export class OxalisModel {
     }
 
     this.applyState(UrlManager.initialState, tracing);
+  }
+
+  precompileShaders() {
+    const planeGeo = new THREE.PlaneGeometry(128, 128, 1, 1);
+    const planeMaterialFactory = new PlaneMaterialFactory("PLANE_XY", 0);
+    planeMaterialFactory.setupUniforms();
+    planeMaterialFactory.makeMaterial();
+    const textureMaterial = planeMaterialFactory.getMaterial();
+    // window.material = textureMaterial;
+    const plane = new THREE.Mesh(planeGeo, textureMaterial);
+    const scene = new THREE.Scene();
+    const camera = new THREE.OrthographicCamera(0, 0, 0, 0);
+    scene.add(camera);
+    scene.add(plane);
+    const renderer = getRenderer();
+    renderer.compile(scene, camera);
   }
 
   validateSpecsForLayers(

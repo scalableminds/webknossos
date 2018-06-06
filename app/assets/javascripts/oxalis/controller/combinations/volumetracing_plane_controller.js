@@ -181,7 +181,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
       leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
         if (event.shiftKey) {
-          const cellId = Model.getSegmentationBinary().cube.getDataValue(
+          const cellId = Model.getSegmentationLayer().cube.getDataValue(
             this.calculateGlobalPos(pos),
           );
           this.handleCellSelection(cellId);
@@ -209,11 +209,11 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
     return _.extend(super.getKeyboardControls(), {
       c: () => Store.dispatch(createCellAction()),
       "ctrl + i": async event => {
-        const mousePosition = Store.getState().temporaryConfiguration.mousePosition;
+        const { mousePosition } = Store.getState().temporaryConfiguration;
         if (mousePosition) {
           const [x, y] = mousePosition;
           const globalMousePosition = calculateGlobalPos({ x, y });
-          const cube = Model.getSegmentationBinary().cube;
+          const { cube } = Model.getSegmentationLayer();
           const mapping = event.altKey ? cube.mapping : null;
           const hoveredId = cube.getDataValue(globalMousePosition, mapping);
           await Clipboard.copy(String(hoveredId));

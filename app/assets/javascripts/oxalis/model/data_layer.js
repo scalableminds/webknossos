@@ -1,33 +1,36 @@
 /**
- * binary.js
+ * data_layer.js
  * @flow
  */
 
 import _ from "lodash";
 import Store from "oxalis/store";
 import AsyncTaskQueue from "libs/async_task_queue";
-import DataCube from "oxalis/model/binary/data_cube";
-import PullQueue from "oxalis/model/binary/pullqueue";
-import PushQueue from "oxalis/model/binary/pushqueue";
+import DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import {
   PingStrategy,
   SkeletonPingStrategy,
   VolumePingStrategy,
-} from "oxalis/model/binary/ping_strategy";
-import { PingStrategy3d, DslSlowPingStrategy3d } from "oxalis/model/binary/ping_strategy_3d";
-import Mappings from "oxalis/model/binary/mappings";
+} from "oxalis/model/bucket_data_handling/ping_strategy";
+import {
+  PingStrategy3d,
+  DslSlowPingStrategy3d,
+} from "oxalis/model/bucket_data_handling/ping_strategy_3d";
+import Mappings from "oxalis/model/bucket_data_handling/mappings";
 import constants from "oxalis/constants";
-import ConnectionInfo from "oxalis/model/binarydata_connection_info";
-import TextureBucketManager from "oxalis/model/binary/texture_bucket_manager";
+import ConnectionInfo from "oxalis/model/data_connection_info";
+import TextureBucketManager from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import PriorityQueue from "js-priority-queue";
 import { M4x4 } from "libs/mjs";
-import determineBucketsForOrthogonal from "oxalis/model/binary/bucket_picker_strategies/orthogonal_bucket_picker";
-import determineBucketsForOblique from "oxalis/model/binary/bucket_picker_strategies/oblique_bucket_picker";
-import determineBucketsForFlight from "oxalis/model/binary/bucket_picker_strategies/flight_bucket_picker";
+import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
+import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
+import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import type { Vector3, Vector4, OrthoViewType, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { CategoryType, DataLayerType } from "oxalis/store";
-import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
+import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Matrix4x4 } from "libs/mjs";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import { getAreas, getZoomedMatrix } from "./accessors/flycam_accessor";
@@ -68,10 +71,10 @@ function consumeBucketsFromPriorityQueue(queue, capacity) {
 }
 
 // TODO: Non-reactive
-class Binary {
+class DataLayer {
   cube: DataCube;
   tracingType: string;
-  layer: DataLayerType;
+  layerInfo: DataLayerType;
   category: CategoryType;
   name: string;
   targetBitDepth: number;
@@ -108,37 +111,42 @@ class Binary {
   };
 
   constructor(
-    layer: DataLayerType,
+    layerInfo: DataLayerType,
     connectionInfo: ConnectionInfo,
     textureWidth: number,
     dataTextureCount: number,
   ) {
     this.tracingType = Store.getState().tracing.type;
-    this.layer = layer;
+    this.layerInfo = layerInfo;
     this.connectionInfo = connectionInfo;
 
     this.textureWidth = textureWidth;
     this.dataTextureCount = dataTextureCount;
 
-    this.category = this.layer.category;
-    this.name = this.layer.name;
+    this.category = this.layerInfo.category;
+    this.name = this.layerInfo.name;
 
-    const bitDepth = getBitDepth(this.layer);
+    const bitDepth = getBitDepth(this.layerInfo);
     this.targetBitDepth = this.category === "color" ? bitDepth : 8;
 
-    const { topLeft, width, height, depth } = this.layer.boundingBox;
+    const { topLeft, width, height, depth } = this.layerInfo.boundingBox;
     this.lowerBoundary = topLeft;
     this.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
 
-    this.cube = new DataCube(this.upperBoundary, layer.maxZoomStep + 1, bitDepth, this.layer);
+    this.cube = new DataCube(
+      this.upperBoundary,
+      this.layerInfo.maxZoomStep + 1,
+      bitDepth,
+      this.layerInfo,
+    );
 
     const taskQueue = new AsyncTaskQueue(Infinity);
 
     const datastoreInfo = Store.getState().dataset.dataStore;
-    this.pullQueue = new PullQueue(this.cube, this.layer, this.connectionInfo, datastoreInfo);
-    this.pushQueue = new PushQueue(this.cube, this.layer, taskQueue);
+    this.pullQueue = new PullQueue(this.cube, this.layerInfo, this.connectionInfo, datastoreInfo);
+    this.pushQueue = new PushQueue(this.cube, this.layerInfo, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
-    this.mappings = new Mappings(this.layer);
+    this.mappings = new Mappings(this.layerInfo);
     this.activeMapping = null;
     this.direction = [0, 0, 0];
 
@@ -147,7 +155,7 @@ class Binary {
   }
 
   getByteCount(): number {
-    return getBitDepth(this.layer) >> 3;
+    return getBitDepth(this.layerInfo) >> 3;
   }
 
   setupDataTextures(): void {
@@ -159,7 +167,7 @@ class Binary {
       this.dataTextureCount,
       bytes,
     );
-    this.textureBucketManager.setupDataTextures(bytes, this.category);
+    this.textureBucketManager.setupDataTextures(bytes);
 
     shaderEditor.addBucketManagers(this.textureBucketManager);
   }
@@ -197,7 +205,10 @@ class Binary {
       return [this.anchorPointCache.anchorPoint, this.anchorPointCache.fallbackAnchorPoint];
     }
 
-    const subBucketLocality = getSubBucketLocality(position, this.layer.resolutions[logZoomStep]);
+    const subBucketLocality = getSubBucketLocality(
+      position,
+      this.layerInfo.resolutions[logZoomStep],
+    );
     const areas = getAreas(Store.getState());
 
     const matrix = getZoomedMatrix(Store.getState().flycam);
@@ -295,7 +306,7 @@ class Binary {
   }
 
   calculateUnzoomedAnchorPoint(position: Vector3, logZoomStep: number): Vector3 {
-    const resolution = this.layer.resolutions[logZoomStep];
+    const resolution = this.layerInfo.resolutions[logZoomStep];
     const maximumRenderedBucketsHalf =
       (constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION - 1) * constants.BUCKET_WIDTH / 2;
 
@@ -385,4 +396,4 @@ class Binary {
   });
 }
 
-export default Binary;
+export default DataLayer;

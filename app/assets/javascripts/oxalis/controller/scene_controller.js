@@ -35,8 +35,7 @@ class SceneController {
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
-  pingBinary: boolean;
-  pingBinarySeg: boolean;
+  isSegmentationVisible: boolean;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: ?Cube;
@@ -58,8 +57,7 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
-    this.pingBinary = true;
-    this.pingBinarySeg = true;
+    this.isSegmentationVisible = true;
   }
 
   initialize() {
@@ -197,9 +195,9 @@ class SceneController {
     let fallbackAnchorPoint;
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      [anchorPoint, fallbackAnchorPoint] = binary.updateDataTextures(gPos, zoomStep);
+    for (const name of Object.keys(Model.dataLayers)) {
+      const dataLayer = Model.dataLayers[name];
+      [anchorPoint, fallbackAnchorPoint] = dataLayer.updateDataTextures(gPos, zoomStep);
     }
 
     if (optPlane) {
@@ -256,7 +254,7 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.setSegmentationAlpha(alpha);
     }
-    this.pingBinarySeg = alpha !== 0;
+    this.isSegmentationVisible = alpha !== 0;
   }
 
   setIsMappingEnabled(isMappingEnabled: boolean): void {
@@ -266,12 +264,12 @@ class SceneController {
     app.vent.trigger("rerender");
   }
 
-  pingDataLayer(dataLayerName: string): boolean {
-    if (Model.binary[dataLayerName].category === "color") {
-      return this.pingBinary;
+  shouldPingDataLayer(dataLayerName: string): boolean {
+    if (Model.dataLayers[dataLayerName].category === "color") {
+      return true;
     }
-    if (Model.binary[dataLayerName].category === "segmentation") {
-      return this.pingBinarySeg;
+    if (Model.dataLayers[dataLayerName].category === "segmentation") {
+      return this.isSegmentationVisible;
     }
     return false;
   }

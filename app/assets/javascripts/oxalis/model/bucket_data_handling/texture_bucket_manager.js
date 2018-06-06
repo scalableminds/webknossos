@@ -1,5 +1,5 @@
 // @flow
-import { DataBucket } from "oxalis/model/binary/bucket";
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
 import _ from "lodash";
@@ -184,7 +184,7 @@ export default class TextureBucketManager {
     return [this.lookUpTexture].concat(this.dataTextures);
   }
 
-  setupDataTextures(bytes: number, binaryCategory: string): void {
+  setupDataTextures(bytes: number): void {
     for (let i = 0; i < this.dataTextureCount; i++) {
       const dataTexture = createUpdatableTexture(
         this.textureWidth,
@@ -192,8 +192,6 @@ export default class TextureBucketManager {
         THREE.UnsignedByteType,
         getRenderer(),
       );
-
-      dataTexture.binaryCategory = binaryCategory;
 
       this.dataTextures.push(dataTexture);
     }

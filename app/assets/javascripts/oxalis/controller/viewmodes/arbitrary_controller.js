@@ -67,9 +67,11 @@ class ArbitraryController extends React.PureComponent<Props> {
   input: {
     mouse?: InputMouse,
     keyboard?: InputKeyboard,
+    keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
+  moveKeyNotification: string;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -80,12 +82,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.input = {};
     this.storePropertyUnsubscribers = [];
     this.start();
-  }
-
-  componentDidUpdate(prevProps: Props) {
-    if (prevProps.viewMode !== this.props.viewMode) {
-      this.plane.setMode(this.props.viewMode);
-    }
   }
 
   componentWillUnmount() {
@@ -191,11 +187,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       o: () => {
         Store.dispatch(zoomOutAction());
       },
-
-      // Change move value
-      h: () => this.changeMoveValue(25),
-      g: () => this.changeMoveValue(-25),
     });
+
+    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
+    this.input.keyboardLoopDelayed = new InputKeyboard(
+      {
+        h: () => this.changeMoveValue(25),
+        g: () => this.changeMoveValue(-25),
+      },
+      { delay: Store.getState().userConfiguration.keyboardDelay },
+    );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
       "1": () => {
@@ -290,13 +291,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       listenToStoreProperty(
         state => state.userConfiguration,
         userConfiguration => {
-          const {
-            sphericalCapRadius,
-            clippingDistanceArbitrary,
-            displayCrosshair,
-            crosshairSize,
-          } = userConfiguration;
-          this.plane.setSphericalCapRadius(sphericalCapRadius);
+          const { clippingDistanceArbitrary, displayCrosshair, crosshairSize } = userConfiguration;
           this.setClippingDistance(clippingDistanceArbitrary);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
@@ -313,6 +308,15 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       ),
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          const { keyboardLoopDelayed } = this.input;
+          if (keyboardLoopDelayed != null) {
+            keyboardLoopDelayed.delay = keyboardDelay;
+          }
+        },
+      ),
     );
   }
 
@@ -321,7 +325,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.arbitraryView.start();
 
     this.plane = new ArbitraryPlane();
-    this.plane.setMode(this.props.viewMode);
     this.crosshair = new Crosshair(Store.getState().userConfiguration.crosshairSize);
     this.crosshair.setVisibility(Store.getState().userConfiguration.displayCrosshair);
 
@@ -369,6 +372,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   destroyInput() {
     Utils.__guard__(this.input.mouse, x => x.destroy());
     Utils.__guard__(this.input.keyboard, x => x.destroy());
+    Utils.__guard__(this.input.keyboardLoopDelayed, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
   }
 
@@ -388,6 +392,13 @@ class ArbitraryController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
+
+    if (this.moveKeyNotification != null) {
+      Toast.close(this.moveKeyNotification);
+    }
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    this.moveKeyNotification = moveValueMessage;
+    Toast.success(moveValueMessage);
   }
 
   setParticleSize(delta: number): void {

@@ -4,7 +4,6 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.play.json.BSONFormats._
 import utils.ObjectId
 
 object TimeSpanDAO {

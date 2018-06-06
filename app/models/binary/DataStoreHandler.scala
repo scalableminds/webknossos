@@ -77,7 +77,7 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
 
   override def getSkeletonTracing(reference: TracingReference): Fox[SkeletonTracing] = {
     logger.debug("Called to get SkeletonTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
-    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${reference.id}/getProto")
+    RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/${reference.id}")
       .withQueryString("token" -> DataStoreHandlingStrategy.webKnossosToken)
       .getWithProtoResponse[SkeletonTracing](SkeletonTracing)
   }
@@ -149,7 +149,7 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
   override def getVolumeTracing(reference: TracingReference): Fox[(VolumeTracing, Enumerator[Array[Byte]])] = {
     logger.debug("Called to get VolumeTracing. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     for {
-      tracing <- RPC(s"${dataStoreInfo.url}/data/tracings/volume/${reference.id}/getProto")
+      tracing <- RPC(s"${dataStoreInfo.url}/data/tracings/volume/${reference.id}")
         .withQueryString("token" -> DataStoreHandlingStrategy.webKnossosToken)
         .getWithProtoResponse[VolumeTracing](VolumeTracing)
       data <- RPC(s"${dataStoreInfo.url}/data/tracings/volume/${reference.id}/data")

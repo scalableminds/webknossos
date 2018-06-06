@@ -164,7 +164,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
   }
 
   //note that this needs to be guaranteed to be sanitized (currently so because it converts from BSONObjectID)
-  private def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
+  def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     ctx.data match {
       case Some(user: User) => Fox.successful(ObjectId.fromBsonId(user._id))
       case _ => Fox.failure("Access denied.")

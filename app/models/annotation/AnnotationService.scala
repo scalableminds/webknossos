@@ -240,7 +240,7 @@ object AnnotationService
     ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
   }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Scale], List[Annotation])]] = {
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Option[Scale]], List[Annotation])]] = {
 
     def getTracings(dataSetName: String, tracingReferences: List[TracingReference]) = {
       for {
@@ -252,8 +252,7 @@ object AnnotationService
     def getDatasetScale(dataSetName: String) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-        scale <- dataSet.dataSource.scaleOpt ?~> Messages("nml.scaleNotFound")
-      } yield scale
+      } yield dataSet.dataSource.scaleOpt
     }
 
     def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))

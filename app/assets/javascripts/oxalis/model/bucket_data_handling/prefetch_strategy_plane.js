@@ -1,20 +1,17 @@
-/**
- * ping_strategy.js
- * @flow
- */
+// @flow
 
 import _ from "lodash";
 import Dimensions from "oxalis/model/dimensions";
-import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqueue";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqueue";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
-export class AbstractPingStrategy {
+export class AbstractPrefetchStrategy {
   velocityRangeStart: number = 0;
   velocityRangeEnd: number = 0;
   roundTripTimeRangeStart: number = 0;
@@ -57,7 +54,7 @@ export class AbstractPingStrategy {
   }
 }
 
-export class PingStrategy extends AbstractPingStrategy {
+export class PrefetchStrategy extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
   velocityRangeEnd = Infinity;
   roundTripTimeRangeStart = 0;
@@ -66,7 +63,7 @@ export class PingStrategy extends AbstractPingStrategy {
   preloadingPriorityOffset = 0;
   w: number;
 
-  ping(
+  prefetch(
     cube: DataCube,
     position: Vector3,
     direction: Vector3,
@@ -77,7 +74,7 @@ export class PingStrategy extends AbstractPingStrategy {
     const zoomStep = Math.min(currentZoomStep, cube.MAX_UNSAMPLED_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
 
-    const queueItemsForCurrentZoomStep = this.pingImpl(
+    const queueItemsForCurrentZoomStep = this.prefetchImpl(
       cube,
       position,
       direction,
@@ -90,7 +87,7 @@ export class PingStrategy extends AbstractPingStrategy {
     let queueItemsForFallbackZoomStep = [];
     const fallbackZoomStep = Math.min(cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
     if (fallbackZoomStep > zoomStep) {
-      queueItemsForFallbackZoomStep = this.pingImpl(
+      queueItemsForFallbackZoomStep = this.prefetchImpl(
         cube,
         position,
         direction,
@@ -104,7 +101,7 @@ export class PingStrategy extends AbstractPingStrategy {
     return queueItemsForCurrentZoomStep.concat(queueItemsForFallbackZoomStep);
   }
 
-  pingImpl(
+  prefetchImpl(
     cube: DataCube,
     position: Vector3,
     direction: Vector3,
@@ -172,13 +169,13 @@ export class PingStrategy extends AbstractPingStrategy {
   }
 }
 
-export class SkeletonPingStrategy extends PingStrategy {
+export class PrefetchStrategySkeleton extends PrefetchStrategy {
   contentTypes = ["skeleton", "readonly"];
   name = "SKELETON";
   preloadingSlides = 2;
 }
 
-export class VolumePingStrategy extends PingStrategy {
+export class PrefetchStrategyVolume extends PrefetchStrategy {
   contentTypes = ["volume"];
   name = "VOLUME";
   preloadingSlides = 1;

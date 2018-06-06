@@ -8,27 +8,27 @@ import {
   getAreas,
 } from "oxalis/model/accessors/flycam_accessor";
 import {
-  SkeletonPingStrategy,
-  VolumePingStrategy,
-} from "oxalis/model/bucket_data_handling/ping_strategy";
-import { DslSlowPingStrategy3d } from "oxalis/model/bucket_data_handling/ping_strategy_3d";
+  PrefetchStrategySkeleton,
+  PrefetchStrategyVolume,
+} from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
+import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import DataLayer from "oxalis/model/data_layer";
 
-const PING_THROTTLE_TIME = 50;
+const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
 
-const pingStrategies3d = [new DslSlowPingStrategy3d()];
-const pingStrategies = [new SkeletonPingStrategy(), new VolumePingStrategy()];
+const prefetchStrategiesArbitrary = [new PrefetchStrategyArbitrary()];
+const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStrategyVolume()];
 
 export function* watchDataRelevantChanges(): Generator<*, *, *> {
   yield take("WK_READY");
 
   const previousProperties = { lastDirection: [0, 0, 0] };
-  yield throttle(PING_THROTTLE_TIME, FlycamActions, triggerDataFetching, previousProperties);
+  yield throttle(PREFETCH_THROTTLE_TIME, FlycamActions, triggerDataPrefetching, previousProperties);
 }
 
-function* shouldPingDataLayer(dataLayer: DataLayer): Generator<*, *, *> {
+function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Generator<*, *, *> {
   const isSegmentationLayer = dataLayer.category === "segmentation";
   const isSegmentationVisible = yield select(
     state => state.datasetConfiguration.segmentationOpacity !== 0,
@@ -37,25 +37,25 @@ function* shouldPingDataLayer(dataLayer: DataLayer): Generator<*, *, *> {
   return !isSegmentationLayer || isSegmentationVisible;
 }
 
-function* triggerDataFetching(previousProperties: Object): Generator<*, *, *> {
-  console.log("triggerDataFetching");
+function* triggerDataPrefetching(previousProperties: Object): Generator<*, *, *> {
+  console.log("triggerDataPrefetching");
   const currentViewMode = yield select(state => state.temporaryConfiguration.viewMode);
   const isPlaneMode = constants.MODES_PLANE.includes(currentViewMode);
 
   if (isPlaneMode) {
     for (const dataLayer of Object.values(Model.dataLayers)) {
-      if (yield call(shouldPingDataLayer, dataLayer)) {
-        yield call(pingPlaneMode, dataLayer, previousProperties);
+      if (yield call(shouldPrefetchForDataLayer, dataLayer)) {
+        yield call(prefetchForPlaneMode, dataLayer, previousProperties);
       }
     }
   } else {
     for (const colorLayer of Model.getColorLayers()) {
-      yield call(pingArbitraryMode, colorLayer, previousProperties);
+      yield call(prefetchForArbitraryMode, colorLayer, previousProperties);
     }
   }
 }
 
-function* pingPlaneMode(layer: DataLayer, previousProperties: Object): Generator<*, *, *> {
+function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Object): Generator<*, *, *> {
   const position = yield select(state => getPosition(state.flycam));
   const zoomStep = yield select(state => getRequestLogZoomStep(state));
   const activePlane = yield select(state => state.viewModeData.plane.activeViewport);
@@ -75,14 +75,14 @@ function* pingPlaneMode(layer: DataLayer, previousProperties: Object): Generator
   }
   if (position !== lastPosition || zoomStep !== lastZoomStep) {
     const areas = yield select(state => getAreas(state));
-    for (const strategy of pingStrategies) {
+    for (const strategy of prefetchStrategiesPlane) {
       if (
         strategy.forContentType(tracingType) &&
         strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
       ) {
         layer.pullQueue.clearNormalPriorities();
-        const buckets = strategy.ping(
+        const buckets = strategy.prefetch(
           layer.cube,
           position,
           direction,
@@ -102,21 +102,24 @@ function* pingPlaneMode(layer: DataLayer, previousProperties: Object): Generator
   }
 }
 
-function* pingArbitraryMode(layer: DataLayer, previousProperties: Object): Generator<*, *, *> {
+function* prefetchForArbitraryMode(
+  layer: DataLayer,
+  previousProperties: Object,
+): Generator<*, *, *> {
   const matrix = yield select(state => state.flycam.currentMatrix);
   const zoomStep = yield select(state => getRequestLogZoomStep(state));
   const tracingType = yield select(state => state.tracing.type);
   const { lastMatrix, lastZoomStep } = previousProperties;
 
   if (matrix !== lastMatrix || zoomStep !== lastZoomStep) {
-    for (const strategy of pingStrategies3d) {
+    for (const strategy of prefetchStrategiesArbitrary) {
       if (
         strategy.forContentType(tracingType) &&
         strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
         strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
       ) {
         layer.pullQueue.clearNormalPriorities();
-        const buckets = strategy.ping(matrix, zoomStep);
+        const buckets = strategy.prefetch(matrix, zoomStep);
         layer.pullQueue.addAll(buckets);
         break;
       }

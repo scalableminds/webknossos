@@ -30,32 +30,35 @@ export function* watchDataRelevantChanges(): Generator<*, *, *> {
 
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Generator<*, *, *> {
   const isSegmentationLayer = dataLayer.category === "segmentation";
-  const isSegmentationVisible = yield select(
-    state => state.datasetConfiguration.segmentationOpacity !== 0,
-  );
+  const segmentationOpacity = yield select(state => state.datasetConfiguration.segmentationOpacity);
+  const isSegmentationVisible = segmentationOpacity !== 0;
   // There is no need to prefetch data for segmentation layers that are not visible
   return !isSegmentationLayer || isSegmentationVisible;
 }
 
-function* triggerDataPrefetching(previousProperties: Object): Generator<*, *, *> {
-  console.log("triggerDataPrefetching");
+export function* triggerDataPrefetching(previousProperties: Object): Generator<*, *, *> {
   const currentViewMode = yield select(state => state.temporaryConfiguration.viewMode);
   const isPlaneMode = constants.MODES_PLANE.includes(currentViewMode);
 
   if (isPlaneMode) {
-    for (const dataLayer of Object.values(Model.dataLayers)) {
+    const dataLayers = yield call([Model, Model.getAllLayers]);
+    for (const dataLayer of dataLayers) {
       if (yield call(shouldPrefetchForDataLayer, dataLayer)) {
         yield call(prefetchForPlaneMode, dataLayer, previousProperties);
       }
     }
   } else {
-    for (const colorLayer of Model.getColorLayers()) {
+    const dataLayers = yield call([Model, Model.getColorLayers]);
+    for (const colorLayer of dataLayers) {
       yield call(prefetchForArbitraryMode, colorLayer, previousProperties);
     }
   }
 }
 
-function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Object): Generator<*, *, *> {
+export function* prefetchForPlaneMode(
+  layer: DataLayer,
+  previousProperties: Object,
+): Generator<*, *, *> {
   const position = yield select(state => getPosition(state.flycam));
   const zoomStep = yield select(state => getRequestLogZoomStep(state));
   const activePlane = yield select(state => state.viewModeData.plane.activeViewport);
@@ -102,7 +105,7 @@ function* prefetchForPlaneMode(layer: DataLayer, previousProperties: Object): Ge
   }
 }
 
-function* prefetchForArbitraryMode(
+export function* prefetchForArbitraryMode(
   layer: DataLayer,
   previousProperties: Object,
 ): Generator<*, *, *> {

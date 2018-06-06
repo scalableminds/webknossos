@@ -193,8 +193,7 @@ class SceneController {
     let fallbackAnchorPoint;
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
-    for (const name of Object.keys(Model.dataLayers)) {
-      const dataLayer = Model.dataLayers[name];
+    for (const dataLayer of Model.getAllLayers()) {
       [anchorPoint, fallbackAnchorPoint] = dataLayer.updateDataTextures(gPos, zoomStep);
     }
 

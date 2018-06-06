@@ -141,9 +141,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       },
     });
 
-    for (const name of Object.keys(Model.dataLayers)) {
-      const dataLayer = Model.dataLayers[name];
-      this.uniforms[sanitizeName(`${name}_maxZoomStep`)] = {
+    for (const dataLayer of Model.getAllLayers()) {
+      this.uniforms[sanitizeName(`${dataLayer.name}_maxZoomStep`)] = {
         type: "f",
         value: dataLayer.cube.MAX_ZOOM_STEP,
       };
@@ -159,8 +158,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     this.textures = textures;
 
     // Add data and look up textures for each layer
-    for (const name of Object.keys(Model.dataLayers)) {
-      const dataLayer = Model.dataLayers[name];
+    for (const dataLayer of Model.getAllLayers()) {
+      const { name } = dataLayer;
       const [lookUpTexture, ...dataTextures] = dataLayer.getDataTextures();
 
       this.uniforms[`${sanitizeName(name)}_textures`] = {

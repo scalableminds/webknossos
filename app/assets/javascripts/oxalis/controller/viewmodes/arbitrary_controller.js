@@ -274,8 +274,7 @@ class ArbitraryController extends React.PureComponent<Props> {
       app.vent.trigger("rerender");
     };
 
-    for (const name of Object.keys(Model.dataLayers)) {
-      const dataLayer = Model.dataLayers[name];
+    for (const dataLayer of Model.getAllLayers()) {
       this.listenTo(dataLayer.cube, "bucketLoaded", onBucketLoaded);
     }
 

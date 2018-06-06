@@ -528,7 +528,7 @@ class DataApi {
 
   __getLayer(layerName: string): DataLayer {
     const layer = this.model.getLayerByName(layerName);
-    if (layer === undefined) throw new Error(`Layer with name ${layerName} was not found.`);
+    if (layer == null) throw new Error(`Layer with name ${layerName} was not found.`);
     return layer;
   }
 

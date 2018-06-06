@@ -166,6 +166,11 @@ class TaskCreateFormView extends React.PureComponent<Props, State> {
           let response;
           try {
             if (this.state.isNMLSpecification) {
+              // Workaround: Antd replaces file objects in the formValues with a wrapper file
+              // The original file object is contained in the originFileObj property
+              // This is most likely not intentional and may change in a future Antd version
+              formValues.nmlFile = formValues.nmlFile.map(wrapperFile => wrapperFile.originFileObj);
+
               response = await createTaskFromNML(formValues);
             } else {
               response = await createTasks([formValues]);

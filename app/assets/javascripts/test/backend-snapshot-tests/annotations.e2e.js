@@ -13,32 +13,6 @@ test("getAnnotationInformation()", async t => {
   t.snapshot(annotation, { id: "annotations-getAnnotationInformation" });
 });
 
-// needs datastore
-// test.serial("createExplorational() and deleteAnnotation()", async t => {
-//   const dataSetName = "confocal-multi_knossos";
-//   const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
-//   t.is(createdExplorational.dataSetName, dataSetName);
-//   t.snapshot(createdExplorational, { id: "annotations-createExplorational" });
-
-//   const deletedAnnotation = await api.deleteAnnotation(
-//     createdExplorational.id,
-//     APITracingTypeEnum.Explorational,
-//   );
-// });
-// export async function resetAnnotation(
-//   annotationId: string,
-//   annotationType: APITracingType,
-// ): Promise<APIAnnotationType> {
-//   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reset`);
-// }
-// export async function copyAnnotationToUserAccount(
-//   annotationId: string,
-//   tracingType: string,
-// ): Promise<APIAnnotationType> {
-//   const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
-//   return Request.receiveJSON(url);
-// }
-
 test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
   const annotationId = "58135c402faeb34e0081c068";
   const finishedAnnotation = await api.finishAnnotation(annotationId, APITracingTypeEnum.Task);
@@ -122,3 +96,30 @@ test.serial("finishAllAnnotations()", async t => {
     t.is(annotation.state, "Finished");
   });
 });
+
+// Tests which require a working dataStore during tests and therefore don't work yet:
+//
+// test.serial("createExplorational() and deleteAnnotation()", async t => {
+//   const dataSetName = "confocal-multi_knossos";
+//   const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
+//   t.is(createdExplorational.dataSetName, dataSetName);
+//   t.snapshot(createdExplorational, { id: "annotations-createExplorational" });
+
+//   const deletedAnnotation = await api.deleteAnnotation(
+//     createdExplorational.id,
+//     APITracingTypeEnum.Explorational,
+//   );
+// });
+// export async function resetAnnotation(
+//   annotationId: string,
+//   annotationType: APITracingType,
+// ): Promise<APIAnnotationType> {
+//   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reset`);
+// }
+// export async function copyAnnotationToUserAccount(
+//   annotationId: string,
+//   tracingType: string,
+// ): Promise<APIAnnotationType> {
+//   const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
+//   return Request.receiveJSON(url);
+// }

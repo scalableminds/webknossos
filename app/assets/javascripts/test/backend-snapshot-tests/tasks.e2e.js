@@ -11,14 +11,12 @@ test("getTasks()", async t => {
   t.snapshot(allTasks, { id: "tasks-getTasks" });
 
   const complexQueriedTasks = await api.getTasks({
-    project: "58135bfd2faeb3190181c057",
     taskType: "570b9f4c2a7c0e4c008da6ee",
-    // user : "5447d5902d00001c35e1c965"
   });
 
   t.is(complexQueriedTasks.length, 2);
   t.deepEqual(
-    complexQueriedTasks.map(t => t.id).sort(),
+    complexQueriedTasks.map(task => task.id).sort(),
     ["58135c192faeb34c0081c058", "581367a82faeb37a008a5352"].sort(),
   );
 
@@ -75,7 +73,7 @@ test.serial("transferTask()", async t => {
   t.is(revertedTask.user && revertedTask.user.id, userId);
 });
 
-// Require dataStore:
+// Tests which require a working dataStore during tests and therefore don't work yet:
 //
 // test.serial("createTasks() and deleteTask()", async t => {
 //   const newTask = {
@@ -101,7 +99,6 @@ test.serial("transferTask()", async t => {
 //   t.true(true);
 // });
 //
-// requires dataStore
 // test.serial("requestTask()", async t => {
 //   const newTaskAnnotation = await api.requestTask();
 //   t.snapshot(newTaskAnnotation, { id: "task-requestTask" });

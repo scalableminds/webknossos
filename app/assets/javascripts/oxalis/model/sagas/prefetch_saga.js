@@ -14,6 +14,7 @@ import {
 import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/prefetch_strategy_arbitrary";
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import DataLayer from "oxalis/model/data_layer";
+import type { Vector3 } from "oxalis/constants";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -24,7 +25,7 @@ const prefetchStrategiesPlane = [new PrefetchStrategySkeleton(), new PrefetchStr
 export function* watchDataRelevantChanges(): Generator<*, *, *> {
   yield take("WK_READY");
 
-  const previousProperties = { lastDirection: [0, 0, 0] };
+  const previousProperties = {};
   yield throttle(PREFETCH_THROTTLE_TIME, FlycamActions, triggerDataPrefetching, previousProperties);
 }
 
@@ -55,6 +56,25 @@ export function* triggerDataPrefetching(previousProperties: Object): Generator<*
   }
 }
 
+function getTraceDirection(
+  position: Vector3,
+  lastPosition: ?Vector3,
+  lastDirection: ?Vector3,
+): Vector3 {
+  let direction = lastDirection || [0, 0, 0];
+  if (lastPosition != null) {
+    direction = [
+      (1 - DIRECTION_VECTOR_SMOOTHER) * direction[0] +
+        DIRECTION_VECTOR_SMOOTHER * (position[0] - lastPosition[0]),
+      (1 - DIRECTION_VECTOR_SMOOTHER) * direction[1] +
+        DIRECTION_VECTOR_SMOOTHER * (position[1] - lastPosition[1]),
+      (1 - DIRECTION_VECTOR_SMOOTHER) * direction[2] +
+        DIRECTION_VECTOR_SMOOTHER * (position[2] - lastPosition[2]),
+    ];
+  }
+  return direction;
+}
+
 export function* prefetchForPlaneMode(
   layer: DataLayer,
   previousProperties: Object,
@@ -64,18 +84,8 @@ export function* prefetchForPlaneMode(
   const activePlane = yield select(state => state.viewModeData.plane.activeViewport);
   const tracingType = yield select(state => state.tracing.type);
   const { lastPosition, lastDirection, lastZoomStep } = previousProperties;
+  const direction = getTraceDirection(position, lastPosition, lastDirection);
 
-  let direction = lastDirection;
-  if (lastPosition != null) {
-    direction = [
-      (1 - DIRECTION_VECTOR_SMOOTHER) * lastDirection[0] +
-        DIRECTION_VECTOR_SMOOTHER * (position[0] - lastPosition[0]),
-      (1 - DIRECTION_VECTOR_SMOOTHER) * lastDirection[1] +
-        DIRECTION_VECTOR_SMOOTHER * (position[1] - lastPosition[1]),
-      (1 - DIRECTION_VECTOR_SMOOTHER) * lastDirection[2] +
-        DIRECTION_VECTOR_SMOOTHER * (position[2] - lastPosition[2]),
-    ];
-  }
   if (position !== lastPosition || zoomStep !== lastZoomStep) {
     const areas = yield select(state => getAreas(state));
     for (const strategy of prefetchStrategiesPlane) {

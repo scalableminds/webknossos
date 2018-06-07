@@ -369,8 +369,8 @@ export class OxalisModel {
   }
 
   getAllLayers(): Array<DataLayer> {
-    // ToDo: Remove this typecast, once https://github.com/facebook/flow/issues/2221 is fixed
-    return ((Object.values(this.dataLayers): any): Array<DataLayer>);
+    // $FlowFixMe remove once https://github.com/facebook/flow/issues/2221 is fixed
+    return Object.values(this.dataLayers);
   }
 
   getColorLayers(): Array<DataLayer> {

@@ -269,9 +269,11 @@ class Binary {
       );
 
       // In general, pull buckets which are not available but should be sent to the GPU
+      // Don't use -1 for ortho mode since this will make at the corner of the viewport more important than the ones in the middle
+      const missingBucketPriority = constants.MODES_PLANE.includes(viewMode) ? 100 : -1;
       const missingBuckets = buckets
         .filter(bucket => !bucket.hasData())
-        .map(bucket => ({ bucket: bucket.zoomedAddress, priority: -1 }));
+        .map(bucket => ({ bucket: bucket.zoomedAddress, priority: missingBucketPriority }));
       this.pullQueue.addAll(missingBuckets);
       this.pullQueue.pull();
     }

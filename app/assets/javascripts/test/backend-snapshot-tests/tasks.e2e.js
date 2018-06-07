@@ -10,7 +10,17 @@ test("getTasks()", async t => {
   const allTasks = await api.getTasks({});
   t.snapshot(allTasks, { id: "tasks-getTasks" });
 
-  const complexQueriedTasks = await api.getTasks({});
+  const complexQueriedTasks = await api.getTasks({
+    project: "58135bfd2faeb3190181c057",
+    taskType: "570b9f4c2a7c0e4c008da6ee",
+    // user : "5447d5902d00001c35e1c965"
+  });
+
+  t.is(complexQueriedTasks.length, 2);
+  t.deepEqual(
+    complexQueriedTasks.map(t => t.id).sort(),
+    ["58135c192faeb34c0081c058", "581367a82faeb37a008a5352"].sort(),
+  );
 
   t.snapshot(complexQueriedTasks, { id: "tasks-getTasks-complex-query" });
 });

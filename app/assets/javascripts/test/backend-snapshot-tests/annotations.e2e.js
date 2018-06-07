@@ -40,12 +40,11 @@ test("getAnnotationInformation()", async t => {
 //   return Request.receiveJSON(url);
 // }
 
-// test finish explorational
-
-test("finishAnnotation() and reOpenAnnotation()", async t => {
+test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
   const annotationId = "58135c402faeb34e0081c068";
   const finishedAnnotation = await api.finishAnnotation(annotationId, APITracingTypeEnum.Task);
   t.is(finishedAnnotation.state, "Finished");
+  finishedAnnotation.task.tracingTime = 0;
   t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation" });
 
   const reopenedAnnotation = await api.reOpenAnnotation(annotationId, APITracingTypeEnum.Task);
@@ -57,7 +56,25 @@ test("finishAnnotation() and reOpenAnnotation()", async t => {
   t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation" });
 });
 
-test("editAnnotation()", async t => {
+test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async t => {
+  const annotationId = "570ba0092a7c0e980056fe9b";
+  const finishedAnnotation = await api.finishAnnotation(
+    annotationId,
+    APITracingTypeEnum.Explorational,
+  );
+  t.is(finishedAnnotation.state, "Finished");
+  t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation-explorational" });
+
+  const reopenedAnnotation = await api.reOpenAnnotation(
+    annotationId,
+    APITracingTypeEnum.Explorational,
+  );
+  t.is(reopenedAnnotation.state, "Active");
+
+  t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation-explorational" });
+});
+
+test.serial("editAnnotation()", async t => {
   const annotationId = "58135c192faeb34c0081c05d";
   const originalAnnotation = await api.getAnnotationInformation(
     annotationId,
@@ -91,12 +108,17 @@ test("editAnnotation()", async t => {
   });
 });
 
-// export async function finishAllAnnotations(
-//   selectedAnnotationIds: Array<string>,
-// ): Promise<{ messages: Array<MessageType> }> {
-//   return Request.sendJSONReceiveJSON("/api/annotations/Explorational/finish", {
-//     data: {
-//       annotations: selectedAnnotationIds,
-//     },
-//   });
-// }
+test.serial("finishAllAnnotations()", async t => {
+  const annotationIds = ["570ba0092a7c0e980056fe9b", "58135c402faeb34e0081c068"];
+
+  await api.finishAllAnnotations(annotationIds);
+
+  const finishedAnnotations = await Promise.all(
+    annotationIds.map(id => api.getAnnotationInformation(id, "skeleton")),
+  );
+
+  t.is(finishedAnnotations.length, 2);
+  finishedAnnotations.forEach(annotation => {
+    t.is(annotation.state, "Finished");
+  });
+});

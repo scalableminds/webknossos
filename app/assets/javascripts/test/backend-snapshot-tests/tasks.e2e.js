@@ -64,16 +64,6 @@ test.serial("transferTask()", async t => {
   t.is(revertedTask.user && revertedTask.user.id, userId);
 });
 
-// export async function finishTask(annotationId: string): Promise<APIAnnotationType> {
-//   return Request.receiveJSON(`/api/annotations/Task/${annotationId}/finish`);
-// }
-
-// export async function deleteTask(taskId: string): Promise<void> {
-//   return Request.receiveJSON(`/api/tasks/${taskId}`, {
-//     method: "DELETE",
-//   });
-// }
-
 // Require dataStore:
 //
 // test.serial("createTasks() and deleteTask()", async t => {

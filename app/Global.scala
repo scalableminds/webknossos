@@ -118,6 +118,7 @@ Samplecountry
   val organizationTeamId = BSONObjectID.generate
   val defaultOrganization = Organization(additionalInformation, "Connectomics department", List(), organizationTeamId)
   val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)
+  val organizationTeamSQL = TeamSQL(ObjectId.fromBsonId(organizationTeamId), ObjectId.fromBsonId(defaultOrganization._id), defaultOrganization.name, isOrganizationTeam = true)
 
   def insert: Fox[Unit] =
     for {
@@ -165,7 +166,7 @@ Samplecountry
     TeamDAO.findAll(GlobalAccessContext).flatMap {
       teams =>
         if (teams.isEmpty)
-          TeamDAO.insert(organizationTeam)(GlobalAccessContext)
+          TeamSQLDAO.insertOne(organizationTeamSQL)(GlobalAccessContext)
         else
           Fox.successful(())
     }.toFox

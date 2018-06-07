@@ -10,6 +10,8 @@ import play.api.mvc.Action
 
 class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
 
-  def health = Action { implicit request => Ok }
+  def health = Action { implicit request =>
+    AllowRemoteOrigin { Ok }
+  }
 
 }

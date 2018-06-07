@@ -50,9 +50,6 @@ import {
 } from "admin/admin_rest_api";
 import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
 import messages from "messages";
-import * as THREE from "three";
-import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_factory";
-import { getRenderer } from "oxalis/controller/renderer";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
 import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
 import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
@@ -175,8 +172,6 @@ export class OxalisModel {
       if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
     }
 
-    this.precompileShaders();
-
     // Fetch the actual tracing from the datastore, if there is an annotation
     if (annotation != null) {
       tracing = await getTracing(annotation);
@@ -188,23 +183,6 @@ export class OxalisModel {
     }
 
     this.applyState(UrlManager.initialState, tracing);
-  }
-
-  precompileShaders() {
-    const planeGeo = new THREE.PlaneGeometry(128, 128, 1, 1);
-    const planeMaterialFactory = new PlaneMaterialFactory("PLANE_XY", 0);
-    planeMaterialFactory.setupUniforms();
-    planeMaterialFactory.makeMaterial();
-    const textureMaterial = planeMaterialFactory.getMaterial();
-    const plane = new THREE.Mesh(planeGeo, textureMaterial);
-    const scene = new THREE.Scene();
-    const camera = new THREE.OrthographicCamera(0, 0, 0, 0);
-    scene.add(camera);
-    scene.add(plane);
-    const renderer: any = getRenderer();
-    if (renderer.compile != null) {
-      renderer.compile(scene, camera);
-    }
   }
 
   validateSpecsForLayers(

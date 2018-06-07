@@ -25,6 +25,7 @@ import {
 import constants, {
   OrthoViews,
   OrthoViewValues,
+  OrthoViewIndices,
   ModeValues,
   ModeValuesIndices,
   VolumeToolEnum,
@@ -604,11 +605,11 @@ float linearizeVec3ToIndexWithMod(vec3 position, float base, float m) {
 
 // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.
 vec3 transDim(vec3 array) {
-  if (planeID == 0.0) {
+  if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
     return array;
-  } else if (planeID == 1.0) {
+  } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
     return vec3(array.z, array.y, array.x); // [2, 1, 0]
-  } else if (planeID == 2.0) {
+  } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
     return vec3(array.x, array.z, array.y); // [0, 2, 1]
   }
 }
@@ -740,11 +741,11 @@ bool isFlightMode() {
 }
 
 float getW(vec3 vector) {
-  if (planeID == 0.0) {
+  if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
     return vector[2];
-  } else if (planeID == 1.0) {
+  } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
     return vector[0];
-  } else {
+  } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
     return vector[1];
   }
 }
@@ -1124,6 +1125,7 @@ void main() {
       segmentationName,
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
       OrthoViews,
+      OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
       ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
       bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),

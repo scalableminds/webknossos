@@ -196,14 +196,15 @@ export class OxalisModel {
     planeMaterialFactory.setupUniforms();
     planeMaterialFactory.makeMaterial();
     const textureMaterial = planeMaterialFactory.getMaterial();
-    // window.material = textureMaterial;
     const plane = new THREE.Mesh(planeGeo, textureMaterial);
     const scene = new THREE.Scene();
     const camera = new THREE.OrthographicCamera(0, 0, 0, 0);
     scene.add(camera);
     scene.add(plane);
-    const renderer = getRenderer();
-    renderer.compile(scene, camera);
+    const renderer: any = getRenderer();
+    if (renderer.compile != null) {
+      renderer.compile(scene, camera);
+    }
   }
 
   validateSpecsForLayers(

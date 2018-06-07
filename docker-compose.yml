@@ -114,7 +114,7 @@ services:
       - "./pg/dev-db:/var/lib/postgresql/data/"
 
   fossildb:
-    image: scalableminds/fossildb:master__272
+    image: scalableminds/fossildb:master__337
     command:
       - fossildb
       - -c

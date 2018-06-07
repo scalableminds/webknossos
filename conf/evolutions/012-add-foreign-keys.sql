@@ -1,7 +1,12 @@
 -- https://github.com/scalableminds/webknossos/pull/2568
 
+-- Possible manual work:
+   -- delete annotations with state = Initializing   https://github.com/scalableminds/webknossos/issues/2703
+   -- delete timespans with task ids as annotation IDs    https://github.com/scalableminds/webknossos/issues/2702
+
 -- UP:
 
+START TRANSACTION;
 ALTER TABLE webknossos.analytics
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id);
 ALTER TABLE webknossos.annotations
@@ -43,9 +48,11 @@ ALTER TABLE webknossos.user_experiences
 ALTER TABLE webknossos.user_dataSetConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE,
   ADD CONSTRAINT dataSet_ref FOREIGN KEY(_dataSet) REFERENCES webknossos.dataSets(_id) ON DELETE CASCADE;
+COMMIT TRANSACTION;
 
 -- DOWN:
 
+START TRANSACTION;
 ALTER TABLE webknossos.analytics
   DROP CONSTRAINT user_ref;
 ALTER TABLE webknossos.annotations
@@ -87,3 +94,4 @@ ALTER TABLE webknossos.user_experiences
 ALTER TABLE webknossos.user_dataSetConfigurations
   DROP CONSTRAINT user_ref,
   DROP CONSTRAINT dataSet_ref;
+COMMIT TRANSACTION;

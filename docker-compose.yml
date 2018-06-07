@@ -18,12 +18,10 @@ services:
       - -Ddatastore.fossildb.address=fossildb
       - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
       # the following lines disable the integrated datastore:
-      - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
-      - -Ddatastore.enabled=false
+      # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
+      # - -Ddatastore.enabled=false
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
-      - USER_UID=1000
-      - USER_GID=1000
 
   webknossos-datastore:
     build: webknossos-datastore
@@ -46,8 +44,6 @@ services:
       - -Ddatastore.oxalis.uri=webknossos:9000
     links:
       - fossildb
-      - webknossos
-    user: 1000:1000
 
   base:
     image: scalableminds/sbt:sbt-0.13.15_mongo-3.4.10_node-9.x_jdk-8

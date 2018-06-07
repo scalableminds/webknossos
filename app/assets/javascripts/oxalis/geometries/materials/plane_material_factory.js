@@ -34,6 +34,7 @@ import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager
 import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary/mappings";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { getPackingDegree } from "oxalis/model/binary/data_rendering_logic";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -387,6 +388,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     const segmentationName = sanitizeName(segmentationBinary ? segmentationBinary.name : "");
     const datasetScale = Store.getState().dataset.dataSource.scale;
     const hasSegmentation = segmentationBinary != null;
+
+    const segmentationPackingDegree = hasSegmentation
+      ? getPackingDegree(segmentationBinary.getByteCount())
+      : 0;
 
     return _.template(
       `\
@@ -981,7 +986,7 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
         <%= segmentationName %>_lookup_texture,
         <%= formatNumberAsGLSLFloat(segmentationLayerIndex) %>,
         <%= segmentationName %>_data_texture_width,
-        1.0,
+        <%= segmentationPackingDegree %>,
         coords,
         fallbackCoords,
         hasFallback,
@@ -1117,6 +1122,7 @@ void main() {
       layers: colorLayerNames,
       hasSegmentation,
       segmentationName,
+      segmentationPackingDegree: formatNumberAsGLSLFloat(segmentationPackingDegree),
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
       OrthoViews,
       ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),

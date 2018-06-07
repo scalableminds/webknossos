@@ -4,7 +4,6 @@
 import test from "ava";
 import "../enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
-import _ from "lodash";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 
 test("getAnnotationInformation()", async t => {
@@ -44,6 +43,7 @@ test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
   const annotationId = "58135c402faeb34e0081c068";
   const finishedAnnotation = await api.finishAnnotation(annotationId, APITracingTypeEnum.Task);
   t.is(finishedAnnotation.state, "Finished");
+  // $FlowFixMe: Make tracingTime deterministic
   finishedAnnotation.task.tracingTime = 0;
   t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation" });
 

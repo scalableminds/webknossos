@@ -1,17 +1,18 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
+import "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
 import _ from "lodash";
 
 test("getTasks()", async t => {
-  const tasks = await api.getTasks({});
+  const allTasks = await api.getTasks({});
+  t.snapshot(allTasks, { id: "tasks-getTasks" });
 
-  // todo: more complex query
+  const complexQueriedTasks = await api.getTasks({});
 
-  t.snapshot(tasks, { id: "tasks-getTasks" });
+  t.snapshot(complexQueriedTasks, { id: "tasks-getTasks-complex-query" });
 });
 
 test("peekNextTasks()", async t => {

@@ -205,18 +205,22 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   }
 
   def deactivateUnreported(names: List[String], dataStoreName: String): Fox[Unit] = {
-    val deleteResolutionsQuery = sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
-              (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))})"""
-    val deleteLayersQuery = sqlu"""delete from webknossos.dataSet_layers where _dataSet in
-              (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))})"""
-    val setToUnusableQuery = sqlu"""update webknossos.datasets
-               set isUsable = false, status = 'No longer available on datastore.', scale = NULL
-               where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))}"""
+    val inclusionPredicate = if (names.isEmpty) "true" else s"name not in ${writeStructTupleWithQuotes(names.map(sanitize))}"
+    val deleteResolutionsQuery =
+      sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
+            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate})"""
+    val deleteLayersQuery =
+      sqlu"""delete from webknossos.dataSet_layers where _dataSet in
+            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate})"""
+    val setToUnusableQuery =
+      sqlu"""update webknossos.datasets
+             set isUsable = false, status = 'No longer available on datastore.', scale = NULL
+             where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate}"""
     for {
-      _ <-run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
+      _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
   }
 

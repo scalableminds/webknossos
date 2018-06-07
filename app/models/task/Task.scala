@@ -166,15 +166,17 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     val annotationId = ObjectId.generate
     val dummyTracingId = Random.alphanumeric.take(36).mkString
 
+    //the values inserted in _dataset, _team and _user are dummy values but filled with real entities to not violate foreign key constraints
     val insertAnnotationQ = sqlu"""
-           with task as (#${findNextTaskQ(userId, teamIds)})
+           with task as (#${findNextTaskQ(userId, teamIds)}),
+           dataset as (select _id from webknossos.datasets_ limit 1)
 
            insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-           select ${annotationId.id}, 'dummyDatasetId', _id, 'dummyTeamId', 'dummyUserId', ${dummyTracingId},
+           select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption.map(_.id).getOrElse("")}, ${userId.id}, ${dummyTracingId},
                     'skeleton', '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
                     '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
                      ${new java.sql.Timestamp(System.currentTimeMillis)}, false
-           from task
+           from task, dataset
       """
 
     val findTaskOfInsertedAnnotationQ =
@@ -399,7 +401,7 @@ object Task extends FoxImplicits {
 
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      dataSetName <- task.annotationBase.map(_.dataSetName)
+      dataSetName <- task.annotationBase.map(_.dataSetName) ?~> Messages("dataSet.notFound")
       status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))
       scriptInfo <- task._script.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull

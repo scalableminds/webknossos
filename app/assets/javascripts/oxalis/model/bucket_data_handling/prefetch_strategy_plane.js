@@ -1,21 +1,17 @@
-/**
- * ping_strategy.js
- * @flow
- */
+// @flow
 
 import _ from "lodash";
 import Dimensions from "oxalis/model/dimensions";
-import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqueue";
 import { OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import { zoomedAddressToAnotherZoomStep } from "oxalis/model/helpers/position_converter";
+import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqueue";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
-export class AbstractPingStrategy {
-  cube: DataCube;
+export class AbstractPrefetchStrategy {
   velocityRangeStart: number = 0;
   velocityRangeEnd: number = 0;
   roundTripTimeRangeStart: number = 0;
@@ -24,10 +20,6 @@ export class AbstractPingStrategy {
   name: string = "ABSTRACT";
   u: number;
   v: number;
-
-  constructor(cube: DataCube) {
-    this.cube = cube;
-  }
 
   forContentType(contentType: string): boolean {
     return _.isEmpty(this.contentTypes) || this.contentTypes.includes(contentType);
@@ -62,7 +54,7 @@ export class AbstractPingStrategy {
   }
 }
 
-export class PingStrategy extends AbstractPingStrategy {
+export class PrefetchStrategy extends AbstractPrefetchStrategy {
   velocityRangeStart = 0;
   velocityRangeEnd = Infinity;
   roundTripTimeRangeStart = 0;
@@ -71,17 +63,19 @@ export class PingStrategy extends AbstractPingStrategy {
   preloadingPriorityOffset = 0;
   w: number;
 
-  ping(
+  prefetch(
+    cube: DataCube,
     position: Vector3,
     direction: Vector3,
     currentZoomStep: number,
     activePlane: OrthoViewType,
     areas: OrthoViewMapType<AreaType>,
   ): Array<PullQueueItemType> {
-    const zoomStep = Math.min(currentZoomStep, this.cube.MAX_UNSAMPLED_ZOOM_STEP);
+    const zoomStep = Math.min(currentZoomStep, cube.MAX_UNSAMPLED_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
 
-    const queueItemsForCurrentZoomStep = this.pingImpl(
+    const queueItemsForCurrentZoomStep = this.prefetchImpl(
+      cube,
       position,
       direction,
       zoomStep,
@@ -91,9 +85,10 @@ export class PingStrategy extends AbstractPingStrategy {
     );
 
     let queueItemsForFallbackZoomStep = [];
-    const fallbackZoomStep = Math.min(this.cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
+    const fallbackZoomStep = Math.min(cube.MAX_UNSAMPLED_ZOOM_STEP, currentZoomStep + 1);
     if (fallbackZoomStep > zoomStep) {
-      queueItemsForFallbackZoomStep = this.pingImpl(
+      queueItemsForFallbackZoomStep = this.prefetchImpl(
+        cube,
         position,
         direction,
         fallbackZoomStep,
@@ -106,7 +101,8 @@ export class PingStrategy extends AbstractPingStrategy {
     return queueItemsForCurrentZoomStep.concat(queueItemsForFallbackZoomStep);
   }
 
-  pingImpl(
+  prefetchImpl(
+    cube: DataCube,
     position: Vector3,
     direction: Vector3,
     zoomStep: number,
@@ -120,7 +116,7 @@ export class PingStrategy extends AbstractPingStrategy {
       return pullQueue;
     }
 
-    const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
+    const centerBucket = cube.positionToZoomedAddress(position, zoomStep);
     const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
 
     for (const plane of OrthoViewValuesWithoutTDView) {
@@ -137,7 +133,7 @@ export class PingStrategy extends AbstractPingStrategy {
 
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
         widthHeightVector,
-        this.cube.layerInfo.resolutions,
+        cube.layerInfo.resolutions,
         zoomStep,
       );
 
@@ -173,13 +169,13 @@ export class PingStrategy extends AbstractPingStrategy {
   }
 }
 
-export class SkeletonPingStrategy extends PingStrategy {
+export class PrefetchStrategySkeleton extends PrefetchStrategy {
   contentTypes = ["skeleton", "readonly"];
   name = "SKELETON";
   preloadingSlides = 2;
 }
 
-export class VolumePingStrategy extends PingStrategy {
+export class PrefetchStrategyVolume extends PrefetchStrategy {
   contentTypes = ["volume"];
   name = "VOLUME";
   preloadingSlides = 1;

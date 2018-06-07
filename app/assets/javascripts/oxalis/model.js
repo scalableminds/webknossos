@@ -368,7 +368,12 @@ export class OxalisModel {
     }
   }
 
-  getColorLayers() {
+  getAllLayers(): Array<DataLayer> {
+    // $FlowFixMe remove once https://github.com/facebook/flow/issues/2221 is fixed
+    return Object.values(this.dataLayers);
+  }
+
+  getColorLayers(): Array<DataLayer> {
     return _.filter(this.dataLayers, dataLayer => dataLayer.category === "color");
   }
 
@@ -376,7 +381,7 @@ export class OxalisModel {
     return _.find(this.dataLayers, dataLayer => dataLayer.category === "segmentation");
   }
 
-  getLayerByName(name: string) {
+  getLayerByName(name: string): ?DataLayer {
     return this.dataLayers[name];
   }
 

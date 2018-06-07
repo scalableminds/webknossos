@@ -13,6 +13,7 @@ import {
   watchVolumeTracingAsync,
 } from "oxalis/model/sagas/volumetracing_saga";
 import { watchAnnotationAsync } from "oxalis/model/sagas/annotation_saga";
+import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import { alert } from "libs/window";
 import { select, fork, take, cancel } from "redux-saga/effects";
 import Model from "oxalis/model";
@@ -44,6 +45,7 @@ function* restartableSaga(): Generator<*, *, *> {
       disallowVolumeTracingWarning(),
       watchVolumeTracingAsync(),
       watchAnnotationAsync(),
+      watchDataRelevantChanges(),
     ];
   } catch (err) {
     alert(`\

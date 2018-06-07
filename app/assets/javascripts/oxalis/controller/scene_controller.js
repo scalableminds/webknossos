@@ -35,7 +35,6 @@ class SceneController {
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
-  isSegmentationVisible: boolean;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: ?Cube;
@@ -57,7 +56,6 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
-    this.isSegmentationVisible = true;
   }
 
   initialize() {
@@ -195,8 +193,7 @@ class SceneController {
     let fallbackAnchorPoint;
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
-    for (const name of Object.keys(Model.dataLayers)) {
-      const dataLayer = Model.dataLayers[name];
+    for (const dataLayer of Model.getAllLayers()) {
       [anchorPoint, fallbackAnchorPoint] = dataLayer.updateDataTextures(gPos, zoomStep);
     }
 
@@ -254,7 +251,6 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.setSegmentationAlpha(alpha);
     }
-    this.isSegmentationVisible = alpha !== 0;
   }
 
   setIsMappingEnabled(isMappingEnabled: boolean): void {
@@ -262,16 +258,6 @@ class SceneController {
       plane.setIsMappingEnabled(isMappingEnabled);
     }
     app.vent.trigger("rerender");
-  }
-
-  shouldPingDataLayer(dataLayerName: string): boolean {
-    if (Model.dataLayers[dataLayerName].category === "color") {
-      return true;
-    }
-    if (Model.dataLayers[dataLayerName].category === "segmentation") {
-      return this.isSegmentationVisible;
-    }
-    return false;
   }
 
   stopPlaneMode(): void {

@@ -3,15 +3,20 @@
  */
 package com.scalableminds.webknossos.datastore.controllers
 
+import com.scalableminds.webknossos.datastore.tracings.TracingDataStore
 import javax.inject.Inject
-
 import play.api.i18n.MessagesApi
+import scala.concurrent.ExecutionContext.Implicits.global
 import play.api.mvc.Action
 
-class Application @Inject()(val messagesApi: MessagesApi) extends Controller {
+class Application @Inject()(tracingDataStore: TracingDataStore, val messagesApi: MessagesApi) extends Controller {
 
-  def health = Action { implicit request =>
-    AllowRemoteOrigin { Ok }
+  def health = Action.async { implicit request =>
+    AllowRemoteOrigin {
+      for {
+        _ <- tracingDataStore.healthClient.checkHealth
+      } yield Ok
+    }
   }
 
 }

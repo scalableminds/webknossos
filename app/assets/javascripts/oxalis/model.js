@@ -164,17 +164,17 @@ export class OxalisModel {
     const highestResolutions = await this.initializeDataset(datasetName);
     await this.initializeSettings(datasetName);
 
+    // Fetch the actual tracing from the datastore, if there is an annotation
+    let tracing: ?ServerTracingType;
+    if (annotation != null) {
+      tracing = await getTracing(annotation);
+    }
+
     // Only initialize the model once.
     // There is no need to reinstantiate the binaries if the dataset didn't change.
-    let tracing: ?ServerTracingType;
     if (initialFetch) {
       this.initializeModel(tracing, highestResolutions);
       if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
-    }
-
-    // Fetch the actual tracing from the datastore, if there is an annotation
-    if (annotation != null) {
-      tracing = await getTracing(annotation);
     }
 
     // There is no need to initialize the tracing if there is no tracing (View mode).

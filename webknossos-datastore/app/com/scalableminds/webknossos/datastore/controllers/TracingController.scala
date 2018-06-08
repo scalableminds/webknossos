@@ -7,7 +7,7 @@ import com.scalableminds.webknossos.datastore.services.{DataSourceRepository, Us
 import com.scalableminds.webknossos.datastore.tracings.{TracingSelector, _}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.JsonHelper.boxFormat
-import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import net.liftweb.common.Failure
 import play.api.i18n.Messages
 import play.api.libs.json.{Json, Reads}

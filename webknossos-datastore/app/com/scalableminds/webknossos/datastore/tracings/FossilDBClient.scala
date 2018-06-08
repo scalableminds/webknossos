@@ -6,15 +6,17 @@ package com.scalableminds.webknossos.datastore.tracings
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
-import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import io.grpc.netty.NettyChannelBuilder
+import io.grpc.health.v1._
 import net.liftweb.common.{Box, Empty, Full}
 import net.liftweb.util.Helpers.tryo
 import play.api.Configuration
 import play.api.libs.json.{Json, Reads, Writes}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
 
 
@@ -48,16 +50,23 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
 class FossilDBClient(collection: String, config: Configuration) extends FoxImplicits with LazyLogging {
   val address = config.getString("datastore.fossildb.address").getOrElse("localhost")
   val port = config.getInt("datastore.fossildb.port").getOrElse(7155)
-  val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext(true).build
+  val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
   val blockingStub = FossilDBGrpc.blockingStub(channel)
+  val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
 
-  def checkHealth = {
+  def checkHealth: Fox[Unit] = {
     try {
-      val reply: HealthReply = blockingStub.health(HealthRequest())
-      if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-      logger.info("Successfully tested FossilDB health at " + address + ":" + port)
+      val reply: HealthCheckResponse = blockingStubHealth.check(HealthCheckRequest.getDefaultInstance())
+      val replyString = reply.getStatus.toString
+      if (!(replyString == "SERVING")) throw new Exception(replyString)
+      logger.info("Successfully tested FossilDB health at " + address + ":" + port + ". Reply: " + replyString)
+      Fox.successful(replyString)
     } catch {
-      case e: Exception => logger.error("Failed to connect to FossilDB at " + address + ":" + port + ": " + e)
+      case e: Exception => {
+        val errorText = "Failed to connect to FossilDB at " + address + ":" + port + ": " + e
+        logger.error(errorText)
+        Fox.failure(errorText)
+      }
     }
   }
 

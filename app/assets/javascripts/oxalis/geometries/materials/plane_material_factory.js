@@ -24,16 +24,18 @@ import {
 } from "oxalis/model/accessors/flycam_accessor";
 import constants, {
   OrthoViews,
+  OrthoViewValues,
+  OrthoViewIndices,
   ModeValues,
   ModeValuesIndices,
   VolumeToolEnum,
   volumeToolEnumToIndex,
 } from "oxalis/constants";
-import Dimensions from "oxalis/model/dimensions";
 import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
 import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary/mappings";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
+import { getPackingDegree } from "oxalis/model/binary/data_rendering_logic";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -91,10 +93,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 1,
       },
-      uvw: {
-        type: "v3",
-        value: new THREE.Vector3(0, 0, 0),
-      },
       useBilinearFiltering: {
         type: "b",
         value: true,
@@ -138,6 +136,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       viewMode: {
         type: "f",
         value: 0,
+      },
+      planeID: {
+        type: "f",
+        value: OrthoViewValues.indexOf(this.planeID),
       },
     });
 
@@ -388,6 +390,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     const datasetScale = Store.getState().dataset.dataSource.scale;
     const hasSegmentation = segmentationBinary != null;
 
+    const segmentationPackingDegree = hasSegmentation
+      ? getPackingDegree(segmentationBinary.getByteCount())
+      : 0;
+
     return _.template(
       `\
 precision highp float;
@@ -436,6 +442,7 @@ uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float pixelToVoxelFactor;
+uniform float planeID;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
@@ -603,19 +610,13 @@ float linearizeVec3ToIndexWithMod(vec3 position, float base, float m) {
 
 // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.
 vec3 transDim(vec3 array) {
-  <%= (function () {
-      switch (planeID) {
-        case OrthoViews.PLANE_XY:
-          return "return array;";
-        case OrthoViews.PLANE_YZ:
-          return "return vec3(array.z, array.y, array.x);"; // [2, 1, 0]
-        case OrthoViews.PLANE_XZ:
-          return "return vec3(array.x, array.z, array.y);"; //[0, 2, 1]"
-        default:
-          throw new Error("Invalid planeID provided to fragment shader");
-      }
-    })()
-  %>
+  if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
+    return array;
+  } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
+    return vec3(array.z, array.y, array.x); // [2, 1, 0]
+  } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
+    return vec3(array.x, array.z, array.y); // [0, 2, 1]
+  }
 }
 
 bool isNan(float val) {
@@ -744,6 +745,16 @@ bool isFlightMode() {
   return viewMode == <%= ModeValuesIndices.Flight %>;
 }
 
+float getW(vec3 vector) {
+  if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
+    return vector[2];
+  } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
+    return vector[0];
+  } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
+    return vector[1];
+  }
+}
+
 vec3 getWorldCoordUVW() {
   vec3 worldCoordUVW = transDim(worldCoord.xyz);
 
@@ -772,7 +783,7 @@ vec3 getWorldCoordUVW() {
     // the same for all texels computed in this shader, we simply use globalPosition[w] instead
     isArbitrary() ?
       worldCoordUVW.z / datasetScaleUVW.z
-      : globalPosition[<%= uvw[2] %>]
+      : getW(globalPosition)
   );
 
   return worldCoordUVW;
@@ -981,7 +992,7 @@ float binarySearchIndex(sampler2D texture, float maxIndex, vec4 value) {
         <%= segmentationName %>_lookup_texture,
         <%= formatNumberAsGLSLFloat(segmentationLayerIndex) %>,
         <%= segmentationName %>_data_texture_width,
-        1.0,
+        <%= segmentationPackingDegree %>,
         coords,
         fallbackCoords,
         hasFallback,
@@ -1117,11 +1128,11 @@ void main() {
       layers: colorLayerNames,
       hasSegmentation,
       segmentationName,
+      segmentationPackingDegree: formatNumberAsGLSLFloat(segmentationPackingDegree),
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
       OrthoViews,
+      OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
       ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
-      planeID: this.planeID,
-      uvw: Dimensions.getIndices(this.planeID),
       bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
       l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
       isMappingSupported: Model.isMappingSupported,

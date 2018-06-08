@@ -221,7 +221,7 @@ object AnnotationService
   }
 
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.logTime(time, _annotation)
+    AnnotationDAO.logTime(time, _annotation) ?~> "FAILED: AnnotationDAO.logTime"
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
     for {

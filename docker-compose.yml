@@ -46,7 +46,7 @@ services:
       - fossildb
 
   base:
-    image: scalableminds/sbt:graal__35
+    image: scalableminds/sbt:graal__45
     environment:
       # - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos

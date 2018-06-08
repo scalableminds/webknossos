@@ -11,7 +11,7 @@ dbHost="$("$scriptdir"/db_host.sh)"
 
 for file in $(find "$scriptdir"/../../test/db -name "*.csv")
 do
-  echo $file
+  echo $file 
   PGPASSWORD=postgres psql -U postgres -h $dbHost --dbname=$dbName -c "SET session_replication_role = replica;COPY webknossos.$(basename $file .csv) FROM STDOUT WITH CSV HEADER QUOTE ''''" < $file
 done;
 

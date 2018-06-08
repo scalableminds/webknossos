@@ -8,7 +8,6 @@ import * as THREE from "three";
 import Utils from "libs/utils";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import AbstractPlaneMaterialFactory, {
   sanitizeName,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
@@ -27,6 +26,7 @@ import { OrthoViews, ModeValues, volumeToolEnumToIndex } from "oxalis/constants"
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
+import { getPackingDegree } from "oxalis/model/binary/data_rendering_logic";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -265,7 +265,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     );
 
     listenToStoreProperty(
-      storeState => getPlaneScalingFactor(storeState.flycam) / getViewportScale(this.planeID),
+      storeState => getPlaneScalingFactor(storeState.flycam) / storeState.userConfiguration.scale,
       pixelToVoxelFactor => {
         this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
       },
@@ -371,10 +371,15 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     const datasetScale = Store.getState().dataset.dataSource.scale;
     const hasSegmentation = segmentationBinary != null;
 
+    const segmentationPackingDegree = hasSegmentation
+      ? getPackingDegree(segmentationBinary.getByteCount())
+      : 0;
+
     const code = getMainFragmentShader({
       colorLayerNames,
       hasSegmentation,
       segmentationName,
+      segmentationPackingDegree,
       isRgb: Utils.__guard__(Model.binary.color, x1 => x1.targetBitDepth) === 24,
       planeID: this.planeID,
       isMappingSupported: Model.isMappingSupported,

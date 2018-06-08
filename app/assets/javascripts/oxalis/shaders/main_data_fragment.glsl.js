@@ -21,6 +21,7 @@ type ParamsType = {|
   colorLayerNames: string[],
   hasSegmentation: boolean,
   segmentationName: string,
+  segmentationPackingDegree: number,
   isRgb: boolean,
   planeID: OrthoViewType,
   isMappingSupported: boolean,
@@ -220,6 +221,7 @@ void main() {
     // Since we concat the segmentation to the color layers, its index is equal
     // to the length of the colorLayer array
     segmentationLayerIndex: params.colorLayerNames.length,
+    segmentationPackingDegree: formatNumberAsGLSLFloat(params.segmentationPackingDegree),
     ModeValuesIndices: _.mapValues(ModeValuesIndices, formatNumberAsGLSLFloat),
     OrthoViews,
     bucketWidth: formatNumberAsGLSLFloat(constants.BUCKET_WIDTH),

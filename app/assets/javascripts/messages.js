@@ -17,7 +17,7 @@ In order to restore the current window, a reload is necessary.`,
   "react.rendering_error":
     "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
   "save.leave_page_unfinished":
-    "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.",
+    "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save tracing. Retrying.",
   "undo.no_undo": "There is no action that could be undone.",
   "undo.no_redo": "There is no action that could be redone.",
@@ -48,8 +48,6 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
   "tracing.changed_move_value": "The move value was changed to: ",
-  "tracing.no_viewport_scaling_setting":
-    "Scaling the viewports via k/l is not supported anymore. Instead you can increase the viewport size by dragging the borders between the panes. You can also rearrange the panes by dragging the tabs.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "task.user_script_retrieval_error": "Unable to retrieve script",

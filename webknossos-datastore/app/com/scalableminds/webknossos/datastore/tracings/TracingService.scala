@@ -6,7 +6,7 @@ package com.scalableminds.webknossos.datastore.tracings
 import java.util.UUID
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Reads
 

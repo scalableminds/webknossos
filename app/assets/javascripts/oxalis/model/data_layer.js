@@ -254,6 +254,7 @@ class DataLayer {
       const missingBucketPriority = constants.MODES_PLANE.includes(viewMode) ? 100 : -1;
       const missingBuckets = buckets
         .filter(bucket => !bucket.hasData())
+        .filter(bucket => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
         .map(bucket => ({ bucket: bucket.zoomedAddress, priority: missingBucketPriority }));
       this.pullQueue.addAll(missingBuckets);
       this.pullQueue.pull();

@@ -46,6 +46,9 @@ object ScriptSQLDAO extends SQLDAO[ScriptSQL, ScriptsRow, Scripts] {
   def idColumn(x: Scripts): Rep[String] = x._Id
   def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
 
+  override def readAccessQ(requestingUserId: ObjectId): String =
+    s"(select _organization from webknossos.users_ u where u._id = _owner) = (select _organization from webknossos.users_ u where u._id = '${requestingUserId.id}')"
+
   def parse(r: ScriptsRow): Fox[ScriptSQL] =
     Fox.successful(ScriptSQL(
       ObjectId(r._Id),
@@ -73,6 +76,13 @@ object ScriptSQLDAO extends SQLDAO[ScriptSQL, ScriptsRow, Scripts] {
                             isDeleted = ${s.isDeleted}
                           where _id = ${s._id.id}""")
     } yield ()
+
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[ScriptSQL]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select #${columns} from webknossos.scripts_ where #${accessQuery}".as[ScriptsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
 }
 
 
@@ -97,15 +107,15 @@ object Script extends FoxImplicits {
     Script(name, gist, BSONObjectID(_owner))
   }
 
-  def scriptPublicWrites(script: Script)(implicit ctx: DBAccessContext): Future[JsObject] =
+  def scriptPublicWrites(script: Script)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      owner <- UserDAO.findOneById(script._owner).map(User.userCompactWrites.writes).futureBox
+      owner <- UserDAO.findOneById(script._owner).map(User.userCompactWrites.writes)
     } yield {
       Json.obj(
         "id" -> script.id,
         "name" -> script.name,
         "gist" -> script.gist,
-        "owner" -> owner.toOption
+        "owner" -> owner
       )
     }
 

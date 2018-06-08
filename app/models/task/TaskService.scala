@@ -26,7 +26,7 @@ object TaskService
   }
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    TaskDAO.logTime(time, _task)
+    TaskDAO.logTime(time, _task) ?~> "FAILED: TaskDAO.logTime"
 
   def removeAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
     TaskDAO.removeAllWithTaskTypeAndItsAnnotations(taskType)

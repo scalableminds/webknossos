@@ -8,7 +8,9 @@ import play.api.Configuration
 
 class TracingDataStore @Inject()(config: Configuration) {
 
-  new FossilDBClient("healthCheckOnly", config).checkHealth
+  val healthClient = new FossilDBClient("healthCheckOnly", config)
+
+  healthClient.checkHealth
 
   lazy val skeletons = new FossilDBClient("skeletons", config)
 

@@ -196,7 +196,7 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
     const tracingDescription = this.props.tracing.description || "<no description>";
 
     return (
-      <div className="flex-overflow">
+      <div>
         <p>{annotationTypeLabel}</p>
         <p>
           <span>

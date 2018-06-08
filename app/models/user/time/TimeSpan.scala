@@ -134,7 +134,7 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
 
   def updateOne(t: TimeSpanSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for { //note that t.created is skipped
-      _ <- assertUpdateAccess(t._id)
+      _ <- assertUpdateAccess(t._id) ?~> "FAILED: TimeSpanSQLDAO.assertUpdateAccess"
       r <- run(sqlu"""update webknossos.timespans
                 set
                   _user = ${t._user.id},
@@ -144,7 +144,7 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
                   numberOfUpdates = ${t.numberOfUpdates},
                   isDeleted = ${t.isDeleted}
                 where _id = ${t._id.id}
-        """)
+        """) ?~> "FAILED: run() in TimeSpanSQLDAO.updateOne"
     } yield ()
   }
 }

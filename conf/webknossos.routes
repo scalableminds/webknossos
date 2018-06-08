@@ -5,6 +5,7 @@
 GET           /api/buildinfo                                                    controllers.Application.buildInfo
 GET           /api/features                                                     controllers.Application.features
 POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
+GET           /api/triggers/initialData                                         controllers.InitialDataController.triggerInsert
 
 # Authentication
 GET           /api/auth/autoLogin                                               controllers.Authentication.autoLogin

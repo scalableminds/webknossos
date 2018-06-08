@@ -3,7 +3,7 @@ package com.scalableminds.util.rpc
 import java.io.File
 
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.trueaccord.scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
+import scalapb.{GeneratedMessage, GeneratedMessageCompanion, Message}
 import com.typesafe.scalalogging.LazyLogging
 import net.liftweb.common.{Failure, Full}
 import play.api.Play.current

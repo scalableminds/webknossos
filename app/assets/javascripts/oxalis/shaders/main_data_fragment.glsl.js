@@ -2,8 +2,8 @@
 import _ from "lodash";
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
-import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/binary/mappings";
-import { floatsPerLookUpEntry } from "oxalis/model/binary/texture_bucket_manager";
+import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
+import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
   OrthoViews,
   ModeValuesIndices,

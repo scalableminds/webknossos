@@ -97,7 +97,7 @@ export function sanitizeName(name: ?string): string {
   if (name == null) {
     return "";
   }
-  return `binary_${name.replace(/-/g, "_")}`;
+  return `layer_${name.replace(/-/g, "_")}`;
 }
 
 class AbstractPlaneMaterialFactory {
@@ -129,8 +129,8 @@ class AbstractPlaneMaterialFactory {
   setupUniforms(): void {
     this.uniforms = {};
 
-    for (const binary of Model.getColorBinaries()) {
-      const name = sanitizeName(binary.name);
+    for (const colorLayer of Model.getColorLayers()) {
+      const name = sanitizeName(colorLayer.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",
         value: 1.0,
@@ -167,10 +167,10 @@ class AbstractPlaneMaterialFactory {
     listenToStoreProperty(
       state => state.datasetConfiguration.layers,
       layerSettings => {
-        for (const binary of Model.getColorBinaries()) {
-          const settings = layerSettings[binary.name];
+        for (const colorLayer of Model.getColorLayers()) {
+          const settings = layerSettings[colorLayer.name];
           if (settings != null) {
-            const name = sanitizeName(binary.name);
+            const name = sanitizeName(colorLayer.name);
             this.updateUniformsForLayer(settings, name);
           }
         }

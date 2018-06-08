@@ -287,7 +287,7 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   init(): void {
-    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    const { clippingDistance } = Store.getState().userConfiguration;
     SceneController.setClippingDistance(clippingDistance);
   }
 
@@ -333,23 +333,12 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   onPlaneViewRender(): void {
-    const state = Store.getState();
-    const activeViewport = state.viewModeData.plane.activeViewport;
-    for (const dataLayerName of Object.keys(Model.binary)) {
-      if (SceneController.pingDataLayer(dataLayerName)) {
-        Model.binary[dataLayerName].ping(getPosition(state.flycam), {
-          zoomStep: getRequestLogZoomStep(state),
-          activePlane: activeViewport,
-        });
-      }
-    }
-
     SceneController.update();
     this.props.onRender();
   }
 
   movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
   };
 
@@ -362,7 +351,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   moveZ = (z: number, oneSlide: boolean): void => {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
@@ -384,7 +373,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   zoom(value: number, zoomToMouse: boolean): void {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (OrthoViewValuesWithoutTDView.includes(activeViewport)) {
       this.zoomPlanes(value, zoomToMouse);
     } else {
@@ -414,7 +403,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   moveTDView(delta: Point2): void {
     const state = Store.getState();
-    const scale = state.userConfiguration.scale;
+    const { scale } = state.userConfiguration;
     Store.dispatch(moveTDViewXAction(delta.x / scale * -1));
     Store.dispatch(moveTDViewYAction(delta.y / scale * -1));
   }
@@ -422,7 +411,7 @@ class PlaneController extends React.PureComponent<Props> {
   finishZoom = (): void => {
     // Move the plane so that the mouse is at the same position as
     // before the zoom
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (this.isMouseOver() && activeViewport !== OrthoViews.TDView) {
       const mousePos = this.getMousePosition();
       const moveVector = [
@@ -435,7 +424,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   getMousePosition(): Vector3 {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     const pos = this.input.mouseControllers[activeViewport].position;
     if (pos != null) {
       return this.calculateGlobalPos(pos);
@@ -527,7 +516,7 @@ function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
 export function calculateGlobalPos(clickPos: Point2): Vector3 {
   let position;
   const state = Store.getState();
-  const activeViewport = state.viewModeData.plane.activeViewport;
+  const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
   const zoomFactor = getPlaneScalingFactor(state.flycam);
   const viewportScale = state.userConfiguration.scale;

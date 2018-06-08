@@ -8,7 +8,7 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
-import Binary from "oxalis/model/binary";
+import DataLayer from "oxalis/model/data_layer";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -527,9 +527,9 @@ class DataApi {
     this.model = model;
   }
 
-  __getLayer(layerName: string): Binary {
-    const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw new Error(`Layer with name ${layerName} was not found.`);
+  __getLayer(layerName: string): DataLayer {
+    const layer = this.model.getLayerByName(layerName);
+    if (layer == null) throw new Error(`Layer with name ${layerName} was not found.`);
     return layer;
   }
 
@@ -537,7 +537,7 @@ class DataApi {
    * Returns the names of all available layers of the current tracing.
    */
   getLayerNames(): Array<string> {
-    return _.map(this.model.binary, "name");
+    return _.map(this.model.dataLayers, "name");
   }
 
   /**
@@ -546,9 +546,9 @@ class DataApi {
    */
   getVolumeTracingLayerName(): string {
     assertVolume(Store.getState().tracing);
-    const layer = this.model.getSegmentationBinary();
-    assertExists(layer, "Segmentation layer not found!");
-    return layer.name;
+    const segmentationLayer = this.model.getSegmentationLayer();
+    assertExists(segmentationLayer, "Segmentation layer not found!");
+    return segmentationLayer.name;
   }
 
   /**
@@ -569,7 +569,7 @@ class DataApi {
 
     // Note: As there is at most one segmentation layer now, the layerName is unneccessary
     // However, we probably want to support multiple segmentation layers in the future
-    const segmentationLayerName = this.model.getSegmentationBinary().name;
+    const segmentationLayerName = this.model.getSegmentationLayer().name;
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
@@ -661,15 +661,15 @@ class DataApi {
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
-    const layer = this.model.getSegmentationBinary();
-    assertExists(layer, "Segmentation layer not found!");
+    const segmentationLayer = this.model.getSegmentationLayer();
+    assertExists(segmentationLayer, "Segmentation layer not found!");
 
     for (const voxel of voxels) {
-      layer.cube.labelVoxel(voxel, label);
+      segmentationLayer.cube.labelVoxel(voxel, label);
     }
 
-    layer.cube.pushQueue.push();
-    layer.cube.trigger("volumeLabeled");
+    segmentationLayer.cube.pushQueue.push();
+    segmentationLayer.cube.trigger("volumeLabeled");
   }
 
   /**

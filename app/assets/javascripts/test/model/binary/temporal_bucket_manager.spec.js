@@ -10,9 +10,10 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
 });
 mockRequire("libs/request", null);
 
-const { DataBucket } = mockRequire.reRequire("oxalis/model/binary/bucket");
-const TemporalBucketManager = mockRequire.reRequire("oxalis/model/binary/temporal_bucket_manager")
-  .default;
+const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
+const TemporalBucketManager = mockRequire.reRequire(
+  "oxalis/model/bucket_data_handling/temporal_bucket_manager",
+).default;
 
 test.beforeEach(t => {
   const pullQueue = {

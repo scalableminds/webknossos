@@ -43,7 +43,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         js <- annotation.toJson(request.identity, Some(restrictions), Some(readOnly))
       } yield {
         request.identity.foreach { user =>
-          TimeSpanService.logUserInteraction(user, annotation)            // log time when a user starts working
+          if (typ == "Task" || typ == "Explorational") TimeSpanService.logUserInteraction(user, annotation)            // log time when a user starts working
         }
         Ok(js)
       }

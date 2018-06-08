@@ -48,7 +48,6 @@ services:
   base:
     image: scalableminds/sbt:graal__46
     environment:
-      # - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
       - HOME=/root
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos

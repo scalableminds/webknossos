@@ -30,14 +30,10 @@ jobs:
           name: Build webknossos (sbt and webpack)
           command: |
             if [ "${CIRCLE_BRANCH}" == "master" ]; then
-              docker-compose run compile sbt -v clean compile stage
+              docker-compose run compile sbt clean compile stage
             else
-              docker-compose run compile bash -c 'SBT_OPTS="$SBT_OPTS -Dgraal.TruffleCompilationExceptionsAreFatal=true" sbt -v compile stage'
+              docker-compose run compile sbt compile stage
             fi
-          no_output_timeout: 30m
-      - store_artifacts:
-          path: dumps
-          destination: graal-dumps
       - run:
           name: Build webknossos-datastore (sbt)
           command: docker-compose run base sbt "project webknossosDatastore" compile stage

@@ -1,14 +1,12 @@
-FROM openjdk:8-jdk
-RUN apt-get update \
-    && apt-get -y install postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+FROM scalableminds/graalvm:graal__46
 
 RUN mkdir -p /srv/webknossos
 WORKDIR /srv/webknossos
 
 COPY target/universal/stage .
 
-RUN groupadd -r webknossos \
+RUN apk --no-cache add shadow \
+  && groupadd -r webknossos \
   && useradd -r -g webknossos webknossos \
   && mkdir disk \
   && chown -R webknossos .

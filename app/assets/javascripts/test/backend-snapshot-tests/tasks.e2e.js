@@ -7,7 +7,13 @@ import * as api from "admin/admin_rest_api";
 import _ from "lodash";
 
 test("getTasks()", async t => {
-  const allTasks = await api.getTasks({});
+  const allTasks = (await api.getTasks({})).filter(
+    task => task.projectName !== "Test_Project3(for_annotation_mutations)",
+  );
+  allTasks.forEach(task => {
+    // $FlowFixMe: Make tracingTime deterministic
+    task.tracingTime = 100;
+  });
   t.snapshot(allTasks, { id: "tasks-getTasks" });
 
   const complexQueriedTasks = await api.getTasks({
@@ -15,6 +21,10 @@ test("getTasks()", async t => {
   });
 
   t.is(complexQueriedTasks.length, 2);
+  complexQueriedTasks.forEach(task => {
+    // $FlowFixMe: Make tracingTime deterministic
+    task.tracingTime = 100;
+  });
   t.deepEqual(
     complexQueriedTasks.map(task => task.id).sort(),
     ["58135c192faeb34c0081c058", "581367a82faeb37a008a5352"].sort(),

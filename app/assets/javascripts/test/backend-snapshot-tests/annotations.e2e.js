@@ -14,7 +14,7 @@ test("getAnnotationInformation()", async t => {
 });
 
 test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
-  const annotationId = "58135c402faeb34e0081c068";
+  const annotationId = "78135c192faeb34c0081c05d";
   const finishedAnnotation = await api.finishAnnotation(annotationId, APITracingTypeEnum.Task);
   t.is(finishedAnnotation.state, "Finished");
   // $FlowFixMe: Make tracingTime deterministic
@@ -31,25 +31,29 @@ test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
 });
 
 test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async t => {
-  const annotationId = "570ba0092a7c0e980056fe9b";
+  const annotationId = "68135c192faeb34c0081c05d";
   const finishedAnnotation = await api.finishAnnotation(
     annotationId,
     APITracingTypeEnum.Explorational,
   );
   t.is(finishedAnnotation.state, "Finished");
+  // $FlowFixMe: Make tracingTime deterministic
+  finishedAnnotation.tracingTime = 100;
   t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation-explorational" });
 
   const reopenedAnnotation = await api.reOpenAnnotation(
     annotationId,
     APITracingTypeEnum.Explorational,
   );
+  // $FlowFixMe: Make tracingTime deterministic
+  finishedAnnotation.tracingTime = 100;
   t.is(reopenedAnnotation.state, "Active");
 
   t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation-explorational" });
 });
 
 test.serial("editAnnotation()", async t => {
-  const annotationId = "58135c192faeb34c0081c05d";
+  const annotationId = "68135c192faeb34c0081c05d";
   const originalAnnotation = await api.getAnnotationInformation(
     annotationId,
     APITracingTypeEnum.Explorational,
@@ -73,6 +77,8 @@ test.serial("editAnnotation()", async t => {
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.isPublic, newIsPublic);
   t.is(editedAnnotation.description, newDescription);
+  // $FlowFixMe: Make tracingTime deterministic
+  editedAnnotation.tracingTime = 100;
   t.snapshot(editedAnnotation, { id: "annotations-editAnnotation" });
 
   await api.editAnnotation(annotationId, APITracingTypeEnum.Explorational, {
@@ -83,7 +89,7 @@ test.serial("editAnnotation()", async t => {
 });
 
 test.serial("finishAllAnnotations()", async t => {
-  const annotationIds = ["570ba0092a7c0e980056fe9b", "58135c402faeb34e0081c068"];
+  const annotationIds = ["78135c192faeb34c0081c05d", "78135c192faeb34c0081c05e"];
 
   await api.finishAllAnnotations(annotationIds);
 
@@ -95,6 +101,8 @@ test.serial("finishAllAnnotations()", async t => {
   finishedAnnotations.forEach(annotation => {
     t.is(annotation.state, "Finished");
   });
+
+  await Promise.all(annotationIds.map(id => api.reOpenAnnotation(id, APITracingTypeEnum.Task)));
 });
 
 // Tests which require a working dataStore during tests and therefore don't work yet:

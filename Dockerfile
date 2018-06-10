@@ -5,7 +5,7 @@ WORKDIR /srv/webknossos
 
 COPY target/universal/stage .
 
-RUN apk --no-cache add shadow \
+RUN apk --no-cache add bash shadow \
   && groupadd -r webknossos \
   && useradd -r -g webknossos webknossos \
   && mkdir disk \

@@ -17,8 +17,8 @@ window._setupShaderEditor = viewport => {
   const button = document.createElement("button");
   const buttonContainer = document.createElement("div");
   function overrideShader() {
-    material.fragmentShader = input.value;
-    material.needsUpdate = true;
+    window.materials[viewport].fragmentShader = input.value;
+    window.materials[viewport].needsUpdate = true;
     window.needsRerender = true;
   }
   button.addEventListener("click", () => overrideShader());

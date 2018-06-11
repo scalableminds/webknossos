@@ -8,7 +8,7 @@ import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 import models.annotation.AnnotationState._
-import models.project.ProjectDAO
+import models.project.ProjectSQLDAO
 
 object TaskInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
@@ -20,20 +20,22 @@ object TaskInformationHandler extends AnnotationInformationHandler with FoxImpli
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
-      project <- ProjectDAO.findOneByName(task._project)
+      project <- ProjectSQLDAO.findOneByName(task._project)
+      teamIdBson <- project._team.toBSONObjectId.toFox
       dataSetName = finishedAnnotations.head.dataSetName
       mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(task.id), persistTracing=false, user._id,
-        dataSetName, project._team, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+        dataSetName, teamIdBson, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: String)(implicit ctx: DBAccessContext) =
     for {
       task <- TaskDAO.findOneById(taskId) ?~> "task.notFound"
-      project <- ProjectDAO.findOneByName(task._project)
+      project <- ProjectSQLDAO.findOneByName(task._project)
+      teamIdBson <- project._team.toBSONObjectId.toFox
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.exists(_.isTeamManagerOfBLOCKING(project._team))
+          user.exists(_.isTeamManagerOfBLOCKING(teamIdBson))
       }
     }
 }

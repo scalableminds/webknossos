@@ -28,12 +28,14 @@ import {
   updateDatasetDefaultConfiguration,
   getDatasetDatasource,
   updateDatasetDatasource,
+  updateDatasetTeams,
 } from "admin/admin_rest_api";
 import { Vector3Input } from "libs/vector_input";
 import type { DatasetConfigurationType } from "oxalis/store";
 import messages from "messages";
 import type { APIDatasetType, APIMessageType } from "admin/api_flow_types";
 import DatasourceSchema from "libs/datasource.schema.json";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 
 const FormItem = Form.Item;
 const CollapsePanel = Collapse.Panel;
@@ -118,6 +120,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         displayName: dataset.displayName || undefined,
         isPublic: dataset.isPublic || false,
         description: dataset.description || undefined,
+        allowedTeams: dataset.allowedTeams || [],
       },
     });
 
@@ -162,6 +165,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
         const dataSource = JSON.parse(formValues.dataSourceJson);
         await updateDatasetDatasource(this.props.datasetName, dataset.dataStore.url, dataSource);
+
+        const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
+        await updateDatasetTeams(dataset.name, teamIds);
 
         const verb = this.props.isEditingMode ? "updated" : "imported";
         Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
@@ -330,6 +336,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
               })(<Input.TextArea rows={20} style={jsonEditStyle} />)}
             </FormItem>
             {this.props.isEditingMode ? this.getEditModeComponents() : null}
+            <FormItem label="Allowed Teams">
+              {getFieldDecorator("dataset.allowedTeams", {})(
+                <TeamSelectionComponent mode="multiple" />,
+              )}
+            </FormItem>
             <FormItem>
               <Button type="primary" htmlType="submit">
                 {titleString}

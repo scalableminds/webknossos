@@ -351,8 +351,8 @@ class DataCube {
     }
   }
 
-  getDataValue(voxel: Vector3, mapping: ?MappingType): number {
-    const bucket = this.getBucket(this.positionToBaseAddress(voxel));
+  getDataValue(voxel: Vector3, mapping: ?MappingType, zoomStep: number = 0): number {
+    const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
     const voxelIndex = this.getVoxelIndex(voxel);
 
     if (bucket.hasData()) {
@@ -376,8 +376,8 @@ class DataCube {
     return 0;
   }
 
-  getMappedDataValue(voxel: Vector3): number {
-    return this.getDataValue(voxel, this.isMappingEnabled() ? this.getMapping() : null);
+  getMappedDataValue(voxel: Vector3, zoomStep: number = 0): number {
+    return this.getDataValue(voxel, this.isMappingEnabled() ? this.getMapping() : null, zoomStep);
   }
 
   getVoxelIndex(voxel: Vector3): number {

@@ -6,7 +6,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.Annotation
-import models.project.Project
+import models.project.ProjectSQL
 import models.task.Task
 import models.user.User
 import net.liftweb.common.Box
@@ -78,11 +78,11 @@ object BrainTracing extends LazyLogging with FoxImplicits {
     result.contains("ist derzeit nicht verf&uuml;gbar.")
 
   private def signalOverTime(
-    time: Long,
-    project: Box[Project],
-    task: Box[Task],
-    annotation: Option[Annotation],
-    user: User) = {
+                              time: Long,
+                              project: Box[ProjectSQL],
+                              task: Box[Task],
+                              annotation: Option[Annotation],
+                              user: User) = {
 
     for {
       p <- project

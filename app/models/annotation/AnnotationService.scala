@@ -206,7 +206,8 @@ object AnnotationService
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
       project <- task.project
-      _ <- Annotation(userId, tracingReference, dataSetName, project._team, taskType.settings,
+      teamIdBson <- project._team.toBSONObjectId.toFox
+      _ <- Annotation(userId, tracingReference, dataSetName, teamIdBson, taskType.settings,
           typ = AnnotationType.TracingBase, _task = Some(task._id), description = description.getOrElse("")).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }

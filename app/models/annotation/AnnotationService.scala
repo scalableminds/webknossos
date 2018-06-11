@@ -193,6 +193,8 @@ object AnnotationService
     }
   }
 
+  def cleanUpInitializingAnnotations = AnnotationSQLDAO.deleteInitializingAnnotations
+
   def createAnnotationBase(
     taskFox: Fox[Task],
     userId: BSONObjectID,

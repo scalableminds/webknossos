@@ -1,10 +1,11 @@
 import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Mailer
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
+import models.annotation.AnnotationService
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.security.WebknossosSilhouette
@@ -17,6 +18,7 @@ import utils.SQLClient
 
 import scala.concurrent.Future
 import sys.process._
+import scala.concurrent.duration._
 
 object Global extends GlobalSettings with LazyLogging{
 
@@ -40,6 +42,10 @@ object Global extends GlobalSettings with LazyLogging{
 
     CleanUpService.register("deletion of expired tokens", tokenAuthenticatorService.dataStoreExpiry) {
       tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
+    }
+
+    CleanUpService.register("deletion of annotations in initializing state", 30 seconds) {
+      AnnotationService.cleanUpInitializingAnnotations
     }
 
     super.onStart(app)

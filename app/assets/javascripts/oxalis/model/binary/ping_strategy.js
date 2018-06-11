@@ -88,6 +88,7 @@ export class PingStrategy extends AbstractPingStrategy {
       zoomStepDiff,
       activePlane,
       areas,
+      false,
     );
 
     let queueItemsForFallbackZoomStep = [];
@@ -100,6 +101,7 @@ export class PingStrategy extends AbstractPingStrategy {
         zoomStepDiff - 1,
         activePlane,
         areas,
+        true,
       );
     }
 
@@ -113,6 +115,7 @@ export class PingStrategy extends AbstractPingStrategy {
     zoomStepDiff: number,
     activePlane: OrthoViewType,
     areas: OrthoViewMapType<AreaType>,
+    isFallback: boolean,
   ): Array<PullQueueItemType> {
     const pullQueue = [];
 
@@ -122,6 +125,8 @@ export class PingStrategy extends AbstractPingStrategy {
 
     const centerBucket = this.cube.positionToZoomedAddress(position, zoomStep);
     const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
+
+    const fallbackPriorityWeight = isFallback ? 50 : 0;
 
     for (const plane of OrthoViewValuesWithoutTDView) {
       const [u, v, w] = Dimensions.getIndices(plane);
@@ -150,7 +155,8 @@ export class PingStrategy extends AbstractPingStrategy {
         const priority =
           Math.abs(bucket[0] - centerBucket3[0]) +
           Math.abs(bucket[1] - centerBucket3[1]) +
-          Math.abs(bucket[2] - centerBucket3[2]);
+          Math.abs(bucket[2] - centerBucket3[2]) +
+          fallbackPriorityWeight;
         pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
         if (plane === activePlane) {
           // preload only for active plane

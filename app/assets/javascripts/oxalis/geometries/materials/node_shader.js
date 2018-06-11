@@ -47,7 +47,7 @@ class NodeShader {
       },
       viewportScale: {
         type: "f",
-        value: 1,
+        value: state.userConfiguration.scale,
       },
       overrideNodeRadius: {
         type: "i",

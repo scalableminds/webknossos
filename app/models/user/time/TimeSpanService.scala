@@ -163,8 +163,8 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       annotation.flatMap(_._task) match {
         case Some(taskId) =>
           for {
-            _ <- TaskSQLDAO.logTime(ObjectId.fromBsonId(taskId), duration)(GlobalAccessContext)
-            _ <- signalOverTime(duration, annotation)(GlobalAccessContext)
+            _ <- TaskSQLDAO.logTime(ObjectId.fromBsonId(taskId), duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
+            _ <- signalOverTime(duration, annotation)(GlobalAccessContext)?~> "FAILED: TimeSpanService.signalOverTime"
           } yield {}
         case _ =>
           Fox.successful(())

@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 import com.scalableminds.util.reactivemongo.JsonFormatHelper
-import com.scalableminds.util.tools.FoxImplicits
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task.{Script, _}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -21,7 +21,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   val scriptPublicReads =
     ((__ \ 'name).read[String](minLength[String](2) or maxLength[String](50)) and
       (__ \ 'gist).read[String] and
-      (__ \ 'owner).read[String] (JsonFormatHelper.StringObjectIdReads("team"))) (Script.fromForm _)
+      (__ \ 'owner).read[String] (JsonFormatHelper.StringObjectIdReads("owner"))) (Script.fromForm _)
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { script =>
@@ -47,7 +47,7 @@ class ScriptsController @Inject()(val messagesApi: MessagesApi) extends Controll
   def list = SecuredAction.async { implicit request =>
     for {
       scripts <- ScriptDAO.findAll
-      js <- Future.traverse(scripts)(s => Script.scriptPublicWrites(s))
+      js <- Fox.serialCombined(scripts)(s => Script.scriptPublicWrites(s))
     } yield {
       Ok(Json.toJson(js))
     }

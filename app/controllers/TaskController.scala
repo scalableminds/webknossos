@@ -13,17 +13,14 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.binary.DataSetDAO
 import models.project.ProjectSQLDAO
 import models.task.{ScriptDAO, TaskSQL, TaskSQLDAO, TaskTypeDAO}
-import models.team.TeamDAO
 import models.user._
-import net.liftweb.common.{Box, Full}
+import net.liftweb.common.Box
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.Play.current
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
 import play.api.mvc.Result
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import utils.ObjectId
 
 import scala.concurrent.Future

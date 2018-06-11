@@ -29,7 +29,6 @@ import type {
   VolumeToolType,
   ControlModeType,
   BoundingBoxType,
-  Rect,
 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import DiffableMap from "libs/diffable_map";
@@ -216,6 +215,7 @@ export type UserConfigurationType = {
   +particleSize: number,
   +radius: number,
   +rotateValue: number,
+  +scale: number,
   +scaleValue: number,
   +sortCommentsAsc: boolean,
   +sortTreesByName: boolean,
@@ -287,21 +287,15 @@ export type PartialCameraData = {
 export type PlaneModeData = {
   +activeViewport: OrthoViewType,
   +tdCamera: CameraData,
-  +inputCatcherRects: {
-    +PLANE_XY: Rect,
-    +PLANE_YZ: Rect,
-    +PLANE_XZ: Rect,
-    +TDView: Rect,
-  },
 };
 
-type ArbitraryModeData = {
-  +inputCatcherRect: Rect,
-};
+type ArbitraryModeData = null;
+type FlightModeData = null;
 
 export type ViewModeData = {
   +plane: PlaneModeData,
-  +arbitrary: ArbitraryModeData,
+  +arbitrary: ?ArbitraryModeData,
+  +flight: ?FlightModeData,
 };
 
 export type OxalisState = {
@@ -315,13 +309,6 @@ export type OxalisState = {
   +flycam: FlycamType,
   +viewModeData: ViewModeData,
   +activeUser: ?APIUserType,
-};
-
-const defaultViewportRect = {
-  top: 0,
-  left: 0,
-  width: Constants.VIEWPORT_WIDTH,
-  height: Constants.VIEWPORT_WIDTH,
 };
 
 export const defaultState: OxalisState = {
@@ -440,16 +427,9 @@ export const defaultState: OxalisState = {
         lookAt: [0, 0, 0],
         position: [0, 0, 0],
       },
-      inputCatcherRects: {
-        PLANE_XY: defaultViewportRect,
-        PLANE_YZ: defaultViewportRect,
-        PLANE_XZ: defaultViewportRect,
-        TDView: defaultViewportRect,
-      },
     },
-    arbitrary: {
-      inputCatcherRect: defaultViewportRect,
-    },
+    arbitrary: null,
+    flight: null,
   },
   activeUser: null,
 };

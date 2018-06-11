@@ -93,7 +93,6 @@ class NodeShader {
   }
 
   getMaterial(): THREE.RawShaderMaterial {
-    window.nodeMaterial = this.material;
     return this.material;
   }
 
@@ -230,8 +229,8 @@ void main()
 {
     gl_FragColor = vec4(color, 1.0);
     vec2 centerDistance = abs(gl_PointCoord - vec2(0.5));
-    bool isBorder = centerDistance.x < 0.20 && centerDistance.y < 0.20;
-    if (v_isHighlightedCommented > 0.0 && isBorder) {
+    bool isWithinBorder = centerDistance.x < 0.20 && centerDistance.y < 0.20;
+    if (v_isHighlightedCommented > 0.0 && isWithinBorder) {
       gl_FragColor  = vec4(1.0);
     };
 }`;

@@ -457,6 +457,7 @@ class Skeleton {
       attributes.position.set(node.position, index * 3);
       attributes.radius.array[index] = node.radius;
       attributes.type.array[index] = NodeTypes.NORMAL;
+      attributes.isCommented.array[index] = false;
       attributes.nodeId.array[index] = node.id;
       attributes.treeId.array[index] = treeId;
       return _.values(attributes);

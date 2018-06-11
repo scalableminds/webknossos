@@ -13,8 +13,7 @@ export default {
 window._setupShaderEditor = viewport => {
   const outer = document.createElement("div");
   const input = document.createElement("textarea");
-  const material = window.nodeMaterial || window.materials[viewport];
-  input.value = material.fragmentShader;
+  input.value = window.materials[viewport].fragmentShader;
   const button = document.createElement("button");
   const buttonContainer = document.createElement("div");
   function overrideShader() {

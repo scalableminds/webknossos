@@ -208,14 +208,14 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     val dummyTracingId = Random.alphanumeric.take(36).mkString
 
     val insertAnnotationQ = sqlu"""
-           with task as (#${findNextTaskQ(userId, teamIds)})
-
+           with task as (#${findNextTaskQ(userId, teamIds)}),
+           dataset as (select _id from webknossos.datasets_ limit 1)
            insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-           select ${annotationId.id}, 'dummyDatasetId', _id, 'dummyTeamId', 'dummyUserId', ${dummyTracingId},
+           select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption.map(_.id).getOrElse("")}, ${userId.id}, ${dummyTracingId},
                     'skeleton', '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
                     '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
                      ${new java.sql.Timestamp(System.currentTimeMillis)}, false
-           from task
+           from task, dataset
       """
 
     val findTaskOfInsertedAnnotationQ =
@@ -335,8 +335,8 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
   def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}")
+      _ <- assertUpdateAccess(id) ?~> "FAILED: TaskSQLDAO.assertUpdateAccess"
+      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}") ?~> "FAILED: run in TaskSQLDAO.logTime"
     } yield ()
 
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {

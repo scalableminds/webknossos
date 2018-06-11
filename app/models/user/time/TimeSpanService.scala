@@ -130,7 +130,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       // Log time to annotation
       annotation match {
         case Some(a: Annotation) =>
-          AnnotationService.logTime(duration, a._id)(GlobalAccessContext)
+          AnnotationService.logTime(duration, a._id)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
         case _ =>
           Fox.successful(())
         // do nothing, this is not a stored annotation
@@ -189,9 +189,9 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
       val updateResult = for {
         annotation <- getAnnotation(updated.annotation)
-        _ <- TimeSpanDAO.update(updated)(ctx)
-        _ <- logTimeToAnnotation(duration, annotation)
-        _ <- logTimeToTask(duration, annotation)
+        _ <- TimeSpanDAO.update(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
+        _ <- logTimeToAnnotation(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
+        _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"
       } yield {}
 
       updateResult.onComplete{ x =>

@@ -19,6 +19,7 @@ import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
 import models.task.TaskSQL
+import models.team.OrganizationSQLDAO
 import models.user.User
 import utils.ObjectId
 import play.api.i18n.Messages
@@ -42,8 +43,18 @@ object AnnotationService
   with ProtoGeometryImplicits
   with LazyLogging {
 
-  private def selectSuitableTeam(user: User, dataSet: DataSet): BSONObjectID = {
-      dataSet.allowedTeams.intersect(user.teamIds).head
+  private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[BSONObjectID] = {
+    val selectedTeamOpt = dataSet.allowedTeams.intersect(user.teamIds).headOption
+    selectedTeamOpt match {
+      case Some(selectedTeam) => Fox.successful(selectedTeam)
+      case None =>
+        for {
+          _ <- user.isAdmin
+          organization <- OrganizationSQLDAO.findOneByName(user.organization)
+          organizationTeamId <- OrganizationSQLDAO.findOrganizationTeam(organization._id)
+          organizationTeamIdBson <- organizationTeamId.toBSONObjectId.toFox
+        } yield organizationTeamIdBson
+    }
   }
 
   private def createVolumeTracing(dataSource: DataSource, withFallback: Boolean): VolumeTracing = {
@@ -85,11 +96,12 @@ object AnnotationService
     for {
       dataSource <- dataSet.dataSource.toUsable ?~> "DataSet is not imported."
       tracing <- createTracing(dataSource)
+      teamId <- selectSuitableTeam(user, dataSet)
       annotation = Annotation(
         user._id,
         tracing,
         dataSet.name,
-        selectSuitableTeam(user, dataSet),
+        teamId,
         AnnotationSettings.defaultFor(tracingType),
         _id = BSONObjectID.parse(id).getOrElse(BSONObjectID.generate))
       _ <- annotation.saveToDB
@@ -209,17 +221,19 @@ object AnnotationService
                 settings: AnnotationSettings,
                 name: Option[String],
                 description: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
-    val annotation = Annotation(
-      user._id,
-      tracingReference,
-      dataSet.name,
-      _team = selectSuitableTeam(user, dataSet),
-      settings = settings,
-      _name = name,
-      description = description,
-      typ = annotationType)
     for {
+      teamId <- selectSuitableTeam(user, dataSet)
+      annotation = Annotation(
+        user._id,
+        tracingReference,
+        dataSet.name,
+        teamId,
+        settings = settings,
+        _name = name,
+        description = description,
+        typ = annotationType)
       _ <- annotation.saveToDB
+
     } yield annotation
   }
 

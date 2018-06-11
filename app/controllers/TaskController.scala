@@ -1,6 +1,7 @@
 package controllers
 
 import javax.inject.Inject
+
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
@@ -13,7 +14,7 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.binary.DataSetDAO
 import models.project.ProjectSQLDAO
 import models.task._
-import models.team.TeamDAO
+import models.team.{OrganizationDAO, TeamDAO}
 import models.user._
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
@@ -275,7 +276,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
 
   private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[BSONObjectID]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
-      if (numberOfOpen < MAX_OPEN_TASKS) {
+      if (user.isAdmin) {
+        OrganizationDAO.findOneByName(user.organization).map(_.teams)
+      } else if (numberOfOpen < MAX_OPEN_TASKS) {
         Fox.successful(user.teamIds)
       } else if (user.teamManagerTeamIds.nonEmpty) {
         Fox.successful(user.teamManagerTeamIds)

@@ -1,41 +1,24 @@
 // @flow
 import * as React from "react";
-import { Row, Col, Form, Select, Button } from "antd";
-import { getEditableTeams } from "admin/admin_rest_api";
+import { Row, Col, Form, Button } from "antd";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
 import type { APITeamType } from "admin/api_flow_types";
 
 const FormItem = Form.Item;
-const { Option } = Select;
 
 type Props = {
   form: Object,
-  value?: ?string,
-  onChange: (teamId: string) => Promise<*> | void,
-};
-type State = {
-  teams: Array<APITeamType>,
+  value?: ?APITeamType,
+  onChange: (team: APITeamType) => Promise<*> | void,
 };
 
-class TeamSelectionView extends React.PureComponent<Props, State> {
-  state = {
-    teams: [],
-  };
-
-  componentDidMount() {
-    this.fetchData();
-  }
-
-  async fetchData() {
-    const teams = await getEditableTeams();
-    this.setState({ teams });
-  }
-
+class TeamSelectionForm extends React.PureComponent<Props> {
   handleFormSubmit = (event: ?SyntheticInputEvent<*>) => {
     if (event) {
       event.preventDefault();
     }
     this.props.form.validateFields((err, formValues) => {
-      this.props.onChange(formValues.teamId);
+      this.props.onChange(formValues.team);
     });
   };
 
@@ -50,20 +33,8 @@ class TeamSelectionView extends React.PureComponent<Props, State> {
         <Row gutter={40}>
           <Col span={12}>
             <FormItem {...formItemLayout} label="Team" style={{ marginBottom: 0 }}>
-              {getFieldDecorator("teamId", { initialValue: this.props.value })(
-                <Select
-                  allowClear
-                  showSearch
-                  placeholder="Select a Team"
-                  optionFilterProp="children"
-                  style={{ width: "100%" }}
-                >
-                  {this.state.teams.map((team: APITeamType) => (
-                    <Option key={team.id} value={team.id}>
-                      {team.name}
-                    </Option>
-                  ))}
-                </Select>,
+              {getFieldDecorator("team", { initialValue: this.props.value })(
+                <TeamSelectionComponent />,
               )}
             </FormItem>
           </Col>
@@ -78,4 +49,4 @@ class TeamSelectionView extends React.PureComponent<Props, State> {
   }
 }
 
-export default Form.create()(TeamSelectionView);
+export default Form.create()(TeamSelectionForm);

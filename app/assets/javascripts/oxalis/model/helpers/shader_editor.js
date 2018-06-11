@@ -31,7 +31,7 @@ window._setupShaderEditor = viewport => {
     "style",
     `position: absolute;
         top: 0;
-        right: 0;
+        right: 0px;
         z-index: 10000;
         background: white;`,
   );

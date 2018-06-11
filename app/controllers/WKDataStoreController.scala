@@ -8,7 +8,7 @@ import javax.inject.Inject
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, JsonFormatHelper}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{Annotation, AnnotationDAO}
@@ -19,7 +19,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
 import models.annotation.AnnotationState._
+import models.team.TeamDAO
 import oxalis.security.{TokenType, WebknossosSilhouette}
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
@@ -30,7 +32,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
 
   val bearerTokenService = WebknossosSilhouette.environment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def validateDataSetUpload(name: String) = DataStoreAction(name).async(parse.json){ implicit request =>
+  def validateDataSetUpload(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       uploadInfo <- request.body.validate[DataSourceId].asOpt.toFox ?~> Messages("dataStore.upload.invalid")
       _ <- DataSetService.isProperDataSetName(uploadInfo.name) ?~> Messages("dataSet.name.invalid")
@@ -44,14 +46,14 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
       case JsSuccess(status, _) =>
         logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
         DataStoreDAO.updateUrl(name, status.url)(GlobalAccessContext).map(_ => Ok)
-      case e: JsError           =>
+      case e: JsError =>
         logger.error("Data store '$name' sent invalid update. Error: " + e)
         Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
     }
   }
 
   def updateAll(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
-    request.body.validate[List[InboxDataSource]] match {
+request.body.validate[List[InboxDataSource]] match {
       case JsSuccess(dataSources, _) =>
         for {
           _ <- DataSetService.deactivateUnreportedDataSources(request.dataStore.name, dataSources)(GlobalAccessContext)
@@ -60,7 +62,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
           JsonOk
         }
 
-      case e: JsError                =>
+      case e: JsError =>
         logger.warn("Data store reported invalid json for data sources.")
         Fox.successful(JsonBadRequest(JsError.toFlatJson(e)))
     }
@@ -74,7 +76,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
         } yield {
           JsonOk
         }
-      case e: JsError               =>
+      case e: JsError =>
         logger.warn("Data store reported invalid json for data source.")
         Fox.successful(JsonBadRequest(JsError.toFlatJson(e)))
     }
@@ -115,11 +117,12 @@ trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport
   case class DataStoreAction(name: String) extends ActionBuilder[RequestWithDataStore] {
     def invokeBlock[A](request: Request[A], block: (RequestWithDataStore[A]) => Future[Result]): Future[Result] = {
       request.getQueryString("key")
-      .toFox
-      .flatMap(key => DataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
-      //.filter(dataStore => dataStore.name == name) // Check if correct name is provided
-      .flatMap(dataStore => block(new RequestWithDataStore(dataStore, request))) // Run underlying action
-      .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error
+        .toFox
+        .flatMap(key => DataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
+        //.filter(dataStore => dataStore.name == name) // Check if correct name is provided
+        .flatMap(dataStore => block(new RequestWithDataStore(dataStore, request))) // Run underlying action
+        .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error
     }
   }
+
 }

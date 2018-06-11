@@ -14,6 +14,4 @@ RUN addgroup -S -g 999 webknossos \
 
 USER webknossos
 
-RUN id && [ "$(id -u)" == "999" ] && [ "$(id -g)" == "999" ]
-
 ENTRYPOINT [ "bin/oxalis" ]

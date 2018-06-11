@@ -22,6 +22,21 @@ module.exports = function(env = {}) {
     }),
   ];
 
+  if (env.production) {
+    plugins.push(
+      new UglifyJsPlugin({
+        cache: true,
+        parallel: true,
+        sourceMap: true,
+        uglifyOptions: {
+          // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
+          // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
+          compress: false,
+        },
+      }),
+    );
+  }
+
   return {
     entry: {
       main: "main.js",

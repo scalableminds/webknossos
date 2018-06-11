@@ -1,4 +1,4 @@
-FROM scalableminds/graalvm:graal__46
+FROM scalableminds/graalvm:master__47
 
 RUN mkdir -p /srv/webknossos
 WORKDIR /srv/webknossos

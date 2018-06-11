@@ -18,7 +18,7 @@ import {
 import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
-import { getVoxelPerNM } from "oxalis/model/scaleinfo";
+import { getVoxelPerNM, getBaseVoxel } from "oxalis/model/scaleinfo";
 import Plane from "oxalis/geometries/plane";
 import Skeleton from "oxalis/geometries/skeleton";
 import Cube from "oxalis/geometries/cube";
@@ -102,6 +102,26 @@ class SceneController {
       showCrossSections: true,
     });
     this.cube.getMeshes().forEach(mesh => this.rootNode.add(mesh));
+
+    window.addBucketMesh = (position, zoomStep) => {
+      // const baseVoxel = getBaseVoxel(Store.getState().dataset.dataSource.scale);
+      const bucketSize = [32, 32, 32].map(e => e * 2 ** zoomStep);
+      var geo = new THREE.BoxGeometry(...bucketSize);
+      const geometry = new THREE.EdgesGeometry(geo); // or WireframeGeometry( geo )
+
+      const material = new THREE.LineBasicMaterial({
+        color: zoomStep === 0 ? 0xff00ff : 0x00ffff,
+        linewidth: 1,
+      });
+      const cube = new THREE.LineSegments(geometry, material);
+      cube.position.x = position[0] + bucketSize[0] / 2;
+      cube.position.y = position[1] + bucketSize[1] / 2;
+      cube.position.z = position[2] + bucketSize[2] / 2;
+      this.rootNode.add(cube);
+    };
+
+    const pos = getPosition(Store.getState().flycam);
+    // window.addBucketMesh(pos);
 
     this.userBoundingBox = new Cube({
       max: [0, 0, 0],

@@ -11,6 +11,7 @@ import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bu
 import * as Utils from "libs/utils";
 import window from "libs/window";
 import Toast from "libs/toast";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
 
 export const BucketStateEnum = {
   UNREQUESTED: "UNREQUESTED",
@@ -164,6 +165,14 @@ export class DataBucket {
         if (this.dirty) {
           this.merge(data);
         } else {
+          const resolutions = [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8]];
+          if (this.zoomedAddress[3] === 0 || this.zoomedAddress[3] === 1) {
+            window.addBucketMesh(
+              bucketPositionToGlobalAddress(this.zoomedAddress, resolutions),
+              this.zoomedAddress[3],
+            );
+          }
+
           this.data = data;
         }
         this.trigger("bucketLoaded");

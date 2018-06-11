@@ -267,7 +267,7 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     } yield ()
   }
 
-  def deleteInitializingAnnotations: Fox[Unit] = {
+  def deleteOldInitializingAnnotations: Fox[Unit] = {
     for {
       _ <- run(sqlu"delete from webknossos.annotations where state = '#${AnnotationState.Initializing.toString}' and created < (now() - interval '1 hour')")
     } yield ()

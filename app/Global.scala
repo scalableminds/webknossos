@@ -45,7 +45,7 @@ object Global extends GlobalSettings with LazyLogging{
     }
 
     CleanUpService.register("deletion of old annotations in initializing state", 1 day) {
-      AnnotationSQLDAO.deleteInitializingAnnotations
+      AnnotationSQLDAO.deleteOldInitializingAnnotations
     }
 
     super.onStart(app)

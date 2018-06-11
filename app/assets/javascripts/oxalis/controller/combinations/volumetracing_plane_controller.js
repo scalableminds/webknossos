@@ -11,12 +11,10 @@ import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import {
   PlaneControllerClass,
   mapStateToProps,
-  calculateGlobalPos,
 } from "oxalis/controller/viewmodes/plane_controller";
 import Model from "oxalis/model";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import Toast from "libs/toast";
 import {
   createCellAction,
   setToolAction,

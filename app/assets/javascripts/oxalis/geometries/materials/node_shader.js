@@ -80,12 +80,12 @@ class NodeShader {
       },
       highlightCommentedNodes: {
         type: "f",
-        value: 0,
+        value: state.userConfiguration.highlightCommentedNodes,
       },
     };
 
     listenToStoreProperty(
-      state => state.userConfiguration.highlightCommentedNodes,
+      _state => _state.userConfiguration.highlightCommentedNodes,
       highlightCommentedNodes => {
         this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
       },

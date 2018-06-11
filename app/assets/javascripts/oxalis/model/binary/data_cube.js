@@ -171,10 +171,6 @@ class DataCube {
     return this.arbitraryCube;
   }
 
-  getVoxelIndexByVoxelOffset([x, y, z]: Vector3): number {
-    return this.BYTE_OFFSET * (x + y * (1 << BUCKET_SIZE_P) + z * (1 << (BUCKET_SIZE_P * 2)));
-  }
-
   isWithinBounds([x, y, z, zoomStep]: Vector4): boolean {
     if (zoomStep >= this.ZOOM_STEP_COUNT) {
       return false;
@@ -353,7 +349,7 @@ class DataCube {
 
   getDataValue(voxel: Vector3, mapping: ?MappingType, zoomStep: number = 0): number {
     const bucket = this.getBucket(this.positionToZoomedAddress(voxel, zoomStep));
-    const voxelIndex = this.getVoxelIndex(voxel);
+    const voxelIndex = this.getVoxelIndex(voxel, zoomStep);
 
     if (bucket.hasData()) {
       const data = bucket.getData();
@@ -380,11 +376,16 @@ class DataCube {
     return this.getDataValue(voxel, this.isMappingEnabled() ? this.getMapping() : null, zoomStep);
   }
 
-  getVoxelIndex(voxel: Vector3): number {
+  getVoxelIndexByVoxelOffset([x, y, z]: Vector3): number {
+    return this.BYTE_OFFSET * (x + y * (1 << BUCKET_SIZE_P) + z * (1 << (BUCKET_SIZE_P * 2)));
+  }
+
+  getVoxelIndex(voxel: Vector3, zoomStep: number = 0): number {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];
+    const resolution = this.layer.resolutions[zoomStep];
     for (let i = 0; i < 3; i++) {
-      voxelOffset[i] = voxel[i] & 0b11111;
+      voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
     return this.getVoxelIndexByVoxelOffset(voxelOffset);
   }

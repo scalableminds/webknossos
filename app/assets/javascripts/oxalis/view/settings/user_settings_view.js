@@ -111,8 +111,8 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             <LogSliderSetting
               label="Viewport Scale"
               roundTo={3}
-              min={0.05}
-              max={20}
+              min={Constants.MIN_SCALE}
+              max={Constants.MAX_SCALE}
               step={0.1}
               value={this.props.userConfiguration.scale}
               onChange={this.onChangeUser.scale}
@@ -127,6 +127,23 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
       default:
         return (
           <Panel header="Flight Options" key="2">
+            <LogSliderSetting
+              label="Zoom"
+              roundTo={3}
+              min={0.001}
+              max={this.props.maxZoomStep}
+              value={this.props.zoomStep}
+              onChange={this.props.onChangeZoomStep}
+            />
+            <LogSliderSetting
+              label="Viewport Scale"
+              roundTo={3}
+              min={Constants.MIN_SCALE}
+              max={Constants.MAX_SCALE}
+              step={0.1}
+              value={this.props.userConfiguration.scale}
+              onChange={this.onChangeUser.scale}
+            />
             <NumberSliderSetting
               label="Mouse Rotation"
               min={0.0001}
@@ -248,26 +265,6 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             label="Active Cell ID"
             value={this.props.tracing.activeCellId}
             onChange={this.props.onChangeActiveCellId}
-          />
-          <SwitchSetting
-            label="3D Volume Rendering"
-            value={this.props.userConfiguration.isosurfaceDisplay}
-            onChange={this.onChangeUser.isosurfaceDisplay}
-          />
-          <NumberSliderSetting
-            label="3D Rendering Bounding Box Size"
-            min={1}
-            max={10}
-            step={0.1}
-            value={this.props.userConfiguration.isosurfaceBBsize}
-            onChange={this.onChangeUser.isosurfaceBBsize}
-          />
-          <NumberSliderSetting
-            label="3D Rendering Resolution"
-            min={40}
-            max={400}
-            value={this.props.userConfiguration.isosurfaceResolution}
-            onChange={this.onChangeUser.isosurfaceResolution}
           />
         </Panel>
       );

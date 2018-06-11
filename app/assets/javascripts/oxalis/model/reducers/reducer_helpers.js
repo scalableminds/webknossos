@@ -1,17 +1,18 @@
 // @flow
 /* eslint-disable import/prefer-default-export */
 import type { BoundingBoxType } from "oxalis/constants";
+import type { ServerBoundingBoxType } from "oxalis/model";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import Maybe from "data.maybe";
 import Utils from "libs/utils";
 
 export function convertServerBoundingBoxToFrontend(
-  boundingBox: ?BoundingBoxObjectType,
+  boundingBox: ?ServerBoundingBoxType,
 ): ?BoundingBoxType {
   return Maybe.fromNullable(boundingBox)
     .map(bb =>
       Utils.computeBoundingBoxFromArray(
-        Utils.concatVector3(bb.topLeft, [bb.width, bb.height, bb.depth]),
+        Utils.concatVector3(Utils.point3ToVector3(bb.topLeft), [bb.width, bb.height, bb.depth]),
       ),
     )
     .getOrElse(null);

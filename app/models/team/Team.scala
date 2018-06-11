@@ -12,7 +12,6 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
@@ -24,6 +23,7 @@ case class TeamSQL(
                   _id: ObjectId,
                   _organization: ObjectId,
                   name: String,
+                  isOrganizationTeam: Boolean = false,
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
                   )
@@ -32,11 +32,14 @@ object TeamSQL {
   def fromTeam(t: Team)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
     for {
       organization <- OrganizationSQLDAO.findOneByName(t.organization)
+      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeam(organization._id)
+      teamId = ObjectId.fromBsonId(t._id)
     } yield {
       TeamSQL(
-        ObjectId.fromBsonId(t._id),
+        teamId,
         organization._id,
         t.name,
+        organizationTeamId == teamId,
         System.currentTimeMillis(),
         false
       )
@@ -55,6 +58,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
       ObjectId(r._Id),
       ObjectId(r._Organization),
       r.name,
+      r.isorganizationteam,
       r.created.getTime,
       r.isdeleted
     ))
@@ -65,7 +69,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
        or _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def deleteAccessQ(requestingUserId: ObjectId) =
-    s"""(_id not in (select _organizationTeam from webknossos.organizations_)
+    s"""(not isorganizationteam
           and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
@@ -92,6 +96,18 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     } yield parsed
   }
 
+  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
+    for {
+      requestingUserId <- userIdFromCtx
+      accessQuery <- readAccessQuery
+      r <- run(sql"""select #${columns} from #${existingCollectionName}
+                     where (_id in (select _team from webknossos.user_team_roles where _user = ${requestingUserId.id} and isTeamManager)
+                           or _organization in (select _organization from webknossos.users_ where _id = ${requestingUserId.id} and isAdmin))
+                     and #${accessQuery}""".as[TeamsRow])
+      parsed <- Fox.combined(r.toList.map(parse))
+    } yield parsed
+  }
+
   def findAllByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamSQL]] = {
     for {
       accessQuery <- readAccessQuery
@@ -103,8 +119,8 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   def insertOne(t: TeamSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
-        sqlu"""insert into webknossos.teams(_id, _organization, name, created, isDeleted)
-                  values(${t._id.id}, ${t._organization.id}, ${t.name}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+        sqlu"""insert into webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
+                  values(${t._id.id}, ${t._organization.id}, ${t.name}, ${new java.sql.Timestamp(t.created)}, ${t.isOrganizationTeam}, ${t.isDeleted})
             """)
     } yield ()
 
@@ -118,9 +134,6 @@ case class Team(name: String,
                 _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
-
-  def isEditableBy(user: User) =
-    user.organization == organization && (user.isTeamManagerOfBLOCKING(_id) || user.isAdmin)
 
   def couldBeAdministratedBy(user: User) =
     user.organization == organization
@@ -198,6 +211,12 @@ object TeamDAO {
   def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {
       teamsSQL <- TeamSQLDAO.findAll
+      teams <- Fox.combined(teamsSQL.map(Team.fromTeamSQL(_)))
+    } yield teams
+
+  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] =
+    for {
+      teamsSQL <- TeamSQLDAO.findAllEditable
       teams <- Fox.combined(teamsSQL.map(Team.fromTeamSQL(_)))
     } yield teams
 

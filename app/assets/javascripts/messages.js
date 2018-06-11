@@ -4,6 +4,9 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
+  "datastore.health": _.template(
+    "The datastore server at <%- url %> does not seem to be available. This is likely due to an update. Please check back in five minutes.",
+  ),
   "save.failed_simultaneous_tracing": `It seems that you edited the tracing simultaneously in different windows.
 Editing should be done in a single window only.
 
@@ -11,8 +14,10 @@ In order to restore the current window, a reload is necessary.`,
   "save.failed_client_error": `We've encountered a permanent error while trying to save.
 
 In order to restore the current window, a reload is necessary.`,
+  "react.rendering_error":
+    "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
   "save.leave_page_unfinished":
-    "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.",
+    "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save tracing. Retrying.",
   "undo.no_undo": "There is no action that could be undone.",
   "undo.no_redo": "There is no action that could be redone.",
@@ -42,6 +47,7 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.merged": "Merging successfully done",
   "tracing.tree_viewer_no_cyclic_trees":
     "Cyclic trees are not supported by the abstract tree viewer.",
+  "tracing.changed_move_value": "The move value was changed to: ",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
   "task.user_script_retrieval_error": "Unable to retrieve script",
@@ -58,8 +64,6 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
     "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos.",
-  "dataset.ndstore_success":
-    "The dataset was successfully added to webKnossos from the specified NDStore.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",
@@ -89,6 +93,8 @@ In order to restore the current window, a reload is necessary.`,
   "auth.registration_firstName_input": "Please input your first name!",
   "auth.registration_lastName_input": "Please input your last name!",
   "auth.registration_org_input": "Please select an organization!",
+  "auth.privacy_check_required":
+    "Unfortunately, we cannot provide the service without your consent to the processing of your data.",
   "auth.reset_logout": "You will be logged out, after successfully changing your password.",
   "auth.reset_old_password": "Please input your old password!",
   "auth.reset_new_password": "Please input your new password!",
@@ -132,8 +138,14 @@ In order to restore the current window, a reload is necessary.`,
   "users.grant_admin_rights": _.template(
     "You are about to grant admin privileges to <%- numUsers %> user(s) giving them access to all teams, datasets and annotations. Do you want to proceed?",
   ),
+  "users.change_email_title": "Do you really want to change the email?",
+  "users.change_email": _.template(
+    "Do you really want to change the email to '<%- newEmail %>' ? The corresponding user will be logged out and unsaved changes might be lost.",
+  ),
+  "users.change_email_confirmation": "The email has been changed",
   "mapping.too_big":
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
   "mapping.too_few_textures":
     "Not enough textures available to support mappings. Mappings are disabled.",
+  "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",
 };

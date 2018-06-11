@@ -5,10 +5,11 @@
 
 import _ from "lodash";
 import BinaryDataConnectionInfo from "oxalis/model/binarydata_connection_info";
-import type Layer from "oxalis/model/binary/layers/layer";
+import { requestFromStore } from "oxalis/model/binary/wkstore_adapter";
 import type DataCube from "oxalis/model/binary/data_cube";
 import type { Vector4 } from "oxalis/constants";
-import type { DataStoreInfoType } from "oxalis/store";
+import type { DataStoreInfoType, DataLayerType } from "oxalis/store";
+import PriorityQueue from "js-priority-queue";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
@@ -26,20 +27,28 @@ export const PullQueueConstants = {
   BATCH_LIMIT: 6,
 };
 
+const createPriorityQueue = () =>
+  new PriorityQueue({
+    // small priorities take precedence
+    comparator: (b, a) => b.priority - a.priority,
+  });
+
+const BATCH_SIZE = 3;
+
 class PullQueue {
-  BATCH_SIZE: number;
   cube: DataCube;
   queue: Array<PullQueueItemType>;
+  priorityQueue: PriorityQueue;
   batchCount: number;
   roundTripTime: number;
-  layer: Layer;
+  layer: DataLayerType;
   whitenEmptyBuckets: boolean;
   connectionInfo: BinaryDataConnectionInfo;
   datastoreInfo: DataStoreInfoType;
 
   constructor(
     cube: DataCube,
-    layer: Layer,
+    layer: DataLayerType,
     connectionInfo: BinaryDataConnectionInfo,
     datastoreInfo: DataStoreInfoType,
   ) {
@@ -47,8 +56,7 @@ class PullQueue {
     this.layer = layer;
     this.connectionInfo = connectionInfo;
     this.datastoreInfo = datastoreInfo;
-    this.queue = [];
-    this.BATCH_SIZE = this.isNDstore() ? 1 : 3;
+    this.priorityQueue = createPriorityQueue();
     this.batchCount = 0;
     this.roundTripTime = 0;
 
@@ -58,15 +66,12 @@ class PullQueue {
   }
 
   pull(): Array<Promise<void>> {
-    // Filter and sort queue, using negative priorities for sorting so .pop() can be used to get next bucket
-    this.queue = _.sortBy(this.queue, item => item.priority);
-
     // Starting to download some buckets
     const promises = [];
-    while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.queue.length) {
+    while (this.batchCount < PullQueueConstants.BATCH_LIMIT && this.priorityQueue.length > 0) {
       const batch = [];
-      while (batch.length < this.BATCH_SIZE && this.queue.length) {
-        const address = this.queue.shift().bucket;
+      while (batch.length < BATCH_SIZE && this.priorityQueue.length > 0) {
+        const address = this.priorityQueue.dequeue().bucket;
         const bucket = this.cube.getOrCreateBucket(address);
         if (bucket.type === "data" && bucket.needsRequest()) {
           batch.push(address);
@@ -89,7 +94,7 @@ class PullQueue {
     const roundTripBeginTime = new Date();
 
     try {
-      const responseBuffer = await this.layer.requestFromStore(batch);
+      const responseBuffer = await requestFromStore(this.layer, batch);
       let bucketData;
       this.connectionInfo.log(
         this.layer.name,
@@ -150,19 +155,30 @@ class PullQueue {
   }
 
   clearNormalPriorities(): void {
-    this.queue = _.filter(this.queue, e => e.priority === PullQueueConstants.PRIORITY_HIGHEST);
+    // The following code removes all items from the priorityQueue which are not PRIORITY_HIGHEST
+
+    const newQueue = createPriorityQueue();
+    while (this.priorityQueue.length > 0) {
+      const item = this.priorityQueue.dequeue();
+      if (item.priority === PullQueueConstants.PRIORITY_HIGHEST) {
+        newQueue.queue(item);
+      } else if (item.priority > PullQueueConstants.PRIORITY_HIGHEST) {
+        // Since dequeuing is ordered, we will only receive priorities which are
+        // not PRIORITY_HIGHEST
+        break;
+      }
+    }
+    this.priorityQueue = newQueue;
   }
 
   add(item: PullQueueItemType): void {
-    this.queue.push(item);
+    this.priorityQueue.queue(item);
   }
 
   addAll(items: Array<PullQueueItemType>): void {
-    this.queue = this.queue.concat(items);
-  }
-
-  isNDstore(): boolean {
-    return this.datastoreInfo.typ === "ndstore";
+    for (const item of items) {
+      this.priorityQueue.queue(item);
+    }
   }
 
   maybeWhitenEmptyBucket(bucketData: Uint8Array) {

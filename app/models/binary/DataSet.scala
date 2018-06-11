@@ -2,13 +2,11 @@ package models.binary
 
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
-import com.scalableminds.util.reactivemongo.AccessRestrictions.AllowIf
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}
 import com.scalableminds.webknossos.schema.Tables._
-import models.basics.SecuredBaseDAO
 import models.configuration.DataSetConfiguration
 import models.team._
 import models.user.{User, UserSQLDAO}
@@ -20,10 +18,10 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.utils.UriEncoding
-import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
+import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
@@ -118,7 +116,9 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     s"""isPublic
         or _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
         or _id in (select _dataSet
-          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))"""
+          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))
+        or ('${requestingUserId.id}' in (select _user from webknossos.user_team_roles where isTeammanager)
+            and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
     for {
@@ -207,18 +207,22 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   }
 
   def deactivateUnreported(names: List[String], dataStoreName: String): Fox[Unit] = {
-    val deleteResolutionsQuery = sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
-              (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))})"""
-    val deleteLayersQuery = sqlu"""delete from webknossos.dataSet_layers where _dataSet in
-              (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))})"""
-    val setToUnusableQuery = sqlu"""update webknossos.datasets
-               set isUsable = false, status = 'No longer available on datastore.', scale = NULL
-               where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))}"""
+    val inclusionPredicate = if (names.isEmpty) "true" else s"name not in ${writeStructTupleWithQuotes(names.map(sanitize))}"
+    val deleteResolutionsQuery =
+      sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
+            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate})"""
+    val deleteLayersQuery =
+      sqlu"""delete from webknossos.dataSet_layers where _dataSet in
+            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate})"""
+    val setToUnusableQuery =
+      sqlu"""update webknossos.datasets
+             set isUsable = false, status = 'No longer available on datastore.', scale = NULL
+             where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate}"""
     for {
-      _ <-run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
+      _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
   }
 
@@ -359,7 +363,7 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
 
     val composedQuery = DBIO.sequence(List(clearQuery) ++ insertQueries)
     for {
-      _ <- run(composedQuery.transactionally)
+      _ <- run(composedQuery.transactionally.withTransactionIsolation(Serializable), retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
     } yield ()
   }
 }

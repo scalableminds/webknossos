@@ -19,6 +19,10 @@ import messages from "messages";
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
+import EditableTextLabel from "oxalis/view/components/editable_text_label";
+import Toast from "libs/toast";
+import Store from "../../oxalis/store";
+import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -102,6 +106,25 @@ class UserListView extends React.PureComponent<Props, State> {
 
   deactivateUser = (user: APIUserType): void => {
     this.activateUser(user, false);
+  };
+
+  changeEmail = (selectedUser: APIUserType, newEmail: string): void => {
+    const newUsers = this.state.users.map(user => {
+      if (selectedUser.id === user.id) {
+        const newUser = Object.assign({}, user, { email: newEmail });
+        updateUser(newUser);
+        return newUser;
+      }
+      return user;
+    });
+
+    this.setState({
+      users: newUsers,
+      selectedUserIds: [selectedUser.id],
+    });
+    Toast.success(messages["users.change_email_confirmation"]);
+
+    if (this.props.activeUser.email === selectedUser.email) Store.dispatch(logoutUserAction());
   };
 
   handleUsersChange = (updatedUsers: Array<APIUserType>): void => {
@@ -246,6 +269,30 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="email"
               key="email"
               sorter={Utils.localeCompareBy("email")}
+              render={(__, user: APIUserType) =>
+                this.props.activeUser.isAdmin ? (
+                  <EditableTextLabel
+                    value={user.email}
+                    rules={{
+                      message: messages["auth.registration_email_invalid"],
+                      type: "email",
+                    }}
+                    onChange={newEmail => {
+                      if (newEmail !== user.email) {
+                        Modal.confirm({
+                          title: messages["users.change_email_title"],
+                          content: messages["users.change_email"]({
+                            newEmail,
+                          }),
+                          onOk: () => this.changeEmail(user, newEmail),
+                        });
+                      }
+                    }}
+                  />
+                ) : (
+                  user.email
+                )
+              }
             />
             <Column
               title="Experiences"

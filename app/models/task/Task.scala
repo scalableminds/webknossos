@@ -4,15 +4,13 @@ import javax.management.relation.Role
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.reactivemongo.AccessRestrictions.{AllowIf, DenyEveryone}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DefaultAccessDefinitions, GlobalAccessContext}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationSQLDAO.transactionSerializationError
 import models.annotation._
-import models.basics.SecuredBaseDAO
 import models.project.{Project, ProjectDAO, ProjectSQLDAO}
 import models.team.TeamSQLDAO
 import models.user.{Experience, User}
@@ -23,7 +21,6 @@ import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
-import reactivemongo.api.indexes.IndexType
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile
@@ -40,7 +37,6 @@ case class TaskSQL(
                     _project: ObjectId,
                     _script: Option[ObjectId],
                     _taskType: ObjectId,
-                    _team: ObjectId,
                     neededExperience: Experience,
                     totalInstances: Long,
                     tracingTime: Option[Long],
@@ -62,7 +58,6 @@ object TaskSQL {
         project._id,
         t._script.map(ObjectId(_)),
         ObjectId.fromBsonId(t._taskType),
-        ObjectId.fromBsonId(t._team),
         t.neededExperience,
         t.instances,
         t.tracingTime,
@@ -93,7 +88,6 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
         ObjectId(r._Project),
         r._Script.map(ObjectId(_)),
         ObjectId(r._Tasktype),
-        ObjectId(r._Team),
         Experience(r.neededexperienceDomain, r.neededexperienceValue),
         r.totalinstances,
         r.tracingtime,
@@ -107,12 +101,12 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     }
 
   override def readAccessQ(requestingUserId: ObjectId) =
-    s"""(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
-      or ((select _organization from webknossos.teams where webknossos.teams._id = _team)
+    s"""((select _team from webknossos.projects p where _project = p._id) in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')
+      or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
   override def deleteAccessQ(requestingUserId: ObjectId) =
-    s"""(_team in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
-      or ((select _organization from webknossos.teams where webknossos.teams._id = _team)
+    s"""((select _team from webknossos.projects p where _project = p._id) in (select _team from webknossos.user_team_roles where isTeamManager and _user = '${requestingUserId.id}')
+      or ((select _organization from webknossos.teams where webknossos.teams._id = (select _team from webknossos.projects p where _project = p._id))
         in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskSQL] =
@@ -160,7 +154,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
              left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.tasks_.openInstances > 0
-                 and webknossos.tasks_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
+                 and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
                  and not webknossos.projects_.paused
            order by webknossos.projects_.priority desc
@@ -172,15 +166,17 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     val annotationId = ObjectId.generate
     val dummyTracingId = Random.alphanumeric.take(36).mkString
 
+    //the values inserted in _dataset, _team and _user are dummy values but filled with real entities to not violate foreign key constraints
     val insertAnnotationQ = sqlu"""
-           with task as (#${findNextTaskQ(userId, teamIds)})
+           with task as (#${findNextTaskQ(userId, teamIds)}),
+           dataset as (select _id from webknossos.datasets_ limit 1)
 
            insert into webknossos.annotations(_id, _dataSet, _task, _team, _user, tracing_id, tracing_typ, description, isPublic, name, state, statistics, tags, tracingTime, typ, created, modified, isDeleted)
-           select ${annotationId.id}, 'dummyDatasetId', _id, 'dummyTeamId', 'dummyUserId', ${dummyTracingId},
+           select ${annotationId.id}, dataset._id, task._id, ${teamIds.headOption.map(_.id).getOrElse("")}, ${userId.id}, ${dummyTracingId},
                     'skeleton', '', false, '', '#${AnnotationState.Initializing.toString}', '{}',
                     '{}', 0, 'Task', ${new java.sql.Timestamp(System.currentTimeMillis)},
                      ${new java.sql.Timestamp(System.currentTimeMillis)}, false
-           from task
+           from task, dataset
       """
 
     val findTaskOfInsertedAnnotationQ =
@@ -265,9 +261,9 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
   def insertOne(t: TaskSQL): Fox[Unit] = {
     for {
       _ <- run(
-        sqlu"""insert into webknossos.tasks(_id, _project, _script, _taskType, _team, neededExperience_domain, neededExperience_value,
+        sqlu"""insert into webknossos.tasks(_id, _project, _script, _taskType, neededExperience_domain, neededExperience_value,
                                              totalInstances, openInstances, tracingTime, boundingBox, editPosition, editRotation, creationInfo, created, isDeleted)
-                   values(${t._id.id}, ${t._project.id}, #${optionLiteral(t._script.map(s => sanitize(s.id)))}, ${t._taskType.id}, ${t._team.id},
+                   values(${t._id.id}, ${t._project.id}, #${optionLiteral(t._script.map(s => sanitize(s.id)))}, ${t._taskType.id},
                           ${t.neededExperience.domain}, ${t.neededExperience.value},
                           ${t.totalInstances}, ${t.totalInstances}, ${t.tracingTime}, #${optionLiteral(t.boundingBox.map(_.toSql.map(_.toString)).map(writeStructTuple(_)))},
                            '#${writeStructTuple(t.editPosition.toList.map(_.toString))}', '#${writeStructTuple(t.editRotation.toList.map(_.toString))}',
@@ -300,8 +296,8 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
 
   def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}")
+      _ <- assertUpdateAccess(id) ?~> "FAILED: TaskSQLDAO.assertUpdateAccess"
+      _ <- run(sqlu"update webknossos.tasks set tracingTime = coalesce(tracingTime, 0) + $time where _id = ${id.id}") ?~> "FAILED: run in TaskSQLDAO.logTime"
     } yield ()
 
   def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
@@ -346,7 +342,6 @@ class info(message: String) extends scala.annotation.StaticAnnotation
 
 case class Task(
                  @info("Reference to task type") _taskType: BSONObjectID,
-                 @info("Assigned team ObjectID") _team: BSONObjectID,
                  @info("Required experience") neededExperience: Experience = Experience.empty,
                  @info("Number of total instances") instances: Int = 1,
                  @info("Number of open (=remaining) instances") openInstances: Int = 1,
@@ -364,7 +359,6 @@ case class Task(
                ) extends FoxImplicits {
 
   lazy val id = _id.stringify
-  lazy val team = _team.stringify
 
   def taskType(implicit ctx: DBAccessContext) = TaskTypeDAO.findOneById(_taskType)(GlobalAccessContext).toFox
 
@@ -407,7 +401,7 @@ object Task extends FoxImplicits {
 
   def transformToJson(task: Task)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      dataSetName <- task.annotationBase.map(_.dataSetName)
+      dataSetName <- task.annotationBase.map(_.dataSetName) ?~> Messages("dataSet.notFound")
       status <- task.status.getOrElse(CompletionStatus(-1, -1, -1))
       scriptInfo <- task._script.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
       tt <- task.taskType.map(TaskType.transformToJson) getOrElse JsNull
@@ -415,7 +409,6 @@ object Task extends FoxImplicits {
     } yield {
       Json.obj(
         "id" -> task.id,
-        "team" -> task.team,
         "formattedHash" -> Formatter.formatHash(task.id),
         "projectName" -> task._project,
         "type" -> tt,
@@ -437,14 +430,12 @@ object Task extends FoxImplicits {
     for {
       taskTypeIdBson <- s._taskType.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._taskType.toString)
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      teamIdBson <- s._team.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
       project <- ProjectSQLDAO.findOne(s._project)(GlobalAccessContext) ?~> Messages("project.notFound", s._project.toString)
       priority = if (project.paused) -1 else project.priority
       openInstances <- TaskSQLDAO.countOpenInstancesForTask(s._id)
     } yield {
       Task(
         taskTypeIdBson,
-        teamIdBson,
         s.neededExperience,
         s.totalInstances.toInt,
         openInstances,
@@ -541,7 +532,7 @@ object TaskDAO {
     TaskSQLDAO.removeScriptFromAllTasks(ObjectId(_script))
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    TaskSQLDAO.logTime(ObjectId.fromBsonId(_task), time)
+    TaskSQLDAO.logTime(ObjectId.fromBsonId(_task), time) ?~> "FAILED: TaskSQLDAO.logTime"
 
   def updateInstances(_task: BSONObjectID, instances: Int)(implicit ctx: DBAccessContext): Fox[Task] =
     for {

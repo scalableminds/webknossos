@@ -7,7 +7,6 @@ import models.project.Project
 import models.user.{User, UserDAO}
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 
 import scala.concurrent.Future
 
@@ -27,7 +26,7 @@ object TaskService
   }
 
   def logTime(time: Long, _task: BSONObjectID)(implicit ctx: DBAccessContext) =
-    TaskDAO.logTime(time, _task)
+    TaskDAO.logTime(time, _task) ?~> "FAILED: TaskDAO.logTime"
 
   def removeAllWithTaskType(taskType: TaskType)(implicit ctx: DBAccessContext) =
     TaskDAO.removeAllWithTaskTypeAndItsAnnotations(taskType)

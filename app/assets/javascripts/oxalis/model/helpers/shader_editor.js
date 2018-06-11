@@ -4,8 +4,9 @@ export default {
     window.managers.push(textureBucketManager);
   },
 
-  addMaterial(material) {
-    window.materials = (window.materials || []).concat(material);
+  addMaterial(viewMode, material) {
+    window.materials = window.materials || [];
+    window.materials[viewMode] = material;
   },
 };
 

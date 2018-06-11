@@ -20,17 +20,19 @@ import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
 import models.task.Task
 import models.user.User
-import net.liftweb.common.{Box, Full}
+import utils.ObjectId
 import play.api.i18n.Messages
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
+import scala.concurrent.Future
+import scala.collection.{IterableLike, TraversableLike}
+import scala.runtime.Tuple3Zipped
+import scala.collection.generic.Growable
+import net.liftweb.common.{Box, Full}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
-import utils.ObjectId
-
-import scala.concurrent.Future
 
 object AnnotationService
   extends BoxImplicits
@@ -190,7 +192,8 @@ object AnnotationService
       task <- taskFox
       taskType <- task.taskType
       tracingReference <- tracingReferenceBox.toFox
-      _ <- Annotation(userId, tracingReference, dataSetName, task._team, taskType.settings,
+      project <- task.project
+      _ <- Annotation(userId, tracingReference, dataSetName, project._team, taskType.settings,
           typ = AnnotationType.TracingBase, _task = Some(task._id), description = description.getOrElse("")).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
@@ -218,7 +221,7 @@ object AnnotationService
   }
 
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.logTime(time, _annotation)
+    AnnotationDAO.logTime(time, _annotation) ?~> "FAILED: AnnotationDAO.logTime"
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
     for {
@@ -237,7 +240,7 @@ object AnnotationService
     ((l1, l2, l3).zipped.toList, l4).zipped.toList.map( tuple => (tuple._1._1, tuple._1._2, tuple._1._3, tuple._2))
   }
 
-  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Scale], List[Annotation])]] = {
+  private def getTracingsScalesAndNamesFor(annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[List[(List[SkeletonTracing], List[String], List[Option[Scale]], List[Annotation])]] = {
 
     def getTracings(dataSetName: String, tracingReferences: List[TracingReference]) = {
       for {
@@ -249,8 +252,7 @@ object AnnotationService
     def getDatasetScale(dataSetName: String) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
-        scale <- dataSet.dataSource.scaleOpt ?~> Messages("nml.scaleNotFound")
-      } yield scale
+      } yield dataSet.dataSource.scaleOpt
     }
 
     def getNames(annotations: List[Annotation]) = Fox.combined(annotations.map(a => SavedTracingInformationHandler.nameForAnnotation(a).toFox))

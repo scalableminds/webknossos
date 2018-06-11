@@ -5,6 +5,7 @@
 GET           /api/buildinfo                                                    controllers.Application.buildInfo
 GET           /api/features                                                     controllers.Application.features
 POST          /api/analytics/:namespace                                         controllers.Application.analytics(namespace)
+GET           /api/triggers/initialData                                         controllers.InitialDataController.triggerInsert
 
 # Authentication
 GET           /api/auth/autoLogin                                               controllers.Authentication.autoLogin
@@ -143,6 +144,7 @@ GET           /assets/*file                                                     
 
 #Organizations
 GET           /api/organizations                                                controllers.OrganizationController.listAllOrganizations
+GET           /api/operatorData                                                 controllers.OrganizationController.getOperatorData
 
 #Timelogging
 GET           /api/time/allusers/:year/:month                                   controllers.TimeController.getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int])

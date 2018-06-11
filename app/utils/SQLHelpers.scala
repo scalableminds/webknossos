@@ -145,7 +145,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
     if (ctx.globalAccess) Fox.successful(())
     else {
       for {
-        userId <- userIdFromCtx
+        userId <- userIdFromCtx ?~> "FAILED: userIdFromCtx"
         resultList <- run(sql"select _id from #${existingCollectionName} where _id = ${id.id} and #${updateAccessQ(userId)}".as[String]) ?~> "Failed to check write access. Does the object exist?"
         _ <- resultList.headOption.toFox ?~> "Access denied."
       } yield ()
@@ -164,7 +164,7 @@ trait SecuredSQLDAO extends SimpleSQLDAO {
   }
 
   //note that this needs to be guaranteed to be sanitized (currently so because it converts from BSONObjectID)
-  private def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
+  def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     ctx.data match {
       case Some(user: User) => Fox.successful(ObjectId.fromBsonId(user._id))
       case _ => Fox.failure("Access denied.")

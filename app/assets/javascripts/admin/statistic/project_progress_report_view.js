@@ -5,7 +5,7 @@ import Utils from "libs/utils";
 import FormatUtils from "libs/format_utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
-import type { APIProjectProgressReportType } from "admin/api_flow_types";
+import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
 import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
@@ -14,7 +14,7 @@ const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
 type State = {
   areSettingsVisible: boolean,
-  teamId: ?string,
+  team: ?APITeamType,
   data: Array<APIProjectProgressReportType>,
   isLoading: boolean,
   updatedAt: ?number,
@@ -24,31 +24,31 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
   state = {
     areSettingsVisible: true,
     data: [],
-    teamId: undefined,
+    team: undefined,
     isLoading: false,
     updatedAt: null,
   };
 
   async fetchData(suppressLoadingState?: boolean = false) {
-    const { teamId } = this.state;
-    if (teamId == null) {
+    const { team } = this.state;
+    if (team == null) {
       this.setState({ data: [] });
     } else if (suppressLoadingState) {
       try {
-        const progessData = await getProjectProgressReport(teamId);
+        const progessData = await getProjectProgressReport(team.id);
         this.setState({ data: progessData, updatedAt: Date.now() });
       } catch (err) {
         // Fail silently
       }
     } else {
       this.setState({ isLoading: true });
-      const progessData = await getProjectProgressReport(teamId);
+      const progessData = await getProjectProgressReport(team.id);
       this.setState({ data: progessData, updatedAt: Date.now(), isLoading: false });
     }
   }
 
-  handleTeamChange = (teamId: string) => {
-    this.setState({ teamId, areSettingsVisible: false }, () => {
+  handleTeamChange = (team: APITeamType) => {
+    this.setState({ team, areSettingsVisible: false }, () => {
       this.fetchData();
     });
   };
@@ -74,7 +74,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
         <h3>Project Progress</h3>
         {this.state.areSettingsVisible ? (
           <Card>
-            <TeamSelectionForm value={this.state.teamId} onChange={this.handleTeamChange} />
+            <TeamSelectionForm value={this.state.team} onChange={this.handleTeamChange} />
           </Card>
         ) : null}
 

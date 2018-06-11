@@ -5,7 +5,6 @@
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
-  BoundingBoxObjectType,
   SettingsType,
   EdgeType,
   CommentType,
@@ -38,30 +37,27 @@ import Utils from "libs/utils";
 import Binary from "oxalis/model/binary";
 import ConnectionInfo from "oxalis/model/binarydata_connection_info";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
-import type { Vector3, ControlModeType } from "oxalis/constants";
+import type { Vector3, Point3, ControlModeType } from "oxalis/constants";
 import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
-import WkLayer from "oxalis/model/binary/layers/wk_layer";
-import NdStoreLayer from "oxalis/model/binary/layers/nd_store_layer";
 import UrlManager from "oxalis/controller/url_manager";
 import {
-  doWithToken,
+  getTracing,
   getAnnotationInformation,
   getDataset,
   getSharingToken,
 } from "admin/admin_rest_api";
-
+import { getBitDepth } from "oxalis/model/binary/wkstore_adapter";
 import messages from "messages";
-import type Layer from "oxalis/model/binary/layers/layer";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
 import type { DataTextureSizeAndCount } from "./model/binary/data_rendering_logic";
 import * as DataRenderingLogic from "./model/binary/data_rendering_logic";
 
 export type ServerNodeType = {
   id: number,
-  position: Vector3,
-  rotation: Vector3,
+  position: Point3,
+  rotation: Point3,
   bitDepth: number,
   viewport: number,
   resolution: number,
@@ -75,9 +71,16 @@ export type ServerBranchPointType = {
   nodeId: number,
 };
 
+export type ServerBoundingBoxType = {
+  topLeft: Point3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
 export type ServerSkeletonTracingTreeType = {
   branchPoints: Array<ServerBranchPointType>,
-  color: ?Vector3,
+  color: ?{ r: number, g: number, b: number },
   comments: Array<CommentType>,
   edges: Array<EdgeType>,
   name: string,
@@ -89,10 +92,10 @@ export type ServerSkeletonTracingTreeType = {
 
 type ServerTracingBaseType = {
   id: string,
-  userBoundingBox?: BoundingBoxObjectType,
+  userBoundingBox?: ServerBoundingBoxType,
   createdTimestamp: number,
-  editPosition: Vector3,
-  editRotation: Vector3,
+  editPosition: Point3,
+  editRotation: Point3,
   error?: string,
   version: number,
   zoomLevel: number,
@@ -100,20 +103,20 @@ type ServerTracingBaseType = {
 
 export type ServerSkeletonTracingType = ServerTracingBaseType & {
   activeNodeId?: number,
-  boundingBox?: BoundingBoxObjectType,
+  boundingBox?: ServerBoundingBoxType,
   trees: Array<ServerSkeletonTracingTreeType>,
   treeGroups: ?Array<TreeGroupType>,
 };
 
 export type ServerVolumeTracingType = ServerTracingBaseType & {
   activeSegmentId?: number,
-  boundingBox: BoundingBoxObjectType,
+  boundingBox: ServerBoundingBoxType,
   elementClass: ElementClassType,
   fallbackLayer?: string,
   largestSegmentId: number,
 };
 
-type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
+export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
 
 // TODO: Non-reactive
 export class OxalisModel {
@@ -164,16 +167,7 @@ export class OxalisModel {
     // Fetch the actual tracing from the datastore, if there is an annotation
     let tracing: ?ServerTracingType;
     if (annotation != null) {
-      // Make flow happy
-      const nonNullAnnotation = annotation;
-      tracing = await doWithToken(token =>
-        Request.receiveJSON(
-          `${nonNullAnnotation.dataStore.url}/data/tracings/${nonNullAnnotation.content.typ}/${
-            nonNullAnnotation.content.id
-          }?token=${token}`,
-        ),
-      );
-      tracing.id = annotation.content.id;
+      tracing = await getTracing(annotation);
     }
 
     // Only initialize the model once.
@@ -191,7 +185,9 @@ export class OxalisModel {
     this.applyState(UrlManager.initialState, tracing);
   }
 
-  validateSpecsForLayers(layers: Array<Layer>): Map<Layer, DataTextureSizeAndCount> {
+  validateSpecsForLayers(
+    layers: Array<DataLayerType>,
+  ): Map<DataLayerType, DataTextureSizeAndCount> {
     const specs = DataRenderingLogic.getSupportedTextureSpecs();
     DataRenderingLogic.validateMinimumRequirements(specs);
 
@@ -199,7 +195,7 @@ export class OxalisModel {
     const setupInfo = DataRenderingLogic.computeDataTexturesSetup(
       specs,
       layers,
-      layer => layer.bitDepth >> 3,
+      layer => getBitDepth(layer) >> 3,
       hasSegmentation,
     );
 
@@ -321,22 +317,7 @@ export class OxalisModel {
   }
 
   initializeModel(tracing: ?ServerTracingType, resolutions: Array<Vector3>) {
-    const { dataStore } = Store.getState().dataset;
-
-    const LayerClass = (() => {
-      switch (dataStore.typ) {
-        case "webknossos-store":
-          return WkLayer;
-        case "ndstore":
-          return NdStoreLayer;
-        default:
-          throw new Error(`${messages["datastore.unknown_type"]} ${dataStore.typ}`);
-      }
-    })();
-
-    const layers = this.getLayerInfos(tracing, resolutions).map(
-      layerInfo => new LayerClass(layerInfo, dataStore),
-    );
+    const layers = this.getLayerInfos(tracing, resolutions);
 
     const textureInformationPerLayer = this.validateSpecsForLayers(layers);
     this.maximumDataTextureCountForLayer = _.max(
@@ -440,9 +421,9 @@ export class OxalisModel {
       category: "segmentation",
       boundingBox: {
         topLeft: [
-          tracing.boundingBox.topLeft[0],
-          tracing.boundingBox.topLeft[1],
-          tracing.boundingBox.topLeft[2],
+          tracing.boundingBox.topLeft.x,
+          tracing.boundingBox.topLeft.y,
+          tracing.boundingBox.topLeft.z,
         ],
         width: tracing.boundingBox.width,
         height: tracing.boundingBox.height,
@@ -510,7 +491,7 @@ export class OxalisModel {
       position = defaultPosition;
     }
     if (tracing != null) {
-      position = tracing.editPosition;
+      position = Utils.point3ToVector3(tracing.editPosition);
     }
     if (urlState.position != null) {
       position = urlState.position;
@@ -530,7 +511,7 @@ export class OxalisModel {
       rotation = defaultRotation;
     }
     if (tracing != null) {
-      rotation = tracing.editRotation;
+      rotation = Utils.point3ToVector3(tracing.editRotation);
     }
     if (urlState.rotation != null) {
       rotation = urlState.rotation;

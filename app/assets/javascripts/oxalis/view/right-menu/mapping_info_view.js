@@ -6,11 +6,12 @@ import React, { Component } from "react";
 import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
 import Cube from "oxalis/model/binary/data_cube";
+import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, MappingType } from "oxalis/store";
 import { OrthoViews } from "oxalis/constants";
 import _ from "lodash";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
@@ -21,6 +22,8 @@ type Props = {
   position: Vector3,
   mousePosition: ?Vector2,
   isMappingEnabled: boolean,
+  mapping: ?MappingType,
+  setMappingEnabled: boolean => void,
   activeViewport: OrthoViewType,
   activeCellId: number,
 };
@@ -39,34 +42,28 @@ const convertCellIdToHSV = id => {
 
 class MappingInfoView extends Component<Props> {
   componentDidMount() {
-    const cube = this.getCube();
+    const cube = this.getSegmentationCube();
     cube.on("bucketLoaded", this._forceUpdate);
     cube.on("volumeLabeled", this._forceUpdate);
-    cube.on("newMapping", this._forceUpdate);
   }
 
   componentWillUnmount() {
-    const cube = this.getCube();
+    const cube = this.getSegmentationCube();
     cube.off("bucketLoaded", this._forceUpdate);
     cube.off("volumeLabeled", this._forceUpdate);
-    cube.off("newMapping", this._forceUpdate);
   }
 
   _forceUpdate = _.throttle(() => {
     this.forceUpdate();
   }, 100);
 
-  getCube(): Cube {
+  getSegmentationCube(): Cube {
     return Model.getSegmentationBinary().cube;
   }
 
-  handleChangeMappingEnabled = (isEnabled: boolean) => {
-    this.getCube().setMappingEnabled(isEnabled);
-  };
-
   renderIdTable() {
-    const cube = this.getCube();
-    const hasMapping = cube.hasMapping();
+    const cube = this.getSegmentationCube();
+    const hasMapping = this.props.mapping != null;
 
     let globalMousePosition;
     if (this.props.mousePosition && this.props.activeViewport !== OrthoViews.TDView) {
@@ -136,8 +133,7 @@ class MappingInfoView extends Component<Props> {
   }
 
   render() {
-    const cube = this.getCube();
-    const hasMapping = cube.hasMapping();
+    const hasMapping = this.props.mapping != null;
 
     return (
       <div id="volume-mapping-info">
@@ -145,7 +141,7 @@ class MappingInfoView extends Component<Props> {
           <div style={{ marginBottom: 12 }}>
             <SwitchSetting
               value={this.props.isMappingEnabled}
-              onChange={this.handleChangeMappingEnabled}
+              onChange={this.props.setMappingEnabled}
               label="Enable Mapping"
             />
           </div>
@@ -156,15 +152,24 @@ class MappingInfoView extends Component<Props> {
   }
 }
 
-function mapStateToProps(state: OxalisState): Props {
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  setMappingEnabled(isEnabled) {
+    dispatch(setMappingEnabledAction(isEnabled));
+  },
+});
+
+function mapStateToProps(state: OxalisState) {
   return {
     position: getPosition(state.flycam),
-    isMappingEnabled: state.temporaryConfiguration.isMappingEnabled,
+    isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
+    mapping: state.temporaryConfiguration.activeMapping.mapping,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
-    activeCellId: typeof state.tracing.activeCellId === "number" ? state.tracing.activeCellId : 0,
+    activeCellId: state.tracing.type === "volume" ? state.tracing.activeCellId : 0,
   };
 }
 
 const debounceTime = 100;
-export default connect(mapStateToProps)(debounceRender(MappingInfoView, debounceTime));
+export default connect(mapStateToProps, mapDispatchToProps)(
+  debounceRender(MappingInfoView, debounceTime),
+);

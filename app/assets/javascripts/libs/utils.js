@@ -181,6 +181,10 @@ const Utils = {
     return output;
   },
 
+  point3ToVector3({ x, y, z }: { x: number, y: number, z: number }): Vector3 {
+    return [x, y, z];
+  },
+
   isElementInViewport(el: Element): boolean {
     const rect = el.getBoundingClientRect();
     return (
@@ -484,7 +488,7 @@ const Utils = {
     [tmp, a] = divMod(tmp); // eslint-disable-line
 
     // Big endian
-    return [r, g, b, a];
+    return [a, b, g, r];
   },
 };
 

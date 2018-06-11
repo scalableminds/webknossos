@@ -5,7 +5,7 @@ import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService
-import models.annotation.AnnotationService
+import models.annotation.AnnotationSQLDAO
 import net.liftweb.common.{Failure, Full}
 import oxalis.cleanup.CleanUpService
 import oxalis.security.WebknossosSilhouette
@@ -44,8 +44,8 @@ object Global extends GlobalSettings with LazyLogging{
       tokenAuthenticatorService.removeExpiredTokens(GlobalAccessContext)
     }
 
-    CleanUpService.register("deletion of annotations in initializing state", 30 seconds) {
-      AnnotationService.cleanUpInitializingAnnotations
+    CleanUpService.register("deletion of old annotations in initializing state", 1 day) {
+      AnnotationSQLDAO.deleteInitializingAnnotations
     }
 
     super.onStart(app)

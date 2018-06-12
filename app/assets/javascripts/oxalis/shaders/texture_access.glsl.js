@@ -169,13 +169,13 @@ const getColorFor: ShaderModuleType = {
       float rgbaIndex = linearizeVec3ToIndexWithMod(offsetInBucket, bucketWidth, packingDegree);
 
       if (rgbaIndex == 0.0) {
-        return vec4(vec3(bucketColor.r), 1.0);
+        return vec4(bucketColor.r);
       } else if (rgbaIndex == 1.0) {
-        return vec4(vec3(bucketColor.g), 1.0);
+        return vec4(bucketColor.g);
       } else if (rgbaIndex == 2.0) {
-        return vec4(vec3(bucketColor.b), 1.0);
+        return vec4(bucketColor.b);
       } else if (rgbaIndex == 3.0) {
-        return vec4(vec3(bucketColor.a), 1.0);
+        return vec4(bucketColor.a);
       }
 
       return vec4(0.0);

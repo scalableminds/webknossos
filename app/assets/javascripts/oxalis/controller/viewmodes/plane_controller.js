@@ -80,7 +80,6 @@ class PlaneController extends React.PureComponent<Props> {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
-  moveKeyNotification: string;
 
   constructor(...args: any) {
     super(...args);
@@ -478,12 +477,9 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
-    if (this.moveKeyNotification != null) {
-      Toast.close(this.moveKeyNotification);
-    }
+
     const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
-    this.moveKeyNotification = moveValueMessage;
-    Toast.success(moveValueMessage);
+    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {

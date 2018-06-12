@@ -71,7 +71,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
-  moveKeyNotification: string;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -393,12 +392,8 @@ class ArbitraryController extends React.PureComponent<Props> {
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
 
-    if (this.moveKeyNotification != null) {
-      Toast.close(this.moveKeyNotification);
-    }
     const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
-    this.moveKeyNotification = moveValueMessage;
-    Toast.success(moveValueMessage);
+    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   setParticleSize(delta: number): void {

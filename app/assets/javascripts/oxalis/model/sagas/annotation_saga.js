@@ -47,7 +47,7 @@ export function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
     );
 
     if (shouldDisplaySegmentationData() && (isDisallowed || isSegmentationMissing)) {
-      Toast.message("error", messages["tracing.segmentation_zoom_warning"], false, 3000);
+      Toast.error(messages["tracing.segmentation_zoom_warning"], { sticky: false, timeout: 3000 });
     } else {
       Toast.close(messages["tracing.segmentation_zoom_warning"]);
     }
@@ -55,7 +55,7 @@ export function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
       displaysDownsampledVolumeData(state, segmentationBinary.cube.MAX_UNSAMPLED_ZOOM_STEP),
     );
     if (shouldDisplaySegmentationData() && displaysDownsampled) {
-      Toast.message("warning", messages["tracing.segmentation_downsampled_data_warning"]);
+      Toast.warning(messages["tracing.segmentation_downsampled_data_warning"]);
     } else {
       Toast.close(messages["tracing.segmentation_downsampled_data_warning"]);
     }

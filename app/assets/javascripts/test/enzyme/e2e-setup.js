@@ -113,6 +113,7 @@ function debugWrapper(wrapper: any, name: string) {
 configure({ adapter: new Adapter() });
 
 export function resetDatabase() {
+  console.log("Resetting test database...");
   shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
 }
 

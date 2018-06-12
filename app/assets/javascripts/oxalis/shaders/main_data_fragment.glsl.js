@@ -6,6 +6,7 @@ import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mapping
 import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
   OrthoViews,
+  OrthoViewIndices,
   ModeValuesIndices,
   VolumeToolEnum,
   volumeToolEnumToIndex,
@@ -90,6 +91,7 @@ uniform vec3 globalMousePosition;
 uniform bool isMouseInCanvas;
 uniform float brushSizeInPixel;
 uniform float pixelToVoxelFactor;
+uniform float planeID;
 
 varying vec4 worldCoord;
 varying vec4 modelCoord;
@@ -156,7 +158,7 @@ void main() {
         <%= layers[0] %>_lookup_texture,
         0.0, // layerIndex
         <%= layers[0] %>_data_texture_width,
-        1.0,
+        <%= segmentationPackingDegree %>,
         coords,
         fallbackCoords,
         hasFallback,
@@ -234,5 +236,6 @@ void main() {
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,
     brushToolIndex: formatNumberAsGLSLFloat(volumeToolEnumToIndex(VolumeToolEnum.BRUSH)),
     floatsPerLookUpEntry: formatNumberAsGLSLFloat(floatsPerLookUpEntry),
+    OrthoViewIndices: _.mapValues(OrthoViewIndices, formatNumberAsGLSLFloat),
   });
 }

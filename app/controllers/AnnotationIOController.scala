@@ -1,7 +1,6 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -12,7 +11,7 @@ import models.annotation.AnnotationState._
 import models.annotation.nml.{NmlService, NmlWriter}
 import models.annotation.{AnnotationType, _}
 import models.binary.{DataSet, DataSetDAO}
-import models.project.{Project, ProjectDAO}
+import models.project.ProjectSQLDAO
 import models.task.{Task, _}
 import models.user._
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareRequest}
@@ -168,8 +167,9 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
 
   def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext) = {
     for {
-      project <- ProjectDAO.findOneById(projectId) ?~> Messages("project.notFound", projectId)
-      _ <- user.assertTeamManagerOrAdminOf(project._team)
+      project <- ProjectSQLDAO.findOne(ObjectId(projectId)) ?~> Messages("project.notFound", projectId)
+      teamIdBson <- project._team.toBSONObjectId.toFox
+      _ <- user.assertTeamManagerOrAdminOf(teamIdBson)
       annotations <- AnnotationDAO.findFinishedForProject(projectId)
       zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {

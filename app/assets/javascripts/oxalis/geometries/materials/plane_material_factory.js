@@ -22,7 +22,7 @@ import {
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
-import { OrthoViews, ModeValues, volumeToolEnumToIndex } from "oxalis/constants";
+import { OrthoViews, OrthoViewValues, ModeValues, volumeToolEnumToIndex } from "oxalis/constants";
 import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
@@ -74,10 +74,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 1,
       },
-      uvw: {
-        type: "v3",
-        value: new THREE.Vector3(0, 0, 0),
-      },
       useBilinearFiltering: {
         type: "b",
         value: true,
@@ -121,6 +117,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       viewMode: {
         type: "f",
         value: 0,
+      },
+      planeID: {
+        type: "f",
+        value: OrthoViewValues.indexOf(this.planeID),
       },
     });
 

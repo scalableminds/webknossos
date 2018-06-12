@@ -1,5 +1,6 @@
 // @flow
 import type { ShaderModuleType } from "./shader_module_system";
+import { getW } from "./utils.glsl";
 
 export const getResolution: ShaderModuleType = {
   code: `
@@ -43,6 +44,7 @@ export const getRelativeCoords: ShaderModuleType = {
 };
 
 export const getWorldCoordUVW: ShaderModuleType = {
+  requirements: [getW],
   code: `
     vec3 getWorldCoordUVW() {
       vec3 worldCoordUVW = transDim(worldCoord.xyz);
@@ -72,7 +74,7 @@ export const getWorldCoordUVW: ShaderModuleType = {
         // the same for all texels computed in this shader, we simply use globalPosition[w] instead
         isArbitrary() ?
           worldCoordUVW.z / datasetScaleUVW.z
-          : globalPosition[<%= uvw[2] %>]
+          : getW(globalPosition)
       );
 
       return worldCoordUVW;

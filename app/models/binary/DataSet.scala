@@ -116,7 +116,9 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     s"""isPublic
         or _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
         or _id in (select _dataSet
-          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))"""
+          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))
+        or ('${requestingUserId.id}' in (select _user from webknossos.user_team_roles where isTeammanager)
+            and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
     for {

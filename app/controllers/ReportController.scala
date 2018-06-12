@@ -8,7 +8,6 @@ import javax.inject.Inject
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationSQLDAO, AnnotationTypeSQL}
-import models.project.ProjectDAO
 import models.team.TeamDAO
 import models.user.{User, UserDAO}
 import oxalis.security.WebknossosSilhouette.SecuredAction

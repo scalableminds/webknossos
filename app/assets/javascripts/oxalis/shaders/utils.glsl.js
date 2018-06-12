@@ -135,19 +135,27 @@ export const transDim: ShaderModuleType = {
   code: `
     // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.
     vec3 transDim(vec3 array) {
-      <%= (function () {
-          switch (planeID) {
-            case OrthoViews.PLANE_XY:
-              return "return array;";
-            case OrthoViews.PLANE_YZ:
-              return "return vec3(array.z, array.y, array.x);"; // [2, 1, 0]
-            case OrthoViews.PLANE_XZ:
-              return "return vec3(array.x, array.z, array.y);"; //[0, 2, 1]"
-            default:
-              throw new Error("Invalid planeID provided to fragment shader");
-          }
-        })()
-      %>
+      if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
+        return array;
+      } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
+        return vec3(array.z, array.y, array.x); // [2, 1, 0]
+      } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
+        return vec3(array.x, array.z, array.y); // [0, 2, 1]
+      }
+    }
+  `,
+};
+
+export const getW: ShaderModuleType = {
+  code: `
+    float getW(vec3 vector) {
+      if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
+        return vector[2];
+      } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
+        return vector[0];
+      } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
+        return vector[1];
+      }
     }
   `,
 };

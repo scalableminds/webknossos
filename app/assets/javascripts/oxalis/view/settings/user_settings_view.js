@@ -252,6 +252,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />
+          <SwitchSetting
+            label="Highlight Commented Nodes"
+            value={this.props.userConfiguration.highlightCommentedNodes}
+            onChange={this.onChangeUser.highlightCommentedNodes}
+          />
         </Panel>
       );
     } else if (

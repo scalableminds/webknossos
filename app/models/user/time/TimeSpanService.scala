@@ -132,7 +132,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
         case Some(a: Annotation) =>
           AnnotationService.logTime(duration, a._id)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
         case _ =>
-          Fox.successful(true)
+          Fox.successful(())
         // do nothing, this is not a stored annotation
       }
     }

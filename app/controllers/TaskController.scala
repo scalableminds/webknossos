@@ -12,9 +12,9 @@ import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, 
 import models.annotation.nml.NmlService
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.binary.DataSetDAO
-import models.project.ProjectDAO
+import models.project.ProjectSQLDAO
 import models.task._
-import models.team.TeamDAO
+import models.team.{OrganizationDAO, TeamDAO}
 import models.user._
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
@@ -90,7 +90,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
-      project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      project <- ProjectSQLDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- ensureTeamAdministration(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> Messages("task.create.failed")
@@ -169,7 +169,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: SecuredRequest[_]): Fox[Task] = {
     for {
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
-      project <- ProjectDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
+      project <- ProjectSQLDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId)
       _ <- ensureTeamAdministration(request.identity, project._team)
       task = Task(
@@ -182,9 +182,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
         editPosition = params.editPosition,
         editRotation = params.editRotation,
         boundingBox = params.boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) },
-        priority = if (project.paused) -1 else project.priority,
+        priority = if (project.paused) -1 else project.priority.toInt,
         creationInfo = params.creationInfo)
-      _ <- TaskService.insert(task, project)
+      _ <- TaskService.insert(task)
     } yield task
   }
 
@@ -276,7 +276,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
 
   private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[BSONObjectID]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
-      if (numberOfOpen < MAX_OPEN_TASKS) {
+      if (user.isAdmin) {
+        OrganizationDAO.findOneByName(user.organization).map(_.teams)
+      } else if (numberOfOpen < MAX_OPEN_TASKS) {
         Fox.successful(user.teamIds)
       } else if (user.teamManagerTeamIds.nonEmpty) {
         Fox.successful(user.teamManagerTeamIds)

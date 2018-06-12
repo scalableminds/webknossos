@@ -3,11 +3,10 @@
 // @flow
 import test from "ava";
 import * as api from "admin/admin_rest_api";
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
-import shell from "shelljs";
+import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
 
-test.before("Refresh schema", async () => {
-  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+test.before("Reset database", async () => {
+  resetDatabase();
 });
 
 test.before("Change token", async () => {

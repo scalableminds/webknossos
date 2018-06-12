@@ -1,18 +1,17 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
+import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import moment from "moment";
-import shell from "shelljs";
 
 let activeUser;
 let firstTeam;
 
-test.before("Initialize values", async () => {
-  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+test.before("Reset database and initialize values", async () => {
+  resetDatabase();
   setCurrToken(tokenUserA);
   activeUser = await api.getActiveUser();
 

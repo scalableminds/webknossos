@@ -1,12 +1,11 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
+import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import type { APIDatasetType } from "admin/api_flow_types";
-import shell from "shelljs";
 
 async function getFirstDataset(): Promise<APIDatasetType> {
   const datasets = await api.getActiveDatasets();
@@ -15,8 +14,8 @@ async function getFirstDataset(): Promise<APIDatasetType> {
   return dataset;
 }
 
-test.before("Change token", async () => {
-  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+test.before("Reset database and change token", async () => {
+  resetDatabase();
   setCurrToken(tokenUserA);
 });
 

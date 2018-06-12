@@ -1,14 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import "../enzyme/e2e-setup";
+import { resetDatabase } from "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
 import _ from "lodash";
-import shell from "shelljs";
 
-test.before("Refresh schema", async () => {
-  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+test.before("Reset database", async () => {
+  resetDatabase();
 });
 
 test("getTasks()", async t => {

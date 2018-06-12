@@ -8,14 +8,14 @@ import {
   tokenUserD,
   tokenUserE,
   setCurrToken,
+  resetDatabase,
 } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
-import shell from "shelljs";
 
-test.before("Refresh schema", async () => {
-  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+test.before("Reset database", async () => {
+  resetDatabase();
 });
 
 /*

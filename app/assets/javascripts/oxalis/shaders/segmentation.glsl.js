@@ -50,7 +50,7 @@ export const getSegmentationId: ShaderModuleType = {
           <%= segmentationName %>_lookup_texture,
           <%= formatNumberAsGLSLFloat(segmentationLayerIndex) %>,
           <%= segmentationName %>_data_texture_width,
-          1.0,
+          <%= segmentationPackingDegree %>,
           coords,
           fallbackCoords,
           hasFallback,

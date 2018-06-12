@@ -194,7 +194,7 @@ void main() {
   <% } %>
 
   // Color map (<= to fight rounding mistakes)
-  if ( length(id) > 0.1 ) {
+  if ( length(id.xyz) > 0.1 ) {
     // Increase cell opacity when cell is hovered
     float hoverAlphaIncrement =
       // Hover cell only if it's the active one, if the feature is enabled

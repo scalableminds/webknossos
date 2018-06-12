@@ -4,7 +4,7 @@
  - e.g. *- Deleting large trees will no longer cause webknossos to freeze.*
 
 ### URL of deployed dev instance (used for testing):
-- `http://___.webknossos.xyz`
+- https://___.webknossos.xyz
 
 ### Steps to test:
 - abc

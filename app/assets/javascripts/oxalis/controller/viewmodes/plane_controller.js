@@ -50,6 +50,7 @@ import {
 import messages from "messages";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Clipboard from "clipboard-js";
 
 type OwnProps = {
   onRender: () => void,
@@ -283,7 +284,30 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getKeyboardControls(): Object {
-    return {};
+    return {
+      "ctrl + i": async event => {
+        const segmentationBinary = Model.getSegmentationBinary();
+        if (!segmentationBinary) {
+          return;
+        }
+        const mousePosition = Store.getState().temporaryConfiguration.mousePosition;
+        if (mousePosition) {
+          const [x, y] = mousePosition;
+          const globalMousePosition = calculateGlobalPos({ x, y });
+          const { cube } = segmentationBinary;
+          const mapping = event.altKey ? cube.mapping : null;
+          const hoveredId = cube.getDataValue(
+            globalMousePosition,
+            mapping,
+            getRequestLogZoomStep(Store.getState()),
+          );
+          await Clipboard.copy(String(hoveredId));
+          Toast.success(`Cell id ${hoveredId} copied to clipboard.`);
+        } else {
+          Toast.warning("No cell under cursor.");
+        }
+      },
+    };
   }
 
   init(): void {

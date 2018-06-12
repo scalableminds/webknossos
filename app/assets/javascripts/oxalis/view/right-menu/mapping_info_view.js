@@ -8,7 +8,7 @@ import { connect } from "react-redux";
 import Cube from "oxalis/model/binary/data_cube";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 import type { OxalisState, MappingType } from "oxalis/store";
@@ -20,6 +20,7 @@ import debounceRender from "react-debounce-render";
 
 type Props = {
   position: Vector3,
+  zoomStep: number,
   mousePosition: ?Vector2,
   isMappingEnabled: boolean,
   mapping: ?MappingType,
@@ -71,7 +72,7 @@ class MappingInfoView extends Component<Props> {
       globalMousePosition = calculateGlobalPos({ x, y });
     }
 
-    const getIdForPos = pos => pos && cube.getDataValue(pos, null);
+    const getIdForPos = pos => pos && cube.getDataValue(pos, null, this.props.zoomStep);
 
     const tableData = [
       { name: "Active ID", key: "active", unmapped: this.props.activeCellId },
@@ -161,6 +162,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 function mapStateToProps(state: OxalisState) {
   return {
     position: getPosition(state.flycam),
+    zoomStep: getRequestLogZoomStep(state),
     isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
     mapping: state.temporaryConfiguration.activeMapping.mapping,
     mousePosition: state.temporaryConfiguration.mousePosition,

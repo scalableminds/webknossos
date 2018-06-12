@@ -17,6 +17,7 @@ import play.api.mvc.{Request, Result, Controller => PlayController}
 import play.twirl.api.Html
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import reactivemongo.bson.BSONObjectID
+import utils.ObjectId
 
 
 trait Controller extends PlayController
@@ -30,7 +31,13 @@ trait Controller extends PlayController
   implicit def AuthenticatedRequest2Request[T](r: SecuredRequest[T]): Request[T] =
     r.request
 
-  def ensureTeamAdministration(user: User, team: BSONObjectID) =
+  def ensureTeamAdministration(user: User, teamId: ObjectId): Fox[Unit] =
+    for {
+      teamIdBson <- teamId.toBSONObjectId.toFox
+      _ <- ensureTeamAdministration(user, teamIdBson)
+    } yield ()
+
+  def ensureTeamAdministration(user: User, team: BSONObjectID): Fox[Unit] =
     user.assertTeamManagerOrAdminOf(team) ?~> Messages("team.admin.notAllowed")
 
   def allowedToAdministrate(admin: User, dataSet: DataSet) =

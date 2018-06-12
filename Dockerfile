@@ -1,4 +1,4 @@
-FROM scalableminds/graalvm:master__58
+FROM scalableminds/graalvm:graal-tls__59
 
 RUN apk --no-cache add bash 'postgresql-client~10'
 

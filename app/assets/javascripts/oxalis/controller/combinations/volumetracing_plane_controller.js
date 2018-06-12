@@ -11,14 +11,10 @@ import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
 import {
   PlaneControllerClass,
   mapStateToProps,
-  calculateGlobalPos,
 } from "oxalis/controller/viewmodes/plane_controller";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Model from "oxalis/model";
-import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { setPositionAction } from "oxalis/model/actions/flycam_actions";
-import Clipboard from "clipboard-js";
-import Toast from "libs/toast";
 import {
   createCellAction,
   setToolAction,
@@ -106,7 +102,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         const contourTracingMode = getContourTracingMode(tracing).get();
 
         if (tool === VolumeToolEnum.MOVE) {
-          const viewportScale = getViewportScale(planeId);
+          const viewportScale = Store.getState().userConfiguration.scale;
           this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
         }
 
@@ -184,6 +180,8 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
         if (event.shiftKey) {
           const cellId = Model.getSegmentationBinary().cube.getDataValue(
             this.calculateGlobalPos(pos),
+            null,
+            getRequestLogZoomStep(Store.getState()),
           );
           this.handleCellSelection(cellId);
         }
@@ -209,20 +207,6 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
   getKeyboardControls(): Object {
     return _.extend(super.getKeyboardControls(), {
       c: () => Store.dispatch(createCellAction()),
-      "ctrl + i": async event => {
-        const mousePosition = Store.getState().temporaryConfiguration.mousePosition;
-        if (mousePosition) {
-          const [x, y] = mousePosition;
-          const globalMousePosition = calculateGlobalPos({ x, y });
-          const cube = Model.getSegmentationBinary().cube;
-          const mapping = event.altKey ? cube.mapping : null;
-          const hoveredId = cube.getDataValue(globalMousePosition, mapping);
-          await Clipboard.copy(String(hoveredId));
-          Toast.success(`Cell id ${hoveredId} copied to clipboard.`);
-        } else {
-          Toast.warning("No cell under cursor.");
-        }
-      },
     });
   }
 

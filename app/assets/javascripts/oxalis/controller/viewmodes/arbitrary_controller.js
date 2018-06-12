@@ -13,7 +13,6 @@ import Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Model from "oxalis/model";
 import {
   updateUserSettingAction,
@@ -33,7 +32,7 @@ import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
 import app from "app";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import constants, { ArbitraryViewport } from "oxalis/constants";
+import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import {
   yawFlycamAction,
@@ -49,7 +48,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
 import api from "oxalis/api/internal_api";
 
-const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
+const CANVAS_SELECTOR = "#render-canvas";
 
 type Props = {
   onRender: () => void,
@@ -68,9 +67,11 @@ class ArbitraryController extends React.PureComponent<Props> {
   input: {
     mouse?: InputMouse,
     keyboard?: InputKeyboard,
+    keyboardLoopDelayed?: InputKeyboard,
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
+  moveKeyNotification: string;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -95,33 +96,33 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    Utils.waitForSelector(arbitraryViewportSelector).then(() => {
-      this.input.mouse = new InputMouse(arbitraryViewportSelector, {
-        leftDownMove: (delta: Point2) => {
-          if (this.props.viewMode === constants.MODE_ARBITRARY) {
-            Store.dispatch(
-              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
-            );
-            Store.dispatch(
-              pitchFlycamAction(
-                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-                true,
-              ),
-            );
-          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const f = Store.getState().flycam.zoomStep / getViewportScale(ArbitraryViewport);
-            Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
-          }
-        },
-        scroll: this.scroll,
-        pinch: (delta: number) => {
-          if (delta < 0) {
-            Store.dispatch(zoomOutAction());
-          } else {
-            Store.dispatch(zoomInAction());
-          }
-        },
-      });
+    this.input.mouse = new InputMouse(CANVAS_SELECTOR, {
+      leftDownMove: (delta: Point2) => {
+        if (this.props.viewMode === constants.MODE_ARBITRARY) {
+          Store.dispatch(
+            yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+          );
+          Store.dispatch(
+            pitchFlycamAction(
+              delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+              true,
+            ),
+          );
+        } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+          const f =
+            Store.getState().flycam.zoomStep /
+            (this.arbitraryView.width / constants.VIEWPORT_WIDTH);
+          Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
+        }
+      },
+      scroll: this.scroll,
+      pinch: (delta: number) => {
+        if (delta < 0) {
+          Store.dispatch(zoomOutAction());
+        } else {
+          Store.dispatch(zoomInAction());
+        }
+      },
     });
   }
 
@@ -186,11 +187,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       o: () => {
         Store.dispatch(zoomOutAction());
       },
-
-      // Change move value
-      h: () => this.changeMoveValue(25),
-      g: () => this.changeMoveValue(-25),
     });
+
+    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
+    this.input.keyboardLoopDelayed = new InputKeyboard(
+      {
+        h: () => this.changeMoveValue(25),
+        g: () => this.changeMoveValue(-25),
+      },
+      { delay: Store.getState().userConfiguration.keyboardDelay },
+    );
 
     this.input.keyboardNoLoop = new InputKeyboardNoLoop({
       "1": () => {
@@ -302,6 +308,15 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       ),
+      listenToStoreProperty(
+        state => state.userConfiguration.keyboardDelay,
+        keyboardDelay => {
+          const { keyboardLoopDelayed } = this.input;
+          if (keyboardLoopDelayed != null) {
+            keyboardLoopDelayed.delay = keyboardDelay;
+          }
+        },
+      ),
     );
   }
 
@@ -357,6 +372,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   destroyInput() {
     Utils.__guard__(this.input.mouse, x => x.destroy());
     Utils.__guard__(this.input.keyboard, x => x.destroy());
+    Utils.__guard__(this.input.keyboardLoopDelayed, x => x.destroy());
     Utils.__guard__(this.input.keyboardNoLoop, x => x.destroy());
   }
 
@@ -376,6 +392,13 @@ class ArbitraryController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
+
+    if (this.moveKeyNotification != null) {
+      Toast.close(this.moveKeyNotification);
+    }
+    const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
+    this.moveKeyNotification = moveValueMessage;
+    Toast.success(moveValueMessage);
   }
 
   setParticleSize(delta: number): void {

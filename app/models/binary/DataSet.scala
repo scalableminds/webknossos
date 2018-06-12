@@ -116,7 +116,9 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
     s"""isPublic
         or _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin)
         or _id in (select _dataSet
-          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))"""
+          from (webknossos.dataSet_allowedTeams dt join (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}') ut on dt._team = ut._team))
+        or ('${requestingUserId.id}' in (select _user from webknossos.user_team_roles where isTeammanager)
+            and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}'))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSetSQL] =
     for {
@@ -205,18 +207,22 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
   }
 
   def deactivateUnreported(names: List[String], dataStoreName: String): Fox[Unit] = {
-    val deleteResolutionsQuery = sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
-              (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))})"""
-    val deleteLayersQuery = sqlu"""delete from webknossos.dataSet_layers where _dataSet in
-              (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))})"""
-    val setToUnusableQuery = sqlu"""update webknossos.datasets
-               set isUsable = false, status = 'No longer available on datastore.', scale = NULL
-               where _dataStore = ${dataStoreName}
-               and name not in #${writeStructTupleWithQuotes(names.map(sanitize))}"""
+    val inclusionPredicate = if (names.isEmpty) "true" else s"name not in ${writeStructTupleWithQuotes(names.map(sanitize))}"
+    val deleteResolutionsQuery =
+      sqlu"""delete from webknossos.dataSet_resolutions where _dataSet in
+            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate})"""
+    val deleteLayersQuery =
+      sqlu"""delete from webknossos.dataSet_layers where _dataSet in
+            (select _id from webknossos.dataSets where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate})"""
+    val setToUnusableQuery =
+      sqlu"""update webknossos.datasets
+             set isUsable = false, status = 'No longer available on datastore.', scale = NULL
+             where _dataStore = ${dataStoreName}
+             and #${inclusionPredicate}"""
     for {
-      _ <-run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
+      _ <- run(DBIO.sequence(List(deleteResolutionsQuery, deleteLayersQuery, setToUnusableQuery)).transactionally)
     } yield ()
   }
 

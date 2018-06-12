@@ -178,10 +178,6 @@ class TreesTabView extends React.PureComponent<Props, State> {
   }
 
   render() {
-    if (this.props.skeletonTracing.type !== "skeleton") {
-      // Extra guard to avoid that we try to render non-skeleton tracings
-      return null;
-    }
     const activeTreeName = getActiveTree(this.props.skeletonTracing)
       .map(activeTree => activeTree.name)
       .getOrElse("");
@@ -195,7 +191,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
     }
 
     return (
-      <div id="tree-list">
+      <div id="tree-list" className="flex-column">
         <Modal
           visible={this.state.isDownloading || this.state.isUploading}
           title={title}
@@ -258,7 +254,7 @@ class TreesTabView extends React.PureComponent<Props, State> {
           </Dropdown>
         </InputGroup>
 
-        <ul style={{ flex: "1 1 auto", overflow: "auto" }}>{this.getTreesComponents()}</ul>
+        <ul className="flex-overflow">{this.getTreesComponents()}</ul>
       </div>
     );
   }

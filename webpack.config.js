@@ -1,5 +1,5 @@
 module.exports = function(env = {}) {
-  /* eslint no-var:0, import/no-extraneous-dependencies:0 */
+  /* eslint no-var:0, import/no-extraneous-dependencies:0, global-require:0, func-names:0 */
   var webpack = require("webpack");
   var fs = require("fs");
   var path = require("path");
@@ -20,15 +20,6 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-
-    // GoldenLayout requires these libraries to be available in
-    // the global scope
-    new webpack.ProvidePlugin({
-      React: "react",
-      ReactDOM: "react-dom",
-      $: "jquery",
-      jQuery: "jquery",
-    }),
   ];
 
   if (env.production) {
@@ -38,9 +29,9 @@ module.exports = function(env = {}) {
         parallel: true,
         sourceMap: true,
         uglifyOptions: {
-          compress: {
-            inline: 1,
-          },
+          // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
+          // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
+          compress: false,
         },
       }),
     );
@@ -106,6 +97,7 @@ module.exports = function(env = {}) {
         },
         { test: /\.png$/, use: { loader: "url-loader", options: { limit: 100000 } } },
         { test: /\.jpg$/, use: "file-loader" },
+        { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
       ],
     },
     resolve: {

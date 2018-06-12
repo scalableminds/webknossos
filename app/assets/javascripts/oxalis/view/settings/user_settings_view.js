@@ -74,6 +74,15 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               onChange={this.props.onChangeZoomStep}
             />
             <LogSliderSetting
+              label="Viewport Scale"
+              roundTo={3}
+              min={Constants.MIN_SCALE}
+              max={Constants.MAX_SCALE}
+              step={0.1}
+              value={this.props.userConfiguration.scale}
+              onChange={this.onChangeUser.scale}
+            />
+            <LogSliderSetting
               label="Clipping Distance"
               roundTo={3}
               min={1}
@@ -99,6 +108,15 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
             />
+            <LogSliderSetting
+              label="Viewport Scale"
+              roundTo={3}
+              min={Constants.MIN_SCALE}
+              max={Constants.MAX_SCALE}
+              step={0.1}
+              value={this.props.userConfiguration.scale}
+              onChange={this.onChangeUser.scale}
+            />
             <SwitchSetting
               label="Show Crosshairs"
               value={this.props.userConfiguration.displayCrosshair}
@@ -116,6 +134,15 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
               max={this.props.maxZoomStep}
               value={this.props.zoomStep}
               onChange={this.props.onChangeZoomStep}
+            />
+            <LogSliderSetting
+              label="Viewport Scale"
+              roundTo={3}
+              min={Constants.MIN_SCALE}
+              max={Constants.MAX_SCALE}
+              step={0.1}
+              value={this.props.userConfiguration.scale}
+              onChange={this.onChangeUser.scale}
             />
             <NumberSliderSetting
               label="Mouse Rotation"
@@ -225,6 +252,11 @@ class UserSettingsView extends PureComponent<UserSettingsViewProps> {
             value={this.props.userConfiguration.newNodeNewTree}
             onChange={this.onChangeUser.newNodeNewTree}
           />
+          <SwitchSetting
+            label="Highlight Commented Nodes"
+            value={this.props.userConfiguration.highlightCommentedNodes}
+            onChange={this.onChangeUser.highlightCommentedNodes}
+          />
         </Panel>
       );
     } else if (
@@ -331,7 +363,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   onChangeZoomStep(zoomStep: number) {
     dispatch(setZoomStepAction(zoomStep));
   },
-  onChangeRadius(radius: number) {
+  onChangeRadius(radius: any) {
     dispatch(setNodeRadiusAction(radius));
   },
 });

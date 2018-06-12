@@ -20,6 +20,7 @@ import play.api.libs.concurrent.Akka
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
 
+
 import scala.collection.mutable
 import scala.concurrent.duration._
 
@@ -129,9 +130,9 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       // Log time to annotation
       annotation match {
         case Some(a: Annotation) =>
-          AnnotationService.logTime(duration, a._id)(GlobalAccessContext)
+          AnnotationService.logTime(duration, a._id)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
         case _ =>
-          Fox.successful(true)
+          Fox.successful(())
         // do nothing, this is not a stored annotation
       }
     }
@@ -162,8 +163,8 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       annotation.flatMap(_._task) match {
         case Some(taskId) =>
           for {
-            _ <- TaskService.logTime(duration, taskId)(GlobalAccessContext)
-            _ <- signalOverTime(duration, annotation)(GlobalAccessContext)
+            _ <- TaskService.logTime(duration, taskId)(GlobalAccessContext)  ?~> "FAILED: TaskService.logTime"
+            _ <- signalOverTime(duration, annotation)(GlobalAccessContext) ?~> "FAILED: TimeSpanTracker.signalOverTime"
           } yield {}
         case _ =>
           Fox.successful(())
@@ -188,9 +189,9 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
       val updateResult = for {
         annotation <- getAnnotation(updated.annotation)
-        _ <- TimeSpanDAO.update(updated)(ctx)
-        _ <- logTimeToAnnotation(duration, annotation)
-        _ <- logTimeToTask(duration, annotation)
+        _ <- TimeSpanDAO.update(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
+        _ <- logTimeToAnnotation(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
+        _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"
       } yield {}
 
       updateResult.onComplete{ x =>

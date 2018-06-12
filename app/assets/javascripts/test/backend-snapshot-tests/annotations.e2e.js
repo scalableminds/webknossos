@@ -5,6 +5,11 @@ import test from "ava";
 import "../enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import { APITracingTypeEnum } from "admin/api_flow_types";
+import shell from "shelljs";
+
+test.before("Refresh schema", async () => {
+  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+});
 
 test("getAnnotationInformation()", async t => {
   const annotationId = "570b9ff12a7c0e980056fe8f";

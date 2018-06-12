@@ -5,6 +5,11 @@ import "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
 import _ from "lodash";
+import shell from "shelljs";
+
+test.before("Refresh schema", async () => {
+  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+});
 
 test("getTasks()", async t => {
   const allTasks = (await api.getTasks({})).filter(

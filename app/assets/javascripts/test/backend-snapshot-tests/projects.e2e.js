@@ -6,6 +6,11 @@ import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
 import type { APIProjectType, APIProjectUpdaterType } from "admin/api_flow_types";
+import shell from "shelljs";
+
+test.before("Refresh schema", async () => {
+  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+});
 
 test.beforeEach("Change token", async () => {
   setCurrToken(tokenUserA);

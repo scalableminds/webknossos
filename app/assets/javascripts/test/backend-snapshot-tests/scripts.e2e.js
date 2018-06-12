@@ -4,6 +4,11 @@
 import test from "ava";
 import * as api from "admin/admin_rest_api";
 import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
+import shell from "shelljs";
+
+test.before("Refresh schema", async () => {
+  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+});
 
 test.before("Change token", async () => {
   setCurrToken(tokenUserA);

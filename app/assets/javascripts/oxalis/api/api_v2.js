@@ -616,7 +616,7 @@ class DataApi {
       });
     }
     // Bucket has been loaded by now or was loaded already
-    return layer.cube.getDataValue(position);
+    return layer.cube.getDataValue(position, null, zoomStep);
   }
 
   /**
@@ -725,6 +725,7 @@ class UserApi {
     - scale
     - tdViewDisplayPlanes
     - newNodeNewTree
+    - highlightCommentedNodes
     - keyboardDelay
     - particleSize
     - overrideNodeRadius

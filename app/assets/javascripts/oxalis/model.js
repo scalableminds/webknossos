@@ -455,18 +455,6 @@ export class OxalisModel {
     return layers.map(adaptResolutionInfoForLayer);
   }
 
-  shouldDisplaySegmentationData(): boolean {
-    const { segmentationOpacity } = Store.getState().datasetConfiguration;
-    if (segmentationOpacity === 0) {
-      return false;
-    }
-    const currentViewMode = Store.getState().temporaryConfiguration.viewMode;
-
-    // Currently segmentation data can only be displayed in orthogonal and volume mode
-    const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
-    return this.getSegmentationLayer() != null && canModeDisplaySegmentationData;
-  }
-
   computeBoundaries() {
     this.lowerBoundary = [Infinity, Infinity, Infinity];
     this.upperBoundary = [-Infinity, -Infinity, -Infinity];

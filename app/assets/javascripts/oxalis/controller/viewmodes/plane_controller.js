@@ -286,15 +286,15 @@ class PlaneController extends React.PureComponent<Props> {
   getKeyboardControls(): Object {
     return {
       "ctrl + i": async event => {
-        const segmentationBinary = Model.getSegmentationLayer();
-        if (!segmentationBinary) {
+        const segmentationLayer = Model.getSegmentationLayer();
+        if (!segmentationLayer) {
           return;
         }
         const { mousePosition } = Store.getState().temporaryConfiguration;
         if (mousePosition) {
           const [x, y] = mousePosition;
           const globalMousePosition = calculateGlobalPos({ x, y });
-          const { cube } = segmentationBinary;
+          const { cube } = segmentationLayer;
           const mapping = event.altKey ? cube.mapping : null;
           const hoveredId = cube.getDataValue(
             globalMousePosition,

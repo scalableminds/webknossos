@@ -7,6 +7,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation.AnnotationState._
+import models.binary.DataSetDAO
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -62,7 +63,8 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
       for {
         task <- annotation.task.toFox
         annotationBase <- task.annotationBase
-        newTracingReference <- AnnotationService.tracingFromBase(annotationBase)
+        dataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName) ?~> ("Could not find DataSet " + annotation.dataSetName + ". Does your team have access?")
+        newTracingReference <- AnnotationService.tracingFromBase(annotationBase, dataSet)
         updatedAnnotation <- AnnotationDAO.updateTracingRefernce(annotation._id, newTracingReference)
       } yield {
         updatedAnnotation

@@ -140,9 +140,8 @@ object AnnotationService
     AnnotationDAO.findFor(user._id, isFinished, AnnotationType.Explorational, limit)
   }
 
-  def tracingFromBase(annotationBase: Annotation)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
+  def tracingFromBase(annotationBase: Annotation, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
     for {
-      dataSet: DataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName) ?~> ("Could not find DataSet " + annotationBase.dataSetName)
       dataSource <- dataSet.dataSource.toUsable.toFox ?~> "Could not convert to usable DataSource"
       newTracingReference <- dataSet.dataStore.duplicateSkeletonTracing(annotationBase.tracingReference)
     } yield newTracingReference
@@ -151,7 +150,8 @@ object AnnotationService
   def createAnnotationFor(user: User, task: TaskSQL, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
-        newTracing <- tracingFromBase(annotation) ?~> "Failed to create tracing from base"
+        dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> ("Could not find DataSet " + annotation.dataSetName + ". Does your team have access?")
+        newTracing <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
           _user = user._id,
           tracingReference = newTracing,
@@ -168,7 +168,7 @@ object AnnotationService
 
     for {
       annotationBase <- task.annotationBase ?~> "Failed to retrieve annotation base."
-      result <- useAsTemplateAndInsert(annotationBase).toFox ?~> "Failed to use annotation base as template."
+      result <- useAsTemplateAndInsert(annotationBase).toFox
     } yield {
       result
     }

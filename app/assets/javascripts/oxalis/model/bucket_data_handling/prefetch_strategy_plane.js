@@ -8,6 +8,8 @@ import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqu
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import Store from "oxalis/store";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
@@ -133,7 +135,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
 
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
         widthHeightVector,
-        cube.layerInfo.resolutions,
+        getResolutions(Store.getState().dataset),
         zoomStep,
       );
 

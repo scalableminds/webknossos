@@ -1,7 +1,6 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.reactivemongo.JsonFormatHelper
 import com.scalableminds.util.tools.FoxImplicits
 import models.annotation.AnnotationSettings
@@ -12,6 +11,7 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
+import utils.ObjectId
 
 class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits{
 
@@ -41,7 +41,6 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
     }
   }
 
-
   def list = SecuredAction.async { implicit request =>
     for {
       taskTypes <- TaskTypeDAO.findAll
@@ -58,7 +57,6 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
         _ <- ensureTeamAdministration(request.identity, taskType._team)
         _ <- ensureTeamAdministration(request.identity, updatedTaskType._team)
         _ <- TaskTypeDAO.update(taskType._id, updatedTaskType)
-        tasks <- TaskDAO.findAllByTaskType(taskType._id)
       } yield {
         JsonOk(TaskType.transformToJson(updatedTaskType), Messages("taskType.editSuccess"))
       }
@@ -70,8 +68,8 @@ class TaskTypeController @Inject()(val messagesApi: MessagesApi) extends Control
       taskType <- TaskTypeDAO.findOneById(taskTypeId) ?~> Messages("taskType.notFound")
       _ <- ensureTeamAdministration(request.identity, taskType._team)
       _ <- TaskTypeDAO.removeById(taskType._id) ?~> Messages("taskType.deleteFailure")
+      _ <- TaskSQLDAO.removeAllWithTaskTypeAndItsAnnotations(ObjectId.fromBsonId(taskType._id)) ?~> Messages("taskType.deleteFailure")
     } yield {
-      TaskService.removeAllWithTaskType(taskType)
       JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
     }
   }

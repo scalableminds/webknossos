@@ -4,7 +4,7 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
 import models.project.ProjectSQLDAO
-import models.task.TaskDAO
+import models.task.TaskSQLDAO
 import models.user.User
 import reactivemongo.bson.BSONObjectID
 
@@ -18,7 +18,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
   {
     for {
       project <- ProjectSQLDAO.findOne(ObjectId(projectId)) ?~> "project.notFound"
-      tasks <- TaskDAO.findAllByProject(project._id)
+      tasks <- TaskSQLDAO.findAllByProject(project._id)
       annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten).toFox
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)

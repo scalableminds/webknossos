@@ -12,6 +12,7 @@ import {
   disallowVolumeTracingWarning,
   watchVolumeTracingAsync,
 } from "oxalis/model/sagas/volumetracing_saga";
+import { watchDataRelevantChanges } from "oxalis/model/sagas/prefetch_saga";
 import {
   warnAboutSegmentationOpacity,
   watchAnnotationAsync,
@@ -40,6 +41,7 @@ function* restartableSaga(): Generator<*, *, *> {
       disallowVolumeTracingWarning(),
       watchVolumeTracingAsync(),
       watchAnnotationAsync(),
+      watchDataRelevantChanges(),
     ];
   } catch (err) {
     alert(`\

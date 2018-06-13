@@ -4,8 +4,12 @@
  */
 
 import _ from "lodash";
-import type DataCube from "oxalis/model/binary/data_cube";
-import { DataBucket, NULL_BUCKET, NULL_BUCKET_OUT_OF_BB } from "oxalis/model/binary/bucket";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import {
+  DataBucket,
+  NULL_BUCKET,
+  NULL_BUCKET_OUT_OF_BB,
+} from "oxalis/model/bucket_data_handling/bucket";
 import type { Vector3, Vector4 } from "oxalis/constants";
 
 const ARBITRARY_MAX_ZOOMSTEP = 2;

@@ -12,7 +12,7 @@ import models.annotation.nml.{NmlService, NmlWriter}
 import models.annotation.{AnnotationType, _}
 import models.binary.{DataSet, DataSetDAO}
 import models.project.ProjectSQLDAO
-import models.task.{Task, _}
+import models.task._
 import models.user._
 import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
@@ -178,13 +178,13 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   }
 
   def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
-    def createTaskZip(task: Task): Fox[TemporaryFile] = task.annotations.flatMap { annotations =>
+    def createTaskZip(task: TaskSQL): Fox[TemporaryFile] = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state == Finished)
-      AnnotationService.zipAnnotations(finished, task.id + "_nmls.zip")
+      AnnotationService.zipAnnotations(finished, task._id.toString + "_nmls.zip")
     }
 
     for {
-      task <- TaskDAO.findOneById(taskId).toFox ?~> Messages("task.notFound")
+      task <- TaskSQLDAO.findOne(ObjectId(taskId)).toFox ?~> Messages("task.notFound")
       project <- task.project ?~> Messages("project.notFound")
       _ <- ensureTeamAdministration(user, project._team) ?~> Messages("notAllowed")
       zip <- createTaskZip(task)
@@ -194,7 +194,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
   def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
-        tasks <- TaskDAO.findAllByTaskType(taskType._id)
+        tasks <- TaskSQLDAO.findAllByTaskType(ObjectId.fromBsonId(taskType._id))
         annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten.filter(_.state == Finished))
         zip <- AnnotationService.zipAnnotations(annotations, taskType.summary + "_nmls.zip")
       } yield zip

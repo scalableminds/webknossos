@@ -33,10 +33,10 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         projects <- ProjectSQLDAO.findAll
-        allCounts <- TaskDAO.countOpenInstancesByProjects
+        allCounts <- TaskSQLDAO.countAllOpenInstancesGroupedByProjects
         js <- Fox.serialCombined(projects) { project =>
           for {
-            openTaskInstances <- Fox.successful(allCounts.get(project._id.toString).getOrElse(0))
+            openTaskInstances <- Fox.successful(allCounts.get(project._id).getOrElse(0))
             r <- project.publicWritesWithStatus(openTaskInstances)
           } yield r
         }
@@ -122,8 +122,8 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
         project <- ProjectSQLDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
         teamIdBson <- project._team.toBSONObjectId.toFox
         _ <- request.identity.assertTeamManagerOrAdminOf(teamIdBson) ?~> Messages("notAllowed")
-        tasks <- TaskDAO.findAllByProject(project._id)(GlobalAccessContext)
-        js <- Fox.serialCombined(tasks)(t => Task.transformToJson(t))
+        tasks <- TaskSQLDAO.findAllByProject(project._id)(GlobalAccessContext)
+        js <- Fox.serialCombined(tasks)(_.publicWrites)
       } yield {
         Ok(Json.toJson(js))
       }

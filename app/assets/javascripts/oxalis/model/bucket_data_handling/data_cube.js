@@ -6,24 +6,24 @@
 import _ from "lodash";
 import BackboneEvents from "backbone-events-standalone";
 import constants from "oxalis/constants";
-import PullQueue from "oxalis/model/binary/pullqueue";
-import PushQueue from "oxalis/model/binary/pushqueue";
+import PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
 import {
   DataBucket,
   NullBucket,
   NULL_BUCKET,
   NULL_BUCKET_OUT_OF_BB,
   BUCKET_SIZE_P,
-} from "oxalis/model/binary/bucket";
-import ArbitraryCubeAdapter from "oxalis/model/binary/arbitrary_cube_adapter";
-import TemporalBucketManager from "oxalis/model/binary/temporal_bucket_manager";
-import BoundingBox from "oxalis/model/binary/bounding_box";
+} from "oxalis/model/bucket_data_handling/bucket";
+import ArbitraryCubeAdapter from "oxalis/model/bucket_data_handling/arbitrary_cube_adapter";
+import TemporalBucketManager from "oxalis/model/bucket_data_handling/temporal_bucket_manager";
+import BoundingBox from "oxalis/model/bucket_data_handling/bounding_box";
 import Store from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_converter";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
-import type { Bucket } from "oxalis/model/binary/bucket";
+import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { MappingType, DataLayerType } from "oxalis/store";
 
 class CubeEntry {
@@ -54,7 +54,7 @@ class DataCube {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
-  layer: DataLayerType;
+  layerInfo: DataLayerType;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -78,10 +78,10 @@ class DataCube {
     upperBoundary: Vector3,
     extendedZoomStepCount: number,
     bitDepth: number,
-    layer: DataLayerType,
+    layerInfo: DataLayerType,
   ) {
     this.upperBoundary = upperBoundary;
-    this.layer = layer;
+    this.layerInfo = layerInfo;
 
     this.MAX_UNSAMPLED_ZOOM_STEP =
       extendedZoomStepCount - constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1;
@@ -109,7 +109,7 @@ class DataCube {
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
     for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
-      const resolution = this.layer.resolutions[i];
+      const resolution = this.layerInfo.resolutions[i];
       const zoomedCubeBoundary = [
         Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
         Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
@@ -147,13 +147,13 @@ class DataCube {
   }
 
   isMappingEnabled(): boolean {
-    return this.layer.category === "segmentation"
+    return this.layerInfo.category === "segmentation"
       ? Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled
       : false;
   }
 
   getMapping(): ?MappingType {
-    return this.layer.category === "segmentation"
+    return this.layerInfo.category === "segmentation"
       ? Store.getState().temporaryConfiguration.activeMapping.mapping
       : null;
   }
@@ -383,7 +383,7 @@ class DataCube {
   getVoxelIndex(voxel: Vector3, zoomStep: number = 0): number {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];
-    const resolution = this.layer.resolutions[zoomStep];
+    const resolution = this.layerInfo.resolutions[zoomStep];
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
@@ -392,7 +392,7 @@ class DataCube {
 
   positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
     // return the bucket a given voxel lies in
-    return globalPositionToBucketPosition(position, this.layer.resolutions, resolutionIndex);
+    return globalPositionToBucketPosition(position, this.layerInfo.resolutions, resolutionIndex);
   }
 
   positionToBaseAddress(position: Vector3): Vector4 {

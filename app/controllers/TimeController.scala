@@ -2,11 +2,9 @@ package controllers
 
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import javax.inject.Inject
 
+import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationDAO
-import models.task.{Task, TaskService}
 import models.user.time.{TimeSpan, TimeSpanSQLDAO}
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
@@ -17,8 +15,6 @@ import play.api.mvc.AnyContent
 import utils.ObjectId
 
 class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller with FoxImplicits {
-
-  // REST API
 
   //all users with working hours > 0
   def getWorkingHoursOfAllUsers(year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
@@ -99,18 +95,4 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     }
   }
 
-  def getOnlyTimeSpansWithTask(l: List[TimeSpan])(implicit request: SecuredRequest[AnyContent]): Fox[List[(TimeSpan, Task)]] = {
-    Fox.sequence(l.map(getTimeSpanOptionTask)).map(_.flatten)
-  }
-
-  def getTimeSpanOptionTask(t: TimeSpan)(implicit request: SecuredRequest[AnyContent]): Fox[(TimeSpan,Task)] = {
-    for {
-      annotationId <- t.annotation.toFox
-      annotation <- AnnotationDAO.findOneById(annotationId)
-      if (annotation._task.isDefined)
-      task <- TaskService.findOneById(annotation._task.get.stringify)
-    } yield {
-      (t, task)
-    }
-  }
 }

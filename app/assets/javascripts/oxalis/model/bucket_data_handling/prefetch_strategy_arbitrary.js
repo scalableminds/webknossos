@@ -1,16 +1,28 @@
-/**
- * ping_strategy_3d.js
- * @flow
- */
+// @flow
 
 import { M4x4 } from "libs/mjs";
 import type { Matrix4x4 } from "libs/mjs";
 import type { BoundingBoxType } from "oxalis/constants";
-import PolyhedronRasterizer from "oxalis/model/binary/polyhedron_rasterizer";
-import { AbstractPingStrategy } from "oxalis/model/binary/ping_strategy";
-import type { PullQueueItemType } from "oxalis/model/binary/pullqueue";
+import PolyhedronRasterizer from "oxalis/model/bucket_data_handling/polyhedron_rasterizer";
+import { AbstractPrefetchStrategy } from "oxalis/model/bucket_data_handling/prefetch_strategy_plane";
+import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqueue";
 
-export class PingStrategy3d extends AbstractPingStrategy {
+export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
+  velocityRangeStart = 0;
+  velocityRangeEnd = Infinity;
+  roundTripTimeRangeStart = 0;
+  roundTripTimeRangeEnd = Infinity;
+  name = "ARBITRARY";
+
+  prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
+    5,
+    5,
+    -0.5,
+    4,
+    4,
+    2,
+  );
+
   getExtentObject(
     poly0: BoundingBoxType,
     poly1: BoundingBoxType,
@@ -40,32 +52,13 @@ export class PingStrategy3d extends AbstractPingStrategy {
     matrix[14] += 1;
   }
 
-  // eslint-disable-next-line no-unused-vars
-  ping(matrix: Matrix4x4, zoomStep: number): Array<PullQueueItemType> {
-    return [];
-  }
-}
-
-export class DslSlowPingStrategy3d extends PingStrategy3d {
-  pingPolyhedron: PolyhedronRasterizer.Master;
-
-  velocityRangeStart = 0;
-  velocityRangeEnd = Infinity;
-
-  roundTripTimeRangeStart = 0;
-  roundTripTimeRangeEnd = Infinity;
-
-  name = "DSL_SLOW";
-
-  pingPolyhedron = PolyhedronRasterizer.Master.squareFrustum(5, 5, -0.5, 4, 4, 2);
-
-  ping(matrix: Matrix4x4, zoomStep: number): Array<PullQueueItemType> {
+  prefetch(matrix: Matrix4x4, zoomStep: number): Array<PullQueueItemType> {
     const pullQueue = [];
 
     const matrix0 = M4x4.clone(matrix);
     this.modifyMatrixForPoly(matrix0, zoomStep);
 
-    const polyhedron0 = this.pingPolyhedron.transformAffine(matrix0);
+    const polyhedron0 = this.prefetchPolyhedron.transformAffine(matrix0);
     const testAddresses = polyhedron0.collectPointsOnion(matrix0[12], matrix0[13], matrix0[14]);
 
     let i = 0;
@@ -79,3 +72,5 @@ export class DslSlowPingStrategy3d extends PingStrategy3d {
     return pullQueue;
   }
 }
+
+export default {};

@@ -285,7 +285,7 @@ class PlaneController extends React.PureComponent<Props> {
 
   getKeyboardControls(): Object {
     return {
-      "ctrl + i": async event => {
+      "ctrl + i": event => {
         const segmentationLayer = Model.getSegmentationLayer();
         if (!segmentationLayer) {
           return;
@@ -301,8 +301,9 @@ class PlaneController extends React.PureComponent<Props> {
             mapping,
             getRequestLogZoomStep(Store.getState()),
           );
-          await Clipboard.copy(String(hoveredId));
-          Toast.success(`Cell id ${hoveredId} copied to clipboard.`);
+          Clipboard.copy(String(hoveredId)).then(() =>
+            Toast.success(`Cell id ${hoveredId} copied to clipboard.`),
+          );
         } else {
           Toast.warning("No cell under cursor.");
         }

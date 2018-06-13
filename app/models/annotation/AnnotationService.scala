@@ -18,7 +18,7 @@ import models.annotation.AnnotationType._
 import models.annotation.handler.SavedTracingInformationHandler
 import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO, DataStoreHandlingStrategy}
-import models.task.Task
+import models.task.TaskSQL
 import models.team.OrganizationSQLDAO
 import models.user.User
 import utils.ObjectId
@@ -115,16 +115,16 @@ object AnnotationService
     AnnotationDAO.finish(annotation._id)
   }
 
-  def baseFor(task: Task)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def baseFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     (for {
-      list <- AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.TracingBase)
+      list <- AnnotationDAO.findByTaskIdAndType(taskId, AnnotationType.TracingBase)
     } yield list.headOption.toFox).flatten
 
-  def annotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.findByTaskIdAndType(task._id, AnnotationType.Task)
+  def annotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
+      AnnotationDAO.findByTaskIdAndType(taskId, AnnotationType.Task)
 
-  def countActiveAnnotationsFor(task: Task)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.countActiveByTaskIdAndType(task._id, AnnotationType.Task)
+  def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
+    AnnotationDAO.countActiveByTaskIdAndType(taskId, AnnotationType.Task)
 
   def openTasksFor(user: User)(implicit ctx: DBAccessContext) =
     AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
@@ -147,7 +147,7 @@ object AnnotationService
     } yield newTracingReference
   }
 
-  def createAnnotationFor(user: User, task: Task, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
+  def createAnnotationFor(user: User, task: TaskSQL, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[Annotation] = {
     def useAsTemplateAndInsert(annotation: Annotation) = {
       for {
         dataSet <- DataSetDAO.findOneBySourceName(annotation.dataSetName) ?~> ("Could not find DataSet " + annotation.dataSetName + ". Does your team have access?")
@@ -194,7 +194,7 @@ object AnnotationService
   }
 
   def createAnnotationBase(
-    taskFox: Fox[Task],
+    taskFox: Fox[TaskSQL],
     userId: BSONObjectID,
     tracingReferenceBox: Box[TracingReference],
     dataSetName: String,
@@ -207,8 +207,9 @@ object AnnotationService
       tracingReference <- tracingReferenceBox.toFox
       project <- task.project
       teamIdBson <- project._team.toBSONObjectId.toFox
+      taskIdBson <- task._id.toBSONObjectId.toFox
       _ <- Annotation(userId, tracingReference, dataSetName, teamIdBson, taskType.settings,
-          typ = AnnotationType.TracingBase, _task = Some(task._id), description = description.getOrElse("")).saveToDB ?~> "Failed to insert annotation."
+          typ = AnnotationType.TracingBase, _task = Some(taskIdBson), description = description.getOrElse("")).saveToDB ?~> "Failed to insert annotation."
     } yield true
   }
 
@@ -226,17 +227,18 @@ object AnnotationService
         user._id,
         tracingReference,
         dataSet.name,
-        _team = teamId,
+        teamId,
         settings = settings,
         _name = name,
         description = description,
         typ = annotationType)
       _ <- annotation.saveToDB
+
     } yield annotation
   }
 
   def logTime(time: Long, _annotation: BSONObjectID)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.logTime(time, _annotation) ?~> "FAILED: AnnotationDAO.logTime"
+    AnnotationDAO.logTime(time, _annotation)
 
   def zipAnnotations(annotations: List[Annotation], zipFileName: String)(implicit messages: Messages, ctx: DBAccessContext): Fox[TemporaryFile] = {
     for {

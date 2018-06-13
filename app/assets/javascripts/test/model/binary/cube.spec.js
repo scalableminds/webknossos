@@ -8,8 +8,22 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
 import runAsync from "test/helpers/run-async";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 
 mockRequire.stopAll();
+
+const StoreMock = {
+  getState: () => ({
+    dataset: datasetServerObject,
+    tracing: skeletontracingServerObject,
+    datasetConfiguration: { fourBit: false },
+  }),
+  dispatch: sinon.stub(),
+  subscribe: sinon.stub(),
+};
+
+mockRequire("oxalis/store", StoreMock);
 
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;

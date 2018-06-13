@@ -8,10 +8,15 @@ import {
   tokenUserD,
   tokenUserE,
   setCurrToken,
+  resetDatabase,
 } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
+
+test.before("Reset database", async () => {
+  resetDatabase();
+});
 
 /*
 TEAM STRUCTURE USED FOR TESTING:

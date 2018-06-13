@@ -13,8 +13,8 @@ import { M4x4, V3 } from "libs/mjs";
 import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
 import constants from "oxalis/constants";
 import Store from "oxalis/store";
-import { getFallbackBuckets } from "./oblique_bucket_picker";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { getFallbackBuckets } from "./oblique_bucket_picker";
 
 export default function determineBucketsForFlight(
   dataLayer: DataLayer,

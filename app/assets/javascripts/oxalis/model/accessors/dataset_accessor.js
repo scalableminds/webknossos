@@ -15,3 +15,5 @@ export function getResolutions(dataset: APIDatasetType): Vector3[] {
     .last()
     .valueOf();
 }
+
+export default {};

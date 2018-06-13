@@ -53,7 +53,6 @@ import messages from "messages";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
 import type { DataTextureSizeAndCount } from "./model/bucket_data_handling/data_rendering_logic";
 import * as DataRenderingLogic from "./model/bucket_data_handling/data_rendering_logic";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
 
 export type ServerNodeType = {
   id: number,

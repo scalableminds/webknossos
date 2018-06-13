@@ -13,6 +13,7 @@ import type { BucketInfo } from "oxalis/model/bucket_data_handling/bucket_builde
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { Vector4 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
 
 export const REQUEST_TIMEOUT = 30000;
 
@@ -22,7 +23,7 @@ export function getBitDepth(layerInfo: DataLayerType): number {
 
 function buildBuckets(layerInfo: DataLayerType, batch: Array<Vector4>): Array<BucketInfo> {
   return batch.map((bucketAddress: Vector4) =>
-    BucketBuilder.fromZoomedAddress(bucketAddress, layerInfo.resolutions),
+    BucketBuilder.fromZoomedAddress(bucketAddress, getResolutions(Store.getState().dataset)),
   );
 }
 
@@ -82,7 +83,10 @@ export async function sendToStore(
     // eslint-disable-next-line no-await-in-loop
     if (counter % YIELD_AFTER_X_BUCKETS === 0) await Utils.sleep(1);
     const bucketData = bucket.getData();
-    const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress, layerInfo.resolutions);
+    const bucketInfo = BucketBuilder.fromZoomedAddress(
+      bucket.zoomedAddress,
+      getResolutions(Store.getState().dataset),
+    );
     items.push(updateBucket(bucketInfo, Base64.fromByteArray(bucketData)));
   }
   Store.dispatch(pushSaveQueueAction(items));

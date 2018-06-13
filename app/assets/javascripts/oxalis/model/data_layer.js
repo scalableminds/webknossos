@@ -24,6 +24,7 @@ import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accesso
 import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { CategoryType, DataLayerType } from "oxalis/store";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -177,7 +178,7 @@ class DataLayer {
 
     const subBucketLocality = getSubBucketLocality(
       position,
-      this.layerInfo.resolutions[logZoomStep],
+      getResolutions(Store.getState().dataset)[logZoomStep],
     );
     const areas = getAreas(Store.getState());
 
@@ -277,7 +278,7 @@ class DataLayer {
   }
 
   calculateUnzoomedAnchorPoint(position: Vector3, logZoomStep: number): Vector3 {
-    const resolution = this.layerInfo.resolutions[logZoomStep];
+    const resolution = getResolutions(Store.getState().dataset)[logZoomStep];
     const maximumRenderedBucketsHalf =
       (constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION - 1) * constants.BUCKET_WIDTH / 2;
 

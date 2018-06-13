@@ -53,6 +53,7 @@ import messages from "messages";
 import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
 import type { DataTextureSizeAndCount } from "./model/bucket_data_handling/data_rendering_logic";
 import * as DataRenderingLogic from "./model/bucket_data_handling/data_rendering_logic";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
 
 export type ServerNodeType = {
   id: number,
@@ -517,19 +518,6 @@ export class OxalisModel {
     if (urlState.activeNode != null) {
       Store.dispatch(setActiveNodeAction(urlState.activeNode));
     }
-  }
-
-  getResolutions(): Array<Vector3> {
-    // Different layers can have different resolutions. At the moment,
-    // unequal resolutions will result in undefined behavior.
-    // However, if resolutions are subset of each other, everything should be fine.
-    // For that case, returning the longest resolutions array should suffice
-
-    return _.chain(this.dataLayers)
-      .map(dataLayer => dataLayer.layerInfo.resolutions)
-      .sortBy(resolutions => resolutions.length)
-      .last()
-      .valueOf();
   }
 
   stateSaved() {

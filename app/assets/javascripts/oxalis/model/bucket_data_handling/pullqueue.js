@@ -14,6 +14,8 @@ import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import Store from "oxalis/store";
 
 export type PullQueueItemType = {
   priority: number,
@@ -102,6 +104,7 @@ class PullQueue {
       );
 
       let offset = 0;
+      const resolutions = getResolutions(Store.getState().dataset);
       for (const bucketAddress of batch) {
         const zoomStep = bucketAddress[3];
         if (zoomStep > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
@@ -116,13 +119,13 @@ class PullQueue {
           if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
             const higherAddress = zoomedAddressToAnotherZoomStep(
               bucketAddress,
-              this.layerInfo.resolutions,
+              resolutions,
               zoomStep + 1,
             );
 
             const resolutionsFactors = getResolutionsFactors(
-              this.layerInfo.resolutions[zoomStep + 1],
-              this.layerInfo.resolutions[zoomStep],
+              resolutions[zoomStep + 1],
+              resolutions[zoomStep],
             );
             const higherBucket = this.cube.getOrCreateBucket(higherAddress);
             if (higherBucket.type === "data") {

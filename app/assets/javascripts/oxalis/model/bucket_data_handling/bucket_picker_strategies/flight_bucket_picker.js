@@ -14,6 +14,7 @@ import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
 import constants from "oxalis/constants";
 import Store from "oxalis/store";
 import { getFallbackBuckets } from "./oblique_bucket_picker";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 
 export default function determineBucketsForFlight(
   dataLayer: DataLayer,
@@ -31,6 +32,7 @@ export default function determineBucketsForFlight(
 
   const { sphericalCapRadius } = Store.getState().userConfiguration;
   const cameraVertex = [0, 0, -sphericalCapRadius];
+  const resolutions = getResolutions(Store.getState().dataset);
 
   // This array holds the four corners and the center point of the rendered plane
   const planePoints = M4x4.transformVectorsAffine(
@@ -47,9 +49,7 @@ export default function determineBucketsForFlight(
       V3.add(vec, cameraVertex, vec);
       return vec;
     }),
-  ).map((position: Vector3) =>
-    globalPositionToBucketPosition(position, dataLayer.layerInfo.resolutions, logZoomStep),
-  );
+  ).map((position: Vector3) => globalPositionToBucketPosition(position, resolutions, logZoomStep));
 
   const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
 
@@ -88,13 +88,10 @@ export default function determineBucketsForFlight(
         z <= boundingBoxBuckets.cornerMax[2] + tolerance;
         z++
       ) {
-        const pos = bucketPositionToGlobalAddress(
-          [x, y, z, logZoomStep],
-          dataLayer.layerInfo.resolutions,
-        );
+        const pos = bucketPositionToGlobalAddress([x, y, z, logZoomStep], resolutions);
         const nextPos = bucketPositionToGlobalAddress(
           [x + 1, y + 1, z + 1, logZoomStep],
-          dataLayer.layerInfo.resolutions,
+          resolutions,
         );
 
         const closest = [0, 1, 2].map(dim =>
@@ -127,7 +124,7 @@ export default function determineBucketsForFlight(
 
   const fallbackBuckets = getFallbackBuckets(
     traversedBuckets,
-    dataLayer.layerInfo.resolutions,
+    resolutions,
     fallbackZoomStep,
     isFallbackAvailable,
   );
@@ -136,7 +133,7 @@ export default function determineBucketsForFlight(
 
   const centerAddress = globalPositionToBucketPosition(
     getPosition(Store.getState().flycam),
-    dataLayer.layerInfo.resolutions,
+    resolutions,
     logZoomStep,
   );
 

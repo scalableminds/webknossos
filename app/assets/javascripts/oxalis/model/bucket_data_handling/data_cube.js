@@ -25,6 +25,7 @@ import type { Vector3, Vector4 } from "oxalis/constants";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { MappingType, DataLayerType } from "oxalis/store";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -108,8 +109,9 @@ class DataCube {
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
+    const resolutions = getResolutions(Store.getState().dataset);
     for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
-      const resolution = this.layerInfo.resolutions[i];
+      const resolution = resolutions[i];
       const zoomedCubeBoundary = [
         Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
         Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
@@ -383,7 +385,7 @@ class DataCube {
   getVoxelIndex(voxel: Vector3, zoomStep: number = 0): number {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];
-    const resolution = this.layerInfo.resolutions[zoomStep];
+    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
@@ -392,7 +394,11 @@ class DataCube {
 
   positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
     // return the bucket a given voxel lies in
-    return globalPositionToBucketPosition(position, this.layerInfo.resolutions, resolutionIndex);
+    return globalPositionToBucketPosition(
+      position,
+      getResolutions(Store.getState().dataset),
+      resolutionIndex,
+    );
   }
 
   positionToBaseAddress(position: Vector3): Vector4 {

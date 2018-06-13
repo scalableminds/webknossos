@@ -9,6 +9,8 @@ import {
 import Dimensions from "oxalis/model/dimensions";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import DataLayer from "oxalis/model/data_layer";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import Store from "oxalis/store";
 
 export default function determineBucketsForOrthogonal(
   dataLayer: DataLayer,
@@ -53,8 +55,9 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   areas: OrthoViewMapType<AreaType>,
   subBucketLocality: Vector3,
 ): void {
-  const resolution = dataLayer.layerInfo.resolutions[logZoomStep];
-  const previousResolution = dataLayer.layerInfo.resolutions[logZoomStep - 1];
+  const resolutions = getResolutions(Store.getState().dataset);
+  const resolution = resolutions[logZoomStep];
+  const previousResolution = resolutions[logZoomStep - 1];
 
   const resolutionChangeRatio = isFallback
     ? getResolutionsFactors(resolution, previousResolution)
@@ -73,12 +76,12 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 
     const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
       topLeftVector,
-      dataLayer.layerInfo.resolutions,
+      resolutions,
       logZoomStep,
     );
     const scaledBottomRightVector = zoomedAddressToAnotherZoomStep(
       bottomRightVector,
-      dataLayer.layerInfo.resolutions,
+      resolutions,
       logZoomStep,
     );
 

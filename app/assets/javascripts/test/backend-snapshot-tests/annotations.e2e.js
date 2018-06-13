@@ -29,7 +29,6 @@ test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
   t.is(reopenedAnnotation.state, "Active");
   // $FlowFixMe: Make tracingTime deterministic
   reopenedAnnotation.task.tracingTime = 100;
-  // reopenedAnnotation.tracingTime = 100;
 
   t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation" });
 });
@@ -69,7 +68,7 @@ test.serial("editAnnotation()", async t => {
   const newDescription = "new description";
 
   await api.editAnnotation(annotationId, APITracingTypeEnum.Explorational, {
-    name: "new name",
+    name: newName,
     isPublic: newIsPublic,
     description: newDescription,
   });

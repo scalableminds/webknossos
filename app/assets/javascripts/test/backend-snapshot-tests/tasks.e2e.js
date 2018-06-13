@@ -48,8 +48,9 @@ test("getTask()", async t => {
 });
 
 test("getAnnotationsForTask()", async t => {
-  const annotation = await api.getAnnotationsForTask("58135c192faeb34c0081c058");
-  t.snapshot(annotation, { id: "tasks-getAnnotationsForTask" });
+  const annotations = await api.getAnnotationsForTask("581367a82faeb37a008a5352");
+  t.is(annotations.length, 1);
+  t.snapshot(annotations, { id: "tasks-getAnnotationsForTask" });
 });
 
 test.serial("updateTask()", async t => {
@@ -72,7 +73,6 @@ test.serial("updateTask()", async t => {
   const updatedTask = await api.updateTask(task.id, newTask);
 
   t.deepEqual(updatedTask.status.open, newTask.openInstances);
-  console.log("updatedTask", updatedTask);
   t.snapshot(updatedTask, { id: "tasks-updatedTask" });
 });
 

@@ -88,13 +88,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.stop();
   }
 
-  pingBinaries(): void {
-    const matrix = Store.getState().flycam.currentMatrix;
-    Model.getColorBinaries().forEach(binary =>
-      binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality),
-    );
-  }
-
   initMouse(): void {
     this.input.mouse = new InputMouse(CANVAS_SELECTOR, {
       leftDownMove: (delta: Point2) => {
@@ -255,7 +248,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   getVoxelOffset(timeFactor: number): number {
     const state = Store.getState();
-    const moveValue3d = state.userConfiguration.moveValue3d;
+    const { moveValue3d } = state.userConfiguration;
     const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
     return moveValue3d * timeFactor / baseVoxel / constants.FPS;
   }
@@ -269,12 +262,11 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   init(): void {
-    const clippingDistanceArbitrary = Store.getState().userConfiguration.clippingDistanceArbitrary;
+    const { clippingDistanceArbitrary } = Store.getState().userConfiguration;
     this.setClippingDistance(clippingDistanceArbitrary);
   }
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.pingBinaries);
     this.listenTo(this.arbitraryView, "render", this.props.onRender);
 
     const onBucketLoaded = () => {
@@ -282,9 +274,8 @@ class ArbitraryController extends React.PureComponent<Props> {
       app.vent.trigger("rerender");
     };
 
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      this.listenTo(binary.cube, "bucketLoaded", onBucketLoaded);
+    for (const dataLayer of Model.getAllLayers()) {
+      this.listenTo(dataLayer.cube, "bucketLoaded", onBucketLoaded);
     }
 
     this.storePropertyUnsubscribers.push(
@@ -337,7 +328,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.initMouse();
     this.init();
 
-    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    const { clippingDistance } = Store.getState().userConfiguration;
     SceneController.setClippingDistance(clippingDistance);
 
     this.arbitraryView.draw();

@@ -28,11 +28,13 @@ class Mappings {
   mappingTexture: UpdatableTexture;
   mappingLookupTexture: UpdatableTexture;
 
-  constructor(layer: DataLayerType) {
+  constructor(layerInfo: DataLayerType) {
     const datasetName = Store.getState().dataset.name;
     const dataStoreUrl = Store.getState().dataset.dataStore.url;
-    this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layer.name}/mappings/`;
-    this.availableMappings = layer.mappings || [];
+    this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${
+      layerInfo.name
+    }/mappings/`;
+    this.availableMappings = layerInfo.mappings || [];
   }
 
   getMappingNames(): Array<string> {

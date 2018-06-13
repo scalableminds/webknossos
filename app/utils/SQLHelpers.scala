@@ -36,10 +36,11 @@ case class ObjectId(id: String) {
   override def toString = id
 }
 
-object ObjectId {
+object ObjectId extends FoxImplicits {
   implicit val jsonFormat = Json.format[ObjectId]
   def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   def generate = fromBsonId(BSONObjectID.generate)
+  def parse(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption.toFox ?~> "bsonid.invalid"
 }
 
 trait SQLTypeImplicits {

@@ -1,12 +1,12 @@
 /**
- * binarydata_connection_info.js
+ * data_connection_info.js
  * @flow
  */
 
 const ROUND_TRIP_TIME_SMOOTHER = 0.125;
 const BANDWIDTH_SMOOTHER = 0.125;
 
-class BinaryDataConnectionInfo {
+class DataConnectionInfo {
   roundTripTime: number;
   bandwidth: number;
   totalBuckets: number;
@@ -36,4 +36,4 @@ class BinaryDataConnectionInfo {
   }
 }
 
-export default BinaryDataConnectionInfo;
+export default DataConnectionInfo;

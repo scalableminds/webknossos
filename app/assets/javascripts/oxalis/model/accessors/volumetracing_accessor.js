@@ -40,9 +40,21 @@ export function getContourTracingMode(tracing: TracingType): Maybe<ContourModeTy
 }
 
 export function isVolumeTracingDisallowed(state: OxalisState) {
-  return getRequestLogZoomStep(state) > 1;
+  const isVolumeTracing = state.tracing.type === "volume";
+  const isWrongZoomStep = getRequestLogZoomStep(state) > 1;
+  return isVolumeTracing && isWrongZoomStep;
 }
 
-export function displaysUnsampledVolumeData(state: OxalisState): boolean {
-  return getRequestLogZoomStep(state) === 1;
+export function isSegmentationMissingForZoomstep(
+  state: OxalisState,
+  maxZoomStepForSegmentation: number,
+): boolean {
+  return getRequestLogZoomStep(state) > maxZoomStepForSegmentation;
+}
+
+export function displaysDownsampledVolumeData(
+  state: OxalisState,
+  maxUnsampledZoomStepForSegmentation: number,
+): boolean {
+  return getRequestLogZoomStep(state) === maxUnsampledZoomStepForSegmentation + 1;
 }

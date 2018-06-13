@@ -8,10 +8,10 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import Dimensions from "oxalis/model/dimensions";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
-import Binary from "oxalis/model/binary";
+import DataLayer from "oxalis/model/data_layer";
 
 export default function determineBucketsForOrthogonal(
-  binary: Binary,
+  dataLayer: DataLayer,
   bucketQueue: PriorityQueue,
   logZoomStep: number,
   fallbackZoomStep: number,
@@ -22,7 +22,7 @@ export default function determineBucketsForOrthogonal(
   subBucketLocality: Vector3,
 ) {
   addNecessaryBucketsToPriorityQueueOrthogonal(
-    binary,
+    dataLayer,
     bucketQueue,
     logZoomStep,
     anchorPoint,
@@ -33,7 +33,7 @@ export default function determineBucketsForOrthogonal(
 
   if (isFallbackAvailable) {
     addNecessaryBucketsToPriorityQueueOrthogonal(
-      binary,
+      dataLayer,
       bucketQueue,
       logZoomStep + 1,
       fallbackAnchorPoint,
@@ -45,7 +45,7 @@ export default function determineBucketsForOrthogonal(
 }
 
 function addNecessaryBucketsToPriorityQueueOrthogonal(
-  binary: Binary,
+  dataLayer: DataLayer,
   bucketQueue: PriorityQueue,
   logZoomStep: number,
   zoomedAnchorPoint: Vector4,
@@ -53,8 +53,8 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   areas: OrthoViewMapType<AreaType>,
   subBucketLocality: Vector3,
 ): void {
-  const resolution = binary.layer.resolutions[logZoomStep];
-  const previousResolution = binary.layer.resolutions[logZoomStep - 1];
+  const resolution = dataLayer.layerInfo.resolutions[logZoomStep];
+  const previousResolution = dataLayer.layerInfo.resolutions[logZoomStep - 1];
 
   const resolutionChangeRatio = isFallback
     ? getResolutionsFactors(resolution, previousResolution)
@@ -73,12 +73,12 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 
     const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
       topLeftVector,
-      binary.layer.resolutions,
+      dataLayer.layerInfo.resolutions,
       logZoomStep,
     );
     const scaledBottomRightVector = zoomedAddressToAnotherZoomStep(
       bottomRightVector,
-      binary.layer.resolutions,
+      dataLayer.layerInfo.resolutions,
       logZoomStep,
     );
 
@@ -127,7 +127,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
           bucketAddress[v] = y;
           bucketAddress[w] += wSliceOffset;
 
-          const bucket = binary.cube.getOrCreateBucket(bucketAddress);
+          const bucket = dataLayer.cube.getOrCreateBucket(bucketAddress);
 
           if (bucket.type !== "null") {
             const priority =

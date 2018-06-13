@@ -4,9 +4,9 @@
  */
 
 import _ from "lodash";
-import PullQueue, { PullQueueConstants } from "oxalis/model/binary/pullqueue";
-import PushQueue from "oxalis/model/binary/pushqueue";
-import type { DataBucket } from "oxalis/model/binary/bucket";
+import PullQueue, { PullQueueConstants } from "oxalis/model/bucket_data_handling/pullqueue";
+import PushQueue from "oxalis/model/bucket_data_handling/pushqueue";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 
 class TemporalBucketManager {
   // Manages temporal buckets (i.e., buckets created for annotation where

@@ -8,10 +8,10 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import type { Vector3, Vector4 } from "oxalis/constants";
 import constants from "oxalis/constants";
-import traverse from "oxalis/model/binary/bucket_traversals";
+import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import _ from "lodash";
 import type { Matrix4x4 } from "libs/mjs";
-import Binary from "oxalis/model/binary";
+import DataLayer from "oxalis/model/data_layer";
 import Store from "oxalis/store";
 import { chunk2 } from "oxalis/model/helpers/chunk";
 
@@ -33,7 +33,7 @@ export const getFallbackBuckets = (
     : [];
 
 export default function determineBucketsForOblique(
-  binary: Binary,
+  dataLayer: DataLayer,
   bucketQueue: PriorityQueue,
   matrix: Matrix4x4,
   logZoomStep: number,
@@ -68,7 +68,7 @@ export default function determineBucketsForOblique(
 
   let traversedBuckets = _.flatten(
     chunk2(scanLinesPoints).map(([a, b]: [Vector3, Vector3]) =>
-      traverse(a, b, binary.layer.resolutions, logZoomStep),
+      traverse(a, b, dataLayer.layerInfo.resolutions, logZoomStep),
     ),
   );
 
@@ -77,7 +77,7 @@ export default function determineBucketsForOblique(
 
   const fallbackBuckets = getFallbackBuckets(
     traversedBuckets,
-    binary.layer.resolutions,
+    dataLayer.layerInfo.resolutions,
     fallbackZoomStep,
     isFallbackAvailable,
   );
@@ -86,12 +86,12 @@ export default function determineBucketsForOblique(
 
   const centerAddress = globalPositionToBucketPosition(
     getPosition(Store.getState().flycam),
-    binary.layer.resolutions,
+    dataLayer.layerInfo.resolutions,
     logZoomStep,
   );
 
   for (const bucketAddress of traversedBuckets) {
-    const bucket = binary.cube.getOrCreateBucket(bucketAddress);
+    const bucket = dataLayer.cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
       const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);

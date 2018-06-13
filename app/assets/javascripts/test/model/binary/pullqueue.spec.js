@@ -13,11 +13,13 @@ mockRequire("oxalis/model/sagas/root_saga", function*() {
 });
 mockRequire("libs/request", RequestMock);
 const WkstoreAdapterMock = { requestFromStore: sinon.stub() };
-mockRequire("oxalis/model/binary/wkstore_adapter", WkstoreAdapterMock);
+mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
 
 // Avoid node caching and make sure all mockRequires are applied
-const PullQueue = mockRequire.reRequire("oxalis/model/binary/pullqueue").default;
-const { DataBucket, BucketStateEnum } = mockRequire.reRequire("oxalis/model/binary/bucket");
+const PullQueue = mockRequire.reRequire("oxalis/model/bucket_data_handling/pullqueue").default;
+const { DataBucket, BucketStateEnum } = mockRequire.reRequire(
+  "oxalis/model/bucket_data_handling/bucket",
+);
 
 test.beforeEach(t => {
   const layer = {

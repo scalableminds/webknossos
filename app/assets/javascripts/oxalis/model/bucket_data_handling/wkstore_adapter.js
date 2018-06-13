@@ -2,35 +2,35 @@
 
 import Base64 from "base64-js";
 
-import BucketBuilder from "oxalis/model/binary/bucket_builder";
+import BucketBuilder from "oxalis/model/bucket_data_handling/bucket_builder";
 import Request from "libs/request";
 import Store from "oxalis/store";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import Utils from "libs/utils";
 import { doWithToken } from "admin/admin_rest_api";
-import type { BucketInfo } from "oxalis/model/binary/bucket_builder";
-import type { DataBucket } from "oxalis/model/binary/bucket";
+import type { BucketInfo } from "oxalis/model/bucket_data_handling/bucket_builder";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { Vector4 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
 
 export const REQUEST_TIMEOUT = 30000;
 
-export function getBitDepth(layer: DataLayerType): number {
-  return parseInt(layer.elementClass.substring(4), 10);
+export function getBitDepth(layerInfo: DataLayerType): number {
+  return parseInt(layerInfo.elementClass.substring(4), 10);
 }
 
-function buildBuckets(layer: DataLayerType, batch: Array<Vector4>): Array<BucketInfo> {
+function buildBuckets(layerInfo: DataLayerType, batch: Array<Vector4>): Array<BucketInfo> {
   return batch.map((bucketAddress: Vector4) =>
-    BucketBuilder.fromZoomedAddress(bucketAddress, layer.resolutions),
+    BucketBuilder.fromZoomedAddress(bucketAddress, layerInfo.resolutions),
   );
 }
 
 export async function requestFromStore(
-  layer: DataLayerType,
+  layerInfo: DataLayerType,
   batch: Array<Vector4>,
 ): Promise<Uint8Array> {
-  const bucketInfo = buildBuckets(layer, batch);
+  const bucketInfo = buildBuckets(layerInfo, batch);
   return doWithToken(async token => {
     const state = Store.getState();
     const wasFourBit = state.datasetConfiguration.fourBit;
@@ -38,7 +38,7 @@ export async function requestFromStore(
     const dataStoreUrl = state.dataset.dataStore.url;
 
     const responseBuffer = await Request.sendJSONReceiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layer.name}/data?token=${token}`,
+      `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerInfo.name}/data?token=${token}`,
       {
         data: bucketInfo,
         timeout: REQUEST_TIMEOUT,
@@ -69,7 +69,10 @@ function decodeFourBit(bufferArray: Uint8Array): Uint8Array {
   return newColors;
 }
 
-export async function sendToStore(layer: DataLayerType, batch: Array<DataBucket>): Promise<void> {
+export async function sendToStore(
+  layerInfo: DataLayerType,
+  batch: Array<DataBucket>,
+): Promise<void> {
   const YIELD_AFTER_X_BUCKETS = 3;
   let counter = 0;
   const items = [];
@@ -79,7 +82,7 @@ export async function sendToStore(layer: DataLayerType, batch: Array<DataBucket>
     // eslint-disable-next-line no-await-in-loop
     if (counter % YIELD_AFTER_X_BUCKETS === 0) await Utils.sleep(1);
     const bucketData = bucket.getData();
-    const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress, layer.resolutions);
+    const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress, layerInfo.resolutions);
     items.push(updateBucket(bucketInfo, Base64.fromByteArray(bucketData)));
   }
   Store.dispatch(pushSaveQueueAction(items));

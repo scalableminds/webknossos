@@ -7,13 +7,14 @@ import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation.AnnotationState._
+import models.binary.DataSetDAO
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
 
 class AnnotationMutations(val annotation: AnnotationSQL) extends BoxImplicits with FoxImplicits {
 
-  def finishAnnotation(user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[String] = {
+  def finish(user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[String] = {
     def executeFinish: Fox[String] = {
       for {
         _ <- AnnotationService.finish(annotation)
@@ -63,7 +64,8 @@ class AnnotationMutations(val annotation: AnnotationSQL) extends BoxImplicits wi
       for {
         task <- annotation.task.toFox
         annotationBase <- task.annotationBase
-        newTracingReference <- AnnotationService.tracingFromBase(annotationBase)
+        dataSet <- DataSetDAO.findOneById(annotationBase._dataSet) ?~> "dataSet.notFound"
+        newTracingReference <- AnnotationService.tracingFromBase(annotationBase, dataSet)
         _ <- AnnotationSQLDAO.updateTracingReference(annotation._id, newTracingReference)
       } yield ()
     case _ if annotation.tracingType != TracingType.skeleton =>

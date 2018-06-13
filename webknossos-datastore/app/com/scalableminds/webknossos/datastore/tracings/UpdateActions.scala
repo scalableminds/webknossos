@@ -5,7 +5,7 @@ package com.scalableminds.webknossos.datastore.tracings
 
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.trueaccord.scalapb.{GeneratedMessage, Message}
+import scalapb.{GeneratedMessage, Message}
 import play.api.libs.json._
 
 trait UpdateAction[T <: GeneratedMessage with Message[T]] {

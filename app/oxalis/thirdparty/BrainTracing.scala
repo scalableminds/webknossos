@@ -83,7 +83,6 @@ object BrainTracing extends LazyLogging with FoxImplicits {
                               task: Box[TaskSQL],
                               annotation: Option[AnnotationSQL],
                               user: User) = {
-
     for {
       p <- project
       a <- annotation

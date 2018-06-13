@@ -13,7 +13,6 @@ import Utils from "libs/utils";
 import Toast from "libs/toast";
 import type { ModeType, Point2 } from "oxalis/constants";
 import Store from "oxalis/store";
-import { getViewportScale } from "oxalis/model/accessors/view_mode_accessor";
 import Model from "oxalis/model";
 import {
   updateUserSettingAction,
@@ -33,7 +32,7 @@ import ArbitraryPlane from "oxalis/geometries/arbitrary_plane";
 import Crosshair from "oxalis/geometries/crosshair";
 import app from "app";
 import ArbitraryView from "oxalis/view/arbitrary_view";
-import constants, { ArbitraryViewport } from "oxalis/constants";
+import constants from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import {
   yawFlycamAction,
@@ -49,7 +48,7 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import SceneController from "oxalis/controller/scene_controller";
 import api from "oxalis/api/internal_api";
 
-const arbitraryViewportSelector = "#inputcatcher_arbitraryViewport";
+const CANVAS_SELECTOR = "#render-canvas";
 
 type Props = {
   onRender: () => void,
@@ -89,41 +88,34 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.stop();
   }
 
-  pingBinaries(): void {
-    const matrix = Store.getState().flycam.currentMatrix;
-    Model.getColorBinaries().forEach(binary =>
-      binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality),
-    );
-  }
-
   initMouse(): void {
-    Utils.waitForSelector(arbitraryViewportSelector).then(() => {
-      this.input.mouse = new InputMouse(arbitraryViewportSelector, {
-        leftDownMove: (delta: Point2) => {
-          if (this.props.viewMode === constants.MODE_ARBITRARY) {
-            Store.dispatch(
-              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
-            );
-            Store.dispatch(
-              pitchFlycamAction(
-                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-                true,
-              ),
-            );
-          } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-            const f = Store.getState().flycam.zoomStep / getViewportScale(ArbitraryViewport);
-            Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
-          }
-        },
-        scroll: this.scroll,
-        pinch: (delta: number) => {
-          if (delta < 0) {
-            Store.dispatch(zoomOutAction());
-          } else {
-            Store.dispatch(zoomInAction());
-          }
-        },
-      });
+    this.input.mouse = new InputMouse(CANVAS_SELECTOR, {
+      leftDownMove: (delta: Point2) => {
+        if (this.props.viewMode === constants.MODE_ARBITRARY) {
+          Store.dispatch(
+            yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+          );
+          Store.dispatch(
+            pitchFlycamAction(
+              delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+              true,
+            ),
+          );
+        } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
+          const f =
+            Store.getState().flycam.zoomStep /
+            (this.arbitraryView.width / constants.VIEWPORT_WIDTH);
+          Store.dispatch(moveFlycamAction([delta.x * f, delta.y * f, 0]));
+        }
+      },
+      scroll: this.scroll,
+      pinch: (delta: number) => {
+        if (delta < 0) {
+          Store.dispatch(zoomOutAction());
+        } else {
+          Store.dispatch(zoomInAction());
+        }
+      },
     });
   }
 
@@ -256,7 +248,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   getVoxelOffset(timeFactor: number): number {
     const state = Store.getState();
-    const moveValue3d = state.userConfiguration.moveValue3d;
+    const { moveValue3d } = state.userConfiguration;
     const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
     return moveValue3d * timeFactor / baseVoxel / constants.FPS;
   }
@@ -270,12 +262,11 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   init(): void {
-    const clippingDistanceArbitrary = Store.getState().userConfiguration.clippingDistanceArbitrary;
+    const { clippingDistanceArbitrary } = Store.getState().userConfiguration;
     this.setClippingDistance(clippingDistanceArbitrary);
   }
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.pingBinaries);
     this.listenTo(this.arbitraryView, "render", this.props.onRender);
 
     const onBucketLoaded = () => {
@@ -283,9 +274,8 @@ class ArbitraryController extends React.PureComponent<Props> {
       app.vent.trigger("rerender");
     };
 
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      this.listenTo(binary.cube, "bucketLoaded", onBucketLoaded);
+    for (const dataLayer of Model.getAllLayers()) {
+      this.listenTo(dataLayer.cube, "bucketLoaded", onBucketLoaded);
     }
 
     this.storePropertyUnsubscribers.push(
@@ -338,7 +328,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.initMouse();
     this.init();
 
-    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    const { clippingDistance } = Store.getState().userConfiguration;
     SceneController.setClippingDistance(clippingDistance);
 
     this.arbitraryView.draw();

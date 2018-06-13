@@ -23,6 +23,7 @@ case class TeamSQL(
                   _id: ObjectId,
                   _organization: ObjectId,
                   name: String,
+                  isOrganizationTeam: Boolean = false,
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
                   )
@@ -31,11 +32,14 @@ object TeamSQL {
   def fromTeam(t: Team)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
     for {
       organization <- OrganizationSQLDAO.findOneByName(t.organization)
+      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(organization._id)
+      teamId = ObjectId.fromBsonId(t._id)
     } yield {
       TeamSQL(
-        ObjectId.fromBsonId(t._id),
+        teamId,
         organization._id,
         t.name,
+        organizationTeamId == teamId,
         System.currentTimeMillis(),
         false
       )
@@ -54,6 +58,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
       ObjectId(r._Id),
       ObjectId(r._Organization),
       r.name,
+      r.isorganizationteam,
       r.created.getTime,
       r.isdeleted
     ))
@@ -64,7 +69,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
        or _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def deleteAccessQ(requestingUserId: ObjectId) =
-    s"""(_id not in (select _organizationTeam from webknossos.organizations_)
+    s"""(not isorganizationteam
           and _organization in (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin))"""
 
   override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TeamSQL] =
@@ -114,8 +119,8 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
   def insertOne(t: TeamSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
-        sqlu"""insert into webknossos.teams(_id, _organization, name, created, isDeleted)
-                  values(${t._id.id}, ${t._organization.id}, ${t.name}, ${new java.sql.Timestamp(t.created)}, ${t.isDeleted})
+        sqlu"""insert into webknossos.teams(_id, _organization, name, created, isOrganizationTeam, isDeleted)
+                  values(${t._id.id}, ${t._organization.id}, ${t.name}, ${new java.sql.Timestamp(t.created)}, ${t.isOrganizationTeam}, ${t.isDeleted})
             """)
     } yield ()
 

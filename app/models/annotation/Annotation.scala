@@ -3,7 +3,6 @@
  */
 package models.annotation
 
-import javax.management.relation.Role
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,20 +10,15 @@ import com.scalableminds.webknossos.datastore.tracings.{TracingReference, Tracin
 import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState._
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
-import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO}
-import models.task.TaskSQLDAO.transactionSerializationError
+import models.binary.{DataSet, DataSetDAO}
 import models.task.{TaskSQLDAO, TaskTypeSQLDAO, _}
-import models.team.TeamSQLDAO
 import models.user.{User, UserService}
-import net.liftweb.common.Full
 import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
@@ -309,17 +303,23 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     } yield ()
   }
 
+  def deleteOldInitializingAnnotations: Fox[Unit] = {
+    for {
+      _ <- run(sqlu"delete from webknossos.annotations where state = '#${AnnotationState.Initializing.toString}' and created < (now() - interval '1 hour')")
+    } yield ()
+  }
+
   def logTime(id: ObjectId, time: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + $time where _id = ${id.id}")
+      _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
+      _ <- run(sqlu"update webknossos.annotations set tracingTime = Coalesce(tracingTime, 0) + $time where _id = ${id.id}") ?~> "FAILED: run in AnnotationSQLDAO.logTime"
     } yield ()
 
   def updateState(id: ObjectId, state: AnnotationState)(implicit ctx: DBAccessContext) =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id) ?~> "FAILED: AnnotationSQLDAO.assertUpdateAccess"
       _ <- run(sqlu"update webknossos.annotations set state = '#${state}' where _id = ${id.id}".withTransactionIsolation(Serializable),
-              retryCount = 50, retryIfErrorContains = List(transactionSerializationError))
+              retryCount = 50, retryIfErrorContains = List(transactionSerializationError)) ?~> "FAILED: run in AnnotationSQLDAO.updateState"
     } yield ()
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext) =
@@ -358,4 +358,3 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
   def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     updateObjectIdCol(id, _._User, userId)
 }
-

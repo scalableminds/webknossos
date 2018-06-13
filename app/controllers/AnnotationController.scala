@@ -7,6 +7,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation._
 import models.binary.{DataSetDAO, DataSetSQLDAO}
+import models.binary.DataSetDAO
 import models.task.TaskSQLDAO
 import models.user.time._
 import models.user.{User, UserDAO}
@@ -42,7 +43,9 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly))
     } yield {
       request.identity.foreach { user =>
-        TimeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
+        if (typ == AnnotationTypeSQL.Task || typ == AnnotationTypeSQL.Explorational) {
+          TimeSpanService.logUserInteraction(user, annotation) // log time when a user starts working
+        }
       }
       Ok(js)
     }
@@ -146,7 +149,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     for {
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
-      message <- annotation.muta.finishAnnotation(user, restrictions)
+      message <- annotation.muta.finish(user, restrictions)
       updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
     } yield {
       TimeSpanService.logUserInteraction(user, annotation) // log time on tracing end

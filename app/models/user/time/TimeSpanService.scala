@@ -130,7 +130,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       // Log time to annotation
       annotation match {
         case Some(a: AnnotationSQL) =>
-          AnnotationSQLDAO.logTime(a._id, duration)(GlobalAccessContext)
+          AnnotationSQLDAO.logTime(a._id, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
         case _ =>
           Fox.successful(())
         // do nothing, this is not a stored annotation
@@ -163,8 +163,8 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       annotation.flatMap(_._task) match {
         case Some(taskId) =>
           for {
-            _ <- TaskSQLDAO.logTime(taskId, duration)(GlobalAccessContext)
-            _ <- signalOverTime(duration, annotation)(GlobalAccessContext)
+            _ <- TaskSQLDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
+            _ <- signalOverTime(duration, annotation)(GlobalAccessContext) ?~> "FAILED: TimeSpanService.signalOverTime"
           } yield {}
         case _ =>
           Fox.successful(())
@@ -189,9 +189,9 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
       val updateResult = for {
         annotation <- getAnnotation(updated.annotation.map(ObjectId(_)))
-        _ <- TimeSpanDAO.update(updated)(ctx)
-        _ <- logTimeToAnnotation(duration, annotation)
-        _ <- logTimeToTask(duration, annotation)
+        _ <- TimeSpanDAO.update(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
+        _ <- logTimeToAnnotation(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
+        _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"
       } yield {}
 
       updateResult.onComplete{ x =>
@@ -205,7 +205,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     def receive = {
       case TrackTime(timestamps, _user, _annotation, ctx) =>
         // Only if the annotation belongs to the user, we are going to log the time on the annotation
-        val annotation = if (_annotation._user == _user) Some(_annotation) else None
+        val annotation = if (_annotation._user == ObjectId.fromBsonId(_user)) Some(_annotation) else None
         val start = timestamps.head
 
         var current = lastUserActivity.get(_user).flatMap(last => {

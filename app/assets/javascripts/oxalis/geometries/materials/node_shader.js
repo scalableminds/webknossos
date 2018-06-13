@@ -5,6 +5,7 @@ import Store from "oxalis/store";
 import { getBaseVoxel } from "oxalis/model/scaleinfo";
 import { getPlaneScalingFactor } from "oxalis/model/accessors/flycam_accessor";
 import type { UniformsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
+import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 
 export const NodeTypes = {
   INVALID: 0.0,
@@ -47,7 +48,7 @@ class NodeShader {
       },
       viewportScale: {
         type: "f",
-        value: 1,
+        value: state.userConfiguration.scale,
       },
       overrideNodeRadius: {
         type: "i",
@@ -77,7 +78,18 @@ class NodeShader {
         type: "i",
         value: 0,
       },
+      highlightCommentedNodes: {
+        type: "f",
+        value: state.userConfiguration.highlightCommentedNodes,
+      },
     };
+
+    listenToStoreProperty(
+      _state => _state.userConfiguration.highlightCommentedNodes,
+      highlightCommentedNodes => {
+        this.uniforms.highlightCommentedNodes.value = highlightCommentedNodes ? 1 : 0;
+      },
+    );
   }
 
   getMaterial(): THREE.RawShaderMaterial {
@@ -103,12 +115,17 @@ uniform float overrideParticleSize; // node radius for equally size nodes
 uniform int overrideNodeRadius; // bool activates equaly node radius for all nodes
 uniform int isPicking; // bool indicates whether we are currently rendering for node picking
 uniform int isTouch; // bool that is used during picking and indicates whether the picking was triggered by a touch event
+uniform float highlightCommentedNodes;
 
 uniform sampler2D treeColors;
 
 attribute float radius;
 attribute vec3 position;
 attribute float type;
+attribute float isCommented;
+// Since attributes are only supported in vertex shader, we pass the attribute into a
+// varying to use in the fragment shader
+varying float v_isHighlightedCommented;
 attribute float nodeId;
 attribute float treeId;
 
@@ -130,7 +147,7 @@ vec3 hsv2rgb(vec3 color) {
     return color.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), color.y);
 }
 
-vec3 shiftColor(vec3 color, float shiftValue) {
+vec3 shiftHue(vec3 color, float shiftValue) {
     vec3 hsvColor = rgb2hsv(color);
     hsvColor.x = fract(hsvColor.x + shiftValue);
     return hsv2rgb(hsvColor);
@@ -178,14 +195,26 @@ void main() {
 
     // NODE COLOR FOR ACTIVE NODE
     if (activeNodeId == nodeId) {
-      color = shiftColor(color, 0.25);
+      color = shiftHue(color, 0.25);
       gl_PointSize *= activeNodeScaleFactor;
     }
 
+    float isBranchpoint =
+      type == ${NodeTypes.BRANCH_POINT.toFixed(1)}
+      ? 1.0 : 0.0;
     // NODE COLOR FOR BRANCH_POINT
-    if (type == ${NodeTypes.BRANCH_POINT.toFixed(1)}) {
-      color = shiftColor(color, 0.5);
+    if (isBranchpoint == 1.0) {
+      color = shiftHue(color, 0.5);
     }
+    // Since attributes are only supported in vertex shader, we pass the attribute into a
+    // varying to use in the fragment shader
+    v_isHighlightedCommented = highlightCommentedNodes > 0.0 && isCommented > 0.0 ? 1.0 : 0.0;
+    if (v_isHighlightedCommented > 0.0) {
+      // Make commented nodes twice as large so that the border can be displayed correctly
+      // and recognizable
+      gl_PointSize *= 2.0;
+    }
+
 }`;
   }
 
@@ -194,10 +223,16 @@ void main() {
 precision highp float;
 
 varying vec3 color;
+varying float v_isHighlightedCommented;
 
 void main()
 {
     gl_FragColor = vec4(color, 1.0);
+    vec2 centerDistance = abs(gl_PointCoord - vec2(0.5));
+    bool isWithinBorder = centerDistance.x < 0.20 && centerDistance.y < 0.20;
+    if (v_isHighlightedCommented > 0.0 && isWithinBorder) {
+      gl_FragColor  = vec4(1.0);
+    };
 }`;
   }
 }

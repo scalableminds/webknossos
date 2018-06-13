@@ -20,15 +20,6 @@ module.exports = function(env = {}) {
       filename: "[name].css",
       chunkFilename: "[name].css",
     }),
-
-    // GoldenLayout requires these libraries to be available in
-    // the global scope
-    new webpack.ProvidePlugin({
-      React: "react",
-      ReactDOM: "react-dom",
-      $: "jquery",
-      jQuery: "jquery",
-    }),
   ];
 
   if (env.production) {
@@ -38,9 +29,9 @@ module.exports = function(env = {}) {
         parallel: true,
         sourceMap: true,
         uglifyOptions: {
-          compress: {
-            inline: 1,
-          },
+          // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
+          // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
+          compress: false,
         },
       }),
     );

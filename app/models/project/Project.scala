@@ -98,7 +98,9 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
       r.isdeleted
     ))
 
-  override def readAccessQ(requestingUserId: ObjectId) = s"(_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _owner = '${requestingUserId.id}'"
+  override def readAccessQ(requestingUserId: ObjectId) =
+    s"""((_team in (select _team from webknossos.user_team_roles where _user = '${requestingUserId.id}')) or _owner = '${requestingUserId.id}'
+      or (select _organization from webknossos.users_ where _id = '${requestingUserId.id}' and isAdmin) = (select _organization from webknossos.users_ where _id = _owner))"""
   override def deleteAccessQ(requestingUserId: ObjectId) = s"_owner = '${requestingUserId.id}'"
 
   // read operations

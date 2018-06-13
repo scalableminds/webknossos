@@ -33,6 +33,7 @@ object UserConfiguration {
       "isosurfaceBBsize" -> JsNumber(1),
       "isosurfaceResolution" -> JsNumber(80),
       "newNodeNewTree" -> JsBoolean(false),
+      "highlightCommentedNodes" -> JsBoolean(false),
       "keyboardDelay" -> JsNumber(200),
       "particleSize" -> JsNumber(5),
       "overrideNodeRadius" -> JsBoolean(true),

@@ -4,6 +4,11 @@ import { notification, Icon } from "antd";
 
 export type ToastStyleType = "info" | "warning" | "success" | "error";
 export type MessageType = { success: string } | { error: string };
+export type ToastConfigType = {
+  sticky?: boolean,
+  timeout?: number,
+  key?: string,
+};
 
 const Toast = {
   messages(messages: Array<MessageType>): void {
@@ -20,8 +25,7 @@ const Toast = {
   message(
     type: ToastStyleType,
     message: string,
-    sticky: boolean = false,
-    timeout: number = 6000,
+    { sticky = false, timeout = 6000, key = message }: ToastConfigType,
   ): void {
     let toastMessage;
     if (message.match(/<html[^>]*>/)) {
@@ -31,12 +35,12 @@ const Toast = {
       toastMessage = message;
     }
 
-    const timeOutSeconds = timeout / 1000;
+    const timeOutInSeconds = timeout / 1000;
 
     let toastConfig = {
       icon: undefined,
-      key: toastMessage,
-      duration: sticky ? 0 : timeOutSeconds,
+      key,
+      duration: sticky ? 0 : timeOutInSeconds,
       message: toastMessage,
       style: {},
       className: "",
@@ -56,20 +60,20 @@ const Toast = {
     notification[type](toastConfig);
   },
 
-  info(message: string, sticky?: boolean) {
-    return this.message("info", message, sticky);
+  info(message: string, config: ToastConfigType = {}) {
+    return this.message("info", message, config);
   },
 
-  warning(message: string, sticky?: boolean) {
-    return this.message("warning", message, sticky);
+  warning(message: string, config: ToastConfigType = {}) {
+    return this.message("warning", message, config);
   },
 
-  success(message: string = "Success :-)", sticky?: boolean) {
-    return this.message("success", message, sticky);
+  success(message: string = "Success :-)", config: ToastConfigType = {}) {
+    return this.message("success", message, config);
   },
 
-  error(message: string = "Error :-/", sticky?: boolean) {
-    return this.message("error", message, sticky);
+  error(message: string = "Error :-/", config: ToastConfigType = {}) {
+    return this.message("error", message, config);
   },
 
   close(key: string) {

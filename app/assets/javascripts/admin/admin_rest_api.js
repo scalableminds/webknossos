@@ -46,7 +46,7 @@ type NewTeamType = {
 
 function assertResponseLimit(collection) {
   if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
-    Toast.warning(messages["request.max_item_count_alert"], true);
+    Toast.warning(messages["request.max_item_count_alert"], { sticky: true });
   }
 }
 

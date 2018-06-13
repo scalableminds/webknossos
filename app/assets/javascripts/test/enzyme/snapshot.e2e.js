@@ -3,7 +3,7 @@
 /* eslint-disable import/first */
 
 // This needs to be the very first import
-import { createSnapshotable, debugWrapper, waitForAllRequests } from "./e2e-setup";
+import { createSnapshotable, debugWrapper, waitForAllRequests, resetDatabase } from "./e2e-setup";
 import { mount } from "enzyme";
 import test from "ava";
 import mockRequire from "mock-require";
@@ -39,6 +39,10 @@ const { getActiveUser } = mockRequire.reRequire("../../admin/admin_rest_api");
 // const TracingLayoutView = mockRequire.reRequire("../../oxalis/view/tracing_layout_view").default;
 
 const browserHistory = createBrowserHistory();
+
+test.before(() => {
+  resetDatabase();
+});
 
 test.beforeEach(async _ => {
   // There needs to be an active user in the store for the pages to render correctly

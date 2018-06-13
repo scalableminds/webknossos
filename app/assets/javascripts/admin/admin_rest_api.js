@@ -320,7 +320,7 @@ export async function requestTask(): Promise<APIAnnotationType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
 
-export async function getAnnotationsForTask(taskId: string): Promise<void> {
+export async function getAnnotationsForTask(taskId: string): Promise<APIAnnotationType[]> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
 }
 

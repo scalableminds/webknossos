@@ -209,7 +209,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def cancel(typ: String, id: String) = SecuredAction.async { implicit request =>
     def tryToCancel(annotation: AnnotationSQL) = {
       annotation match {
-        case t if t.typ == AnnotationTypeSQL.Task.toString =>
+        case t if t.typ == AnnotationTypeSQL.Task =>
           annotation.muta.cancel.map { _ =>
             JsonOk(Messages("task.finished"))
           }

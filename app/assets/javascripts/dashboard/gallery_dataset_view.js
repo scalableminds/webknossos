@@ -14,9 +14,11 @@ import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
 
 const padding = 16;
+const thumbnailDimension = "400";
+const columnSpan = { xs: 24, sm: 24, md: 12, lg: 12, xl: 8, xxl: 8 };
 
 type StateProps = {
-  activeUser: ?APIUserType
+  activeUser: ?APIUserType,
 };
 
 type Props = {
@@ -92,35 +94,39 @@ class GalleryDatasetView extends React.PureComponent<Props> {
     );
 
     return (
-      <Card
-        bodyStyle={{ padding: 0 }}
-        className="spotlight-item-card"
-      >
-      <span className="dataset-thumbnail" style={{ background: `url(${dataset.thumbnailURL})` }}>
-        <div className="dataset-thumbnail-buttons">
-          <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
-            <Icon
-              type="eye-o"
-              style={{
-                width: 25,
-                height: 25,
-                margin: 7.5,
-                fontSize: 26,
-                textAlign: "center",
-                verticalAlign: "middle",
-                color: "rgb(199, 199, 199)",
-              }}
-            />
-          </a>
-          <a
-            href="#"
-            title="Create skeleton tracing"
-            onClick={() => this.createTracing(dataset, "skeleton", false)}
-          >
-            <img src="/assets/images/skeleton.svg" alt="Skeleton" />
-          </a>
-          {volumeTracingMenu}
-        </div>
+      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
+        <span
+          className="dataset-thumbnail"
+          style={{
+            background: `url(${
+              dataset.thumbnailURL
+            }?w=${thumbnailDimension}&h=${thumbnailDimension})`,
+          }}
+        >
+          <div className="dataset-thumbnail-buttons">
+            <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
+              <Icon
+                type="eye-o"
+                style={{
+                  width: 25,
+                  height: 25,
+                  margin: 7.5,
+                  fontSize: 26,
+                  textAlign: "center",
+                  verticalAlign: "middle",
+                  color: "rgb(199, 199, 199)",
+                }}
+              />
+            </a>
+            <a
+              href="#"
+              title="Create skeleton tracing"
+              onClick={() => this.createTracing(dataset, "skeleton", false)}
+            >
+              <img src="/assets/images/skeleton.svg" alt="Skeleton" />
+            </a>
+            {volumeTracingMenu}
+          </div>
         </span>
         <span className="dataset-description">
           <h3>
@@ -145,7 +151,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         )
           .sort(Utils.localeCompareBy("formattedCreated", false))
           .map(ds => (
-            <Col span={6} key={ds.name} style={{ paddingBottom: padding }}>
+            <Col {...columnSpan} key={ds.name} style={{ paddingBottom: padding }}>
               {this.renderCard(ds)}
             </Col>
           ))}

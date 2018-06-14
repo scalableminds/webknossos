@@ -96,7 +96,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         bodyStyle={{ padding: 0 }}
         className="spotlight-item-card"
       >
-      <span className="dataset-thumbnail" style={{ backgroundImage: `url(${dataset.thumbnailURL})` }}>
+      <span className="dataset-thumbnail" style={{ background: `url(${dataset.thumbnailURL})` }}>
         <div className="dataset-thumbnail-buttons">
           <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
             <Icon

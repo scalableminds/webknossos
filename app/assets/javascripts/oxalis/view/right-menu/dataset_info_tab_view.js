@@ -148,7 +148,11 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
             ? "https://upload.wikimedia.org/wikipedia/en/4/47/Rockefeller_University_seal.svg"
             : "/assets/images/mpi-logos.svg"
         }
-        alt="Max Plank Institute of Brain Research Logo"
+        alt={
+          isRockefeller
+            ? "Rockefeller University Logo"
+            : "Max Plank Institute of Brain Research Logo"
+        }
       />
     ) : null;
   }

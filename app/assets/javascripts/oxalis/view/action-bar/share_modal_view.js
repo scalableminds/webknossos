@@ -56,7 +56,7 @@ class ShareModalView extends PureComponent<ShareModalPropType, State> {
     // public tracings only work if the dataset is public too
     const isPublic = this.state.isPublic;
     if (!this.props.isDatasetPublic && isPublic) {
-      Toast.warning(messages["annotation.dataset_no_public"], true);
+      Toast.warning(messages["annotation.dataset_no_public"], { sticky: true });
     }
     this.props.setAnnotationPublic(isPublic);
     this.props.onOk();

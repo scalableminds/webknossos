@@ -1,7 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
+import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
 import test from "ava";
 import _ from "lodash";
 import * as api from "admin/admin_rest_api";
@@ -14,7 +14,8 @@ async function getFirstDataset(): Promise<APIDatasetType> {
   return dataset;
 }
 
-test.before("Change token", async () => {
+test.before("Reset database and change token", async () => {
+  resetDatabase();
   setCurrToken(tokenUserA);
 });
 

@@ -210,7 +210,7 @@ issue.submit.success=Successfully submitted issue.
 issue.submit.failure=Failed to submit issue
 
 task.create.success=Task successfully created
-task.create.failed=Failed to create Task
+task.create.failed=Failed to create Tasks
 task.bulk.processed=Tasks successfully processed
 task.finished=Task is finished
 task.assigned=You was a new task

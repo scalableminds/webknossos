@@ -77,7 +77,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     createTasks(request.body.map { params =>
       val tracing = AnnotationService.createTracingBase(params.dataSet, params.boundingBox, params.editPosition, params.editRotation)
       (params, tracing)
-    })
+    }) ?~> Messages("task.create.failed")
   }
 
   def createFromFile = SecuredAction.async { implicit request =>
@@ -91,7 +91,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       _ <- ensureTeamAdministration(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
       skeletonSuccesses <- Fox.serialCombined(parseResults)(_.toSkeletonSuccessFox) ?~> Messages("task.create.failed")
-      result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.tracing.get.left.get, s.fileName, s.description), s.tracing.get.left.get)))
+      result <- createTasks(skeletonSuccesses.map(s => (buildFullParams(params, s.tracing.get.left.get, s.fileName, s.description), s.tracing.get.left.get))) ?~> Messages("task.create.failed")
     } yield {
       result
     }
@@ -129,36 +129,21 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
         Fox.failure("Cannot create tasks on multiple datasets in one go.")
     }
 
-    def taskToJsonFoxed(taskFox: Fox[TaskSQL], otherFox: Fox[_]): Fox[JsObject] = {
-      for {
-        _ <- otherFox
-        task <- taskFox
-        js <- task.publicWrites
-      } yield js
-    }
-
     for {
       dataSetName <- assertAllOnSameDataset()
       dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
-      tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
-      taskObjects: List[Fox[TaskSQL]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
+      tracingReferences: List[TracingReference] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
+      taskObjects: List[TaskSQL] <- Fox.serialCombined(requestedTasks)(r => createTaskWithoutAnnotationBase(r._1))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
-      annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
-        taskFox = tuple._3,
+      _ <- Fox.serialCombined(zipped)(tuple => AnnotationService.createAnnotationBase(
+        task = tuple._3,
         request.identity._id,
-        tracingReferenceBox = tuple._2,
+        tracingReference = tuple._2,
         dataSetName,
         description = tuple._1._1.description
       ))
-      zippedTasksAndAnnotations = taskObjects zip annotationBases
-      taskJsons = zippedTasksAndAnnotations.map(tuple => taskToJsonFoxed(tuple._1, tuple._2))
-      result <- {
-        val taskJsonFuture: Future[List[Box[JsObject]]] = Fox.sequence(taskJsons)
-        taskJsonFuture.map { taskJsonBoxes =>
-          bulk2StatusJson(taskJsonBoxes)
-        }
-      }
-    } yield Ok(Json.toJson(result))
+      taskJsons <- Fox.serialCombined(taskObjects)(_.publicWrites)
+    } yield Ok(Json.toJson(taskJsons.map(task => Json.obj("status" -> OK, jsonSuccess -> task))))
   }
 
   private def validateScript(scriptIdOpt: Option[String])(implicit request: SecuredRequest[_]): Fox[Unit] = {

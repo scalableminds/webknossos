@@ -203,16 +203,13 @@ export class OxalisModel {
     annotation: ?APIAnnotationType,
     datasetName: string,
   ): Promise<[APIDatasetType, *, *, ?ServerTracingType]> {
-    if (!annotation) {
-      throw new Error();
-    }
     return Promise.all([
       getDataset(datasetName, getSharingToken()),
       getUserConfiguration(),
       getDatasetConfiguration(datasetName),
       // Fetch the actual tracing from the datastore, if there is an annotation
-      // $FlowFixMe: Type inference with promise all seems to be a bit broken in flow.
-      // Also see https://github.com/facebook/flow/issues/4936
+      // (Also see https://github.com/facebook/flow/issues/4936)
+      // $FlowFixMe: Type inference with promise all seems to be a bit broken in flow
       annotation ? getTracingForAnnotation(annotation) : null,
     ]);
   }

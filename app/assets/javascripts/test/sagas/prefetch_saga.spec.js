@@ -7,6 +7,11 @@ import Model from "oxalis/model";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import DATASET from "../fixtures/dataset_server_object";
 
+// temporary workaround for DataLayer class vs DataLayer object discrepancy
+DATASET.dataSource.dataLayers.forEach(layer => {
+  layer.isSegmentation = () => layer.category === "segmentation";
+});
+
 mockRequire.stopAll();
 
 mockRequire("oxalis/model/sagas/root_saga", function*() {

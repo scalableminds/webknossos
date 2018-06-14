@@ -30,11 +30,10 @@ export function* watchDataRelevantChanges(): Generator<*, *, *> {
 }
 
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Generator<*, *, *> {
-  const isSegmentationLayer = dataLayer.category === "segmentation";
   const segmentationOpacity = yield select(state => state.datasetConfiguration.segmentationOpacity);
   const isSegmentationVisible = segmentationOpacity !== 0;
   // There is no need to prefetch data for segmentation layers that are not visible
-  return !isSegmentationLayer || isSegmentationVisible;
+  return !dataLayer.isSegmentation() || isSegmentationVisible;
 }
 
 export function* triggerDataPrefetching(previousProperties: Object): Generator<*, *, *> {

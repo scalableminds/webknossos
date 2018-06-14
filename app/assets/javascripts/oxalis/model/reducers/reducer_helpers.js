@@ -30,3 +30,14 @@ export function convertFrontendBoundingBoxToServer(
     }))
     .getOrElse(null);
 }
+
+export function convertPointToVecInBoundingBox(
+  boundingBox: ServerBoundingBoxType,
+): BoundingBoxObjectType {
+  return {
+    width: boundingBox.width,
+    height: boundingBox.height,
+    depth: boundingBox.depth,
+    topLeft: Utils.point3ToVector3(boundingBox.topLeft),
+  };
+}

@@ -318,6 +318,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         pagination={{
           defaultPageSize: 50,
         }}
+        style={{ overflowX: "auto" }}
       >
         <Column
           title="ID"
@@ -329,13 +330,13 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Column
           title="Type"
           dataIndex="type.summary"
-          width={200}
+          width={150}
           sorter={Utils.localeCompareBy(t => t.type.summary)}
         />
         <Column
           title="Project"
           dataIndex="projectName"
-          width={110}
+          width={150}
           sorter={Utils.localeCompareBy("projectName")}
         />
         <Column
@@ -355,6 +356,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         <Column
           title="Modes"
           dataIndex="type.settings.allowedModes"
+          width={150}
           sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
           render={modes => modes.map(mode => <Tag key={mode}>{mode}</Tag>)}
         />

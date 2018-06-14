@@ -6,7 +6,7 @@ import test from "ava";
 import {
   calculateTextureSizeAndCountForLayer,
   computeDataTexturesSetup,
-} from "oxalis/model/binary/data_rendering_logic";
+} from "oxalis/model/bucket_data_handling/data_rendering_logic";
 
 const minSpecs = {
   supportedTextureSize: 4096,

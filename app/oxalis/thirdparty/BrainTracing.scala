@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.Annotation
 import models.project.ProjectSQL
-import models.task.Task
+import models.task.TaskSQL
 import models.user.User
 import net.liftweb.common.Box
 import oxalis.mail.DefaultMails
@@ -80,7 +80,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
   private def signalOverTime(
                               time: Long,
                               project: Box[ProjectSQL],
-                              task: Box[Task],
+                              task: Box[TaskSQL],
                               annotation: Option[Annotation],
                               user: User) = {
 

@@ -7,10 +7,10 @@ import _ from "lodash";
 import Toast from "libs/toast";
 import { document } from "libs/window";
 import AsyncTaskQueue from "libs/async_task_queue";
-import { sendToStore } from "oxalis/model/binary/wkstore_adapter";
+import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Vector4 } from "oxalis/constants";
-import type DataCube from "oxalis/model/binary/data_cube";
-import type { DataBucket } from "oxalis/model/binary/bucket";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 import type { DataLayerType } from "oxalis/store";
 
 const BATCH_SIZE = 32;
@@ -19,19 +19,19 @@ const DEBOUNCE_TIME = 1000;
 class PushQueue {
   dataSetName: string;
   cube: DataCube;
-  layer: DataLayerType;
+  layerInfo: DataLayerType;
   taskQueue: AsyncTaskQueue;
   sendData: boolean;
   queue: Set<DataBucket>;
 
   constructor(
     cube: DataCube,
-    layer: DataLayerType,
+    layerInfo: DataLayerType,
     taskQueue: AsyncTaskQueue,
     sendData: boolean = true,
   ) {
     this.cube = cube;
-    this.layer = layer;
+    this.layerInfo = layerInfo;
     this.taskQueue = taskQueue;
     this.sendData = sendData;
     this.queue = new Set();
@@ -39,7 +39,7 @@ class PushQueue {
     const autoSaveFailureMessage = "Auto-Save failed!";
     this.taskQueue.on("failure", () => {
       document.body.classList.add("save-error");
-      Toast.error(autoSaveFailureMessage, true);
+      Toast.error(autoSaveFailureMessage, { sticky: true });
     });
     this.taskQueue.on("success", () => {
       document.body.classList.remove("save-error");
@@ -102,7 +102,7 @@ class PushQueue {
   push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
   pushBatch(batch: Array<DataBucket>): Promise<void> {
-    return sendToStore(this.layer, batch);
+    return sendToStore(this.layerInfo, batch);
   }
 }
 

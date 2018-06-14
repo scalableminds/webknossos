@@ -7,7 +7,7 @@ import {
 import type { Vector3 } from "oxalis/constants";
 import type { Matrix4x4 } from "libs/mjs";
 import PriorityQueue from "js-priority-queue";
-import Binary from "oxalis/model/binary";
+import DataLayer from "oxalis/model/data_layer";
 import Utils from "libs/utils";
 import { M4x4, V3 } from "libs/mjs";
 import { getMatrixScale } from "oxalis/model/reducers/flycam_reducer";
@@ -16,7 +16,7 @@ import Store from "oxalis/store";
 import { getFallbackBuckets } from "./oblique_bucket_picker";
 
 export default function determineBucketsForFlight(
-  binary: Binary,
+  dataLayer: DataLayer,
   bucketQueue: PriorityQueue,
   matrix: Matrix4x4,
   logZoomStep: number,
@@ -29,7 +29,7 @@ export default function determineBucketsForFlight(
   const enlargedExtent = constants.VIEWPORT_WIDTH * enlargementFactor;
   const enlargedHalfExtent = enlargedExtent / 2;
 
-  const sphericalCapRadius = Store.getState().userConfiguration.sphericalCapRadius;
+  const { sphericalCapRadius } = Store.getState().userConfiguration;
   const cameraVertex = [0, 0, -sphericalCapRadius];
 
   // This array holds the four corners and the center point of the rendered plane
@@ -48,12 +48,12 @@ export default function determineBucketsForFlight(
       return vec;
     }),
   ).map((position: Vector3) =>
-    globalPositionToBucketPosition(position, binary.layer.resolutions, logZoomStep),
+    globalPositionToBucketPosition(position, dataLayer.layerInfo.resolutions, logZoomStep),
   );
 
   const cameraPosition = M4x4.transformVectorsAffine(queryMatrix, [cameraVertex])[0];
 
-  const scale = Store.getState().dataset.dataSource.scale;
+  const { scale } = Store.getState().dataset.dataSource;
   const matrixScale = getMatrixScale(scale);
 
   const inverseScale = V3.divide3([1, 1, 1], matrixScale);
@@ -68,7 +68,7 @@ export default function determineBucketsForFlight(
 
   let traversedBuckets = [];
 
-  const zoomStep = Store.getState().flycam.zoomStep;
+  const { zoomStep } = Store.getState().flycam;
   const squaredRadius = (zoomStep * sphericalCapRadius) ** 2;
   const tolerance = 1;
 
@@ -88,10 +88,13 @@ export default function determineBucketsForFlight(
         z <= boundingBoxBuckets.cornerMax[2] + tolerance;
         z++
       ) {
-        const pos = bucketPositionToGlobalAddress([x, y, z, logZoomStep], binary.layer.resolutions);
+        const pos = bucketPositionToGlobalAddress(
+          [x, y, z, logZoomStep],
+          dataLayer.layerInfo.resolutions,
+        );
         const nextPos = bucketPositionToGlobalAddress(
           [x + 1, y + 1, z + 1, logZoomStep],
-          binary.layer.resolutions,
+          dataLayer.layerInfo.resolutions,
         );
 
         const closest = [0, 1, 2].map(dim =>
@@ -124,7 +127,7 @@ export default function determineBucketsForFlight(
 
   const fallbackBuckets = getFallbackBuckets(
     traversedBuckets,
-    binary.layer.resolutions,
+    dataLayer.layerInfo.resolutions,
     fallbackZoomStep,
     isFallbackAvailable,
   );
@@ -133,12 +136,12 @@ export default function determineBucketsForFlight(
 
   const centerAddress = globalPositionToBucketPosition(
     getPosition(Store.getState().flycam),
-    binary.layer.resolutions,
+    dataLayer.layerInfo.resolutions,
     logZoomStep,
   );
 
   for (const bucketAddress of traversedBuckets) {
-    const bucket = binary.cube.getOrCreateBucket(bucketAddress);
+    const bucket = dataLayer.cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
       const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);

@@ -8,7 +8,7 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
-import Binary from "oxalis/model/binary";
+import DataLayer from "oxalis/model/data_layer";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -526,9 +526,9 @@ class DataApi {
     this.model = model;
   }
 
-  __getLayer(layerName: string): Binary {
-    const layer = this.model.getBinaryByName(layerName);
-    if (layer === undefined) throw new Error(`Layer with name ${layerName} was not found.`);
+  __getLayer(layerName: string): DataLayer {
+    const layer = this.model.getLayerByName(layerName);
+    if (layer == null) throw new Error(`Layer with name ${layerName} was not found.`);
     return layer;
   }
 
@@ -536,7 +536,7 @@ class DataApi {
    * Returns the names of all available layers of the current tracing.
    */
   getLayerNames(): Array<string> {
-    return _.map(this.model.binary, "name");
+    return _.map(this.model.dataLayers, "name");
   }
 
   /**
@@ -545,9 +545,9 @@ class DataApi {
    */
   getVolumeTracingLayerName(): string {
     assertVolume(Store.getState().tracing);
-    const layer = this.model.getSegmentationBinary();
-    assertExists(layer, "Segmentation layer not found!");
-    return layer.name;
+    const segmentationLayer = this.model.getSegmentationLayer();
+    assertExists(segmentationLayer, "Segmentation layer not found!");
+    return segmentationLayer.name;
   }
 
   /**
@@ -566,7 +566,7 @@ class DataApi {
       throw new Error(messages["mapping.too_few_textures"]);
     }
 
-    const segmentationLayerName = this.model.getSegmentationBinary().name;
+    const segmentationLayerName = this.model.getSegmentationLayer().name;
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
@@ -616,7 +616,7 @@ class DataApi {
       });
     }
     // Bucket has been loaded by now or was loaded already
-    return layer.cube.getDataValue(position);
+    return layer.cube.getDataValue(position, null, zoomStep);
   }
 
   /**
@@ -658,15 +658,15 @@ class DataApi {
    */
   labelVoxels(voxels: Array<Vector3>, label: number): void {
     assertVolume(Store.getState().tracing);
-    const layer = this.model.getSegmentationBinary();
-    assertExists(layer, "Segmentation layer not found!");
+    const segmentationLayer = this.model.getSegmentationLayer();
+    assertExists(segmentationLayer, "Segmentation layer not found!");
 
     for (const voxel of voxels) {
-      layer.cube.labelVoxel(voxel, label);
+      segmentationLayer.cube.labelVoxel(voxel, label);
     }
 
-    layer.cube.pushQueue.push();
-    layer.cube.trigger("volumeLabeled");
+    segmentationLayer.cube.pushQueue.push();
+    segmentationLayer.cube.trigger("volumeLabeled");
   }
 
   /**
@@ -788,7 +788,7 @@ class UtilsApi {
    * // removeToast();
    */
   showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
-    Toast.message(type, message, timeout === 0, timeout);
+    Toast.message(type, message, { sticky: timeout === 0, timeout });
     return () => Toast.close(message);
   }
 

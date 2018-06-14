@@ -71,7 +71,6 @@ class ArbitraryController extends React.PureComponent<Props> {
     keyboardNoLoop?: InputKeyboardNoLoop,
   };
   storePropertyUnsubscribers: Array<Function>;
-  moveKeyNotification: string;
 
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
@@ -86,13 +85,6 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   componentWillUnmount() {
     this.stop();
-  }
-
-  pingBinaries(): void {
-    const matrix = Store.getState().flycam.currentMatrix;
-    Model.getColorBinaries().forEach(binary =>
-      binary.arbitraryPing(matrix, Store.getState().datasetConfiguration.quality),
-    );
   }
 
   initMouse(): void {
@@ -255,7 +247,7 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   getVoxelOffset(timeFactor: number): number {
     const state = Store.getState();
-    const moveValue3d = state.userConfiguration.moveValue3d;
+    const { moveValue3d } = state.userConfiguration;
     const baseVoxel = getBaseVoxel(state.dataset.dataSource.scale);
     return moveValue3d * timeFactor / baseVoxel / constants.FPS;
   }
@@ -269,12 +261,11 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   init(): void {
-    const clippingDistanceArbitrary = Store.getState().userConfiguration.clippingDistanceArbitrary;
+    const { clippingDistanceArbitrary } = Store.getState().userConfiguration;
     this.setClippingDistance(clippingDistanceArbitrary);
   }
 
   bindToEvents(): void {
-    this.listenTo(this.arbitraryView, "render", this.pingBinaries);
     this.listenTo(this.arbitraryView, "render", this.props.onRender);
 
     const onBucketLoaded = () => {
@@ -282,9 +273,8 @@ class ArbitraryController extends React.PureComponent<Props> {
       app.vent.trigger("rerender");
     };
 
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      this.listenTo(binary.cube, "bucketLoaded", onBucketLoaded);
+    for (const dataLayer of Model.getAllLayers()) {
+      this.listenTo(dataLayer.cube, "bucketLoaded", onBucketLoaded);
     }
 
     this.storePropertyUnsubscribers.push(
@@ -337,7 +327,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     this.initMouse();
     this.init();
 
-    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    const { clippingDistance } = Store.getState().userConfiguration;
     SceneController.setClippingDistance(clippingDistance);
 
     this.arbitraryView.draw();
@@ -393,12 +383,8 @@ class ArbitraryController extends React.PureComponent<Props> {
 
     Store.dispatch(updateUserSettingAction("moveValue3d", moveValue));
 
-    if (this.moveKeyNotification != null) {
-      Toast.close(this.moveKeyNotification);
-    }
     const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
-    this.moveKeyNotification = moveValueMessage;
-    Toast.success(moveValueMessage);
+    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   setParticleSize(delta: number): void {

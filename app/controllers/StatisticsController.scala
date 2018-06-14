@@ -4,11 +4,10 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationDAO
 import models.binary.DataSetDAO
-import models.task.TaskDAO
+import models.task.TaskSQLDAO
 import models.user.time.{TimeSpan, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WebknossosSilhouette.SecuredAction
@@ -43,7 +42,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
           numberOfUsers <- UserDAO.countAll
           numberOfDatasets <- DataSetDAO.countAll
           numberOfAnnotations <- AnnotationDAO.countAll
-          numberOfAssignments <- TaskDAO.countAllOpenInstances
+          numberOfAssignments <- TaskSQLDAO.countAllOpenInstances
         } yield {
           Ok(Json.obj(
             "name" -> "oxalis",

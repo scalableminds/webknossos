@@ -13,6 +13,8 @@
 <PROJECT_ROOT>/public/.*
 <PROJECT_ROOT>/tools/.*
 <PROJECT_ROOT>/node_modules/webpack-cli/
+<PROJECT_ROOT>/node_modules/findup/
+<PROJECT_ROOT>/node_modules/documentation/
 
 [untyped]
 <PROJECT_ROOT>/node_modules/ava/

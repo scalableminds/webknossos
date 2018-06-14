@@ -98,6 +98,7 @@
   "dependencies": {
     "@scalableminds/prop-types": "^15.6.1",
     "@scalableminds/saxophone": "^0.5.0",
+    "Enumjs": "^1.0.2",
     "airbrake-js": "^0.5.8",
     "antd": "3.5.4",
     "backbone-events-standalone": "^0.2.7",

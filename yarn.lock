@@ -229,6 +229,10 @@
   version "8.10.17"
   resolved "https://registry.yarnpkg.com/@types/node/-/node-8.10.17.tgz#d48cf10f0dc6dcf59f827f5a3fc7a4a6004318d3"
 
+Enumjs@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/Enumjs/-/Enumjs-1.0.2.tgz#0fdb5889473c47050f4e9f4814c0258468d1e7c2"
+
 JSONStream@^1.0.3:
   version "1.3.2"
   resolved "https://registry.yarnpkg.com/JSONStream/-/JSONStream-1.3.2.tgz#c102371b6ec3a7cf3b847ca00c20bb0fce4c6dea"

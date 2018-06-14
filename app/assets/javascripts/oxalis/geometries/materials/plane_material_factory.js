@@ -378,7 +378,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       hasSegmentation,
       segmentationName,
       segmentationPackingDegree,
-      isRgb: Utils.__guard__(Model.dataLayers.color, x1 => x1.targetBitDepth) === 24,
+      isRgb: Model.dataLayers.color && Model.dataLayers.color.isRgb(),
       planeID: this.planeID,
       isMappingSupported: Model.isMappingSupported,
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,

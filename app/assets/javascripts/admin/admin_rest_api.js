@@ -475,7 +475,7 @@ export async function copyAnnotationToUserAccount(
   return Request.receiveJSON(url);
 }
 
-export async function getAnnotationInformation(
+export function getAnnotationInformation(
   annotationId: string,
   tracingType: string,
 ): Promise<APIAnnotationType> {
@@ -496,7 +496,9 @@ export async function createExplorational(
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
-export async function getTracing(annotation: APIAnnotationType): Promise<ServerTracingType> {
+export async function getTracingForAnnotation(
+  annotation: APIAnnotationType,
+): Promise<ServerTracingType> {
   const annotationType = annotation.content.typ;
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
@@ -548,43 +550,37 @@ export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
-export async function getDataset(
-  datasetName: string,
-  sharingToken?: string,
-): Promise<APIDatasetType> {
+export function getDataset(datasetName: string, sharingToken?: ?string): Promise<APIDatasetType> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  const dataset = await Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
-  return dataset;
+  return Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
 }
 
-export async function updateDataset(
+export function updateDataset(
   datasetName: string,
   dataset: APIDatasetType,
 ): Promise<APIDatasetType> {
-  const updatedDataset = await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
     data: dataset,
   });
-  return updatedDataset;
 }
 
-export async function getDatasetDefaultConfiguration(
+export function getDatasetConfiguration(datasetName: string): Promise<Object> {
+  return Request.receiveJSON(`/api/dataSetConfigurations/${datasetName}`);
+}
+
+export function getDatasetDefaultConfiguration(
   datasetName: string,
 ): Promise<DatasetConfigurationType> {
-  const datasetDefaultConfiguration = await Request.receiveJSON(
-    `/api/dataSetConfigurations/default/${datasetName}`,
-  );
-  return datasetDefaultConfiguration;
+  return Request.receiveJSON(`/api/dataSetConfigurations/default/${datasetName}`);
 }
 
-export async function updateDatasetDefaultConfiguration(
+export function updateDatasetDefaultConfiguration(
   datasetName: string,
   datasetConfiguration: DatasetConfigurationType,
 ): Promise<{}> {
-  const datasetDefaultConfiguration = await Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/default/${datasetName}`,
-    { data: datasetConfiguration },
-  );
-  return datasetDefaultConfiguration;
+  return Request.sendJSONReceiveJSON(`/api/dataSetConfigurations/default/${datasetName}`, {
+    data: datasetConfiguration,
+  });
 }
 
 export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
@@ -636,8 +632,12 @@ export async function getDatastores(): Promise<Array<APIDataStoreType>> {
 export const getDataStoresCached = _.memoize(getDatastores);
 
 // ### Active User
-export async function getActiveUser(options: Object = {}) {
+export function getActiveUser(options: Object = {}) {
   return Request.receiveJSON("/api/user", options);
+}
+
+export function getUserConfiguration(): Object {
+  return Request.receiveJSON("/api/user/userConfiguration");
 }
 
 // ### TimeTracking

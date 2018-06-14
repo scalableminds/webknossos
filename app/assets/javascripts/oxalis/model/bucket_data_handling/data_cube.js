@@ -24,7 +24,7 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { MappingType, DataLayerType } from "oxalis/store";
+import type { MappingType } from "oxalis/store";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 
 class CubeEntry {
@@ -55,7 +55,7 @@ class DataCube {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
-  layerInfo: DataLayerType;
+  isSegmentation: boolean;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -77,18 +77,18 @@ class DataCube {
 
   constructor(
     upperBoundary: Vector3,
-    extendedZoomStepCount: number,
+    resolutionsLength: number,
     bitDepth: number,
-    layerInfo: DataLayerType,
+    isSegmentation: boolean,
   ) {
     this.upperBoundary = upperBoundary;
-    this.layerInfo = layerInfo;
+    this.isSegmentation = isSegmentation;
 
-    this.MAX_UNSAMPLED_ZOOM_STEP =
-      extendedZoomStepCount - constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1;
+    this.MAX_UNSAMPLED_ZOOM_STEP = resolutionsLength - 1;
+
     // Always add another layer of downsampled buckets, so that we support
     // zooming out to maxZoomStep + 1
-    this.ZOOM_STEP_COUNT = extendedZoomStepCount;
+    this.ZOOM_STEP_COUNT = resolutionsLength + constants.DOWNSAMPLED_ZOOM_STEP_COUNT;
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
 
     this.BIT_DEPTH = bitDepth;
@@ -149,13 +149,13 @@ class DataCube {
   }
 
   isMappingEnabled(): boolean {
-    return this.layerInfo.category === "segmentation"
+    return this.isSegmentation
       ? Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled
       : false;
   }
 
   getMapping(): ?MappingType {
-    return this.layerInfo.category === "segmentation"
+    return this.isSegmentation
       ? Store.getState().temporaryConfiguration.activeMapping.mapping
       : null;
   }

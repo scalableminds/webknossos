@@ -39,7 +39,7 @@ export function getLayerByName(dataset: APIDatasetType, layerName: string): Data
 
   const layer = dataLayers.find(l => l.name === layerName);
   if (!layer) {
-    throw new Error("Layer not found");
+    throw new Error(`Layer "${layerName}" not found`);
   }
   return layer;
 }

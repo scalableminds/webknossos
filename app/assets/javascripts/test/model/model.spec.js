@@ -31,7 +31,7 @@ class DataLayer {
   upperBoundary = [4, 5, 6];
 }
 
-mockRequire("libs/toast", { error: _.noop });
+mockRequire("libs/toast", { error: console.log.bind(console) });
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", {});
@@ -103,9 +103,10 @@ test("Model Initialization: should throw a model.HANDLED_ERROR for missing data 
 test("Model Initialization: should throw an Error on unexpected failure", t => {
   t.plan(1);
   const { model } = t.context;
+  const rejectedDatasetError = new Error("mocked dataset rejection");
   Request.receiveJSON
     .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
-    .returns(Promise.reject(new Error("errorMessage")));
+    .returns(Promise.reject(rejectedDatasetError));
 
   return model
     .fetch(TRACING_TYPE, ANNOTATION.dataSetName, "VIEW", true)
@@ -113,6 +114,6 @@ test("Model Initialization: should throw an Error on unexpected failure", t => {
       t.fail("Promise should not have been resolved.");
     })
     .catch(error => {
-      t.is(error.message, "errorMessage");
+      t.is(error, rejectedDatasetError);
     });
 });

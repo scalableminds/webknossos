@@ -16,8 +16,8 @@ object AnnotationIdentifier extends FoxImplicits {
 
   def parse(typ: String, id: String): Fox[AnnotationIdentifier] =
     for {
-      identifier <- ObjectId.parse(id)
-      typ <- AnnotationTypeSQL.fromString(typ).toFox
+      identifier <- ObjectId.parse(id) ?~> ("Invalid ObjectId: " + id)
+      typ <- AnnotationTypeSQL.fromString(typ) ?~> ("Invalid AnnotationType: " + typ)
     } yield AnnotationIdentifier(typ, identifier)
 
 }

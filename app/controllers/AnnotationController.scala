@@ -37,10 +37,10 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def info(typ: String, id: String, readOnly: Boolean = false) = UserAwareAction.async { implicit request =>
     for {
-      annotation <- provideAnnotation(typ, id)
-      restrictions <- restrictionsFor(typ, id)
+      annotation <- provideAnnotation(typ, id) ?~> "annotation.notFound"
+      restrictions <- restrictionsFor(typ, id) ?~> "restrictions.notFound"
       _ <- restrictions.allowAccess(request.identity) ?~> "notAllowed" ~> BAD_REQUEST
-      js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly))
+      js <- annotation.publicWrites(request.identity, Some(restrictions), Some(readOnly)) ?~> "could not convert annotation to json"
     } yield {
       request.identity.foreach { user =>
         if (typ == AnnotationTypeSQL.Task || typ == AnnotationTypeSQL.Explorational) {
@@ -230,7 +230,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       newUserId <- (request.body \ "userId").asOpt[String].toFox
       newUser <- UserDAO.findOneById(newUserId) ?~> Messages("user.notFound")
-      _ <- annotation.muta.transferToUser(newUser)
+      _ <- annotation.muta.transferToUser(newUser)(GlobalAccessContext)
       updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       json <- annotation.publicWrites(Some(request.identity), Some(restrictions))

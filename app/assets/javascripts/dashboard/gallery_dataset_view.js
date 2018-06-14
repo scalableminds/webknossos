@@ -16,7 +16,7 @@ import type { APIUserType } from "admin/api_flow_types";
 const padding = 16;
 
 type StateProps = {
-  activeUser: ?APIUserType,
+  activeUser: ?APIUserType
 };
 
 type Props = {
@@ -94,9 +94,9 @@ class GalleryDatasetView extends React.PureComponent<Props> {
     return (
       <Card
         bodyStyle={{ padding: 0 }}
-        style={{ backgroundImage: `url(${dataset.thumbnailURL})` }}
         className="spotlight-item-card"
       >
+      <span className="dataset-thumbnail" style={{ backgroundImage: `url(${dataset.thumbnailURL})` }}>
         <div className="dataset-thumbnail-buttons">
           <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
             <Icon
@@ -121,7 +121,8 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           </a>
           {volumeTracingMenu}
         </div>
-        <div className="dataset-description">
+        </span>
+        <span className="dataset-description">
           <h3>
             {dataset.displayName != null && dataset.displayName !== ""
               ? dataset.displayName
@@ -129,7 +130,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           </h3>
           <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
           {description}
-        </div>
+        </span>
       </Card>
     );
   }

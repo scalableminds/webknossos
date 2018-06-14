@@ -44,9 +44,8 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def thumbnail(dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) = UserAwareAction.async { implicit request =>
 
     def imageFromCacheIfPossible(dataSet: DataSet) = {
-      val width = Math.limit(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
-      val height = Math.limit(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
-      // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 1 day
+      val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
+      val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
       Cache.get(s"thumbnail-$dataSetName*$dataLayerName-$width-$height") match {
         case Some(a: Array[Byte]) =>
           Fox.successful(a)
@@ -55,6 +54,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
           val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Int])))
           dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, width, height, defaultZoomOpt, defaultCenterOpt).map {
             result =>
+              // We don't want all images to expire at the same time. Therefore, we add some random variation
               Cache.set(s"thumbnail-$dataSetName*$dataLayerName-$width-$height",
                 result,
                 (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt)

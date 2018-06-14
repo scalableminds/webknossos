@@ -32,7 +32,7 @@ object Math {
       c
   }
 
-  def limit[T](x: T, lower: T, upper: T)(implicit num: Numeric[T]): T = {
+  def clamp[T](x: T, lower: T, upper: T)(implicit num: Numeric[T]): T = {
     import num._
     lower.max(x).min(upper)
   }

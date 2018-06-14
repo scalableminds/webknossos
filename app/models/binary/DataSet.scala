@@ -42,6 +42,7 @@ case class DataSetSQL(
                        scale: Option[Scale],
                        sharingToken: Option[String],
                        status: String,
+                       logoUrl: Option[String],
                        created: Long = System.currentTimeMillis(),
                        isDeleted: Boolean = false
                      )
@@ -64,6 +65,7 @@ object DataSetSQL {
         d.dataSource.scaleOpt,
         d.sharingToken,
         d.dataSource.statusOpt.getOrElse(""),
+        d.logoUrl,
         d.created,
         false
       )
@@ -104,6 +106,7 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
         scale,
         r.sharingtoken,
         r.status,
+        r.logourl,
         r.created.getTime,
         r.isdeleted
       )
@@ -369,6 +372,7 @@ object DataSetAllowedTeamsSQLDAO extends SimpleSQLDAO {
 }
 
 case class DataSet(
+                    logoUrl: Option[String],
                     dataStoreInfo: DataStoreInfo,
                     dataSource: InboxDataSource,
                     owningOrganization: String,
@@ -400,6 +404,7 @@ object DataSet extends FoxImplicits {
     for {
       teams <- Fox.combined(d.allowedTeams.map(TeamDAO.findOneById(_)(GlobalAccessContext)))
       teamsJs <- Future.traverse(teams)(Team.teamPublicWrites(_)(GlobalAccessContext))
+      logoUrl <- getLogoUrl(d)
     } yield {
       Json.obj("name" -> d.name,
         "dataSource" -> d.dataSource,
@@ -411,7 +416,8 @@ object DataSet extends FoxImplicits {
         "description" -> d.description,
         "displayName" -> d.displayName,
         "created" -> d.created,
-        "isEditable" -> d.isEditableBy(user))
+        "isEditable" -> d.isEditableBy(user),
+        "logoUrl" -> logoUrl)
     }
 
   private def parseDefaultConfiguration(jsValueOpt: Option[JsValue]): Fox[Option[DataSetConfiguration]] = jsValueOpt match {
@@ -437,6 +443,12 @@ object DataSet extends FoxImplicits {
     }
   }
 
+  private def getLogoUrl(dataSet: DataSet) =
+    dataSet.logoUrl match {
+      case Some(url) => Fox.successful(url)
+      case None => OrganizationDAO.findOneByName(dataSet.owningOrganization)(GlobalAccessContext).map(_.logoUrl)
+    }
+
   def fromDataSetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {
     for {
       datastore <- DataStoreSQLDAO.findOneByName(s._dataStore.trim)(GlobalAccessContext) ?~> Messages("datastore.notFound")
@@ -447,6 +459,7 @@ object DataSet extends FoxImplicits {
       dataSource <- constructDataSource(s, organization)(GlobalAccessContext) ?~> "could not construct datasource"
     } yield {
       DataSet(
+        s.logoUrl,
         DataStoreInfo(datastore.name, datastore.url, datastore.typ),
         dataSource,
         organization.name,

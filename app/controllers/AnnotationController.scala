@@ -228,12 +228,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   def transfer(typ: String, id: String) = SecuredAction.async(parse.json) { implicit request =>
     for {
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
+      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
+      _ <- restrictions.allowFinish(request.identity) ?~> Messages("notAllowed")
       newUserId <- (request.body \ "userId").asOpt[String].toFox
       newUser <- UserDAO.findOneById(newUserId) ?~> Messages("user.notFound")
-      _ <- annotation.muta.transferToUser(newUser)(GlobalAccessContext)
+      _ <- annotation.muta.transferToUser(newUser)
       updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
-      restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
-      json <- annotation.publicWrites(Some(request.identity), Some(restrictions))
+      json <- updated.publicWrites(Some(request.identity), Some(restrictions))
     } yield {
       JsonOk(json)
     }

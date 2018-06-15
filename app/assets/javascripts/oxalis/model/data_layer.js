@@ -24,7 +24,12 @@ import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accesso
 import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor.js";
+import {
+  getResolutions,
+  getLayerByName,
+  getByteCount,
+  getLayerBoundaries,
+} from "oxalis/model/accessors/dataset_accessor.js";
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -58,8 +63,6 @@ class DataLayer {
   cube: DataCube;
   layerInfo: DataLayerType;
   name: string;
-  lowerBoundary: Vector3;
-  upperBoundary: Vector3;
   connectionInfo: ConnectionInfo;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
@@ -98,14 +101,11 @@ class DataLayer {
 
     this.name = layerInfo.name;
 
-    const { topLeft, width, height, depth } = layerInfo.boundingBox;
-    this.lowerBoundary = topLeft;
-    this.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
-
-    const bitDepth = getBitDepth(getLayerByName(Store.getState().dataset, this.name));
+    const { dataset } = Store.getState();
+    const bitDepth = getBitDepth(getLayerByName(dataset, this.name));
 
     this.cube = new DataCube(
-      this.upperBoundary,
+      getLayerBoundaries(dataset, this.name).upperBoundary,
       layerInfo.resolutions.length,
       bitDepth,
       layerInfo.category === "segmentation",
@@ -113,7 +113,7 @@ class DataLayer {
 
     const taskQueue = new AsyncTaskQueue(Infinity);
 
-    const datastoreInfo = Store.getState().dataset.dataStore;
+    const datastoreInfo = dataset.dataStore;
     this.pullQueue = new PullQueue(this.cube, layerInfo.name, this.connectionInfo, datastoreInfo);
     this.pushQueue = new PushQueue(this.cube, layerInfo, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
@@ -121,23 +121,12 @@ class DataLayer {
     this.activeMapping = null;
   }
 
-  isRgb() {
-    return (
-      getLayerByName(Store.getState().dataset, this.name).category === "color" &&
-      this.getByteCount() === 3
-    );
-  }
-
   isSegmentation() {
     return getLayerByName(Store.getState().dataset, this.name).category === "segmentation";
   }
 
-  getByteCount(): number {
-    return getBitDepth(getLayerByName(Store.getState().dataset, this.name)) >> 3;
-  }
-
   setupDataTextures(): void {
-    const bytes = this.getByteCount();
+    const bytes = getByteCount(Store.getState().dataset, this.name);
 
     this.textureBucketManager = new TextureBucketManager(
       constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,

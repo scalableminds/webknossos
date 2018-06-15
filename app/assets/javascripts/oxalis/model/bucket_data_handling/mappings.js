@@ -18,10 +18,26 @@ import messages from "messages";
 import { getMappings } from "oxalis/model/accessors/dataset_accessor";
 import type { MappingType } from "oxalis/store";
 import type { APIMappingType } from "admin/api_flow_types";
+import type DataLayer from "oxalis/model/data_layer";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 
 type APIMappingsType = { [string]: APIMappingType };
+
+// For now, since we have no UI for this
+export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
+  return {
+    getAll(): string[] {
+      return segmentationLayer.mappings.getMappingNames();
+    },
+    getActive(): ?string {
+      return segmentationLayer.activeMapping;
+    },
+    activate(mapping: string) {
+      return segmentationLayer.setActiveMapping(mapping);
+    },
+  };
+}
 
 class Mappings {
   baseUrl: string;

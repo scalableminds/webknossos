@@ -77,8 +77,8 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
     for {
       r <- run(
 
-        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, created, isDeleted)
-                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
+        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, created, isDeleted)
+                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
             """)
     } yield ()
 

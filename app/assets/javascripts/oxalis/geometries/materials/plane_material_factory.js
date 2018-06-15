@@ -27,7 +27,7 @@ import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
+import { getResolutions, isRgb, getByteCount } from "oxalis/model/accessors/dataset_accessor.js";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
 
@@ -366,11 +366,12 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     const colorLayerNames = _.map(Model.getColorLayers(), b => sanitizeName(b.name));
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const { dataset } = Store.getState();
+    const datasetScale = dataset.dataSource.scale;
     const hasSegmentation = segmentationLayer != null;
 
     const segmentationPackingDegree = hasSegmentation
-      ? getPackingDegree(segmentationLayer.getByteCount())
+      ? getPackingDegree(getByteCount(dataset, segmentationLayer.name))
       : 0;
 
     const code = getMainFragmentShader({
@@ -378,11 +379,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       hasSegmentation,
       segmentationName,
       segmentationPackingDegree,
-      isRgb: Model.dataLayers.color && Model.dataLayers.color.isRgb(),
+      isRgb: Model.dataLayers.color && isRgb(dataset, Model.dataLayers.color.name),
       planeID: this.planeID,
       isMappingSupported: Model.isMappingSupported,
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
-      resolutions: getResolutions(Store.getState().dataset),
+      resolutions: getResolutions(dataset),
       datasetScale,
     });
 

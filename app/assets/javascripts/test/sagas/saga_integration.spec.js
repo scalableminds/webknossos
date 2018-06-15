@@ -25,7 +25,7 @@ test("watchTreeNames saga should rename empty trees in tasks and these updates s
     name: { $set: generateTreeName(state, treeWithEmptyName.timestamp, treeWithEmptyName.treeId) },
   });
 
-  const saveQueue = createSaveQueueFromUpdateActions(
+  const expectedSaveQueue = createSaveQueueFromUpdateActions(
     [
       [
         UpdateActions.updateTree(treeWithCorrectName),
@@ -38,5 +38,5 @@ test("watchTreeNames saga should rename empty trees in tasks and these updates s
 
   // Once the updateTree update action is in the save queue, we're good.
   // This means the setTreeName action was dispatched, the diffing ran, and the change will be persisted.
-  t.deepEqual(saveQueue, Store.getState().save.queue);
+  t.deepEqual(expectedSaveQueue, state.save.queue);
 });

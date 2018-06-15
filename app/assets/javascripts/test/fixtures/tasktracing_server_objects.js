@@ -1,4 +1,8 @@
-export const tracing = {
+// @flow
+import type { ServerSkeletonTracingType } from "oxalis/model";
+import type { APIAnnotationType } from "admin/api_flow_types";
+
+export const tracing: ServerSkeletonTracingType = {
   trees: [
     {
       nodes: [
@@ -34,7 +38,7 @@ export const tracing = {
   id: "e90133de-b2db-4912-8261-8b6f84f7edab",
 };
 
-export const annotation = {
+export const annotation: APIAnnotationType = {
   modified: "2018-06-12 15:59",
   state: "Active",
   id: "5b1fd1cf97000027049c67ee",

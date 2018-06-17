@@ -15,7 +15,7 @@ import type { APIUserType } from "admin/api_flow_types";
 
 const padding = 16;
 const thumbnailDimension = "400";
-const columnSpan = { xs: 24, sm: 24, md: 12, lg: 12, xl: 8, xxl: 8 };
+const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 
 type StateProps = {
   activeUser: ?APIUserType,
@@ -100,22 +100,15 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           style={{
             background: `url(${
               dataset.thumbnailURL
-            }?w=${thumbnailDimension}&h=${thumbnailDimension}) no-repeat`,
+            }?w=${thumbnailDimension}&h=${thumbnailDimension})`,
+            backgroundSize : "cover",
           }}
         >
           <div className="dataset-thumbnail-buttons">
             <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
               <Icon
                 type="eye-o"
-                style={{
-                  width: 25,
-                  height: 25,
-                  margin: 7.5,
-                  fontSize: 26,
-                  textAlign: "center",
-                  verticalAlign: "middle",
-                  color: "rgb(199, 199, 199)",
-                }}
+                className="view-button"
               />
             </a>
             <a

@@ -13,7 +13,7 @@
     paddingLeft: 15px;
     paddingRight: 15px;
 
-    @media only screen and (max-width: 650px){
+    @media only screen and (max-width: 600px){
       height: 600px;
     }
 
@@ -23,8 +23,7 @@
       height: 100%;
 
 
-      .dataset-thumbnail {
-      min-width: 200px; 
+      .dataset-thumbnail { 
       height: 100%;
       width: 50%;
       display: inline-block;
@@ -33,18 +32,16 @@
           position: relative;
           height: 100%;
           width: 50%;
-          @media only screen and (max-width: 650px){
+          @media only screen and (max-width: 600px){
             height: 600px;
             width: 100%
           }
         }
 
-      @media only screen and (max-width: 650px){
+      @media only screen and (max-width: 600px){
         height: 62.5%;
         width: 100%;
         display: block;
-        background-size: 100% 100%;
-        background-repeat : no-repeat no-repeat;
       }
 
         .dataset-thumbnail-buttons {
@@ -53,6 +50,22 @@
           align-items: center;
           width: 100%;
           height: 100%;
+
+          .view-button{
+            width: 25px;
+            height: 25px;
+            margin: 7.5px;
+            font-size: 26px;
+            text-align: center;
+            vertical-align: middle;
+            color: rgb(199, 199, 199);
+
+            @media only screen and (max-width: 600px){
+              width: 37.5px;
+              height: 37.5px;
+              margin: 12px;
+            }
+          }
 
           a {
             box-shadow: white 0px 0px 4px;
@@ -64,11 +77,25 @@
             position: relative;
             margin: 0 3px;
 
+
+            @media only screen and (max-width: 600px){
+              width: 60px;
+              height: 60px;
+              border-radius: 15px;
+              margin: 0 4px;
+            }
+
             img {
               width: 25px;
               height: 25px;
               margin: 7.5px;
               filter: brightness(0) invert(1);
+
+              @media only screen and (max-width: 600px){
+                width: 37.5px;
+                height: 37.5px;
+                margin: 12px;
+              }
             }
           }
           a:hover {
@@ -76,21 +103,20 @@
           }
         }
 
-        .dataset-actions {
+        .dataset-actions { // I am pretty sure this is unused !
           a {
             display: block;
 
             img {
               width: 14px;
-            }
+            }             //--------
           }
         }
       }
 
       .dataset-description {
-        min-width: 200px;
-        padding: 5px;
-        padding-top: 10px;
+        padding: 10px;
+        padding-top: 16px;
         position: absolute;
         display: inline-block;
         bottom: 0px;
@@ -100,19 +126,28 @@
         color: white;
         overflow-y: auto;
 
-        @media only screen and (max-width: 650px) {
+        @media only screen and (max-width: 600px) {
           height: 37.5%;
           width: 100%;
           display: block;
+          padding: 16px;
+          padding-top: 24;
         }
 
         h3 {
           color: white;
           word-wrap: break-word;
+          @media only screen and (max-width: 600px) {
+            font-size: 28px;
+          }
         }
 
         p {
           font-size: 14px;
+
+          @media only screen and (max-width: 600px) {
+            font-size: 16px;
+          }
         }
       }
     }

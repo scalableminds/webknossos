@@ -101,15 +101,12 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             background: `url(${
               dataset.thumbnailURL
             }?w=${thumbnailDimension}&h=${thumbnailDimension})`,
-            backgroundSize : "cover",
+            backgroundSize: "cover",
           }}
         >
           <div className="dataset-thumbnail-buttons">
             <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
-              <Icon
-                type="eye-o"
-                className="view-button"
-              />
+              <Icon type="eye-o" className="view-button" />
             </a>
             <a
               href="#"
@@ -144,7 +141,12 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         )
           .sort(Utils.localeCompareBy("formattedCreated", false))
           .map(ds => (
-            <Col className="gallery-dataset-col" {...columnSpan} key={ds.name} style={{ paddingBottom: padding }}>
+            <Col
+              className="gallery-dataset-col"
+              {...columnSpan}
+              key={ds.name}
+              style={{ paddingBottom: padding }}
+            >
               {this.renderCard(ds)}
             </Col>
           ))}
@@ -158,7 +160,6 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 export default connect(mapStateToProps)(GalleryDatasetView);
-
 
 // TODO: mit mediaquery bei kleinen Bildschirmen: display: block; und breite beider spans auf 100% setzen !!!
 // Andernfalls belassen bei: display: block; und width auf 100% setzen

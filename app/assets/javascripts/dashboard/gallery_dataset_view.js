@@ -100,7 +100,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           style={{
             background: `url(${
               dataset.thumbnailURL
-            }?w=${thumbnailDimension}&h=${thumbnailDimension})`,
+            }?w=${thumbnailDimension}&h=${thumbnailDimension}) no-repeat`,
           }}
         >
           <div className="dataset-thumbnail-buttons">
@@ -151,7 +151,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         )
           .sort(Utils.localeCompareBy("formattedCreated", false))
           .map(ds => (
-            <Col {...columnSpan} key={ds.name} style={{ paddingBottom: padding }}>
+            <Col className="gallery-dataset-col" {...columnSpan} key={ds.name} style={{ paddingBottom: padding }}>
               {this.renderCard(ds)}
             </Col>
           ))}

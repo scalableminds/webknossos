@@ -56,8 +56,9 @@ test("Prefetch saga should not prefetch segmentation if it is not visible", t =>
   );
 
   let shouldPrefetchSaga = execCall(t, saga.next(allLayers)); // shouldPrefetchForDataLayer
-  shouldPrefetchSaga.next(); // select segmentationOpacity
-  const shouldPrefetchColorLayer = shouldPrefetchSaga.next(0).value;
+  shouldPrefetchSaga.next();
+  shouldPrefetchSaga.next(0); // select segmentationOpacity
+  const shouldPrefetchColorLayer = shouldPrefetchSaga.next(false).value;
   // The color layer should be prefetched, although the segmentationOpacity is 0
   t.is(shouldPrefetchColorLayer, true);
   expectValueDeepEqual(
@@ -67,8 +68,9 @@ test("Prefetch saga should not prefetch segmentation if it is not visible", t =>
   );
 
   shouldPrefetchSaga = execCall(t, saga.next()); // shouldPrefetchForDataLayer
-  shouldPrefetchSaga.next(); // select segmentationOpacity
-  const shouldPrefetchSegmentationLayer = shouldPrefetchSaga.next(0).value;
+  shouldPrefetchSaga.next();
+  shouldPrefetchSaga.next(0); // select segmentationOpacity
+  const shouldPrefetchSegmentationLayer = shouldPrefetchSaga.next(true).value;
   // The segmentation layer should not be prefetched because it is not visible
   t.is(shouldPrefetchSegmentationLayer, false);
   // So the saga should be over afterwards, no prefetch call

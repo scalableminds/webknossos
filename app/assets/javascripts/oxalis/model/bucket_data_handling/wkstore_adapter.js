@@ -66,10 +66,7 @@ function decodeFourBit(bufferArray: Uint8Array): Uint8Array {
   return newColors;
 }
 
-export async function sendToStore(
-  layerInfo: DataLayerType,
-  batch: Array<DataBucket>,
-): Promise<void> {
+export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
   const YIELD_AFTER_X_BUCKETS = 3;
   let counter = 0;
   const items = [];

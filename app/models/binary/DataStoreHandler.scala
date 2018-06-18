@@ -36,7 +36,7 @@ trait DataStoreHandlingStrategy {
   def saveSkeletonTracing(tracing: SkeletonTracing): Fox[TracingReference] =
     Fox.failure("DataStore doesn't support saving SkeletonTracings.")
 
-  def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[TracingReference]]] =
+  def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[TracingReference]] =
     Fox.failure("DataStore doesn't support saving SkeletonTracings.")
 
   def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] =
@@ -96,11 +96,11 @@ class WKStoreHandlingStrategy(dataStoreInfo: DataStoreInfo, dataSet: DataSet) ex
       .postProtoWithJsonResponse[SkeletonTracing, TracingReference](tracing)
   }
 
-  override def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[Box[TracingReference]]] = {
+  override def saveSkeletonTracings(tracings: SkeletonTracings): Fox[List[TracingReference]] = {
     logger.debug("Called to save SkeletonTracings. Base: " + dataSet.name + " Datastore: " + dataStoreInfo)
     RPC(s"${dataStoreInfo.url}/data/tracings/skeleton/saveMultiple")
       .withQueryString("token" -> DataStoreHandlingStrategy.webKnossosToken)
-      .postProtoWithJsonResponse[SkeletonTracings, List[Box[TracingReference]]](tracings)
+      .postProtoWithJsonResponse[SkeletonTracings, List[TracingReference]](tracings)
   }
 
   override def duplicateSkeletonTracing(tracingReference: TracingReference, versionString: Option[String] = None): Fox[TracingReference] = {

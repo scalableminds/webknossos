@@ -184,17 +184,15 @@ object AnnotationService
   }
 
   def createAnnotationBase(
-    taskFox: Fox[TaskSQL],
+    task: TaskSQL,
     userId: BSONObjectID,
-    tracingReferenceBox: Box[TracingReference],
+    tracingReference: TracingReference,
     dataSetId: ObjectId,
     description: Option[String]
     )(implicit ctx: DBAccessContext) = {
 
     for {
-      task <- taskFox
       taskType <- task.taskType
-      tracingReference <- tracingReferenceBox.toFox
       project <- task.project
       annotationBase = AnnotationSQL(
         ObjectId.generate,

@@ -38,7 +38,10 @@ function dump {
 
 if [ "$#" -ne 2 ]
 then
-  echo "Usage: $0 <TODO> <TODO>"
+  echo "Usage: $0 <sqlFiles|DB> <sqlFiles|DB>"
+  echo "Examples:"
+  echo "  $0 tools/postgres/schema.sql \"conf/evolutions/*.sql\""
+  echo "  $0 tools/postgres/schema.sql DB"
   exit 1
 fi
 

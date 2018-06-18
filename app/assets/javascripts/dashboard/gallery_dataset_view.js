@@ -124,8 +124,10 @@ class GalleryDatasetView extends React.PureComponent<Props> {
               ? dataset.displayName
               : dataset.name}
           </h3>
-          <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
-          {description}
+          <span className="dataset-description-body">
+            <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
+            {description}
+          </span>
         </span>
       </Card>
     );

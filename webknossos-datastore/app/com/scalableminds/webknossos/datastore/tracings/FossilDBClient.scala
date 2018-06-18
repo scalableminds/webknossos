@@ -50,9 +50,9 @@ case class VersionedKeyValuePair[T](versionedKey: VersionedKey, value: T) {
 class FossilDBClient(collection: String, config: Configuration) extends FoxImplicits with LazyLogging {
   val address = config.getString("datastore.fossildb.address").getOrElse("localhost")
   val port = config.getInt("datastore.fossildb.port").getOrElse(7155)
-  val channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
-  val blockingStub = FossilDBGrpc.blockingStub(channel)
-  val blockingStubHealth = HealthGrpc.newBlockingStub(channel)
+  var channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
+  var blockingStub = FossilDBGrpc.blockingStub(channel)
+  var blockingStubHealth = HealthGrpc.newBlockingStub(channel)
 
   def checkHealth: Fox[Unit] = {
     try {
@@ -63,11 +63,18 @@ class FossilDBClient(collection: String, config: Configuration) extends FoxImpli
       Fox.successful(replyString)
     } catch {
       case e: Exception => {
+        reloadBlockingStub()
         val errorText = "Failed to connect to FossilDB at " + address + ":" + port + ": " + e
         logger.error(errorText)
         Fox.failure(errorText)
       }
     }
+  }
+
+  def reloadBlockingStub() = {
+    var channel = NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
+    var blockingStub = FossilDBGrpc.blockingStub(channel)
+    var blockingStubHealth = HealthGrpc.newBlockingStub(channel)
   }
 
   def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Fox[VersionedKeyValuePair[T]] = {

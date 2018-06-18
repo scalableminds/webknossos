@@ -15,6 +15,7 @@
 <PROJECT_ROOT>/node_modules/webpack-cli/
 <PROJECT_ROOT>/node_modules/findup/
 <PROJECT_ROOT>/node_modules/documentation/
+<PROJECT_ROOT>/node_modules/flow-coverage-report/
 
 [untyped]
 <PROJECT_ROOT>/node_modules/ava/

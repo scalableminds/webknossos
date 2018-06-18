@@ -49,7 +49,7 @@ object AnnotationService
       case Some(selectedTeam) => Fox.successful(ObjectId.fromBsonId(selectedTeam))
       case None =>
         for {
-          _ <- user.isAdmin
+          _ <- (user.isTeamManagerInOrg(user.organization) || user.isAdmin)
           organization <- OrganizationSQLDAO.findOneByName(user.organization)
           organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(organization._id)
         } yield organizationTeamId

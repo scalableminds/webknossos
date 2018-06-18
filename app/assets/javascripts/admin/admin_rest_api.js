@@ -469,7 +469,7 @@ export async function finishAllAnnotations(
 
 export async function copyAnnotationToUserAccount(
   annotationId: string,
-  tracingType: string,
+  tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
   const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url);
@@ -477,7 +477,7 @@ export async function copyAnnotationToUserAccount(
 
 export async function getAnnotationInformation(
   annotationId: string,
-  tracingType: string,
+  tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
   // Include /readOnly part whenever it is in the pathname
   const isReadOnly = location.pathname.endsWith("/readOnly");

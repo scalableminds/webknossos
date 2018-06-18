@@ -6,7 +6,6 @@ import constants, { Vector3Indicies, ModeValues } from "oxalis/constants";
 import type { APIDatasetType } from "admin/api_flow_types";
 import type { Vector3 } from "oxalis/constants";
 import type { SettingsType, DataLayerType } from "oxalis/store";
-import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 
 export function getResolutions(dataset: APIDatasetType): Vector3[] {
   // Different layers can have different resolutions. At the moment,
@@ -119,6 +118,10 @@ export function determineAllowedModes(dataset: APIDatasetType, settings: Setting
   }
 
   return { preferredMode, allowedModes };
+}
+
+export function getBitDepth(layerInfo: DataLayerType): number {
+  return parseInt(layerInfo.elementClass.substring(4), 10);
 }
 
 export default {};

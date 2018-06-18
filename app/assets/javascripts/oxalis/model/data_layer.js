@@ -19,7 +19,6 @@ import { M4x4 } from "libs/mjs";
 import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
@@ -29,6 +28,7 @@ import {
   getLayerByName,
   getByteCount,
   getLayerBoundaries,
+  getBitDepth,
 } from "oxalis/model/accessors/dataset_accessor.js";
 
 // each index of the returned Vector3 is either -1 or +1.

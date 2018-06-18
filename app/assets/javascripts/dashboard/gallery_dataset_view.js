@@ -143,11 +143,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         )
           .sort(Utils.localeCompareBy("formattedCreated", false))
           .map(ds => (
-            <Col
-              className="gallery-dataset-col"
-              {...columnSpan}
-              key={ds.name}
-            >
+            <Col className="gallery-dataset-col" {...columnSpan} key={ds.name}>
               {this.renderCard(ds)}
             </Col>
           ))}

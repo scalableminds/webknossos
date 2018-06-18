@@ -15,6 +15,7 @@ import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/pre
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import DataLayer from "oxalis/model/data_layer";
 import type { Vector3 } from "oxalis/constants";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -84,6 +85,7 @@ export function* prefetchForPlaneMode(
   const tracingType = yield select(state => state.tracing.type);
   const { lastPosition, lastDirection, lastZoomStep } = previousProperties;
   const direction = getTraceDirection(position, lastPosition, lastDirection);
+  const resolutions = yield select(state => getResolutions(state.dataset));
 
   if (position !== lastPosition || zoomStep !== lastZoomStep) {
     const areas = yield select(state => getAreas(state));
@@ -101,6 +103,7 @@ export function* prefetchForPlaneMode(
           zoomStep,
           activePlane,
           areas,
+          resolutions,
         );
         layer.pullQueue.addAll(buckets);
         break;

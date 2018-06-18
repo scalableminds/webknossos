@@ -10,26 +10,25 @@ import models.annotation.AnnotationState._
 import models.binary.DataSetDAO
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
+import utils.ObjectId
 
-class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with FoxImplicits {
+class AnnotationMutations(val annotation: AnnotationSQL) extends BoxImplicits with FoxImplicits {
 
-  type AType = Annotation
-
-  def finishAnnotation(user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[(Annotation, String)] = {
-    def executeFinish(annotation: Annotation): Fox[(Annotation, String)] = {
+  def finish(user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[String] = {
+    def executeFinish: Fox[String] = {
       for {
-        updated <- AnnotationService.finish(annotation)
+        _ <- AnnotationService.finish(annotation)
       } yield {
         if (annotation._task.isEmpty)
-          updated -> "annotation.finished"
+          "annotation.finished"
         else
-          updated -> "task.finished"
+          "task.finished"
       }
     }
 
     if (restrictions.allowFinish(user)) {
       if (annotation.state == Active)
-        executeFinish(annotation)
+        executeFinish
       else
         Fox.failure("annotation.notActive")
     } else {
@@ -37,45 +36,39 @@ class AnnotationMutations(val annotation: Annotation) extends BoxImplicits with 
     }
   }
 
-  def reopen()(implicit ctx: DBAccessContext) = {
-    AnnotationDAO.updateState(annotation._id, AnnotationState.Active)
-  }
+  def reopen(implicit ctx: DBAccessContext) =
+    AnnotationSQLDAO.updateState(annotation._id, AnnotationState.Active)
 
   def rename(name: String)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.rename(annotation._id, name)
+    AnnotationSQLDAO.updateName(annotation._id, name)
 
   def setDescription(description: String)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.setDescription(annotation._id, description)
+    AnnotationSQLDAO.updateDescription(annotation._id, description)
 
   def setIsPublic(isPublic: Boolean)(implicit ctx: DBAccessContext) =
-    AnnotationDAO.setIsPublic(annotation._id, isPublic)
+    AnnotationSQLDAO.updateIsPublic(annotation._id, isPublic)
 
   def setTags(tags: List[String])(implicit ctx: DBAccessContext) =
-    AnnotationDAO.setTags(annotation._id, tags)
+    AnnotationSQLDAO.updateTags(annotation._id, tags)
 
-  def cancelTask()(implicit ctx: DBAccessContext) =
-    AnnotationDAO.updateState(annotation._id, Cancelled)
+  def cancel(implicit ctx: DBAccessContext) =
+    AnnotationSQLDAO.updateState(annotation._id, Cancelled)
 
-  def resetToBase()(implicit ctx: DBAccessContext): Fox[Annotation] = annotation.typ match {
-    case AnnotationType.Explorational =>
+  def transferToUser(user: User)(implicit ctx: DBAccessContext) =
+    AnnotationSQLDAO.updateUser(annotation._id, ObjectId.fromBsonId(user._id))
+
+  def resetToBase(implicit ctx: DBAccessContext) = annotation.typ match {
+    case AnnotationTypeSQL.Explorational =>
       Fox.failure("annotation.revert.skeletonOnly")
-    case AnnotationType.Task if annotation.tracingType == TracingType.skeleton =>
+    case AnnotationTypeSQL.Task if annotation.tracingType == TracingType.skeleton =>
       for {
         task <- annotation.task.toFox
         annotationBase <- task.annotationBase
-        dataSet <- DataSetDAO.findOneBySourceName(annotationBase.dataSetName) ?~> ("Could not find DataSet " + annotation.dataSetName + ". Does your team have access?")
+        dataSet <- DataSetDAO.findOneById(annotationBase._dataSet) ?~> "dataSet.notFound"
         newTracingReference <- AnnotationService.tracingFromBase(annotationBase, dataSet)
-        updatedAnnotation <- AnnotationDAO.updateTracingRefernce(annotation._id, newTracingReference)
-      } yield {
-        updatedAnnotation
-      }
+        _ <- AnnotationSQLDAO.updateTracingReference(annotation._id, newTracingReference)
+      } yield ()
     case _ if annotation.tracingType != TracingType.skeleton =>
       Fox.failure("annotation.revert.skeletonOnly")
-  }
-
-  def transferToUser(user: User)(implicit ctx: DBAccessContext) = {
-    for {
-      updatedAnnotation <- AnnotationDAO.transfer(annotation._id, user._id)
-    } yield updatedAnnotation
   }
 }

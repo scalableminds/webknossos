@@ -176,6 +176,7 @@ role.added=Added role to {0}
 
 tracing=Annotation
 tracing.notFound=Tracing couldn''t be found
+tracing.couldNotSave=Could not save tracings to datastore server
 
 annotation.creationFailed=Failed to create annotation
 annotation.transfered=Annotation was transfered

@@ -12,7 +12,10 @@ test.before("Reset database", async () => {
 
 test("getAnnotationInformation()", async t => {
   const annotationId = "570b9ff12a7c0e980056fe8f";
-  const annotation = await api.getAnnotationInformation(annotationId, "skeleton");
+  const annotation = await api.getAnnotationInformation(
+    annotationId,
+    APITracingTypeEnum.Explorational,
+  );
   t.is(annotation.id, annotationId);
   t.snapshot(annotation, { id: "annotations-getAnnotationInformation" });
 });
@@ -97,7 +100,7 @@ test.serial("finishAllAnnotations()", async t => {
   await api.finishAllAnnotations(annotationIds);
 
   const finishedAnnotations = await Promise.all(
-    annotationIds.map(id => api.getAnnotationInformation(id, "skeleton")),
+    annotationIds.map(id => api.getAnnotationInformation(id, APITracingTypeEnum.Explorational)),
   );
 
   t.is(finishedAnnotations.length, 2);

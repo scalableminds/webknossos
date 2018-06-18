@@ -8,7 +8,7 @@ import com.scalableminds.util.mail.Send
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.{Annotation, AnnotationDAO, AnnotationService}
+import models.annotation._
 import models.task.TaskSQLDAO
 import models.user.User
 import net.liftweb.common.Full
@@ -31,12 +31,12 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   private lazy val timeSpanTracker = Akka.system.actorOf(Props[TimeSpanTracker])
 
-  def logUserInteraction(user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Unit = {
+  def logUserInteraction(user: User, annotation: AnnotationSQL)(implicit ctx: DBAccessContext): Unit = {
     val timestamp = System.currentTimeMillis
     logUserInteraction(Seq(timestamp), user, annotation)
   }
 
-  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: Annotation)(implicit ctx: DBAccessContext): Unit = {
+  def logUserInteraction(timestamps: Seq[Long], user: User, annotation: AnnotationSQL)(implicit ctx: DBAccessContext): Unit = {
     timeSpanTracker ! TrackTime(timestamps, user._id, annotation, ctx)
   }
 
@@ -105,7 +105,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
   }
 
 
-  protected case class TrackTime(timestamps: Seq[Long], _user: BSONObjectID, annotation: Annotation, ctx: DBAccessContext)
+  protected case class TrackTime(timestamps: Seq[Long], _user: BSONObjectID, annotation: AnnotationSQL, ctx: DBAccessContext)
 
   protected class TimeSpanTracker extends Actor {
     private val lastUserActivity = mutable.HashMap.empty[BSONObjectID, TimeSpan]
@@ -115,10 +115,10 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       duration >= 0 && duration < MaxTracingPause
     }
 
-    private def belongsToSameTracing( last: TimeSpan, annotation: Option[Annotation]) =
+    private def belongsToSameTracing( last: TimeSpan, annotation: Option[AnnotationSQL]) =
       last.annotationEquals(annotation.map(_.id))
 
-    private def createNewTimeSpan(timestamp: Long, _user: BSONObjectID, annotation: Option[Annotation], ctx: DBAccessContext) = {
+    private def createNewTimeSpan(timestamp: Long, _user: BSONObjectID, annotation: Option[AnnotationSQL], ctx: DBAccessContext) = {
       val timeSpan = TimeSpan.create(timestamp, timestamp, _user, annotation)
       TimeSpanDAO.insert(timeSpan)(ctx)
       timeSpan
@@ -126,18 +126,18 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
     private def logTimeToAnnotation(
       duration: Long,
-      annotation: Option[Annotation]): Fox[Unit] = {
+      annotation: Option[AnnotationSQL]): Fox[Unit] = {
       // Log time to annotation
       annotation match {
-        case Some(a: Annotation) =>
-          AnnotationService.logTime(duration, a._id)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
+        case Some(a: AnnotationSQL) =>
+          AnnotationSQLDAO.logTime(a._id, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
         case _ =>
           Fox.successful(())
         // do nothing, this is not a stored annotation
       }
     }
 
-    def signalOverTime(time: Long, annotationOpt: Option[Annotation])(implicit ctx: DBAccessContext): Fox[_] = {
+    def signalOverTime(time: Long, annotationOpt: Option[AnnotationSQL])(implicit ctx: DBAccessContext): Fox[_] = {
       for {
         annotation <- annotationOpt.toFox
         user <- annotation.user
@@ -158,13 +158,13 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
     private def logTimeToTask(
                                duration: Long,
-                               annotation: Option[Annotation]) = {
+                               annotation: Option[AnnotationSQL]) = {
       // Log time to task
       annotation.flatMap(_._task) match {
         case Some(taskId) =>
           for {
-            _ <- TaskSQLDAO.logTime(ObjectId.fromBsonId(taskId), duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
-            _ <- signalOverTime(duration, annotation)(GlobalAccessContext)?~> "FAILED: TimeSpanService.signalOverTime"
+            _ <- TaskSQLDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
+            _ <- signalOverTime(duration, annotation)(GlobalAccessContext) ?~> "FAILED: TimeSpanService.signalOverTime"
           } yield {}
         case _ =>
           Fox.successful(())
@@ -174,10 +174,10 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     // We intentionally return a Fox[Option] here, since the calling for-comprehension expects an Option[Annotation]. In case
     // None is passed in as "annotation", we want to pass this None on as Fox.successful(None) and not break the for-comprehension
     // by returning Fox.empty.
-    private def getAnnotation(annotation: Option[String])(implicit ctx: DBAccessContext): Fox[Option[Annotation]] = {
+    private def getAnnotation(annotation: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Option[AnnotationSQL]] = {
       annotation match {
         case Some(annotationId) =>
-          AnnotationDAO.findOneById(annotationId).map(Some(_))
+          AnnotationSQLDAO.findOne(annotationId).map(Some(_))
         case _ =>
           Fox.successful(None)
       }
@@ -188,7 +188,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       val updated = timeSpan.addTime(duration, timestamp)
 
       val updateResult = for {
-        annotation <- getAnnotation(updated.annotation)
+        annotation <- getAnnotation(updated.annotation.map(ObjectId(_)))
         _ <- TimeSpanDAO.update(updated)(ctx) ?~> "FAILED: TimeSpanDAO.update"
         _ <- logTimeToAnnotation(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToAnnotation"
         _ <- logTimeToTask(duration, annotation) ?~> "FAILED: TimeSpanService.logTimeToTask"
@@ -205,7 +205,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     def receive = {
       case TrackTime(timestamps, _user, _annotation, ctx) =>
         // Only if the annotation belongs to the user, we are going to log the time on the annotation
-        val annotation = if (_annotation._user == _user) Some(_annotation) else None
+        val annotation = if (_annotation._user == ObjectId.fromBsonId(_user)) Some(_annotation) else None
         val start = timestamps.head
 
         var current = lastUserActivity.get(_user).flatMap(last => {

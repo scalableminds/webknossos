@@ -1,19 +1,21 @@
+@smartphones: ~"only screen and (max-width: 600px)";
+
 .dataset-description :first-child {
   margin-top: 0px;
 }
 
 .gallery-dataset-col{
-  paddingBottom: 16px;
+  padding-bottom: 16px;
 
 
   .spotlight-item-card {
     height: 300px;
     width: 100%;
     position: relative;
-    paddingLeft: 15px;
-    paddingRight: 15px;
+    margin-left: 16px;
+    margin-right: 16px;
 
-    @media only screen and (max-width: 600px){
+    @media @smartphones{
       height: 700px;
     }
 
@@ -24,21 +26,15 @@
 
 
       .dataset-thumbnail { 
-      height: 100%;
-      width: 50%;
-      display: inline-block;
+        height: 100%;
+        width: 50%;
+        display: inline-block;
         img {
           opacity: 0.8;
           position: relative;
-          height: 100%;
-          width: 50%;
-          @media only screen and (max-width: 600px){
-            height: 600px;
-            width: 100%
-          }
         }
 
-      @media only screen and (max-width: 600px){
+      @media @smartphones{
         height: 55%;
         width: 100%;
         display: block;
@@ -60,7 +56,7 @@
             vertical-align: middle;
             color: rgb(199, 199, 199);
 
-            @media only screen and (max-width: 600px){
+            @media @smartphones{
               width: 37.5px;
               height: 37.5px;
               margin: 10px;
@@ -78,8 +74,7 @@
             position: relative;
             margin: 0 3px;
 
-
-            @media only screen and (max-width: 600px){
+            @media @smartphones{
               width: 60px;
               height: 60px;
               border-radius: 15px;
@@ -92,7 +87,7 @@
               margin: 7.5px;
               filter: brightness(0) invert(1);
 
-              @media only screen and (max-width: 600px){
+              @media @smartphones{
                 width: 37.5px;
                 height: 37.5px;
                 margin: 12px;
@@ -106,8 +101,6 @@
       }
 
       .dataset-description {
-        padding: 10px;
-        padding-top: 16px;
         position: absolute;
         display: inline-block;
         bottom: 0px;
@@ -118,35 +111,41 @@
         color: white;
         
 
-        @media only screen and (max-width: 600px) {
+        @media @smartphones{
           height: 45%;
           width: 100%;
           display: block;
-          padding: 16px;
-          padding-top: 24px;
         }
 
         h3 {
+          padding: 10px;
+          padding-top: 16px;
           color: white;
           word-wrap: break-word;
-          @media only screen and (max-width: 600px) {
+          @media @smartphones{
             font-size: 32px;
+            padding: 16px;
+            padding-top: 24px;
           }
         }
 
-        .dataset-description-body{ //TODO set the hight of the body correct and let it appear below the heading/title
+        .dataset-description-body{
+          padding: 10px;
           position: absolute;
-          display: inline-block;
           bottom: 0px;
           width: 100%;
-          height: 100%;
+          height: 240px;
           overflow-y: auto;
+          @media @smartphones{
+            padding: 16px;
+            height: 243px;
+          }
         }
 
         p {
           font-size: 14px;
 
-          @media only screen and (max-width: 600px) {
+          @media @smartphones{
             font-size: 18px;
           }
         }

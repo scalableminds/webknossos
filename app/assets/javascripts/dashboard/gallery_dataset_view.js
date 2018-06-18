@@ -14,7 +14,7 @@ import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
 
 const padding = 16;
-const thumbnailDimension = "400";
+const thumbnailDimension = "500";
 const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 
 type StateProps = {
@@ -118,17 +118,17 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             {volumeTracingMenu}
           </div>
         </span>
-        <span className="dataset-description">
+        <div className="dataset-description">
           <h3>
             {dataset.displayName != null && dataset.displayName !== ""
               ? dataset.displayName
               : dataset.name}
           </h3>
-          <span className="dataset-description-body">
+          <div className="dataset-description-body">
             <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
             {description}
-          </span>
-        </span>
+          </div>
+        </div>
       </Card>
     );
   }
@@ -147,7 +147,6 @@ class GalleryDatasetView extends React.PureComponent<Props> {
               className="gallery-dataset-col"
               {...columnSpan}
               key={ds.name}
-              style={{ paddingBottom: padding }}
             >
               {this.renderCard(ds)}
             </Col>

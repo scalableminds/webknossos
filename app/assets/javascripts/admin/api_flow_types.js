@@ -192,6 +192,7 @@ export type APITaskType = {
   +projectName: string,
   +script: ?APIScriptType,
   +status: TaskStatusType,
+  +team: string,
   +tracingTime: ?number,
   +type: APITaskTypeType,
   +directLinks?: Array<string>,

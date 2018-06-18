@@ -30,7 +30,7 @@ type StateProps = {
 
 type Props = {
   history: RouterHistory,
-  initialSearchValue: string,
+  initialSearchValue?: string,
 } & StateProps;
 
 type State = {
@@ -55,7 +55,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     this.setState({
       ...persistence.load(this.props.history),
     });
-    if (this.props.initialSearchValue !== "") {
+    if (this.props.initialSearchValue != null && this.props.initialSearchValue !== "") {
       // Only override the persisted value if the provided initialSearchValue is not empty
       this.setState({
         searchQuery: this.props.initialSearchValue,

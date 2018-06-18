@@ -144,7 +144,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
-      const [lookUpTexture, ...dataTextures] = dataLayer.getDataTextures();
+      const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
 
       this.uniforms[`${sanitizeName(name)}_textures`] = {
         type: "tv",
@@ -153,7 +153,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
         type: "f",
-        value: dataLayer.textureWidth,
+        value: dataLayer.layerRenderingManager.textureWidth,
       };
 
       this.uniforms[sanitizeName(`${name}_lookup_texture`)] = {

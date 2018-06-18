@@ -2,16 +2,14 @@
  * pushqueue.js
  * @flow
  */
-
+import AsyncTaskQueue from "libs/async_task_queue";
 import _ from "lodash";
 import Toast from "libs/toast";
 import { document } from "libs/window";
-import AsyncTaskQueue from "libs/async_task_queue";
 import { sendToStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type { Vector4 } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { DataLayerType } from "oxalis/store";
 
 const BATCH_SIZE = 32;
 const DEBOUNCE_TIME = 1000;
@@ -19,20 +17,13 @@ const DEBOUNCE_TIME = 1000;
 class PushQueue {
   dataSetName: string;
   cube: DataCube;
-  layerInfo: DataLayerType;
   taskQueue: AsyncTaskQueue;
   sendData: boolean;
   queue: Set<DataBucket>;
 
-  constructor(
-    cube: DataCube,
-    layerInfo: DataLayerType,
-    taskQueue: AsyncTaskQueue,
-    sendData: boolean = true,
-  ) {
+  constructor(cube: DataCube, sendData: boolean = true) {
     this.cube = cube;
-    this.layerInfo = layerInfo;
-    this.taskQueue = taskQueue;
+    this.taskQueue = new AsyncTaskQueue(Infinity);
     this.sendData = sendData;
     this.queue = new Set();
 
@@ -102,7 +93,7 @@ class PushQueue {
   push = _.debounce(this.pushImpl, DEBOUNCE_TIME);
 
   pushBatch(batch: Array<DataBucket>): Promise<void> {
-    return sendToStore(this.layerInfo, batch);
+    return sendToStore(batch);
   }
 }
 

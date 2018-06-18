@@ -125,7 +125,6 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
 });
 
 test.serial("sendToStore: Request Handling should send the correct request parameters", t => {
-  const { layer } = t.context;
   const data = new Uint8Array(2);
   const bucket1 = new DataBucket(8, [0, 0, 0, 0], null);
   bucket1.data = data;
@@ -162,7 +161,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
     ],
   };
 
-  return sendToStore(layer, batch).then(() => {
+  return sendToStore(batch).then(() => {
     t.is(StoreMock.dispatch.callCount, 1);
 
     const [saveQueueItems] = StoreMock.dispatch.getCall(0).args;

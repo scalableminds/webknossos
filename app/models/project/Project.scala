@@ -35,7 +35,7 @@ case class ProjectSQL(
 
   def isDeletableBy(user: User) = ObjectId.fromBsonId(user._id) == _owner || user.isAdmin
 
-  def team = _team.toBSONObjectId.toFox.flatMap(TeamDAO.findOneById(_))
+  def team(implicit ctx: DBAccessContext) = _team.toBSONObjectId.toFox.flatMap(TeamDAO.findOneById(_))
 
   def publicWrites: Fox[JsObject] =
     for {

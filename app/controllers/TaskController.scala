@@ -1,6 +1,7 @@
 package controllers
 
 import javax.inject.Inject
+
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
@@ -8,10 +9,10 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import models.annotation.nml.NmlService
-import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
-import models.binary.DataSetDAO
+import models.annotation.{AnnotationSQLDAO, AnnotationService, AnnotationTypeSQL}
+import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.project.ProjectSQLDAO
-import models.task._
+import models.task.{ScriptDAO, TaskSQL, TaskSQLDAO, TaskTypeDAO}
 import models.team.OrganizationDAO
 import models.user._
 import net.liftweb.common.Box
@@ -140,6 +141,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     for {
       dataSetName <- assertAllOnSameDataset()
       dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
+      dataSetId <- DataSetSQLDAO.getIdByName(requestedTasks.head._1.dataSet)
       tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
       taskObjects: List[Fox[TaskSQL]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
@@ -147,7 +149,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
         taskFox = tuple._3,
         request.identity._id,
         tracingReferenceBox = tuple._2,
-        dataSetName,
+        dataSetId,
         description = tuple._1._1.description
       ))
       zippedTasksAndAnnotations = taskObjects zip annotationBases
@@ -244,8 +246,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       case Some(userId) => {
         for {
           user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-          userAnnotations <- AnnotationDAO.findActiveAnnotationsFor(user._id, AnnotationType.Task)
-          taskIdsFromAnnotations = userAnnotations.flatMap(_._task).map(_.stringify).toSet
+          userAnnotations <- AnnotationSQLDAO.findAllActiveForUser(ObjectId.fromBsonId(user._id), AnnotationTypeSQL.Task)
+          taskIdsFromAnnotations = userAnnotations.flatMap(_._task).map(_.toString).toSet
           taskIds = idsOpt match {
             case Some(ids) => taskIdsFromAnnotations.intersect(ids.toSet)
             case None => taskIdsFromAnnotations
@@ -277,7 +279,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       insertedAnnotationBox <- AnnotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
       _ <- AnnotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
       annotation <- insertedAnnotationBox.toFox
-      annotationJSON <- annotation.toJson(Some(user))
+      annotationJSON <- annotation.publicWrites(Some(user))
     } yield {
       JsonOk(annotationJSON, Messages("task.assigned"))
     }

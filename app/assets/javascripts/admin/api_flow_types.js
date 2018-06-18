@@ -10,6 +10,7 @@ import type {
   CategoryType,
   ElementClassType,
 } from "oxalis/store";
+import Enum from "Enumjs";
 
 export type APIMessageType = { ["info" | "warning" | "error"]: string };
 
@@ -121,14 +122,14 @@ export type APISettingsType = {
   +somaClickingAllowed: boolean,
 };
 
-export const APITracingTypeEnum = {
+export const APITracingTypeEnum = Enum.make({
   Explorational: "Explorational",
   Task: "Task",
   View: "View",
   CompoundTask: "CompoundTask",
   CompoundProject: "CompoundProject",
   CompoundTaskType: "CompoundTaskType",
-};
+});
 
 export type APITracingType = $Keys<typeof APITracingTypeEnum>;
 

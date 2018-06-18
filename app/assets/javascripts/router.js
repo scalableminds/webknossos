@@ -194,7 +194,7 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/projects"
-                render={({ match, location }: ContextRouter) => (
+                render={({ location }: ContextRouter) => (
                   // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
                   <ProjectListView initialSearchValue={location.hash.slice(1)} />
                 )}

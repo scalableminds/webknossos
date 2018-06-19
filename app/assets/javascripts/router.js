@@ -262,7 +262,10 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
-                component={TaskTypeListView}
+                render={({ location }: ContextRouter) => (
+                  // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
+                  <TaskTypeListView initialSearchValue={location.hash.slice(1)} />
+                )}
                 exact
               />
               <SecuredRoute

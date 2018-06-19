@@ -5,14 +5,16 @@
 }
 
 .gallery-dataset-col {
-  padding-bottom: 16px;
+  padding-bottom: 24px;
+
+  @media @smartphones {
+    padding-bottom: 32px;
+  }
 
   .spotlight-item-card {
     height: 300px;
     width: 100%;
     position: relative;
-    margin-left: 16px;
-    margin-right: 16px;
 
     @media @smartphones {
       height: 700px;

@@ -41,7 +41,7 @@ import type {
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
 import type { ActionType } from "oxalis/model/actions/actions";
-import type {ServerNodeType, ServerBranchPointType} from "admin/api_flow_types";
+import type { ServerNodeType, ServerBranchPointType } from "admin/api_flow_types";
 import Maybe from "data.maybe";
 import ErrorHandling from "libs/error_handling";
 

@@ -36,9 +36,7 @@ import type {
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
-import type {
-  DatasetConfigurationType,
-} from "oxalis/store";
+import type { DatasetConfigurationType } from "oxalis/store";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 

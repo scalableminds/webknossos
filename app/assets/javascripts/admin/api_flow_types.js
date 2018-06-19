@@ -64,7 +64,7 @@ export type APIDatasetType = {
   +name: string,
   +displayName: string,
   +owningOrganization: string,
-  +isDummyDataset?: boolean, // only used locally to encode that the store holds an initial dummy dataset
+  +logoUrl: ?string,
 };
 
 export type APIDataSourceWithMessagesType = {

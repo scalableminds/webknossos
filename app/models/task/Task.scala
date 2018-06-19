@@ -84,12 +84,14 @@ case class TaskSQL(
       taskType <- taskType.map(TaskType.transformToJson) getOrElse JsNull
       scriptInfo <- _script.map(_.toBSONObjectId).flatten.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
       scriptJs <- scriptInfo.toFox.flatMap(s => Script.scriptPublicWrites(s)).futureBox
-      projectName <- project.map(_.name)
+      project <- project
+      team <- project.team
     } yield {
       Json.obj(
         "id" -> _id.toString,
         "formattedHash" -> Formatter.formatHash(_id.toString),
-        "projectName" -> projectName,
+        "projectName" -> project.name,
+        "team" -> team.name,
         "type" -> taskType,
         "dataSet" -> dataSet.name,
         "neededExperience" -> neededExperience,

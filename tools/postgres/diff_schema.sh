@@ -50,4 +50,10 @@ trap "rv=\$?; echo CLEANUP $dir1 1>&2; rm -rf $dir1; exit \$rv" EXIT
 dir2="$(dump "$2")"
 trap "rv=\$?; echo CLEANUP $dir1 $dir2 1>&2; rm -rf $dir1 $dir2; exit \$rv" EXIT
 
-diff -rq "$dir1" "$dir2"
+# strip trailing commas and sort schema files:
+find "$dir1" -type f -exec sed -i 's/,$//' {} +
+find "$dir1" -type f -exec sort -o {} {} \;
+find "$dir2" -type f -exec sed -i 's/,$//' {} +
+find "$dir2" -type f -exec sort -o {} {} \;
+
+diff -r "$dir1" "$dir2"

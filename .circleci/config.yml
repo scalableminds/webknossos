@@ -21,6 +21,9 @@ jobs:
             - cache-{{ checksum ".circleci/cache_version" }}-master
 
       - run:
+          name: Assert schema.sql and evolutions are equal
+          command: docker-compose run compile tools/postgres/diff_schema.sh tools/postgres/schema.sql "conf/evolutions/*.sql"
+      - run:
           name: Install frontend dependencies
           command: docker-compose run base yarn install --frozen-lockfile
       - run:

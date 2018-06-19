@@ -7,11 +7,6 @@ import Model from "oxalis/model";
 import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import DATASET from "../fixtures/dataset_server_object";
 
-// temporary workaround for DataLayer class vs DataLayer object discrepancy
-DATASET.dataSource.dataLayers.forEach(layer => {
-  layer.isSegmentation = () => layer.category === "segmentation";
-});
-
 mockRequire.stopAll();
 
 mockRequire("oxalis/model/sagas/root_saga", function*() {
@@ -32,7 +27,7 @@ test("Prefetch saga should trigger prefetching for the correct view mode", t => 
   const previousProperties = {};
   const saga = triggerDataPrefetching(previousProperties);
   saga.next(); // select viewMode
-  expectValueDeepEqual(t, saga.next(constants.MODE_ARBITRARY), call([Model, Model.getColorLayers]));
+  saga.next(constants.MODE_ARBITRARY);
   expectValueDeepEqual(
     t,
     saga.next(colorLayers),

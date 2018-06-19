@@ -128,4 +128,23 @@ export function isSegmentationLayer(dataset: APIDatasetType, layerName: string):
   return getLayerByName(dataset, layerName).category === "segmentation";
 }
 
+export function isColorLayer(dataset: APIDatasetType, layerName: string): boolean {
+  return getLayerByName(dataset, layerName).category === "color";
+}
+
+export function getSegmentationLayer(dataset: APIDatasetType): ?DataLayerType {
+  const segmentationLayers = dataset.dataSource.dataLayers.filter(dataLayer =>
+    isSegmentationLayer(dataset, dataLayer.name),
+  );
+  if (segmentationLayers.length === 0) {
+    return null;
+  }
+  // Currently, only one segmentationLayer at a time is supported
+  return segmentationLayers[0];
+}
+
+export function getColorLayers(dataset: APIDatasetType): Array<DataLayerType> {
+  return dataset.dataSource.dataLayers.filter(dataLayer => isColorLayer(dataset, dataLayer.name));
+}
+
 export default {};

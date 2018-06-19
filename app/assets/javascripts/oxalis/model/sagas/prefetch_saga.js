@@ -15,7 +15,12 @@ import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/pre
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import DataLayer from "oxalis/model/data_layer";
 import type { Vector3 } from "oxalis/constants";
-import { isSegmentationLayer, getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import {
+  isSegmentationLayer,
+  getResolutions,
+  getColorLayers,
+} from "oxalis/model/accessors/dataset_accessor";
+import type { DataLayerType } from "oxalis/store";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -50,7 +55,7 @@ export function* triggerDataPrefetching(previousProperties: Object): Generator<*
       }
     }
   } else {
-    const dataLayers = yield call([Model, Model.getColorLayers]);
+    const dataLayers = yield select(state => getColorLayers(state.dataset));
     for (const colorLayer of dataLayers) {
       yield call(prefetchForArbitraryMode, colorLayer, previousProperties);
     }
@@ -119,30 +124,31 @@ export function* prefetchForPlaneMode(
 }
 
 export function* prefetchForArbitraryMode(
-  layer: DataLayer,
+  layer: DataLayerType,
   previousProperties: Object,
 ): Generator<*, *, *> {
   const matrix = yield select(state => state.flycam.currentMatrix);
   const zoomStep = yield select(state => getRequestLogZoomStep(state));
   const tracingType = yield select(state => state.tracing.type);
   const { lastMatrix, lastZoomStep } = previousProperties;
+  const { connectionInfo, pullQueue } = Model.dataLayers[layer.name];
 
   if (matrix !== lastMatrix || zoomStep !== lastZoomStep) {
     for (const strategy of prefetchStrategiesArbitrary) {
       if (
         strategy.forContentType(tracingType) &&
-        strategy.inVelocityRange(layer.connectionInfo.bandwidth) &&
-        strategy.inRoundTripTimeRange(layer.connectionInfo.roundTripTime)
+        strategy.inVelocityRange(connectionInfo.bandwidth) &&
+        strategy.inRoundTripTimeRange(connectionInfo.roundTripTime)
       ) {
-        layer.pullQueue.clearNormalPriorities();
+        pullQueue.clearNormalPriorities();
         const buckets = strategy.prefetch(matrix, zoomStep);
-        layer.pullQueue.addAll(buckets);
+        pullQueue.addAll(buckets);
         break;
       }
     }
   }
 
-  layer.pullQueue.pull();
+  pullQueue.pull();
   previousProperties.lastMatrix = matrix;
   previousProperties.lastZoomStep = zoomStep;
 }

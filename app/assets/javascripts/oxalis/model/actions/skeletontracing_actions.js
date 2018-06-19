@@ -9,8 +9,7 @@ import { getActiveNode, getTree } from "oxalis/model/accessors/skeletontracing_a
 import messages from "messages";
 import { Modal } from "antd";
 import type { Vector3 } from "oxalis/constants";
-import type { ServerSkeletonTracingType } from "oxalis/model";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type { APIAnnotationType, ServerSkeletonTracingType } from "admin/api_flow_types";
 import type { SkeletonTracingType, TreeMapType, TreeGroupType } from "oxalis/store";
 
 type InitializeSkeletonTracingActionType = {

@@ -44,6 +44,7 @@ mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", {});
 
 // Avoid node caching and make sure all mockRequires are applied
 const Model = mockRequire.reRequire("../../oxalis/model").OxalisModel;
+const { HANDLED_ERROR } = mockRequire.reRequire("../../oxalis/model_initialization");
 
 const TRACING_TYPE = "tracingTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
@@ -96,7 +97,7 @@ test("Model Initialization: should throw a model.HANDLED_ERROR for missing data 
       t.fail("Promise should not have been resolved.");
     })
     .catch(error => {
-      t.is(error, model.HANDLED_ERROR);
+      t.is(error, HANDLED_ERROR);
     });
 });
 

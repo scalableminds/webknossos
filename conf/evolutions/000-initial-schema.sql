@@ -280,4 +280,3 @@ CREATE INDEX ON webknossos.projects(name);
 CREATE INDEX ON webknossos.projects(_team);
 CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
-

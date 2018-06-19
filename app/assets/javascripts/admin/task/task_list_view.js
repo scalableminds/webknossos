@@ -249,7 +249,7 @@ class TaskListView extends React.PureComponent<Props, State> {
                   <br />
                   <span title="Tracing Time">
                     <Icon type="clock-circle-o" />
-                    {FormatUtils.formatSeconds(task.tracingTime / 1000)}
+                    {FormatUtils.formatSeconds((task.tracingTime || 0) / 1000)}
                   </span>
                 </div>
               )}

@@ -10,6 +10,8 @@ services:
       - fossildb
       - postgres
     entrypoint: bin/oxalis
+    volumes:
+      - ./binaryData:/srv/webknossos/binaryData
     command:
       - -Djava.io.tmpdir=disk
       - -Dconfig.file=conf/application.conf
@@ -122,6 +124,8 @@ services:
       POSTGRES_DB: webknossos
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
 
   postgres-dev:
     extends:
@@ -133,9 +137,9 @@ services:
 
   psql:
     extends: postgres
-    command: psql -h postgres -U postgres webknossos
+    command: psql -h postgres-dev -U postgres webknossos
     links:
-      - postgres
+      - postgres-dev
     environment:
       PGPASSWORD: postgres
 

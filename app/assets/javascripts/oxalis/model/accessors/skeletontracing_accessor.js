@@ -8,6 +8,7 @@ import type {
   TreeMapType,
   BranchPointType,
 } from "oxalis/store";
+import type { ServerTracingType, ServerSkeletonTracingType } from "admin/api_flow_types";
 
 export type SkeletonTracingStatsType = {|
   treeCount: number,
@@ -21,6 +22,16 @@ export function getSkeletonTracing(tracing: TracingType): Maybe<SkeletonTracingT
     return Maybe.Just(tracing);
   }
   return Maybe.Nothing();
+}
+
+export function serverTracingAsSkeletonTracingMaybe(
+  tracing: ?ServerTracingType,
+): Maybe<ServerSkeletonTracingType> {
+  if (tracing && !tracing.elementClass) {
+    return Maybe.Just(tracing);
+  } else {
+    return Maybe.Nothing();
+  }
 }
 
 export function enforceSkeletonTracing(tracing: TracingType): SkeletonTracingType {

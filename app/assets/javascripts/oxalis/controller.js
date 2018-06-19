@@ -28,6 +28,7 @@ import { wkReadyAction } from "oxalis/model/actions/actions";
 import { saveNowAction, undoAction, redoAction } from "oxalis/model/actions/save_actions";
 import { setViewModeAction, updateUserSettingAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
+import { HANDLED_ERROR } from "oxalis/model_initialization";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
@@ -91,7 +92,7 @@ class Controller extends React.PureComponent<Props, State> {
       .then(() => this.modelFetchDone())
       .catch(error => {
         // Don't throw errors for errors already handled by the model.
-        if (error !== Model.HANDLED_ERROR) {
+        if (error !== HANDLED_ERROR) {
           throw error;
         }
       });

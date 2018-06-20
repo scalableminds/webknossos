@@ -1,6 +1,6 @@
 // @flow
 import _ from "lodash";
-import type { ServerSkeletonTracingTreeType } from "oxalis/model";
+import type { ServerSkeletonTracingTreeType } from "admin/api_flow_types";
 
 // This is a quick'n'dirty code to generate a huge amount of mocked trees.
 // Since the server cannot handle such big tracings at the moment, we'll

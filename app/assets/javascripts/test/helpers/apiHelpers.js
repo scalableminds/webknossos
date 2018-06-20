@@ -23,6 +23,7 @@ const Request = {
   receiveJSON: sinon.stub(),
   sendJSONReceiveJSON: sinon.stub(),
   receiveArraybuffer: sinon.stub(),
+  sendJSONReceiveArraybuffer: sinon.stub(),
   always: () => Promise.resolve(),
 };
 const ErrorHandling = {
@@ -64,12 +65,12 @@ mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
 mockRequire("oxalis/model/helpers/proto_helpers", protoHelpers);
 
+// Avoid node caching and make sure all mockRequires are applied
+const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
 wkstoreAdapter.requestFromStore = () => new Uint8Array();
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", wkstoreAdapter);
 
-// Avoid node caching and make sure all mockRequires are applied
-const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 

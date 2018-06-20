@@ -1,7 +1,7 @@
 // @flow
 /* eslint-disable import/prefer-default-export */
 import type { BoundingBoxType } from "oxalis/constants";
-import type { ServerBoundingBoxType } from "oxalis/model";
+import type { ServerBoundingBoxType } from "admin/api_flow_types";
 import type { BoundingBoxObjectType } from "oxalis/store";
 import Maybe from "data.maybe";
 import Utils from "libs/utils";

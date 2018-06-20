@@ -83,7 +83,7 @@ object ReportSQLDAO extends SimpleSQLDAO {
           from s1
             join s2 on s1._id = s2._id
             join projectModifiedTimes pmt on s1._id = pmt._id
-          where (not (paused and s1.totalInstances = s1.openInstances)) and (s1.openInstances > 0 or s2.activeInstances > 0 or pmt.modified > NOW() - INTERVAL '30 days')
+          where (not (s1.paused and s1.totalInstances = s1.openInstances)) and ((s1.openInstances > 0 and not s1.paused) or s2.activeInstances > 0 or pmt.modified > NOW() - INTERVAL '30 days')
         """.as[(String, Boolean, Int, Int, Int, Int, Int)])
     } yield {
       r.toList.map(row => ProjectProgressEntry(row._1, row._2, row._3, row._4, row._5, row._6, row._7))

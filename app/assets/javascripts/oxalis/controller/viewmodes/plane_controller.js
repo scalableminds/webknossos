@@ -51,6 +51,7 @@ import messages from "messages";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import Clipboard from "clipboard-js";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
 
 type OwnProps = {
   onRender: () => void,
@@ -383,7 +384,7 @@ class PlaneController extends React.PureComponent<Props> {
     if (oneSlide) {
       const logZoomStep = getRequestLogZoomStep(Store.getState());
       const w = Dimensions.getIndices(activeViewport)[2];
-      const zStep = Model.getResolutions()[logZoomStep][w];
+      const zStep = getResolutions(Store.getState().dataset)[logZoomStep][w];
 
       Store.dispatch(
         moveFlycamOrthoAction(

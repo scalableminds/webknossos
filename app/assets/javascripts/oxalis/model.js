@@ -10,7 +10,6 @@ import type {
   CommentType,
   TracingTypeTracingType,
   ElementClassType,
-  DataLayerType,
   TreeGroupType,
 } from "oxalis/store";
 import type { UrlManagerState } from "oxalis/controller/url_manager";
@@ -38,19 +37,23 @@ import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
 import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
 import type { Vector3, Point3, ControlModeType } from "oxalis/constants";
-import Request from "libs/request";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";
 import {
-  getTracing,
+  getTracingForAnnotation,
   getAnnotationInformation,
   getDataset,
   getSharingToken,
+  getUserConfiguration,
+  getDatasetConfiguration,
 } from "admin/admin_rest_api";
 import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import messages from "messages";
-import type { APIAnnotationType, APIDatasetType } from "admin/api_flow_types";
+import type { APIAnnotationType, APIDatasetType, APIDataLayerType } from "admin/api_flow_types";
+import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";
+import Maybe from "data.maybe";
 import type { DataTextureSizeAndCount } from "./model/bucket_data_handling/data_rendering_logic";
 import * as DataRenderingLogic from "./model/bucket_data_handling/data_rendering_logic";
 
@@ -90,7 +93,7 @@ export type ServerSkeletonTracingTreeType = {
   groupId?: ?number,
 };
 
-type ServerTracingBaseType = {
+type ServerTracingBaseType = {|
   id: string,
   userBoundingBox?: ServerBoundingBoxType,
   createdTimestamp: number,
@@ -99,24 +102,35 @@ type ServerTracingBaseType = {
   error?: string,
   version: number,
   zoomLevel: number,
-};
+  dataSetName: string, // todo refactoring: necessary??
+|};
 
-export type ServerSkeletonTracingType = ServerTracingBaseType & {
+export type ServerSkeletonTracingType = {|
+  ...ServerTracingBaseType,
   activeNodeId?: number,
   boundingBox?: ServerBoundingBoxType,
   trees: Array<ServerSkeletonTracingTreeType>,
   treeGroups: ?Array<TreeGroupType>,
-};
+|};
 
-export type ServerVolumeTracingType = ServerTracingBaseType & {
+export type ServerVolumeTracingType = {|
+  ...ServerTracingBaseType,
   activeSegmentId?: number,
   boundingBox: ServerBoundingBoxType,
   elementClass: ElementClassType,
   fallbackLayer?: string,
   largestSegmentId: number,
-};
+|};
 
 export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
+
+const asVolumeTracingMaybe = (tracing: ?ServerTracingType): Maybe<ServerVolumeTracingType> => {
+  if (tracing && tracing.elementClass) {
+    return Maybe.Just(tracing);
+  } else {
+    return Maybe.Nothing();
+  }
+};
 
 // TODO: Non-reactive
 export class OxalisModel {
@@ -133,7 +147,7 @@ export class OxalisModel {
 
   async fetch(
     tracingType: TracingTypeTracingType,
-    annotationId: string,
+    annotationIdOrDatasetName: string,
     controlMode: ControlModeType,
     initialFetch: boolean,
   ) {
@@ -142,6 +156,7 @@ export class OxalisModel {
     let annotation: ?APIAnnotationType;
     let datasetName;
     if (controlMode === ControlModeEnum.TRACE) {
+      const annotationId = annotationIdOrDatasetName;
       annotation = await getAnnotationInformation(annotationId, tracingType);
       datasetName = annotation.dataSetName;
 
@@ -156,24 +171,24 @@ export class OxalisModel {
 
       Store.dispatch(setTaskAction(annotation.task));
     } else {
-      // In View mode, the annotationId is actually the dataSetName
+      // In View mode, the annotationId is actually the datasetName
       // as there is no annotation and no tracing!
-      datasetName = annotationId;
+      datasetName = annotationIdOrDatasetName;
     }
 
-    const highestResolutions = await this.initializeDataset(datasetName);
-    await this.initializeSettings(datasetName);
+    const [
+      dataset,
+      initialUserSettings,
+      initialDatasetSettings,
+      tracing,
+    ] = await this.fetchParallel(annotation, datasetName);
 
-    // Fetch the actual tracing from the datastore, if there is an annotation
-    let tracing: ?ServerTracingType;
-    if (annotation != null) {
-      tracing = await getTracing(annotation);
-    }
+    this.initializeDataset(dataset, tracing);
+    this.initializeSettings(initialUserSettings, initialDatasetSettings);
 
-    // Only initialize the model once.
-    // There is no need to reinstantiate the binaries if the dataset didn't change.
+    // There is no need to reinstantiate the DataLayers if the dataset didn't change.
     if (initialFetch) {
-      this.initializeModel(tracing, highestResolutions);
+      this.initializeDataLayerInstances();
       if (tracing != null) Store.dispatch(setZoomStepAction(tracing.zoomLevel));
     }
 
@@ -185,9 +200,24 @@ export class OxalisModel {
     this.applyState(UrlManager.initialState, tracing);
   }
 
+  async fetchParallel(
+    annotation: ?APIAnnotationType,
+    datasetName: string,
+  ): Promise<[APIDatasetType, *, *, ?ServerTracingType]> {
+    return Promise.all([
+      getDataset(datasetName, getSharingToken()),
+      getUserConfiguration(),
+      getDatasetConfiguration(datasetName),
+      // Fetch the actual tracing from the datastore, if there is an annotation
+      // (Also see https://github.com/facebook/flow/issues/4936)
+      // $FlowFixMe: Type inference with promise all seems to be a bit broken in flow
+      annotation ? getTracingForAnnotation(annotation) : null,
+    ]);
+  }
+
   validateSpecsForLayers(
-    layers: Array<DataLayerType>,
-  ): Map<DataLayerType, DataTextureSizeAndCount> {
+    layers: Array<APIDataLayerType>,
+  ): Map<APIDataLayerType, DataTextureSizeAndCount> {
     const specs = DataRenderingLogic.getSupportedTextureSpecs();
     DataRenderingLogic.validateMinimumRequirements(specs);
 
@@ -270,26 +300,18 @@ export class OxalisModel {
     }
   }
 
-  async initializeDataset(datasetName: string): Promise<Array<Vector3>> {
-    const sharingToken = getSharingToken();
-    const rawDataset =
-      sharingToken != null
-        ? await getDataset(datasetName, sharingToken)
-        : await getDataset(datasetName);
-
+  initializeDataset(dataset: APIDatasetType, tracing: ?ServerTracingType): void {
     let error;
-    if (!rawDataset) {
+    if (!dataset) {
       error = messages["dataset.does_not_exist"];
-    } else if (!rawDataset.dataSource.dataLayers) {
-      error = `${messages["dataset.not_imported"]} '${datasetName}'`;
+    } else if (!dataset.dataSource.dataLayers) {
+      error = `${messages["dataset.not_imported"]} '${dataset.name}'`;
     }
 
     if (error) {
       Toast.error(error);
       throw this.HANDLED_ERROR;
     }
-
-    const [dataset, highestResolutions] = adaptResolutions(rawDataset);
 
     // Make sure subsequent fetch calls are always for the same dataset
     if (!_.isEmpty(this.dataLayers)) {
@@ -303,21 +325,24 @@ export class OxalisModel {
       dataSet: dataset.dataSource.id.name,
     });
 
-    Store.dispatch(setDatasetAction(dataset));
+    asVolumeTracingMaybe(tracing).map(volumeTracing => {
+      const newDataLayers = this.setupLayerForVolumeTracing(
+        dataset.dataSource.dataLayers,
+        volumeTracing,
+      );
+      // $FlowFixMe We mutate the dataset here to avoid that an outdated version is used somewhere else
+      dataset.dataSource.dataLayers = newDataLayers;
+    });
 
-    return highestResolutions;
+    Store.dispatch(setDatasetAction(dataset));
   }
 
-  async initializeSettings(datasetName: string) {
-    const initialUserSettings = await Request.receiveJSON("/api/user/userConfiguration");
-    const initialDatasetSettings = await Request.receiveJSON(
-      `/api/dataSetConfigurations/${datasetName}`,
-    );
+  initializeSettings(initialUserSettings: Object, initialDatasetSettings: Object): void {
     Store.dispatch(initializeSettingsAction(initialUserSettings, initialDatasetSettings));
   }
 
-  initializeModel(tracing: ?ServerTracingType, resolutions: Array<Vector3>) {
-    const layers = this.getLayerInfos(tracing, resolutions);
+  initializeDataLayerInstances() {
+    const layers = Store.getState().dataset.dataSource.dataLayers;
 
     const textureInformationPerLayer = this.validateSpecsForLayers(layers);
     this.maximumDataTextureCountForLayer = _.max(
@@ -374,76 +399,55 @@ export class OxalisModel {
   }
 
   getColorLayers(): Array<DataLayer> {
-    return _.filter(this.dataLayers, dataLayer => dataLayer.category === "color");
+    return _.filter(
+      this.dataLayers,
+      dataLayer => getLayerByName(Store.getState().dataset, dataLayer.name).category === "color",
+    );
   }
 
+  // todo: add ?DataLayer as return type
   getSegmentationLayer() {
-    return _.find(this.dataLayers, dataLayer => dataLayer.category === "segmentation");
+    return _.find(
+      this.dataLayers,
+      dataLayer =>
+        getLayerByName(Store.getState().dataset, dataLayer.name).category === "segmentation",
+    );
   }
 
   getLayerByName(name: string): ?DataLayer {
     return this.dataLayers[name];
   }
 
-  getLayerInfos(tracing: ?ServerTracingType, resolutions: Array<Vector3>): Array<DataLayerType> {
-    // This method adds/merges the layers of the tracing into the dataset layers
-    // Overwrite or extend layers with volumeTracingLayer
-    let layers = _.clone(Store.getState().dataset.dataSource.dataLayers);
-    const adaptResolutionInfoForLayer = layer => ({
-      ...layer,
-      // The server only provides the actual resolutions for a layer. However,
-      // we adapt these resolutions to the most extensive one (across all layers),
-      // since resolutions are used when converting positions between zoomSteps and this
-      // should be possible even if the layer does not support a resolution.
-      // To not lose the information, which resolution a layer truly supports, we add
-      // maxZoomStep as another flag here (derived by reading the resolutions array which
-      // the server provides)
-      resolutions,
-      maxZoomStep: layer.resolutions.length - 1,
-    });
+  setupLayerForVolumeTracing(
+    _layers: APIDataLayerType[],
+    tracing: ServerVolumeTracingType,
+  ): Array<APIDataLayerType> {
+    // This method adds/merges the segmentation layers of the tracing into the dataset layers
+    let layers = _.clone(_layers);
 
-    // $FlowFixMe TODO Why does Flow complain about this check
-    if (tracing == null || tracing.elementClass == null) {
-      return layers.map(adaptResolutionInfoForLayer);
-    }
-
-    // Flow doesn't understand that as the tracing has the elementClass property it has to be a volumeTracing
-    tracing = ((tracing: any): ServerVolumeTracingType);
-
-    // This code will only be executed for volume tracings as only those have a dataLayer.
     // The tracing always contains the layer information for the user segmentation.
-    // layers (dataset.dataLayers) contains information about all existing layers of the dataset.
     // Two possible cases:
     // 1) No segmentation exists yet: In that case layers doesn't contain the dataLayer - it needs
     //    to be created and inserted.
     // 2) Segmentation exists: In that case layers already contains dataLayer and the fallbackLayer
     //    property specifies its name, to be able to merge the two layers
-    const fallbackLayerName = tracing.fallbackLayer;
-    const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === fallbackLayerName);
+    const fallbackLayerIndex = _.findIndex(layers, layer => layer.name === tracing.fallbackLayer);
     const fallbackLayer = layers[fallbackLayerIndex];
 
     const tracingLayer = {
       name: tracing.id,
-      category: "segmentation",
-      boundingBox: {
-        topLeft: [
-          tracing.boundingBox.topLeft.x,
-          tracing.boundingBox.topLeft.y,
-          tracing.boundingBox.topLeft.z,
-        ],
-        width: tracing.boundingBox.width,
-        height: tracing.boundingBox.height,
-        depth: tracing.boundingBox.depth,
-      },
-      resolutions,
-      maxZoomStep: resolutions.length - 1,
       elementClass: tracing.elementClass,
+      category: "segmentation",
+      largestSegmentId: tracing.largestSegmentId,
+      boundingBox: convertPointToVecInBoundingBox(tracing.boundingBox),
+      // volume tracing can only be done for the first resolution
+      resolutions: [[1, 1, 1]],
       mappings:
         fallbackLayer != null && fallbackLayer.mappings != null ? fallbackLayer.mappings : [],
-      largestSegmentId: tracing.largestSegmentId,
     };
 
     if (fallbackLayer != null) {
+      // Replace the orginal tracing layer
       layers[fallbackLayerIndex] = tracingLayer;
     } else {
       // Remove other segmentation layers, since we are adding a new one.
@@ -452,7 +456,7 @@ export class OxalisModel {
       layers = layers.filter(layer => layer.category !== "segmentation");
       layers.push(tracingLayer);
     }
-    return layers.map(adaptResolutionInfoForLayer);
+    return layers;
   }
 
   computeBoundaries() {
@@ -519,19 +523,6 @@ export class OxalisModel {
     }
   }
 
-  getResolutions(): Array<Vector3> {
-    // Different layers can have different resolutions. At the moment,
-    // unequal resolutions will result in undefined behavior.
-    // However, if resolutions are subset of each other, everything should be fine.
-    // For that case, returning the longest resolutions array should suffice
-
-    return _.chain(this.dataLayers)
-      .map(dataLayer => dataLayer.layerInfo.resolutions)
-      .sortBy(resolutions => resolutions.length)
-      .last()
-      .valueOf();
-  }
-
   stateSaved() {
     const state = Store.getState();
     const storeStateSaved = !state.save.isBusy && state.save.queue.length === 0;
@@ -553,40 +544,6 @@ export class OxalisModel {
       await Utils.sleep(500);
     }
   };
-}
-
-function adaptResolutions(dataset: APIDatasetType): [APIDatasetType, Array<Vector3>] {
-  const adaptedLayers = dataset.dataSource.dataLayers.map(dataLayer => {
-    const adaptedResolutions = dataLayer.resolutions.slice();
-    _.range(constants.DOWNSAMPLED_ZOOM_STEP_COUNT).forEach(() => {
-      // We add another level of resolutions to allow zooming out even further
-      const lastResolution = _.last(adaptedResolutions);
-      adaptedResolutions.push([
-        2 * lastResolution[0],
-        2 * lastResolution[1],
-        2 * lastResolution[2],
-      ]);
-    });
-
-    return {
-      ...dataLayer,
-      resolutions: adaptedResolutions,
-    };
-  });
-
-  const highestResolutions = _.last(
-    _.sortBy(adaptedLayers.map(layer => layer.resolutions), resolutions => resolutions.length),
-  );
-
-  const adaptedDataset = {
-    ...dataset,
-    dataSource: {
-      ...dataset.dataSource,
-      dataLayers: adaptedLayers,
-    },
-  };
-
-  return [adaptedDataset, highestResolutions];
 }
 
 // export the model as a singleton

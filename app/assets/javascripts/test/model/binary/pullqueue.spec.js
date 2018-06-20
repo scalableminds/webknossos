@@ -15,6 +15,25 @@ mockRequire("libs/request", RequestMock);
 const WkstoreAdapterMock = { requestFromStore: sinon.stub() };
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", WkstoreAdapterMock);
 
+const layer = {
+  url: "url",
+  name: "layername",
+  category: "color",
+  resolutions: [[1, 1, 1]],
+};
+
+const StoreMock = {
+  getState: () => ({
+    dataset: {
+      dataSource: { dataLayers: [layer] },
+    },
+  }),
+  dispatch: sinon.stub(),
+  subscribe: sinon.stub(),
+};
+
+mockRequire("oxalis/store", StoreMock);
+
 // Avoid node caching and make sure all mockRequires are applied
 const PullQueue = mockRequire.reRequire("oxalis/model/bucket_data_handling/pullqueue").default;
 const { DataBucket, BucketStateEnum } = mockRequire.reRequire(
@@ -22,11 +41,6 @@ const { DataBucket, BucketStateEnum } = mockRequire.reRequire(
 );
 
 test.beforeEach(t => {
-  const layer = {
-    url: "url",
-    name: "layername",
-    category: "color",
-  };
   const cube = {
     BUCKET_LENGTH: 32 * 32 * 32,
     getBucket: sinon.stub(),
@@ -43,7 +57,7 @@ test.beforeEach(t => {
     typ: "webknossos-store",
   };
 
-  const pullQueue = new PullQueue(cube, layer, connectionInfo, datastoreInfo);
+  const pullQueue = new PullQueue(cube, layer.name, connectionInfo, datastoreInfo);
 
   const buckets = [new DataBucket(8, [0, 0, 0, 0], null), new DataBucket(8, [1, 1, 1, 1], null)];
 

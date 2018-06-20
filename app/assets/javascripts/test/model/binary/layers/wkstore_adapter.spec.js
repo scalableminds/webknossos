@@ -4,6 +4,7 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import Base64 from "base64-js";
+import datasetServerObject from "test/fixtures/dataset_server_object";
 
 mockRequire.stopAll();
 
@@ -12,6 +13,7 @@ const RequestMock = {
   sendJSONReceiveArraybuffer: sinon.stub(),
   receiveJSON: sinon.stub(),
 };
+const { dataSource } = datasetServerObject;
 const StoreMock = {
   getState: () => ({
     dataset: {
@@ -20,6 +22,7 @@ const StoreMock = {
         typ: "webknossos-store",
         url: "url",
       },
+      dataSource,
     },
     datasetConfiguration: { fourBit: false },
   }),

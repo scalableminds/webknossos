@@ -150,7 +150,15 @@ class TaskListView extends React.PureComponent<Props, State> {
           <Table
             dataSource={Utils.filterWithSearchQueryAND(
               this.state.tasks,
-              ["team", "projectName", "id", "dataSet", "created", "type", "neededExperience"],
+              [
+                "team",
+                "projectName",
+                "id",
+                "dataSet",
+                "created",
+                "type",
+                task => task.neededExperience.domain,
+              ],
               this.state.searchQuery,
             )}
             rowKey="id"

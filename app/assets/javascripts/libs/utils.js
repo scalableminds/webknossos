@@ -21,6 +21,20 @@ function swap(arr, a, b) {
   }
 }
 
+function getRecursiveValues(obj: Object | Array<*> | string): Array<*> {
+  return _.flattenDeep(getRecursiveValuesUnflat(obj));
+}
+
+function getRecursiveValuesUnflat(obj: Object | Array<*> | string): Array<*> {
+  if (Array.isArray(obj)) {
+    return obj.map(getRecursiveValuesUnflat);
+  } else if (obj instanceof Object) {
+    return Object.keys(obj).map(key => getRecursiveValuesUnflat(obj[key]));
+  } else {
+    return [obj];
+  }
+}
+
 const Utils = {
   clamp(a: number, x: number, b: number): number {
     return Math.max(a, Math.min(b, x));
@@ -304,25 +318,11 @@ const Utils = {
     return maybe.isJust ? maybe.get() : null;
   },
 
-  getRecursiveKeysAndValues(obj: Object | Array<*> | string): Array<*> {
-    return _.flattenDeep(Utils.getRecursiveKeysAndValuesUnflat(obj));
-  },
-
-  getRecursiveKeysAndValuesUnflat(obj: Object | Array<*> | string): Array<*> {
-    if (Array.isArray(obj)) {
-      return obj.map(Utils.getRecursiveKeysAndValuesUnflat);
-    } else if (obj instanceof Object) {
-      return Object.keys(obj).map(key => [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]);
-    } else {
-      return [obj];
-    }
-  },
-
   // Filters an array given a search string. Supports searching for several words as OR query.
   // Supports nested properties
   filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
     collection: Array<T>,
-    properties: Array<P>,
+    properties: Array<P | (T => Object | Array<*> | string)>,
     searchQuery: string,
   ): Array<T> {
     if (searchQuery === "") {
@@ -337,9 +337,9 @@ const Utils = {
 
       return collection.filter(model =>
         _.some(properties, fieldName => {
-          const value = model[fieldName];
+          const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
           if (value != null && (typeof value === "string" || value instanceof Object)) {
-            const values = Utils.getRecursiveKeysAndValues(value);
+            const values = getRecursiveValues(value);
             return _.some(values, v => v.toString().match(regexp));
           } else {
             return false;
@@ -353,7 +353,7 @@ const Utils = {
   // Supports nested properties
   filterWithSearchQueryAND<T: { +[string]: mixed }, P: $Keys<T>>(
     collection: Array<T>,
-    properties: Array<P>,
+    properties: Array<P | (T => Object | Array<*> | string)>,
     searchQuery: string,
   ): Array<T> {
     if (searchQuery === "") {
@@ -368,9 +368,9 @@ const Utils = {
       return collection.filter(model =>
         _.every(patterns, pattern =>
           _.some(properties, fieldName => {
-            const value = model[fieldName];
+            const value = typeof fieldName === "function" ? fieldName(model) : model[fieldName];
             if (value !== null && (typeof value === "string" || value instanceof Object)) {
-              const values = Utils.getRecursiveKeysAndValues(value);
+              const values = getRecursiveValues(value);
               return _.some(values, v => v.toString().match(pattern));
             } else {
               return false;

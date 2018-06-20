@@ -237,7 +237,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <Table
             dataSource={Utils.filterWithSearchQueryOR(
               this.state.users,
-              ["firstName", "lastName", "email", "teams", "experiences"],
+              ["firstName", "lastName", "email", "teams", user => Object.keys(user.experiences)],
               this.state.searchQuery,
             )}
             rowKey="id"

@@ -102,6 +102,7 @@ type ServerTracingBaseType = {|
   error?: string,
   version: number,
   zoomLevel: number,
+  dataSetName: string, // todo refactoring: necessary??
 |};
 
 export type ServerSkeletonTracingType = {|

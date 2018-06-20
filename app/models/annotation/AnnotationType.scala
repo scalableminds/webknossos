@@ -16,32 +16,3 @@ object AnnotationTypeSQL extends Enumeration {
 
   def UserTracings = List(Task, Explorational)
 }
-
-
-object AnnotationType {
-  type AnnotationType = String
-
-  // User types
-  val Task = "Task"
-  val Explorational = "Explorational"
-
-  // View is an artifact of the frontend using the same code for tracing and dataset viewing. never found in db
-  val View = "View"
-
-  // Compound types. never found in db
-  val CompoundTask = "CompoundTask"
-  val CompoundProject = "CompoundProject"
-  val CompoundTaskType = "CompoundTaskType"
-
-  // System Types
-  val TracingBase = "TracingBase"
-  val Orphan = "Orphan"  // Annotations whose task was deleted
-
-  val UserTracings = List(
-    Task,
-    Explorational)
-
-  val SystemTracings = List(
-    TracingBase,
-    Orphan)
-}

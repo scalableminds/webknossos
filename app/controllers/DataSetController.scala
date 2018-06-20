@@ -20,6 +20,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.BSONFormats._
+import com.scalableminds.util.tools.Math
 
 import scala.concurrent.ExecutionContext.Implicits._
 import scala.concurrent.Future
@@ -27,8 +28,10 @@ import scala.concurrent.duration._
 
 class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controller {
 
-  val ThumbnailWidth = 200
-  val ThumbnailHeight = 200
+  val DefaultThumbnailWidth = 400
+  val DefaultThumbnailHeight = 400
+  val MaxThumbnailWidth = 4000
+  val MaxThumbnailHeight = 4000
 
   val ThumbnailCacheDuration = 1 day
 
@@ -38,25 +41,28 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       (__ \ 'isPublic).read[Boolean]).tupled
 
 
-  def thumbnail(dataSetName: String, dataLayerName: String) = UserAwareAction.async { implicit request =>
+  def thumbnail(dataSetName: String, dataLayerName: String, w: Option[Int], h: Option[Int]) = UserAwareAction.async { implicit request =>
 
-    def imageFromCacheIfPossible(dataSet: DataSet) =
-    // We don't want all images to expire at the same time. Therefore, we add a day of randomness, hence the 1 day
-      Cache.get(s"thumbnail-$dataSetName*$dataLayerName") match {
+    def imageFromCacheIfPossible(dataSet: DataSet) = {
+      val width = Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailHeight)
+      val height = Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
+      Cache.get(s"thumbnail-$dataSetName*$dataLayerName-$width-$height") match {
         case Some(a: Array[Byte]) =>
           Fox.successful(a)
         case _ => {
           val defaultCenterOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("position").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Point3D])))
           val defaultZoomOpt = dataSet.defaultConfiguration.flatMap(c => c.configuration.get("zoom").flatMap(jsValue => JsonHelper.jsResultToOpt(jsValue.validate[Int])))
-          dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, ThumbnailWidth, ThumbnailHeight, defaultZoomOpt, defaultCenterOpt).map {
+          dataSet.dataStore.requestDataLayerThumbnail(dataLayerName, width, height, defaultZoomOpt, defaultCenterOpt).map {
             result =>
-              Cache.set(s"thumbnail-$dataSetName*$dataLayerName",
+              // We don't want all images to expire at the same time. Therefore, we add some random variation
+              Cache.set(s"thumbnail-$dataSetName*$dataLayerName-$width-$height",
                 result,
                 (ThumbnailCacheDuration.toSeconds + math.random * 2.hours.toSeconds).toInt)
               result
           }
         }
       }
+    }
 
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)

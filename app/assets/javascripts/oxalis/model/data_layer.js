@@ -25,6 +25,7 @@ import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/consta
 import type { DataLayerType } from "oxalis/store";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
 import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor.js";
+import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -40,17 +41,26 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
 }
 
-function consumeBucketsFromPriorityQueue(queue, capacity) {
-  const buckets = new Set();
+function consumeBucketsFromPriorityQueue(
+  queue: PriorityQueue,
+  capacity: number,
+): Array<{ priority: number, bucket: DataBucket }> {
+  // Use bucketSet to only get unique buckets from the priority queue.
+  // Don't use {bucket, priority} as set elements, as the instances will always be unique
+  const bucketSet = new Set();
+  const bucketsWithPriorities = [];
   // Consume priority queue until we maxed out the capacity
-  while (buckets.size < capacity) {
+  while (bucketsWithPriorities.length < capacity) {
     if (queue.length === 0) {
       break;
     }
     const bucketWithPriority = queue.dequeue();
-    buckets.add(bucketWithPriority.bucket);
+    if (!bucketSet.has(bucketWithPriority.bucket)) {
+      bucketSet.add(bucketWithPriority.bucket);
+      bucketsWithPriorities.push(bucketWithPriority);
+    }
   }
-  return Array.from(buckets);
+  return bucketsWithPriorities;
 }
 
 // TODO: Non-reactive
@@ -246,24 +256,22 @@ class DataLayer {
         );
       }
 
-      const buckets = consumeBucketsFromPriorityQueue(
+      const bucketsWithPriorities = consumeBucketsFromPriorityQueue(
         bucketQueue,
         this.textureBucketManager.maximumCapacity,
       );
 
       this.textureBucketManager.setActiveBuckets(
-        buckets,
+        bucketsWithPriorities.map(({ bucket }) => bucket),
         this.anchorPointCache.anchorPoint,
         this.anchorPointCache.fallbackAnchorPoint,
       );
 
       // In general, pull buckets which are not available but should be sent to the GPU
-      // Don't use -1 for ortho mode since this will make at the corner of the viewport more important than the ones in the middle
-      const missingBucketPriority = constants.MODES_PLANE.includes(viewMode) ? 100 : -1;
-      const missingBuckets = buckets
-        .filter(bucket => !bucket.hasData())
-        .filter(bucket => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
-        .map(bucket => ({ bucket: bucket.zoomedAddress, priority: missingBucketPriority }));
+      const missingBuckets = bucketsWithPriorities
+        .filter(({ bucket }) => !bucket.hasData())
+        .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
+        .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
       this.pullQueue.addAll(missingBuckets);
       this.pullQueue.pull();
     }

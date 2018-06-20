@@ -15,7 +15,7 @@ import { PrefetchStrategyArbitrary } from "oxalis/model/bucket_data_handling/pre
 import { FlycamActions } from "oxalis/model/actions/flycam_actions";
 import DataLayer from "oxalis/model/data_layer";
 import type { Vector3 } from "oxalis/constants";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import { isSegmentationLayer, getResolutions } from "oxalis/model/accessors/dataset_accessor";
 
 const PREFETCH_THROTTLE_TIME = 50;
 const DIRECTION_VECTOR_SMOOTHER = 0.125;
@@ -33,8 +33,9 @@ export function* watchDataRelevantChanges(): Generator<*, *, *> {
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Generator<*, *, *> {
   const segmentationOpacity = yield select(state => state.datasetConfiguration.segmentationOpacity);
   const isSegmentationVisible = segmentationOpacity !== 0;
+  const isSegmentation = yield select(state => isSegmentationLayer(state.dataset, dataLayer.name));
   // There is no need to prefetch data for segmentation layers that are not visible
-  return !dataLayer.isSegmentation() || isSegmentationVisible;
+  return !isSegmentation || isSegmentationVisible;
 }
 
 export function* triggerDataPrefetching(previousProperties: Object): Generator<*, *, *> {

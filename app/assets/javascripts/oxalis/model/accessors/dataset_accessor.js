@@ -124,4 +124,8 @@ export function getBitDepth(layerInfo: DataLayerType): number {
   return parseInt(layerInfo.elementClass.substring(4), 10);
 }
 
+export function isSegmentationLayer(dataset: APIDatasetType, layerName: string): boolean {
+  return getLayerByName(dataset, layerName).category === "segmentation";
+}
+
 export default {};

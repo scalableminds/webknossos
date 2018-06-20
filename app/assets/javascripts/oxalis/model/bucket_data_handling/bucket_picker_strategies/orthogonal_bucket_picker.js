@@ -8,12 +8,12 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import Dimensions from "oxalis/model/dimensions";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
-import DataLayer from "oxalis/model/data_layer";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 import Store from "oxalis/store";
 
 export default function determineBucketsForOrthogonal(
-  dataLayer: DataLayer,
+  cube: DataCube,
   bucketQueue: PriorityQueue,
   logZoomStep: number,
   fallbackZoomStep: number,
@@ -24,7 +24,7 @@ export default function determineBucketsForOrthogonal(
   subBucketLocality: Vector3,
 ) {
   addNecessaryBucketsToPriorityQueueOrthogonal(
-    dataLayer,
+    cube,
     bucketQueue,
     logZoomStep,
     anchorPoint,
@@ -35,7 +35,7 @@ export default function determineBucketsForOrthogonal(
 
   if (isFallbackAvailable) {
     addNecessaryBucketsToPriorityQueueOrthogonal(
-      dataLayer,
+      cube,
       bucketQueue,
       logZoomStep + 1,
       fallbackAnchorPoint,
@@ -47,7 +47,7 @@ export default function determineBucketsForOrthogonal(
 }
 
 function addNecessaryBucketsToPriorityQueueOrthogonal(
-  dataLayer: DataLayer,
+  cube: DataCube,
   bucketQueue: PriorityQueue,
   logZoomStep: number,
   zoomedAnchorPoint: Vector4,
@@ -130,7 +130,7 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
           bucketAddress[v] = y;
           bucketAddress[w] += wSliceOffset;
 
-          const bucket = dataLayer.cube.getOrCreateBucket(bucketAddress);
+          const bucket = cube.getOrCreateBucket(bucketAddress);
 
           if (bucket.type !== "null") {
             const priority =

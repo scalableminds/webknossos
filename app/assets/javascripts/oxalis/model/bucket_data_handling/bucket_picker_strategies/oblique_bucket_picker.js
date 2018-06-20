@@ -11,10 +11,10 @@ import constants from "oxalis/constants";
 import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 import _ from "lodash";
 import type { Matrix4x4 } from "libs/mjs";
-import DataLayer from "oxalis/model/data_layer";
 import Store from "oxalis/store";
 import { chunk2 } from "oxalis/model/helpers/chunk";
 import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 
 const hashPosition = ([x, y, z]) => 2 ** 32 * x + 2 ** 16 * y + z;
 const makeBucketsUnique = buckets => _.uniqBy(buckets, hashPosition);
@@ -34,7 +34,7 @@ export const getFallbackBuckets = (
     : [];
 
 export default function determineBucketsForOblique(
-  dataLayer: DataLayer,
+  cube: DataCube,
   bucketQueue: PriorityQueue,
   matrix: Matrix4x4,
   logZoomStep: number,
@@ -92,7 +92,7 @@ export default function determineBucketsForOblique(
   );
 
   for (const bucketAddress of traversedBuckets) {
-    const bucket = dataLayer.cube.getOrCreateBucket(bucketAddress);
+    const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type !== "null") {
       const priority = V3.sub(bucketAddress, centerAddress).reduce((a, b) => a + Math.abs(b), 0);

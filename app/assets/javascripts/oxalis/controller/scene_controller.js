@@ -196,7 +196,10 @@ class SceneController {
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      [anchorPoint, fallbackAnchorPoint] = dataLayer.updateDataTextures(gPos, zoomStep);
+      [anchorPoint, fallbackAnchorPoint] = dataLayer.layerRenderingManager.updateDataTextures(
+        gPos,
+        zoomStep,
+      );
     }
 
     if (optPlane) {

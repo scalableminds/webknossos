@@ -193,14 +193,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
     } yield parsed
   }
 
-  def findAllActiveForUser(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(sql"""select #${columns} from #${existingCollectionName}
-                     where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}""".as[AnnotationsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
-
   // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
   def findAllFinishedForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
     for {

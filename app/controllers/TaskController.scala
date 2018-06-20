@@ -141,7 +141,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       dataSetName <- assertAllOnSameDataset()
       dataSet <- DataSetDAO.findOneBySourceName(requestedTasks.head._1.dataSet) ?~> Messages("dataSet.notFound", dataSetName)
       tracingReferences: List[Box[TracingReference]] <- dataSet.dataStore.saveSkeletonTracings(SkeletonTracings(requestedTasks.map(_._2)))
-      taskObjects: List[Fox[TaskSQL]] = requestedTasks.map(r => createTaskWithoutAnnotationBase(r._1))
+      requestedTasksWithTracingReferences = requestedTasks zip tracingReferences
+      taskObjects: List[Fox[TaskSQL]] = requestedTasksWithTracingReferences.map(r => createTaskWithoutAnnotationBase(r._1._1, r._2))
       zipped = (requestedTasks, tracingReferences, taskObjects).zipped.toList
       annotationBases = zipped.map(tuple => AnnotationService.createAnnotationBase(
         taskFox = tuple._3,
@@ -171,8 +172,9 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     }
   }
 
-  private def createTaskWithoutAnnotationBase(params: TaskParameters)(implicit request: SecuredRequest[_]): Fox[TaskSQL] = {
+  private def createTaskWithoutAnnotationBase(params: TaskParameters, tracingReferenceBox: Box[TracingReference])(implicit request: SecuredRequest[_]): Fox[TaskSQL] = {
     for {
+      _ <- tracingReferenceBox.toFox
       taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
       project <- ProjectSQLDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId)

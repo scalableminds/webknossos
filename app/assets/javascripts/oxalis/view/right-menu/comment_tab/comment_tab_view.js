@@ -67,7 +67,11 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
         return tree.comments
           .slice(0)
           .sort(
-            Utils.localeCompareBy(([]: CommentType[]), comment => `${comment.content}_${comment.nodeId}`, sortAscending),
+            Utils.localeCompareBy(
+              ([]: CommentType[]),
+              comment => `${comment.content}_${comment.nodeId}`,
+              sortAscending,
+            ),
           );
       });
 

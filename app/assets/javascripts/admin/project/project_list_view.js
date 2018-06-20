@@ -167,10 +167,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy(
-                  typeHint,
-                  "name",
-                )}
+                sorter={Utils.localeCompareBy(typeHint, "name")}
               />
               <Column
                 title="Team"
@@ -191,7 +188,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Owner"
                 dataIndex="owner"
                 key="owner"
-                sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
+                sorter={Utils.localeCompareBy(typeHint, project => project.owner.lastName)}
                 render={owner =>
                   owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"
                 }
@@ -200,10 +197,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Open Assignments"
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
-                sorter={Utils.compareBy(
-                  typeHint,
-                  (project) => project.numberOfOpenAssignments,
-                )}
+                sorter={Utils.compareBy(typeHint, project => project.numberOfOpenAssignments)}
               />
               <Column
                 title="Expected Time"

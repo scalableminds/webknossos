@@ -62,7 +62,13 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
     const commentNodes = !this.state.collapsed
       ? this.props.tree.comments
           .slice(0)
-          .sort(Utils.localeCompareBy(([]: Array<CommentType>), "content", this.props.isSortedAscending))
+          .sort(
+            Utils.localeCompareBy(
+              ([]: Array<CommentType>),
+              "content",
+              this.props.isSortedAscending,
+            ),
+          )
           .map(comment => (
             <Comment
               key={comment.nodeId}

@@ -101,7 +101,11 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 </span>
               )}
             />
-            <Column title="Tasks" dataIndex="totalTasks" sorter={Utils.compareBy(typeHint, "totalTasks")} />
+            <Column
+              title="Tasks"
+              dataIndex="totalTasks"
+              sorter={Utils.compareBy(typeHint, "totalTasks")}
+            />
             <ColumnGroup title="Instances">
               <Column
                 title="Total"

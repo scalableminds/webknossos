@@ -5,6 +5,7 @@ package controllers
 import javax.inject.Inject
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.AnnotationDAO
 import models.project._
 import models.task._
 import models.user.UserDAO

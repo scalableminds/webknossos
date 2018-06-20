@@ -31,7 +31,7 @@ class DataLayer {
   upperBoundary = [4, 5, 6];
 }
 
-mockRequire("libs/toast", { error: console.log.bind(console) });
+mockRequire("libs/toast", { error: _.noop });
 mockRequire("libs/request", Request);
 mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", {});

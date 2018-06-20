@@ -1,10 +1,10 @@
 package controllers
 
 import javax.inject.Inject
+
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.{AnnotationSQLDAO, AnnotationTypeSQL}
 import models.team._
 import models.user._
 import models.user.time._
@@ -17,13 +17,13 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.twirl.api.Html
-import utils.ObjectId
 import views.html
 
 import scala.concurrent.Future
 
 class UserController @Inject()(val messagesApi: MessagesApi)
   extends Controller
+    with Dashboard
     with FoxImplicits {
 
   val defaultAnnotationLimit = 1000
@@ -43,19 +43,17 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      annotations <- AnnotationSQLDAO.findAllFor(ObjectId.fromBsonId(request.identity._id), isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      content <- dashboardExploratoryAnnotations(request.identity, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
-      Ok(Json.toJson(jsonList))
+      Ok(content)
     }
   }
 
   def tasks(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      annotations <- AnnotationSQLDAO.findAllFor(ObjectId.fromBsonId(request.identity._id), isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      content <- dashboardTaskAnnotations(request.identity, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
-      Ok(Json.toJson(jsonList))
+      Ok(content)
     }
   }
 
@@ -112,25 +110,21 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      annotations <- AnnotationSQLDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      content <- dashboardExploratoryAnnotations(user, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
-      Ok(Json.toJson(jsonList))
+      Ok(content)
     }
   }
 
   def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      userIdValidated <- ObjectId.parse(userId)
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      annotations <- AnnotationSQLDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
-      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
+      content <- dashboardTaskAnnotations(user, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
     } yield {
-      Ok(Json.toJson(jsonList))
+      Ok(content)
     }
   }
 

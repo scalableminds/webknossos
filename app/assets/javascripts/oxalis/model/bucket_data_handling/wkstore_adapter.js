@@ -17,10 +17,6 @@ import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
 
 export const REQUEST_TIMEOUT = 30000;
 
-export function getBitDepth(layerInfo: DataLayerType): number {
-  return parseInt(layerInfo.elementClass.substring(4), 10);
-}
-
 function buildBuckets(layerInfo: DataLayerType, batch: Array<Vector4>): Array<BucketInfo> {
   return batch.map((bucketAddress: Vector4) =>
     BucketBuilder.fromZoomedAddress(bucketAddress, getResolutions(Store.getState().dataset)),

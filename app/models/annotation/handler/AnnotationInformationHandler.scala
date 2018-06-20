@@ -1,43 +1,43 @@
 package models.annotation.handler
 
 import com.scalableminds.util.reactivemongo.DBAccessContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
-import models.annotation._
+import com.scalableminds.util.tools.Fox
+import models.annotation.{Annotation, AnnotationRestrictions, AnnotationType}
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._
-import utils.ObjectId
+
+import scala.concurrent.Future
 
 object AnnotationInformationHandler {
-  val informationHandlers: Map[AnnotationTypeSQL, AnnotationInformationHandler] = Map(
-    AnnotationTypeSQL.CompoundProject -> ProjectInformationHandler,
-    AnnotationTypeSQL.CompoundTask     -> TaskInformationHandler,
-    AnnotationTypeSQL.CompoundTaskType -> TaskTypeInformationHandler)
+  val informationHandlers: Map[String, AnnotationInformationHandler] = Map(
+    AnnotationType.CompoundProject.toString  -> ProjectInformationHandler,
+    AnnotationType.CompoundTask.toString     -> TaskInformationHandler,
+    AnnotationType.CompoundTaskType.toString -> TaskTypeInformationHandler)
       .withDefaultValue(SavedTracingInformationHandler)
 }
 
-trait AnnotationInformationHandler extends FoxImplicits {
+trait AnnotationInformationHandler {
 
   def cache: Boolean = true
 
-  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[AnnotationSQL]
+  def provideAnnotation(identifier: String, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 
-  def nameForAnnotation(t: AnnotationSQL)(implicit ctx: DBAccessContext): Fox[String] = {
-    Fox.successful(t.id)
+  def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Future[String] = {
+    Future.successful(t.id)
   }
 
-  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
+  def restrictionsFor(identifier: String)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
 
-  def assertAllOnSameDataset(annotations: List[AnnotationSQL]): Fox[Boolean] = {
-    def allOnSameDatasetIter(annotations: List[AnnotationSQL], _dataSet: ObjectId): Boolean =
+  def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
+    def allOnSameDatasetIter(annotations: List[Annotation], dataSetName: String): Boolean =
       annotations match {
         case List() => true
-        case head :: tail => head._dataSet == _dataSet && allOnSameDatasetIter(tail, _dataSet)
+        case head :: tail => head.dataSetName == dataSetName && allOnSameDatasetIter(tail, dataSetName)
       }
     annotations match {
       case List() => Fox.successful(true)
       case head :: tail => {
-        if (allOnSameDatasetIter(annotations, annotations.head._dataSet))
+        if (allOnSameDatasetIter(annotations, annotations.head.dataSetName))
           Fox.successful(true)
         else
           Fox.failure("Cannot create compound annotation spanning multiple datasets")
@@ -45,8 +45,10 @@ trait AnnotationInformationHandler extends FoxImplicits {
     }
   }
 
-  def assertNonEmpty[T](seq: List[T]): Fox[Unit] = {
-    if (seq.isEmpty) Fox.failure("no annotations")
-    else Fox.successful(())
+  def assertNonEmpty(annotations: List[Annotation]): Fox[Boolean] = {
+    annotations match {
+      case List() => Fox.failure("no annotations")
+      case _ => Fox.successful(true)
+    }
   }
 }

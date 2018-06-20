@@ -9,12 +9,12 @@ import _ from "lodash";
 import api from "oxalis/api/internal_api";
 import constants, { OrthoViews, OrthoViewValuesWithoutTDView } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
-import Model from "oxalis/model";
 import Store from "oxalis/store";
 import TWEEN from "tween.js";
 import type { CameraData } from "oxalis/store";
 import type { Vector3, OrthoViewMapType, OrthoViewType } from "oxalis/constants";
 import { getPosition } from "oxalis/model/accessors/flycam_accessor";
+import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import { setTDCameraAction } from "oxalis/model/actions/view_mode_actions";
 import { voxelToNm, getBaseVoxel } from "oxalis/model/scaleinfo";
@@ -140,8 +140,9 @@ type TweenState = {
 
 export function rotate3DViewTo(id: OrthoViewType, animate: boolean = true): void {
   const state = Store.getState();
-  const b = voxelToNm(state.dataset.dataSource.scale, Model.upperBoundary);
-  const pos = voxelToNm(state.dataset.dataSource.scale, getPosition(state.flycam));
+  const { dataset } = state;
+  const b = voxelToNm(dataset.dataSource.scale, getBoundaries(dataset).upperBoundary);
+  const pos = voxelToNm(dataset.dataSource.scale, getPosition(state.flycam));
 
   let to: TweenState;
   if (id === OrthoViews.TDView) {

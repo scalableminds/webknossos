@@ -1,78 +1,79 @@
 package models.annotation
 
-import oxalis.security.WebknossosSilhouette.SecuredRequest
+import oxalis.security.WebknossosSilhouette.{SecuredRequest}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
+import models.annotation.AnnotationType.AnnotationType
 import models.binary.DataSetDAO
 import play.api.libs.concurrent.Execution.Implicits._
-import utils.ObjectId
+import reactivemongo.bson.BSONObjectID
 
+/**
+  * Created by f on 07.08.17.
+  */
 object AnnotationMerger extends FoxImplicits with LazyLogging {
 
   def mergeTwoByIds(
-                    identifierA: AnnotationIdentifier,
-                    identifierB: AnnotationIdentifier,
-                    persistTracing: Boolean
-                   )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[AnnotationSQL] = {
+                idA: String,
+                typA: AnnotationType,
+                idB: String,
+                typB: AnnotationType,
+                persistTracing: Boolean
+              )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[Annotation] = {
+
+    val identifierA = AnnotationIdentifier(typA, idA)
+    val identifierB = AnnotationIdentifier(typB, idB)
+
     for {
-      annotationA: AnnotationSQL <- AnnotationStore.requestAnnotation(identifierA, Some(request.identity)) ?~> "Request Annotation in AnnotationStore failed"
-      annotationB: AnnotationSQL <- AnnotationStore.requestAnnotation(identifierB, Some(request.identity)) ?~> "Request Annotation in AnnotationStore failed"
+      annotationA: Annotation <- AnnotationStore.requestAnnotation(identifierA, Some(request.identity)) ?~> "Request Annotation in AnnotationStore failed"
+      annotationB: Annotation <- AnnotationStore.requestAnnotation(identifierB, Some(request.identity)) ?~> "Request Annotation in AnnotationStore failed"
       mergedAnnotation <- mergeTwo(annotationA, annotationB, persistTracing)
     } yield mergedAnnotation
   }
 
   def mergeTwo(
-    annotationA: AnnotationSQL,
-    annotationB: AnnotationSQL,
+    annotationA: Annotation,
+    annotationB: Annotation,
     persistTracing: Boolean
-    )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[AnnotationSQL] = {
-    mergeN(
-      ObjectId.generate,
-      persistTracing,
-      ObjectId.fromBsonId(request.identity._id),
-      annotationB._dataSet,
-      annotationB._team,
-      AnnotationTypeSQL.Explorational,
-      List(annotationA, annotationB)
-    )
+    )(implicit request: SecuredRequest[_], ctx: DBAccessContext): Fox[Annotation] = {
+    val newId = BSONObjectID.generate()
+    mergeN(newId, persistTracing, request.identity._id, annotationB.dataSetName, annotationB._team, AnnotationType.Explorational, List(annotationA, annotationB))
   }
 
   def mergeN(
-    newId: ObjectId,
+    newId: BSONObjectID,
     persistTracing: Boolean,
-    _user: ObjectId,
-    _dataSet: ObjectId,
-    _team: ObjectId,
-    typ: AnnotationTypeSQL,
-    annotations: List[AnnotationSQL]
-    )(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
+    _user: BSONObjectID,
+    dataSetName: String,
+    team: BSONObjectID,
+    typ: AnnotationType,
+    annotations: List[Annotation])(implicit ctx: DBAccessContext): Fox[Annotation] = {
     if (annotations.isEmpty)
       Fox.empty
     else {
       for {
-        mergedTracingReference <- mergeTracingsOfAnnotations(annotations, _dataSet, persistTracing)
+        mergedTracingReference <- mergeTracingsOfAnnotations(annotations, dataSetName, persistTracing)
       } yield {
-        AnnotationSQL(
-          newId,
-          _dataSet,
-          None,
-          _team,
+        Annotation(
           _user,
           mergedTracingReference,
-          typ = typ
-        )
+          dataSetName,
+          team,
+          AnnotationSettings.defaultFor(TracingType.skeleton),
+          None,
+          typ,
+          _id = newId)
       }
     }
   }
 
-  private def mergeTracingsOfAnnotations(annotations: List[AnnotationSQL], dataSetId: ObjectId, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
+  private def mergeTracingsOfAnnotations(annotations: List[Annotation], dataSetName: String, persistTracing: Boolean)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
     for {
-      dataSet <- DataSetDAO.findOneById(dataSetId)
+      dataSet <- DataSetDAO.findOneBySourceName(dataSetName)
       dataSource <- dataSet.dataSource.toUsable.toFox
-      tracingReference <- dataSet.dataStore.mergeSkeletonTracingsByIds(annotations.map(_.tracing), persistTracing) ?~> "Failed to merge skeleton tracings."
+      tracingReference <- dataSet.dataStore.mergeSkeletonTracingsByIds(annotations.map(_.tracingReference), persistTracing) ?~> "Failed to merge skeleton tracings."
     } yield {
       tracingReference
     }

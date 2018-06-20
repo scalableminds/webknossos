@@ -19,13 +19,17 @@ import { M4x4 } from "libs/mjs";
 import determineBucketsForOrthogonal from "oxalis/model/bucket_data_handling/bucket_picker_strategies/orthogonal_bucket_picker";
 import determineBucketsForOblique from "oxalis/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import determineBucketsForFlight from "oxalis/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
-import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { getAreas, getZoomedMatrix } from "oxalis/model/accessors/flycam_accessor";
 import type { Vector3, Vector4, OrthoViewMapType, ModeType } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor.js";
-import { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
+import {
+  getResolutions,
+  getLayerByName,
+  getByteCount,
+  getLayerBoundaries,
+  getBitDepth,
+} from "oxalis/model/accessors/dataset_accessor.js";
 
 // each index of the returned Vector3 is either -1 or +1.
 function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
@@ -41,26 +45,17 @@ function getSubBucketLocality(position: Vector3, resolution: Vector3): Vector3 {
   return position.map((pos, idx) => roundToNearestBucketBoundary(position, idx));
 }
 
-function consumeBucketsFromPriorityQueue(
-  queue: PriorityQueue,
-  capacity: number,
-): Array<{ priority: number, bucket: DataBucket }> {
-  // Use bucketSet to only get unique buckets from the priority queue.
-  // Don't use {bucket, priority} as set elements, as the instances will always be unique
-  const bucketSet = new Set();
-  const bucketsWithPriorities = [];
+function consumeBucketsFromPriorityQueue(queue, capacity) {
+  const buckets = new Set();
   // Consume priority queue until we maxed out the capacity
-  while (bucketsWithPriorities.length < capacity) {
+  while (buckets.size < capacity) {
     if (queue.length === 0) {
       break;
     }
     const bucketWithPriority = queue.dequeue();
-    if (!bucketSet.has(bucketWithPriority.bucket)) {
-      bucketSet.add(bucketWithPriority.bucket);
-      bucketsWithPriorities.push(bucketWithPriority);
-    }
+    buckets.add(bucketWithPriority.bucket);
   }
-  return bucketsWithPriorities;
+  return Array.from(buckets);
 }
 
 // TODO: Non-reactive
@@ -68,8 +63,6 @@ class DataLayer {
   cube: DataCube;
   layerInfo: DataLayerType;
   name: string;
-  lowerBoundary: Vector3;
-  upperBoundary: Vector3;
   connectionInfo: ConnectionInfo;
   pullQueue: PullQueue;
   pushQueue: PushQueue;
@@ -108,14 +101,11 @@ class DataLayer {
 
     this.name = layerInfo.name;
 
-    const { topLeft, width, height, depth } = layerInfo.boundingBox;
-    this.lowerBoundary = topLeft;
-    this.upperBoundary = [topLeft[0] + width, topLeft[1] + height, topLeft[2] + depth];
-
-    const bitDepth = getBitDepth(getLayerByName(Store.getState().dataset, this.name));
+    const { dataset } = Store.getState();
+    const bitDepth = getBitDepth(getLayerByName(dataset, this.name));
 
     this.cube = new DataCube(
-      this.upperBoundary,
+      getLayerBoundaries(dataset, this.name).upperBoundary,
       layerInfo.resolutions.length,
       bitDepth,
       layerInfo.category === "segmentation",
@@ -123,7 +113,7 @@ class DataLayer {
 
     const taskQueue = new AsyncTaskQueue(Infinity);
 
-    const datastoreInfo = Store.getState().dataset.dataStore;
+    const datastoreInfo = dataset.dataStore;
     this.pullQueue = new PullQueue(this.cube, layerInfo.name, this.connectionInfo, datastoreInfo);
     this.pushQueue = new PushQueue(this.cube, layerInfo, taskQueue);
     this.cube.initializeWithQueues(this.pullQueue, this.pushQueue);
@@ -131,23 +121,12 @@ class DataLayer {
     this.activeMapping = null;
   }
 
-  isRgb() {
-    return (
-      getLayerByName(Store.getState().dataset, this.name).category === "color" &&
-      this.getByteCount() === 3
-    );
-  }
-
   isSegmentation() {
     return getLayerByName(Store.getState().dataset, this.name).category === "segmentation";
   }
 
-  getByteCount(): number {
-    return getBitDepth(getLayerByName(Store.getState().dataset, this.name)) >> 3;
-  }
-
   setupDataTextures(): void {
-    const bytes = this.getByteCount();
+    const bytes = getByteCount(Store.getState().dataset, this.name);
 
     this.textureBucketManager = new TextureBucketManager(
       constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION,
@@ -256,22 +235,24 @@ class DataLayer {
         );
       }
 
-      const bucketsWithPriorities = consumeBucketsFromPriorityQueue(
+      const buckets = consumeBucketsFromPriorityQueue(
         bucketQueue,
         this.textureBucketManager.maximumCapacity,
       );
 
       this.textureBucketManager.setActiveBuckets(
-        bucketsWithPriorities.map(({ bucket }) => bucket),
+        buckets,
         this.anchorPointCache.anchorPoint,
         this.anchorPointCache.fallbackAnchorPoint,
       );
 
       // In general, pull buckets which are not available but should be sent to the GPU
-      const missingBuckets = bucketsWithPriorities
-        .filter(({ bucket }) => !bucket.hasData())
-        .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
-        .map(({ bucket, priority }) => ({ bucket: bucket.zoomedAddress, priority }));
+      // Don't use -1 for ortho mode since this will make at the corner of the viewport more important than the ones in the middle
+      const missingBucketPriority = constants.MODES_PLANE.includes(viewMode) ? 100 : -1;
+      const missingBuckets = buckets
+        .filter(bucket => !bucket.hasData())
+        .filter(bucket => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)
+        .map(bucket => ({ bucket: bucket.zoomedAddress, priority: missingBucketPriority }));
       this.pullQueue.addAll(missingBuckets);
       this.pullQueue.pull();
     }

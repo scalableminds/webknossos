@@ -8,8 +8,6 @@ import type { PullQueueItemType } from "oxalis/model/bucket_data_handling/pullqu
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
-import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
-import Store from "oxalis/store";
 
 const MAX_ZOOM_STEP_DIFF = 1;
 
@@ -72,6 +70,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     currentZoomStep: number,
     activePlane: OrthoViewType,
     areas: OrthoViewMapType<AreaType>,
+    resolutions: Vector3[],
   ): Array<PullQueueItemType> {
     const zoomStep = Math.min(currentZoomStep, cube.MAX_UNSAMPLED_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
@@ -84,6 +83,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       zoomStepDiff,
       activePlane,
       areas,
+      resolutions,
     );
 
     let queueItemsForFallbackZoomStep = [];
@@ -97,6 +97,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         zoomStepDiff - 1,
         activePlane,
         areas,
+        resolutions,
       );
     }
 
@@ -111,6 +112,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     zoomStepDiff: number,
     activePlane: OrthoViewType,
     areas: OrthoViewMapType<AreaType>,
+    resolutions: Vector3[],
   ): Array<PullQueueItemType> {
     const pullQueue = [];
 
@@ -135,7 +137,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
 
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
         widthHeightVector,
-        getResolutions(Store.getState().dataset),
+        resolutions,
         zoomStep,
       );
 

@@ -9,12 +9,12 @@ import type {
   BranchPointType,
 } from "oxalis/store";
 
-export type SkeletonTracingStatsType = {
+export type SkeletonTracingStatsType = {|
   treeCount: number,
   nodeCount: number,
   edgeCount: number,
   branchPointCount: number,
-};
+|};
 
 export function getSkeletonTracing(tracing: TracingType): Maybe<SkeletonTracingType> {
   if (tracing.type === "skeleton") {

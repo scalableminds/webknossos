@@ -5,7 +5,6 @@
 import _ from "lodash";
 import Store from "oxalis/store";
 import type {
-  SettingsType,
   EdgeType,
   CommentType,
   TracingTypeTracingType,
@@ -35,8 +34,8 @@ import window from "libs/window";
 import Utils from "libs/utils";
 import DataLayer from "oxalis/model/data_layer";
 import ConnectionInfo from "oxalis/model/data_connection_info";
-import constants, { Vector3Indicies, ControlModeEnum, ModeValues } from "oxalis/constants";
-import type { Vector3, Point3, ControlModeType } from "oxalis/constants";
+import { ControlModeEnum } from "oxalis/constants";
+import type { Point3, ControlModeType } from "oxalis/constants";
 import Toast from "libs/toast";
 import ErrorHandling from "libs/error_handling";
 import UrlManager from "oxalis/controller/url_manager";
@@ -48,12 +47,19 @@ import {
   getUserConfiguration,
   getDatasetConfiguration,
 } from "admin/admin_rest_api";
-import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import messages from "messages";
 import type { APIAnnotationType, APIDatasetType, APIDataLayerType } from "admin/api_flow_types";
-import { getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import type PullQueue from "oxalis/model/bucket_data_handling/pullqueue";
+import {
+  getLayerByName,
+  getDatasetCenter,
+  determineAllowedModes,
+  getBitDepth,
+} from "oxalis/model/accessors/dataset_accessor";
+import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volumetracing_accessor";
 import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";
-import Maybe from "data.maybe";
+import { setupGlobalMappingsObject } from "oxalis/model/bucket_data_handling/mappings";
 import type { DataTextureSizeAndCount } from "./model/bucket_data_handling/data_rendering_logic";
 import * as DataRenderingLogic from "./model/bucket_data_handling/data_rendering_logic";
 
@@ -124,14 +130,6 @@ export type ServerVolumeTracingType = {|
 
 export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
 
-const asVolumeTracingMaybe = (tracing: ?ServerTracingType): Maybe<ServerVolumeTracingType> => {
-  if (tracing && tracing.elementClass) {
-    return Maybe.Just(tracing);
-  } else {
-    return Maybe.Nothing();
-  }
-};
-
 // TODO: Non-reactive
 export class OxalisModel {
   HANDLED_ERROR = "error_was_handled";
@@ -140,8 +138,6 @@ export class OxalisModel {
   dataLayers: {
     [key: string]: DataLayer,
   };
-  lowerBoundary: Vector3;
-  upperBoundary: Vector3;
   isMappingSupported: boolean = true;
   maximumDataTextureCountForLayer: number;
 
@@ -197,7 +193,7 @@ export class OxalisModel {
       this.initializeTracing(annotation, tracing);
     }
 
-    this.applyState(UrlManager.initialState, tracing);
+    this.applyUrlState(UrlManager.initialState, tracing);
   }
 
   async fetchParallel(
@@ -210,7 +206,7 @@ export class OxalisModel {
       getDatasetConfiguration(datasetName),
       // Fetch the actual tracing from the datastore, if there is an annotation
       // (Also see https://github.com/facebook/flow/issues/4936)
-      // $FlowFixMe: Type inference with promise all seems to be a bit broken in flow
+      // $FlowFixMe: Type inference with Promise.all seems to be a bit broken in flow
       annotation ? getTracingForAnnotation(annotation) : null,
     ]);
   }
@@ -244,31 +240,12 @@ export class OxalisModel {
     return setupInfo.textureInformationPerLayer;
   }
 
-  determineAllowedModes(settings: SettingsType) {
-    // The order of allowedModes should be independent from the server and instead be similar to ModeValues
-    let allowedModes = _.intersection(ModeValues, settings.allowedModes);
-
-    const colorLayer = _.find(Store.getState().dataset.dataSource.dataLayers, {
-      category: "color",
-    });
-    if (colorLayer != null && colorLayer.elementClass !== "uint8") {
-      allowedModes = allowedModes.filter(mode => !constants.MODES_ARBITRARY.includes(mode));
-    }
-
-    let preferredMode = null;
-    if (settings.preferredMode != null) {
-      const modeId = settings.preferredMode;
-      if (allowedModes.includes(modeId)) {
-        preferredMode = modeId;
-      }
-    }
-
-    return { preferredMode, allowedModes };
-  }
-
   initializeTracing(annotation: APIAnnotationType, tracing: ServerTracingType) {
     // This method is not called for the View mode
-    const { allowedModes, preferredMode } = this.determineAllowedModes(annotation.settings);
+    const { allowedModes, preferredMode } = determineAllowedModes(
+      Store.getState().dataset,
+      annotation.settings,
+    );
     _.extend(annotation.settings, { allowedModes, preferredMode });
 
     const isVolume = annotation.content.typ === "volume";
@@ -325,7 +302,7 @@ export class OxalisModel {
       dataSet: dataset.dataSource.id.name,
     });
 
-    asVolumeTracingMaybe(tracing).map(volumeTracing => {
+    serverTracingAsVolumeTracingMaybe(tracing).map(volumeTracing => {
       const newDataLayers = this.setupLayerForVolumeTracing(
         dataset.dataSource.dataLayers,
         volumeTracing,
@@ -364,32 +341,14 @@ export class OxalisModel {
       );
     }
 
-    this.buildMappingsObject();
+    const segmentationLayer = this.getSegmentationLayer();
+    if (segmentationLayer != null && this.isMappingSupported) {
+      window.mappings = setupGlobalMappingsObject(segmentationLayer);
+    }
 
     if (this.getColorLayers().length === 0) {
       Toast.error(messages["dataset.no_data"]);
       throw this.HANDLED_ERROR;
-    }
-
-    this.computeBoundaries();
-  }
-
-  // For now, since we have no UI for this
-  buildMappingsObject() {
-    const segmentationLayer = this.getSegmentationLayer();
-
-    if (segmentationLayer != null && this.isMappingSupported) {
-      window.mappings = {
-        getAll() {
-          return segmentationLayer.mappings.getMappingNames();
-        },
-        getActive() {
-          return segmentationLayer.activeMapping;
-        },
-        activate(mapping) {
-          return segmentationLayer.setActiveMapping(mapping);
-        },
-      };
     }
   }
 
@@ -414,8 +373,18 @@ export class OxalisModel {
     );
   }
 
-  getLayerByName(name: string): ?DataLayer {
-    return this.dataLayers[name];
+  getCubeByLayerName(name: string): DataCube {
+    if (!this.dataLayers[name]) {
+      throw new Error(`Layer with name ${name} was not found.`);
+    }
+    return this.dataLayers[name].cube;
+  }
+
+  getPullQueueByLayerName(name: string): PullQueue {
+    if (!this.dataLayers[name]) {
+      throw new Error(`Layer with name ${name} was not found.`);
+    }
+    return this.dataLayers[name].pullQueue;
   }
 
   setupLayerForVolumeTracing(
@@ -459,32 +428,12 @@ export class OxalisModel {
     return layers;
   }
 
-  computeBoundaries() {
-    this.lowerBoundary = [Infinity, Infinity, Infinity];
-    this.upperBoundary = [-Infinity, -Infinity, -Infinity];
-
-    for (const key of Object.keys(this.dataLayers)) {
-      const dataLayer = this.dataLayers[key];
-      for (const i of Vector3Indicies) {
-        this.lowerBoundary[i] = Math.min(this.lowerBoundary[i], dataLayer.lowerBoundary[i]);
-        this.upperBoundary[i] = Math.max(this.upperBoundary[i], dataLayer.upperBoundary[i]);
-      }
-    }
-  }
-
-  getDatasetCenter(): Vector3 {
-    return [
-      (this.lowerBoundary[0] + this.upperBoundary[0]) / 2,
-      (this.lowerBoundary[1] + this.upperBoundary[1]) / 2,
-      (this.lowerBoundary[2] + this.upperBoundary[2]) / 2,
-    ];
-  }
-
-  applyState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
+  applyUrlState(urlState: UrlManagerState, tracing: ?ServerTracingType) {
     // If there is no editPosition (e.g. when viewing a dataset) and
     // no default position, compute the center of the dataset
-    const defaultPosition = Store.getState().datasetConfiguration.position;
-    let position = this.getDatasetCenter();
+    const { dataset, datasetConfiguration } = Store.getState();
+    const defaultPosition = datasetConfiguration.position;
+    let position = getDatasetCenter(dataset);
     if (defaultPosition != null) {
       position = defaultPosition;
     }
@@ -496,14 +445,14 @@ export class OxalisModel {
     }
     Store.dispatch(setPositionAction(position));
 
-    const defaultZoomStep = Store.getState().datasetConfiguration.zoom;
+    const defaultZoomStep = datasetConfiguration.zoom;
     if (urlState.zoomStep != null) {
       Store.dispatch(setZoomStepAction(urlState.zoomStep));
     } else if (defaultZoomStep != null) {
       Store.dispatch(setZoomStepAction(defaultZoomStep));
     }
 
-    const defaultRotation = Store.getState().datasetConfiguration.rotation;
+    const defaultRotation = datasetConfiguration.rotation;
     let rotation = null;
     if (defaultRotation != null) {
       rotation = defaultRotation;

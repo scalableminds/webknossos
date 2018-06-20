@@ -149,20 +149,6 @@ object DataSetSQLDAO extends SQLDAO[DataSetSQL, DatasetsRow, Datasets] {
       parsed
     }
 
-  def getIdByName(name: String)(implicit ctx: DBAccessContext): Fox[ObjectId] =
-    for {
-      accessQuery <- readAccessQuery
-      rList <- run(sql"select _id from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[String])
-      r <- rList.headOption.toFox
-    } yield ObjectId(r)
-
-  def getNameById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
-    for {
-      accessQuery <- readAccessQuery
-      rList <- run(sql"select name from #${existingCollectionName} where _id = ${id} and #${accessQuery}".as[String])
-      r <- rList.headOption.toFox
-    } yield r
-
   def getSharingTokenByName(name: String)(implicit ctx: DBAccessContext): Fox[Option[String]] = {
     for {
       accessQuery <- readAccessQuery
@@ -491,13 +477,6 @@ object DataSet extends FoxImplicits {
 }
 
 object DataSetDAO {
-
-  def findOneById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[DataSet] = {
-    for {
-      dataSetSQL <- DataSetSQLDAO.findOne(id)
-      dataSet <- DataSet.fromDataSetSQL(dataSetSQL)
-    } yield dataSet
-  }
 
   def findOneBySourceName(name: String)(implicit ctx: DBAccessContext): Fox[DataSet] = {
     for {

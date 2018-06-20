@@ -104,8 +104,9 @@ const Utils = {
       : null;
   },
 
-  compareBy<T: Object>(
-    selector: string | (T => number),
+  compareBy<T: { +[string]: mixed }>(
+    collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
+    selector: $Keys<T> | (T => number),
     isSortedAscending: boolean = true,
   ): Comparator<T> {
     // generic key comparator for array.prototype.sort
@@ -115,6 +116,9 @@ const Utils = {
       }
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      if (!(valueA instanceof Number && valueB instanceof Number)) {
+        return 0;
+      }
       if (valueA < valueB) {
         return -1;
       }
@@ -125,15 +129,19 @@ const Utils = {
     };
   },
 
-  localeCompareBy<T: Object>(
-    selector: string | (T => string),
+  localeCompareBy<T: { +[string]: mixed }>(
+    collectionForTypeInference: Array<T>, // this parameter is only used let flow infer the used type
+    selector: $Keys<T> | (T => string),
     isSortedAscending: boolean = true,
   ): (T, T) => number {
     const sortingOrder = isSortedAscending ? 1 : -1;
 
     return (a: T, b: T): number => {
-      const valueA: string = typeof selector === "function" ? selector(a) : a[selector];
-      const valueB: string = typeof selector === "function" ? selector(b) : b[selector];
+      const valueA = typeof selector === "function" ? selector(a) : a[selector];
+      const valueB = typeof selector === "function" ? selector(b) : b[selector];
+      if (!(valueA instanceof String && valueB instanceof String)) {
+        return 0;
+      }
       return (
         valueA.localeCompare(valueB, "en", {
           numeric: true,
@@ -296,14 +304,14 @@ const Utils = {
     return maybe.isJust ? maybe.get() : null;
   },
 
-  getRecursiveKeysAndValues(obj: Object): Array<any> {
+  getRecursiveKeysAndValues(obj: Object | Array<*> | string): Array<*> {
     return _.flattenDeep(Utils.getRecursiveKeysAndValuesUnflat(obj));
   },
 
-  getRecursiveKeysAndValuesUnflat(obj: Object): Array<any> {
-    if (_.isArray(obj)) {
+  getRecursiveKeysAndValuesUnflat(obj: Object | Array<*> | string): Array<*> {
+    if (Array.isArray(obj)) {
       return obj.map(Utils.getRecursiveKeysAndValuesUnflat);
-    } else if (_.isObject(obj)) {
+    } else if (obj instanceof Object) {
       return Object.keys(obj).map(key => [key, Utils.getRecursiveKeysAndValuesUnflat(obj[key])]);
     } else {
       return [obj];
@@ -312,9 +320,9 @@ const Utils = {
 
   // Filters an array given a search string. Supports searching for several words as OR query.
   // Supports nested properties
-  filterWithSearchQueryOR<T: Object>(
+  filterWithSearchQueryOR<T: { +[string]: mixed }, P: $Keys<T>>(
     collection: Array<T>,
-    properties: Array<string>,
+    properties: Array<P>,
     searchQuery: string,
   ): Array<T> {
     if (searchQuery === "") {
@@ -330,7 +338,7 @@ const Utils = {
       return collection.filter(model =>
         _.some(properties, fieldName => {
           const value = model[fieldName];
-          if (value !== null) {
+          if (value != null && (typeof value === "string" || value instanceof Object)) {
             const values = Utils.getRecursiveKeysAndValues(value);
             return _.some(values, v => v.toString().match(regexp));
           } else {
@@ -343,9 +351,9 @@ const Utils = {
 
   // Filters an array given a search string. Supports searching for several words as AND query.
   // Supports nested properties
-  filterWithSearchQueryAND<T: Object>(
+  filterWithSearchQueryAND<T: { +[string]: mixed }, P: $Keys<T>>(
     collection: Array<T>,
-    properties: Array<string>,
+    properties: Array<P>,
     searchQuery: string,
   ): Array<T> {
     if (searchQuery === "") {
@@ -361,7 +369,7 @@ const Utils = {
         _.every(patterns, pattern =>
           _.some(properties, fieldName => {
             const value = model[fieldName];
-            if (value !== null) {
+            if (value !== null && (typeof value === "string" || value instanceof Object)) {
               const values = Utils.getRecursiveKeysAndValues(value);
               return _.some(values, v => v.toString().match(pattern));
             } else {

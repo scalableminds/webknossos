@@ -129,6 +129,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
 
   render() {
     const marginRight = { marginRight: 20 };
+    const typeHint: Array<APIProjectType> = [];
 
     return (
       <div className="container TestProjectListView">
@@ -166,19 +167,22 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy("name")}
+                sorter={Utils.localeCompareBy(
+                  typeHint,
+                  "name",
+                )}
               />
               <Column
                 title="Team"
                 dataIndex="teamName"
                 key="teamName"
-                sorter={Utils.localeCompareBy("team")}
+                sorter={Utils.localeCompareBy(typeHint, "team")}
               />
               <Column
                 title="Priority"
                 dataIndex="priority"
                 key="priority"
-                sorter={Utils.compareBy((project: APIProjectType) => project.priority)}
+                sorter={Utils.compareBy(typeHint, project => project.priority)}
                 render={(priority, project: APIProjectType) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
@@ -187,7 +191,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Owner"
                 dataIndex="owner"
                 key="owner"
-                sorter={Utils.localeCompareBy((project: APIProjectType) => project.owner.lastName)}
+                sorter={Utils.localeCompareBy(typeHint, (project) => project.owner.lastName)}
                 render={owner =>
                   owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"
                 }
@@ -197,14 +201,15 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
                 sorter={Utils.compareBy(
-                  (project: APIProjectType) => project.numberOfOpenAssignments,
+                  typeHint,
+                  (project) => project.numberOfOpenAssignments,
                 )}
               />
               <Column
                 title="Expected Time"
                 dataIndex="expectedTime"
                 key="expectedTime"
-                sorter={Utils.compareBy((project: APIProjectType) => project.expectedTime)}
+                sorter={Utils.compareBy(typeHint, project => project.expectedTime)}
                 render={expectedTime => `${expectedTime}m`}
               />
               <Column

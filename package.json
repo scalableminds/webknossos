@@ -100,7 +100,7 @@
     "@scalableminds/saxophone": "^0.5.0",
     "Enumjs": "scalableminds/Enumjs",
     "airbrake-js": "^0.5.8",
-    "antd": "3.5.4",
+    "antd": "3.6.3",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
     "classnames": "^2.2.5",

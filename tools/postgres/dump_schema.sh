@@ -36,3 +36,5 @@ echo "dumping $dbName to $schemadir" 1>&2
 
 PGPASSWORD=postgres psql -U postgres -h "$dbHost" --dbname "$dbName" -c "\d+ webknossos.*" | \
   awk -v RS= -v FS='"' -v schemadir="$schemadir" "$FORMATING"
+
+PGPASSWORD=postgres psql -U postgres -h "$dbHost" --dbname "$dbName" -c "\df+ webknossos.*" > "$schemadir/Functions"

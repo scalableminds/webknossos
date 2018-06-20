@@ -17,6 +17,7 @@ import type {
   APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
+  APIAnnotationWithTaskType,
   APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
@@ -316,7 +317,7 @@ export async function peekNextTasks(): Promise<?APITaskType> {
   return Request.receiveJSON("/api/user/tasks/peek");
 }
 
-export async function requestTask(): Promise<APIAnnotationType> {
+export async function requestTask(): Promise<APIAnnotationWithTaskType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
 

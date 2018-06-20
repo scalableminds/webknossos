@@ -135,24 +135,15 @@ class DatasetInfoTabView extends React.PureComponent<DatasetInfoTabProps> {
   }
 
   getOrganisationLogo(isPublicViewMode: boolean) {
-    if (this.props.dataset.isDummyDataset) {
+    if (!this.props.dataset.logoUrl) {
       return null;
     }
-    const isRockefeller = this.props.dataset.name.toLowerCase().indexOf("rockefeller") > -1;
 
     return isPublicViewMode ? (
       <img
         style={{ maxHeight: 250 }}
-        src={
-          isRockefeller
-            ? "https://upload.wikimedia.org/wikipedia/en/4/47/Rockefeller_University_seal.svg"
-            : "/assets/images/mpi-logos.svg"
-        }
-        alt={
-          isRockefeller
-            ? "Rockefeller University Logo"
-            : "Max Plank Institute of Brain Research Logo"
-        }
+        src={this.props.dataset.logoUrl}
+        alt={`${this.props.dataset.owningOrganization} Logo`}
       />
     ) : null;
   }

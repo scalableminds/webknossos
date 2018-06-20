@@ -157,8 +157,8 @@ CREATE TABLE webknossos.tasks(
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CHECK (openInstances <= totalInstances),
-  CHECK (openInstances >= 0)
+  CONSTRAINT openInstancesSmallEnoughCheck CHECK (openInstances <= totalInstances),
+  CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
 );
 
 CREATE TABLE webknossos.teams(

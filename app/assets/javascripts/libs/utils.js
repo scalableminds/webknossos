@@ -116,7 +116,7 @@ const Utils = {
       }
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
-      if (!(valueA instanceof Number && valueB instanceof Number)) {
+      if (typeof valueA !== "number" || typeof valueB !== "number") {
         return 0;
       }
       if (valueA < valueB) {
@@ -139,7 +139,7 @@ const Utils = {
     return (a: T, b: T): number => {
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
-      if (!(valueA instanceof String && valueB instanceof String)) {
+      if (typeof valueA !== "string" || typeof valueB !== "string") {
         return 0;
       }
       return (

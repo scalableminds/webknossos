@@ -239,7 +239,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield parsed
   }
 
-  def findAllByPojectAndTaskTypeAndIds(
+  def findAllByPojectAndTaskTypeAndUserAndIds(
                                         projectNameOpt: Option[String],
                                         taskTypeIdOpt: Option[ObjectId],
                                         taskIdsOpt: Option[List[ObjectId]],

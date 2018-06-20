@@ -244,7 +244,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       projectNameOpt = (request.body \ "project").asOpt[String]
       taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids => Fox.serialCombined(ids)(ObjectId.parse))
       taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse(_))
-      tasks <- TaskSQLDAO.findAllByPojectAndTaskTypeAndIds(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt)
+      tasks <- TaskSQLDAO.findAllByPojectAndTaskTypeAndUserAndIds(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt)
       jsResult <- Fox.serialCombined(tasks)(_.publicWrites)
     } yield {
       Ok(Json.toJson(jsResult))

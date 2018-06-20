@@ -17,6 +17,7 @@ import type {
   APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
+  APIAnnotationWithTaskType,
   APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
@@ -315,7 +316,7 @@ export async function peekNextTasks(): Promise<?APITaskType> {
   return Request.receiveJSON("/api/user/tasks/peek");
 }
 
-export async function requestTask(): Promise<APIAnnotationType> {
+export async function requestTask(): Promise<APIAnnotationWithTaskType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
 
@@ -468,7 +469,7 @@ export async function finishAllAnnotations(
 
 export async function copyAnnotationToUserAccount(
   annotationId: string,
-  tracingType: string,
+  tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
   const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url);
@@ -476,7 +477,7 @@ export async function copyAnnotationToUserAccount(
 
 export function getAnnotationInformation(
   annotationId: string,
-  tracingType: string,
+  tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
   // Include /readOnly part whenever it is in the pathname
   const isReadOnly = location.pathname.endsWith("/readOnly");

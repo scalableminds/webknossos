@@ -13,6 +13,10 @@ import {
   tracing as VOLUME_TRACING,
   annotation as VOLUME_ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
+import {
+  tracing as TASK_TRACING,
+  annotation as TASK_ANNOTATION,
+} from "../fixtures/tasktracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
 
 const Request = {
@@ -35,6 +39,12 @@ const app = {
 const protoHelpers = {
   parseProtoTracing: sinon.stub(),
 };
+
+export const TIMESTAMP = 1494695001688;
+const DateMock = {
+  now: () => TIMESTAMP,
+};
+mockRequire("libs/date", DateMock);
 
 export const KeyboardJS = {
   bind: _.noop,
@@ -74,6 +84,10 @@ const modelData = {
   volume: {
     tracing: VOLUME_TRACING,
     annotation: VOLUME_ANNOTATION,
+  },
+  task: {
+    tracing: TASK_TRACING,
+    annotation: TASK_ANNOTATION,
   },
 };
 

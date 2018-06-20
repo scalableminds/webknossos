@@ -62,7 +62,7 @@ GET           /api/datasets/:dataSetName/accessList                             
 GET           /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.getSharingToken(dataSetName: String)
 DELETE        /api/datasets/:dataSetName/sharingToken                           controllers.DataSetController.deleteSharingToken(dataSetName: String)
 POST          /api/datasets/:dataSetName/teams                                  controllers.DataSetController.updateTeams(dataSetName: String)
-GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String)
+GET           /api/datasets/:dataSetName/layers/:layer/thumbnail                controllers.DataSetController.thumbnail(dataSetName: String, layer: String, w: Option[Int], h: Option[Int])
 
 # Datastores
 GET           /api/datastores                                                   controllers.DataStoreController.list

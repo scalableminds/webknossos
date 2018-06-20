@@ -38,7 +38,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         },
       });
     } else {
-      const annotation = await createExplorational(dataset, typ, withFallback);
+      const annotation = await createExplorational(dataset.name, typ, withFallback);
       window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
     }
   };

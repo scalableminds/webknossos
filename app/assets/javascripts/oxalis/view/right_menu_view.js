@@ -42,7 +42,7 @@ class RightMenuView extends React.Component<Props> {
       }
     }
 
-    const hasSegmentation = Model.getSegmentationBinary() != null;
+    const hasSegmentation = Model.getSegmentationLayer() != null;
     if (hasSegmentation) {
       tabs.push(
         <TabPane tab="Segmentation" key="5" className="flex-column">

@@ -32,30 +32,30 @@ function shouldDisplaySegmentationData(): boolean {
 
   // Currently segmentation data can only be displayed in orthogonal and volume mode
   const canModeDisplaySegmentationData = constants.MODES_PLANE.includes(currentViewMode);
-  return Model.getSegmentationBinary() != null && canModeDisplaySegmentationData;
+  return Model.getSegmentationLayer() != null && canModeDisplaySegmentationData;
 }
 
 export function* warnAboutSegmentationOpacity(): Generator<*, *, *> {
   function* warnMaybe() {
-    const segmentationBinary = Model.getSegmentationBinary();
-    if (!segmentationBinary) {
+    const segmentationLayer = Model.getSegmentationLayer();
+    if (!segmentationLayer) {
       return;
     }
     const isDisallowed = yield select(isVolumeTracingDisallowed);
     const isSegmentationMissing = yield select(state =>
-      isSegmentationMissingForZoomstep(state, segmentationBinary.cube.MAX_ZOOM_STEP),
+      isSegmentationMissingForZoomstep(state, segmentationLayer.cube.MAX_ZOOM_STEP),
     );
 
     if (shouldDisplaySegmentationData() && (isDisallowed || isSegmentationMissing)) {
-      Toast.message("error", messages["tracing.segmentation_zoom_warning"], false, 3000);
+      Toast.error(messages["tracing.segmentation_zoom_warning"], { sticky: false, timeout: 3000 });
     } else {
       Toast.close(messages["tracing.segmentation_zoom_warning"]);
     }
     const displaysDownsampled = yield select(state =>
-      displaysDownsampledVolumeData(state, segmentationBinary.cube.MAX_UNSAMPLED_ZOOM_STEP),
+      displaysDownsampledVolumeData(state, segmentationLayer.cube.MAX_UNSAMPLED_ZOOM_STEP),
     );
     if (shouldDisplaySegmentationData() && displaysDownsampled) {
-      Toast.message("warning", messages["tracing.segmentation_downsampled_data_warning"]);
+      Toast.warning(messages["tracing.segmentation_downsampled_data_warning"]);
     } else {
       Toast.close(messages["tracing.segmentation_downsampled_data_warning"]);
     }

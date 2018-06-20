@@ -13,6 +13,10 @@ import {
   tracing as VOLUME_TRACING,
   annotation as VOLUME_ANNOTATION,
 } from "../fixtures/volumetracing_server_objects";
+import {
+  tracing as TASK_TRACING,
+  annotation as TASK_ANNOTATION,
+} from "../fixtures/tasktracing_server_objects";
 import DATASET from "../fixtures/dataset_server_object";
 
 const Request = {
@@ -35,6 +39,12 @@ const protoHelpers = {
   parseProtoTracing: sinon.stub(),
 };
 
+export const TIMESTAMP = 1494695001688;
+const DateMock = {
+  now: () => TIMESTAMP,
+};
+mockRequire("libs/date", DateMock);
+
 export const KeyboardJS = {
   bind: _.noop,
   unbind: _.noop,
@@ -54,9 +64,9 @@ mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
 mockRequire("oxalis/model/helpers/proto_helpers", protoHelpers);
 
-const wkstoreAdapter = mockRequire.reRequire("oxalis/model/binary/wkstore_adapter");
+const wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
 wkstoreAdapter.requestFromStore = () => new Uint8Array();
-mockRequire("oxalis/model/binary/wkstore_adapter", wkstoreAdapter);
+mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", wkstoreAdapter);
 
 // Avoid node caching and make sure all mockRequires are applied
 const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
@@ -73,6 +83,10 @@ const modelData = {
   volume: {
     tracing: VOLUME_TRACING,
     annotation: VOLUME_ANNOTATION,
+  },
+  task: {
+    tracing: TASK_TRACING,
+    annotation: TASK_ANNOTATION,
   },
 };
 

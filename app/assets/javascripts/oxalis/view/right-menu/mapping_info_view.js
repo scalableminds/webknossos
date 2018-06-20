@@ -5,7 +5,7 @@
 import React, { Component } from "react";
 import { Table, Tooltip, Icon } from "antd";
 import { connect } from "react-redux";
-import Cube from "oxalis/model/binary/data_cube";
+import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
 import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
@@ -59,7 +59,7 @@ class MappingInfoView extends Component<Props> {
   }, 100);
 
   getSegmentationCube(): Cube {
-    return Model.getSegmentationBinary().cube;
+    return Model.getSegmentationLayer().cube;
   }
 
   renderIdTable() {

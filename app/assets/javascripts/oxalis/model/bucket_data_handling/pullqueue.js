@@ -4,9 +4,9 @@
  */
 
 import _ from "lodash";
-import BinaryDataConnectionInfo from "oxalis/model/binarydata_connection_info";
-import { requestFromStore } from "oxalis/model/binary/wkstore_adapter";
-import type DataCube from "oxalis/model/binary/data_cube";
+import ConnectionInfo from "oxalis/model/data_connection_info";
+import { requestFromStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector4 } from "oxalis/constants";
 import type { DataStoreInfoType, DataLayerType } from "oxalis/store";
 import PriorityQueue from "js-priority-queue";
@@ -40,25 +40,23 @@ class PullQueue {
   queue: Array<PullQueueItemType>;
   priorityQueue: PriorityQueue;
   batchCount: number;
-  roundTripTime: number;
-  layer: DataLayerType;
+  layerInfo: DataLayerType;
   whitenEmptyBuckets: boolean;
-  connectionInfo: BinaryDataConnectionInfo;
+  connectionInfo: ConnectionInfo;
   datastoreInfo: DataStoreInfoType;
 
   constructor(
     cube: DataCube,
-    layer: DataLayerType,
-    connectionInfo: BinaryDataConnectionInfo,
+    layerInfo: DataLayerType,
+    connectionInfo: ConnectionInfo,
     datastoreInfo: DataStoreInfoType,
   ) {
     this.cube = cube;
-    this.layer = layer;
+    this.layerInfo = layerInfo;
     this.connectionInfo = connectionInfo;
     this.datastoreInfo = datastoreInfo;
     this.priorityQueue = createPriorityQueue();
     this.batchCount = 0;
-    this.roundTripTime = 0;
 
     // Debug option.
     // If true, buckets of all 0 will be transformed to have 255 bytes everywhere.
@@ -94,10 +92,10 @@ class PullQueue {
     const roundTripBeginTime = new Date();
 
     try {
-      const responseBuffer = await requestFromStore(this.layer, batch);
+      const responseBuffer = await requestFromStore(this.layerInfo, batch);
       let bucketData;
       this.connectionInfo.log(
-        this.layer.name,
+        this.layerInfo.name,
         roundTripBeginTime,
         batch.length,
         responseBuffer.length,
@@ -118,20 +116,20 @@ class PullQueue {
           if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
             const higherAddress = zoomedAddressToAnotherZoomStep(
               bucketAddress,
-              this.layer.resolutions,
+              this.layerInfo.resolutions,
               zoomStep + 1,
             );
 
             const resolutionsFactors = getResolutionsFactors(
-              this.layer.resolutions[zoomStep + 1],
-              this.layer.resolutions[zoomStep],
+              this.layerInfo.resolutions[zoomStep + 1],
+              this.layerInfo.resolutions[zoomStep],
             );
             const higherBucket = this.cube.getOrCreateBucket(higherAddress);
             if (higherBucket.type === "data") {
               higherBucket.downsampleFromLowerBucket(
                 bucket,
                 resolutionsFactors,
-                this.layer.category === "segmentation",
+                this.layerInfo.category === "segmentation",
               );
             }
           }

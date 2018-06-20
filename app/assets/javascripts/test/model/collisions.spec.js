@@ -1,7 +1,7 @@
 // @flow
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 import test from "ava";
-import traverse from "oxalis/model/binary/bucket_traversals";
+import traverse from "oxalis/model/bucket_data_handling/bucket_traversals";
 
 test("Traversal: diagonal line", t => {
   const buckets = traverse([0, 0, 0], [33, 33, 0], [[1, 1, 1]], 0);

@@ -5,6 +5,7 @@ import himalaya from "himalaya";
 import fetch, { Headers, Request, Response, FetchError } from "node-fetch";
 import { configure } from "enzyme";
 import Adapter from "enzyme-adapter-react-16";
+import shell from "shelljs";
 
 const requests = [];
 const minimumWait = 100; // ms
@@ -110,6 +111,11 @@ function debugWrapper(wrapper: any, name: string) {
 }
 
 configure({ adapter: new Adapter() });
+
+export function resetDatabase() {
+  console.log("Resetting test database...");
+  shell.exec("tools/postgres/prepareTestDB.sh > /dev/null 2> /dev/null");
+}
 
 export {
   waitForAllRequests,

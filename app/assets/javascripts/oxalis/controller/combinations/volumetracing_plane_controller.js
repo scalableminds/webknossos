@@ -178,7 +178,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
       leftClick: (pos: Point2, plane: OrthoViewType, event: MouseEvent) => {
         if (event.shiftKey) {
-          const cellId = Model.getSegmentationBinary().cube.getDataValue(
+          const cellId = Model.getSegmentationLayer().cube.getDataValue(
             this.calculateGlobalPos(pos),
             null,
             getRequestLogZoomStep(Store.getState()),

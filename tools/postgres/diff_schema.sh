@@ -11,7 +11,7 @@ function dump {
     export POSTGRES_URL="$ORIGINAL_POSTGRES_URL"
   else
     tempDbName="wk_tmp_$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 8 | head -n 1)" || true
-    export POSTGRES_URL="$(dirname "$POSTGRES_URL")/$tempDbName"
+    export POSTGRES_URL="$(dirname "$ORIGINAL_POSTGRES_URL")/$tempDbName"
     dbName="$("$scriptdir"/db_name.sh)"
     [[ "$dbName" == "$tempDbName" ]]
     echo "Creating DB $dbName" 1>&2

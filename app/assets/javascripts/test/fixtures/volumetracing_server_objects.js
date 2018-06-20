@@ -3,7 +3,6 @@ import type { ServerVolumeTracingType, APIAnnotationType } from "admin/api_flow_
 
 export const tracing: ServerVolumeTracingType = {
   activeSegmentId: 10000,
-  dataSetName: "ROI2017_wkw",
   boundingBox: { topLeft: { x: 0, y: 0, z: 0 }, width: 1024, height: 1024, depth: 1024 },
   createdTimestamp: 1529066010230,
   editPosition: { x: 3904, y: 4282, z: 2496 },

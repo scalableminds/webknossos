@@ -3,7 +3,7 @@ set -Eeuo pipefail
 
 scriptdir="$(dirname "$0")"
 
-ORIGINAL_POSTGRES_URL="$POSTGRES_URL"
+ORIGINAL_POSTGRES_URL="${POSTGRES_URL:-jdbc:postgresql://localhost/webknossos}"
 
 function dump {
   set -Eeuo pipefail

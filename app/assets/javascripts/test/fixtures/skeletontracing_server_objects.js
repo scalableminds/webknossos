@@ -1,6 +1,5 @@
 // @flow
-import type { ServerSkeletonTracingType } from "oxalis/model";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type { ServerSkeletonTracingType, APIAnnotationType } from "admin/api_flow_types";
 
 export const tracing: ServerSkeletonTracingType = {
   id: "47e37793-d0be-4240-a371-87ce68561a13",

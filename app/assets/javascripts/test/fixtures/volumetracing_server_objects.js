@@ -1,6 +1,5 @@
 // @flow
-import type { ServerVolumeTracingType } from "oxalis/model";
-import type { APIAnnotationType } from "admin/api_flow_types";
+import type { ServerVolumeTracingType, APIAnnotationType } from "admin/api_flow_types";
 
 export const tracing: ServerVolumeTracingType = {
   activeSegmentId: 10000,
@@ -14,8 +13,6 @@ export const tracing: ServerVolumeTracingType = {
   largestSegmentId: 21890,
   version: 0,
   zoomLevel: 0,
-  editPosition: [3904, 4282, 2496],
-  editRotation: [0, 0, 0],
 };
 
 export const annotation: APIAnnotationType = {

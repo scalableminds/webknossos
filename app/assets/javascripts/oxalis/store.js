@@ -211,6 +211,7 @@ export type UserConfigurationType = {
   +moveValue: number,
   +moveValue3d: number,
   +newNodeNewTree: boolean,
+  +highlightCommentedNodes: boolean,
   +overrideNodeRadius: boolean,
   +particleSize: number,
   +radius: number,
@@ -332,6 +333,7 @@ export const defaultState: OxalisState = {
     moveValue: 300,
     moveValue3d: 300,
     newNodeNewTree: false,
+    highlightCommentedNodes: false,
     overrideNodeRadius: true,
     particleSize: 5,
     radius: 5,
@@ -379,6 +381,7 @@ export const defaultState: OxalisState = {
     description: null,
     displayName: "Awesome Test Dataset",
     allowedTeams: [],
+    logoUrl: null,
   },
   tracing: {
     annotationId: "",

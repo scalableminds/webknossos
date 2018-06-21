@@ -5,6 +5,7 @@ import { Router, Route, Switch, Redirect } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
 import { connect } from "react-redux";
 import { Layout, Alert } from "antd";
+import Enum from "Enumjs";
 
 import window from "libs/window";
 import { ControlModeEnum } from "oxalis/constants";
@@ -45,7 +46,7 @@ import ScriptCreateView from "admin/scripts/script_create_view";
 import TimeLineView from "admin/time/time_line_view";
 
 import type { OxalisState } from "oxalis/store";
-import type { APITracingType, APIUserType } from "admin/api_flow_types";
+import type { APIUserType } from "admin/api_flow_types";
 import type { ContextRouter } from "react-router-dom";
 
 const { Content } = Layout;
@@ -79,14 +80,12 @@ function PageNotFoundView() {
 
 class ReactRouter extends React.Component<Props> {
   tracingView = ({ match }: ContextRouter) => {
-    const tracingType = match.params.type;
-    const isValidTracingType = Object.keys(APITracingTypeEnum).includes(tracingType);
+    const tracingType = Enum.coalesce(APITracingTypeEnum, match.params.type);
 
-    if (isValidTracingType) {
-      const saveTracingType = ((tracingType: any): APITracingType);
+    if (tracingType != null) {
       return (
         <TracingLayoutView
-          initialTracingType={saveTracingType}
+          initialTracingType={tracingType}
           initialAnnotationId={match.params.id || ""}
           initialControlmode={ControlModeEnum.TRACE}
         />
@@ -194,7 +193,10 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/projects"
-                component={ProjectListView}
+                render={({ location }: ContextRouter) => (
+                  // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
+                  <ProjectListView initialSearchValue={location.hash.slice(1)} />
+                )}
                 exact
               />
               <SecuredRoute
@@ -227,7 +229,8 @@ class ReactRouter extends React.Component<Props> {
                   if (isReadOnly) {
                     const annotationInformation = await getAnnotationInformation(
                       match.params.id || "",
-                      match.params.type || "",
+                      Enum.coalesce(APITracingTypeEnum, match.params.type) ||
+                        APITracingTypeEnum.Explorational,
                     );
                     return annotationInformation.isPublic;
                   }
@@ -259,7 +262,10 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/taskTypes"
-                component={TaskTypeListView}
+                render={({ location }: ContextRouter) => (
+                  // Strip the leading # away. If there is no hash, "".slice(1) will evaluate to "", too.
+                  <TaskTypeListView initialSearchValue={location.hash.slice(1)} />
+                )}
                 exact
               />
               <SecuredRoute

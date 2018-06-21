@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
-import models.project.{Project, ProjectDAO}
+import models.project.{ProjectSQL, ProjectSQLDAO}
 import models.task.{TaskType, TaskTypeDAO}
 import models.team._
 import models.user.{User, UserDAO, UserService}
@@ -42,7 +42,7 @@ Sampletown
 Samplecountry
 """
   val organizationTeamId = BSONObjectID.generate
-  val defaultOrganization = Organization(additionalInformation, "Connectomics department", List(), organizationTeamId)
+  val defaultOrganization = Organization("/assets/images/mpi-logos.svg", additionalInformation, "Connectomics department", List(), organizationTeamId)
   val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)
   val organizationTeamSQL = TeamSQL(ObjectId.fromBsonId(organizationTeamId), ObjectId.fromBsonId(defaultOrganization._id), defaultOrganization.name, isOrganizationTeam = true)
 
@@ -126,12 +126,12 @@ Samplecountry
   }
 
   def insertProject = {
-    ProjectDAO.findAll(GlobalAccessContext).flatMap {
+    ProjectSQLDAO.findAll(GlobalAccessContext).flatMap {
       projects =>
         if (projects.isEmpty) {
           UserService.defaultUser.flatMap { user =>
-            val project = Project("sampleProject", organizationTeam._id, user._id, 100, false, Some(5400000))
-            for {_ <- ProjectDAO.insert(project)(GlobalAccessContext)} yield ()
+            val project = ProjectSQL(ObjectId.generate, ObjectId.fromBsonId(organizationTeam._id), ObjectId.fromBsonId(user._id), "sampleProject", 100, false, Some(5400000))
+            for {_ <- ProjectSQLDAO.insertOne(project)(GlobalAccessContext)} yield ()
           }
         } else Fox.successful(())
     }.toFox

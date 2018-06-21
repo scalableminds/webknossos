@@ -10,6 +10,7 @@ import type {
   CategoryType,
   ElementClassType,
 } from "oxalis/store";
+import Enum from "Enumjs";
 
 export type APIMessageType = { ["info" | "warning" | "error"]: string };
 
@@ -63,6 +64,7 @@ export type APIDatasetType = {
   +name: string,
   +displayName: string,
   +owningOrganization: string,
+  +logoUrl: ?string,
 };
 
 export type APIDataSourceWithMessagesType = {
@@ -78,18 +80,21 @@ export type APITeamMembershipType = {
 
 export type ExperienceMapType = { +[string]: number };
 
-export type APIUserType = {
+export type APIUserBaseType = {
   +email: string,
-  +experiences: ExperienceMapType,
   +firstName: string,
   +lastName: string,
   +id: string,
+  +isAnonymous: boolean,
+  +teams: Array<APITeamMembershipType>,
+};
+
+export type APIUserType = APIUserBaseType & {
+  +experiences: ExperienceMapType,
   +isAdmin: boolean,
   +isActive: boolean,
-  +isAnonymous: boolean,
   +isEditable: boolean,
   +lastActivity: number,
-  +teams: Array<APITeamMembershipType>,
   +organization: string,
 };
 
@@ -120,14 +125,14 @@ export type APISettingsType = {
   +somaClickingAllowed: boolean,
 };
 
-export const APITracingTypeEnum = {
+export const APITracingTypeEnum = Enum.make({
   Explorational: "Explorational",
   Task: "Task",
   View: "View",
   CompoundTask: "CompoundTask",
   CompoundProject: "CompoundProject",
   CompoundTaskType: "CompoundTaskType",
-};
+});
 
 export type APITracingType = $Keys<typeof APITracingTypeEnum>;
 
@@ -144,7 +149,7 @@ export type TaskStatusType = { +open: number, +active: number, +finished: number
 export type APIScriptType = {
   +id: string,
   +name: string,
-  +owner: APIUserType,
+  +owner: APIUserBaseType,
   +gist: string,
 };
 
@@ -159,7 +164,7 @@ type APIProjectTypeBase = {
 
 export type APIProjectType = APIProjectTypeBase & {
   +id: string,
-  +owner: APIUserType,
+  +owner: APIUserBaseType,
 };
 
 export type APIProjectUpdaterType = APIProjectTypeBase & {
@@ -172,8 +177,8 @@ export type APIProjectCreatorType = APIProjectTypeBase & {
 };
 
 export type APITaskType = {
-  +boundingBox: BoundingBoxObjectType,
-  +boundingBoxVec6: Vector6,
+  +boundingBox: ?BoundingBoxObjectType,
+  +boundingBoxVec6?: Vector6,
   +created: string,
   +creationInfo: ?string,
   +dataSet: string,
@@ -189,12 +194,12 @@ export type APITaskType = {
   +script: ?APIScriptType,
   +status: TaskStatusType,
   +team: string,
-  +tracingTime: number,
+  +tracingTime: ?number,
   +type: APITaskTypeType,
   +directLinks?: Array<string>,
 };
 
-export type APIAnnotationType = {
+type APIAnnotationTypeBase = {
   +content: {
     +id: string,
     +typ: string,
@@ -210,12 +215,19 @@ export type APIAnnotationType = {
   +restrictions: APIRestrictionsType,
   +settings: APISettingsType,
   +state: string,
-  +stats: SkeletonTracingStatsType,
+  +stats: SkeletonTracingStatsType | {||},
   +tags: Array<string>,
-  +task: APITaskType,
-  +tracingTime: number,
+  +tracingTime: ?number,
   +typ: APITracingType,
-  +user?: APIUserType,
+  +user?: APIUserBaseType,
+};
+
+export type APIAnnotationType = APIAnnotationTypeBase & {
+  +task: ?APITaskType,
+};
+
+export type APIAnnotationWithTaskType = APIAnnotationTypeBase & {
+  +task: APITaskType,
 };
 
 export type APITaskWithAnnotationType = APITaskType & {

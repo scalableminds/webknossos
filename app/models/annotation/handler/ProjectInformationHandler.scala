@@ -3,39 +3,38 @@ package models.annotation.handler
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation._
-import models.project.ProjectDAO
-import models.task.TaskDAO
+import models.project.ProjectSQLDAO
 import models.user.User
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
-import models.annotation.AnnotationState._
+import utils.ObjectId
 
 object ProjectInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  def provideAnnotation(projectId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
   {
     for {
-      project <- ProjectDAO.findOneById(projectId) ?~> "project.notFound"
-      tasks <- TaskDAO.findAllByProject(project.name)
-      annotations <- Fox.serialSequence(tasks)(_.annotations).map(_.flatten).toFox
-      finishedAnnotations = annotations.filter(_.state == Finished)
-      _ <- assertAllOnSameDataset(finishedAnnotations)
-      _ <- assertNonEmpty(finishedAnnotations) ?~> "project.noAnnotations"
+      project <- ProjectSQLDAO.findOne(projectId) ?~> "project.notFound"
+      annotations <- AnnotationSQLDAO.findAllFinishedForProject(project._id)
+      _ <- assertAllOnSameDataset(annotations)
+      _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
-      dataSetName = finishedAnnotations.head.dataSetName
-      mergedAnnotation <- AnnotationMerger.mergeN(BSONObjectID(project.id), persistTracing=false, user._id,
-        dataSetName, project._team, AnnotationType.CompoundProject, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+      teamIdBson <- project._team.toBSONObjectId.toFox
+      _ <- user.assertTeamManagerOrAdminOf(teamIdBson)
+      _dataSet = annotations.head._dataSet
+      mergedAnnotation <- AnnotationMerger.mergeN(projectId, persistTracing=false, ObjectId.fromBsonId(user._id),
+        _dataSet, project._team, AnnotationTypeSQL.CompoundProject, annotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
   }
 
-  override def restrictionsFor(projectId: String)(implicit ctx: DBAccessContext) =
+  override def restrictionsFor(projectId: ObjectId)(implicit ctx: DBAccessContext) =
     for {
-      project <- ProjectDAO.findOneById(projectId)
+      project <- ProjectSQLDAO.findOne(projectId)
+      teamIdBson <- project._team.toBSONObjectId.toFox
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(user: Option[User]) =
-          user.exists(_.isTeamManagerOfBLOCKING(project._team))
+          user.exists(_.isTeamManagerOfBLOCKING(teamIdBson))
       }
     }
 }

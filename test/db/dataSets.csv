@@ -1,7 +1,7 @@
-_id,_dataStore,_organization,defaultConfiguration,description,displayName,isPublic,isUsable,name,scale,status,sharingToken,created,isDeleted
-'570b9f4e4bb848d0885ee711','localhost','5ab0c6a674d0af7b003b23ac',,,,f,f,'2012-06-28_Cortex',,'No longer available on datastore.',,'2016-04-11T12:57:50.082Z',f
-'570b9f4e4bb848d0885ee712','localhost','5ab0c6a674d0af7b003b23ac',,,,f,f,'Experiment_001',,'No longer available on datastore.',,'2016-04-11T12:57:50.079Z',f
-'570b9f4e4bb848d0885ee713','localhost','5ab0c6a674d0af7b003b23ac',,,,f,f,'2012-09-28_ex145_07x2',,'No longer available on datastore.',,'2016-04-11T12:57:50.080Z',f
-'570b9fd34bb848d0885ee716','localhost','5ab0c6a674d0af7b003b23ac',,,,f,f,'rgb',,'No longer available on datastore.',,'2016-04-11T13:00:03.792Z',f
-'59e9cfbdba632ac2ab8b23b3','localhost','5ab0c6a674d0af7b003b23ac',,,,f,t,'confocal-multi_knossos','(22,22,44.599998474121094)','',,'2017-10-20T10:28:13.763Z',f
-'59e9cfbdba632ac2ab8b23b5','localhost','5ab0c6a674d0af7b003b23ac',,,,f,t,'e2006_knossos','(16.5,16.5,25)','',,'2017-10-20T10:28:13.789Z',f
+_id,_dataStore,_organization,defaultConfiguration,description,displayName,isPublic,isUsable,name,scale,status,sharingToken,logoUrl,created,isDeleted
+'570b9f4e4bb848d0885ee711','localhost','5ab0c6a674d0af7b003b23ac',,,,f,f,'2012-06-28_Cortex',,'No longer available on datastore.',,,'2016-04-11T12:57:50.082Z',f
+'570b9f4e4bb848d0885ee712','localhost','5ab0c6a674d0af7b003b23ac',,,,f,f,'Experiment_001',,'No longer available on datastore.',,,'2016-04-11T12:57:50.079Z',f
+'570b9f4e4bb848d0885ee713','localhost','5ab0c6a674d0af7b003b23ac',,,,f,f,'2012-09-28_ex145_07x2',,'No longer available on datastore.',,,'2016-04-11T12:57:50.080Z',f
+'570b9fd34bb848d0885ee716','localhost','5ab0c6a674d0af7b003b23ac',,,,f,f,'rgb',,'No longer available on datastore.',,,'2016-04-11T13:00:03.792Z',f
+'59e9cfbdba632ac2ab8b23b3','localhost','5ab0c6a674d0af7b003b23ac',,,,f,t,'confocal-multi_knossos','(22,22,44.599998474121094)','',,,'2017-10-20T10:28:13.763Z',f
+'59e9cfbdba632ac2ab8b23b5','localhost','5ab0c6a674d0af7b003b23ac',,,,f,t,'e2006_knossos','(16.5,16.5,25)','',,,'2017-10-20T10:28:13.789Z',f

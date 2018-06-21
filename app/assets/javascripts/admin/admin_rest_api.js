@@ -17,6 +17,7 @@ import type {
   APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
+  APIAnnotationWithTaskType,
   APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
@@ -32,6 +33,7 @@ import type {
   APIFeatureToggles,
   APIOrganizationType,
 } from "admin/api_flow_types";
+import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
 import type { DatasetConfigurationType } from "oxalis/store";
@@ -45,7 +47,7 @@ type NewTeamType = {
 
 function assertResponseLimit(collection) {
   if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
-    Toast.warning(messages["request.max_item_count_alert"], true);
+    Toast.warning(messages["request.max_item_count_alert"], { sticky: true });
   }
 }
 
@@ -315,11 +317,11 @@ export async function peekNextTasks(): Promise<?APITaskType> {
   return Request.receiveJSON("/api/user/tasks/peek");
 }
 
-export async function requestTask(): Promise<APIAnnotationType> {
+export async function requestTask(): Promise<APIAnnotationWithTaskType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
 
-export async function getAnnotationsForTask(taskId: string): Promise<void> {
+export async function getAnnotationsForTask(taskId: string): Promise<APIAnnotationType[]> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
 }
 
@@ -394,7 +396,7 @@ export async function updateTask(taskId: string, task: NewTaskType): Promise<API
 }
 
 export async function finishTask(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/api/annotations/Task/${annotationId}/finish`);
+  return finishAnnotation(annotationId, APITracingTypeEnum.Task);
 }
 
 export async function transferTask(
@@ -427,7 +429,7 @@ export async function editAnnotation(
   annotationId: string,
   annotationType: APITracingType,
   data: $Shape<EditableAnnotationType>,
-): Promise<APIAnnotationType> {
+): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
     data,
   });
@@ -468,7 +470,7 @@ export async function finishAllAnnotations(
 
 export async function copyAnnotationToUserAccount(
   annotationId: string,
-  tracingType: string,
+  tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
   const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url);
@@ -476,7 +478,7 @@ export async function copyAnnotationToUserAccount(
 
 export async function getAnnotationInformation(
   annotationId: string,
-  tracingType: string,
+  tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
   // Include /readOnly part whenever it is in the pathname
   const isReadOnly = location.pathname.endsWith("/readOnly");
@@ -486,11 +488,11 @@ export async function getAnnotationInformation(
 }
 
 export async function createExplorational(
-  dataset: APIDatasetType,
+  datasetName: string,
   typ: "volume" | "skeleton",
   withFallback: boolean,
-) {
-  const url = `/api/datasets/${dataset.name}/createExplorational`;
+): Promise<APIAnnotationType> {
+  const url = `/api/datasets/${datasetName}/createExplorational`;
 
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }

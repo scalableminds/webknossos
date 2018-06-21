@@ -26,7 +26,7 @@ mockRequire("libs/error_handling", {
 mockRequire("libs/toast", { error: _.noop });
 
 // Avoid node caching and make sure all mockRequires are applied
-const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
+const Cube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
 
 test.beforeEach(t => {
   const mockedLayer = {

@@ -357,7 +357,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           render={(__, tracing: APIAnnotationType) =>
-            tracing.stats && tracing.content.typ === "skeleton" ? (
+            tracing.stats.treeCount && tracing.content.typ === "skeleton" ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />

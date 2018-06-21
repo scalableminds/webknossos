@@ -29,9 +29,9 @@ const StoreMock = {
 mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 
-const { DataBucket } = mockRequire.reRequire("oxalis/model/binary/bucket");
+const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
 const { requestFromStore, sendToStore, getBitDepth } = mockRequire.reRequire(
-  "oxalis/model/binary/wkstore_adapter",
+  "oxalis/model/bucket_data_handling/wkstore_adapter",
 );
 
 const layerInfo = {

@@ -30,7 +30,7 @@ class PushQueue {
     const autoSaveFailureMessage = "Auto-Save failed!";
     this.taskQueue.on("failure", () => {
       document.body.classList.add("save-error");
-      Toast.error(autoSaveFailureMessage, true);
+      Toast.error(autoSaveFailureMessage, { sticky: true });
     });
     this.taskQueue.on("success", () => {
       document.body.classList.remove("save-error");

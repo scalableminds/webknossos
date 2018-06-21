@@ -115,29 +115,32 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 
     // Build up priority queue
     wSliceOffsets.forEach(wSliceOffset => {
-      for (
-        let y = scaledTopLeftVector[v] - extraBucket;
-        y <= scaledBottomRightVector[v] + extraBucket;
-        y++
-      ) {
-        for (
-          let x = scaledTopLeftVector[u] - extraBucket;
-          x <= scaledBottomRightVector[u] + extraBucket;
-          x++
-        ) {
+      const extraYBucketStart = scaledTopLeftVector[v] - extraBucket;
+      const extraYBucketEnd = scaledBottomRightVector[v] + extraBucket;
+      const extraXBucketStart = scaledTopLeftVector[u] - extraBucket;
+      const extraXBucketEnd = scaledBottomRightVector[u] + extraBucket;
+
+      for (let y = extraYBucketStart; y <= extraYBucketEnd; y++) {
+        for (let x = extraXBucketStart; x <= extraXBucketEnd; x++) {
           const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
           bucketAddress[u] = x;
           bucketAddress[v] = y;
           bucketAddress[w] += wSliceOffset;
 
           const bucket = cube.getOrCreateBucket(bucketAddress);
+          const isExtraBucket =
+            y === extraYBucketStart ||
+            y === extraYBucketEnd ||
+            x === extraXBucketStart ||
+            x === extraXBucketEnd;
 
           if (bucket.type !== "null") {
             const priority =
               Math.abs(x - centerBucketUV[0]) +
               Math.abs(y - centerBucketUV[1]) +
               Math.abs(100 * wSliceOffset) +
-              additionalPriorityWeight;
+              additionalPriorityWeight +
+              (isExtraBucket ? 100 : 0);
             bucketQueue.queue({
               priority,
               bucket,

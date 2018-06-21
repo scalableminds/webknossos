@@ -1,17 +1,14 @@
 package models.task
 
-import javax.management.relation.Role
-
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
-import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables._
-import models.annotation.AnnotationSQLDAO.transactionSerializationError
 import models.annotation._
-import models.project.{ProjectSQLDAO}
+import models.binary.DataSetDAO
+import models.project.ProjectSQLDAO
 import models.team.TeamSQLDAO
 import models.user.{Experience, User}
 import org.joda.time.DateTime
@@ -21,13 +18,9 @@ import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
-import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
-import views.html.helper.select
 
 import scala.util.Random
 
@@ -85,7 +78,8 @@ case class TaskSQL(
 
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      dataSetName <- annotationBase.map(_.dataSetName)
+      annotationBase <- annotationBase
+      dataSet <- DataSetDAO.findOneById(annotationBase._dataSet)
       status <- status.getOrElse(CompletionStatus(-1, -1, -1))
       taskType <- taskType.map(TaskType.transformToJson) getOrElse JsNull
       scriptInfo <- _script.map(_.toBSONObjectId).flatten.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
@@ -99,7 +93,7 @@ case class TaskSQL(
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskType,
-        "dataSet" -> dataSetName,
+        "dataSet" -> dataSet.name,
         "neededExperience" -> neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
         "status" -> status,
@@ -195,7 +189,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                 where _user = '${userId.id}')
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationTypeSQL.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.tasks_.openInstances > 0
                  and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null
@@ -245,19 +239,36 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield parsed
   }
 
-  def findAllByPojectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+  def findAllByProjectAndTaskTypeAndIdsAndUser(
+                                        projectNameOpt: Option[String],
+                                        taskTypeIdOpt: Option[ObjectId],
+                                        taskIdsOpt: Option[List[ObjectId]],
+                                        userIdOpt: Option[ObjectId]
+                                      )(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+
     /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
-    val projectFilterFox = projectOpt match {
-      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"(_project = '${sanitize(project._id.toString)}')"
+
+    val projectFilterFox = projectNameOpt match {
+      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"(t._project = '${project._id}')"
       case _ => Fox.successful("true")
     }
-    val taskTypeFilter = taskTypeOpt.map(tId => s"(_taskType = '${sanitize(tId)}')").getOrElse("true")
-    val idsFilter = idsOpt.map(ids => if (ids.isEmpty) "false" else s"(_id in ${writeStructTupleWithQuotes(ids.map(sanitize(_)))})").getOrElse("true")
+    val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '${ttId}')").getOrElse("true")
+    val taskIdsFilter = taskIdsOpt.map(tIds => if (tIds.isEmpty) "false" else s"(t._id in ${writeStructTupleWithQuotes(tIds.map(_.toString))})").getOrElse("true")
+    val userJoin = userIdOpt.map(_ => "join webknossos.annotations_ a on a._task = t._id join webknossos.users_ u on a._user = u._id").getOrElse("")
+    val userFilter = userIdOpt.map(uId => s"(u._id = '${uId}' and a.typ = '${AnnotationTypeSQL.Task}' and a.state != '${AnnotationState.Cancelled}')").getOrElse("true")
 
     for {
       projectFilter <- projectFilterFox
       accessQuery <- readAccessQuery
-      q = sql"select #${columns} from webknossos.tasks where webknossos.tasks.isDeleted = false and #${projectFilter} and #${taskTypeFilter} and #${idsFilter} and #${accessQuery} limit 1000"
+      q = sql"""select #${columnsWithPrefix("t.")}
+                from webknossos.tasks_ t
+                #${userJoin}
+                where #${projectFilter}
+                and #${taskTypeFilter}
+                and #${taskIdsFilter}
+                and #${userFilter}
+                and #${accessQuery}
+                limit 1000"""
       r <- run(q.as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed

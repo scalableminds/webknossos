@@ -82,7 +82,7 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
             """)
     } yield ()
 
-  def findOrganizationTeam(o: ObjectId) =
+  def findOrganizationTeamId(o: ObjectId) =
     for{
       r <- run(sql"select _id from webknossos.organizationTeams where _organization = ${o.id}".as[String])
       parsed <- BSONObjectID.parse(r.head).toOption.toFox ?~> Messages("sql.invalidBSONObjectId")
@@ -110,7 +110,7 @@ object Organization extends FoxImplicits {
   def fromOrganizationSQL(o: OrganizationSQL)(implicit ctx: DBAccessContext) = {
     for {
       idBson <- o._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId")
-      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeam(o._id).toFox
+      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(o._id).toFox
       organizationTeamIdBson <- organizationTeamId.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId")
       teams <- TeamSQLDAO.findAllByOrganization(o._id)
       teamBsonIds <- Fox.combined(teams.map(_._id.toBSONObjectId.toFox))

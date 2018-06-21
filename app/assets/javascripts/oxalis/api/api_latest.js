@@ -788,7 +788,7 @@ class UtilsApi {
    * // removeToast();
    */
   showToast(type: ToastStyleType, message: string, timeout: number): ?Function {
-    Toast.message(type, message, timeout === 0, timeout);
+    Toast.message(type, message, { sticky: timeout === 0, timeout });
     return () => Toast.close(message);
   }
 

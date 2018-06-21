@@ -156,7 +156,7 @@ export function toggleErrorHighlighting(state: boolean) {
     document.body.classList.toggle("save-error", state);
   }
   if (state) {
-    Toast.error(messages["save.failed"], true);
+    Toast.error(messages["save.failed"], { sticky: true });
   } else {
     Toast.close(messages["save.failed"]);
   }

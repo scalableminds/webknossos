@@ -158,6 +158,3 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 
 export default connect(mapStateToProps)(GalleryDatasetView);
 
-// TODO: mit mediaquery bei kleinen Bildschirmen: display: block; und breite beider spans auf 100% setzen !!!
-// Andernfalls belassen bei: display: block; und width auf 100% setzen
-// Maybe also change fontsize according to the screen size

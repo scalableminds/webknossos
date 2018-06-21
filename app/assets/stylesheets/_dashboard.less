@@ -109,8 +109,14 @@
         bottom: 0px;
         width: 50%;
         height: 100%;
+        padding-top: 16px;
+        padding-left: 16px;
         overflow-y: auto;
         background-color: white;
+        @media @smartphones {
+          padding-top: 24px;
+          padding-left: 24px;
+        }
 
         @media @smartphones {
           height: 45%;
@@ -124,24 +130,20 @@
           height: 100%;
 
           h3 {
-            padding: 10px;
-            padding-top: 16px;
             margin-bottom: 0px;
+            padding-bottom: 16px;
             word-wrap: break-word;
             @media @smartphones {
               font-size: 32px;
-              padding: 16px;
-              padding-top: 24px;
+              padding-bottom: 24px;
             }
           }
 
           .dataset-description-body {
-            padding: 10px;
             width: 100%;
             height: 240px;
             overflow-y: auto;
             @media @smartphones {
-              padding: 16px;
               height: 243px;
             }
           }

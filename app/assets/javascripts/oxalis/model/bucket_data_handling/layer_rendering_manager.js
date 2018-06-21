@@ -212,8 +212,6 @@ export default class LayerRenderingManager {
       );
 
       // In general, pull buckets which are not available but should be sent to the GPU
-      // Don't use -1 for ortho mode since this will make at the corner of the viewport more important than the ones in the middle
-      const missingBucketPriority = constants.MODES_PLANE.includes(viewMode) ? 100 : -1;
       const missingBuckets = bucketsWithPriorities
         .filter(({ bucket }) => !bucket.hasData())
         .filter(({ bucket }) => bucket.zoomedAddress[3] <= this.cube.MAX_UNSAMPLED_ZOOM_STEP)

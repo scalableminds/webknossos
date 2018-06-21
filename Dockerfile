@@ -1,4 +1,4 @@
-FROM scalableminds/alpine:master__62
+FROM scalableminds/various:alpine__master__62
 
 RUN apk --no-cache add bash 'openjdk8-jre postgresql-client~10'
 

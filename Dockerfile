@@ -1,6 +1,6 @@
 FROM scalableminds/various:alpine__master__62
 
-RUN apk --no-cache add bash 'openjdk8-jre postgresql-client~10'
+RUN apk --no-cache add bash openjdk8-jre 'postgresql-client~10'
 
 RUN mkdir -p /srv/webknossos
 WORKDIR /srv/webknossos

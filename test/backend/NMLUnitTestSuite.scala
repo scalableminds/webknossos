@@ -5,15 +5,23 @@ import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
+import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationSQL
 import models.annotation.nml.{NmlParser, NmlWriter}
-import org.specs2.main.Arguments
+import net.liftweb.common.Full
 import org.scalatest.FlatSpec
-import play.api.libs.iteratee.Enumerator
+import org.specs2.main.Arguments
+import play.api.libs.iteratee.Iteratee
+import play.api.test.{FakeApplication, WithServer}
 import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
-class NMLUnitTest(arguments: Arguments) extends FlatSpec {
+import scala.concurrent.Await
+import scala.concurrent.duration.Duration
+
+
+class NMLUnitTestSuite extends FlatSpec with LazyLogging {
+  logger.debug(s"test run")
   val timestamp = 123456789
 
   def getObjectId = ObjectId.fromBsonId(BSONObjectID.generate)
@@ -35,10 +43,31 @@ class NMLUnitTest(arguments: Arguments) extends FlatSpec {
 
   val dummyAnnotation = AnnotationSQL(getObjectId, getObjectId, None, getObjectId, getObjectId, TracingReference(getObjectId.toString, TracingType.skeleton))
 
-  /*"NML serializing and parsing" should "yield the same state" in {
-    val nml = NmlWriter.toNmlStream(Left(dummyTracing), dummyAnnotation, None)
-    Enumerator.
-    val parsedTracing = NmlParser.parse("", nml.)
+
+  "NML serializing and parsing" should "yield the same state" in new WithServer(app = FakeApplication(
+    additionalConfiguration = Map("http.port" -> 9000,
+      "play.modules.disabled" -> List("com.scalableminds.webknossos.datastore.DataStoreModule"),
+      "play.http.router" -> "webknossos.Routes",
+      "datastore.enabled" -> false)
+  ),
+    port = 9000) {
+    logger.debug(s"test run")
+    val nmlEnumarator = NmlWriter.toNmlStream(Left(dummyTracing), dummyAnnotation, None)
+    val arrayFuture = Iteratee.flatten(nmlEnumarator |>> Iteratee.consume[Array[Byte]]()).run
+    val array = Await.result(arrayFuture, Duration.Inf)
+    val parsedTracing = NmlParser.parse("", new ByteArrayInputStream(array))
+
+    parsedTracing match {
+      case Full(either) => either match {
+        case (Left(tracing), _) => {
+          logger.info(tracing.toString)
+          logger.info(dummyTracing.toString)
+          assert(tracing == dummyTracing)
+        }
+        case _ => throw new Exception
+      }
+      case _ => throw new Exception
+    }
   }
   /*
   * _id: ObjectId,

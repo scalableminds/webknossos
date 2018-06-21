@@ -95,6 +95,7 @@ case class AnnotationSQL(
       dataSet <- dataSet
       userJson <- user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
       settings <- findSettings
+      annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
     } yield {
       Json.obj(
         "modified" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(modified),
@@ -105,7 +106,7 @@ case class AnnotationSQL(
         "typ" -> typ,
         "task" -> taskJson,
         "stats" -> statistics,
-        "restrictions" -> AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser),
+        "restrictions" -> annotationRestrictions,
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracing,
         "dataSetName" -> dataSet.name,

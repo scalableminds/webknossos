@@ -64,6 +64,7 @@ CREATE TABLE webknossos.dataSets(
   scale webknossos.VECTOR3,
   status VARCHAR(1024) NOT NULL DEFAULT '',
   sharingToken CHAR(256),
+  logoUrl VARCHAR(2048),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
   UNIQUE (name, _organization)
@@ -156,8 +157,8 @@ CREATE TABLE webknossos.tasks(
   creationInfo VARCHAR(512),
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false,
-  CHECK (openInstances <= totalInstances),
-  CHECK (openInstances >= 0)
+  CONSTRAINT openInstancesSmallEnoughCheck CHECK (openInstances <= totalInstances),
+  CONSTRAINT openInstancesLargeEnoughCheck CHECK (openInstances >= 0)
 );
 
 CREATE TABLE webknossos.teams(
@@ -185,6 +186,7 @@ CREATE TABLE webknossos.organizations(
   _id CHAR(24) PRIMARY KEY DEFAULT '',
   name VARCHAR(256) NOT NULL,
   additionalInformation VARCHAR(2048) NOT NULL DEFAULT '',
+  logoUrl VARCHAR(2048) NOT NULL DEFAULT '',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT false
 );

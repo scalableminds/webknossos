@@ -42,7 +42,7 @@ Sampletown
 Samplecountry
 """
   val organizationTeamId = BSONObjectID.generate
-  val defaultOrganization = Organization(additionalInformation, "Connectomics department", List(), organizationTeamId)
+  val defaultOrganization = Organization("/assets/images/mpi-logos.svg", additionalInformation, "Connectomics department", List(), organizationTeamId)
   val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)
   val organizationTeamSQL = TeamSQL(ObjectId.fromBsonId(organizationTeamId), ObjectId.fromBsonId(defaultOrganization._id), defaultOrganization.name, isOrganizationTeam = true)
 

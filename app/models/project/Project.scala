@@ -4,7 +4,7 @@ import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationState
+import models.annotation.{AnnotationState, AnnotationTypeSQL}
 import models.task.TaskSQLDAO
 import models.team.{Team, TeamDAO, TeamSQLDAO}
 import models.user.{User, UserService}
@@ -35,6 +35,7 @@ case class ProjectSQL(
 
   def isDeletableBy(user: User) = ObjectId.fromBsonId(user._id) == _owner || user.isAdmin
 
+  def team(implicit ctx: DBAccessContext) = _team.toBSONObjectId.toFox.flatMap(TeamDAO.findOneById(_))
 
   def publicWrites: Fox[JsObject] =
     for {
@@ -124,7 +125,7 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
   def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[ProjectSQL] =
     for {
       accessQuery <- readAccessQuery
-      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = ${name} and #${accessQuery}".as[ProjectsRow])
+      rList <- run(sql"select #${columns} from #${existingCollectionName} where name = '#${sanitize(name)}' and #${accessQuery}".as[ProjectsRow])
       r <- rList.headOption.toFox
       parsed <- parse(r)
     } yield parsed
@@ -139,7 +140,8 @@ object ProjectSQLDAO extends SQLDAO[ProjectSQL, ProjectsRow, Projects] {
                          join webknossos.projects_ p on t._project = p._id
                          join webknossos.users_ u on a._user = u._id
                          where p.name = ${name}
-                         and a.state != '#${AnnotationState.Finished.toString}'
+                         and a.state = '#${AnnotationState.Active.toString}'
+                         and a.typ = '#${AnnotationTypeSQL.Task}'
                          group by u.email
                      """.as[String])
     } yield rSeq.toList

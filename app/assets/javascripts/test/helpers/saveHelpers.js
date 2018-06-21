@@ -1,10 +1,10 @@
 import type { UpdateAction } from "oxalis/model/sagas/update_actions";
 
-export function createSaveQueueFromUpdateActions(updateActions, timestamp) {
+export function createSaveQueueFromUpdateActions(updateActions, timestamp, stats = null) {
   return updateActions.map(ua => ({
     version: -1,
     timestamp,
-    stats: null,
+    stats,
     actions: [].concat(ua),
   }));
 }

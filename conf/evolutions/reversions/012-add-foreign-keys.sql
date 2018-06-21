@@ -1,0 +1,43 @@
+START TRANSACTION;
+ALTER TABLE webknossos.analytics
+  DROP CONSTRAINT user_ref;
+ALTER TABLE webknossos.annotations
+  DROP CONSTRAINT task_ref,
+  DROP CONSTRAINT team_ref,
+  DROP CONSTRAINT user_ref;
+ALTER TABLE webknossos.dataSets
+  DROP CONSTRAINT organization_ref,
+  DROP CONSTRAINT dataStore_ref;
+ALTER TABLE webknossos.dataSet_layers
+  DROP CONSTRAINT dataSet_ref;
+ALTER TABLE webknossos.dataSet_allowedTeams
+  DROP CONSTRAINT dataSet_ref,
+  DROP CONSTRAINT team_ref;
+ALTER TABLE webknossos.dataSet_resolutions
+  DROP CONSTRAINT dataSet_ref;
+ALTER TABLE webknossos.projects
+  DROP CONSTRAINT team_ref,
+  DROP CONSTRAINT user_ref;
+ALTER TABLE webknossos.scripts
+  DROP CONSTRAINT user_ref;
+ALTER TABLE webknossos.taskTypes
+  DROP CONSTRAINT team_ref;
+ALTER TABLE webknossos.tasks
+  DROP CONSTRAINT project_ref,
+  DROP CONSTRAINT script_ref;
+ALTER TABLE webknossos.teams
+  DROP CONSTRAINT organization_ref;
+ALTER TABLE webknossos.timespans
+  DROP CONSTRAINT user_ref,
+  DROP CONSTRAINT annotation_ref;
+ALTER TABLE webknossos.users
+  DROP CONSTRAINT organization_ref;
+ALTER TABLE webknossos.user_team_roles
+  DROP CONSTRAINT user_ref,
+  DROP CONSTRAINT team_ref;
+ALTER TABLE webknossos.user_experiences
+  DROP CONSTRAINT user_ref;
+ALTER TABLE webknossos.user_dataSetConfigurations
+  DROP CONSTRAINT user_ref,
+  DROP CONSTRAINT dataSet_ref;
+COMMIT TRANSACTION;

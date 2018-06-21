@@ -30,6 +30,7 @@ object ND2WK extends FoxImplicits {
       organization <- OrganizationDAO.findOneByName(orgName)(GlobalAccessContext)
     } yield {
       DataSet(
+        None,
         dataStoreInfo,
         dataSource,
         orgName,

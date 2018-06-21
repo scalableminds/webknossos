@@ -1,15 +1,14 @@
-FROM openjdk:8-jdk
-RUN apt-get update \
-    && apt-get -y install postgresql-client \
-    && rm -rf /var/lib/apt/lists/*
+FROM scalableminds/alpine:master__62
+
+RUN apk --no-cache add bash 'openjdk8-jre postgresql-client~10'
 
 RUN mkdir -p /srv/webknossos
 WORKDIR /srv/webknossos
 
 COPY target/universal/stage .
 
-RUN groupadd -r webknossos \
-  && useradd -r -g webknossos webknossos \
+RUN addgroup -S -g 999 webknossos \
+  && adduser -S -u 999 -G webknossos webknossos \
   && mkdir disk \
   && chown -R webknossos .
 

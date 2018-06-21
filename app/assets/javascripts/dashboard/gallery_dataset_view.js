@@ -119,14 +119,16 @@ class GalleryDatasetView extends React.PureComponent<Props> {
           </div>
         </span>
         <div className="dataset-description">
-          <h3>
-            {dataset.displayName != null && dataset.displayName !== ""
-              ? dataset.displayName
-              : dataset.name}
-          </h3>
-          <div className="dataset-description-body">
-            <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
-            {description}
+          <div className="description-flex">
+            <h3>
+              {dataset.displayName != null && dataset.displayName !== ""
+                ? dataset.displayName
+                : dataset.name}
+            </h3>
+            <div className="dataset-description-body">
+              <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
+              {description}
+            </div>
           </div>
         </div>
       </Card>

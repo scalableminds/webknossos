@@ -115,36 +115,41 @@
           display: block;
         }
 
-        h3 {
-          padding: 10px;
-          padding-top: 16px;
-          color: white;
-          word-wrap: break-word;
-          @media @smartphones {
-            font-size: 32px;
-            padding: 16px;
-            padding-top: 24px;
+        .description-flex {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+
+          h3 {
+            padding: 10px;
+            padding-top: 16px;
+            color: white;
+            margin-bottom: 0px;
+            word-wrap: break-word;
+            @media @smartphones {
+              font-size: 32px;
+              padding: 16px;
+              padding-top: 24px;
+            }
           }
-        }
 
-        .dataset-description-body {
-          padding: 10px;
-          position: absolute;
-          bottom: 0px;
-          width: 100%;
-          height: 240px;
-          overflow-y: auto;
-          @media @smartphones {
-            padding: 16px;
-            height: 243px;
+          .dataset-description-body {
+            padding: 10px;
+            width: 100%;
+            height: 240px;
+            overflow-y: auto;
+            @media @smartphones {
+              padding: 16px;
+              height: 243px;
+            }
           }
-        }
 
-        p {
-          font-size: 14px;
+          p {
+            font-size: 14px;
 
-          @media @smartphones {
-            font-size: 18px;
+            @media @smartphones {
+              font-size: 18px;
+            }
           }
         }
       }

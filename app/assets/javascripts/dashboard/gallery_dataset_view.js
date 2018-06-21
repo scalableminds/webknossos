@@ -97,6 +97,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
         <span
           className="dataset-thumbnail"
+          title="Preview of the dataset"
           style={{
             background: `url(${
               dataset.thumbnailURL

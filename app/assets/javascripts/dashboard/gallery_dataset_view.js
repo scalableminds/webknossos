@@ -157,4 +157,3 @@ const mapStateToProps = (state: OxalisState): StateProps => ({
 });
 
 export default connect(mapStateToProps)(GalleryDatasetView);
-

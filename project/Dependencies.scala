@@ -36,6 +36,7 @@ object Dependencies {
   val reactivePlay = "org.reactivemongo" %% "play2-reactivemongo" % reactivePlayVersion
   val scalaAsync = "org.scala-lang.modules" %% "scala-async" % "0.9.2"
   val scalaLogging = "com.typesafe.scala-logging" %% "scala-logging" % "3.4.0"
+  val scalaTest = "org.scalatest" %% "scalatest" % "3.0.4" % "test"
   val silhouette = "com.mohiva" %% "play-silhouette" % "3.0.5"
   val silhouetteTestkit = "com.mohiva" %% "play-silhouette-testkit" % "3.0.5" % "test"
   val urlHelper = "com.netaporter" %% "scala-uri" % "0.4.14"
@@ -86,6 +87,7 @@ object Dependencies {
     ceedubs,
     commonsCodec,
     scalaAsync,
+    scalaTest,
     silhouette,
     silhouetteTestkit,
     specs2 % Test,

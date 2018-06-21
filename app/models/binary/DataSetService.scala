@@ -43,6 +43,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
     OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
       case Full(_) =>
       DataSetDAO.insert(DataSet(
+        None,
         dataStore,
         dataSource,
         owningOrganization,

@@ -93,6 +93,18 @@ object Global extends GlobalSettings with LazyLogging{
     if (result != 0)
       throw new Exception("Could not ensure Postgres database. Is postgres installed?")
 
+    // diffing the actual DB schema against schema.sql:
+    logger.info("Running diff_schema.sh tools/postgres/schema.sql DB")
+    val errorMessage = new StringBuilder("Database schema does not fit to schema.sql:\n")
+    def appendMessage(value: String) = errorMessage.append(value + "\n")
+    val schemaDiffResult = "tools/postgres/diff_schema.sh tools/postgres/schema.sql DB" ! ProcessLogger(appendMessage, appendMessage)
+    if (schemaDiffResult == 0) {
+      logger.info("Schema is up to date.")
+    } else {
+      logger.error(errorMessage.toString())
+      NewRelic.noticeError(errorMessage.toString())
+    }
+
     Future.successful(())
   }
 

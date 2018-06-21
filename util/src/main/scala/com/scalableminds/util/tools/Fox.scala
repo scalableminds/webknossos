@@ -3,7 +3,6 @@
  */
 package com.scalableminds.util.tools
 
-import com.scalableminds.util.tools.Fox.sequenceOfFulls
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
@@ -135,6 +134,16 @@ object Fox{
       results <- serialCombined(seq)(f)
       zipped = results.zip(seq)
     } yield (zipped.filter(_._1 != inverted).map(_._2))
+  }
+
+  def runOptional[A, B](input: Option[A])(f: A => Fox[B])(implicit ec: ExecutionContext) = {
+    input match {
+      case Some(i) =>
+        for {
+          result <- f(i)
+        } yield Some(result)
+      case None =>
+        Fox.successful(None)}
   }
 
 }

@@ -28,7 +28,7 @@ gain=Gain
 lose=Loss
 task=Task
 
-bsonid.invalid=The passed resource id is invalid.
+bsonid.invalid=The passed resource id ''{0}'' is invalid
 query.type.invalid=Invalid query type argument
 
 format.json.invalid=Invalid Json format

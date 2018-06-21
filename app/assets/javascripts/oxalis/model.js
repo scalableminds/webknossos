@@ -47,7 +47,6 @@ import {
   getUserConfiguration,
   getDatasetConfiguration,
 } from "admin/admin_rest_api";
-import { getBitDepth } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import messages from "messages";
 import type { APIAnnotationType, APIDatasetType, APIDataLayerType } from "admin/api_flow_types";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
@@ -56,6 +55,7 @@ import {
   getLayerByName,
   getDatasetCenter,
   determineAllowedModes,
+  getBitDepth,
 } from "oxalis/model/accessors/dataset_accessor";
 import { serverTracingAsVolumeTracingMaybe } from "oxalis/model/accessors/volumetracing_accessor";
 import { convertPointToVecInBoundingBox } from "oxalis/model/reducers/reducer_helpers";

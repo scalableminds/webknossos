@@ -5,6 +5,7 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import Base64 from "base64-js";
 import datasetServerObject from "test/fixtures/dataset_server_object";
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 
 mockRequire.stopAll();
 
@@ -33,7 +34,7 @@ mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
-const { requestFromStore, sendToStore, getBitDepth } = mockRequire.reRequire(
+const { requestFromStore, sendToStore } = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/wkstore_adapter",
 );
 

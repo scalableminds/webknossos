@@ -4,13 +4,14 @@
 package controllers
 
 import javax.inject.Inject
+
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.services.DataStoreStatus
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.reactivemongo.{GlobalAccessContext, JsonFormatHelper}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.{AnnotationSQL, AnnotationSQLDAO}
+import models.annotation.{Annotation, AnnotationDAO}
 import models.binary._
 import models.user.time.TimeSpanService
 import play.api.i18n.{I18nSupport, Messages, MessagesApi}
@@ -18,7 +19,9 @@ import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsError, JsObject, JsSuccess}
 import play.api.mvc._
 import models.annotation.AnnotationState._
-import oxalis.security.WebknossosSilhouette
+import models.team.TeamDAO
+import oxalis.security.{TokenType, WebknossosSilhouette}
+import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.Future
 
@@ -82,16 +85,16 @@ request.body.validate[List[InboxDataSource]] match {
   def handleTracingUpdateReport(name: String) = DataStoreAction(name).async(parse.json) { implicit request =>
     for {
       tracingId <- (request.body \ "tracingId").asOpt[String].toFox
-      annotation <- AnnotationSQLDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
+      annotation: Annotation <- AnnotationDAO.findOneByTracingId(tracingId)(GlobalAccessContext)
       _ <- ensureAnnotationNotFinished(annotation)
       timestamps <- (request.body \ "timestamps").asOpt[List[Long]].toFox
       statisticsOpt = (request.body \ "statistics").asOpt[JsObject]
       userTokenOpt = (request.body \ "userToken").asOpt[String]
       _ <- statisticsOpt match {
-        case Some(statistics) => AnnotationSQLDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
+        case Some(statistics) => AnnotationDAO.updateStatistics(annotation._id, statistics)(GlobalAccessContext)
         case None => Fox.successful(())
       }
-      _ <- AnnotationSQLDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
+      _ <- AnnotationDAO.updateModifiedTimestamp(annotation._id)(GlobalAccessContext)
       userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
     } yield {
       userBox.map(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
@@ -99,7 +102,7 @@ request.body.validate[List[InboxDataSource]] match {
     }
   }
 
-  private def ensureAnnotationNotFinished(annotation: AnnotationSQL) = {
+  private def ensureAnnotationNotFinished(annotation: Annotation) = {
     if (annotation.state == Finished) Fox.failure("annotation already finshed")
     else Fox.successful(())
   }

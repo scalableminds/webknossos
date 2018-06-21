@@ -3,7 +3,7 @@ package models.user.time
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.annotation.AnnotationSQL
+import models.annotation.Annotation
 import org.joda.time.DateTime
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -182,7 +182,7 @@ object TimeSpan extends FoxImplicits {
 
   val hoursRx = "[0-9]+".r
 
-  def create(start: Long, end: Long, _user: BSONObjectID, annotation: Option[AnnotationSQL]) =
+  def create(start: Long, end: Long, _user: BSONObjectID, annotation: Option[Annotation]) =
     TimeSpan(end - start, start, end, _user = _user, annotation = annotation.map(_.id))
 
   def inMillis(days: Int, hours: Int, minutes: Int) =

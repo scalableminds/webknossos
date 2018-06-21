@@ -5,7 +5,7 @@ import com.scalableminds.util.mail.Send
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationSQL
+import models.annotation.Annotation
 import models.project.ProjectSQL
 import models.task.TaskSQL
 import models.user.User
@@ -81,8 +81,9 @@ object BrainTracing extends LazyLogging with FoxImplicits {
                               time: Long,
                               project: Box[ProjectSQL],
                               task: Box[TaskSQL],
-                              annotation: Option[AnnotationSQL],
+                              annotation: Option[Annotation],
                               user: User) = {
+
     for {
       p <- project
       a <- annotation
@@ -96,7 +97,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
         a.id))
   }
 
-  def logTime(user: User, time: Long, annotation: Option[AnnotationSQL])(implicit ctx: DBAccessContext): Future[Boolean] = {
+  def logTime(user: User, time: Long, annotation: Option[Annotation])(implicit ctx: DBAccessContext): Future[Boolean] = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
     if (isActive && !user.isAnonymous && user.organization == "Connectomics department") {

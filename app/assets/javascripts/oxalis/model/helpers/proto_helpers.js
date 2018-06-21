@@ -1,7 +1,7 @@
 // @flow
 
 import { Root } from "protobufjs/light";
-import type { ServerTracingType } from "oxalis/model";
+import type { ServerTracingType } from "admin/api_flow_types";
 // The babel-plugin-file-loader gets confused with the absolute paths, which is why they have to be relative
 // We need this plugin to work to ignore the .proto files in the tests
 import SkeletonTracingProto from "../../../../../../webknossos-datastore/proto/SkeletonTracing.proto";

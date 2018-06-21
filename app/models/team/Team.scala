@@ -32,7 +32,7 @@ object TeamSQL {
   def fromTeam(t: Team)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
     for {
       organization <- OrganizationSQLDAO.findOneByName(t.organization)
-      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(organization._id)
+      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeam(organization._id)
       teamId = ObjectId.fromBsonId(t._id)
     } yield {
       TeamSQL(

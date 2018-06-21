@@ -1,14 +1,17 @@
 package models.task
 
+import javax.management.relation.Role
+
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
+import com.scalableminds.webknossos.schema.Tables
 import com.scalableminds.webknossos.schema.Tables._
+import models.annotation.AnnotationSQLDAO.transactionSerializationError
 import models.annotation._
-import models.binary.DataSetDAO
-import models.project.ProjectSQLDAO
+import models.project.{ProjectSQLDAO}
 import models.team.TeamSQLDAO
 import models.user.{Experience, User}
 import org.joda.time.DateTime
@@ -18,9 +21,13 @@ import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.{JsNull, JsObject, Json}
+import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
+import slick.jdbc.PostgresProfile
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import utils.{ObjectId, SQLClient, SQLDAO}
+import views.html.helper.select
 
 import scala.util.Random
 
@@ -78,8 +85,7 @@ case class TaskSQL(
 
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
-      annotationBase <- annotationBase
-      dataSet <- DataSetDAO.findOneById(annotationBase._dataSet)
+      dataSetName <- annotationBase.map(_.dataSetName)
       status <- status.getOrElse(CompletionStatus(-1, -1, -1))
       taskType <- taskType.map(TaskType.transformToJson) getOrElse JsNull
       scriptInfo <- _script.map(_.toBSONObjectId).flatten.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
@@ -93,7 +99,7 @@ case class TaskSQL(
         "projectName" -> project.name,
         "team" -> team.name,
         "type" -> taskType,
-        "dataSet" -> dataSet.name,
+        "dataSet" -> dataSetName,
         "neededExperience" -> neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),
         "status" -> status,
@@ -189,7 +195,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                 where _user = '${userId.id}')
                as user_experiences on webknossos.tasks_.neededExperience_domain = user_experiences.domain and webknossos.tasks_.neededExperience_value <= user_experiences.value
              join webknossos.projects_ on webknossos.tasks_._project = webknossos.projects_._id
-             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationTypeSQL.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
+             left join (select _task from webknossos.annotations_ where _user = '${userId.id}' and typ = '${AnnotationType.Task}') as userAnnotations ON webknossos.tasks_._id = userAnnotations._task
            where webknossos.tasks_.openInstances > 0
                  and webknossos.projects_._team in ${writeStructTupleWithQuotes(teamIds.map(t => sanitize(t.id)))}
                  and userAnnotations._task is null

@@ -12,23 +12,25 @@ import utils.ObjectId
 
 object TaskInformationHandler extends AnnotationInformationHandler with FoxImplicits {
 
-  override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[AnnotationSQL] =
+  def provideAnnotation(taskId: String, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      task <- TaskSQLDAO.findOne(taskId) ?~> "task.notFound"
+      task <- TaskSQLDAO.findOne(ObjectId(taskId)) ?~> "task.notFound"
       annotations <- task.annotations
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
       _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
       project <- ProjectSQLDAO.findOne(task._project)
-      _dataSet = finishedAnnotations.head._dataSet
-      mergedAnnotation <- AnnotationMerger.mergeN(task._id, persistTracing=false, ObjectId.fromBsonId(user._id),
-        _dataSet, project._team, AnnotationTypeSQL.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
+      teamIdBson <- project._team.toBSONObjectId.toFox
+      dataSetName = finishedAnnotations.head.dataSetName
+      taskIdBson <- task._id.toBSONObjectId.toFox
+      mergedAnnotation <- AnnotationMerger.mergeN(taskIdBson, persistTracing=false, user._id,
+        dataSetName, teamIdBson, AnnotationType.CompoundTask, finishedAnnotations) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
-  def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
+  def restrictionsFor(taskId: String)(implicit ctx: DBAccessContext) =
     for {
-      task <- TaskSQLDAO.findOne(taskId) ?~> "task.notFound"
+      task <- TaskSQLDAO.findOne(ObjectId(taskId)) ?~> "task.notFound"
       project <- ProjectSQLDAO.findOne(task._project)
       teamIdBson <- project._team.toBSONObjectId.toFox
     } yield {

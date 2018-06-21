@@ -32,8 +32,8 @@ object Global extends GlobalSettings with LazyLogging{
       if (conf.getBoolean("application.insertInitialData") getOrElse false) {
         InitialDataService.insert.futureBox.map {
           case Full(_) => ()
-          case Failure(msg, _, _) => logger.warn("No initial data inserted: " + msg)
-          case _ => logger.warn("Error while inserting initial data")
+          case Failure(msg, _, _) => logger.error("Error while inserting initial data: " + msg)
+          case _ => logger.error("Error while inserting initial data")
         }
       }
     }

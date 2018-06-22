@@ -1,12 +1,11 @@
 // @flow
 
 import ReactDOM from "react-dom";
-import * as React from "react";
 
 type DestroyFunction = () => void;
 
 export default function renderIndependently(getComponent: DestroyFunction => React$Element<*>) {
-  let div = document.createElement("div");
+  const div = document.createElement("div");
   if (!document.body) {
     return;
   }

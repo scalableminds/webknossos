@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Markdown from "react-remarkable";
-import { Spin, Modal, Button } from "antd";
+import { Modal, Button } from "antd";
 
 type Props = {
   description: string,
@@ -15,20 +15,20 @@ export default class NewTaskDescriptionModal extends React.Component<Props, *> {
   state = {
     mayClose: false,
     visible: true,
-    newDescriptionTimestamp: 0,
   };
 
   componentDidMount() {
-    this.setState({
-      newDescriptionTimestamp: Date.now(),
-    });
     this.timeoutId = setTimeout(() => {
-      this.setState({ mayClose: true });
+      this.allowClose();
     }, 10000);
   }
 
   componentWillUnmount() {
     clearTimeout(this.timeoutId);
+  }
+
+  allowClose() {
+    this.setState({ mayClose: true });
   }
 
   handleOk = () => {

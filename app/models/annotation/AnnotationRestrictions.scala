@@ -57,15 +57,16 @@ object AnnotationRestrictions extends FoxImplicits{
 
   def defaultAnnotationRestrictions(annotation: AnnotationSQL): AnnotationRestrictions =
     new AnnotationRestrictions {
-      override def allowAccess(user: Option[User]) = {
-        (for {
-          _ <- bool2Fox(annotation.isPublic)
-          u <- option2Fox(user)
-          teamBSONObjectId <- option2Fox(annotation._team.toBSONObjectId)
-          isTeamManagerOrAdminOf <- u.isTeamManagerOrAdminOf(teamBSONObjectId) // validate if this is correct or if this should only unpack the future...
-        } yield {
-          annotation._user == ObjectId.fromBsonId(u._id) || isTeamManagerOrAdminOf
-        }).orElse(Fox.successful(false))
+      override def allowAccess(userOption: Option[User]) = {
+        if(annotation.isPublic) Fox.successful(true)
+        else
+          (for {
+            user <- option2Fox(userOption)
+            teamBSONObjectId <- option2Fox(annotation._team.toBSONObjectId)
+            isTeamManagerOrAdminOf <- user.isTeamManagerOrAdminOf(teamBSONObjectId)
+          } yield {
+            annotation._user == ObjectId.fromBsonId(user._id) || isTeamManagerOrAdminOf
+          }).orElse(Fox.successful(false))
       }
 
       override def allowUpdate(user: Option[User]) = {
@@ -79,9 +80,9 @@ object AnnotationRestrictions extends FoxImplicits{
         (for {
           u <- option2Fox(user)
           teamBSONObjectId <- option2Fox(annotation._team.toBSONObjectId)
-          isTeamManagerOrAdminOfOption <- u.isTeamManagerOrAdminOf(teamBSONObjectId).toFutureOption
+          isTeamManagerOrAdminOf <- u.isTeamManagerOrAdminOf(teamBSONObjectId)
         } yield {
-          (annotation._user == ObjectId.fromBsonId(u._id) || isTeamManagerOrAdminOfOption.getOrElse(false)) && !(annotation.state == Finished)
+          (annotation._user == ObjectId.fromBsonId(u._id) || isTeamManagerOrAdminOf) && !(annotation.state == Finished)
         }).orElse(Fox.successful(false))
       }
     }

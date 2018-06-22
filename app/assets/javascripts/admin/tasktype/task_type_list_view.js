@@ -19,6 +19,7 @@ const { Search } = Input;
 
 type Props = {
   history: RouterHistory,
+  initialSearchValue?: string,
 };
 
 type State = {
@@ -41,6 +42,11 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
 
   componentWillMount() {
     this.setState(persistence.load(this.props.history));
+    if (this.props.initialSearchValue && this.props.initialSearchValue !== "") {
+      this.setState({
+        searchQuery: this.props.initialSearchValue,
+      });
+    }
   }
 
   componentDidMount() {

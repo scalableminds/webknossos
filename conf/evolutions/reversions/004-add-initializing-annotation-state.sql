@@ -1,0 +1,2 @@
+-- removing enum values from the type is not supported in postgresql
+-- also, there are no permanent annotations with this state, so we don't have to remove them here

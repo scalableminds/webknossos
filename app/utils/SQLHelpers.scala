@@ -4,8 +4,6 @@
 package utils
 
 
-import java.util.UUID
-
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -13,15 +11,16 @@ import com.typesafe.scalalogging.LazyLogging
 import models.user.User
 import net.liftweb.common.Full
 import oxalis.security.SharingTokenContainer
-import play.api.Play.current
+import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import slick.dbio.DBIOAction
-import slick.driver
 import slick.jdbc.{PositionedParameters, PostgresProfile, SetParameter}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.{AbstractTable, Rep, TableQuery}
+import play.api.Play.current
+import play.api.i18n.Messages.Implicits._
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
@@ -40,7 +39,7 @@ object ObjectId extends FoxImplicits {
   implicit val jsonFormat = Json.format[ObjectId]
   def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   def generate = fromBsonId(BSONObjectID.generate)
-  def parse(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption.toFox ?~> "bsonid.invalid"
+  def parse(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption.toFox ?~> Messages("bsonid.invalid", input)
 }
 
 trait SQLTypeImplicits {

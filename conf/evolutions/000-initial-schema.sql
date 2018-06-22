@@ -260,29 +260,6 @@ CREATE VIEW webknossos.tokens_ AS SELECT * FROM webknossos.tokens WHERE NOT isDe
 
 
 
-
-CREATE FUNCTION webknossos.checkOpenAssignments() RETURNS trigger AS $$
-  DECLARE
-    cur CURSOR for SELECT openInstances FROM webknossos.task_instances where NEW.typ = 'Task' and _id = NEW._task;
-  BEGIN
-    IF NEW.typ = 'Task' THEN
-      FOR rec IN cur LOOP
-        IF rec.openInstances < 0 THEN
-          RAISE EXCEPTION 'Negative openInstances for Task (%)', NEW._task;
-        END IF;
-      END LOOP;
-    END IF;
-    RETURN NULL;
-  END;
-$$ LANGUAGE plpgsql;
-
-
-CREATE TRIGGER checkOpenAssignmentsTrigger
-AFTER INSERT ON webknossos.annotations
-FOR EACH ROW EXECUTE PROCEDURE webknossos.checkOpenAssignments();
-
-
-
 CREATE INDEX ON webknossos.annotations(_user, isDeleted);
 CREATE INDEX ON webknossos.annotations(_task, isDeleted);
 CREATE INDEX ON webknossos.annotations(typ, state, isDeleted);
@@ -303,4 +280,3 @@ CREATE INDEX ON webknossos.projects(name);
 CREATE INDEX ON webknossos.projects(_team);
 CREATE INDEX ON webknossos.projects(name, isDeleted);
 CREATE INDEX ON webknossos.projects(_team, isDeleted);
-

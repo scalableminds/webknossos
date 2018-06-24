@@ -26,6 +26,8 @@ type Props = {
   searchQuery: string,
 } & StateProps;
 
+// owningOrganization
+
 class GalleryDatasetView extends React.PureComponent<Props> {
   createTracing = async (
     dataset: DatasetType,
@@ -44,6 +46,29 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       window.location.href = `/annotations/${annotation.typ}/${annotation.id}`;
     }
   };
+
+  sortByOrganisation(datasets: DatasetType[]) {
+    const sortedDatasets = [];
+    for (let pos = 0; pos < datasets.length; pos++) {
+      const dataset = datasets[pos];
+      let found = false;
+      for (let bucket = 0; bucket < sortedDatasets.length && !found; bucket++) {
+        if (sortedDatasets[bucket].owningOrganization === dataset.owningOrganization) {
+          sortedDatasets[bucket].datasets.push(dataset);
+          found = true;
+        }
+      }
+      if (!found) {
+        const datasetArray = [dataset];
+        const organisationWithDatasets = {
+          owningOrganization: dataset.owningOrganization,
+          datasets: datasetArray,
+        };
+        sortedDatasets.push(organisationWithDatasets);
+      }
+    }
+    return sortedDatasets;
+  }
 
   renderCard(dataset: DatasetType) {
     let description;

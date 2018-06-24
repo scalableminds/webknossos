@@ -35,7 +35,7 @@ export function handleGenericError(error: { ...Error, messages?: mixed }) {
     // The user was already notified about this error
     return;
   }
-  Toast.error(messages["unknown_error"]);
+  Toast.error(messages.unknown_error);
   console.warn(error);
 }
 

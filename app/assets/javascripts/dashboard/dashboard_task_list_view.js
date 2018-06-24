@@ -30,6 +30,7 @@ import type {
 } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 
@@ -131,19 +132,24 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    this.setState({ isLoading: true });
     const isFinished = this.state.showFinishedTasks;
     const url = this.props.userId
       ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
       : `/api/user/tasks?isFinished=${isFinished.toString()}`;
-    const annotationsWithTasks = await Request.receiveJSON(url);
 
-    const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
+    try {
+      this.setState({ isLoading: true });
+      const annotationsWithTasks = await Request.receiveJSON(url);
+      const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
 
-    this.setState({
-      [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
-      isLoading: false,
-    });
+      this.setState({
+        [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   }
 
   toggleShowFinished = () => {

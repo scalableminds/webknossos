@@ -19,6 +19,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APITaskType, APITaskTypeType } from "admin/api_flow_types";
 import type { QueryObjectType, TaskFormFieldValuesType } from "admin/task/task_search_form";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search, TextArea } = Input;
@@ -60,11 +61,16 @@ class TaskListView extends React.PureComponent<Props, State> {
     if (!_.isEmpty(queryObject)) {
       this.setState({ isLoading: true });
 
-      const tasks = await getTasks(queryObject);
-      this.setState({
-        tasks,
-        isLoading: false,
-      });
+      try {
+        const tasks = await getTasks(queryObject);
+        this.setState({
+          tasks,
+        });
+      } catch (error) {
+        handleGenericError(error);
+      } finally {
+        this.setState({ isLoading: false });
+      }
     } else {
       this.setState({ tasks: [] });
     }
@@ -78,15 +84,19 @@ class TaskListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["task.delete"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
-
-        await deleteTask(task.id);
-        this.setState({
-          isLoading: false,
-          tasks: this.state.tasks.filter(t => t.id !== task.id),
-        });
+        try {
+          this.setState({
+            isLoading: true,
+          });
+          await deleteTask(task.id);
+          this.setState({
+            tasks: this.state.tasks.filter(t => t.id !== task.id),
+          });
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };

@@ -7,6 +7,7 @@ import Request from "libs/request";
 import { fetchGistContent } from "libs/gist";
 import messages from "messages";
 import type { ScriptType } from "oxalis/store";
+import { handleGenericError } from "libs/error_handling";
 
 const TextArea = Input.TextArea;
 
@@ -68,14 +69,19 @@ class UserScriptsModalView extends React.PureComponent<UserScriptsModalViewProps
   };
 
   loadScript = async (script: ScriptType) => {
-    this.setState({ isLoading: true });
-    const content = await fetchGistContent(script.gist, script.name);
-    this.setState({
-      isLoading: false,
-      selectedScript: script.id,
-      code: content,
-      isCodeChanged: false,
-    });
+    try {
+      this.setState({ isLoading: true });
+      const content = await fetchGistContent(script.gist, script.name);
+      this.setState({
+        selectedScript: script.id,
+        code: content,
+        isCodeChanged: false,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   };
 
   handleClick = () => {

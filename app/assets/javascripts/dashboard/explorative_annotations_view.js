@@ -26,6 +26,7 @@ import {
   reOpenAnnotation,
 } from "admin/admin_rest_api";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -121,28 +122,32 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
 
-    this.setState({ isLoading: true });
-    const tracings = await Request.receiveJSON(url);
-    if (showArchivedTracings) {
-      this.setState(
-        update(this.state, {
-          isLoading: { $set: false },
-          archivedTracings: { $set: tracings },
-          didAlreadyFetchMetaInfo: {
-            isArchived: { $set: true },
-          },
-        }),
-      );
-    } else {
-      this.setState(
-        update(this.state, {
-          isLoading: { $set: false },
-          unarchivedTracings: { $set: tracings },
-          didAlreadyFetchMetaInfo: {
-            isUnarchived: { $set: true },
-          },
-        }),
-      );
+    try {
+      this.setState({ isLoading: true });
+      const tracings = await Request.receiveJSON(url);
+      if (showArchivedTracings) {
+        this.setState(
+          update(this.state, {
+            archivedTracings: { $set: tracings },
+            didAlreadyFetchMetaInfo: {
+              isArchived: { $set: true },
+            },
+          }),
+        );
+      } else {
+        this.setState(
+          update(this.state, {
+            unarchivedTracings: { $set: tracings },
+            didAlreadyFetchMetaInfo: {
+              isUnarchived: { $set: true },
+            },
+          }),
+        );
+      }
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
     }
   }
 

@@ -4,6 +4,8 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
+  unknown_error:
+    "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
     "The datastore server at <%- url %> does not seem to be available. This is likely due to an update. Please check back in five minutes.",
   ),

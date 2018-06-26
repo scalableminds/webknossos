@@ -185,24 +185,27 @@ export const deleteNodeWithConfirmAction = (
   treeId?: number,
 ): DeleteNodeActionType | NoActionType => {
   const state = Store.getState();
-  return getActiveNode(state.tracing)
-    .map(activeNode => {
-      nodeId = nodeId != null ? nodeId : activeNode.id;
-      if (state.task != null && nodeId === 1) {
-        // Let the user confirm the deletion of the initial node (node with id 1) of a task
-        Modal.confirm({
-          title: messages["tracing.delete_initial_node"],
-          onOk: () => {
-            Store.dispatch(deleteNodeAction(nodeId, treeId));
-          },
-        });
-        // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
-        // if the user confirms
-        return noAction();
-      }
-      return deleteNodeAction(nodeId, treeId);
-    })
-    .getOrElse(noAction());
+  return (
+    getActiveNode(state.tracing)
+      .map(activeNode => {
+        nodeId = nodeId != null ? nodeId : activeNode.id;
+        if (state.task != null && nodeId === 1) {
+          // Let the user confirm the deletion of the initial node (node with id 1) of a task
+          Modal.confirm({
+            title: messages["tracing.delete_initial_node"],
+            onOk: () => {
+              Store.dispatch(deleteNodeAction(nodeId, treeId));
+            },
+          });
+          // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+          // if the user confirms
+          return noAction();
+        }
+        return deleteNodeAction(nodeId, treeId);
+      })
+      // Empty trees can be deleted, too
+      .getOrElse(deleteNodeAction())
+  );
 };
 
 export const deleteEdgeAction = (

@@ -164,11 +164,14 @@ test("SkeletonTracing should add nodes to a different tree", t => {
   t.deepEqual(newState.tracing.trees[2].edges.asArray(), [{ source: 2, target: 3 }]);
 });
 
-test("SkeletonTracing shouldn't delete a node from an empty tree", t => {
-  const action = SkeletonTracingActions.deleteNodeAction();
-  const newState = SkeletonTracingReducer(initialState, action);
+test("SkeletonTracing should delete the tree if 'delete node' is initiated for an empty tree", t => {
+  const createTreeAction = SkeletonTracingActions.createTreeAction();
+  const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
+  const newState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, createTreeAction)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .unpack();
 
-  t.is(newState, initialState);
   t.deepEqual(newState, initialState);
 });
 
@@ -192,7 +195,7 @@ test("SkeletonTracing should delete a node from a tree", t => {
   t.deepEqual(newStateB, newState);
 });
 
-test("SkeletonTracing should delete several nodes from a tree", t => {
+test("SkeletonTracing should delete tree when last node is deleted from the tree", t => {
   const createNodeAction = SkeletonTracingActions.createNodeAction(
     position,
     rotation,
@@ -201,14 +204,16 @@ test("SkeletonTracing should delete several nodes from a tree", t => {
   );
   const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
 
-  // Add one node, then delete two times
-  const newState = SkeletonTracingReducer(initialState, createNodeAction);
-  const newStateA = SkeletonTracingReducer(newState, deleteNodeAction);
-  const newStateB = SkeletonTracingReducer(newStateA, deleteNodeAction);
+  // Create tree, add two nodes, then delete them again so that the tree is removed, as well
+  const newState = ChainReducer(initialState)
+    .apply(SkeletonTracingReducer, SkeletonTracingActions.createTreeAction())
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, createNodeAction)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .apply(SkeletonTracingReducer, deleteNodeAction)
+    .unpack();
 
-  t.not(newStateB, newState);
-  t.not(newStateA, newState);
-  t.is(newStateB, newStateA);
+  t.deepEqual(initialState, newState);
 });
 
 test("SkeletonTracing should delete nodes and split the tree", t => {

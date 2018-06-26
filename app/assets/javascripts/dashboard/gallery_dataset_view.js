@@ -69,12 +69,9 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       ["name", "description"],
       this.props.searchQuery,
     ).sort(Utils.localeCompareBy("formattedCreated", false));
-    if (this.props.datasets.length > 0) {
-      console.log("yay");
-    }
     const sortedDatasets = this.sortByOrganisation(datasets);
     return (
-      <React.Component>
+      <React.Fragment>
         {sortedDatasets.map(ds => (
           <DatasetPanel
             key={ds.owningOrganization}
@@ -82,7 +79,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
             datasets={ds.datasets}
           />
         ))}
-      </React.Component>
+      </React.Fragment>
     );
   }
 }

@@ -33,7 +33,7 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
       new AnnotationRestrictions {
         override def allowAccess(userOption: Option[User]): Fox[Boolean] =
           (for {
-            user <- userOption.toFox // does this return false in case the user does not exists?
+            user <- userOption.toFox
             allowed <- user.isTeamManagerOrAdminOf(taskType._team)
           } yield allowed).orElse(Fox.successful(false))
       }

@@ -204,8 +204,8 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
               if (tree.nodes.size() === 0) {
                 return deleteTree(state, tree, timestamp);
               } else {
-                return getNodeAndTree(skeletonTracing, nodeId, treeId).chain(([tree, node]) =>
-                  deleteNode(state, tree, node, timestamp),
+                return getNodeAndTree(skeletonTracing, nodeId, treeId).chain(([_tree, node]) =>
+                  deleteNode(state, _tree, node, timestamp),
                 );
               }
             })

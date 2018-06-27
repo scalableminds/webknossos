@@ -16,6 +16,8 @@ import type { RouterHistory } from "react-router-dom";
 const { Column } = Table;
 const { Search } = Input;
 
+const typeHint: APIScriptType[] = [];
+
 type Props = {
   history: RouterHistory,
 };
@@ -120,27 +122,27 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 dataIndex="id"
                 key="id"
                 className="monospace-id"
-                sorter={Utils.localeCompareBy("id")}
+                sorter={Utils.localeCompareBy(typeHint, "id")}
               />
               <Column
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy("name")}
+                sorter={Utils.localeCompareBy(typeHint, "name")}
               />
 
               <Column
                 title="Owner"
                 dataIndex="owner"
                 key="owner"
-                sorter={Utils.localeCompareBy((scripts: APIScriptType) => scripts.owner.lastName)}
+                sorter={Utils.localeCompareBy(typeHint, scripts => scripts.owner.lastName)}
                 render={(owner: APIUserType) => `${owner.firstName} ${owner.lastName}`}
               />
               <Column
                 title="Gist URL"
                 dataIndex="gist"
                 key="gist"
-                sorter={Utils.localeCompareBy("gist")}
+                sorter={Utils.localeCompareBy(typeHint, "gist")}
                 render={(gist: string) => (
                   <a href={gist} target="_blank" rel="noopener noreferrer">
                     {gist}

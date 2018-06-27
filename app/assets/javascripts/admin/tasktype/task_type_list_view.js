@@ -89,6 +89,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
 
   render() {
     const marginRight = { marginRight: 20 };
+    const typeHint: Array<APITaskTypeType> = [];
 
     return (
       <div className="container">
@@ -127,7 +128,7 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 dataIndex="id"
                 key="id"
                 width={100}
-                sorter={Utils.localeCompareBy("id")}
+                sorter={Utils.localeCompareBy(typeHint, "id")}
                 className="monospace-id"
               />
               <Column
@@ -135,20 +136,20 @@ class TaskTypeListView extends React.PureComponent<Props, State> {
                 dataIndex="team.name"
                 key="team"
                 width={130}
-                sorter={Utils.localeCompareBy("team")}
+                sorter={Utils.localeCompareBy(typeHint, "team")}
               />
               <Column
                 title="Summary"
                 dataIndex="summary"
                 key="summary"
                 width={130}
-                sorter={Utils.localeCompareBy("summary")}
+                sorter={Utils.localeCompareBy(typeHint, "summary")}
               />
               <Column
                 title="Description"
                 dataIndex="description"
                 key="description"
-                sorter={Utils.localeCompareBy("description")}
+                sorter={Utils.localeCompareBy(typeHint, "description")}
                 render={description => (
                   <div className="task-type-description">
                     <Markdown

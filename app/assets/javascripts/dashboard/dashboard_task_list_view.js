@@ -33,6 +33,8 @@ import type { RouterHistory } from "react-router-dom";
 
 const { Column } = Table;
 
+const typeHint: APITaskWithAnnotationType[] = [];
+
 type StateProps = {
   activeUser: APIUserType,
 };
@@ -324,25 +326,25 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          sorter={Utils.localeCompareBy("id")}
+          sorter={Utils.localeCompareBy(typeHint, "id")}
           className="monospace-id"
         />
         <Column
           title="Type"
           dataIndex="type.summary"
           width={150}
-          sorter={Utils.localeCompareBy(t => t.type.summary)}
+          sorter={Utils.localeCompareBy(typeHint, t => t.type.summary)}
         />
         <Column
           title="Project"
           dataIndex="projectName"
           width={150}
-          sorter={Utils.localeCompareBy("projectName")}
+          sorter={Utils.localeCompareBy(typeHint, "projectName")}
         />
         <Column
           title="Description"
           dataIndex="type.description"
-          sorter={Utils.localeCompareBy(t => t.type.description)}
+          sorter={Utils.localeCompareBy(typeHint, t => t.type.description)}
           render={description => (
             <div className="task-type-description">
               <Markdown
@@ -357,14 +359,14 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           title="Modes"
           dataIndex="type.settings.allowedModes"
           width={150}
-          sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
+          sorter={Utils.localeCompareBy(typeHint, t => t.type.settings.allowedModes.join("-"))}
           render={modes => modes.map(mode => <Tag key={mode}>{mode}</Tag>)}
         />
         <Column
           title="Creation Date"
           dataIndex="created"
           width={150}
-          sorter={Utils.localeCompareBy("created")}
+          sorter={Utils.localeCompareBy(typeHint, "created")}
           render={created => moment(created).format("YYYY-MM-DD HH:SS")}
         />
         <Column

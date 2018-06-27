@@ -8,6 +8,8 @@ import TeamSelectionForm from "./team_selection_form";
 
 const { Column } = Table;
 
+const typeHint: APIOpenTasksReportType[] = [];
+
 type State = {
   data: Array<APIOpenTasksReportType>,
   isLoading: boolean,
@@ -51,14 +53,14 @@ class OpenTasksReportView extends React.PureComponent<{}, State> {
             <Column
               title="User"
               dataIndex="user"
-              sorter={Utils.localeCompareBy("user")}
+              sorter={Utils.localeCompareBy(typeHint, "user")}
               width={200}
             />
             <Column
               title="# Assignments"
               dataIndex="totalAssignments"
               defaultSortOrder="ascend"
-              sorter={Utils.compareBy("totalAssignments")}
+              sorter={Utils.compareBy(typeHint, "totalAssignments")}
               width={150}
             />
             <Column

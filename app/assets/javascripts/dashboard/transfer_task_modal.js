@@ -5,6 +5,7 @@ import * as React from "react";
 import { Spin, Modal, Button, Select } from "antd";
 import { getUsers, transferTask } from "admin/admin_rest_api";
 import type { APIUserType, APIAnnotationType } from "admin/api_flow_types";
+import { handleGenericError } from "libs/error_handling";
 
 const { Option } = Select;
 
@@ -34,15 +35,20 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    this.setState({ isLoading: true });
-    const users = await getUsers();
-    const activeUsers = users.filter(u => u.isActive);
-    this.setState({ isLoading: false });
-    const sortedUsers = _.sortBy(activeUsers, "lastName");
+    try {
+      this.setState({ isLoading: true });
+      const users = await getUsers();
+      const activeUsers = users.filter(u => u.isActive);
+      const sortedUsers = _.sortBy(activeUsers, "lastName");
 
-    this.setState({
-      users: sortedUsers,
-    });
+      this.setState({
+        users: sortedUsers,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   }
 
   async transfer() {
@@ -50,10 +56,15 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
     if (!annotationId) {
       throw new Error("No annotation id provided");
     }
-    this.setState({ isLoading: true });
-    const updatedAnnotation = await transferTask(annotationId, this.state.currentUserIdValue);
-    this.setState({ isLoading: false });
-    this.props.onChange(updatedAnnotation);
+    try {
+      this.setState({ isLoading: true });
+      const updatedAnnotation = await transferTask(annotationId, this.state.currentUserIdValue);
+      this.props.onChange(updatedAnnotation);
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   }
 
   handleSelectChange = (userId: string) => {

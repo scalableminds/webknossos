@@ -371,7 +371,7 @@ export const setTreeGroupAction = (groupId: ?string, treeId: number): SetTreeGro
 });
 
 // The following actions have the prefix "AsUser" which means that they
-// offer some additional logic which is sensible from user-centered point of view.
+// offer some additional logic which is sensible from a user-centered point of view.
 // For example, the deleteNodeAsUserAction also initiates the deletion of a tree,
 // when the current tree is empty.
 

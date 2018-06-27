@@ -75,6 +75,7 @@ export default class TextureBucketManager {
 
     this.dataTextures = [];
 
+    this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
   }
 
@@ -132,6 +133,15 @@ export default class TextureBucketManager {
     return constants.BUCKET_SIZE / this.packingDegree;
   }
 
+  keepLookUpBufferUpToDate() {
+    if (this.isRefreshBufferOutOfDate) {
+      this._refreshLookUpBuffer();
+    }
+    window.requestAnimationFrame(() => {
+      this.keepLookUpBufferUpToDate();
+    });
+  }
+
   // Commit "active" buckets by writing these to the dataTexture.
   processWriterQueue() {
     // uniqBy removes multiple write-buckets-requests for the same index.
@@ -171,7 +181,6 @@ export default class TextureBucketManager {
 
     window.requestAnimationFrame(() => {
       this.processWriterQueue();
-      this._refreshLookUpBuffer();
     });
   }
 
@@ -243,9 +252,6 @@ export default class TextureBucketManager {
   }
 
   _refreshLookUpBuffer() {
-    if (!this.isRefreshBufferOutOfDate) {
-      return;
-    }
     // Completely re-write the lookup buffer. This could be smarter, but it's
     // probably not worth it.
     this.lookUpBuffer.fill(-2);

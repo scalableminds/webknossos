@@ -20,6 +20,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIProjectType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -92,11 +93,16 @@ class ProjectListView extends React.PureComponent<Props, State> {
           isLoading: true,
         });
 
-        await deleteProject(project.name);
-        this.setState({
-          isLoading: false,
-          projects: this.state.projects.filter(p => p.id !== project.id),
-        });
+        try {
+          await deleteProject(project.name);
+          this.setState({
+            projects: this.state.projects.filter(p => p.id !== project.id),
+          });
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };
@@ -115,14 +121,19 @@ class ProjectListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["project.increase_instances"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
-        const updatedProject = await increaseProjectTaskInstances(project.name);
-        this.setState({
-          projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
-          isLoading: false,
-        });
+        try {
+          this.setState({
+            isLoading: true,
+          });
+          const updatedProject = await increaseProjectTaskInstances(project.name);
+          this.setState({
+            projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
+          });
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };

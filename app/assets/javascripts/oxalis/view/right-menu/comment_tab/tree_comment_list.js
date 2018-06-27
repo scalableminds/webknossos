@@ -9,7 +9,7 @@ import classNames from "classnames";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
 import Utils from "libs/utils";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
-import { scrollIntoViewIfNeeded } from "scroll-into-view-if-needed";
+import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import type { OxalisState, TreeType, SkeletonTracingType, CommentType } from "oxalis/store";
 
 type OwnProps = {
@@ -47,7 +47,11 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
       this.props.tree.treeId === this.props.skeletonTracing.activeTreeId &&
       !this.activeNodeHasComment()
     ) {
-      scrollIntoViewIfNeeded(this.treeDomElement, { centerIfNeeded: true });
+      scrollIntoViewIfNeeded(this.treeDomElement, {
+        block: "center",
+        scrollMode: "if-needed",
+        boundary: document.body,
+      });
     }
   }
 

@@ -20,6 +20,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIProjectType, APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -92,11 +93,16 @@ class ProjectListView extends React.PureComponent<Props, State> {
           isLoading: true,
         });
 
-        await deleteProject(project.name);
-        this.setState({
-          isLoading: false,
-          projects: this.state.projects.filter(p => p.id !== project.id),
-        });
+        try {
+          await deleteProject(project.name);
+          this.setState({
+            projects: this.state.projects.filter(p => p.id !== project.id),
+          });
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };
@@ -115,20 +121,26 @@ class ProjectListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["project.increase_instances"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
-        const updatedProject = await increaseProjectTaskInstances(project.name);
-        this.setState({
-          projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
-          isLoading: false,
-        });
+        try {
+          this.setState({
+            isLoading: true,
+          });
+          const updatedProject = await increaseProjectTaskInstances(project.name);
+          this.setState({
+            projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
+          });
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };
 
   render() {
     const marginRight = { marginRight: 20 };
+    const typeHint: Array<APIProjectType> = [];
 
     return (
       <div className="container TestProjectListView">
@@ -166,19 +178,19 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy("name")}
+                sorter={Utils.localeCompareBy(typeHint, "name")}
               />
               <Column
                 title="Team"
                 dataIndex="teamName"
                 key="teamName"
-                sorter={Utils.localeCompareBy("team")}
+                sorter={Utils.localeCompareBy(typeHint, "team")}
               />
               <Column
                 title="Priority"
                 dataIndex="priority"
                 key="priority"
-                sorter={Utils.compareBy((project: APIProjectType) => project.priority)}
+                sorter={Utils.compareBy(typeHint, project => project.priority)}
                 render={(priority, project: APIProjectType) =>
                   `${priority} ${project.paused ? "(paused)" : ""}`
                 }
@@ -187,7 +199,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Owner"
                 dataIndex="owner"
                 key="owner"
-                sorter={Utils.localeCompareBy((project: APIProjectType) => project.owner.lastName)}
+                sorter={Utils.localeCompareBy(typeHint, project => project.owner.lastName)}
                 render={owner =>
                   owner.email ? `${owner.firstName} ${owner.lastName} (${owner.email})` : "-"
                 }
@@ -196,15 +208,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
                 title="Open Assignments"
                 dataIndex="numberOfOpenAssignments"
                 key="numberOfOpenAssignments"
-                sorter={Utils.compareBy(
-                  (project: APIProjectType) => project.numberOfOpenAssignments,
-                )}
+                sorter={Utils.compareBy(typeHint, project => project.numberOfOpenAssignments)}
               />
               <Column
                 title="Expected Time"
                 dataIndex="expectedTime"
                 key="expectedTime"
-                sorter={Utils.compareBy((project: APIProjectType) => project.expectedTime)}
+                sorter={Utils.compareBy(typeHint, project => project.expectedTime)}
                 render={expectedTime => `${expectedTime}m`}
               />
               <Column

@@ -10,7 +10,7 @@ import Comment from "oxalis/view/right-menu/comment_tab/comment";
 import Utils from "libs/utils";
 import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_accessor";
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
-import type { OxalisState, TreeType, SkeletonTracingType } from "oxalis/store";
+import type { OxalisState, TreeType, SkeletonTracingType, CommentType } from "oxalis/store";
 
 type OwnProps = {
   tree: TreeType,
@@ -66,7 +66,13 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
     const commentNodes = !this.state.collapsed
       ? this.props.tree.comments
           .slice(0)
-          .sort(Utils.localeCompareBy("content", this.props.isSortedAscending))
+          .sort(
+            Utils.localeCompareBy(
+              ([]: Array<CommentType>),
+              "content",
+              this.props.isSortedAscending,
+            ),
+          )
           .map(comment => (
             <Comment
               key={comment.nodeId}

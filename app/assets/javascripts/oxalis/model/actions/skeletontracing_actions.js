@@ -180,34 +180,6 @@ export const deleteNodeAction = (
   timestamp,
 });
 
-export const deleteNodeUserAction = (
-  nodeId?: number,
-  treeId?: number,
-): DeleteNodeActionType | NoActionType | DeleteTreeActionType => {
-  const state = Store.getState();
-  return (
-    getActiveNode(state.tracing)
-      .map(activeNode => {
-        nodeId = nodeId != null ? nodeId : activeNode.id;
-        if (state.task != null && nodeId === 1) {
-          // Let the user confirm the deletion of the initial node (node with id 1) of a task
-          Modal.confirm({
-            title: messages["tracing.delete_initial_node"],
-            onOk: () => {
-              Store.dispatch(deleteNodeAction(nodeId, treeId));
-            },
-          });
-          // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
-          // if the user confirms
-          return noAction();
-        }
-        return deleteNodeAction(nodeId, treeId);
-      })
-      // If the tree is empty, it will be deleted
-      .getOrElse(deleteTreeAction())
-  );
-};
-
 export const deleteEdgeAction = (
   sourceNodeId: number,
   targetNodeId: number,
@@ -397,3 +369,36 @@ export const setTreeGroupAction = (groupId: ?string, treeId: number): SetTreeGro
   groupId,
   treeId,
 });
+
+// The following actions have the prefix "AsUser" which means that they
+// offer some additional logic which is sensible from user-centered point of view.
+// For example, the deleteNodeAsUserAction also initiates the deletion of a tree,
+// when the current tree is empty.
+
+export const deleteNodeAsUserAction = (
+  nodeId?: number,
+  treeId?: number,
+): DeleteNodeActionType | NoActionType | DeleteTreeActionType => {
+  const state = Store.getState();
+  return (
+    getActiveNode(state.tracing)
+      .map(activeNode => {
+        nodeId = nodeId != null ? nodeId : activeNode.id;
+        if (state.task != null && nodeId === 1) {
+          // Let the user confirm the deletion of the initial node (node with id 1) of a task
+          Modal.confirm({
+            title: messages["tracing.delete_initial_node"],
+            onOk: () => {
+              Store.dispatch(deleteNodeAction(nodeId, treeId));
+            },
+          });
+          // As Modal.confirm is async, return noAction() and the modal will dispatch the real action
+          // if the user confirms
+          return noAction();
+        }
+        return deleteNodeAction(nodeId, treeId);
+      })
+      // If the tree is empty, it will be deleted
+      .getOrElse(deleteTreeAction())
+  );
+};

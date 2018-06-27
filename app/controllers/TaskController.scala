@@ -239,35 +239,15 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
 
   def listTasks = SecuredAction.async(parse.json) { implicit request =>
 
-    val userOpt = (request.body \ "user").asOpt[String]
-    val projectOpt = (request.body \ "project").asOpt[String]
-    val idsOpt = (request.body \ "ids").asOpt[List[String]]
-    val taskTypeOpt = (request.body \ "taskType").asOpt[String]
-
-    userOpt match {
-      case Some(userId) => {
-        for {
-          user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-          userAnnotations <- AnnotationSQLDAO.findAllActiveForUser(ObjectId.fromBsonId(user._id), AnnotationTypeSQL.Task)
-          taskIdsFromAnnotations = userAnnotations.flatMap(_._task).map(_.toString).toSet
-          taskIds = idsOpt match {
-            case Some(ids) => taskIdsFromAnnotations.intersect(ids.toSet)
-            case None => taskIdsFromAnnotations
-          }
-          tasks <- TaskSQLDAO.findAllByPojectAndTaskTypeAndIds(projectOpt, taskTypeOpt, Some(taskIds.toList))
-          jsResult <- Fox.serialCombined(tasks)(_.publicWrites)
-        } yield {
-          Ok(Json.toJson(jsResult))
-        }
-      }
-      case None => {
-        for {
-          tasks <- TaskSQLDAO.findAllByPojectAndTaskTypeAndIds(projectOpt, taskTypeOpt, idsOpt)
-          jsResult <- Fox.serialCombined(tasks)(_.publicWrites)
-        } yield {
-          Ok(Json.toJson(jsResult))
-        }
-      }
+    for {
+      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.parse(_))
+      projectNameOpt = (request.body \ "project").asOpt[String]
+      taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids => Fox.serialCombined(ids)(ObjectId.parse))
+      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse(_))
+      tasks <- TaskSQLDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt)
+      jsResult <- Fox.serialCombined(tasks)(_.publicWrites)
+    } yield {
+      Ok(Json.toJson(jsResult))
     }
 
   }

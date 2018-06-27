@@ -239,19 +239,36 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
     } yield parsed
   }
 
-  def findAllByPojectAndTaskTypeAndIds(projectOpt: Option[String], taskTypeOpt: Option[String], idsOpt: Option[List[String]])(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+  def findAllByProjectAndTaskTypeAndIdsAndUser(
+                                        projectNameOpt: Option[String],
+                                        taskTypeIdOpt: Option[ObjectId],
+                                        taskIdsOpt: Option[List[ObjectId]],
+                                        userIdOpt: Option[ObjectId]
+                                      )(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
+
     /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
-    val projectFilterFox = projectOpt match {
-      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"(_project = '${sanitize(project._id.toString)}')"
+
+    val projectFilterFox = projectNameOpt match {
+      case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"(t._project = '${project._id}')"
       case _ => Fox.successful("true")
     }
-    val taskTypeFilter = taskTypeOpt.map(tId => s"(_taskType = '${sanitize(tId)}')").getOrElse("true")
-    val idsFilter = idsOpt.map(ids => if (ids.isEmpty) "false" else s"(_id in ${writeStructTupleWithQuotes(ids.map(sanitize(_)))})").getOrElse("true")
+    val taskTypeFilter = taskTypeIdOpt.map(ttId => s"(t._taskType = '${ttId}')").getOrElse("true")
+    val taskIdsFilter = taskIdsOpt.map(tIds => if (tIds.isEmpty) "false" else s"(t._id in ${writeStructTupleWithQuotes(tIds.map(_.toString))})").getOrElse("true")
+    val userJoin = userIdOpt.map(_ => "join webknossos.annotations_ a on a._task = t._id join webknossos.users_ u on a._user = u._id").getOrElse("")
+    val userFilter = userIdOpt.map(uId => s"(u._id = '${uId}' and a.typ = '${AnnotationTypeSQL.Task}' and a.state != '${AnnotationState.Cancelled}')").getOrElse("true")
 
     for {
       projectFilter <- projectFilterFox
       accessQuery <- readAccessQuery
-      q = sql"select #${columns} from webknossos.tasks where webknossos.tasks.isDeleted = false and #${projectFilter} and #${taskTypeFilter} and #${idsFilter} and #${accessQuery} limit 1000"
+      q = sql"""select #${columnsWithPrefix("t.")}
+                from webknossos.tasks_ t
+                #${userJoin}
+                where #${projectFilter}
+                and #${taskTypeFilter}
+                and #${taskIdsFilter}
+                and #${userFilter}
+                and #${accessQuery}
+                limit 1000"""
       r <- run(q.as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed

@@ -67,7 +67,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </ButtonComponent>
             <ActionBarView />
           </Header>
-          <Layout style={{ marginTop: 64 }}>
+          <Layout style={{ marginTop: 64, height: "calc(100% - 64px)" }}>
             <Sider
               collapsible
               trigger={null}

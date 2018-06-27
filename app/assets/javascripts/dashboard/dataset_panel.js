@@ -182,9 +182,9 @@ class DatasetPanel extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <React.Fragment>
+      <div className="dataset-panel">
         <h1>{this.props.owningOrganization}</h1>
-        <Row gutter={padding} className="dataset-panel-row">
+        <Row gutter={padding}>
           {this.getDatasetsToDisplay().map(ds => (
             <Col className="gallery-dataset-col" {...columnSpan} key={ds.name}>
               {this.renderCard(ds)}
@@ -192,7 +192,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
           ))}
         </Row>
         {this.renderShowMoreLink()}
-      </React.Fragment>
+      </div>
     );
   }
 }

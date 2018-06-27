@@ -277,7 +277,7 @@ export const deleteTreeAction = (
 export const deleteTreeWithConfirmAction = (treeId?: number): NoActionType => {
   const state = Store.getState();
   getTree(state.tracing, treeId).map(tree => {
-    if (state.task != null && tree.nodes.has(1) != null) {
+    if (state.task != null && tree.nodes.has(1)) {
       // Let the user confirm the deletion of the initial node (node with id 1) of a task
       Modal.confirm({
         title: messages["tracing.delete_tree_with_initial_node"],

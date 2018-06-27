@@ -1,16 +1,19 @@
 import * as React from "react";
-import type { DatasetType } from "dashboard/dataset_view";
 import { Row, Col, Menu, Dropdown, Card, Icon } from "antd";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 
+import type { DatasetType } from "dashboard/dataset_view";
+
 const padding = 16;
 const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 const thumbnailDimension = "500";
+const smallScreenWidth = 992;
+const mediumScreenWidth = 1600;
 
 type Props = {
   datasets: Array<DatasetType>,
-  owningOrganisation: string,
+  owningOrganization: string,
 };
 
 type State = {
@@ -23,7 +26,16 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     this.state = {
       showLessContent: true,
     };
+    this.handleClick = this.handleClick.bind(this);
   }
+
+  handleClick = () => {
+    if (this.state.showLessContent === true) {
+      this.showMorePressed();
+    } else {
+      this.showLessPressed();
+    }
+  };
 
   showMorePressed = () => {
     this.setState({
@@ -133,33 +145,56 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     }
     let datasets;
     const width = window.innerWidth;
-    if (width < 992) {
+    if (width < smallScreenWidth) {
       // when there is only one dataset in each row
-      datasets = this.props.datasets.slice(0, 4);
-    } else if (width < 1600) {
+      datasets = this.props.datasets.slice(0, 3);
+    } else if (width < mediumScreenWidth) {
       // when there are two
-      datasets = this.props.datasets.slice(0, 8);
+      datasets = this.props.datasets.slice(0, 6);
     } else {
       // when there are three
-      datasets = this.props.datasets.slice(0, 12);
+      datasets = this.props.datasets.slice(0, 9);
     }
     return datasets;
   };
 
+  renderShowMoreLink = () => {
+    const width = window.innerWidth;
+    if (width < smallScreenWidth) {
+      if (this.props.datasets.length <= 3) {
+        return null;
+      }
+    } else if (width < mediumScreenWidth) {
+      if (this.props.datasets.length <= 6) {
+        return null;
+      }
+    } else if (this.props.datasets.length <= 9) {
+      return null;
+    }
+    return (
+      <a className="show-more-link" onClick={this.handleClick}>
+        {this.state.showLessContent ? "show more" : "show less"}
+      </a>
+    );
+  };
+
+  // TODO listen to width resizing and trigger rerender if entering "another level of width"
+
   render() {
     return (
-      <React.Component>
-        <h1>{this.props.owningOrganisation}</h1> <br />
-        <Row gutter={padding}>
-          {this.getDatasetsToDisplay.map(ds => (
+      <React.Fragment>
+        <h1>{this.props.owningOrganization}</h1>
+        <Row gutter={padding} className="dataset-panel-row">
+          {this.getDatasetsToDisplay().map(ds => (
             <Col className="gallery-dataset-col" {...columnSpan} key={ds.name}>
               {this.renderCard(ds)}
             </Col>
           ))}
         </Row>
-      </React.Component>
+        {this.renderShowMoreLink()}
+      </React.Fragment>
     );
   }
 }
 
-export default { DatasetPanel };
+export default DatasetPanel;

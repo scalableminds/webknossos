@@ -74,6 +74,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       <React.Fragment>
         {sortedDatasets.map(ds => (
           <DatasetPanel
+            className="dataset-panel"
             key={ds.owningOrganization}
             owningOrganization={ds.owningOrganization}
             datasets={ds.datasets}

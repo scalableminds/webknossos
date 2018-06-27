@@ -13,9 +13,12 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { withRouter } from "react-router-dom";
 import type { APITeamType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
+
+const typeHint: APITeamType[] = [];
 
 type Props = {
   history: RouterHistory,
@@ -70,28 +73,22 @@ class TeamListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["team.delete"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
-
-        deleteTeam(team.id).then(
-          () => {
-            this.setState({
-              isLoading: false,
-              teams: this.state.teams.filter(t => t.id !== team.id),
-            });
-          },
-          () => {
-            this.setState({
-              isLoading: false,
-            });
-          },
-        );
+        try {
+          this.setState({ isLoading: true });
+          await deleteTeam(team.id);
+          this.setState({
+            teams: this.state.teams.filter(t => t.id !== team.id),
+          });
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };
 
-  createTeam = async (newTeam: APITeamType) => {
+  createTeam = (newTeam: APITeamType) => {
     this.setState({
       isTeamCreationModalVisible: false,
       teams: this.state.teams.concat([newTeam]),
@@ -140,7 +137,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy("name")}
+                sorter={Utils.localeCompareBy(typeHint, "name")}
               />
               <Column
                 title="Action"

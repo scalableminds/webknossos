@@ -6,10 +6,11 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import { Spin, Modal } from "antd";
+import { Spin } from "antd";
 import _ from "lodash";
 import app from "app";
 import Utils from "libs/utils";
+import renderIndependently from "libs/render_independently";
 import BackboneEvents from "backbone-events-standalone";
 import Stats from "stats.js";
 import { InputKeyboardNoLoop, InputKeyboard } from "libs/input";
@@ -32,6 +33,7 @@ import { HANDLED_ERROR } from "oxalis/model_initialization";
 import messages from "messages";
 import { fetchGistContent } from "libs/gist";
 import { document } from "libs/window";
+import NewTaskDescriptionModal from "oxalis/view/new_task_description_modal";
 
 import type { ModeType, ControlModeType } from "oxalis/constants";
 import type { OxalisState, TracingTypeTracingType } from "oxalis/store";
@@ -166,15 +168,14 @@ class Controller extends React.PureComponent<Props, State> {
     const taskType = task.type;
     const title = `Attention, new Task Type: ${taskType.summary}`;
     if (taskType.description) {
-      text = `${messages["task.new_description"]}:<br>${taskType.description}`;
+      text = `${messages["task.new_description"]}:\n${taskType.description}`;
     } else {
       text = messages["task.no_description"];
     }
 
-    Modal.info({
-      title,
-      content: text,
-    });
+    renderIndependently(destroy => (
+      <NewTaskDescriptionModal title={title} description={text} destroy={destroy} />
+    ));
   }
 
   scaleTrianglesPlane(delta: number): void {

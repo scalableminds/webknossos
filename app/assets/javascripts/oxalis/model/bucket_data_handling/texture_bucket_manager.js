@@ -129,6 +129,10 @@ export default class TextureBucketManager {
     this._refreshLookUpBuffer();
   }
 
+  getPackedBucketSize() {
+    return constants.BUCKET_SIZE / this.packingDegree;
+  }
+
   keepLookUpBufferUpToDate() {
     if (this.isRefreshBufferOutOfDate) {
       this._refreshLookUpBuffer();
@@ -149,7 +153,7 @@ export default class TextureBucketManager {
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
 
-    const packedBucketSize = constants.BUCKET_SIZE / this.packingDegree;
+    const packedBucketSize = this.getPackedBucketSize();
     const bucketHeightInTexture = packedBucketSize / this.textureWidth;
     const bucketsPerTexture = this.textureWidth * this.textureWidth / packedBucketSize;
 

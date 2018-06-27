@@ -7,6 +7,7 @@ import AirbrakeClient from "airbrake-js";
 import Toast from "libs/toast";
 import { location } from "libs/window";
 import type { APIUserType } from "admin/api_flow_types";
+import messages from "messages";
 
 type ErrorHandlingOptionsType = {
   throwAssertions: boolean,
@@ -15,6 +16,27 @@ type ErrorHandlingOptionsType = {
 
 class ErrorWithParams extends Error {
   params: ?mixed;
+}
+
+// This method can be used when catching error within async processes.
+// For example:
+// try {
+//   this.setState({ isLoading: true });
+// } except (error) {
+//   handleGenericError(error);
+// } finally {
+//   this.setState({isLoading: false});
+// }
+// When the thrown error is coming from the server, our request module
+// will show the error to the user.
+// If some other error occurred, this function will tell the user so.
+export function handleGenericError(error: { ...Error, messages?: mixed }) {
+  if (error.messages) {
+    // The user was already notified about this error
+    return;
+  }
+  Toast.error(messages.unknown_error);
+  console.warn(error);
 }
 
 class ErrorHandling {

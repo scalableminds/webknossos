@@ -180,10 +180,10 @@ export const deleteNodeAction = (
   timestamp,
 });
 
-export const deleteNodeWithConfirmAction = (
+export const deleteNodeUserAction = (
   nodeId?: number,
   treeId?: number,
-): DeleteNodeActionType | NoActionType => {
+): DeleteNodeActionType | NoActionType | DeleteTreeActionType => {
   const state = Store.getState();
   return (
     getActiveNode(state.tracing)
@@ -203,8 +203,8 @@ export const deleteNodeWithConfirmAction = (
         }
         return deleteNodeAction(nodeId, treeId);
       })
-      // Empty trees can be deleted, too
-      .getOrElse(deleteNodeAction())
+      // If the tree is empty, it will be deleted
+      .getOrElse(deleteTreeAction())
   );
 };
 

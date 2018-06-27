@@ -50,6 +50,8 @@ In order to restore the current window, a reload is necessary.`,
   "tracing.changed_move_value": "The move value was changed to: ",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
+  "webgl.context_loss":
+    "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, restarting your browser might also help.",
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",

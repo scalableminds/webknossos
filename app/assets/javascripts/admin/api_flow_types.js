@@ -258,6 +258,7 @@ export type APIProjectProgressReportType = {
   +totalTasks: number,
   +totalInstances: number,
   +openInstances: number,
+  +activeInstances: number,
   +finishedInstances: number,
   +inProgressInstances: number,
 };

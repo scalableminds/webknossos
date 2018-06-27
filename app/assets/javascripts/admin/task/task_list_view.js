@@ -36,6 +36,8 @@ type State = {
   isAnonymousTaskLinkModalVisible: boolean,
 };
 
+const typeHint: Array<APITaskType> = [];
+
 const persistence: Persistence<State> = new Persistence(
   { searchQuery: PropTypes.string },
   "taskList",
@@ -158,7 +160,15 @@ class TaskListView extends React.PureComponent<Props, State> {
           <Table
             dataSource={Utils.filterWithSearchQueryAND(
               this.state.tasks,
-              ["team", "projectName", "id", "dataSet", "created", "type", "neededExperience"],
+              [
+                "team",
+                "projectName",
+                "id",
+                "dataSet",
+                "created",
+                "type",
+                task => task.neededExperience.domain,
+              ],
               this.state.searchQuery,
             )}
             rowKey="id"
@@ -172,7 +182,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="ID"
               dataIndex="id"
               key="id"
-              sorter={Utils.localeCompareBy("id")}
+              sorter={Utils.localeCompareBy(typeHint, "id")}
               className="monospace-id"
             />
             <Column
@@ -180,7 +190,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="projectName"
               key="projectName"
               width={130}
-              sorter={Utils.localeCompareBy("projectName")}
+              sorter={Utils.localeCompareBy(typeHint, "projectName")}
               render={(projectName: string) => (
                 <a href={`/projects#${projectName}`}>{projectName}</a>
               )}
@@ -190,7 +200,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="type"
               key="type"
               width={100}
-              sorter={Utils.localeCompareBy((task: APITaskType) => task.type.summary)}
+              sorter={Utils.localeCompareBy(typeHint, task => task.type.summary)}
               render={(taskType: APITaskTypeType) => (
                 <a href={`/taskTypes#${taskType.id}`}>{taskType.summary}</a>
               )}
@@ -200,7 +210,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="dataSet"
               key="dataSet"
               width={130}
-              sorter={Utils.localeCompareBy("dataSet")}
+              sorter={Utils.localeCompareBy(typeHint, "dataSet")}
             />
             <Column
               title="Edit Position / Bounding Box"
@@ -218,7 +228,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               title="Experience"
               dataIndex="neededExperience"
               key="neededExperience"
-              sorter={Utils.localeCompareBy(neededExperience => neededExperience.domain)}
+              sorter={Utils.localeCompareBy(typeHint, task => task.neededExperience.domain)}
               width={200}
               render={neededExperience =>
                 neededExperience.domain !== "" || neededExperience.value > 0 ? (
@@ -233,7 +243,7 @@ class TaskListView extends React.PureComponent<Props, State> {
               dataIndex="created"
               key="created"
               width={150}
-              sorter={Utils.localeCompareBy("created")}
+              sorter={Utils.localeCompareBy(typeHint, "created")}
             />
             <Column
               title="Stats"

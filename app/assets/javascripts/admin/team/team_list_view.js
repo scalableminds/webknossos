@@ -18,6 +18,8 @@ import { handleGenericError } from "libs/error_handling";
 const { Column } = Table;
 const { Search } = Input;
 
+const typeHint: APITeamType[] = [];
+
 type Props = {
   history: RouterHistory,
 };
@@ -135,7 +137,7 @@ class TeamListView extends React.PureComponent<Props, State> {
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy("name")}
+                sorter={Utils.localeCompareBy(typeHint, "name")}
               />
               <Column
                 title="Action"

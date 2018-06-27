@@ -75,7 +75,6 @@ export default class TextureBucketManager {
 
     this.dataTextures = [];
 
-    this.keepLookUpBufferUpToDate();
     this.processWriterQueue();
   }
 
@@ -129,13 +128,8 @@ export default class TextureBucketManager {
     this._refreshLookUpBuffer();
   }
 
-  keepLookUpBufferUpToDate() {
-    if (this.isRefreshBufferOutOfDate) {
-      this._refreshLookUpBuffer();
-    }
-    window.requestAnimationFrame(() => {
-      this.keepLookUpBufferUpToDate();
-    });
+  getPackedBucketSize() {
+    return constants.BUCKET_SIZE / this.packingDegree;
   }
 
   // Commit "active" buckets by writing these to the dataTexture.
@@ -149,7 +143,7 @@ export default class TextureBucketManager {
     const maxTimePerFrame = 16;
     const startingTime = performance.now();
 
-    const packedBucketSize = constants.BUCKET_SIZE / this.packingDegree;
+    const packedBucketSize = this.getPackedBucketSize();
     const bucketHeightInTexture = packedBucketSize / this.textureWidth;
     const bucketsPerTexture = this.textureWidth * this.textureWidth / packedBucketSize;
 
@@ -177,6 +171,7 @@ export default class TextureBucketManager {
 
     window.requestAnimationFrame(() => {
       this.processWriterQueue();
+      this._refreshLookUpBuffer();
     });
   }
 
@@ -248,6 +243,9 @@ export default class TextureBucketManager {
   }
 
   _refreshLookUpBuffer() {
+    if (!this.isRefreshBufferOutOfDate) {
+      return;
+    }
     // Completely re-write the lookup buffer. This could be smarter, but it's
     // probably not worth it.
     this.lookUpBuffer.fill(-2);

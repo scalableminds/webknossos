@@ -31,6 +31,8 @@ import { handleGenericError } from "libs/error_handling";
 const { Column } = Table;
 const { Search } = Input;
 
+const typeHint: APIAnnotationType[] = [];
+
 type Props = {
   userId: ?string,
   isAdminView: boolean,
@@ -345,13 +347,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           render={(__, tracing: APIAnnotationType) => FormatUtils.formatHash(tracing.id)}
-          sorter={Utils.localeCompareBy("id")}
+          sorter={Utils.localeCompareBy(typeHint, "id")}
           className="monospace-id"
         />
         <Column
           title="Name"
           dataIndex="name"
-          sorter={Utils.localeCompareBy("name")}
+          sorter={Utils.localeCompareBy(typeHint, "name")}
           render={(name: string, tracing: APIAnnotationType) => (
             <EditableTextLabel
               value={name}
@@ -414,7 +416,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Modification Date"
           dataIndex="modified"
-          sorter={Utils.localeCompareBy("modified")}
+          sorter={Utils.localeCompareBy(typeHint, "modified")}
         />
         <Column
           title="Actions"

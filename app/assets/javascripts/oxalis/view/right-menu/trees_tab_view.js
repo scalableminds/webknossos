@@ -15,7 +15,7 @@ import {
   setTreeNameAction,
   createTreeAction,
   addTreesAndGroupsAction,
-  deleteTreeWithConfirmAction,
+  deleteTreeAsUserAction,
   shuffleTreeColorAction,
   shuffleAllTreeColorsAction,
   selectNextTreeAction,
@@ -285,7 +285,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
     dispatch(createTreeAction());
   },
   onDeleteTree() {
-    dispatch(deleteTreeWithConfirmAction());
+    dispatch(deleteTreeAsUserAction());
   },
   onChangeTreeName(name) {
     dispatch(setTreeNameAction(name));

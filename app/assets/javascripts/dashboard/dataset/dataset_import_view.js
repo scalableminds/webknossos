@@ -112,8 +112,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
-      const sharingToken = await getDatasetSharingToken(this.props.datasetName);
-      const dataset = await getDataset(this.props.datasetName);
+      const [sharingToken, dataset] = await Promise.all([
+        getDatasetSharingToken(this.props.datasetName),
+        getDataset(this.props.datasetName),
+      ]);
       const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
 
       this.props.form.setFieldsValue({

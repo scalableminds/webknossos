@@ -5,9 +5,7 @@ import java.io.ByteArrayInputStream
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.{Point3D, Vector3D}
-import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.AnnotationSQL
 import models.annotation.nml.NmlParser
 import net.liftweb.common.{Box, Full}
 import org.scalatest.FlatSpec

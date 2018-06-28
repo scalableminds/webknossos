@@ -8,7 +8,6 @@ import { InputKeyboardNoLoop } from "libs/input";
 import Model from "oxalis/model";
 import type { OxalisModel } from "oxalis/model";
 import Store from "oxalis/store";
-import DataLayer from "oxalis/model/data_layer";
 import {
   updateUserSettingAction,
   updateDatasetSettingAction,
@@ -29,6 +28,7 @@ import {
   getTree,
   getSkeletonTracing,
 } from "oxalis/model/accessors/skeletontracing_accessor";
+import { getLayerBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import { setActiveCellAction, setToolAction } from "oxalis/model/actions/volumetracing_actions";
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import type { Vector3, VolumeToolType, ControlModeType } from "oxalis/constants";
@@ -526,12 +526,6 @@ class DataApi {
     this.model = model;
   }
 
-  __getLayer(layerName: string): DataLayer {
-    const layer = this.model.getLayerByName(layerName);
-    if (layer == null) throw new Error(`Layer with name ${layerName} was not found.`);
-    return layer;
-  }
-
   /**
    * Returns the names of all available layers of the current tracing.
    */
@@ -577,9 +571,12 @@ class DataApi {
    * Returns the bounding box for a given layer name.
    */
   getBoundingBox(layerName: string): [Vector3, Vector3] {
-    const layer = this.__getLayer(layerName);
+    const { lowerBoundary, upperBoundary } = getLayerBoundaries(
+      Store.getState().dataset,
+      layerName,
+    );
 
-    return [layer.lowerBoundary, layer.upperBoundary];
+    return [lowerBoundary, upperBoundary];
   }
 
   /**
@@ -596,9 +593,10 @@ class DataApi {
    * const segmentId = await api.data.getDataValue("segmentation", position);
    */
   async getDataValue(layerName: string, position: Vector3, zoomStep: number = 0): Promise<number> {
-    const layer = this.__getLayer(layerName);
-    const bucketAddress = layer.cube.positionToZoomedAddress(position, zoomStep);
-    const bucket = layer.cube.getOrCreateBucket(bucketAddress);
+    const cube = this.model.getCubeByLayerName(layerName);
+    const pullQueue = this.model.getPullQueueByLayerName(layerName);
+    const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);
+    const bucket = cube.getOrCreateBucket(bucketAddress);
 
     if (bucket.type === "null") return 0;
 
@@ -606,8 +604,8 @@ class DataApi {
     if (bucket.isRequested()) {
       needsToAwaitBucket = true;
     } else if (bucket.needsRequest()) {
-      layer.pullQueue.add({ bucket: bucketAddress, priority: -1 });
-      layer.pullQueue.pull();
+      pullQueue.add({ bucket: bucketAddress, priority: -1 });
+      pullQueue.pull();
       needsToAwaitBucket = true;
     }
     if (needsToAwaitBucket) {
@@ -616,7 +614,7 @@ class DataApi {
       });
     }
     // Bucket has been loaded by now or was loaded already
-    return layer.cube.getDataValue(position, null, zoomStep);
+    return cube.getDataValue(position, null, zoomStep);
   }
 
   /**
@@ -628,13 +626,12 @@ class DataApi {
    */
   downloadRawDataCuboid(layerName: string, topLeft: Vector3, bottomRight: Vector3): Promise<void> {
     const dataset = Store.getState().dataset;
-    const layer = this.__getLayer(layerName);
 
     return doWithToken(token => {
       const downloadUrl =
-        `${dataset.dataStore.url}/data/datasets/${dataset.name}/layers/${
-          layer.name
-        }/data?resolution=0&` +
+        `${dataset.dataStore.url}/data/datasets/${
+          dataset.name
+        }/layers/${layerName}/data?resolution=0&` +
         `token=${token}&` +
         `x=${topLeft[0]}&` +
         `y=${topLeft[1]}&` +

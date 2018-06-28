@@ -24,7 +24,8 @@ import { globalPositionToBucketPosition } from "oxalis/model/helpers/position_co
 import type { Vector3, Vector4 } from "oxalis/constants";
 import type { VoxelIterator } from "oxalis/model/volumetracing/volumelayer";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { MappingType, DataLayerType } from "oxalis/store";
+import type { MappingType } from "oxalis/store";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 
 class CubeEntry {
   data: Map<number, Bucket>;
@@ -54,7 +55,7 @@ class DataCube {
   pullQueue: PullQueue;
   pushQueue: PushQueue;
   temporalBucketManager: TemporalBucketManager;
-  layerInfo: DataLayerType;
+  isSegmentation: boolean;
   // Copied from backbone events (TODO: handle this better)
   trigger: Function;
   on: Function;
@@ -76,18 +77,18 @@ class DataCube {
 
   constructor(
     upperBoundary: Vector3,
-    extendedZoomStepCount: number,
+    resolutionsLength: number,
     bitDepth: number,
-    layerInfo: DataLayerType,
+    isSegmentation: boolean,
   ) {
     this.upperBoundary = upperBoundary;
-    this.layerInfo = layerInfo;
+    this.isSegmentation = isSegmentation;
 
-    this.MAX_UNSAMPLED_ZOOM_STEP =
-      extendedZoomStepCount - constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1;
+    this.MAX_UNSAMPLED_ZOOM_STEP = resolutionsLength - 1;
+
     // Always add another layer of downsampled buckets, so that we support
     // zooming out to maxZoomStep + 1
-    this.ZOOM_STEP_COUNT = extendedZoomStepCount;
+    this.ZOOM_STEP_COUNT = resolutionsLength + constants.DOWNSAMPLED_ZOOM_STEP_COUNT;
     this.MAX_ZOOM_STEP = this.ZOOM_STEP_COUNT - 1;
 
     this.BIT_DEPTH = bitDepth;
@@ -108,8 +109,9 @@ class DataCube {
 
     this.arbitraryCube = new ArbitraryCubeAdapter(this, _.clone(cubeBoundary));
 
+    const resolutions = getResolutions(Store.getState().dataset);
     for (let i = 0; i < this.ZOOM_STEP_COUNT; i++) {
-      const resolution = this.layerInfo.resolutions[i];
+      const resolution = resolutions[i];
       const zoomedCubeBoundary = [
         Math.ceil(cubeBoundary[0] / resolution[0]) + 1,
         Math.ceil(cubeBoundary[1] / resolution[1]) + 1,
@@ -147,13 +149,13 @@ class DataCube {
   }
 
   isMappingEnabled(): boolean {
-    return this.layerInfo.category === "segmentation"
+    return this.isSegmentation
       ? Store.getState().temporaryConfiguration.activeMapping.isMappingEnabled
       : false;
   }
 
   getMapping(): ?MappingType {
-    return this.layerInfo.category === "segmentation"
+    return this.isSegmentation
       ? Store.getState().temporaryConfiguration.activeMapping.mapping
       : null;
   }
@@ -383,7 +385,7 @@ class DataCube {
   getVoxelIndex(voxel: Vector3, zoomStep: number = 0): number {
     // No `map` for performance reasons
     const voxelOffset = [0, 0, 0];
-    const resolution = this.layerInfo.resolutions[zoomStep];
+    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
     for (let i = 0; i < 3; i++) {
       voxelOffset[i] = Math.floor(voxel[i] / resolution[i]) % constants.BUCKET_WIDTH;
     }
@@ -392,7 +394,11 @@ class DataCube {
 
   positionToZoomedAddress(position: Vector3, resolutionIndex: number = 0): Vector4 {
     // return the bucket a given voxel lies in
-    return globalPositionToBucketPosition(position, this.layerInfo.resolutions, resolutionIndex);
+    return globalPositionToBucketPosition(
+      position,
+      getResolutions(Store.getState().dataset),
+      resolutionIndex,
+    );
   }
 
   positionToBaseAddress(position: Vector3): Vector4 {

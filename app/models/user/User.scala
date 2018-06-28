@@ -345,11 +345,6 @@ case class User(
       _ <- asBoolean ?~> Messages("notAllowed")
     } yield ()
 
-  def isTeamManagerOfBLOCKING(_team: BSONObjectID) = {
-    val team = Await.result(TeamDAO.findOneById(_team)(GlobalAccessContext), 500 millis).openOrThrowException("Keep the teamManager Query synchronous")
-    teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization
-  }
-
   def isTeamManagerInOrg(organization: String) = teamManagerTeams.length > 0 && organization == this.organization
 
   def isAdminOf(organization: String): Boolean = isAdmin && organization == this.organization

@@ -12,9 +12,12 @@ import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import type { APIScriptType, APIUserType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
+
+const typeHint: APIScriptType[] = [];
 
 type Props = {
   history: RouterHistory,
@@ -67,15 +70,20 @@ class ScriptListView extends React.PureComponent<Props, State> {
     Modal.confirm({
       title: messages["script.delete"],
       onOk: async () => {
-        this.setState({
-          isLoading: true,
-        });
+        try {
+          this.setState({
+            isLoading: true,
+          });
 
-        await deleteScript(script.id);
-        this.setState({
-          isLoading: false,
-          scripts: this.state.scripts.filter(s => s.id !== script.id),
-        });
+          await deleteScript(script.id);
+          this.setState({
+            scripts: this.state.scripts.filter(s => s.id !== script.id),
+          });
+        } catch (error) {
+          handleGenericError(error);
+        } finally {
+          this.setState({ isLoading: false });
+        }
       },
     });
   };
@@ -120,27 +128,27 @@ class ScriptListView extends React.PureComponent<Props, State> {
                 dataIndex="id"
                 key="id"
                 className="monospace-id"
-                sorter={Utils.localeCompareBy("id")}
+                sorter={Utils.localeCompareBy(typeHint, "id")}
               />
               <Column
                 title="Name"
                 dataIndex="name"
                 key="name"
-                sorter={Utils.localeCompareBy("name")}
+                sorter={Utils.localeCompareBy(typeHint, "name")}
               />
 
               <Column
                 title="Owner"
                 dataIndex="owner"
                 key="owner"
-                sorter={Utils.localeCompareBy((scripts: APIScriptType) => scripts.owner.lastName)}
+                sorter={Utils.localeCompareBy(typeHint, scripts => scripts.owner.lastName)}
                 render={(owner: APIUserType) => `${owner.firstName} ${owner.lastName}`}
               />
               <Column
                 title="Gist URL"
                 dataIndex="gist"
                 key="gist"
-                sorter={Utils.localeCompareBy("gist")}
+                sorter={Utils.localeCompareBy(typeHint, "gist")}
                 render={(gist: string) => (
                   <a href={gist} target="_blank" rel="noopener noreferrer">
                     {gist}

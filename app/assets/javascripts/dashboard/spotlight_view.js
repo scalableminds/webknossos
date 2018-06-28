@@ -6,6 +6,7 @@ import { transformDatasets } from "dashboard/dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import type { DatasetType } from "dashboard/dataset_view";
 import { getDatasets } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
 
 const { Header, Content, Footer } = Layout;
 
@@ -25,14 +26,17 @@ class SpotlightView extends React.PureComponent<{}, State> {
   }
 
   async fetchData(): Promise<void> {
-    this.setState({ isLoading: true });
-    const datasets = await getDatasets();
+    try {
+      this.setState({ isLoading: true });
+      const datasets = await getDatasets();
 
-    const transformedDatasets = transformDatasets(datasets);
-    this.setState({
-      datasets: transformedDatasets,
-      isLoading: false,
-    });
+      const transformedDatasets = transformDatasets(datasets);
+      this.setState({ datasets: transformedDatasets });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   }
 
   render() {

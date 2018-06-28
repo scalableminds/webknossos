@@ -23,6 +23,7 @@ const Request = {
   receiveJSON: sinon.stub(),
   sendJSONReceiveJSON: sinon.stub(),
   receiveArraybuffer: sinon.stub(),
+  sendJSONReceiveArraybuffer: sinon.stub(),
   always: () => Promise.resolve(),
 };
 const ErrorHandling = {
@@ -64,12 +65,12 @@ mockRequire("libs/error_handling", ErrorHandling);
 mockRequire("app", app);
 mockRequire("oxalis/model/helpers/proto_helpers", protoHelpers);
 
+// Avoid node caching and make sure all mockRequires are applied
+const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const wkstoreAdapter = mockRequire.reRequire("oxalis/model/bucket_data_handling/wkstore_adapter");
 wkstoreAdapter.requestFromStore = () => new Uint8Array();
 mockRequire("oxalis/model/bucket_data_handling/wkstore_adapter", wkstoreAdapter);
 
-// Avoid node caching and make sure all mockRequires are applied
-const UrlManager = mockRequire.reRequire("oxalis/controller/url_manager").default;
 const Model = mockRequire.reRequire("oxalis/model").OxalisModel;
 const OxalisApi = mockRequire.reRequire("oxalis/api/api_loader").default;
 
@@ -93,6 +94,8 @@ const modelData = {
 const TRACING_TYPE = "tracingTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
 
+let counter = 0;
+
 export function setupOxalis(t, mode, apiVersion = 2) {
   UrlManager.initialState = { position: [1, 2, 3] };
   const model = new Model();
@@ -104,9 +107,16 @@ export function setupOxalis(t, mode, apiVersion = 2) {
   Request.receiveJSON
     .withArgs(`/api/annotations/${TRACING_TYPE}/${ANNOTATION_ID}/info`)
     .returns(Promise.resolve(_.cloneDeep(ANNOTATION)));
+  const datasetClone = _.cloneDeep(DATASET);
+
   Request.receiveJSON
     .withArgs(`/api/datasets/${ANNOTATION.dataSetName}`)
-    .returns(Promise.resolve(_.cloneDeep(DATASET)));
+    // Right now, initializeDataset() in model_initialization mutates the dataset to add a new
+    // volume layer. Since this mutation should be isolated between different tests, we have to make
+    // sure that each receiveJSON call returns its own clone. Without the following "onCall" line,
+    // each setupOxalis call would overwrite the current stub to receiveJSON.
+    .onCall(counter++)
+    .returns(Promise.resolve(datasetClone));
   protoHelpers.parseProtoTracing.returns(_.cloneDeep(modelData[mode].tracing));
   Request.receiveJSON
     .withArgs("/api/userToken/generate")

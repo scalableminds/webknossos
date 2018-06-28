@@ -9,6 +9,7 @@ import Utils from "libs/utils";
 import type { Matrix4x4 } from "libs/mjs";
 import { M4x4 } from "libs/mjs";
 import * as THREE from "three";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
 
 // All methods in this file should use constants.PLANE_WIDTH instead of constants.VIEWPORT_WIDTH
 // as the area that is rendered is only of size PLANE_WIDTH.
@@ -60,9 +61,7 @@ export function getMaxZoomStep(state: OxalisState): number {
     .map(dataset =>
       Math.max(
         minimumZoomStepCount,
-        ...dataset.dataSource.dataLayers.map(layer =>
-          Math.max(0, ...layer.resolutions.map(r => Math.max(r[0], r[1], r[2]))),
-        ),
+        Math.max(0, ...getResolutions(dataset).map(r => Math.max(r[0], r[1], r[2]))),
       ),
     )
     .getOrElse(2 ** (minimumZoomStepCount + constants.DOWNSAMPLED_ZOOM_STEP_COUNT - 1));

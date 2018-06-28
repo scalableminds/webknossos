@@ -70,6 +70,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     currentZoomStep: number,
     activePlane: OrthoViewType,
     areas: OrthoViewMapType<AreaType>,
+    resolutions: Vector3[],
   ): Array<PullQueueItemType> {
     const zoomStep = Math.min(currentZoomStep, cube.MAX_UNSAMPLED_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
@@ -82,6 +83,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       zoomStepDiff,
       activePlane,
       areas,
+      resolutions,
       false,
     );
 
@@ -96,6 +98,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         zoomStepDiff - 1,
         activePlane,
         areas,
+        resolutions,
         true,
       );
     }
@@ -111,6 +114,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     zoomStepDiff: number,
     activePlane: OrthoViewType,
     areas: OrthoViewMapType<AreaType>,
+    resolutions: Vector3[],
     isFallback: boolean,
   ): Array<PullQueueItemType> {
     const pullQueue = [];
@@ -138,7 +142,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
 
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
         widthHeightVector,
-        cube.layerInfo.resolutions,
+        resolutions,
         zoomStep,
       );
 

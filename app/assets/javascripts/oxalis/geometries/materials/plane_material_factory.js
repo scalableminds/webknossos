@@ -11,10 +11,7 @@ import Store from "oxalis/store";
 import AbstractPlaneMaterialFactory, {
   sanitizeName,
 } from "oxalis/geometries/materials/abstract_plane_material_factory";
-import type {
-  ShaderMaterialOptionsType,
-  TextureMapType,
-} from "oxalis/geometries/materials/abstract_plane_material_factory";
+import type { ShaderMaterialOptionsType } from "oxalis/geometries/materials/abstract_plane_material_factory";
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
@@ -42,10 +39,16 @@ function getColorLayerNames() {
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   planeID: OrthoViewType;
+  isOrthogonal: boolean;
 
-  constructor(planeID: OrthoViewType, shaderId: number) {
+  constructor(planeID: OrthoViewType, isOrthogonal: boolean, shaderId: number) {
     super(shaderId);
     this.planeID = planeID;
+    this.isOrthogonal = isOrthogonal;
+  }
+
+  stopListening() {
+    this.storePropertyUnsubscribers.forEach(fn => fn());
   }
 
   setupUniforms(): void {
@@ -146,10 +149,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     return [color[0] / 255, color[1] / 255, color[2] / 255];
   }
 
-  attachTextures(textures: TextureMapType): void {
-    // create textures
-    this.textures = textures;
-
+  attachTextures(): void {
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
@@ -230,123 +230,152 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
     this.material.side = THREE.DoubleSide;
 
-    listenToStoreProperty(
-      storeState => getRequestLogZoomStep(storeState),
-      zoomStep => {
-        this.uniforms.zoomStep.value = zoomStep;
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => getRequestLogZoomStep(storeState),
+        zoomStep => {
+          console.log("zoomStep");
+          this.uniforms.zoomStep.value = zoomStep;
+        },
+        true,
+      ),
     );
 
-    listenToStoreProperty(
-      storeState => storeState.userConfiguration.sphericalCapRadius,
-      sphericalCapRadius => {
-        this.uniforms.sphericalCapRadius.value = sphericalCapRadius;
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.userConfiguration.sphericalCapRadius,
+        sphericalCapRadius => {
+          this.uniforms.sphericalCapRadius.value = sphericalCapRadius;
+        },
+        true,
+      ),
     );
 
-    listenToStoreProperty(
-      storeState => storeState.flycam.zoomStep,
-      zoomStep => {
-        this.uniforms.zoomValue.value = zoomStep;
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.flycam.zoomStep,
+        zoomStep => {
+          this.uniforms.zoomValue.value = zoomStep;
+        },
+        true,
+      ),
     );
 
-    listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
-      mappingSize => {
-        this.uniforms.mappingSize.value = mappingSize;
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.activeMapping.mappingSize,
+        mappingSize => {
+          this.uniforms.mappingSize.value = mappingSize;
+        },
+        true,
+      ),
     );
 
-    listenToStoreProperty(
-      storeState => storeState.temporaryConfiguration.viewMode,
-      viewMode => {
-        this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.temporaryConfiguration.viewMode,
+        viewMode => {
+          this.uniforms.viewMode.value = ModeValues.indexOf(viewMode);
+        },
+        true,
+      ),
     );
 
-    listenToStoreProperty(
-      storeState => getPlaneScalingFactor(storeState.flycam) / storeState.userConfiguration.scale,
-      pixelToVoxelFactor => {
-        this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => getPlaneScalingFactor(storeState.flycam) / storeState.userConfiguration.scale,
+        pixelToVoxelFactor => {
+          this.uniforms.pixelToVoxelFactor.value = pixelToVoxelFactor;
+        },
+        true,
+      ),
     );
 
-    listenToStoreProperty(
-      storeState => storeState.viewModeData.plane.activeViewport === this.planeID,
-      isMouseInActiveViewport => {
-        this.uniforms.isMouseInActiveViewport.value = isMouseInActiveViewport;
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.viewModeData.plane.activeViewport === this.planeID,
+        isMouseInActiveViewport => {
+          this.uniforms.isMouseInActiveViewport.value = isMouseInActiveViewport;
+        },
+        true,
+      ),
     );
 
-    listenToStoreProperty(
-      storeState => storeState.datasetConfiguration.highlightHoveredCellId,
-      highlightHoveredCellId => {
-        this.uniforms.highlightHoveredCellId.value = highlightHoveredCellId;
-      },
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        storeState => storeState.datasetConfiguration.highlightHoveredCellId,
+        highlightHoveredCellId => {
+          this.uniforms.highlightHoveredCellId.value = highlightHoveredCellId;
+        },
+        true,
+      ),
     );
 
     const hasSegmentation = Model.getSegmentationLayer() != null;
     if (hasSegmentation) {
-      listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.mousePosition,
-        globalMousePosition => {
-          if (!globalMousePosition) {
-            this.uniforms.isMouseInCanvas.value = false;
-            return;
-          }
-          if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
-            return;
-          }
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.mousePosition,
+          globalMousePosition => {
+            if (!globalMousePosition) {
+              this.uniforms.isMouseInCanvas.value = false;
+              return;
+            }
+            if (Store.getState().viewModeData.plane.activeViewport === OrthoViews.TDView) {
+              return;
+            }
 
-          const [x, y, z] = calculateGlobalPos({
-            x: globalMousePosition[0],
-            y: globalMousePosition[1],
-          });
-          this.uniforms.globalMousePosition.value.set(x, y, z);
-          this.uniforms.isMouseInCanvas.value = true;
-        },
-        true,
+            const [x, y, z] = calculateGlobalPos({
+              x: globalMousePosition[0],
+              y: globalMousePosition[1],
+            });
+            this.uniforms.globalMousePosition.value.set(x, y, z);
+            this.uniforms.isMouseInCanvas.value = true;
+          },
+          true,
+        ),
       );
 
-      listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.brushSize,
-        brushSize => {
-          this.uniforms.brushSizeInPixel.value = brushSize;
-        },
-        true,
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.brushSize,
+          brushSize => {
+            this.uniforms.brushSizeInPixel.value = brushSize;
+          },
+          true,
+        ),
       );
 
-      listenToStoreProperty(
-        storeState => getActiveCellId(storeState.tracing).getOrElse(0),
-        () => this.updateActiveCellId(),
-        true,
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => getActiveCellId(storeState.tracing).getOrElse(0),
+          () => this.updateActiveCellId(),
+          true,
+        ),
       );
 
-      listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
-        () => this.updateActiveCellId(),
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.activeMapping.isMappingEnabled,
+          () => this.updateActiveCellId(),
+        ),
       );
 
-      listenToStoreProperty(
-        storeState => storeState.temporaryConfiguration.activeMapping.mapping,
-        () => this.updateActiveCellId(),
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => storeState.temporaryConfiguration.activeMapping.mapping,
+          () => this.updateActiveCellId(),
+        ),
       );
 
-      listenToStoreProperty(
-        storeState => volumeToolEnumToIndex(Utils.toNullable(getVolumeTool(storeState.tracing))),
-        volumeTool => {
-          this.uniforms.activeVolumeToolIndex.value = volumeTool;
-        },
-        true,
+      this.storePropertyUnsubscribers.push(
+        listenToStoreProperty(
+          storeState => volumeToolEnumToIndex(Utils.toNullable(getVolumeTool(storeState.tracing))),
+          volumeTool => {
+            this.uniforms.activeVolumeToolIndex.value = volumeTool;
+          },
+          true,
+        ),
       );
     }
   }
@@ -374,7 +403,8 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
     const { dataset } = Store.getState();
     const datasetScale = dataset.dataSource.scale;
-    const hasSegmentation = segmentationLayer != null;
+    // Don't compile code for segmentation in arbitrary mode
+    const hasSegmentation = this.isOrthogonal && segmentationLayer != null;
 
     const segmentationPackingDegree = hasSegmentation
       ? getPackingDegree(getByteCount(dataset, segmentationLayer.name))
@@ -386,11 +416,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       segmentationName,
       segmentationPackingDegree,
       isRgb: Model.dataLayers.color && isRgb(dataset, Model.dataLayers.color.name),
-      planeID: this.planeID,
       isMappingSupported: Model.isMappingSupported,
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
       resolutions: getResolutions(dataset),
       datasetScale,
+      isOrthogonal: this.isOrthogonal,
     });
 
     return code;

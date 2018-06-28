@@ -13,10 +13,6 @@ import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
 import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 
-export type TextureMapType = {
-  [key: string]: THREE.DataTexture,
-};
-
 export type UniformsType = {
   [key: string]: {
     type: "f" | "i" | "t" | "v2" | "v3" | "tv",
@@ -105,10 +101,10 @@ class AbstractPlaneMaterialFactory {
   material: THREE.ShaderMaterial;
   uniforms: UniformsType;
   attributes: Object;
-  textures: TextureMapType;
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
   shaderId: number;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(shaderId: number) {
     this.minFilter = THREE.NearestFilter;
@@ -119,13 +115,12 @@ class AbstractPlaneMaterialFactory {
   setup() {
     this.setupUniforms();
     this.makeMaterial();
-    this.attachTextures(this.textures);
+    this.attachTextures();
     this.setupChangeListeners();
     return this;
   }
 
-  /* eslint-disable no-unused-vars */
-  attachTextures(textures: TextureMapType): void {}
+  attachTextures(): void {}
 
   setupUniforms(): void {
     this.uniforms = {};
@@ -153,15 +148,6 @@ class AbstractPlaneMaterialFactory {
     );
 
     shaderEditor.addMaterial(this.shaderId, this.material);
-
-    this.material.setData = (name, data) => {
-      const textureName = sanitizeName(name);
-      const texture = this.textures[textureName];
-      if (texture) {
-        texture.image.data = data;
-        texture.needsUpdate = true;
-      }
-    };
   }
 
   setupChangeListeners(): void {

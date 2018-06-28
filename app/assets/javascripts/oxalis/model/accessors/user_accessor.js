@@ -3,7 +3,7 @@
 import messages from "messages";
 import type { APIUserType } from "admin/api_flow_types";
 
-export function getActiveUser(activeUser: ?APIUserType): APIUserType {
+export function enforceActiveUser(activeUser: ?APIUserType): APIUserType {
   if (activeUser) {
     return activeUser;
   } else {

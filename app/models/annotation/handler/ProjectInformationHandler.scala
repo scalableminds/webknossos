@@ -33,8 +33,11 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       teamIdBson <- project._team.toBSONObjectId.toFox
     } yield {
       new AnnotationRestrictions {
-        override def allowAccess(user: Option[User]) =
-          user.exists(_.isTeamManagerOfBLOCKING(teamIdBson))
+        override def allowAccess(userOption: Option[User]): Fox[Boolean] =
+          (for {
+            user <- userOption.toFox
+            allowed <- user.isTeamManagerOrAdminOf(teamIdBson)
+          } yield allowed).orElse(Fox.successful(false))
       }
     }
 }

@@ -177,6 +177,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       const [
         mappingTexture,
         mappingLookupTexture,
+        mappingColorTexture,
       ] = segmentationLayer.mappings.getMappingTextures();
       this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_texture`)] = {
         type: "t",
@@ -185,6 +186,10 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_lookup_texture`)] = {
         type: "t",
         value: mappingLookupTexture,
+      };
+      this.uniforms[sanitizeName(`${segmentationLayer.name}_mapping_color_texture`)] = {
+        type: "t",
+        value: mappingColorTexture,
       };
     }
 

@@ -228,6 +228,7 @@ export type TemporaryConfigurationType = {
   +brushSize: number,
   +activeMapping: {
     +mapping: ?MappingType,
+    +mappingColors: ?Array<number>,
     +isMappingEnabled: boolean,
     +mappingSize: number,
   },
@@ -347,6 +348,7 @@ export const defaultState: OxalisState = {
     brushSize: 50,
     activeMapping: {
       mapping: null,
+      mappingColors: null,
       isMappingEnabled: false,
       mappingSize: 0,
     },

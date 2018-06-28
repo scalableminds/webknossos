@@ -556,7 +556,7 @@ class DataApi {
    *
    * api.setMapping("segmentation", mapping);
    */
-  setMapping(layerName: string, mapping: MappingType) {
+  setMapping(layerName: string, mapping: MappingType, mappingColors?: Array<number>) {
     if (!Model.isMappingSupported) {
       throw new Error(messages["mapping.too_few_textures"]);
     }
@@ -567,7 +567,7 @@ class DataApi {
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(setMappingAction(mapping));
+    Store.dispatch(setMappingAction(mapping, mappingColors));
   }
 
   /**

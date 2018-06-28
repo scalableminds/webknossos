@@ -49,7 +49,11 @@ type SetViewModeActionType = { type: "SET_VIEW_MODE", viewMode: ModeType };
 type SetFlightmodeRecordingActionType = { type: "SET_FLIGHTMODE_RECORDING", value: boolean };
 type SetControlModeActionType = { type: "SET_CONTROL_MODE", controlMode: ControlModeType };
 type SetMappingEnabledActionType = { type: "SET_MAPPING_ENABLED", isMappingEnabled: boolean };
-type SetMappingActionType = { type: "SET_MAPPING", mapping: ?MappingType };
+type SetMappingActionType = {
+  type: "SET_MAPPING",
+  mapping: ?MappingType,
+  mappingColors: ?Array<number>,
+};
 export type SettingActionType =
   | UpdateUserSettingActionType
   | UpdateDatasetSettingActionType
@@ -145,7 +149,11 @@ export const setMappingEnabledAction = (
   isMappingEnabled,
 });
 
-export const setMappingAction = (mapping: ?MappingType): SetMappingActionType => ({
+export const setMappingAction = (
+  mapping: ?MappingType,
+  mappingColors: ?Array<number>,
+): SetMappingActionType => ({
   type: "SET_MAPPING",
   mapping,
+  mappingColors,
 });

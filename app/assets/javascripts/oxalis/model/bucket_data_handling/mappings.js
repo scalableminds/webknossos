@@ -21,6 +21,7 @@ import type { APIMappingType } from "admin/api_flow_types";
 import type DataLayer from "oxalis/model/data_layer";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
+export const MAPPING_COLOR_TEXTURE_WIDTH = 16;
 
 type APIMappingsType = { [string]: APIMappingType };
 
@@ -44,6 +45,7 @@ class Mappings {
   availableMappings: Array<string>;
   mappingTexture: UpdatableTexture;
   mappingLookupTexture: UpdatableTexture;
+  mappingColorTexture: UpdatableTexture;
 
   constructor(layerName: string) {
     const { dataset } = Store.getState();
@@ -63,8 +65,8 @@ class Mappings {
     } else {
       const fetchedMappings = {};
       await this.fetchMappings(mappingName, fetchedMappings);
-      const mappingObject = this.buildMappingObject(mappingName, fetchedMappings);
-      Store.dispatch(setMappingAction(mappingObject));
+      const [mappingObject, mappingColors] = this.buildMappingObject(mappingName, fetchedMappings);
+      Store.dispatch(setMappingAction(mappingObject, mappingColors));
     }
   }
 
@@ -92,8 +94,12 @@ class Mappings {
     });
   }
 
-  buildMappingObject(mappingName: string, fetchedMappings: APIMappingsType): MappingType {
+  buildMappingObject(
+    mappingName: string,
+    fetchedMappings: APIMappingsType,
+  ): [MappingType, ?Array<number>] {
     const mappingObject: MappingType = {};
+    let mappingColors;
 
     for (const currentMappingName of this.getMappingChain(mappingName, fetchedMappings)) {
       const mapping = fetchedMappings[currentMappingName];
@@ -107,8 +113,11 @@ class Mappings {
           }
         }
       }
+      if (mapping.colors != null && mapping.colors.length > 0) {
+        mappingColors = mapping.colors;
+      }
     }
-    return mappingObject;
+    return [mappingObject, mappingColors];
   }
 
   getMappingChain(mappingName: string, fetchedMappings: APIMappingsType): Array<string> {
@@ -125,22 +134,54 @@ class Mappings {
   // MAPPING TEXTURES
 
   setupMappingTextures() {
+    const renderer = getRenderer();
     this.mappingTexture = createUpdatableTexture(
       MAPPING_TEXTURE_WIDTH,
       4,
       THREE.UnsignedByteType,
-      getRenderer(),
+      renderer,
     );
     this.mappingLookupTexture = createUpdatableTexture(
       MAPPING_TEXTURE_WIDTH,
       4,
       THREE.UnsignedByteType,
-      getRenderer(),
+      renderer,
+    );
+    // The first byte indicates whether mappingColors are specified by the user or not
+    // Then up to 255 (16*16 - 1) custom colors can be specified for mappings
+    this.mappingColorTexture = createUpdatableTexture(
+      MAPPING_COLOR_TEXTURE_WIDTH,
+      1,
+      THREE.FloatType,
+      renderer,
     );
 
     listenToStoreProperty(
       state => state.temporaryConfiguration.activeMapping.mapping,
       mapping => this.updateMappingTextures(mapping),
+    );
+
+    listenToStoreProperty(
+      state => state.temporaryConfiguration.activeMapping.mappingColors,
+      mappingColors => this.updateMappingColorTexture(mappingColors),
+    );
+  }
+
+  updateMappingColorTexture(mappingColors: ?Array<number>) {
+    mappingColors = mappingColors || [];
+    const float32Colors = new Float32Array(
+      MAPPING_COLOR_TEXTURE_WIDTH * MAPPING_COLOR_TEXTURE_WIDTH,
+    );
+    const maxNumberOfColors = MAPPING_COLOR_TEXTURE_WIDTH ** 2 - 1;
+    // Set the first byte to indicate whether custom mapping colors are specified or not
+    float32Colors.set([mappingColors.length > 0 ? 1 : 0]);
+    float32Colors.set(mappingColors.slice(0, maxNumberOfColors), 1);
+    this.mappingColorTexture.update(
+      float32Colors,
+      0,
+      0,
+      MAPPING_COLOR_TEXTURE_WIDTH,
+      MAPPING_COLOR_TEXTURE_WIDTH,
     );
   }
 
@@ -194,7 +235,7 @@ class Mappings {
     if (this.mappingTexture == null) {
       this.setupMappingTextures();
     }
-    return [this.mappingTexture, this.mappingLookupTexture];
+    return [this.mappingTexture, this.mappingLookupTexture, this.mappingColorTexture];
   }
 }
 

@@ -2,7 +2,10 @@
 import _ from "lodash";
 import type { OrthoViewType, Vector3 } from "oxalis/constants";
 import Dimensions from "oxalis/model/dimensions";
-import { MAPPING_TEXTURE_WIDTH } from "oxalis/model/bucket_data_handling/mappings";
+import {
+  MAPPING_TEXTURE_WIDTH,
+  MAPPING_COLOR_TEXTURE_WIDTH,
+} from "oxalis/model/bucket_data_handling/mappings";
 import { floatsPerLookUpEntry } from "oxalis/model/bucket_data_handling/texture_bucket_manager";
 import constants, {
   OrthoViews,
@@ -73,6 +76,7 @@ const int dataTextureCountPerLayer = <%= dataTextureCountPerLayer %>;
     uniform float mappingSize;
     uniform sampler2D <%= segmentationName %>_mapping_texture;
     uniform sampler2D <%= segmentationName %>_mapping_lookup_texture;
+    uniform sampler2D <%= segmentationName %>_mapping_color_texture;
   <% } %>
 <% } %>
 
@@ -231,6 +235,7 @@ void main() {
     bucketsPerDim: formatNumberAsGLSLFloat(constants.MAXIMUM_NEEDED_BUCKETS_PER_DIMENSION),
     l_texture_width: formatNumberAsGLSLFloat(constants.LOOK_UP_TEXTURE_WIDTH),
     mappingTextureWidth: formatNumberAsGLSLFloat(MAPPING_TEXTURE_WIDTH),
+    mappingColorTextureWidth: formatNumberAsGLSLFloat(MAPPING_COLOR_TEXTURE_WIDTH),
     uvw: Dimensions.getIndices(params.planeID),
     formatNumberAsGLSLFloat,
     formatVector3AsVec3: vector3 => `vec3(${vector3.map(formatNumberAsGLSLFloat).join(", ")})`,

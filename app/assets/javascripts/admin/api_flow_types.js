@@ -21,6 +21,7 @@ export type APIMappingType = {
   +parent?: string,
   +name: string,
   +classes?: Array<Array<number>>,
+  +colors?: Array<number>,
 };
 
 export type APIDataLayerType = {

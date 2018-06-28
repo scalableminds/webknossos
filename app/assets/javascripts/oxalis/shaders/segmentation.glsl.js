@@ -10,7 +10,25 @@ export const convertCellIdToRGB: ShaderModuleType = {
     vec3 convertCellIdToRGB(vec4 id) {
       float golden_ratio = 0.618033988749895;
       float lastEightBits = id.r;
-      vec4 HSV = vec4( mod( lastEightBits * golden_ratio, 1.0), 1.0, 1.0, 1.0 );
+      float value = mod( lastEightBits * golden_ratio, 1.0);
+
+      <% if (isMappingSupported) { %>
+        // The first element of the texture indicates whether custom colors are specified or not
+        bool hasCustomMappingColors = getRgbaAtIndex(
+          <%= segmentationName %>_mapping_color_texture,
+          <%= mappingColorTextureWidth %>,
+          0.0
+        ).r > 0.5;
+        if (isMappingEnabled && hasCustomMappingColors) {
+          value = getRgbaAtIndex(
+            <%= segmentationName %>_mapping_color_texture,
+            <%= mappingColorTextureWidth %>,
+            lastEightBits
+          ).r;
+        }
+      <% } %>
+
+      vec4 HSV = vec4( value, 1.0, 1.0, 1.0 );
       return hsvToRgb(HSV);
     }
   `,

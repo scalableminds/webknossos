@@ -1,7 +1,4 @@
-/**
- * model.js
- * @flow
- */
+// @flow
 import _ from "lodash";
 import Store from "oxalis/store";
 import type { TracingTypeTracingType } from "oxalis/store";

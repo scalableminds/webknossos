@@ -38,7 +38,7 @@ function getDataLayers(dataset: APIDatasetType): DataLayerType[] {
 
 export function getLayerByName(dataset: APIDatasetType, layerName: string): DataLayerType {
   const dataLayers = getDataLayers(dataset);
-  const hasUniqueNames = _.uniq(dataLayers).length === dataLayers.length;
+  const hasUniqueNames = _.uniqBy(dataLayers, "name").length === dataLayers.length;
   ErrorHandling.assert(hasUniqueNames, messages["dataset.unique_layer_names"]);
 
   const layer = dataLayers.find(l => l.name === layerName);

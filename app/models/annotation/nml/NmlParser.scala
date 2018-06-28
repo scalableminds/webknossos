@@ -56,14 +56,15 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         val editPosition = parseEditPosition(parameters \ "editPosition").getOrElse(SkeletonTracingDefaults.editPosition)
         val editRotation = parseEditRotation(parameters \ "editRotation").getOrElse(SkeletonTracingDefaults.editRotation)
         val zoomLevel = parseZoomLevel(parameters \ "zoomLevel").getOrElse(SkeletonTracingDefaults.zoomLevel)
-        val userBoundingBox = parseUserBoundingBox(parameters \ "userBoundingBox")
+        val userBoundingBox = parseBoundingBox(parameters \ "userBoundingBox")
+        val boundingBox = parseBoundingBox(parameters \ "boundingBox")
 
         logger.debug(s"Parsed NML file. Trees: ${trees.size}, Volumes: ${volumes.size}")
 
         if (volumes.size >= 1) {
           (Right(VolumeTracing(None, BoundingBox.empty, time, dataSetName, editPosition, editRotation, ElementClass.uint32, None, 0, 0, zoomLevel), volumes.head.location), description)
         } else {
-          (Left(SkeletonTracing(dataSetName, trees, time, None, activeNodeId,
+          (Left(SkeletonTracing(dataSetName, trees, time, boundingBox, activeNodeId,
             editPosition, editRotation, zoomLevel, version = 0, userBoundingBox, treeGroups)), description)
         }
       }
@@ -106,7 +107,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     treeNodes.flatMap(treeNode => parseTree(treeNode, branchPoints, comments))
   }
 
-  private def parseUserBoundingBox(node: NodeSeq) = {
+  private def parseBoundingBox(node: NodeSeq) = {
     node.headOption.flatMap(bb =>
       for {
         topLeftX <- (node \ "@topLeftX").text.toIntOpt

@@ -7,10 +7,11 @@ import _ from "lodash";
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import app from "app";
-import Model from "oxalis/model";
+import Store from "oxalis/store";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
+import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 
 export type TextureMapType = {
   [key: string]: THREE.DataTexture,
@@ -129,7 +130,7 @@ class AbstractPlaneMaterialFactory {
   setupUniforms(): void {
     this.uniforms = {};
 
-    for (const colorLayer of Model.getColorLayers()) {
+    for (const colorLayer of getColorLayers(Store.getState().dataset)) {
       const name = sanitizeName(colorLayer.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",
@@ -167,7 +168,7 @@ class AbstractPlaneMaterialFactory {
     listenToStoreProperty(
       state => state.datasetConfiguration.layers,
       layerSettings => {
-        for (const colorLayer of Model.getColorLayers()) {
+        for (const colorLayer of getColorLayers(Store.getState().dataset)) {
           const settings = layerSettings[colorLayer.name];
           if (settings != null) {
             const name = sanitizeName(colorLayer.name);

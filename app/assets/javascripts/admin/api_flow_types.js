@@ -3,12 +3,15 @@
  * @flow
  */
 import type { SkeletonTracingStatsType } from "oxalis/model/accessors/skeletontracing_accessor";
-import type { Vector3, Vector6 } from "oxalis/constants";
+import type { Vector3, Vector6, Point3 } from "oxalis/constants";
 import type {
   SettingsType,
   BoundingBoxObjectType,
   CategoryType,
   ElementClassType,
+  EdgeType,
+  CommentType,
+  TreeGroupType,
 } from "oxalis/store";
 import Enum from "Enumjs";
 
@@ -299,5 +302,72 @@ export type APIBuildInfoType = {
 export type APIFeatureToggles = {
   +discussionBoard: boolean,
 };
+
+// Tracing related datatypes
+export type ServerNodeType = {
+  id: number,
+  position: Point3,
+  rotation: Point3,
+  bitDepth: number,
+  viewport: number,
+  resolution: number,
+  radius: number,
+  createdTimestamp: number,
+  interpolation: boolean,
+};
+
+export type ServerBranchPointType = {
+  createdTimestamp: number,
+  nodeId: number,
+};
+
+export type ServerBoundingBoxType = {
+  topLeft: Point3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
+export type ServerSkeletonTracingTreeType = {
+  branchPoints: Array<ServerBranchPointType>,
+  color: ?{ r: number, g: number, b: number },
+  comments: Array<CommentType>,
+  edges: Array<EdgeType>,
+  name: string,
+  nodes: Array<ServerNodeType>,
+  treeId: number,
+  createdTimestamp: number,
+  groupId?: ?number,
+};
+
+export type ServerTracingBaseType = {|
+  id: string,
+  userBoundingBox?: ServerBoundingBoxType,
+  createdTimestamp: number,
+  editPosition: Point3,
+  editRotation: Point3,
+  error?: string,
+  version: number,
+  zoomLevel: number,
+|};
+
+export type ServerSkeletonTracingType = {|
+  ...ServerTracingBaseType,
+  activeNodeId?: number,
+  boundingBox?: ServerBoundingBoxType,
+  trees: Array<ServerSkeletonTracingTreeType>,
+  treeGroups: ?Array<TreeGroupType>,
+|};
+
+export type ServerVolumeTracingType = {|
+  ...ServerTracingBaseType,
+  activeSegmentId?: number,
+  boundingBox: ServerBoundingBoxType,
+  elementClass: ElementClassType,
+  fallbackLayer?: string,
+  largestSegmentId: number,
+|};
+
+export type ServerTracingType = ServerSkeletonTracingType | ServerVolumeTracingType;
 
 export default {};

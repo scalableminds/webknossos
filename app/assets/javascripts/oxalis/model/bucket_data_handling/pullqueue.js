@@ -8,12 +8,14 @@ import ConnectionInfo from "oxalis/model/data_connection_info";
 import { requestFromStore } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Vector4 } from "oxalis/constants";
-import type { DataStoreInfoType, DataLayerType } from "oxalis/store";
+import type { DataStoreInfoType } from "oxalis/store";
 import PriorityQueue from "js-priority-queue";
 import {
   getResolutionsFactors,
   zoomedAddressToAnotherZoomStep,
 } from "oxalis/model/helpers/position_converter";
+import { getResolutions, getLayerByName } from "oxalis/model/accessors/dataset_accessor";
+import Store from "oxalis/store";
 
 export type PullQueueItemType = {
   priority: number,
@@ -40,19 +42,19 @@ class PullQueue {
   queue: Array<PullQueueItemType>;
   priorityQueue: PriorityQueue;
   batchCount: number;
-  layerInfo: DataLayerType;
+  layerName: string;
   whitenEmptyBuckets: boolean;
   connectionInfo: ConnectionInfo;
   datastoreInfo: DataStoreInfoType;
 
   constructor(
     cube: DataCube,
-    layerInfo: DataLayerType,
+    layerName: string,
     connectionInfo: ConnectionInfo,
     datastoreInfo: DataStoreInfoType,
   ) {
     this.cube = cube;
-    this.layerInfo = layerInfo;
+    this.layerName = layerName;
     this.connectionInfo = connectionInfo;
     this.datastoreInfo = datastoreInfo;
     this.priorityQueue = createPriorityQueue();
@@ -87,21 +89,22 @@ class PullQueue {
   async pullBatch(batch: Array<Vector4>): Promise<void> {
     // Loading a bunch of buckets
     this.batchCount++;
-
+    const { dataset } = Store.getState();
     // Measuring the time until response arrives to select appropriate preloading strategy
     const roundTripBeginTime = new Date();
-
+    const layerInfo = getLayerByName(dataset, this.layerName);
     try {
-      const responseBuffer = await requestFromStore(this.layerInfo, batch);
+      const responseBuffer = await requestFromStore(layerInfo, batch);
       let bucketData;
       this.connectionInfo.log(
-        this.layerInfo.name,
+        this.layerName,
         roundTripBeginTime,
         batch.length,
         responseBuffer.length,
       );
 
       let offset = 0;
+      const resolutions = getResolutions(dataset);
       for (const bucketAddress of batch) {
         const zoomStep = bucketAddress[3];
         if (zoomStep > this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
@@ -116,20 +119,20 @@ class PullQueue {
           if (zoomStep === this.cube.MAX_UNSAMPLED_ZOOM_STEP) {
             const higherAddress = zoomedAddressToAnotherZoomStep(
               bucketAddress,
-              this.layerInfo.resolutions,
+              resolutions,
               zoomStep + 1,
             );
 
             const resolutionsFactors = getResolutionsFactors(
-              this.layerInfo.resolutions[zoomStep + 1],
-              this.layerInfo.resolutions[zoomStep],
+              resolutions[zoomStep + 1],
+              resolutions[zoomStep],
             );
             const higherBucket = this.cube.getOrCreateBucket(higherAddress);
             if (higherBucket.type === "data") {
               higherBucket.downsampleFromLowerBucket(
                 bucket,
                 resolutionsFactors,
-                this.layerInfo.category === "segmentation",
+                layerInfo.category === "segmentation",
               );
             }
           }

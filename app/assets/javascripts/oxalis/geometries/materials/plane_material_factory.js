@@ -27,8 +27,18 @@ import { calculateGlobalPos } from "oxalis/controller/viewmodes/plane_controller
 import { getActiveCellId, getVolumeTool } from "oxalis/model/accessors/volumetracing_accessor";
 import getMainFragmentShader from "oxalis/shaders/main_data_fragment.glsl";
 import { getPackingDegree } from "oxalis/model/bucket_data_handling/data_rendering_logic";
+import {
+  getColorLayers,
+  getResolutions,
+  isRgb,
+  getByteCount,
+} from "oxalis/model/accessors/dataset_accessor.js";
 
 const DEFAULT_COLOR = new THREE.Vector3([255, 255, 255]);
+
+function getColorLayerNames() {
+  return getColorLayers(Store.getState().dataset).map(layer => sanitizeName(layer.name));
+}
 
 class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   planeID: OrthoViewType;
@@ -143,7 +153,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     // Add data and look up textures for each layer
     for (const dataLayer of Model.getAllLayers()) {
       const { name } = dataLayer;
-      const [lookUpTexture, ...dataTextures] = dataLayer.getDataTextures();
+      const [lookUpTexture, ...dataTextures] = dataLayer.layerRenderingManager.getDataTextures();
 
       this.uniforms[`${sanitizeName(name)}_textures`] = {
         type: "tv",
@@ -152,7 +162,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
 
       this.uniforms[`${sanitizeName(name)}_data_texture_width`] = {
         type: "f",
-        value: dataLayer.textureWidth,
+        value: dataLayer.layerRenderingManager.textureWidth,
       };
 
       this.uniforms[sanitizeName(`${name}_lookup_texture`)] = {
@@ -179,10 +189,7 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
     }
 
     // Add weight/color uniforms
-    const colorLayerNames = _.map(Model.getColorLayers(), colorLayer =>
-      sanitizeName(colorLayer.name),
-    );
-    for (const name of colorLayerNames) {
+    for (const name of getColorLayerNames()) {
       this.uniforms[`${name}_weight`] = {
         type: "f",
         value: 1,
@@ -362,14 +369,15 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
   }
 
   getFragmentShader(): string {
-    const colorLayerNames = _.map(Model.getColorLayers(), b => sanitizeName(b.name));
+    const colorLayerNames = getColorLayerNames();
     const segmentationLayer = Model.getSegmentationLayer();
     const segmentationName = sanitizeName(segmentationLayer ? segmentationLayer.name : "");
-    const datasetScale = Store.getState().dataset.dataSource.scale;
+    const { dataset } = Store.getState();
+    const datasetScale = dataset.dataSource.scale;
     const hasSegmentation = segmentationLayer != null;
 
     const segmentationPackingDegree = hasSegmentation
-      ? getPackingDegree(segmentationLayer.getByteCount())
+      ? getPackingDegree(getByteCount(dataset, segmentationLayer.name))
       : 0;
 
     const code = getMainFragmentShader({
@@ -377,11 +385,11 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       hasSegmentation,
       segmentationName,
       segmentationPackingDegree,
-      isRgb: Utils.__guard__(Model.dataLayers.color, x1 => x1.targetBitDepth) === 24,
+      isRgb: Model.dataLayers.color && isRgb(dataset, Model.dataLayers.color.name),
       planeID: this.planeID,
       isMappingSupported: Model.isMappingSupported,
       dataTextureCountPerLayer: Model.maximumDataTextureCountForLayer,
-      resolutions: Model.getResolutions(),
+      resolutions: getResolutions(dataset),
       datasetScale,
     });
 

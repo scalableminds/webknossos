@@ -8,8 +8,8 @@ WORKDIR /srv/webknossos
 
 COPY target/universal/stage .
 
-RUN addgroup -S -g 999 webknossos \
-  && adduser -S -u 999 -G webknossos webknossos \
+RUN addgroup --system -gid 999 webknossos \
+  && adduser --system --uid 999 --ingroup webknossos webknossos \
   && mkdir disk \
   && chown -R webknossos .
 

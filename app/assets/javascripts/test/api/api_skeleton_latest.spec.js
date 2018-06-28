@@ -75,7 +75,7 @@ test("Data Api: setMapping should throw an error if the layer name is not valid"
 
 test("Data Api: setMapping should set a mapping of a layer", t => {
   const { api, model } = t.context;
-  const cube = model.getLayerByName("segmentation").cube;
+  const cube = model.getCubeByLayerName("segmentation");
   t.is(Store.getState().temporaryConfiguration.activeMapping.mapping, null);
   api.data.setMapping("segmentation", [1, 3]);
   t.not(Store.getState().temporaryConfiguration.activeMapping.mapping, null);
@@ -107,7 +107,7 @@ test("Data Api: getDataValue should get the data value for a layer, position and
   // event is being triggered.
   // There is another spec for pullqueue.js
   const { api, model } = t.context;
-  const cube = model.getLayerByName("segmentation").cube;
+  const cube = model.getCubeByLayerName("segmentation");
   const position = [100, 100, 100];
   const zoomStep = 0;
   const bucketAddress = cube.positionToZoomedAddress(position, zoomStep);

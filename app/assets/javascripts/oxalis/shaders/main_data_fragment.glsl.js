@@ -125,7 +125,7 @@ ${compileShader(
       getRelativeCoords,
       getWorldCoordUVW,
       getMaybeFilteredColorOrFallback,
-      convertCellIdToRGB,
+      hasSegmentation ? convertCellIdToRGB : null,
       hasSegmentation ? getBrushOverlay : null,
       hasSegmentation ? getSegmentationId : null,
     )}
@@ -150,9 +150,6 @@ void main() {
     vec3 mousePosCoords = getRelativeCoords(flooredMousePosUVW, zoomStep);
 
     vec4 cellIdUnderMouse = getSegmentationId(mousePosCoords, fallbackCoords, false);
-  <% } else { %>
-    vec4 id = vec4(0.0);
-    vec4 cellIdUnderMouse = vec4(0.0);
   <% } %>
 
   // Get Color Value(s)
@@ -197,20 +194,20 @@ void main() {
     data_color = clamp(data_color, 0.0, 1.0);
   <% } %>
 
-  // Color map (<= to fight rounding mistakes)
-  if ( length(id) > 0.1 ) {
-    // Increase cell opacity when cell is hovered
-    float hoverAlphaIncrement =
-      // Hover cell only if it's the active one, if the feature is enabled
-      // and if segmentation opacity is not zero
-      cellIdUnderMouse == id && highlightHoveredCellId && alpha > 0.0
-        ? 0.2 : 0.0;
-    gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
-  } else {
-    gl_FragColor = vec4(data_color, 1.0);
-  }
+  gl_FragColor = vec4(data_color, 1.0);
 
   <% if (hasSegmentation) { %>
+    // Color map (<= to fight rounding mistakes)
+    if ( length(id) > 0.1 ) {
+      // Increase cell opacity when cell is hovered
+      float hoverAlphaIncrement =
+        // Hover cell only if it's the active one, if the feature is enabled
+        // and if segmentation opacity is not zero
+        cellIdUnderMouse == id && highlightHoveredCellId && alpha > 0.0
+          ? 0.2 : 0.0;
+      gl_FragColor = vec4(mix( data_color, convertCellIdToRGB(id), alpha + hoverAlphaIncrement ), 1.0);
+    }
+
     vec4 brushOverlayColor = getBrushOverlay(worldCoordUVW);
     brushOverlayColor.xyz = convertCellIdToRGB(activeCellId);
     gl_FragColor = mix(gl_FragColor, brushOverlayColor, brushOverlayColor.a);

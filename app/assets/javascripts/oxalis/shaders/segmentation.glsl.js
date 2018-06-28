@@ -5,7 +5,7 @@ import { binarySearchIndex } from "./mappings.glsl";
 import { getRgbaAtIndex } from "./texture_access.glsl";
 
 export const convertCellIdToRGB: ShaderModuleType = {
-  requirements: [hsvToRgb],
+  requirements: [hsvToRgb, getRgbaAtIndex],
   code: `
     vec3 convertCellIdToRGB(vec4 id) {
       float golden_ratio = 0.618033988749895;

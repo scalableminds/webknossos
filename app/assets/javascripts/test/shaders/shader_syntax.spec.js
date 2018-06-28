@@ -13,7 +13,7 @@ test("Shader syntax: Ortho Mode", t => {
     segmentationPackingDegree: 1,
     isRgb: false,
     planeID: OrthoViews.PLANE_XY,
-    isMappingSupported: false,
+    isMappingSupported: true,
     dataTextureCountPerLayer: 3,
     resolutions,
     datasetScale: [1, 1, 1],

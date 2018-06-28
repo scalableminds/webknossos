@@ -140,7 +140,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
   }
 
   private def parseEditRotation(node: NodeSeq) = {
-    node.headOption.flatMap(parseRotation)
+    node.headOption.flatMap(parseRotationForParams)
   }
 
   private def parseZoomLevel(node: NodeSeq) = {
@@ -166,7 +166,15 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
     } yield Point3D(x, y, z)
   }
 
-  private def parseRotation(node: NodeSeq) = {
+  private def parseRotationForParams(node: XMLNode) = {
+    for {
+      rotX <- (node \ "@xRot").text.toDoubleOpt
+      rotY <- (node \ "@yRot").text.toDoubleOpt
+      rotZ <- (node \ "@zRot").text.toDoubleOpt
+    } yield Vector3D(rotX, rotY, rotZ)
+  }
+
+  private def parseRotationForNode(node: XMLNode) = {
     for {
       rotX <- (node \ "@rotX").text.toDoubleOpt
       rotY <- (node \ "@rotY").text.toDoubleOpt
@@ -282,7 +290,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
       val timestamp = parseTimestamp(node)
       val bitDepth = parseBitDepth(node)
       val interpolation = parseInterpolation(node)
-      val rotation = parseRotation(node).getOrElse(NodeDefaults.rotation)
+      val rotation = parseRotationForNode(node).getOrElse(NodeDefaults.rotation)
       Node(id, position, rotation, radius, viewport, resolution, bitDepth, interpolation, timestamp)
     }
   }

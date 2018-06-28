@@ -118,14 +118,14 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       mode match {
         case AccessMode.read => restrictions.allowAccess(userBox)
         case AccessMode.write => restrictions.allowUpdate(userBox)
-        case _ => false
+        case _ => Fox.successful(false)
       }
     }
 
     for {
       annotation <- findAnnotationForTracing(tracingId)
       restrictions <- restrictionsFor(AnnotationIdentifier(annotation.typ, annotation._id))
-      allowed = checkRestrictions(restrictions)
+      allowed <- checkRestrictions(restrictions)
     } yield {
       if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))
     }

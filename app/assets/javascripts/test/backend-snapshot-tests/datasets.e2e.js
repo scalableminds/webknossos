@@ -48,8 +48,7 @@ test("getDatasetAccessList", async t => {
 });
 
 test("updateDatasetTeams", async t => {
-  const dataset = await getFirstDataset();
-  const newTeams = await api.getEditableTeams();
+  const [dataset, newTeams] = await Promise.all([getFirstDataset(), api.getEditableTeams()]);
 
   const updatedDataset = await api.updateDatasetTeams(dataset.name, newTeams.map(team => team.id));
   t.snapshot(updatedDataset, { id: "dataset-updateDatasetTeams" });

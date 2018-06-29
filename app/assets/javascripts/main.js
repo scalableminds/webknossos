@@ -26,8 +26,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // try retreive the currently active user if logged in
   try {
-    await loadFeatureToggles();
-    const user = await getActiveUser({ doNotCatch: true });
+    // eslint-disable-next-line no-unused-vars
+    const [_, user] = await Promise.all([
+      loadFeatureToggles(),
+      getActiveUser({ doNotCatch: true }),
+    ]);
     Store.dispatch(setActiveUserAction(user));
     ErrorHandling.setCurrentUser(user);
   } catch (e) {

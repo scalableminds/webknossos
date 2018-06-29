@@ -70,8 +70,10 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
   componentWillMount() {
     (async () => {
-      const taskTypes = await Request.receiveJSON("/api/taskTypes", { doNotCatch: true });
-      const projects = await Request.receiveJSON("/api/projects", { doNotCatch: true });
+      const [taskTypes, projects] = await Promise.all([
+        Request.receiveJSON("/api/taskTypes", { doNotCatch: true }),
+        Request.receiveJSON("/api/projects", { doNotCatch: true }),
+      ]);
       this.setState({
         taskTypes: taskTypes.map(taskType => ({ id: taskType.id, label: taskType.summary })),
         projects: projects.map(project => ({ id: project.id, label: project.name })),

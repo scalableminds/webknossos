@@ -95,12 +95,11 @@ const getMaybeFilteredColor: ShaderModuleType = {
     ) {
       vec4 color;
       if (!suppressBilinearFiltering && useBilinearFiltering) {
-        // Todo: Re-compile shader based on this condition
-        if (isArbitrary()) {
-          color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
-        } else {
+        <% if (isOrthogonal) { %>
           color = getBilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
-        }
+        <% } else { %>
+          color = getTrilinearColorFor(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
+        <% } %>
       } else {
         color = getColorForCoords(lookUpTexture, layerIndex, d_texture_width, packingDegree, coords, isFallback);
       }

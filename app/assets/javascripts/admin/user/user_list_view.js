@@ -13,7 +13,7 @@ import Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import messages from "messages";
 
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
@@ -400,7 +400,7 @@ class UserListView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(UserListView));

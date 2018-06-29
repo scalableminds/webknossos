@@ -10,7 +10,7 @@ import {
   getProject,
   updateProject,
 } from "admin/admin_rest_api";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 
 import type { APIUserType, APITeamType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
@@ -46,8 +46,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    const users = await getUsers();
-    const teams = await getEditableTeams();
+    const [users, teams] = await Promise.all([getUsers(), getEditableTeams()]);
 
     this.setState({
       users: users.filter(user => user.isActive),
@@ -171,7 +170,7 @@ class ProjectCreateView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(Form.create()(ProjectCreateView)));

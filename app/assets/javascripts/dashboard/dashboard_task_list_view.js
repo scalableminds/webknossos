@@ -20,7 +20,7 @@ import {
   requestTask,
   peekNextTasks,
 } from "admin/admin_rest_api";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import type {
@@ -421,7 +421,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(DashboardTaskListView));

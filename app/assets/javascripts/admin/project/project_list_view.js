@@ -7,7 +7,7 @@ import { Link, withRouter } from "react-router-dom";
 import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import {
   getProjectsWithOpenAssignments,
   increaseProjectTaskInstances,
@@ -290,7 +290,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(ProjectListView));

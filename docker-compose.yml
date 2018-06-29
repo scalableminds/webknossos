@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.2'
 
 services:
   webknossos:
@@ -46,10 +46,13 @@ services:
       - fossildb
 
   base:
-    image: scalableminds/wk-dev
+    image: scalableminds/webknossos-dev
     build:
       context: .
       dockerfile: Dockerfile.dev
+      cache_from:
+        - scalableminds/webknossos-dev
+        - scalableminds/webknossos-dev:${DEV_CACHE:-master}
     environment:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID

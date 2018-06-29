@@ -1,4 +1,4 @@
-FROM scalableminds/sbt:openjdk-sbt__66
+FROM scalableminds/sbt:master__67
 
 ARG VERSION_NODE="8.x"
 

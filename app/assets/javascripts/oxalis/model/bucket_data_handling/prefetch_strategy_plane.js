@@ -70,6 +70,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     currentZoomStep: number,
     activePlane: OrthoViewType,
     areas: OrthoViewMapType<AreaType>,
+    resolutions: Vector3[],
   ): Array<PullQueueItemType> {
     const zoomStep = Math.min(currentZoomStep, cube.MAX_UNSAMPLED_ZOOM_STEP);
     const zoomStepDiff = currentZoomStep - zoomStep;
@@ -82,6 +83,8 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
       zoomStepDiff,
       activePlane,
       areas,
+      resolutions,
+      false,
     );
 
     let queueItemsForFallbackZoomStep = [];
@@ -95,6 +98,8 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         zoomStepDiff - 1,
         activePlane,
         areas,
+        resolutions,
+        true,
       );
     }
 
@@ -109,6 +114,8 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
     zoomStepDiff: number,
     activePlane: OrthoViewType,
     areas: OrthoViewMapType<AreaType>,
+    resolutions: Vector3[],
+    isFallback: boolean,
   ): Array<PullQueueItemType> {
     const pullQueue = [];
 
@@ -118,6 +125,8 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
 
     const centerBucket = cube.positionToZoomedAddress(position, zoomStep);
     const centerBucket3 = [centerBucket[0], centerBucket[1], centerBucket[2]];
+
+    const fallbackPriorityWeight = isFallback ? 50 : 0;
 
     for (const plane of OrthoViewValuesWithoutTDView) {
       const [u, v, w] = Dimensions.getIndices(plane);
@@ -133,7 +142,7 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
 
       const scaledWidthHeightVector = zoomedAddressToAnotherZoomStep(
         widthHeightVector,
-        cube.layerInfo.resolutions,
+        resolutions,
         zoomStep,
       );
 
@@ -146,7 +155,8 @@ export class PrefetchStrategy extends AbstractPrefetchStrategy {
         const priority =
           Math.abs(bucket[0] - centerBucket3[0]) +
           Math.abs(bucket[1] - centerBucket3[1]) +
-          Math.abs(bucket[2] - centerBucket3[2]);
+          Math.abs(bucket[2] - centerBucket3[2]) +
+          fallbackPriorityWeight;
         pullQueue.push({ bucket: [bucket[0], bucket[1], bucket[2], zoomStep], priority });
         if (plane === activePlane) {
           // preload only for active plane

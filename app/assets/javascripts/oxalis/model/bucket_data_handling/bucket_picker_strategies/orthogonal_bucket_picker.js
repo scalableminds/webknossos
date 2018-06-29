@@ -8,10 +8,12 @@ import {
 } from "oxalis/model/helpers/position_converter";
 import Dimensions from "oxalis/model/dimensions";
 import type { AreaType } from "oxalis/model/accessors/flycam_accessor";
-import DataLayer from "oxalis/model/data_layer";
+import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import Store from "oxalis/store";
 
 export default function determineBucketsForOrthogonal(
-  dataLayer: DataLayer,
+  cube: DataCube,
   bucketQueue: PriorityQueue,
   logZoomStep: number,
   fallbackZoomStep: number,
@@ -22,7 +24,7 @@ export default function determineBucketsForOrthogonal(
   subBucketLocality: Vector3,
 ) {
   addNecessaryBucketsToPriorityQueueOrthogonal(
-    dataLayer,
+    cube,
     bucketQueue,
     logZoomStep,
     anchorPoint,
@@ -33,7 +35,7 @@ export default function determineBucketsForOrthogonal(
 
   if (isFallbackAvailable) {
     addNecessaryBucketsToPriorityQueueOrthogonal(
-      dataLayer,
+      cube,
       bucketQueue,
       logZoomStep + 1,
       fallbackAnchorPoint,
@@ -45,7 +47,7 @@ export default function determineBucketsForOrthogonal(
 }
 
 function addNecessaryBucketsToPriorityQueueOrthogonal(
-  dataLayer: DataLayer,
+  cube: DataCube,
   bucketQueue: PriorityQueue,
   logZoomStep: number,
   zoomedAnchorPoint: Vector4,
@@ -53,8 +55,9 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
   areas: OrthoViewMapType<AreaType>,
   subBucketLocality: Vector3,
 ): void {
-  const resolution = dataLayer.layerInfo.resolutions[logZoomStep];
-  const previousResolution = dataLayer.layerInfo.resolutions[logZoomStep - 1];
+  const resolutions = getResolutions(Store.getState().dataset);
+  const resolution = resolutions[logZoomStep];
+  const previousResolution = resolutions[logZoomStep - 1];
 
   const resolutionChangeRatio = isFallback
     ? getResolutionsFactors(resolution, previousResolution)
@@ -73,12 +76,12 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 
     const scaledTopLeftVector = zoomedAddressToAnotherZoomStep(
       topLeftVector,
-      dataLayer.layerInfo.resolutions,
+      resolutions,
       logZoomStep,
     );
     const scaledBottomRightVector = zoomedAddressToAnotherZoomStep(
       bottomRightVector,
-      dataLayer.layerInfo.resolutions,
+      resolutions,
       logZoomStep,
     );
 
@@ -112,29 +115,32 @@ function addNecessaryBucketsToPriorityQueueOrthogonal(
 
     // Build up priority queue
     wSliceOffsets.forEach(wSliceOffset => {
-      for (
-        let y = scaledTopLeftVector[v] - extraBucket;
-        y <= scaledBottomRightVector[v] + extraBucket;
-        y++
-      ) {
-        for (
-          let x = scaledTopLeftVector[u] - extraBucket;
-          x <= scaledBottomRightVector[u] + extraBucket;
-          x++
-        ) {
+      const extraYBucketStart = scaledTopLeftVector[v] - extraBucket;
+      const extraYBucketEnd = scaledBottomRightVector[v] + extraBucket;
+      const extraXBucketStart = scaledTopLeftVector[u] - extraBucket;
+      const extraXBucketEnd = scaledBottomRightVector[u] + extraBucket;
+
+      for (let y = extraYBucketStart; y <= extraYBucketEnd; y++) {
+        for (let x = extraXBucketStart; x <= extraXBucketEnd; x++) {
           const bucketAddress = ((topLeftBucket.slice(): any): Vector4);
           bucketAddress[u] = x;
           bucketAddress[v] = y;
           bucketAddress[w] += wSliceOffset;
 
-          const bucket = dataLayer.cube.getOrCreateBucket(bucketAddress);
+          const bucket = cube.getOrCreateBucket(bucketAddress);
+          const isExtraBucket =
+            y === extraYBucketStart ||
+            y === extraYBucketEnd ||
+            x === extraXBucketStart ||
+            x === extraXBucketEnd;
 
           if (bucket.type !== "null") {
             const priority =
               Math.abs(x - centerBucketUV[0]) +
               Math.abs(y - centerBucketUV[1]) +
               Math.abs(100 * wSliceOffset) +
-              additionalPriorityWeight;
+              additionalPriorityWeight +
+              (isExtraBucket ? 100 : 0);
             bucketQueue.queue({
               priority,
               bucket,

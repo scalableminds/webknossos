@@ -95,6 +95,7 @@ case class AnnotationSQL(
       dataSet <- dataSet
       userJson <- user.map(u => User.userCompactWrites.writes(u)).getOrElse(JsNull)
       settings <- findSettings
+      annotationRestrictions <- AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser)
     } yield {
       Json.obj(
         "modified" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(modified),
@@ -105,7 +106,7 @@ case class AnnotationSQL(
         "typ" -> typ,
         "task" -> taskJson,
         "stats" -> statistics,
-        "restrictions" -> AnnotationRestrictions.writeAsJson(composeRestrictions(restrictions, readOnly), requestingUser),
+        "restrictions" -> annotationRestrictions,
         "formattedHash" -> Formatter.formatHash(id),
         "content" -> tracing,
         "dataSetName" -> dataSet.name,
@@ -192,14 +193,6 @@ object AnnotationSQLDAO extends SQLDAO[AnnotationSQL, AnnotationsRow, Annotation
       parsed <- Fox.combined(r.toList.map(parse))
     } yield parsed
   }
-
-  def findAllActiveForUser(userId: ObjectId, typ: AnnotationTypeSQL)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(sql"""select #${columns} from #${existingCollectionName}
-                     where _user = ${userId.id} and typ = '#${typ.toString}' and state = '#${AnnotationState.Active.toString}' and #${accessQuery}""".as[AnnotationsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
 
   // hint: does not use access query (because they dont support prefixes yet). use only after separate access check
   def findAllFinishedForProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationSQL]] =

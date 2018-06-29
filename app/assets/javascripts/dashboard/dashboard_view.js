@@ -3,14 +3,13 @@
 
 import * as React from "react";
 import { connect } from "react-redux";
-import Request from "libs/request";
 import { Spin, Tabs } from "antd";
 import Utils from "libs/utils";
 import DatasetView from "dashboard/dataset_view";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
-
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
+import { getUser } from "admin/admin_rest_api";
 import type { APIUserType } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 
@@ -52,12 +51,10 @@ class DashboardView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    const url = this.props.userId ? `/api/users/${this.props.userId}` : "/api/user";
-    const user = await Request.receiveJSON(url);
+    const user =
+      this.props.userId != null ? await getUser(this.props.userId) : this.props.activeUser;
 
-    this.setState({
-      user,
-    });
+    this.setState({ user });
   }
 
   getTabs(user: APIUserType) {
@@ -126,7 +123,7 @@ class DashboardView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(DashboardView);

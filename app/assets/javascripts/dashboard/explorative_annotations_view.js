@@ -26,9 +26,12 @@ import {
   reOpenAnnotation,
 } from "admin/admin_rest_api";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
 const { Search } = Input;
+
+const typeHint: APIAnnotationType[] = [];
 
 type Props = {
   userId: ?string,
@@ -121,28 +124,32 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       ? `/api/users/${this.props.userId}/annotations?isFinished=${isFinishedString}`
       : `/api/user/annotations?isFinished=${isFinishedString}`;
 
-    this.setState({ isLoading: true });
-    const tracings = await Request.receiveJSON(url);
-    if (showArchivedTracings) {
-      this.setState(
-        update(this.state, {
-          isLoading: { $set: false },
-          archivedTracings: { $set: tracings },
-          didAlreadyFetchMetaInfo: {
-            isArchived: { $set: true },
-          },
-        }),
-      );
-    } else {
-      this.setState(
-        update(this.state, {
-          isLoading: { $set: false },
-          unarchivedTracings: { $set: tracings },
-          didAlreadyFetchMetaInfo: {
-            isUnarchived: { $set: true },
-          },
-        }),
-      );
+    try {
+      this.setState({ isLoading: true });
+      const tracings = await Request.receiveJSON(url);
+      if (showArchivedTracings) {
+        this.setState(
+          update(this.state, {
+            archivedTracings: { $set: tracings },
+            didAlreadyFetchMetaInfo: {
+              isArchived: { $set: true },
+            },
+          }),
+        );
+      } else {
+        this.setState(
+          update(this.state, {
+            unarchivedTracings: { $set: tracings },
+            didAlreadyFetchMetaInfo: {
+              isUnarchived: { $set: true },
+            },
+          }),
+        );
+      }
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
     }
   }
 
@@ -340,13 +347,13 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           render={(__, tracing: APIAnnotationType) => FormatUtils.formatHash(tracing.id)}
-          sorter={Utils.localeCompareBy("id")}
+          sorter={Utils.localeCompareBy(typeHint, "id")}
           className="monospace-id"
         />
         <Column
           title="Name"
           dataIndex="name"
-          sorter={Utils.localeCompareBy("name")}
+          sorter={Utils.localeCompareBy(typeHint, "name")}
           render={(name: string, tracing: APIAnnotationType) => (
             <EditableTextLabel
               value={name}
@@ -357,7 +364,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Stats"
           render={(__, tracing: APIAnnotationType) =>
-            tracing.stats && tracing.content.typ === "skeleton" ? (
+            tracing.stats.treeCount && tracing.content.typ === "skeleton" ? (
               <div>
                 <span title="Trees">
                   <i className="fa fa-sitemap" />
@@ -409,7 +416,7 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         <Column
           title="Modification Date"
           dataIndex="modified"
-          sorter={Utils.localeCompareBy("modified")}
+          sorter={Utils.localeCompareBy(typeHint, "modified")}
         />
         <Column
           title="Actions"

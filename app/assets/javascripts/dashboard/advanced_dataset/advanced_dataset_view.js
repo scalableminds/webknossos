@@ -12,6 +12,8 @@ import type { APITeamType } from "admin/api_flow_types";
 
 const { Column } = Table;
 
+const typeHint: DatasetType[] = [];
+
 type Props = {
   datasets: Array<DatasetType>,
   searchQuery: string,
@@ -37,7 +39,7 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             title="Name"
             dataIndex="name"
             key="name"
-            sorter={Utils.localeCompareBy("name")}
+            sorter={Utils.localeCompareBy(typeHint, "name")}
             render={(name: string, dataset: DatasetType) => (
               <div>
                 {dataset.name}
@@ -54,7 +56,7 @@ class AdvancedDatasetView extends React.PureComponent<Props> {
             dataIndex="created"
             key="created"
             defaultSortOrder="descend"
-            sorter={Utils.localeCompareBy("formattedCreated")}
+            sorter={Utils.localeCompareBy(typeHint, "formattedCreated")}
             render={(__, dataset: DatasetType) => dataset.formattedCreated}
           />
           <Column

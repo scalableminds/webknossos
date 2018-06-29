@@ -115,13 +115,7 @@ export type VolumeCellMapType = { [number]: VolumeCellType };
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
 
-export type DataLayerType = APIDataLayerType & {
-  +maxZoomStep: number,
-};
-
-export type SegmentationDataLayerType = DataLayerType & {
-  +largestSegmentId: number,
-};
+export type DataLayerType = APIDataLayerType;
 
 export type RestrictionsType = APIRestrictionsType;
 
@@ -381,7 +375,7 @@ export const defaultState: OxalisState = {
     description: null,
     displayName: "Awesome Test Dataset",
     allowedTeams: [],
-    isDummyDataset: true,
+    logoUrl: null,
   },
   tracing: {
     annotationId: "",

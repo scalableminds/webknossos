@@ -28,6 +28,7 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
                  ("http.port"    -> testPort,
                   "play.modules.disabled" -> List("com.scalableminds.webknossos.datastore.DataStoreModule"),
                   "play.http.router" -> "webknossos.Routes",
+                  "insertInitialData" -> false,
                   "datastore.enabled" -> false)
 
   "my application" should {

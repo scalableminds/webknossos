@@ -115,8 +115,7 @@ services:
         -v -d
         "test-only e2e.* --
           -Ddatastore.fossildb.address=fossildb
-          -Dpostgres.url=$${POSTGRES_URL}
-          -Dapplication.insertInitialData=false"
+          -Dpostgres.url=$${POSTGRES_URL}"
 
   postgres:
     image: postgres:10-alpine

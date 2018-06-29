@@ -98,15 +98,15 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     }
   }
 
-  private def buildFullParams(nmlParams: NmlTaskParameters, tracing: SkeletonTracing, fileName: String, description: Option[String]) = {
-    val parsedTracingBoundingBox = tracing.boundingBox.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
-    val bbox = if(nmlParams.boundingBox.isDefined) nmlParams.boundingBox else parsedTracingBoundingBox
+  private def buildFullParams(nmlFormParams: NmlTaskParameters, tracing: SkeletonTracing, fileName: String, description: Option[String]) = {
+    val parsedNmlTracingBoundingBox = tracing.boundingBox.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
+    val bbox = if(nmlFormParams.boundingBox.isDefined) nmlFormParams.boundingBox else parsedNmlTracingBoundingBox
     TaskParameters(
-      nmlParams.taskTypeId,
-      nmlParams.neededExperience,
-      nmlParams.openInstances,
-      nmlParams.projectName,
-      nmlParams.scriptId,
+      nmlFormParams.taskTypeId,
+      nmlFormParams.neededExperience,
+      nmlFormParams.openInstances,
+      nmlFormParams.projectName,
+      nmlFormParams.scriptId,
       bbox,
       tracing.dataSetName,
       tracing.editPosition,

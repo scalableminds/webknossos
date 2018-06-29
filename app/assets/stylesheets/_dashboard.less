@@ -15,8 +15,6 @@
     height: 300px;
     width: 100%;
     position: relative;
-    border-radius: 10px;
-    border: 1px solid grey;
     overflow: hidden;
 
     @media @smartphones {
@@ -31,7 +29,7 @@
         height: 100%;
         width: 50%;
         display: inline-block;
-        background-color: grey;
+        background-color: #e8e8e8;
         img {
           opacity: 0.8;
           position: relative;
@@ -50,29 +48,13 @@
           width: 100%;
           height: 100%;
 
-          .view-button {
-            width: 25px;
-            height: 25px;
-            margin: 7.5px;
-            font-size: 26px;
-            text-align: center;
-            vertical-align: middle;
-            color: rgb(199, 199, 199);
-
-            @media @smartphones {
-              width: 37.5px;
-              height: 37.5px;
-              margin: 10px;
-              font-size: 40px;
-            }
-          }
-
           a {
-            box-shadow: white 0px 0px 4px;
             width: 40px;
             height: 40px;
-            border-radius: 10px;
-            background: rgba(0, 0, 0, 0.8);
+            border-radius: 4px;
+            border: 1px solid white;
+            background-color: rgba(0, 0, 0, 0.5);
+            transition: 0.5s ease background-color;
             display: inline-block;
             position: relative;
             margin: 0 3px;
@@ -85,8 +67,8 @@
             }
 
             img {
-              width: 25px;
-              height: 25px;
+              width: 23px;
+              height: 23px;
               margin: 7.5px;
               filter: brightness(0) invert(1);
 
@@ -96,9 +78,27 @@
                 margin: 12px;
               }
             }
-          }
-          a:hover {
-            background: rgba(0, 0, 0, 1);
+
+            .view-button {
+              width: 23px;
+              height: 23px;
+              margin: 7.5px;
+              font-size: 24px;
+              text-align: center;
+              vertical-align: middle;
+              color: white;
+
+              @media @smartphones {
+                width: 37.5px;
+                height: 37.5px;
+                margin: 10px;
+                font-size: 40px;
+              }
+            }
+
+            &:hover {
+              background-color: rgba(0, 0, 0, 1);
+            }
           }
         }
       }

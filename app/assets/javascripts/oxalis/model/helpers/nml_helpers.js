@@ -17,6 +17,7 @@ import type {
   TemporaryMutableTreeMapType,
   TreeGroupType,
 } from "oxalis/store";
+import type { BoundingBoxType } from "oxalis/constants";
 import type { APIBuildInfoType } from "admin/api_flow_types";
 
 // NML Defaults
@@ -140,10 +141,22 @@ function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoTyp
   ]);
 }
 
+function serializeBoundingBox(bb: BoundingBoxType, name: string): string {
+  return serializeTag(name, {
+    topLeftX: bb.min[0],
+    topLeftY: bb.min[1],
+    topLeftZ: bb.min[2],
+    width: bb.max[0] - bb.min[0],
+    height: bb.max[1] - bb.min[1],
+    depth: bb.max[2] - bb.min[2],
+  });
+}
+
 function serializeParameters(state: OxalisState): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
   const userBB = state.tracing.userBoundingBox;
+  const taskBB = state.tracing.boundingBox;
   return [
     "<parameters>",
     ...indent(
@@ -174,16 +187,8 @@ function serializeParameters(state: OxalisState): Array<string> {
           zRot: editRotation[2],
         }),
         serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-        userBB != null
-          ? serializeTag("userBoundingBox", {
-              topLeftX: userBB.min[0],
-              topLeftY: userBB.min[1],
-              topLeftZ: userBB.min[2],
-              width: userBB.max[0] - userBB.min[0],
-              height: userBB.max[1] - userBB.min[1],
-              depth: userBB.max[2] - userBB.min[2],
-            })
-          : "",
+        userBB != null ? serializeBoundingBox(userBB, "userBoundingBox") : "",
+        taskBB != null ? serializeBoundingBox(taskBB, "taskBoundingBox") : "",
       ]),
     ),
     "</parameters>",

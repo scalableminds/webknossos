@@ -13,7 +13,7 @@ import Utils from "libs/utils";
 import { getEditableUsers, updateUser } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import messages from "messages";
 
 import type { APIUserType, APITeamMembershipType, ExperienceMapType } from "admin/api_flow_types";
@@ -26,6 +26,8 @@ import { logoutUserAction } from "../../oxalis/model/actions/user_actions";
 
 const { Column } = Table;
 const { Search } = Input;
+
+const typeHint: APIUserType[] = [];
 
 type StateProps = {
   activeUser: APIUserType,
@@ -235,7 +237,7 @@ class UserListView extends React.PureComponent<Props, State> {
           <Table
             dataSource={Utils.filterWithSearchQueryOR(
               this.state.users,
-              ["firstName", "lastName", "email", "teams", "experiences"],
+              ["firstName", "lastName", "email", "teams", user => Object.keys(user.experiences)],
               this.state.searchQuery,
             )}
             rowKey="id"
@@ -255,20 +257,20 @@ class UserListView extends React.PureComponent<Props, State> {
               dataIndex="lastName"
               key="lastName"
               width={130}
-              sorter={Utils.localeCompareBy("lastName")}
+              sorter={Utils.localeCompareBy(typeHint, "lastName")}
             />
             <Column
               title="First Name"
               dataIndex="firstName"
               key="firstName"
               width={130}
-              sorter={Utils.localeCompareBy("firstName")}
+              sorter={Utils.localeCompareBy(typeHint, "firstName")}
             />
             <Column
               title="Email"
               dataIndex="email"
               key="email"
-              sorter={Utils.localeCompareBy("email")}
+              sorter={Utils.localeCompareBy(typeHint, "email")}
               render={(__, user: APIUserType) =>
                 this.props.activeUser.isAdmin ? (
                   <EditableTextLabel
@@ -398,7 +400,7 @@ class UserListView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(UserListView));

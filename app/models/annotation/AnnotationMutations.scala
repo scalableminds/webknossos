@@ -26,14 +26,18 @@ class AnnotationMutations(val annotation: AnnotationSQL) extends BoxImplicits wi
       }
     }
 
-    if (restrictions.allowFinish(user)) {
-      if (annotation.state == Active)
-        executeFinish
-      else
-        Fox.failure("annotation.notActive")
-    } else {
-      Fox.failure("annotation.notPossible")
-    }
+    (for {
+      allowed <- restrictions.allowFinish(user)
+    } yield {
+      if (allowed) {
+        if (annotation.state == Active)
+          executeFinish
+        else
+          Fox.failure("annotation.notActive")
+      } else {
+        Fox.failure("annotation.notPossible")
+      }
+    }).flatten
   }
 
   def reopen(implicit ctx: DBAccessContext) =

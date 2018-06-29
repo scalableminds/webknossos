@@ -4,6 +4,8 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import Base64 from "base64-js";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 
 mockRequire.stopAll();
 
@@ -12,6 +14,7 @@ const RequestMock = {
   sendJSONReceiveArraybuffer: sinon.stub(),
   receiveJSON: sinon.stub(),
 };
+const { dataSource } = datasetServerObject;
 const StoreMock = {
   getState: () => ({
     dataset: {
@@ -20,6 +23,7 @@ const StoreMock = {
         typ: "webknossos-store",
         url: "url",
       },
+      dataSource,
     },
     datasetConfiguration: { fourBit: false },
   }),
@@ -30,7 +34,7 @@ mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
-const { requestFromStore, sendToStore, getBitDepth } = mockRequire.reRequire(
+const { requestFromStore, sendToStore } = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/wkstore_adapter",
 );
 
@@ -121,7 +125,6 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
 });
 
 test.serial("sendToStore: Request Handling should send the correct request parameters", t => {
-  const { layer } = t.context;
   const data = new Uint8Array(2);
   const bucket1 = new DataBucket(8, [0, 0, 0, 0], null);
   bucket1.data = data;
@@ -158,7 +161,7 @@ test.serial("sendToStore: Request Handling should send the correct request param
     ],
   };
 
-  return sendToStore(layer, batch).then(() => {
+  return sendToStore(batch).then(() => {
     t.is(StoreMock.dispatch.callCount, 1);
 
     const [saveQueueItems] = StoreMock.dispatch.getCall(0).args;

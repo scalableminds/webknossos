@@ -31,8 +31,11 @@ object TaskTypeInformationHandler extends AnnotationInformationHandler with FoxI
       taskType <- TaskTypeDAO.findOneById(taskTypeId.toString) ?~> "taskType.notFound"
     } yield {
       new AnnotationRestrictions {
-        override def allowAccess(user: Option[User]) =
-          user.exists(_.isTeamManagerOfBLOCKING(taskType._team))
+        override def allowAccess(userOption: Option[User]): Fox[Boolean] =
+          (for {
+            user <- userOption.toFox
+            allowed <- user.isTeamManagerOrAdminOf(taskType._team)
+          } yield allowed).orElse(Fox.successful(false))
       }
     }
 }

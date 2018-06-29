@@ -10,8 +10,8 @@ jobs:
     steps:
       - checkout
       - run:
-          name: Pull sbt docker image
-          command: docker-compose pull base
+          name: Build wk-dev docker image
+          command: docker-compose build base
       - run:
           name: Prepare dependency folders
           command: mkdir -p project/target target ~/.m2 ~/.ivy2 ~/.sbt ~/.yarn-cache

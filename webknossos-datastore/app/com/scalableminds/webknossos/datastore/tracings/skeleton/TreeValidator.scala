@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.tracings.skeleton
 
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree}
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.util.datastructures.UnionFind
 import net.liftweb.common.{Box, Failure, Full}
 import net.liftweb.util.A
@@ -8,6 +8,14 @@ import net.liftweb.util.A
 import scala.collection.mutable
 
 object TreeValidator {
+
+  def validateAdditionalInformation(trees: Seq[Tree], branchPoints: Seq[BranchPoint], comments: Seq[Comment], treeGroups: Seq[TreeGroup]): Box[Unit] =
+    for{
+      _ <- checkNoDuplicateTreeGroupIds(treeGroups)
+      _ <- checkAllTreeGroupIdsUsedExist(trees, treeGroups)
+      _ <- checkAllNodesUsedInBranchPointsExist(trees, branchPoints)
+      _ <- checkAllNodesUsedInCommentsExist(trees, comments)
+    } yield Full(())
 
   def validateTrees(trees: Seq[Tree]): Box[Unit] = {
     for {
@@ -102,7 +110,51 @@ object TreeValidator {
       }
     }
 
+  private def checkNoDuplicateTreeGroupIds(treeGroups: Seq[TreeGroup]) = {
+    val treeGroupIds = getAllTreeGroupIds(treeGroups, Seq[Int]())
+    val distinctTreeGroupIds = treeGroupIds.distinct
+    if (treeGroupIds.size == distinctTreeGroupIds.size) {
+      Full(())
+    } else {
+      Failure(s"Duplicate treeGroupIds: ${treeGroupIds.diff(distinctTreeGroupIds).mkString(", ")}")
+    }
+  }
 
+  private def checkAllNodesUsedInCommentsExist(trees: Seq[Tree], comments: Seq[Comment]): Box[Unit] = {
+    val nodesInAllTrees = trees.flatMap(_.nodes.map(_.id))
+    val nodesInComments = comments.map(_.nodeId).distinct
+
+    val nodesOnlyInComments = nodesInComments.diff(nodesInAllTrees)
+    if (nodesOnlyInComments.isEmpty) {
+      Full(())
+    } else {
+      Failure(s"Some comments refer to non-existent nodes. comments: ${nodesOnlyInComments.mkString(", ")}")
+    }
+  }
+
+  private def checkAllNodesUsedInBranchPointsExist(trees: Seq[Tree], branchPoints: Seq[BranchPoint]): Box[Unit] = {
+      val nodesInAllTrees = trees.flatMap(_.nodes).map(_.id)
+      val nodesInBranchPoints = branchPoints.map(_.nodeId).distinct
+
+      val nodesOnlyInBranchPoints = nodesInBranchPoints.diff(nodesInAllTrees)
+      if (nodesOnlyInBranchPoints.isEmpty) {
+        Full(())
+      } else {
+        Failure(s"Some branchPoints refer to non-existent nodes. branchPoints: ${nodesOnlyInBranchPoints.mkString(", ")}")
+      }
+    }
+
+  private def checkAllTreeGroupIdsUsedExist(trees: Seq[Tree], treeGroups: Seq[TreeGroup]) = {
+    val existingTreeGroups = getAllTreeGroupIds(treeGroups, Seq[Int]())
+    val treeGroupsInTrees = trees.flatMap(_.groupId).distinct
+
+    val treeGroupsOnlyInTrees = treeGroupsInTrees.diff(existingTreeGroups)
+    if (treeGroupsOnlyInTrees.isEmpty) {
+      Full(())
+    } else {
+      Failure(s"Some treeGroups used in trees don't exist. treeGroups: ${treeGroupsOnlyInTrees.mkString(", ")}")
+    }
+  }
 
   private def foldOverTrees(trees: Seq[Tree])(block: Tree => Box[Unit]) = {
     trees.foldLeft[Box[Unit]](Full(())){
@@ -110,6 +162,13 @@ object TreeValidator {
         block(tree)
       case (f, _) =>
         f
+    }
+  }
+
+  private def getAllTreeGroupIds(treeGroups: Seq[TreeGroup], ids: Seq[Int]): Seq[Int] = {
+    treeGroups match {
+      case (head :: tail) => getAllTreeGroupIds(tail ++ head.children, head.groupId +: ids)
+      case _ => ids
     }
   }
 

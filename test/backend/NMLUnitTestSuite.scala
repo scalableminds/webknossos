@@ -73,16 +73,14 @@ class NMLUnitTestSuite extends FlatSpec with LazyLogging {
     val wrongTree = dummyTracing.trees(1).copy(comments = Seq(Comment(99, "test")))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
 
-    assert(true)//!isParseSuccessful(getParsedTracing(newTracing)))
-    //TODO: The parser currently doesn't check this
+    assert(!isParseSuccessful(getParsedTracing(newTracing)))
   }
 
   it should "throw an error for invalid branchPoint state" in {
     val wrongTree = dummyTracing.trees(1).copy(branchPoints = Seq(BranchPoint(99, 0)))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
 
-    assert(true)//!isParseSuccessful(getParsedTracing(newTracing)))
-    //TODO: The parser currently doesn't check this
+    assert(!isParseSuccessful(getParsedTracing(newTracing)))
   }
 
   it should "throw an error for invalid edge state" in {
@@ -131,14 +129,12 @@ class NMLUnitTestSuite extends FlatSpec with LazyLogging {
     val wrongTree = dummyTracing.trees(1).copy(groupId = Some(9999))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
 
-    assert(true)//!isParseSuccessful(getParsedTracing(newTracing)))
-    //TODO: The parser currently doesn't check this
+    assert(!isParseSuccessful(getParsedTracing(newTracing)))
   }
 
   it should "throw an error for duplicate groupId state" in {
     val newTracing = dummyTracing.copy(treeGroups = TreeGroup("Group", 3) +: dummyTracing.treeGroups)
 
-    assert(true)//!isParseSuccessful(getParsedTracing(newTracing)))
-    //TODO: The parser currently doesn't check this
+    assert(!isParseSuccessful(getParsedTracing(newTracing)))
   }
 }

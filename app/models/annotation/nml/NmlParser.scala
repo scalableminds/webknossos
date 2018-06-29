@@ -49,6 +49,7 @@ object NmlParser extends LazyLogging with ProtoGeometryImplicits {
         trees <- extractTrees(data \ "thing", branchPoints, comments)
         treeGroups = extractTreeGroups(data \ "groups")
         volumes = extractVolumes(data \ "volume")
+        _ <- TreeValidator.validateAdditionalInformation(trees, branchPoints, comments, treeGroups)
       } yield {
         val dataSetName = parseDataSetName(parameters \ "experiment")
         val description = parseDescription(parameters \ "experiment")

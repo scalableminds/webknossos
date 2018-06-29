@@ -119,7 +119,7 @@ object NmlWriter extends FoxImplicits {
       }
     }
     tracing.boundingBox.map { b =>
-      Xml.withinElementSync("boundingBox") {
+      Xml.withinElementSync("taskBoundingBox") {
         writer.writeAttribute("topLeftX", b.topLeft.x.toString)
         writer.writeAttribute("topLeftY", b.topLeft.y.toString)
         writer.writeAttribute("topLeftZ", b.topLeft.z.toString)

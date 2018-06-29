@@ -15,10 +15,10 @@ const RequestMock = {
   receiveJSON: sinon.stub(),
 };
 const { dataSource } = datasetServerObject;
-let fourBit = false;
+let _fourBit = false;
 
 function setFourBit(bool) {
-  fourBit = bool;
+  _fourBit = bool;
 }
 
 const StoreMock = {
@@ -31,7 +31,7 @@ const StoreMock = {
       },
       dataSource,
     },
-    datasetConfiguration: { fourBit },
+    datasetConfiguration: { fourBit: _fourBit },
   }),
   dispatch: sinon.stub(),
 };
@@ -134,7 +134,7 @@ test.serial(
   async t => {
     setFourBit(true);
     // test four bit color and 8 bit seg
-    const { layer, segmentationLayer } = t.context;
+    const { layer } = t.context;
     const { batch } = prepare();
 
     const expectedUrl = "url/data/datasets/dataSet/layers/color/data?token=token2";
@@ -156,7 +156,7 @@ test.serial(
   "requestFromStore: Request Handling: four bit mode should not be respected for segmentation layers",
   async t => {
     setFourBit(true);
-    const { layer, segmentationLayer } = t.context;
+    const { segmentationLayer } = t.context;
 
     const { batch } = prepare();
     const expectedUrl = "url/data/datasets/dataSet/layers/segmentation/data?token=token2";

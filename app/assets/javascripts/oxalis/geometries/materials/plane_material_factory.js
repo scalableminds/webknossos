@@ -234,7 +234,6 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
       listenToStoreProperty(
         storeState => getRequestLogZoomStep(storeState),
         zoomStep => {
-          console.log("zoomStep");
           this.uniforms.zoomStep.value = zoomStep;
         },
         true,

@@ -46,7 +46,10 @@ services:
       - fossildb
 
   base:
-    image: scalableminds/sbt:openjdk-sbt__65
+    image: scalableminds/wk-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     environment:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID

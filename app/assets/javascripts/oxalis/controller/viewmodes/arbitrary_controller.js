@@ -349,6 +349,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     }
 
     this.arbitraryView.stop();
+    this.plane.destroy();
 
     this.isStarted = false;
   }

@@ -51,6 +51,7 @@ services:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
       - USER_GID
+      - COVERALLS_REPO_TOKEN
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos

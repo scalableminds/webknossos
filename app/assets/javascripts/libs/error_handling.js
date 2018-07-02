@@ -74,6 +74,7 @@ class ErrorHandling {
     });
 
     this.airbrake.addFilter(notice => {
+      notice.context = notice.context || {};
       notice.context.environment = envName;
       if (this.commitHash != null) {
         notice.context.version = this.commitHash;
@@ -82,9 +83,12 @@ class ErrorHandling {
     });
 
     if (!this.sendLocalErrors) {
-      this.airbrake.addFilter(
-        () => location.hostname !== "127.0.0.1" && location.hostname !== "localhost",
-      );
+      this.airbrake.addFilter(notice => {
+        if (location.hostname !== "127.0.0.1" && location.hostname !== "localhost") {
+          return notice;
+        }
+        return null;
+      });
     }
 
     window.onerror = (message: string, file: string, line: number, colno: number, error: Error) => {
@@ -150,6 +154,7 @@ class ErrorHandling {
 
   setCurrentUser(user: APIUserType) {
     this.airbrake.addFilter(notice => {
+      notice.context = notice.context || {};
       notice.context.user = _.pick(user, ["id", "email", "firstName", "lastName", "isActive"]);
       return notice;
     });

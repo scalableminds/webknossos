@@ -101,7 +101,7 @@
     "@scalableminds/prop-types": "^15.6.1",
     "@scalableminds/saxophone": "^0.5.0",
     "Enumjs": "scalableminds/Enumjs",
-    "airbrake-js": "^0.5.8",
+    "airbrake-js": "^1.4.0",
     "antd": "3.5.4",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",

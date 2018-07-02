@@ -1,4 +1,4 @@
-FROM scalableminds/sbt:master__67
+FROM scalableminds/sbt:sbt-13-17__68
 
 ARG VERSION_NODE="8.x"
 

@@ -85,13 +85,13 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       </Menu>
     );
 
-    const userLoggedIn = this.props.activeUser != null;
+    const isUserLoggedIn = this.props.activeUser != null;
     const volumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
         <a
           href="#"
           title="Create Volume Tracing"
-          style={{ backgroundColor: userLoggedIn ? "" : "transparent" }}
+          style={{ backgroundColor: isUserLoggedIn ? "" : "transparent" }}
         >
           <img src="/assets/images/volume.svg" alt="Volume" />
         </a>
@@ -118,7 +118,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
               href="#"
               title="Create skeleton tracing"
               onClick={() => this.createTracing(dataset, "skeleton", false)}
-              style={{ backgroundColor: userLoggedIn ? "" : "transparent" }}
+              style={{ backgroundColor: isUserLoggedIn ? "" : "transparent" }}
             >
               <img src="/assets/images/skeleton.svg" alt="Skeleton" />
             </a>

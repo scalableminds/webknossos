@@ -4,6 +4,8 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
+  unknown_error:
+    "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
     "The datastore server at <%- url %> does not seem to be available. This is likely due to an update. Please check back in five minutes.",
   ),
@@ -17,7 +19,7 @@ In order to restore the current window, a reload is necessary.`,
   "react.rendering_error":
     "Unfortunately, we encountered an error during rendering. We cannot guarantee that your work is persisted. Please reload the page and try again.",
   "save.leave_page_unfinished":
-    "You haven't saved your progress, please give us 2 seconds to do so and and then leave this site.",
+    "WARNING: You have unsaved progress that may be lost when hitting OK. Please click cancel, wait until the progress is saved and the save button displays a checkmark before leaving the page..",
   "save.failed": "Failed to save tracing. Retrying.",
   "undo.no_undo": "There is no action that could be undone.",
   "undo.no_redo": "There is no action that could be redone.",
@@ -52,6 +54,8 @@ In order to restore the current window, a reload is necessary.`,
     "Scaling the viewports via k/l is not supported anymore. Instead you can increase the viewport size by dragging the borders between the panes. You can also rearrange the panes by dragging the tabs.",
   "datastore.unknown_type": "Unknown datastore type:",
   "webgl.disabled": "Couldn't initialise WebGL, please make sure WebGL is enabled.",
+  "webgl.context_loss":
+    "Unfortunately, WebGL crashed. Please ensure that your graphics card driver is up to date to avoid such crashes. If this message keeps appearing, restarting your browser might also help.",
   "task.user_script_retrieval_error": "Unable to retrieve script",
   "task.new_description": "You are now tracing a new task with the following description",
   "task.no_description": "You are now tracing a new task with no description.",
@@ -73,6 +77,7 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
+  "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",
   "annotation.was_re_opened": "Annotation was reopened",

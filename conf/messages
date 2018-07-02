@@ -28,7 +28,7 @@ gain=Gain
 lose=Loss
 task=Task
 
-bsonid.invalid=The passed resource id is invalid.
+bsonid.invalid=The passed resource id ''{0}'' is invalid
 query.type.invalid=Invalid query type argument
 
 format.json.invalid=Invalid Json format
@@ -244,3 +244,6 @@ mail.welcome.subject = Welcome to ScalableMinds
 script.notFound=Script couldn''t be found
 
 sql.invalidBSONObjectId=Invalid BSONObjectID in SQL DB: {0}
+
+initialData.notEnabled=Initial Data Insertion is not enabled in the configuration of this wK instance
+initialData.organizationsNotEmpty=There are already organizations present in the database. Please refresh the db schema and try again

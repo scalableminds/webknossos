@@ -8,8 +8,22 @@ import mockRequire from "mock-require";
 import sinon from "sinon";
 import _ from "lodash";
 import runAsync from "test/helpers/run-async";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import { tracing as skeletontracingServerObject } from "test/fixtures/skeletontracing_server_objects";
 
 mockRequire.stopAll();
+
+const StoreMock = {
+  getState: () => ({
+    dataset: datasetServerObject,
+    tracing: skeletontracingServerObject,
+    datasetConfiguration: { fourBit: false },
+  }),
+  dispatch: sinon.stub(),
+  subscribe: sinon.stub(),
+};
+
+mockRequire("oxalis/store", StoreMock);
 
 mockRequire("oxalis/model/sagas/root_saga", function*() {
   yield;
@@ -26,7 +40,7 @@ mockRequire("libs/error_handling", {
 mockRequire("libs/toast", { error: _.noop });
 
 // Avoid node caching and make sure all mockRequires are applied
-const Cube = mockRequire.reRequire("oxalis/model/binary/data_cube").default;
+const Cube = mockRequire.reRequire("oxalis/model/bucket_data_handling/data_cube").default;
 
 test.beforeEach(t => {
   const mockedLayer = {

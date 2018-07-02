@@ -7,14 +7,11 @@ import _ from "lodash";
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import app from "app";
-import Model from "oxalis/model";
+import Store from "oxalis/store";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-
-export type TextureMapType = {
-  [key: string]: THREE.DataTexture,
-};
+import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 
 export type UniformsType = {
   [key: string]: {
@@ -97,17 +94,17 @@ export function sanitizeName(name: ?string): string {
   if (name == null) {
     return "";
   }
-  return `binary_${name.replace(/-/g, "_")}`;
+  return `layer_${name.replace(/-/g, "_")}`;
 }
 
 class AbstractPlaneMaterialFactory {
   material: THREE.ShaderMaterial;
   uniforms: UniformsType;
   attributes: Object;
-  textures: TextureMapType;
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
   shaderId: number;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(shaderId: number) {
     this.minFilter = THREE.NearestFilter;
@@ -118,19 +115,18 @@ class AbstractPlaneMaterialFactory {
   setup() {
     this.setupUniforms();
     this.makeMaterial();
-    this.attachTextures(this.textures);
+    this.attachTextures();
     this.setupChangeListeners();
     return this;
   }
 
-  /* eslint-disable no-unused-vars */
-  attachTextures(textures: TextureMapType): void {}
+  attachTextures(): void {}
 
   setupUniforms(): void {
     this.uniforms = {};
 
-    for (const binary of Model.getColorBinaries()) {
-      const name = sanitizeName(binary.name);
+    for (const colorLayer of getColorLayers(Store.getState().dataset)) {
+      const name = sanitizeName(colorLayer.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",
         value: 1.0,
@@ -152,25 +148,16 @@ class AbstractPlaneMaterialFactory {
     );
 
     shaderEditor.addMaterial(this.shaderId, this.material);
-
-    this.material.setData = (name, data) => {
-      const textureName = sanitizeName(name);
-      const texture = this.textures[textureName];
-      if (texture) {
-        texture.image.data = data;
-        texture.needsUpdate = true;
-      }
-    };
   }
 
   setupChangeListeners(): void {
     listenToStoreProperty(
       state => state.datasetConfiguration.layers,
       layerSettings => {
-        for (const binary of Model.getColorBinaries()) {
-          const settings = layerSettings[binary.name];
+        for (const colorLayer of getColorLayers(Store.getState().dataset)) {
+          const settings = layerSettings[colorLayer.name];
           if (settings != null) {
-            const name = sanitizeName(binary.name);
+            const name = sanitizeName(colorLayer.name);
             this.updateUniformsForLayer(settings, name);
           }
         }

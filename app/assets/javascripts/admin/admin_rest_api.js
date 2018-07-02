@@ -17,6 +17,7 @@ import type {
   APIProjectUpdaterType,
   APITaskType,
   APIAnnotationType,
+  APIAnnotationWithTaskType,
   APIDataStoreType,
   DatasetConfigType,
   APIDatasetType,
@@ -31,11 +32,12 @@ import type {
   APITracingType,
   APIFeatureToggles,
   APIOrganizationType,
+  ServerTracingType,
 } from "admin/api_flow_types";
+import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 import type { NewTaskType, TaskCreationResponseType } from "admin/task/task_create_bulk_view";
 import type { DatasetConfigurationType } from "oxalis/store";
-import type { ServerTracingType } from "oxalis/model";
 
 const MAX_SERVER_ITEMS_PER_RESPONSE = 1000;
 
@@ -45,7 +47,7 @@ type NewTeamType = {
 
 function assertResponseLimit(collection) {
   if (collection.length === MAX_SERVER_ITEMS_PER_RESPONSE) {
-    Toast.warning(messages["request.max_item_count_alert"], true);
+    Toast.warning(messages["request.max_item_count_alert"], { sticky: true });
   }
 }
 
@@ -315,11 +317,11 @@ export async function peekNextTasks(): Promise<?APITaskType> {
   return Request.receiveJSON("/api/user/tasks/peek");
 }
 
-export async function requestTask(): Promise<APIAnnotationType> {
+export async function requestTask(): Promise<APIAnnotationWithTaskType> {
   return Request.receiveJSON("/api/user/tasks/request");
 }
 
-export async function getAnnotationsForTask(taskId: string): Promise<void> {
+export async function getAnnotationsForTask(taskId: string): Promise<APIAnnotationType[]> {
   return Request.receiveJSON(`/api/tasks/${taskId}/annotations`);
 }
 
@@ -394,7 +396,7 @@ export async function updateTask(taskId: string, task: NewTaskType): Promise<API
 }
 
 export async function finishTask(annotationId: string): Promise<APIAnnotationType> {
-  return Request.receiveJSON(`/api/annotations/Task/${annotationId}/finish`);
+  return finishAnnotation(annotationId, APITracingTypeEnum.Task);
 }
 
 export async function transferTask(
@@ -427,7 +429,7 @@ export async function editAnnotation(
   annotationId: string,
   annotationType: APITracingType,
   data: $Shape<EditableAnnotationType>,
-): Promise<APIAnnotationType> {
+): Promise<void> {
   return Request.sendJSONReceiveJSON(`/api/annotations/${annotationType}/${annotationId}/edit`, {
     data,
   });
@@ -468,15 +470,15 @@ export async function finishAllAnnotations(
 
 export async function copyAnnotationToUserAccount(
   annotationId: string,
-  tracingType: string,
+  tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
   const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
   return Request.receiveJSON(url);
 }
 
-export async function getAnnotationInformation(
+export function getAnnotationInformation(
   annotationId: string,
-  tracingType: string,
+  tracingType: APITracingType,
 ): Promise<APIAnnotationType> {
   // Include /readOnly part whenever it is in the pathname
   const isReadOnly = location.pathname.endsWith("/readOnly");
@@ -486,16 +488,18 @@ export async function getAnnotationInformation(
 }
 
 export async function createExplorational(
-  dataset: APIDatasetType,
+  datasetName: string,
   typ: "volume" | "skeleton",
   withFallback: boolean,
-) {
-  const url = `/api/datasets/${dataset.name}/createExplorational`;
+): Promise<APIAnnotationType> {
+  const url = `/api/datasets/${datasetName}/createExplorational`;
 
   return Request.sendJSONReceiveJSON(url, { data: { typ, withFallback } });
 }
 
-export async function getTracing(annotation: APIAnnotationType): Promise<ServerTracingType> {
+export async function getTracingForAnnotation(
+  annotation: APIAnnotationType,
+): Promise<ServerTracingType> {
   const annotationType = annotation.content.typ;
   const tracingArrayBuffer = await doWithToken(token =>
     Request.receiveArraybuffer(
@@ -547,43 +551,37 @@ export async function getActiveDatasets(): Promise<Array<APIDatasetType>> {
   return datasets;
 }
 
-export async function getDataset(
-  datasetName: string,
-  sharingToken?: string,
-): Promise<APIDatasetType> {
+export function getDataset(datasetName: string, sharingToken?: ?string): Promise<APIDatasetType> {
   const sharingTokenSuffix = sharingToken != null ? `?sharingToken=${sharingToken}` : "";
-  const dataset = await Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
-  return dataset;
+  return Request.receiveJSON(`/api/datasets/${datasetName}${sharingTokenSuffix}`);
 }
 
-export async function updateDataset(
+export function updateDataset(
   datasetName: string,
   dataset: APIDatasetType,
 ): Promise<APIDatasetType> {
-  const updatedDataset = await Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
+  return Request.sendJSONReceiveJSON(`/api/datasets/${datasetName}`, {
     data: dataset,
   });
-  return updatedDataset;
 }
 
-export async function getDatasetDefaultConfiguration(
+export function getDatasetConfiguration(datasetName: string): Promise<Object> {
+  return Request.receiveJSON(`/api/dataSetConfigurations/${datasetName}`);
+}
+
+export function getDatasetDefaultConfiguration(
   datasetName: string,
 ): Promise<DatasetConfigurationType> {
-  const datasetDefaultConfiguration = await Request.receiveJSON(
-    `/api/dataSetConfigurations/default/${datasetName}`,
-  );
-  return datasetDefaultConfiguration;
+  return Request.receiveJSON(`/api/dataSetConfigurations/default/${datasetName}`);
 }
 
-export async function updateDatasetDefaultConfiguration(
+export function updateDatasetDefaultConfiguration(
   datasetName: string,
   datasetConfiguration: DatasetConfigurationType,
 ): Promise<{}> {
-  const datasetDefaultConfiguration = await Request.sendJSONReceiveJSON(
-    `/api/dataSetConfigurations/default/${datasetName}`,
-    { data: datasetConfiguration },
-  );
-  return datasetDefaultConfiguration;
+  return Request.sendJSONReceiveJSON(`/api/dataSetConfigurations/default/${datasetName}`, {
+    data: datasetConfiguration,
+  });
 }
 
 export async function getDatasetAccessList(datasetName: string): Promise<Array<APIUserType>> {
@@ -635,8 +633,12 @@ export async function getDatastores(): Promise<Array<APIDataStoreType>> {
 export const getDataStoresCached = _.memoize(getDatastores);
 
 // ### Active User
-export async function getActiveUser(options: Object = {}) {
+export function getActiveUser(options: Object = {}) {
   return Request.receiveJSON("/api/user", options);
+}
+
+export function getUserConfiguration(): Object {
+  return Request.receiveJSON("/api/user/userConfiguration");
 }
 
 // ### TimeTracking

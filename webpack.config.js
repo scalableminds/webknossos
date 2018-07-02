@@ -38,9 +38,9 @@ module.exports = function(env = {}) {
         parallel: true,
         sourceMap: true,
         uglifyOptions: {
-          compress: {
-            inline: 1,
-          },
+          // compress is bugged, see https://github.com/mishoo/UglifyJS2/issues/2842
+          // even inline: 1 causes bugs, see https://github.com/scalableminds/webknossos/pull/2713
+          compress: false,
         },
       }),
     );
@@ -108,6 +108,12 @@ module.exports = function(env = {}) {
         { test: /\.jpg$/, use: "file-loader" },
         { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
       ],
+    },
+    externals: {
+      // fs, tls and net are needed so that airbrake-js can be compiled by webpack
+      fs: "{}",
+      tls: "{}",
+      net: "{}",
     },
     resolve: {
       modules: [srcPath, nodePath],

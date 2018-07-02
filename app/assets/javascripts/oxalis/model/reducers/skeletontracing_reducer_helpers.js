@@ -157,10 +157,6 @@ export function deleteNode(
         neighborIds.push(edge.target === node.id ? edge.source : edge.target);
       }
 
-      if (neighborIds.length === 0) {
-        return deleteTree(state, activeTree, timestamp);
-      }
-
       const newTrees = splitTreeByNodes(
         state,
         skeletonTracing,
@@ -176,8 +172,10 @@ export function deleteNode(
         newMaxNodeId = getMaximumNodeId(newTrees);
       }
 
-      const newActiveNodeId = neighborIds[0];
-      const newActiveTree = findTreeByNodeId(newTrees, newActiveNodeId).get();
+      const newActiveNodeId = neighborIds.length > 0 ? neighborIds[0] : null;
+      const newActiveTree = newActiveNodeId
+        ? findTreeByNodeId(newTrees, newActiveNodeId).get()
+        : activeTree;
       const newActiveTreeId = newActiveTree.treeId;
 
       return Maybe.Just([newTrees, newActiveTreeId, newActiveNodeId, newMaxNodeId]);
@@ -246,6 +244,12 @@ function splitTreeByNodes(
   // Not every node id is guaranteed to be a new tree root as there may be cyclic trees.
 
   let newTrees = skeletonTracing.trees;
+
+  if (newTreeRootIds.length === 0) {
+    // As there are no new tree root ids, we are deleting the last node from a tree.
+    // It suffices to simply update that tree within the tree collection
+    return update(newTrees, { [activeTree.treeId]: { $set: activeTree } });
+  }
 
   // Traverse from each possible new root node in all directions (i.e., use each edge) and
   // remember which edges were already visited.

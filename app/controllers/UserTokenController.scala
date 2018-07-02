@@ -87,7 +87,7 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
     def tryAdministrate: Fox[UserAccessAnswer] = {
       userBox match {
-        case Full(user) => Fox.successful(UserAccessAnswer(user.isAdmin))
+        case Full(user) => Fox.successful(UserAccessAnswer(user.isAdmin || user.teamManagerTeams.nonEmpty))
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
     }
@@ -102,8 +102,8 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
 
   private def handleTracingAccess(tracingId: String, mode: AccessMode.Value, userBox: Box[User])(implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
-    def findAnnotationForTracing(tracingId: String): Fox[Annotation] = {
-      val annotationFox = AnnotationDAO.findOneByTracingId(tracingId)
+    def findAnnotationForTracing(tracingId: String): Fox[AnnotationSQL] = {
+      val annotationFox = AnnotationSQLDAO.findOneByTracingId(tracingId)
       for {
         annotationBox <- annotationFox.futureBox
       } yield {
@@ -118,14 +118,14 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       mode match {
         case AccessMode.read => restrictions.allowAccess(userBox)
         case AccessMode.write => restrictions.allowUpdate(userBox)
-        case _ => false
+        case _ => Fox.successful(false)
       }
     }
 
     for {
       annotation <- findAnnotationForTracing(tracingId)
-      restrictions <- restrictionsFor(AnnotationIdentifier(annotation.typ, annotation.id))
-      allowed = checkRestrictions(restrictions)
+      restrictions <- restrictionsFor(AnnotationIdentifier(annotation.typ, annotation._id))
+      allowed <- checkRestrictions(restrictions)
     } yield {
       if (allowed) UserAccessAnswer(true) else UserAccessAnswer(false, Some(s"No ${mode.toString} access to tracing"))
     }

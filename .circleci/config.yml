@@ -21,6 +21,15 @@ jobs:
             - cache-{{ checksum ".circleci/cache_version" }}-master
 
       - run:
+          name: Assert unique evolution numbers
+          command: tools/postgres/assert_unique_evolution_numbers.sh
+      - run:
+          name: Assert schema.sql and evolutions are equal
+          command: |
+            docker-compose up -d postgres
+            sleep 3
+            docker-compose run compile tools/postgres/diff_schema.sh tools/postgres/schema.sql "conf/evolutions/*.sql"
+      - run:
           name: Install frontend dependencies
           command: docker-compose run base yarn install --frozen-lockfile
       - run:
@@ -94,7 +103,7 @@ jobs:
           name: Run webknossos-datastore smoke test
           command: |
             sleep 10
-            curl --retry 3 --max-time 15 -v http://localhost:9090/data/health
+            curl --fail --retry 3 --max-time 15 -v http://localhost:9090/data/health
       - run:
           name: Stop webknossos-datastore
           command: docker-compose down --volumes --remove-orphans

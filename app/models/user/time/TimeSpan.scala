@@ -3,7 +3,7 @@ package models.user.time
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.annotation.Annotation
+import models.annotation.AnnotationSQL
 import org.joda.time.DateTime
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -134,7 +134,7 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
 
   def updateOne(t: TimeSpanSQL)(implicit ctx: DBAccessContext): Fox[Unit] = {
     for { //note that t.created is skipped
-      _ <- assertUpdateAccess(t._id)
+      _ <- assertUpdateAccess(t._id) ?~> "FAILED: TimeSpanSQLDAO.assertUpdateAccess"
       r <- run(sqlu"""update webknossos.timespans
                 set
                   _user = ${t._user.id},
@@ -144,7 +144,7 @@ object TimeSpanSQLDAO extends SQLDAO[TimeSpanSQL, TimespansRow, Timespans] {
                   numberOfUpdates = ${t.numberOfUpdates},
                   isDeleted = ${t.isDeleted}
                 where _id = ${t._id.id}
-        """)
+        """) ?~> "FAILED: run() in TimeSpanSQLDAO.updateOne"
     } yield ()
   }
 }
@@ -182,7 +182,7 @@ object TimeSpan extends FoxImplicits {
 
   val hoursRx = "[0-9]+".r
 
-  def create(start: Long, end: Long, _user: BSONObjectID, annotation: Option[Annotation]) =
+  def create(start: Long, end: Long, _user: BSONObjectID, annotation: Option[AnnotationSQL]) =
     TimeSpan(end - start, start, end, _user = _user, annotation = annotation.map(_.id))
 
   def inMillis(days: Int, hours: Int, minutes: Int) =

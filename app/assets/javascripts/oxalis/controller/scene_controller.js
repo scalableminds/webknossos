@@ -14,6 +14,7 @@ import {
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
+import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -35,8 +36,6 @@ class SceneController {
   current: number;
   displayPlane: OrthoViewMapType<boolean>;
   planeShift: Vector3;
-  pingBinary: boolean;
-  pingBinarySeg: boolean;
   cube: Cube;
   userBoundingBox: Cube;
   taskBoundingBox: ?Cube;
@@ -58,8 +57,6 @@ class SceneController {
       [OrthoViews.PLANE_XZ]: true,
     };
     this.planeShift = [0, 0, 0];
-    this.pingBinary = true;
-    this.pingBinarySeg = true;
   }
 
   initialize() {
@@ -87,9 +84,10 @@ class SceneController {
     this.rootNode = new THREE.Object3D();
 
     // Cubes
+    const { lowerBoundary, upperBoundary } = getBoundaries(Store.getState().dataset);
     this.cube = new Cube({
-      min: Model.lowerBoundary,
-      max: Model.upperBoundary,
+      min: lowerBoundary,
+      max: upperBoundary,
       color: CUBE_COLOR,
       showCrossSections: true,
     });
@@ -197,9 +195,11 @@ class SceneController {
     let fallbackAnchorPoint;
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
-    for (const name of Object.keys(Model.binary)) {
-      const binary = Model.binary[name];
-      [anchorPoint, fallbackAnchorPoint] = binary.updateDataTextures(gPos, zoomStep);
+    for (const dataLayer of Model.getAllLayers()) {
+      [anchorPoint, fallbackAnchorPoint] = dataLayer.layerRenderingManager.updateDataTextures(
+        gPos,
+        zoomStep,
+      );
     }
 
     if (optPlane) {
@@ -256,7 +256,6 @@ class SceneController {
     for (const plane of _.values(this.planes)) {
       plane.setSegmentationAlpha(alpha);
     }
-    this.pingBinarySeg = alpha !== 0;
   }
 
   setIsMappingEnabled(isMappingEnabled: boolean): void {
@@ -264,16 +263,6 @@ class SceneController {
       plane.setIsMappingEnabled(isMappingEnabled);
     }
     app.vent.trigger("rerender");
-  }
-
-  pingDataLayer(dataLayerName: string): boolean {
-    if (Model.binary[dataLayerName].category === "color") {
-      return this.pingBinary;
-    }
-    if (Model.binary[dataLayerName].category === "segmentation") {
-      return this.pingBinarySeg;
-    }
-    return false;
   }
 
   stopPlaneMode(): void {

@@ -1,8 +1,5 @@
 -- https://github.com/scalableminds/webknossos/pull/2532
 
--- UP:
-
-
 CREATE FUNCTION webknossos.checkOpenAssignments() RETURNS trigger AS $$
   DECLARE
     cur CURSOR for SELECT openInstances FROM webknossos.task_instances where NEW.typ = 'Task' and _id = NEW._task;
@@ -22,8 +19,3 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER checkOpenAssignmentsTrigger
 AFTER INSERT ON webknossos.annotations
 FOR EACH ROW EXECUTE PROCEDURE webknossos.checkOpenAssignments();
-
-
--- DOWN:
-
-DROP FUNCTION IF EXISTS webknossos.checkOpenAssignments() CASCADE;

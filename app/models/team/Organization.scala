@@ -20,9 +20,9 @@ import scala.concurrent.Future
 
 case class OrganizationSQL(
                             _id: ObjectId,
-                            _organizationTeam: ObjectId,
                             name: String,
                             additionalInformation: String,
+                            logoUrl: String,
                             created: Long = System.currentTimeMillis(),
                             isDeleted: Boolean = false
                           )
@@ -33,9 +33,9 @@ object OrganizationSQL {
     Fox.successful(
       OrganizationSQL(
         ObjectId.fromBsonId(o._id),
-        ObjectId.fromBsonId(o._organizationTeam),
         o.name,
-        additionalInformation = o.additionalInformation
+        o.additionalInformation,
+        o.logoUrl
       )
     )
   }
@@ -48,13 +48,14 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
 
   def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
+
   def parse(r: OrganizationsRow): Fox[OrganizationSQL] =
     Fox.successful(
       OrganizationSQL(
         ObjectId(r._Id),
-        ObjectId(r._Organizationteam),
         r.name,
         r.additionalinformation,
+        r.logourl,
         r.created.getTime,
         r.isdeleted)
     )
@@ -75,15 +76,23 @@ object OrganizationSQLDAO extends SQLDAO[OrganizationSQL, OrganizationsRow, Orga
   def insertOne(o: OrganizationSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
-        sqlu"""insert into webknossos.organizations(_id, _organizationTeam, name, additionalInformation, created, isDeleted)
-                  values(${o._id.id}, ${o._organizationTeam}, ${o.name}, ${o.additionalInformation}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
+
+        sqlu"""insert into webknossos.organizations(_id, name, additionalInformation, logoUrl, created, isDeleted)
+                  values(${o._id.id}, ${o.name}, ${o.additionalInformation}, ${o.logoUrl}, ${new java.sql.Timestamp(o.created)}, ${o.isDeleted})
             """)
     } yield ()
+
+  def findOrganizationTeamId(o: ObjectId) =
+    for{
+      r <- run(sql"select _id from webknossos.organizationTeams where _organization = ${o.id}".as[String])
+      parsed <- BSONObjectID.parse(r.head).toOption.toFox ?~> Messages("sql.invalidBSONObjectId")
+    } yield ObjectId.fromBsonId(parsed)
 
 }
 
 
 case class Organization(
+                         logoUrl: String,
                          additionalInformation: String,
                          name: String,
                          teams: List[BSONObjectID],
@@ -101,11 +110,13 @@ object Organization extends FoxImplicits {
   def fromOrganizationSQL(o: OrganizationSQL)(implicit ctx: DBAccessContext) = {
     for {
       idBson <- o._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId")
-      organizationTeamIdBson <- o._organizationTeam.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId")
+      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(o._id).toFox
+      organizationTeamIdBson <- organizationTeamId.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId")
       teams <- TeamSQLDAO.findAllByOrganization(o._id)
       teamBsonIds <- Fox.combined(teams.map(_._id.toBSONObjectId.toFox))
     } yield {
       Organization(
+        o.logoUrl,
         o.additionalInformation,
         o.name,
         teamBsonIds,

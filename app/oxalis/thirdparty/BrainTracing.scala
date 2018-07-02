@@ -5,9 +5,9 @@ import com.scalableminds.util.mail.Send
 import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
-import models.annotation.Annotation
-import models.project.Project
-import models.task.Task
+import models.annotation.AnnotationSQL
+import models.project.ProjectSQL
+import models.task.TaskSQL
 import models.user.User
 import net.liftweb.common.Box
 import oxalis.mail.DefaultMails
@@ -78,12 +78,11 @@ object BrainTracing extends LazyLogging with FoxImplicits {
     result.contains("ist derzeit nicht verf&uuml;gbar.")
 
   private def signalOverTime(
-    time: Long,
-    project: Box[Project],
-    task: Box[Task],
-    annotation: Option[Annotation],
-    user: User) = {
-
+                              time: Long,
+                              project: Box[ProjectSQL],
+                              task: Box[TaskSQL],
+                              annotation: Option[AnnotationSQL],
+                              user: User) = {
     for {
       p <- project
       a <- annotation
@@ -97,7 +96,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
         a.id))
   }
 
-  def logTime(user: User, time: Long, annotation: Option[Annotation])(implicit ctx: DBAccessContext): Future[Boolean] = {
+  def logTime(user: User, time: Long, annotation: Option[AnnotationSQL])(implicit ctx: DBAccessContext): Future[Boolean] = {
     import scala.async.Async._
     // TODO: fix, make team dynamic
     if (isActive && !user.isAnonymous && user.organization == "Connectomics department") {

@@ -85,11 +85,12 @@ class TaskSearchForm extends React.Component<Props, State> {
   }
 
   async fetchData() {
-    this.setState({
-      users: await getEditableUsers(),
-      projects: await getProjects(),
-      taskTypes: await getTaskTypes(),
-    });
+    const [users, projects, taskTypes] = await Promise.all([
+      getEditableUsers(),
+      getProjects(),
+      getTaskTypes(),
+    ]);
+    this.setState({ users, projects, taskTypes });
   }
 
   handleFormSubmit = (event: ?SyntheticInputEvent<*>) => {

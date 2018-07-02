@@ -1,10 +1,10 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{AnnotationSQLDAO, AnnotationTypeSQL}
 import models.team._
 import models.user._
 import models.user.time._
@@ -17,13 +17,13 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Json._
 import play.api.libs.json._
 import play.twirl.api.Html
+import utils.ObjectId
 import views.html
 
 import scala.concurrent.Future
 
 class UserController @Inject()(val messagesApi: MessagesApi)
   extends Controller
-    with Dashboard
     with FoxImplicits {
 
   val defaultAnnotationLimit = 1000
@@ -43,17 +43,19 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def annotations(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      content <- dashboardExploratoryAnnotations(request.identity, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
+      annotations <- AnnotationSQLDAO.findAllFor(ObjectId.fromBsonId(request.identity._id), isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
-      Ok(content)
+      Ok(Json.toJson(jsonList))
     }
   }
 
   def tasks(isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
-      content <- dashboardTaskAnnotations(request.identity, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
+      annotations <- AnnotationSQLDAO.findAllFor(ObjectId.fromBsonId(request.identity._id), isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
+      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
-      Ok(content)
+      Ok(Json.toJson(jsonList))
     }
   }
 
@@ -110,21 +112,25 @@ class UserController @Inject()(val messagesApi: MessagesApi)
 
   def userAnnotations(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
+      userIdValidated <- ObjectId.parse(userId)
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      content <- dashboardExploratoryAnnotations(user, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
+      annotations <- AnnotationSQLDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
+      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
-      Ok(content)
+      Ok(Json.toJson(jsonList))
     }
   }
 
   def userTasks(userId: String, isFinished: Option[Boolean], limit: Option[Int]) = SecuredAction.async { implicit request =>
     for {
+      userIdValidated <- ObjectId.parse(userId)
       user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
       _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      content <- dashboardTaskAnnotations(user, request.identity, isFinished, limit getOrElse defaultAnnotationLimit)
+      annotations <- AnnotationSQLDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
+      jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
-      Ok(content)
+      Ok(Json.toJson(jsonList))
     }
   }
 
@@ -205,7 +211,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
           teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t => issuingUser.isTeamManagerOrAdminOf(t._1._id))
           _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
-          updatedTeams <- ensureOrganizationTeamIsPresent(user, teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate)
+          updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
           updatedUser <- UserService.update(user, firstName.trim, lastName.trim, email, isActive, isAdmin, updatedTeams, trimmedExperiences)
         } yield {
           Ok(User.userPublicWrites(request.identity).writes(updatedUser))
@@ -213,18 +219,4 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def ensureOrganizationTeamIsPresent(user: User, updatedTeams: List[TeamMembership]) = {
-    for {
-      organization <- OrganizationDAO.findOneByName(user.organization)(GlobalAccessContext)
-      orgTeam = organization._organizationTeam
-    } yield {
-      if (updatedTeams.exists(t => t._id == orgTeam))
-        updatedTeams
-      else
-        user.teams.find(t => t._id == orgTeam) match {
-          case Some(teamMembership) => teamMembership :: updatedTeams
-          case None => updatedTeams
-        }
-    }
-  }
 }

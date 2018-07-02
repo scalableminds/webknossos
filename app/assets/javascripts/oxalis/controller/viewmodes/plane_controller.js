@@ -51,6 +51,8 @@ import {
 import messages from "messages";
 import { setMousePositionAction } from "oxalis/model/actions/volumetracing_actions";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
+import Clipboard from "clipboard-js";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor.js";
 
 type OwnProps = {
   onRender: () => void,
@@ -81,7 +83,6 @@ class PlaneController extends React.PureComponent<Props> {
   // Copied from backbone events (TODO: handle this better)
   listenTo: Function;
   stopListening: Function;
-  moveKeyNotification: string;
 
   constructor(...args: any) {
     super(...args);
@@ -280,11 +281,35 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   getKeyboardControls(): Object {
-    return {};
+    return {
+      "ctrl + i": event => {
+        const segmentationLayer = Model.getSegmentationLayer();
+        if (!segmentationLayer) {
+          return;
+        }
+        const { mousePosition } = Store.getState().temporaryConfiguration;
+        if (mousePosition) {
+          const [x, y] = mousePosition;
+          const globalMousePosition = calculateGlobalPos({ x, y });
+          const { cube } = segmentationLayer;
+          const mapping = event.altKey ? cube.mapping : null;
+          const hoveredId = cube.getDataValue(
+            globalMousePosition,
+            mapping,
+            getRequestLogZoomStep(Store.getState()),
+          );
+          Clipboard.copy(String(hoveredId)).then(() =>
+            Toast.success(`Cell id ${hoveredId} copied to clipboard.`),
+          );
+        } else {
+          Toast.warning("No cell under cursor.");
+        }
+      },
+    };
   }
 
   init(): void {
-    const clippingDistance = Store.getState().userConfiguration.clippingDistance;
+    const { clippingDistance } = Store.getState().userConfiguration;
     SceneController.setClippingDistance(clippingDistance);
   }
 
@@ -328,23 +353,12 @@ class PlaneController extends React.PureComponent<Props> {
   }
 
   onPlaneViewRender(): void {
-    const state = Store.getState();
-    const activeViewport = state.viewModeData.plane.activeViewport;
-    for (const dataLayerName of Object.keys(Model.binary)) {
-      if (SceneController.pingDataLayer(dataLayerName)) {
-        Model.binary[dataLayerName].ping(getPosition(state.flycam), {
-          zoomStep: getRequestLogZoomStep(state),
-          activePlane: activeViewport,
-        });
-      }
-    }
-
     SceneController.update();
     this.props.onRender();
   }
 
   movePlane = (v: Vector3, increaseSpeedWithZoom: boolean = true) => {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     Store.dispatch(movePlaneFlycamOrthoAction(v, activeViewport, increaseSpeedWithZoom));
   };
 
@@ -357,7 +371,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   moveZ = (z: number, oneSlide: boolean): void => {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (activeViewport === OrthoViews.TDView) {
       return;
     }
@@ -365,7 +379,7 @@ class PlaneController extends React.PureComponent<Props> {
     if (oneSlide) {
       const logZoomStep = getRequestLogZoomStep(Store.getState());
       const w = Dimensions.getIndices(activeViewport)[2];
-      const zStep = Model.getResolutions()[logZoomStep][w];
+      const zStep = getResolutions(Store.getState().dataset)[logZoomStep][w];
 
       Store.dispatch(
         moveFlycamOrthoAction(
@@ -379,7 +393,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   zoom(value: number, zoomToMouse: boolean): void {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (OrthoViewValuesWithoutTDView.includes(activeViewport)) {
       this.zoomPlanes(value, zoomToMouse);
     } else {
@@ -417,7 +431,7 @@ class PlaneController extends React.PureComponent<Props> {
   finishZoom = (): void => {
     // Move the plane so that the mouse is at the same position as
     // before the zoom
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     if (this.isMouseOver() && activeViewport !== OrthoViews.TDView) {
       const mousePos = this.getMousePosition();
       const moveVector = [
@@ -430,7 +444,7 @@ class PlaneController extends React.PureComponent<Props> {
   };
 
   getMousePosition(): Vector3 {
-    const activeViewport = Store.getState().viewModeData.plane.activeViewport;
+    const { activeViewport } = Store.getState().viewModeData.plane;
     const pos = this.input.mouseControllers[activeViewport].position;
     if (pos != null) {
       return this.calculateGlobalPos(pos);
@@ -449,12 +463,9 @@ class PlaneController extends React.PureComponent<Props> {
     moveValue = Math.max(constants.MIN_MOVE_VALUE, moveValue);
 
     Store.dispatch(updateUserSettingAction("moveValue", moveValue));
-    if (this.moveKeyNotification != null) {
-      Toast.close(this.moveKeyNotification);
-    }
+
     const moveValueMessage = messages["tracing.changed_move_value"] + moveValue;
-    this.moveKeyNotification = moveValueMessage;
-    Toast.success(moveValueMessage);
+    Toast.success(moveValueMessage, { key: "CHANGED_MOVE_VALUE" });
   }
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
@@ -522,7 +533,7 @@ function threeCameraToCameraData(camera: THREE.OrthographicCamera): CameraData {
 export function calculateGlobalPos(clickPos: Point2): Vector3 {
   let position;
   const state = Store.getState();
-  const activeViewport = state.viewModeData.plane.activeViewport;
+  const { activeViewport } = state.viewModeData.plane;
   const curGlobalPos = getPosition(state.flycam);
   const zoomFactor = getPlaneScalingFactor(state.flycam);
   const actualWidth = getInputCatcherRect(activeViewport).width;

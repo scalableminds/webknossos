@@ -25,6 +25,8 @@ import { makeSkeletonTracingGuard } from "oxalis/view/guards";
 
 const InputGroup = Input.Group;
 
+const treeTypeHint = ([]: TreeType[]);
+
 type Props = {
   skeletonTracing: SkeletonTracingType,
   setActiveNode: (nodeId: number) => void,
@@ -58,14 +60,18 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       // Create a sorted, flat array of all comments across all trees
       const sortedTrees = _.values(trees)
         .slice(0)
-        .sort(Utils.localeCompareBy("name", sortAscending));
+        .sort(Utils.localeCompareBy(treeTypeHint, "name", sortAscending));
 
       // eslint-disable-next-line prefer-arrow-callback
       const sortedComments = _.flatMap(sortedTrees, function(tree: TreeType): Array<CommentType> {
         return tree.comments
           .slice(0)
           .sort(
-            Utils.localeCompareBy(comment => `${comment.content}_${comment.nodeId}`, sortAscending),
+            Utils.localeCompareBy(
+              ([]: CommentType[]),
+              comment => `${comment.content}_${comment.nodeId}`,
+              sortAscending,
+            ),
           );
       });
 
@@ -108,7 +114,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   getTreeComponents() {
     return _.values(this.props.skeletonTracing.trees)
       .filter(tree => tree.comments.length > 0)
-      .sort(Utils.localeCompareBy("name", this.state.isSortedAscending))
+      .sort(Utils.localeCompareBy(treeTypeHint, "name", this.state.isSortedAscending))
       .map(tree => (
         // one tree and its comments
         <TreeCommentList

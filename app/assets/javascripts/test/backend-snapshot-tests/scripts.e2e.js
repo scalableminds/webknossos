@@ -3,7 +3,11 @@
 // @flow
 import test from "ava";
 import * as api from "admin/admin_rest_api";
-import { tokenUserA, setCurrToken } from "../enzyme/e2e-setup";
+import { tokenUserA, setCurrToken, resetDatabase } from "../enzyme/e2e-setup";
+
+test.before("Reset database", async () => {
+  resetDatabase();
+});
 
 test.before("Change token", async () => {
   setCurrToken(tokenUserA);

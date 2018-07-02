@@ -116,13 +116,7 @@ export type VolumeCellMapType = { [number]: VolumeCellType };
 export type CategoryType = "color" | "segmentation";
 export type ElementClassType = "uint8" | "uint16" | "uint32";
 
-export type DataLayerType = APIDataLayerType & {
-  +maxZoomStep: number,
-};
-
-export type SegmentationDataLayerType = DataLayerType & {
-  +largestSegmentId: number,
-};
+export type DataLayerType = APIDataLayerType;
 
 export type RestrictionsType = APIRestrictionsType;
 
@@ -212,6 +206,7 @@ export type UserConfigurationType = {
   +moveValue: number,
   +moveValue3d: number,
   +newNodeNewTree: boolean,
+  +highlightCommentedNodes: boolean,
   +overrideNodeRadius: boolean,
   +particleSize: number,
   +radius: number,
@@ -345,6 +340,7 @@ export const defaultState: OxalisState = {
     moveValue: 300,
     moveValue3d: 300,
     newNodeNewTree: false,
+    highlightCommentedNodes: false,
     overrideNodeRadius: true,
     particleSize: 5,
     radius: 5,
@@ -392,6 +388,7 @@ export const defaultState: OxalisState = {
     description: null,
     displayName: "Awesome Test Dataset",
     allowedTeams: [],
+    logoUrl: null,
   },
   tracing: {
     annotationId: "",

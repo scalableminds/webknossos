@@ -18,7 +18,6 @@
     "babel-plugin-dynamic-import-webpack": "^1.0.1",
     "babel-plugin-file-loader": "^1.0.0",
     "babel-plugin-import": "^1.1.0",
-    "babel-plugin-transform-async-to-generator": "^6.24.1",
     "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-flow-strip-types": "^6.22.0",
     "babel-polyfill": "^6.23.0",

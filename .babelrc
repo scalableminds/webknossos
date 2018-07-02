@@ -6,7 +6,6 @@
           "targets": {
             "node": "current"
           },
-          "exclude": [],
         }],
         "react",
       ],
@@ -38,7 +37,6 @@
           "last 1 iOS versions"
         ]
       },
-      "exclude": [],
       "modules": false,
     }],
     "react",

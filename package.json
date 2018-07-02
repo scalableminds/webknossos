@@ -89,7 +89,8 @@
     "docs": "node_modules/.bin/documentation build app/assets/javascripts/oxalis/api/api_loader.js --github --project-name \"webKnossos Frontend API\" --format html --output public/docs/frontend-api",
     "refresh-schema": "./tools/postgres/refresh_schema.sh",
     "enable-autologin": "sed -i -e 's/enableDevAutoLogin = false/enableDevAutoLogin = true/g' ./conf/application.conf",
-    "disable-autologin": "sed -i -e 's/enableDevAutoLogin = true/enableDevAutoLogin = false/g' ./conf/application.conf"
+    "disable-autologin": "sed -i -e 's/enableDevAutoLogin = true/enableDevAutoLogin = false/g' ./conf/application.conf",
+    "coverage": "nyc report --reporter=text-lcov | coveralls"
   },
   "lint-staged": {
     "*.js": [
@@ -106,6 +107,7 @@
     "base64-js": "^1.2.1",
     "classnames": "^2.2.5",
     "clipboard-js": "^0.2.0",
+    "coveralls": "^3.0.2",
     "data.maybe": "^1.2.2",
     "deep-freeze": "0.0.1",
     "dice-coefficient": "^1.0.2",
@@ -122,6 +124,7 @@
     "mini-css-extract-plugin": "^0.4.0",
     "mjs": "^1.0.0",
     "moment": "^2.21.0",
+    "nyc": "^12.0.2",
     "pako": "^0.2.8",
     "protobufjs": "^6.8.6",
     "react": "^16.3.0",

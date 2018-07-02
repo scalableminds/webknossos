@@ -101,7 +101,7 @@ module.exports = function(env = {}) {
       ],
     },
     externals: {
-      // fs, tls and net are needed so that airbrae-js can be compiled by webpack
+      // fs, tls and net are needed so that airbrake-js can be compiled by webpack
       fs: "{}",
       tls: "{}",
       net: "{}",

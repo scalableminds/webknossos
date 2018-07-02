@@ -13,4 +13,5 @@
 - fixes #123
 
 ------
+- [ ] Updated [migration guide](MIGRATIONS.md#unreleased) if applicable
 - [ ] Ready for review

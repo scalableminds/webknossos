@@ -253,6 +253,7 @@ export type FlycamType = {
   +zoomStep: number,
   +currentMatrix: Matrix4x4,
   +spaceDirectionOrtho: [-1 | 1, -1 | 1, -1 | 1],
+  +direction: Vector3,
 };
 
 export type CameraData = {
@@ -409,6 +410,7 @@ export const defaultState: OxalisState = {
     zoomStep: 1.3,
     currentMatrix: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
     spaceDirectionOrtho: [1, 1, 1],
+    direction: [0, 0, 0],
   },
   viewModeData: {
     plane: {

@@ -120,13 +120,13 @@ export function zoomReducer(state: OxalisState, zoomStep: number): OxalisState {
 }
 
 export function setDirectionReducer(state: OxalisState, direction: Vector3) {
-  if (state.userConfiguration.dynamicSpaceDirection) {
-    const spaceDirectionOrtho = [0, 1, 2].map(index => (direction[index] < 0 ? -1 : 1));
-    return update(state, {
-      flycam: { spaceDirectionOrtho: { $set: spaceDirectionOrtho } },
-    });
-  }
-  return state;
+  const spaceDirectionOrtho = direction.map(el => (el < 0 ? -1 : 1));
+  return update(state, {
+    flycam: {
+      direction: { $set: direction },
+      spaceDirectionOrtho: { $set: spaceDirectionOrtho },
+    },
+  });
 }
 
 export function setRotationReducer(state: OxalisState, rotation: Vector3) {

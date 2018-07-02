@@ -11,7 +11,7 @@ import {
   mapStateToProps,
 } from "oxalis/controller/viewmodes/plane_controller";
 import SceneController from "oxalis/controller/scene_controller";
-import { OrthoViews } from "oxalis/constants";
+import constants, { OrthoViews } from "oxalis/constants";
 import {
   setActiveNodeAction,
   deleteNodeAsUserAction,
@@ -29,12 +29,16 @@ import {
   getPosition,
   getRotationOrtho,
   getRequestLogZoomStep,
+  getPlaneScalingFactor,
 } from "oxalis/model/accessors/flycam_accessor";
 import { getActiveNode } from "oxalis/model/accessors/skeletontracing_accessor";
 import type { Point2, Vector3, OrthoViewType, OrthoViewMapType } from "oxalis/constants";
 import type { ModifierKeys } from "libs/input";
 import api from "oxalis/api/internal_api";
 import { connect } from "react-redux";
+// import { getBaseVoxelFactors } from "oxalis/model/scaleinfo";
+import { V3 } from "libs/mjs";
+import Utils from "libs/utils";
 
 const OrthoViewToNumber: OrthoViewMapType<number> = {
   [OrthoViews.PLANE_XY]: 0,
@@ -57,7 +61,7 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
       nodesAlreadySet = 0;
     }
 
-    const [x, y, z] = getPosition(Store.getState().flycam);
+    const [x, y, z] = getPosition(this.props.flycam);
     this.setWaypoint([x + 1, y + 1, z], false);
     _.defer(() => this.simulateTracing(nodesPerTree, nodesAlreadySet + 1));
   }
@@ -95,8 +99,20 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
         api.tracing.centerNode();
         api.tracing.centerTDView();
       },
+
+      e: () => this.moveAlongDirection(),
+      r: () => this.moveAlongDirection(true),
     });
   }
+
+  moveAlongDirection = (reverse: boolean = false) => {
+    const directionInverter = reverse ? -1 : 1;
+    const newPosition = V3.scale(
+      V3.add(getPosition(this.props.flycam), this.props.flycam.direction),
+      directionInverter,
+    );
+    api.tracing.centerPositionAnimated(newPosition, false);
+  };
 
   scrollPlanes(delta: number, type: ?ModifierKeys): void {
     super.scrollPlanes(delta, type);
@@ -198,6 +214,16 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
       centered = true;
     }
 
+    const width = getPlaneScalingFactor(this.props.flycam) * constants.VIEWPORT_WIDTH;
+    // const scaleFactors = getBaseVoxelFactors(this.props.scale).map(f => width / f);
+
+    const viewPositionOffset = activeNodeMaybe
+      .map(activeNode => {
+        const newPosition = V3.sub(getPosition(this.props.flycam), activeNode.position);
+        return newPosition.map(el => Utils.clamp(-width / 2.5, el, width / 2.5));
+      })
+      .getOrElse([0, 0, 0]);
+
     Store.dispatch(
       createNodeAction(
         position,
@@ -209,11 +235,19 @@ class SkeletonTracingPlaneController extends PlaneControllerClass {
 
     if (centered) {
       // we created a new node, so get a new reference
-      getActiveNode(Store.getState().tracing).map(newActiveNode =>
+      getActiveNode(Store.getState().tracing).map(newActiveNode => {
         // Center the position of the active node without modifying the "third" dimension (see centerPositionAnimated)
         // This is important because otherwise the user cannot continue to trace until the animation is over
-        api.tracing.centerPositionAnimated(newActiveNode.position, true),
-      );
+        // per dimension: width * datasetScale[i] ?
+
+        // const direction = V3.length(this.props.flycam.direction)
+        // ? V3.normalize(this.props.flycam.direction)
+        // : this.props.flycam.direction;
+        // const decenteredPosition = V3.sub(newActiveNode.position, direction);
+        const offsetPosition = V3.add(newActiveNode.position, viewPositionOffset);
+
+        api.tracing.centerPositionAnimated(offsetPosition, true);
+      });
     }
   };
 }

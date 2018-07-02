@@ -49,7 +49,7 @@ object ZipIO {
   def zip(sources: Iterator[NamedStream], out: OutputStream): Unit = {
     if (sources.nonEmpty) {
       val zip = startZip(out)
-      zipIterator(sources, zip).onComplete{ _ =>
+      zipIterator(sources, zip).onComplete { _ =>
         zip.close()
       }
     } else
@@ -100,11 +100,24 @@ object ZipIO {
 
     def isFileHidden(e: ZipEntry): Boolean = new File(e.getName).isHidden || e.getName.startsWith("__MACOSX")
 
+    def stripPathFrom(path: Path, string: String): Option[String] = {
+      if(path.toString.contains(string))
+        Some(path.toString.substring(0, path.toString.indexOf(string)))
+      else
+        None
+    }
+
     import collection.JavaConverters._
     val zipEntries = zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).toList
 
+    //color, mask, segmentation
     val commonPrefix = if (truncateCommonPrefix) {
-      PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
+      val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
+      val strippedPaths = List("color", "mask", "segmentation").flatMap(stripPathFrom(commonPrefixNotFixed, _))
+      strippedPaths.headOption match {
+        case Some(string) => Paths.get(string)
+        case None => commonPrefixNotFixed
+      }
     } else {
       Paths.get("")
     }
@@ -146,7 +159,7 @@ object ZipIO {
   }
 
   def unzipToFolder(zip: ZipFile, targetDir: Path, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean): Box[List[Path]] = {
-   withUnziped(zip, includeHiddenFiles, truncateCommonPrefix) { (name, in) =>
+    withUnziped(zip, includeHiddenFiles, truncateCommonPrefix) { (name, in) =>
       val path = targetDir.resolve(name)
       if (path.getParent != null) {
         PathUtils.ensureDirectory(path.getParent)

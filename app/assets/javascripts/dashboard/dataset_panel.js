@@ -1,5 +1,5 @@
 import * as React from "react";
-import { Row, Col, Menu, Dropdown, Card, Icon } from "antd";
+import { Row, Col, Card } from "antd";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 
@@ -8,8 +8,6 @@ import type { DatasetType } from "dashboard/dataset_view";
 const padding = 16;
 const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
 const thumbnailDimension = "500";
-const smallScreenWidth = 992;
-const mediumScreenWidth = 1600;
 
 type Props = {
   datasets: Array<DatasetType>,

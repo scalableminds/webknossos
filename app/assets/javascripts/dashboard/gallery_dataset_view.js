@@ -42,28 +42,28 @@ class GalleryDatasetView extends React.PureComponent<Props> {
   };
 
   render() {
-    const datasets = Utils.filterWithSearchQueryAND(
+    const filteredDatasets = Utils.filterWithSearchQueryAND(
       this.props.datasets.filter(ds => ds.isActive),
       ["name", "description"],
       this.props.searchQuery,
     );
 
-    const groupedDatasets = _.chain(datasets)
+    const groupedDatasets = _.chain(filteredDatasets)
       .groupBy("owningOrganization")
       .entries()
-      .map(([organization, datasets]) => {
+      .map(([organization, datasets]) =>
         // Sort each group of datasets
-        return [
+        [
           organization,
           datasets.sort(Utils.localeCompareBy(([]: DatasetType[]), "formattedCreated", false)),
-        ];
-      })
+        ],
+      )
       .value()
       .sort(
         // Sort groups by creation date of first dataset
         Utils.localeCompareBy(
           ([]: DatasetType[]),
-          ([organization, datasets]) => datasets[0].formattedCreated,
+          ([_organization, datasets]) => datasets[0].formattedCreated,
           false,
         ),
       );

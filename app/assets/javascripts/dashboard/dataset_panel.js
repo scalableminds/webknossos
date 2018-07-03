@@ -26,7 +26,6 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     this.state = {
       showLessContent: true,
     };
-    this.handleClick = this.handleClick.bind(this);
   }
 
   handleClick = () => {
@@ -139,46 +138,21 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     );
   };
 
-  getDatasetsToDisplay: Array<DatasetType> = () => {
+  getDatasetsToDisplay = (): Array<DatasetType> => {
     if (!this.state.showLessContent) {
       return this.props.datasets;
     }
-    let datasets;
-    const width = window.innerWidth;
-    if (width < smallScreenWidth) {
-      // when there is only one dataset in each row
-      datasets = this.props.datasets.slice(0, 3);
-    } else if (width < mediumScreenWidth) {
-      // when there are two
-      datasets = this.props.datasets.slice(0, 6);
-    } else {
-      // when there are three
-      datasets = this.props.datasets.slice(0, 9);
-    }
-    return datasets;
+
+    return this.props.datasets.slice(0, 6);
   };
 
   renderShowMoreLink = () => {
-    const width = window.innerWidth;
-    if (width < smallScreenWidth) {
-      if (this.props.datasets.length <= 3) {
-        return null;
-      }
-    } else if (width < mediumScreenWidth) {
-      if (this.props.datasets.length <= 6) {
-        return null;
-      }
-    } else if (this.props.datasets.length <= 9) {
-      return null;
-    }
     return (
       <a className="show-more-link" onClick={this.handleClick}>
         {this.state.showLessContent ? "show more" : "show less"}
       </a>
     );
   };
-
-  // TODO listen to width resizing and trigger rerender if entering "another level of width"
 
   render() {
     return (

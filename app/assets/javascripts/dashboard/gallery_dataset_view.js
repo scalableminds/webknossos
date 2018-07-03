@@ -7,6 +7,7 @@ import Utils from "libs/utils";
 import messages from "messages";
 import { createExplorational } from "admin/admin_rest_api";
 import DatasetPanel from "dashboard/dataset_panel";
+import _ from "lodash";
 
 import type { DatasetType } from "dashboard/dataset_view";
 import type { OxalisState } from "oxalis/store";
@@ -40,44 +41,41 @@ class GalleryDatasetView extends React.PureComponent<Props> {
     }
   };
 
-  sortByOrganisation(datasets: DatasetType[]) {
-    const sortedDatasets = [];
-    for (let pos = 0; pos < datasets.length; pos++) {
-      const dataset = datasets[pos];
-      let found = false;
-      for (let bucket = 0; bucket < sortedDatasets.length && !found; bucket++) {
-        if (sortedDatasets[bucket].owningOrganization === dataset.owningOrganization) {
-          sortedDatasets[bucket].datasets.push(dataset);
-          found = true;
-        }
-      }
-      if (!found) {
-        const datasetArray = [dataset];
-        const organisationWithDatasets = {
-          owningOrganization: dataset.owningOrganization,
-          datasets: datasetArray,
-        };
-        sortedDatasets.push(organisationWithDatasets);
-      }
-    }
-    return sortedDatasets;
-  }
-
   render() {
     const datasets = Utils.filterWithSearchQueryAND(
       this.props.datasets.filter(ds => ds.isActive),
       ["name", "description"],
       this.props.searchQuery,
-    ).sort(Utils.localeCompareBy(([]: DatasetType[]), "formattedCreated", false));
-    const sortedDatasets = this.sortByOrganisation(datasets);
+    );
+
+    const groupedDatasets = _.chain(datasets)
+      .groupBy("owningOrganization")
+      .entries()
+      .map(([organization, datasets]) => {
+        // Sort each group of datasets
+        return [
+          organization,
+          datasets.sort(Utils.localeCompareBy(([]: DatasetType[]), "formattedCreated", false)),
+        ];
+      })
+      .value()
+      .sort(
+        // Sort groups by creation date of first dataset
+        Utils.localeCompareBy(
+          ([]: DatasetType[]),
+          ([organization, datasets]) => datasets[0].formattedCreated,
+          false,
+        ),
+      );
+
     return (
       <React.Fragment>
-        {sortedDatasets.map(ds => (
+        {groupedDatasets.map(([organization, datasets]) => (
           <DatasetPanel
             className="dataset-panel"
-            key={ds.owningOrganization}
-            owningOrganization={ds.owningOrganization}
-            datasets={ds.datasets}
+            key={organization}
+            owningOrganization={organization}
+            datasets={datasets}
           />
         ))}
       </React.Fragment>

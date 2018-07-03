@@ -68,6 +68,10 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         ),
       );
 
+    if (groupedDatasets.length > 0 && window.location.toString().includes("testMulti")) {
+      groupedDatasets.push(["Test Org", groupedDatasets[0][1]]);
+    }
+
     const hasMultipleOrganizations = groupedDatasets.length > 1;
     return (
       <React.Fragment>

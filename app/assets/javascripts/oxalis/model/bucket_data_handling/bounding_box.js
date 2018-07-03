@@ -8,6 +8,8 @@ import constants, { Vector3Indicies } from "oxalis/constants";
 import type { Vector3, Vector4, BoundingBoxType } from "oxalis/constants";
 import type DataCube from "oxalis/model/bucket_data_handling/data_cube";
 import type { Bucket } from "oxalis/model/bucket_data_handling/bucket";
+import { getResolutions } from "oxalis/model/accessors/dataset_accessor";
+import Store from "oxalis/store";
 
 class BoundingBox {
   boundingBox: ?BoundingBoxType;
@@ -34,7 +36,7 @@ class BoundingBox {
   }
 
   getBoxForZoomStep = _.memoize((zoomStep: number): BoundingBoxType => {
-    const resolution = this.cube.layerInfo.resolutions[zoomStep];
+    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
     // No `map` for performance reasons
     const min = [0, 0, 0];
     const max = [0, 0, 0];
@@ -69,9 +71,8 @@ class BoundingBox {
       bucket.isPartlyOutsideBoundingBox = true;
     }
 
-    const { resolutions } = this.cube.layerInfo;
     const zoomStep = bucketAddress[3];
-    const resolution = resolutions[zoomStep];
+    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
 
     const baseVoxel = bucketAddress
       .slice(0, 3)

@@ -30,15 +30,21 @@ import PlaneMaterialFactory from "oxalis/geometries/materials/plane_material_fac
 class ArbitraryPlane {
   mesh: THREE.Mesh;
   isDirty: boolean;
-  textureMaterial: THREE.RawShaderMaterial;
+  stopStoreListening: () => void;
+  materialFactory: PlaneMaterialFactory;
 
   constructor() {
     this.isDirty = true;
     this.mesh = this.createMesh();
 
-    Store.subscribe(() => {
+    this.stopStoreListening = Store.subscribe(() => {
       this.isDirty = true;
     });
+  }
+
+  destroy() {
+    this.stopStoreListening();
+    this.materialFactory.stopListening();
   }
 
   updateAnchorPoints(anchorPoint: ?Vector4, fallbackAnchorPoint: ?Vector4): void {
@@ -92,11 +98,12 @@ class ArbitraryPlane {
   }
 
   createMesh() {
-    this.textureMaterial = new PlaneMaterialFactory(OrthoViews.PLANE_XY, 4).setup().getMaterial();
+    this.materialFactory = new PlaneMaterialFactory(OrthoViews.PLANE_XY, false, 4);
+    const textureMaterial = this.materialFactory.setup().getMaterial();
 
     const plane = new THREE.Mesh(
       new THREE.PlaneGeometry(constants.VIEWPORT_WIDTH, constants.VIEWPORT_WIDTH, 1, 1),
-      this.textureMaterial,
+      textureMaterial,
     );
     plane.rotation.x = Math.PI;
 

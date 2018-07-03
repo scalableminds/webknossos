@@ -1,39 +1,65 @@
 // @flow
 
 import Base64 from "base64-js";
-
-import BucketBuilder from "oxalis/model/bucket_data_handling/bucket_builder";
 import Request from "libs/request";
 import Store from "oxalis/store";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import { updateBucket } from "oxalis/model/sagas/update_actions";
 import Utils from "libs/utils";
 import { doWithToken } from "admin/admin_rest_api";
-import type { BucketInfo } from "oxalis/model/bucket_data_handling/bucket_builder";
 import type { DataBucket } from "oxalis/model/bucket_data_handling/bucket";
-import type { Vector4 } from "oxalis/constants";
+import type { Vector3, Vector4 } from "oxalis/constants";
 import type { DataLayerType } from "oxalis/store";
+import { getResolutions, isSegmentationLayer } from "oxalis/model/accessors/dataset_accessor.js";
+import { bucketPositionToGlobalAddress } from "oxalis/model/helpers/position_converter";
+import constants from "oxalis/constants";
 
 export const REQUEST_TIMEOUT = 30000;
 
-export function getBitDepth(layerInfo: DataLayerType): number {
-  return parseInt(layerInfo.elementClass.substring(4), 10);
-}
+export type SendBucketInfo = {
+  position: Vector3,
+  zoomStep: number,
+  cubeSize: number,
+};
 
-function buildBuckets(layerInfo: DataLayerType, batch: Array<Vector4>): Array<BucketInfo> {
-  return batch.map((bucketAddress: Vector4) =>
-    BucketBuilder.fromZoomedAddress(bucketAddress, layerInfo.resolutions),
-  );
+type RequestBucketInfo = {
+  ...SendBucketInfo,
+  fourBit: boolean,
+};
+
+// Converts a zoomed address ([x, y, z, zoomStep] array) into a bucket JSON
+// object as expected by the server on bucket request
+const createRequestBucketInfo = (
+  zoomedAddress: Vector4,
+  resolutions: Array<Vector3>,
+  fourBit: boolean,
+): RequestBucketInfo => ({
+  ...createSendBucketInfo(zoomedAddress, resolutions),
+  fourBit,
+});
+
+function createSendBucketInfo(zoomedAddress: Vector4, resolutions: Array<Vector3>): SendBucketInfo {
+  return {
+    position: bucketPositionToGlobalAddress(zoomedAddress, resolutions),
+    zoomStep: zoomedAddress[3],
+    cubeSize: constants.BUCKET_WIDTH,
+  };
 }
 
 export async function requestFromStore(
   layerInfo: DataLayerType,
   batch: Array<Vector4>,
 ): Promise<Uint8Array> {
-  const bucketInfo = buildBuckets(layerInfo, batch);
+  const fourBit =
+    Store.getState().datasetConfiguration.fourBit &&
+    !isSegmentationLayer(Store.getState().dataset, layerInfo.name);
+  const resolutions = getResolutions(Store.getState().dataset);
+  const bucketInfo = batch.map(zoomedAddress =>
+    createRequestBucketInfo(zoomedAddress, resolutions, fourBit),
+  );
+
   return doWithToken(async token => {
     const state = Store.getState();
-    const wasFourBit = state.datasetConfiguration.fourBit;
     const datasetName = state.dataset.name;
     const dataStoreUrl = state.dataset.dataStore.url;
 
@@ -46,7 +72,7 @@ export async function requestFromStore(
     );
 
     let result = new Uint8Array(responseBuffer);
-    if (wasFourBit) {
+    if (fourBit) {
       result = decodeFourBit(result);
     }
     return result;
@@ -69,10 +95,7 @@ function decodeFourBit(bufferArray: Uint8Array): Uint8Array {
   return newColors;
 }
 
-export async function sendToStore(
-  layerInfo: DataLayerType,
-  batch: Array<DataBucket>,
-): Promise<void> {
+export async function sendToStore(batch: Array<DataBucket>): Promise<void> {
   const YIELD_AFTER_X_BUCKETS = 3;
   let counter = 0;
   const items = [];
@@ -82,7 +105,10 @@ export async function sendToStore(
     // eslint-disable-next-line no-await-in-loop
     if (counter % YIELD_AFTER_X_BUCKETS === 0) await Utils.sleep(1);
     const bucketData = bucket.getData();
-    const bucketInfo = BucketBuilder.fromZoomedAddress(bucket.zoomedAddress, layerInfo.resolutions);
+    const bucketInfo = createSendBucketInfo(
+      bucket.zoomedAddress,
+      getResolutions(Store.getState().dataset),
+    );
     items.push(updateBucket(bucketInfo, Base64.fromByteArray(bucketData)));
   }
   Store.dispatch(pushSaveQueueAction(items));

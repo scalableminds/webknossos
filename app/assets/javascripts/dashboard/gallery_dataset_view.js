@@ -68,7 +68,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
       this.props.datasets.filter(ds => ds.isActive),
       ["name", "description"],
       this.props.searchQuery,
-    ).sort(Utils.localeCompareBy("formattedCreated", false));
+    ).sort(Utils.localeCompareBy(([]: DatasetType[]), "formattedCreated", false));
     const sortedDatasets = this.sortByOrganisation(datasets);
     return (
       <React.Fragment>

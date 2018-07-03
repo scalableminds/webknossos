@@ -110,7 +110,7 @@ object ZipIO {
     import collection.JavaConverters._
     val zipEntries = zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).toList
 
-    //color, mask, segmentation
+    //color, mask, segmentation are the values for dataSet layer categories
     val commonPrefix = if (truncateCommonPrefix) {
       val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
       val strippedPaths = List("color", "mask", "segmentation").flatMap(stripPathFrom(commonPrefixNotFixed, _))

@@ -14,6 +14,7 @@ const mediumScreenWidth = 1600;
 type Props = {
   datasets: Array<DatasetType>,
   owningOrganization: string,
+  showOrganizationHeader: boolean,
 };
 
 type State = {
@@ -157,7 +158,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
   render() {
     return (
       <div className="dataset-panel">
-        <h1>{this.props.owningOrganization}</h1>
+        {this.props.showOrganizationHeader && <h1>{this.props.owningOrganization}</h1>}
         <Row gutter={padding}>
           {this.getDatasetsToDisplay().map(ds => (
             <Col className="gallery-dataset-col" {...columnSpan} key={ds.name}>

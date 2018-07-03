@@ -68,10 +68,12 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         ),
       );
 
+    const hasMultipleOrganizations = groupedDatasets.length > 1;
     return (
       <React.Fragment>
         {groupedDatasets.map(([organization, datasets]) => (
           <DatasetPanel
+            showOrganizationHeader={hasMultipleOrganizations}
             className="dataset-panel"
             key={organization}
             owningOrganization={organization}

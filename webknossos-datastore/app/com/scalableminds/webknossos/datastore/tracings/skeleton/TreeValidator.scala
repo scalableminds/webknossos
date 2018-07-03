@@ -8,15 +8,6 @@ import net.liftweb.util.A
 import scala.collection.mutable
 
 object TreeValidator {
-
-  def validateAdditionalInformation(trees: Seq[Tree], branchPoints: Seq[BranchPoint], comments: Seq[Comment], treeGroups: Seq[TreeGroup]): Box[Unit] =
-    for{
-      _ <- checkNoDuplicateTreeGroupIds(treeGroups)
-      _ <- checkAllTreeGroupIdsUsedExist(trees, treeGroups)
-      _ <- checkAllNodesUsedInBranchPointsExist(trees, branchPoints)
-      _ <- checkAllNodesUsedInCommentsExist(trees, comments)
-    } yield Full(())
-
   def validateTrees(trees: Seq[Tree]): Box[Unit] = {
     for {
       _ <- checkNoDuplicateTreeIds(trees)
@@ -39,7 +30,7 @@ object TreeValidator {
   }
 
   private def checkNoDuplicateNodeIds(trees: Seq[Tree]): Box[Unit] = {
-    val nodeIds = trees.flatMap(_.nodes).map(_.id)
+    val nodeIds = getAllNodeIds(trees)
     val distinctNodeIds = nodeIds.distinct
     if (nodeIds.size == distinctNodeIds.size) {
       Full(())
@@ -110,7 +101,7 @@ object TreeValidator {
       }
     }
 
-  private def checkNoDuplicateTreeGroupIds(treeGroups: Seq[TreeGroup]) = {
+  def checkNoDuplicateTreeGroupIds(treeGroups: Seq[TreeGroup]) = {
     val treeGroupIds = getAllTreeGroupIds(treeGroups, Seq[Int]())
     val distinctTreeGroupIds = treeGroupIds.distinct
     if (treeGroupIds.size == distinctTreeGroupIds.size) {
@@ -120,8 +111,8 @@ object TreeValidator {
     }
   }
 
-  private def checkAllNodesUsedInCommentsExist(trees: Seq[Tree], comments: Seq[Comment]): Box[Unit] = {
-    val nodesInAllTrees = trees.flatMap(_.nodes.map(_.id))
+  def checkAllNodesUsedInCommentsExist(trees: Seq[Tree], comments: Seq[Comment]): Box[Unit] = {
+    val nodesInAllTrees = getAllNodeIds(trees)
     val nodesInComments = comments.map(_.nodeId).distinct
 
     val nodesOnlyInComments = nodesInComments.diff(nodesInAllTrees)
@@ -132,8 +123,8 @@ object TreeValidator {
     }
   }
 
-  private def checkAllNodesUsedInBranchPointsExist(trees: Seq[Tree], branchPoints: Seq[BranchPoint]): Box[Unit] = {
-      val nodesInAllTrees = trees.flatMap(_.nodes).map(_.id)
+  def checkAllNodesUsedInBranchPointsExist(trees: Seq[Tree], branchPoints: Seq[BranchPoint]): Box[Unit] = {
+      val nodesInAllTrees = getAllNodeIds(trees)
       val nodesInBranchPoints = branchPoints.map(_.nodeId).distinct
 
       val nodesOnlyInBranchPoints = nodesInBranchPoints.diff(nodesInAllTrees)
@@ -144,7 +135,7 @@ object TreeValidator {
       }
     }
 
-  private def checkAllTreeGroupIdsUsedExist(trees: Seq[Tree], treeGroups: Seq[TreeGroup]) = {
+  def checkAllTreeGroupIdsUsedExist(trees: Seq[Tree], treeGroups: Seq[TreeGroup]) = {
     val existingTreeGroups = getAllTreeGroupIds(treeGroups, Seq[Int]())
     val treeGroupsInTrees = trees.flatMap(_.groupId).distinct
 
@@ -172,4 +163,5 @@ object TreeValidator {
     }
   }
 
+  private def getAllNodeIds(trees: Seq[Tree]) = trees.flatMap(_.nodes).map(_.id)
 }

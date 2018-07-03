@@ -99,46 +99,36 @@ class GalleryDatasetView extends React.PureComponent<Props> {
     );
 
     return (
-      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
-        <span
-          className="dataset-thumbnail"
-          title="Preview of the dataset"
-          style={{
-            background: `url(${
-              dataset.thumbnailURL
-            }?w=${thumbnailDimension}&h=${thumbnailDimension})`,
-            backgroundSize: "cover",
-          }}
-        >
-          <div className="dataset-thumbnail-buttons">
-            <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
-              <Icon type="eye-o" className="view-button" />
-            </a>
-            <a
-              href="#"
-              title="Create skeleton tracing"
-              onClick={() => this.createTracing(dataset, "skeleton", false)}
-              style={{ backgroundColor: isUserLoggedIn ? "" : "transparent" }}
-            >
-              <img src="/assets/images/skeleton.svg" alt="Skeleton" />
-            </a>
-            {volumeTracingMenu}
-          </div>
-        </span>
-        <div className="dataset-description">
-          <div className="description-flex">
-            <h3>
-              {dataset.displayName != null && dataset.displayName !== ""
-                ? dataset.displayName
-                : dataset.name}
-            </h3>
-            <div className="dataset-description-body">
-              <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
-              {description}
+      <a href={`#/datasets/${dataset.name}/view`} title="View Dataset">
+        <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
+          <span className="dataset-thumbnail" title="Click to view dataset">
+            <div
+              className="dataset-thumbnail-image"
+              style={{
+                background: `url(${
+                  dataset.thumbnailURL
+                }?w=${thumbnailDimension}&h=${thumbnailDimension})`,
+                backgroundSize: "cover",
+                width: "100%",
+                height: "100%",
+              }}
+            />
+          </span>
+          <div className="dataset-description">
+            <div className="description-flex">
+              <h3>
+                {dataset.displayName != null && dataset.displayName !== ""
+                  ? dataset.displayName
+                  : dataset.name}
+              </h3>
+              <div className="dataset-description-body">
+                <p>Scale: {TemplateHelpers.formatScale(dataset.dataSource.scale)}</p>
+                {description}
+              </div>
             </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </a>
     );
   }
 

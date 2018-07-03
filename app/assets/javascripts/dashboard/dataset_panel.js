@@ -15,6 +15,7 @@ type Props = {
   datasets: Array<DatasetType>,
   owningOrganization: string,
   showOrganizationHeader: boolean,
+  limitDefaultDatasetCount: boolean,
 };
 
 type State = {
@@ -89,7 +90,9 @@ class DatasetPanel extends React.PureComponent<Props, State> {
   render() {
     const maybeCroppedDatasets = this.props.datasets.slice(
       0,
-      this.state.showLessContent ? croppedDatasetCount : this.props.datasets.length,
+      this.state.showLessContent && this.props.limitDefaultDatasetCount
+        ? croppedDatasetCount
+        : this.props.datasets.length,
     );
 
     return (
@@ -102,9 +105,11 @@ class DatasetPanel extends React.PureComponent<Props, State> {
             </Col>
           ))}
         </Row>
-        <a className="show-more-link" onClick={this.handleClick}>
-          {this.state.showLessContent ? "show more" : "show less"}
-        </a>
+        {this.props.limitDefaultDatasetCount && (
+          <a className="show-more-link" onClick={this.handleClick}>
+            {this.state.showLessContent ? "show more" : "show less"}
+          </a>
+        )}
       </div>
     );
   }

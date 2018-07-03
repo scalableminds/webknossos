@@ -74,6 +74,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         {groupedDatasets.map(([organization, datasets]) => (
           <DatasetPanel
             showOrganizationHeader={hasMultipleOrganizations}
+            limitDefaultDatasetCount={hasMultipleOrganizations}
             className="dataset-panel"
             key={organization}
             owningOrganization={organization}

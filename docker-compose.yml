@@ -123,6 +123,8 @@ services:
           -Dapplication.insertInitialData=false"
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
+    volumes:
+      - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
   postgres:
     image: postgres:10-alpine

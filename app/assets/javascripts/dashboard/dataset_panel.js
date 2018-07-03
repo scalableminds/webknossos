@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Row, Col, Card, Popover, Button } from "antd";
+import { Row, Col, Card, Popover } from "antd";
 import Markdown from "react-remarkable";
 import TemplateHelpers from "libs/template_helpers";
 import _ from "lodash";
@@ -107,17 +107,13 @@ class DatasetPanel extends React.PureComponent<Props, State> {
     this.setState({ showLessContent: !this.state.showLessContent });
   };
 
-  renderCard = (dataset: DatasetType) => {
-    const description = getDescription(dataset);
-
-    return (
-      <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
-        <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
-          <ThumbnailAndDescriptionFromDataset dataset={dataset} />
-        </Card>
-      </a>
-    );
-  };
+  renderCard = (dataset: DatasetType) => (
+    <a href={`/datasets/${dataset.name}/view`} title="View Dataset">
+      <Card bodyStyle={{ padding: 0 }} className="spotlight-item-card">
+        <ThumbnailAndDescriptionFromDataset dataset={dataset} />
+      </Card>
+    </a>
+  );
 
   renderMultiDatasetCard = (groupName: string, datasets: DatasetType[]) => {
     const multiDescription = (
@@ -125,14 +121,13 @@ class DatasetPanel extends React.PureComponent<Props, State> {
         This collection consists of multiple datasets:
         <ul>
           {datasets.map(dataset => {
-            const description = getDescription(dataset);
             const popoverContent = (
               <div className="spotlight-popover-card">
                 <ThumbnailAndDescriptionFromDataset dataset={dataset} />
               </div>
             );
             return (
-              <li>
+              <li key={dataset.name}>
                 <Popover
                   placement="left"
                   content={popoverContent}

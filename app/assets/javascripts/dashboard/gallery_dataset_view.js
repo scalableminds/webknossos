@@ -22,6 +22,8 @@ type Props = {
   searchQuery: string,
 } & StateProps;
 
+const croppedDatasetCount = 6;
+
 class GalleryDatasetView extends React.PureComponent<Props> {
   createTracing = async (
     dataset: DatasetType,
@@ -78,7 +80,7 @@ class GalleryDatasetView extends React.PureComponent<Props> {
         {groupedDatasets.map(([organization, datasets]) => (
           <DatasetPanel
             showOrganizationHeader={hasMultipleOrganizations}
-            limitDefaultDatasetCount={hasMultipleOrganizations}
+            croppedDatasetCount={hasMultipleOrganizations ? croppedDatasetCount : null}
             className="dataset-panel"
             key={organization}
             owningOrganization={organization}

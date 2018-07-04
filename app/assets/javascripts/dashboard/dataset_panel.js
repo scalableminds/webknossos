@@ -8,14 +8,13 @@ import _ from "lodash";
 import type { DatasetType } from "dashboard/dataset_view";
 
 const columnSpan = { xs: 24, sm: 24, md: 24, lg: 12, xl: 12, xxl: 8 };
-const thumbnailDimension = "500";
-const croppedDatasetCount = 6;
+const thumbnailDimension = 500;
 
 type Props = {
   datasets: Array<DatasetType>,
   owningOrganization: string,
   showOrganizationHeader: boolean,
-  limitDefaultDatasetCount: boolean,
+  croppedDatasetCount: ?number,
 };
 
 type State = {
@@ -159,12 +158,10 @@ class DatasetPanel extends React.PureComponent<Props, State> {
       // Instead of dataset.name, this could be grouped by a group tag
       _.groupBy(this.props.datasets, dataset => dataset.name),
     );
-    const maybeCroppedDatasetsGroup = groupedDatasets.slice(
-      0,
-      this.state.showLessContent && this.props.limitDefaultDatasetCount
-        ? croppedDatasetCount
-        : this.props.datasets.length,
-    );
+    const maybeCroppedDatasetsGroup =
+      this.state.showLessContent && this.props.croppedDatasetCount != null
+        ? groupedDatasets.slice(0, this.props.croppedDatasetCount)
+        : groupedDatasets;
 
     return (
       <div className="dataset-panel">
@@ -178,12 +175,12 @@ class DatasetPanel extends React.PureComponent<Props, State> {
             </Col>
           ))}
         </Row>
-        {this.props.limitDefaultDatasetCount &&
-          groupedDatasets.length > croppedDatasetCount && (
-            <a className="show-more-link" onClick={this.handleClick}>
-              {this.state.showLessContent ? "show more" : "show less"}
-            </a>
-          )}
+        {this.props.croppedDatasetCount != null &&
+        groupedDatasets.length > this.props.croppedDatasetCount ? (
+          <a className="show-more-link" onClick={this.handleClick}>
+            {this.state.showLessContent ? "show more" : "show less"}
+          </a>
+        ) : null}
       </div>
     );
   }

@@ -4,7 +4,7 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Icon, Spin, Button, Input, Modal } from "antd";
+import { Table, Icon, Spin, Button, Input, Modal, List } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -14,6 +14,7 @@ import {
   deleteProject,
   pauseProject,
   resumeProject,
+  getUsersWithOpenTaskOfProject,
 } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -125,6 +126,23 @@ class ProjectListView extends React.PureComponent<Props, State> {
         });
       },
     });
+  };
+
+  showActiveUsersModal = async (project: APIProjectType) => {
+    const data = await getUsersWithOpenTaskOfProject(project.name);
+    Modal.info({
+      title: `Users with open tasks in project ${project.name}`,
+      width: 800,
+      iconType: "info-circle-o",
+      content: (
+        <List
+          size="large"
+          bordered
+          dataSource={data}
+          renderItem={item => <List.Item>{item}</List.Item>}
+        />
+      ),
+    }); // TODO make a table with all users in it
   };
 
   render() {
@@ -262,7 +280,10 @@ class ProjectListView extends React.PureComponent<Props, State> {
                       <Icon type="download" />Download
                     </a>
                     <br />
-
+                    <a onClick={_.partial(this.showActiveUsersModal, project)}>
+                      <Icon type="info-circle-o" />Show active users
+                    </a>
+                    <br />
                     {project.owner.email === this.props.activeUser.email ? (
                       <a onClick={_.partial(this.deleteProject, project)}>
                         <Icon type="delete" />Delete

@@ -312,6 +312,10 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
   return transformProject(project);
 }
 
+export function getUsersWithOpenTaskOfProject(projectName: string): Promise {
+  return Request.receiveJSON(`api/projects/${projectName}/usersWithOpenTasks`);
+}
+
 // ### Tasks
 export async function peekNextTasks(): Promise<?APITaskType> {
   return Request.receiveJSON("/api/user/tasks/peek");

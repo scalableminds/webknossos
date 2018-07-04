@@ -35,7 +35,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         <div style={{ textAlign: "center", paddingBottom: 32, marginTop: -32 }}>
-          <i className="fa fa-building" style={{ fontSize: 180, color: "#c3c1c1" }} />
+          <i className="fa fa-building" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
           <p style={{ fontSize: 24, margin: "14px 0" }}>Create your organization</p>
         </div>
         <Row
@@ -68,7 +68,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         <div style={{ textAlign: "center", paddingBottom: 32 }}>
-          <Icon type="user" style={{ fontSize: 180, color: "#c3c1c1" }} />
+          <Icon type="user" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
           <p style={{ fontSize: 24, margin: "14px 0" }}>Create an admin account</p>
         </div>
         <RegistrationForm
@@ -85,7 +85,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     return (
       <React.Fragment>
         <div style={{ textAlign: "center", paddingBottom: 32 }}>
-          <Icon type="cloud-upload" style={{ fontSize: 180, color: "#c3c1c1" }} />
+          <Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
           <p style={{ fontSize: 24, margin: "14px 0" }}>
             Upload the first dataset into your organization.
           </p>

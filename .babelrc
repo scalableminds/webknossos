@@ -46,6 +46,7 @@
     "transform-class-properties",
     "transform-flow-strip-types",
     ["import", { libraryName: "antd" }],
+    ["import", { libraryName: "lodash" }],
     "syntax-dynamic-import",
     ["transform-object-rest-spread", { "useBuiltIns": true }]
   ],

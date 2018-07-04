@@ -12,6 +12,7 @@
       plugins: [
         "transform-class-properties",
         "transform-flow-strip-types",
+        "istanbul",
         ["import", { libraryName: "antd" }],
         "syntax-dynamic-import",
         ["transform-object-rest-spread", { "useBuiltIns": true }],

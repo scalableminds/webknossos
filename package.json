@@ -103,6 +103,7 @@
     "Enumjs": "scalableminds/Enumjs",
     "airbrake-js": "^1.4.0",
     "antd": "3.5.4",
+    "babel-plugin-istanbul": "^4.1.6",
     "backbone-events-standalone": "^0.2.7",
     "base64-js": "^1.2.1",
     "classnames": "^2.2.5",

@@ -44,7 +44,7 @@ class Navbar extends React.PureComponent<Props> {
       display: "flex",
       alignItems: "center",
       color: "rgba(255, 255, 255, 0.67)",
-      background: "#404040",
+      background: "#001529",
     };
 
     const isAuthenticated = this.props.isAuthenticated && this.props.activeUser != null;

@@ -22,8 +22,8 @@ import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
 import { handleGenericError } from "libs/error_handling";
 
-const { Column } = Table;
-const { Search } = Input;
+const Column = Table.Column;
+const Search = Input.Search;
 
 type StateProps = {
   activeUser: APIUserType,

@@ -157,5 +157,5 @@
   "nyc": {
     "sourceMap": false,
     "instrument": false
-  },
+  }
 }

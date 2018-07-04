@@ -153,5 +153,9 @@
     "snapshotDir": "app/assets/javascripts/test/snapshots",
     "concurrency": 8,
     "babel": {}
-  }
+  },
+  "nyc": {
+    "sourceMap": false,
+    "instrument": false
+  },
 }

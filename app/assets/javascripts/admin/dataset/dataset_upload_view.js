@@ -2,7 +2,7 @@
 import React from "react";
 import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
-import { Form, Input, Select, Button, Card, Spin, Upload, Icon } from "antd";
+import { Form, Input, Select, Button, Card, Spin, Upload, Icon, Col, Row } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 import Utils from "libs/utils";
@@ -22,6 +22,7 @@ type StateProps = {
 type Props = StateProps & {
   form: Object,
   history: RouterHistory,
+  withoutCard?: boolean,
 };
 
 type State = {
@@ -94,36 +95,48 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
   render() {
     const { getFieldDecorator } = this.props.form;
 
+    const Container = ({ children }) => {
+      if (this.props.withoutCard) {
+        return <React.Fragment>{children}</React.Fragment>;
+      } else {
+        return <Card title={<h3>Upload Dataset</h3>}>{children}</Card>;
+      }
+    };
+
     return (
       <div className="dataset-administration" style={{ padding: 5 }}>
         <Spin spinning={this.state.isUploading} size="large">
-          <Card title={<h3>Upload Dataset</h3>}>
+          <Container>
             <Form onSubmit={this.handleSubmit} layout="vertical">
-              <FormItem label="Dataset Name" hasFeedback>
-                {getFieldDecorator("name", {
-                  rules: [{ required: true }, { min: 3 }, { pattern: /[0-9a-zA-Z_-]+$/ }],
-                })(<Input autoFocus />)}
-              </FormItem>
-
-              <FormItem label="Datastore" hasFeedback>
-                {getFieldDecorator("datastore", {
-                  rules: [{ required: true }],
-                })(
-                  <Select
-                    showSearch
-                    placeholder="Select a Datastore"
-                    optionFilterProp="children"
-                    style={{ width: "100%" }}
-                  >
-                    {this.state.datastores.map((datastore: APIDataStoreType) => (
-                      <Option key={datastore.name} value={datastore.url}>
-                        {`${datastore.name}`}
-                      </Option>
-                    ))}
-                  </Select>,
-                )}
-              </FormItem>
-
+              <Row gutter={8}>
+                <Col span={12}>
+                  <FormItem label="Dataset Name" hasFeedback>
+                    {getFieldDecorator("name", {
+                      rules: [{ required: true }, { min: 3 }, { pattern: /[0-9a-zA-Z_-]+$/ }],
+                    })(<Input autoFocus />)}
+                  </FormItem>
+                </Col>
+                <Col span={12}>
+                  <FormItem label="Datastore" hasFeedback>
+                    {getFieldDecorator("datastore", {
+                      rules: [{ required: true }],
+                    })(
+                      <Select
+                        showSearch
+                        placeholder="Select a Datastore"
+                        optionFilterProp="children"
+                        style={{ width: "100%" }}
+                      >
+                        {this.state.datastores.map((datastore: APIDataStoreType) => (
+                          <Option key={datastore.name} value={datastore.url}>
+                            {`${datastore.name}`}
+                          </Option>
+                        ))}
+                      </Select>,
+                    )}
+                  </FormItem>
+                </Col>
+              </Row>
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
                   rules: [{ required: true }],
@@ -146,12 +159,12 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
               </FormItem>
 
               <FormItem>
-                <Button type="primary" htmlType="submit">
+                <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
                   Upload
                 </Button>
               </FormItem>
             </Form>
-          </Card>
+          </Container>
         </Spin>
       </div>
     );

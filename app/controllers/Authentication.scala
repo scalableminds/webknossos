@@ -421,7 +421,7 @@ class Authentication @Inject()(
     } yield organization
   }
 
-  private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo) = {
+  private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStoreSQL, token: String) = {
       RPC(s"${dataStore.url}/data/triggers/newOrganizationFolder")
         .withQueryString("token" -> token, "organizationName" -> organizationName)
@@ -429,9 +429,9 @@ class Authentication @Inject()(
     }
 
     for {
-      loginInfo <- env.combinedAuthenticatorService.findByLoginInfo(loginInfo).toFox
+      token <- env.combinedAuthenticatorService.tokenAuthenticatorService.createAndInit(loginInfo, TokenType.DataStore, deleteOld = false).toFox
       datastores <- DataStoreSQLDAO.findAll(GlobalAccessContext)
-      _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, loginInfo.id)))
+      _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, token)))
     } yield Full(())
 
   }

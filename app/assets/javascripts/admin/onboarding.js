@@ -36,7 +36,19 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <React.Fragment>
         <div style={{ textAlign: "center", paddingBottom: 32, marginTop: -32 }}>
           <i className="fa fa-building" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
-          <p style={{ fontSize: 24, margin: "14px 0" }}>Create your organization</p>
+          <p style={{ fontSize: 24, margin: "14px 0 0" }}>Create your organization</p>
+          <p
+            style={{
+              fontSize: 14,
+              margin: "14px 0",
+              color: "gray",
+              display: "inline-block",
+              width: 500,
+            }}
+          >
+            Within an organization, users can register and datasets can be uploaded. Granular
+            management and permissions can be achieved by creating teams.
+          </p>
         </div>
         <Row
           type="flex"
@@ -46,7 +58,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
           gutter={8}
         >
           <Col span={18}>
-            <Input size="large" placeholder="Your organization name" autofocus />
+            <Input size="large" placeholder="Your organization name" autoFocus />
           </Col>
           <Col span={6}>
             <Button
@@ -69,7 +81,19 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <React.Fragment>
         <div style={{ textAlign: "center", paddingBottom: 32 }}>
           <Icon type="user" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
-          <p style={{ fontSize: 24, margin: "14px 0" }}>Create an admin account</p>
+          <p style={{ fontSize: 24, margin: "14px 0 0" }}>Create an admin account</p>
+          <p
+            style={{
+              fontSize: 14,
+              margin: "14px 0",
+              color: "gray",
+              display: "inline-block",
+              width: 500,
+            }}
+          >
+            This will be the first admin account. It can be used to confirm user registrations,
+            define teams, create tasks and much more.
+          </p>
         </div>
         <RegistrationForm
           hidePrivacyStatement
@@ -86,8 +110,20 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <React.Fragment>
         <div style={{ textAlign: "center", paddingBottom: 32 }}>
           <Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
-          <p style={{ fontSize: 24, margin: "14px 0" }}>
+          <p style={{ fontSize: 24, margin: "14px 0 0" }}>
             Upload the first dataset into your organization.
+          </p>
+          <p
+            style={{
+              fontSize: 14,
+              margin: "14px 0",
+              color: "gray",
+              display: "inline-block",
+              width: 500,
+            }}
+          >
+            You can upload a dataset via drag and drop or by copying the dataset on the hosting
+            server (recommended for file sizes larger than 1 GB).
           </p>
         </div>
         <DatasetUploadView history={this.props.history} withoutCard />

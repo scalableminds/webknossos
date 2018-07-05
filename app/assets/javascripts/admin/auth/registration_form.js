@@ -117,7 +117,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
                 <Input
                   prefix={<Icon type="user" style={{ fontSize: 13 }} />}
                   placeholder="First Name"
-                  autofocus
+                  autoFocus
                 />,
               )}
             </FormItem>

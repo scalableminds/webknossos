@@ -65,7 +65,7 @@ class NMLUnitTestSuite extends FlatSpec {
     }
   }
 
-  "NML Parser" should "throw an error for invalid comment state" in {
+  "NML Parser" should "throw an error for invalid comment with a non-existent nodeId" in {
     // the comment nodeId is referring to a non-existent node therefore invalid
     val wrongTree = dummyTracing.trees(1).copy(comments = Seq(Comment(99, "test")))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
@@ -74,8 +74,7 @@ class NMLUnitTestSuite extends FlatSpec {
     //TODO: The parser currently doesn't check this
   }
 
-  it should "throw an error for invalid branchPoint state" in {
-    // the branchPoint nodeId is referring to a non-existent node therefore invalid
+  it should "throw an error for a branchPoint with a non-existent nodeId" in {
     val wrongTree = dummyTracing.trees(1).copy(branchPoints = Seq(BranchPoint(99, 0)))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
 
@@ -83,8 +82,7 @@ class NMLUnitTestSuite extends FlatSpec {
     //TODO: The parser currently doesn't check this
   }
 
-  it should "throw an error for invalid edge state" in {
-    // one of the nodeIds in the edge is referring to a non-existent node  therefore invalid
+  it should "throw an error for an edge which is referring to a non-existent node" in {
     val wrongTree = dummyTracing.trees(1).copy(edges = Seq(Edge(99, 5)))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
 

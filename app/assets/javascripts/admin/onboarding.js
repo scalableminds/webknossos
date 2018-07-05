@@ -22,8 +22,8 @@ type State = {
 
 function StepHeader({ header, subheader, icon, children }) {
   return (
-    <React.Fragment>
-      <div style={{ textAlign: "center", paddingBottom: 32, marginTop: -32 }}>
+    <div style={{ textAlign: "center" }}>
+      <div style={{ paddingBottom: 32, marginTop: -32 }}>
         {icon}
         <p style={{ fontSize: 24, margin: "14px 0 0" }}>{header}</p>
         <p
@@ -39,7 +39,7 @@ function StepHeader({ header, subheader, icon, children }) {
         </p>
       </div>
       {children}
-    </React.Fragment>
+    </div>
   );
 }
 
@@ -158,7 +158,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
             provides."
         icon={<Icon type="rocket" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
-        <Row type="flex" gutter={50} align="middle">
+        <Row type="flex" gutter={50} align="middle" style={{ marginBottom: 24 }}>
           <Col span={8}>
             <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
               Invite users and assign them to <a href="/teams">teams</a>. Teams can be used to

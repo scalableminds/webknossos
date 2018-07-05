@@ -70,14 +70,14 @@ class NMLUnitTestSuite extends FlatSpec {
     val wrongTree = dummyTracing.trees(1).copy(comments = Seq(Comment(99, "test")))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
 
-    assert(!isParseSuccessful(getParsedTracing(newTracing)))
+    assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
   }
 
   it should "throw an error for a branchPoint with a non-existent nodeId" in {
     val wrongTree = dummyTracing.trees(1).copy(branchPoints = Seq(BranchPoint(99, 0)))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
 
-    assert(!isParseSuccessful(getParsedTracing(newTracing)))
+    assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
   }
 
   it should "throw an error for an edge which is referring to a non-existent node" in {
@@ -126,12 +126,12 @@ class NMLUnitTestSuite extends FlatSpec {
     val wrongTree = dummyTracing.trees(1).copy(groupId = Some(9999))
     val newTracing = dummyTracing.copy(trees = Seq(dummyTracing.trees(0), wrongTree))
 
-    assert(!isParseSuccessful(getParsedTracing(newTracing)))
+    assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
   }
 
   it should "throw an error for duplicate groupId state" in {
     val newTracing = dummyTracing.copy(treeGroups = TreeGroup("Group", 3) +: dummyTracing.treeGroups)
 
-    assert(!isParseSuccessful(getParsedTracing(newTracing)))
+    assert(!isParseSuccessful(writeAndParseTracing(newTracing)))
   }
 }

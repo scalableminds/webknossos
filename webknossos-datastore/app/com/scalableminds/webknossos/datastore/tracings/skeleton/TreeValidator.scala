@@ -101,19 +101,11 @@ object TreeValidator {
       }
     }
 
-  def checkAllNodesUsedInCommentsExist(trees: Seq[Tree], comments: Seq[Comment]): Box[Unit] = {
-    checkAllNodesUsedExist(trees, comments.map(_.nodeId).distinct) match {
-      case Some(nodesOnlyInComments) => Failure(s"Some comments refer to non-existent nodes. comments: ${nodesOnlyInComments.mkString(", ")}")
-      case None => Full(())
-    }
-  }
+  def checkAllNodesUsedInCommentsExist(trees: Seq[Tree], comments: Seq[Comment]): Box[Unit] =
+    checkAllNodesUsedExist(trees, comments.map(_.nodeId).distinct, "comments")
 
-  def checkAllNodesUsedInBranchPointsExist(trees: Seq[Tree], branchPoints: Seq[BranchPoint]): Box[Unit] = {
-    checkAllNodesUsedExist(trees, branchPoints.map(_.nodeId).distinct) match {
-      case Some(nodesOnlyInBranchPoints) => Failure(s"Some branchPoints refer to non-existent nodes. branchPoints: ${nodesOnlyInBranchPoints.mkString(", ")}")
-      case None => Full(())
-    }
-  }
+  def checkAllNodesUsedInBranchPointsExist(trees: Seq[Tree], branchPoints: Seq[BranchPoint]): Box[Unit] =
+    checkAllNodesUsedExist(trees, branchPoints.map(_.nodeId).distinct, "branchPoints")
 
   def checkNoDuplicateTreeGroupIds(treeGroups: Seq[TreeGroup]): Box[Unit] = {
     val treeGroupIds = getAllTreeGroupIds(treeGroups, Seq[Int]())
@@ -153,14 +145,13 @@ object TreeValidator {
     }
   }
 
-  private def checkAllNodesUsedExist(trees: Seq[Tree], usedNodes: Seq[Int]) = {
+  private def checkAllNodesUsedExist(trees: Seq[Tree], usedNodes: Seq[Int], nodeName: String) = {
     val nodesInAllTrees = trees.flatMap(_.nodes).map(_.id)
 
     val nodesUsedButNonExistent = usedNodes.diff(nodesInAllTrees)
     if (nodesUsedButNonExistent.isEmpty) {
-      None
+      Full(())
     } else {
-      Some(nodesUsedButNonExistent)
-    }
+      Failure(s"Some $nodeName refer to non-existent nodes. $nodeName: ${nodesUsedButNonExistent.mkString(", ")}")    }
   }
 }

@@ -130,9 +130,10 @@ services:
       dockerfile: Dockerfile.puppeteer
     environment:
       - BRANCH
-    working_dir: /home/${USER_NAME:-pptruser}/webknossos
+    working_dir: /home/pptruser/webknossos
+    command: yarn test-screenshot
     volumes:
-      - ".:/home/${USER_NAME:-pptruser}/webknossos"
+      - ".:/home/pptruser/webknossos"
     user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   postgres:

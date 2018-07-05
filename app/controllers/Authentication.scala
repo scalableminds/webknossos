@@ -6,9 +6,12 @@ import javax.inject.Inject
 import com.mohiva.play.silhouette.api.LoginInfo
 import com.mohiva.play.silhouette.api.exceptions.ProviderException
 import com.mohiva.play.silhouette.api.util.Credentials
+import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.mail._
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.rpc.RPC
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.binary.{DataStoreSQL, DataStoreSQLDAO}
 import models.team._
 import models.user.UserService.{Mailer => _, _}
 import models.user._
@@ -389,7 +392,7 @@ class Authentication @Inject()(
                     organization <- createOrganization(signUpData.organization) ?~> Messages("organization.create.failed")
                     user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
-                    brainDBResult <- BrainTracing.register(user).toFox
+                    _ <- createOrganizationFolder(signUpData.organization, loginInfo)
                   } yield Ok
                 }
               case f: Failure => Fox.failure(f.msg)
@@ -415,11 +418,21 @@ class Authentication @Inject()(
       _ <- OrganizationSQLDAO.insertOne(organization)(GlobalAccessContext)
       _ <- TeamSQLDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- InitialDataService.insertLocalDataStoreIfEnabled
-      //_ <- createOrganizationFolder(organizationName)
     } yield organization
   }
 
-  private def createOrganizationFolder(organizationName: String) = {
+  private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo) = {
+    def sendRPCToDataStore(dataStore: DataStoreSQL, token: String) = {
+      RPC(s"${dataStore.url}/data/triggers/newOrganizationFolder")
+        .withQueryString("token" -> token, "organizationName" -> organizationName)
+        .get
+    }
+
+    for {
+      loginInfo <- env.combinedAuthenticatorService.findByLoginInfo(loginInfo).toFox
+      datastores <- DataStoreSQLDAO.findAll(GlobalAccessContext)
+      _ <- Fox.combined(datastores.map(sendRPCToDataStore(_, loginInfo.id)))
+    } yield Full(())
 
   }
 

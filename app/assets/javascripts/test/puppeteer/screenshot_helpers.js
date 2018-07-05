@@ -38,8 +38,10 @@ function bufferToPng(buffer, width, height) {
 }
 
 async function compareScreenshot(screenshotBuffer, width, height, path, name) {
-  const newScreenshot = await bufferToPng(screenshotBuffer, width, height);
-  const existingScreenshot = await openScreenshot(path, name);
+  const [newScreenshot, existingScreenshot] = await Promise.all([
+    bufferToPng(screenshotBuffer, width, height),
+    openScreenshot(path, name),
+  ]);
   if (existingScreenshot == null) {
     // If there is no existing screenshot, save the current one
     await saveScreenshot(newScreenshot, path, name);
@@ -58,8 +60,10 @@ async function compareScreenshot(screenshotBuffer, width, height, path, name) {
 
   if (pixelErrors > 0) {
     // If the screenshots are not equal, save the diff and the new screenshot
-    await saveScreenshot(diff, path, `${name}.diff`);
-    await saveScreenshot(newScreenshot, path, `${name}.new`);
+    await Promise.all([
+      saveScreenshot(diff, path, `${name}.diff`),
+      saveScreenshot(newScreenshot, path, `${name}.new`),
+    ]);
   }
   return pixelErrors;
 }

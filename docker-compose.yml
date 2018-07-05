@@ -126,6 +126,17 @@ services:
     volumes:
       - ./binaryData/Connectomics department:/home/${USER_NAME:-sbt-user}/webknossos/binaryData/Organization_X
 
+  screenshot-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.puppeteer
+    environment:
+      - BRANCH
+    working_dir: /home/${USER_NAME:-pptruser}/webknossos
+    volumes:
+      - ".:/home/${USER_NAME:-pptruser}/webknossos"
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
+
   postgres:
     image: postgres:10-alpine
     environment:

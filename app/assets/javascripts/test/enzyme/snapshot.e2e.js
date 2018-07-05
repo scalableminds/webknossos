@@ -11,7 +11,6 @@ import React from "react";
 import { Provider } from "react-redux";
 import { Router } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
-import { takeScreenshot } from "../tracing-view/tracing_view";
 
 // Those wrappers interfere with global.window and global.document otherwise
 mockRequire("libs/hammerjs_wrapper", {});
@@ -125,9 +124,4 @@ test("Projects", async t => {
 
   debugWrapper(projectListView, "ProjectListView");
   t.snapshot(createSnapshotable(projectListView), { id: "ProjectListView" });
-});
-
-test("TracingView", async t => {
-  await takeScreenshot();
-  t.is(1, 1);
 });

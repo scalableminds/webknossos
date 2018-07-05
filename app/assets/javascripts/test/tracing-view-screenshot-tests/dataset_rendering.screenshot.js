@@ -1,3 +1,4 @@
+/* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 const test = require("ava");
 const puppeteer = require("puppeteer");
 const pixelmatch = require("pixelmatch");

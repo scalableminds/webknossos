@@ -1,4 +1,4 @@
-version: '2.1'
+version: '2.2'
 
 services:
   webknossos:
@@ -46,20 +46,28 @@ services:
       - fossildb
 
   base:
-    image: scalableminds/sbt:sbt-0.13.15_mongo-3.4.10_node-9.x_jdk-8
+    image: scalableminds/webknossos-dev
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      cache_from:
+        - scalableminds/webknossos-dev
+        - scalableminds/webknossos-dev:${DEV_CACHE:-master}
     environment:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
       - USER_GID
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
+      - HOME=/root
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"
-      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/home/${USER_NAME:-sbt-user}/.m2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/home/${USER_NAME:-sbt-user}/.ivy2"
-      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/home/${USER_NAME:-sbt-user}/.sbt"
-      - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/usr/local/share/.cache/yarn"
+      - "${DOCKER_CACHE_PREFIX:-~}/.m2:/root/.m2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.ivy2:/root/.ivy2"
+      - "${DOCKER_CACHE_PREFIX:-~}/.sbt:/root/.sbt"
+      - "${DOCKER_CACHE_PREFIX:-~}/.yarn-cache:/root/.cache/yarn"
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   compile:
     extends:
@@ -91,30 +99,31 @@ services:
           -Dpostgres.url=$${POSTGRES_URL}"
     stdin_open: true
 
-  e2e-tests:
+  backend-tests:
     extends:
       service: base
     ports:
       - "5005:5005"
       - "9000:9000"
+    command: sbt -v -d "test-only backend.*"
+
+  e2e-tests:
+    extends:
+      service: backend-tests
     links:
       - postgres
       - fossildb
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
     command:
       - bash
       - -c
       - >
         sbt
         -v -d
-        "test-only * --
-          -Dconfig.file=./conf/application.conf
-          -Djava.net.preferIPv4Stack=true
-          -Dhttp.address=0.0.0.0
+        "test-only e2e.* --
           -Ddatastore.fossildb.address=fossildb
-          -Dpostgres.url=$${POSTGRES_URL}
-          -Dapplication.insertInitialData=false"
-    environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
+          -Dpostgres.url=$${POSTGRES_URL}"
 
   postgres:
     image: postgres:10-alpine

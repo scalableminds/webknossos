@@ -131,7 +131,7 @@ services:
     environment:
       - BRANCH
     working_dir: /home/pptruser/webknossos
-    command: yarn test-screenshot
+    command: bash -c 'for i in {1..3}; do yarn test-screenshot && break; done'
     volumes:
       - ".:/home/pptruser/webknossos"
     user: ${USER_UID:-1000}:${USER_GID:-1000}

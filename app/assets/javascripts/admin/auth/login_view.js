@@ -2,7 +2,6 @@
 import React from "react";
 import { Form, Icon, Input, Button, Col, Row } from "antd";
 import { withRouter, Link } from "react-router-dom";
-import Request from "libs/request";
 import messages from "messages";
 import Store from "oxalis/throttled_store";
 import { setActiveUserAction } from "oxalis/model/actions/user_actions";

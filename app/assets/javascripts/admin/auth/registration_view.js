@@ -3,9 +3,9 @@ import React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Row, Col, Card } from "antd";
 import type { RouterHistory } from "react-router-dom";
-import RegistrationForm from "./registration_form";
 import messages from "messages";
 import Toast from "libs/toast";
+import RegistrationForm from "./registration_form";
 
 type Props = {
   history: RouterHistory,

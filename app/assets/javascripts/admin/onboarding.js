@@ -17,6 +17,7 @@ type Props = {
 
 type State = {
   currentStep: number,
+  organizationName: string,
 };
 
 class OnboardingView extends React.PureComponent<Props, State> {
@@ -24,6 +25,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     super();
     this.state = {
       currentStep: 0,
+      organizationName: "",
     };
   }
 
@@ -58,7 +60,13 @@ class OnboardingView extends React.PureComponent<Props, State> {
           gutter={8}
         >
           <Col span={18}>
-            <Input size="large" placeholder="Your organization name" autoFocus />
+            <Input
+              size="large"
+              placeholder="Your organization name"
+              autoFocus
+              value={this.state.organizationName}
+              onChange={event => this.setState({ organizationName: event.target.value })}
+            />
           </Col>
           <Col span={6}>
             <Button
@@ -97,9 +105,10 @@ class OnboardingView extends React.PureComponent<Props, State> {
         </div>
         <RegistrationForm
           hidePrivacyStatement
-          organizationId="some_orgid"
+          organizationName={this.state.organizationName}
           onRegistered={this.advanceStep}
           confirmLabel="Create account"
+          tryAutoLogin
         />
       </React.Fragment>
     );

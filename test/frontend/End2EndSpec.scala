@@ -25,7 +25,10 @@ class End2EndSpec(arguments: Arguments) extends Specification with LazyLogging {
   val argumentMapRead = parseCustomJavaArgs(arguments)
   val testPort = 9000
   val argumentMap = argumentMapRead +
-                 ("http.port"    -> testPort)
+                 ("http.port"    -> testPort,
+                  "play.modules.disabled" -> List("com.scalableminds.webknossos.datastore.DataStoreModule"),
+                  "play.http.router" -> "webknossos.Routes",
+                  "datastore.enabled" -> false)
 
   "my application" should {
 

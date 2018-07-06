@@ -6,9 +6,8 @@ import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
-import { Spin, Table, Button, Modal, Tag, Icon } from "antd";
+import { Spin, Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
 import Markdown from "react-remarkable";
-import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -23,6 +22,8 @@ import {
 import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
+import { handleGenericError } from "libs/error_handling";
+import classNames from "classnames";
 import type {
   APITaskWithAnnotationType,
   APIUserType,
@@ -30,11 +31,6 @@ import type {
 } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
-import { handleGenericError } from "libs/error_handling";
-
-const { Column } = Table;
-
-const typeHint: APITaskWithAnnotationType[] = [];
 
 type StateProps = {
   activeUser: APIUserType,
@@ -315,73 +311,47 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     return this.state.showFinishedTasks ? this.state.finishedTasks : this.state.unfinishedTasks;
   }
 
-  renderTable() {
-    return (
-      <Table
-        dataSource={this.getCurrentTasks().filter(task => {
-          if (this.state.showFinishedTasks) return task.annotation.state === "Finished";
-          else return task.annotation.state !== "Finished";
-        })}
-        rowKey="id"
-        pagination={{
-          defaultPageSize: 50,
-        }}
-        style={{ overflowX: "auto" }}
-      >
-        <Column
-          title="ID"
-          dataIndex="id"
-          width={100}
-          sorter={Utils.localeCompareBy(typeHint, "id")}
-          className="monospace-id"
-        />
-        <Column
-          title="Type"
-          dataIndex="type.summary"
-          width={150}
-          sorter={Utils.localeCompareBy(typeHint, t => t.type.summary)}
-        />
-        <Column
-          title="Project"
-          dataIndex="projectName"
-          width={150}
-          sorter={Utils.localeCompareBy(typeHint, "projectName")}
-        />
-        <Column
-          title="Description"
-          dataIndex="type.description"
-          sorter={Utils.localeCompareBy(typeHint, t => t.type.description)}
-          render={description => (
-            <div className="task-type-description">
+  renderTaskList() {
+    const tasks = this.getCurrentTasks();
+    const descriptionClassName = classNames("task-type-description", {
+      short: this.state.showFinishedTasks || this.props.isAdminView,
+    });
+
+    const TaskCardTitle = ({ task }) => (
+      <React.Fragment>
+        {`${task.type.summary} (${moment(task.created).format("YYYY-MM-DD HH:SS")}) `}
+        {task.type.settings.allowedModes.map(mode => <Tag key={mode}>{mode}</Tag>)}
+      </React.Fragment>
+    );
+
+    const TaskCard = task => (
+      <Card key={task.id} title={<TaskCardTitle task={task} />} style={{ margin: "10px" }}>
+        <Row gutter={16}>
+          <Col span={8}>
+            <p>TaskID: {task.id}</p>
+            <p>Project: {task.projectName}</p>
+            {this.renderActions(task)}
+          </Col>
+          <Col span={16}>
+            <div className={descriptionClassName}>
               <Markdown
-                source={description}
+                source={task.type.description}
                 options={{ html: false, breaks: true, linkify: true }}
               />
             </div>
-          )}
-          width={550}
-        />
-        <Column
-          title="Modes"
-          dataIndex="type.settings.allowedModes"
-          width={150}
-          sorter={Utils.localeCompareBy(typeHint, t => t.type.settings.allowedModes.join("-"))}
-          render={modes => modes.map(mode => <Tag key={mode}>{mode}</Tag>)}
-        />
-        <Column
-          title="Creation Date"
-          dataIndex="created"
-          width={150}
-          sorter={Utils.localeCompareBy(typeHint, "created")}
-          render={created => moment(created).format("YYYY-MM-DD HH:SS")}
-        />
-        <Column
-          title="Actions"
-          className="nowrap"
-          width={150}
-          render={(__, task) => this.renderActions(task)}
-        />
-      </Table>
+          </Col>
+        </Row>
+      </Card>
+    );
+
+    return (
+      <List
+        dataSource={tasks}
+        pagination={{
+          defaultPageSize: 50,
+        }}
+        renderItem={TaskCard}
+      />
     );
   }
 
@@ -406,7 +376,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
 
-        <Spin spinning={this.state.isLoading}>{this.renderTable()}</Spin>
+        <Spin spinning={this.state.isLoading}>{this.renderTaskList()}</Spin>
 
         <TransferTaskModal
           visible={this.state.isTransferModalVisible}

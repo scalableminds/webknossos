@@ -156,6 +156,10 @@
   },
   "nyc": {
     "sourceMap": false,
-    "instrument": false
+    "instrument": false,
+    "exclude": [
+      "public/test-bundle/test/**/*.*",
+      "app/assets/javascripts/test/**/*.*",
+    ]
   }
 }

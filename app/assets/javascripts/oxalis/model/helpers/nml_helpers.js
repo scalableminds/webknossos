@@ -8,6 +8,7 @@ import Store from "oxalis/store";
 import Date from "libs/date";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 import type {
   OxalisState,
   SkeletonTracingType,
@@ -17,6 +18,7 @@ import type {
   TemporaryMutableTreeMapType,
   TreeGroupType,
 } from "oxalis/store";
+import type { BoundingBoxType } from "oxalis/constants";
 import type { APIBuildInfoType } from "admin/api_flow_types";
 
 // NML Defaults
@@ -140,10 +142,21 @@ function serializeMetaInformation(state: OxalisState, buildInfo: APIBuildInfoTyp
   ]);
 }
 
+function serializeBoundingBox(bb: ?BoundingBoxType, name: string): string {
+  const serverBoundingBox = convertFrontendBoundingBoxToServer(bb);
+  if (serverBoundingBox != null) {
+    const { topLeft, width, height, depth } = serverBoundingBox;
+    const [topLeftX, topLeftY, topLeftZ] = topLeft;
+    return serializeTag(name, { topLeftX, topLeftY, topLeftZ, width, height, depth });
+  }
+  return "";
+}
+
 function serializeParameters(state: OxalisState): Array<string> {
   const editPosition = getPosition(state.flycam).map(Math.round);
   const editRotation = getRotation(state.flycam);
   const userBB = state.tracing.userBoundingBox;
+  const taskBB = state.tracing.boundingBox;
   return [
     "<parameters>",
     ...indent(
@@ -174,16 +187,8 @@ function serializeParameters(state: OxalisState): Array<string> {
           zRot: editRotation[2],
         }),
         serializeTag("zoomLevel", { zoom: state.flycam.zoomStep }),
-        userBB != null
-          ? serializeTag("userBoundingBox", {
-              topLeftX: userBB.min[0],
-              topLeftY: userBB.min[1],
-              topLeftZ: userBB.min[2],
-              width: userBB.max[0] - userBB.min[0],
-              height: userBB.max[1] - userBB.min[1],
-              depth: userBB.max[2] - userBB.min[2],
-            })
-          : "",
+        serializeBoundingBox(userBB, "userBoundingBox"),
+        serializeBoundingBox(taskBB, "taskBoundingBox"),
       ]),
     ),
     "</parameters>",

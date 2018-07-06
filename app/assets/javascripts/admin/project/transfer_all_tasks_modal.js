@@ -3,8 +3,8 @@
 import _ from "lodash";
 import * as React from "react";
 import { Spin, Modal, Button, Select } from "antd";
-import { getUsers, transferTask } from "admin/admin_rest_api";
-import type { APIUserType, APIAnnotationType } from "admin/api_flow_types";
+import { getUsers, transferTask, getUsersWithOpenTaskOfProject, getTasks } from "admin/admin_rest_api";
+import type { APIUserType, APIAnnotationType, APIProjectType } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 
 const { Option } = Select;
@@ -12,7 +12,7 @@ const { Option } = Select;
 type Props = {
   onChange: (updatedAnnotation: APIAnnotationType) => void,
   annotationId: ?string,
-  projectId: ?string,
+  project: APIProjectType,
   onCancel: Function,
   visible: boolean,
   userId: ?string,
@@ -22,6 +22,11 @@ type State = {
   isLoading: boolean,
   users: Array<APIUserType>,
   currentUserIdValue: string,
+};
+
+type TableEntry = {
+  userEmail: string,
+  numberOfTasks: ?int,
 };
 
 class TransferTaskModal extends React.PureComponent<Props, State> {
@@ -47,16 +52,38 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
     });
   }
 
-  fetchUsersWithOpenTasks(){
-    const data = await getUsersWithOpenTaskOfProject(project.name);
+  // TODO get all users, and all the taskids that are open and fit to the project
+  // !! make the show table compact -> size small !!
+  // provide som mock-data to test atleast the table
+  async fetchUsersWithOpenTasks() {
+    const users = await getUsersWithOpenTaskOfProject(this.props.project.name);
+    const taskIds: string[] = {}; // stores ids from tasks
+    for (let i = 0; i < users.length; i++) {
+      const currentUserEntry: TableEntry = {};
+      const queryObject: QueryObjectType = {};
+      queryObject.project = this.props.project.name;
+      queryObject.user = this.state.users.find(user => user.email === users[i].email);
+      if (queryObject.user) {
+        // put request for tasks here
+        const currentUsersTasks = getTasks(queryObject);
+        currentUsersTasks.forEach((task) => {
+          // man muss nach annotations suchen
+          // nach active tasks filtern 
+          if(task.projectName === this.props.project.name && task.status == ){
+
+          }
+        });
+
+      }
+      // else do nothing
+    }
   }
 
   // ** magic **
   async transfer() {
     // TODO put all relevant task ids into an array
 
-
-    const queryObject: QueryObjectType = {};
+    // const queryObject: QueryObjectType = {};
 
     //--------------------------------------
     const annotationId = this.props.annotationId;

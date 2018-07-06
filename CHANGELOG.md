@@ -57,4 +57,4 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ## [18.07.0](https://github.com/scalableminds/webknossos/releases/tag/18.07.0) - 2018-07-05
 
-first release
+First release

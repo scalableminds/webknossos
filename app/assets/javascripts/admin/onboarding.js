@@ -126,7 +126,13 @@ class OnboardingView extends React.PureComponent<Props, State> {
     return (
       <StepHeader
         header="Create Your Organization"
-        subheader="Create an organization to manage users and datasets."
+        subheader={
+          <React.Fragment>
+            Welcome to webKnossos! This guide will help you get started.<br />Setup your
+            organization to manage users and datasets. Example names: &quot;University of
+            Springfield&quot;, &quot;Simpsons Lab&quot;, &quot;Neuroscience Department&quot;
+          </React.Fragment>
+        }
         icon={
           <i className="fa fa-building" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
         }
@@ -145,8 +151,13 @@ class OnboardingView extends React.PureComponent<Props, State> {
     return (
       <StepHeader
         header="Create an Admin Account"
-        subheader="This will be the first admin account. It can be used to confirm user registrations,
-            define teams, create tasks and much more."
+        subheader={
+          <React.Fragment>
+            This will be the first user account in your organization. It will be equipped with admin
+            privileges in order to confirm user registrations, define teams, create tasks and much
+            more.
+          </React.Fragment>
+        }
         icon={<Icon type="user" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
         <RegistrationForm
@@ -165,11 +176,13 @@ class OnboardingView extends React.PureComponent<Props, State> {
       <StepHeader
         header="Upload the first dataset into your organization."
         subheader={
-          <div>
-            You can upload a dataset via drag and drop or by directly copying the dataset on the
-            hosting server. Learn more details{" "}
-            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">here</a>.
-          </div>
+          <React.Fragment>
+            Upload your dataset via drag and drop or by directly copying the dataset on the hosting
+            server.{" "}
+            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">
+              Learn more about supported data formats.
+            </a>
+          </React.Fragment>
         }
         icon={<Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
@@ -193,42 +206,51 @@ class OnboardingView extends React.PureComponent<Props, State> {
     return (
       <StepHeader
         header="Congratulations!"
-        subheader="The initial setup is done. Learn more about the features and concepts which webKnossos
-            provides."
+        subheader={
+          <React.Fragment>
+            You&apos;ve completed the initial setup.<br />
+            <a href="/dashboard">Start to explore and annotate your data now</a> or learn more about
+            the features and concepts of webKnossos.
+          </React.Fragment>
+        }
         icon={<Icon type="rocket" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
         <Row type="flex" gutter={50} align="middle" style={{ marginBottom: 24 }}>
           <Col span={8}>
-            <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
-              Invite users and assign them to <a href="/teams">teams</a>. Teams can be used to
-              define dataset permissions and task assignments.
-            </FeatureCard>
-          </Col>
-          <Col span={8}>
             <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
-              View and annotate your data. Watch this{" "}
-              <a href="https://youtu.be/W-dosptovEU?t=52">video</a> for a brief overview.
+              <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
+              <a href="https://youtu.be/W-dosptovEU?t=52">watch this video</a>.
             </FeatureCard>
           </Col>
           <Col span={8}>
             <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
-              Upload more datasets. Read{" "}
-              <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">here</a> which
-              formats and upload processes we support.
+              <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
+              <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">Learn more</a>{" "}
+              about the formats and upload processes webKnossos supports.
+            </FeatureCard>
+          </Col>
+          <Col span={8}>
+            <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
+              Invite <a href="/users">users</a> and assign them to <a href="/teams">teams</a>. Teams
+              can be used to define dataset permissions and task assignments.
             </FeatureCard>
           </Col>
         </Row>
         <Row type="flex" gutter={50} align="middle">
           <Col span={8}>
             <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
-              Create projects and tasks to accomplish your research goals. See{" "}
-              <a href="https://www.youtube.com/watch?v=4DD7408avUY">here</a> for a demo.
+              Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
+              accomplish your research goals.{" "}
+              <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn
+              more.
             </FeatureCard>
           </Col>
           <Col span={8}>
             <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
-              Use the webKnossos API to create scriptable workflows. Watch this{" "}
-              <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">demo</a> to learn more.
+              Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
+              <a href="/scripts">scriptable workflows</a>.{" "}
+              <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn
+              more.
             </FeatureCard>
           </Col>
           <Col span={8}>

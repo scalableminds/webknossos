@@ -414,6 +414,15 @@ export async function transferTask(
   });
 }
 
+export async function bulkTasktransfer(
+  annotationIds: string[],
+  userId: string,
+): Promise<APIAnnotationType> {
+  annotationIds.forEach(annotationId => {
+    transferTask(annotationId, userId);
+  });
+}
+
 // ### Annotations
 export async function reOpenAnnotation(
   annotationId: string,

@@ -130,6 +130,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
 
   showActiveUsersModal = async (project: APIProjectType) => {
     const data = await getUsersWithOpenTaskOfProject(project.name);
+    // TODO replace with transfer_all_tasks_modal
     Modal.info({
       title: `Users with open tasks in project ${project.name}`,
       width: 800,

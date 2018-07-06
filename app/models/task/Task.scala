@@ -243,11 +243,16 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                                         projectNameOpt: Option[String],
                                         taskTypeIdOpt: Option[ObjectId],
                                         taskIdsOpt: Option[List[ObjectId]],
-                                        userIdOpt: Option[ObjectId]
+                                        userIdOpt: Option[ObjectId],
+                                        randomizeOpt: Option[Boolean]
                                       )(implicit ctx: DBAccessContext): Fox[List[TaskSQL]] = {
 
     /* WARNING: This code composes an sql query with #${} without sanitize(). Change with care. */
 
+    val orderRandom = randomizeOpt match{
+      case Some(true) => s"ORDER BY random()"
+      case _ => ""
+    }
     val projectFilterFox = projectNameOpt match {
       case Some(pName) => for {project <- ProjectSQLDAO.findOneByName(pName)} yield s"(t._project = '${project._id}')"
       case _ => Fox.successful("true")
@@ -268,6 +273,7 @@ object TaskSQLDAO extends SQLDAO[TaskSQL, TasksRow, Tasks] {
                 and #${taskIdsFilter}
                 and #${userFilter}
                 and #${accessQuery}
+                #${orderRandom}
                 limit 1000"""
       r <- run(q.as[TasksRow])
       parsed <- Fox.combined(r.toList.map(parse))

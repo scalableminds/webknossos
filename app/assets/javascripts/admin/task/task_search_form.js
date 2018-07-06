@@ -17,6 +17,7 @@ export type QueryObjectType = {
   ids?: Array<string>,
   project?: string,
   user?: string,
+  random?: boolean,
 };
 
 export type TaskFormFieldValuesType = {
@@ -123,7 +124,12 @@ class TaskSearchForm extends React.Component<Props, State> {
         queryObject.project = formValues.projectName;
       }
 
+      if (this.state.fieldValues.random) {
+        queryObject.random = this.state.fieldValues.random;
+      }
+
       this.setState({ fieldValues: formValues });
+
       this.props.onChange(queryObject);
     });
   };
@@ -132,6 +138,11 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.props.form.resetFields();
     this.setState({ fieldValues: {} });
     this.props.onChange({});
+  };
+
+  handleRandomSubset = (event: ?SyntheticInputEvent<*>) => {
+    this.state.fieldValues.random = true;
+    this.handleFormSubmit();
   };
 
   render() {
@@ -221,6 +232,9 @@ class TaskSearchForm extends React.Component<Props, State> {
             </Button>
             <Button style={{ marginLeft: 8 }} onClick={this.handleReset}>
               Clear
+            </Button>
+            <Button style={{ marginLeft: 8 }} onClick={this.handleRandomSubset}>
+            Show random subset
             </Button>
           </Col>
         </Row>

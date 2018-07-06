@@ -57,7 +57,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   constructor() {
     super();
     this.state = {
-      currentStep: 3,
+      currentStep: 0,
       organizationName: "",
     };
   }
@@ -130,8 +130,13 @@ class OnboardingView extends React.PureComponent<Props, State> {
     return (
       <StepHeader
         header="Upload the first dataset into your organization."
-        subheader="You can upload a dataset via drag and drop or by directly copying the dataset on the hosting
-            server (recommended for file sizes larger than 1 GB)."
+        subheader={
+          <div>
+            You can upload a dataset via drag and drop or by directly copying the dataset on the
+            hosting server. Learn more details{" "}
+            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">here</a>.
+          </div>
+        }
         icon={<Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
         <DatasetUploadView history={this.props.history} withoutCard />
@@ -167,8 +172,8 @@ class OnboardingView extends React.PureComponent<Props, State> {
           </Col>
           <Col span={8}>
             <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
-              View and annotate your data. <a href="#">Read more</a> about skeleton and volume
-              tracings.
+              View and annotate your data. Watch this{" "}
+              <a href="https://youtu.be/W-dosptovEU?t=52">video</a> for a brief overview.
             </FeatureCard>
           </Col>
           <Col span={8}>
@@ -182,13 +187,14 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <Row type="flex" gutter={50} align="middle">
           <Col span={8}>
             <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
-              Create <a href="/projects">projects</a> and <a href="/tasks">tasks</a> to accomplish
-              your research goals.
+              Create projects and tasks to accomplish your research goals. See{" "}
+              <a href="https://www.youtube.com/watch?v=4DD7408avUY">here</a> for a demo.
             </FeatureCard>
           </Col>
           <Col span={8}>
             <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
-              Define scripts to adapt the tracing to your needs.
+              Use the webKnossos API to create scriptable workflows. Watch this{" "}
+              <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">demo</a> to learn more.
             </FeatureCard>
           </Col>
           <Col span={8}>

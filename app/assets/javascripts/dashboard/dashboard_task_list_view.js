@@ -6,8 +6,9 @@ import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
 import Request from "libs/request";
 import { AsyncButton } from "components/async_clickables";
-import { Spin, Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
+import { Button, Modal, Tag, Icon, Card, Row, Col, List } from "antd";
 import Markdown from "react-remarkable";
+import Utils from "libs/utils";
 import moment from "moment";
 import Toast from "libs/toast";
 import messages from "messages";
@@ -31,6 +32,8 @@ import type {
 } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+
+const typeHint: APITaskWithAnnotationType[] = [];
 
 type StateProps = {
   activeUser: APIUserType,
@@ -312,7 +315,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   renderTaskList() {
-    const tasks = this.getCurrentTasks();
+    const tasks = this.getCurrentTasks().sort(Utils.localeCompareBy(typeHint, "created"));
     const descriptionClassName = classNames("task-type-description", {
       short: this.state.showFinishedTasks || this.props.isAdminView,
     });
@@ -350,6 +353,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
         pagination={{
           defaultPageSize: 50,
         }}
+        loading={this.state.isLoading}
         renderItem={TaskCard}
       />
     );
@@ -375,9 +379,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           Tasks
         </h3>
         <div className="clearfix" style={{ margin: "20px 0px" }} />
-
-        <Spin spinning={this.state.isLoading}>{this.renderTaskList()}</Spin>
-
+        {this.renderTaskList()}
         <TransferTaskModal
           visible={this.state.isTransferModalVisible}
           annotationId={this.state.currentAnnotationId}

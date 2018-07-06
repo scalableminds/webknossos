@@ -159,7 +159,7 @@
     "instrument": false,
     "exclude": [
       "public/test-bundle/test/**/*.*",
-      "app/assets/javascripts/test/**/*.*",
+      "app/assets/javascripts/test/**/*.*"
     ]
   }
 }

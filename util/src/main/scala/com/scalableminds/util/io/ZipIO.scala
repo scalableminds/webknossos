@@ -101,21 +101,25 @@ object ZipIO {
     def isFileHidden(e: ZipEntry): Boolean = new File(e.getName).isHidden || e.getName.startsWith("__MACOSX")
 
     def stripPathFrom(path: Path, string: String): Option[Path] = {
-      for (i <- 0 until path.getNameCount) {
-
-        if (path.subpath(i, i + 1).toString.contains(string))
-          if (i == 0)
-            return Some(Paths.get("")) // path.subpath(0,0) is invalid and means that there is no commonPrefix which isn't started with a layer
-          else
-            return Some(path.subpath(0, i)) // this is the common prefix but stripped from the layer
+      def stripPathHelper(i: Int): Option[Path] = {
+        if (i >= path.getNameCount)
+          None
+        else if (path.subpath(i, i + 1).toString.contains(string)) //sample paths: "test/test/color_1", "segmentation"
+          if (i == 0) // path.subpath(0,0) is invalid and means that there is no commonPrefix which isn't started with a layer
+            Some(Paths.get(""))
+          else // this is the common prefix but stripped from the layer
+            Some(path.subpath(0, i))
+        else
+          stripPathHelper(i + 1)
       }
-      None
+
+      stripPathHelper(0)
     }
 
     import collection.JavaConverters._
     val zipEntries = zip.entries.asScala.filter(e => !e.isDirectory && (includeHiddenFiles || !isFileHidden(e))).toList
 
-    //color, mask, segmentation are the values for dataSet layer categories
+    //color, mask, segmentation are the values for dataSet layer categories and a folder only has one category
     val commonPrefix = if (truncateCommonPrefix) {
       val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
       val strippedPaths = List("color", "mask", "segmentation").flatMap(stripPathFrom(commonPrefixNotFixed, _))

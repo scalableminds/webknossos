@@ -135,11 +135,11 @@ export const transDim: ShaderModuleType = {
   code: `
     // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.
     vec3 transDim(vec3 array) {
-      if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
+      if (planeID > <%= OrthoViewIndices.PLANE_XY %> - 0.1 && planeID < <%= OrthoViewIndices.PLANE_XY %> + 0.1) {
         return array;
-      } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
+      } else if (planeID > <%= OrthoViewIndices.PLANE_YZ %> - 0.1 && planeID < <%= OrthoViewIndices.PLANE_YZ %> + 0.1) {
         return vec3(array.z, array.y, array.x); // [2, 1, 0]
-      } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
+      } else if (planeID > <%= OrthoViewIndices.PLANE_XZ %> - 0.1 && planeID < <%= OrthoViewIndices.PLANE_XZ %> + 0.1) {
         return vec3(array.x, array.z, array.y); // [0, 2, 1]
       }
       return vec3(0.0, 0.0, 0.0);
@@ -150,11 +150,11 @@ export const transDim: ShaderModuleType = {
 export const getW: ShaderModuleType = {
   code: `
     float getW(vec3 vector) {
-      if (planeID == <%= OrthoViewIndices.PLANE_XY %>) {
+      if (planeID > <%= OrthoViewIndices.PLANE_XY %> - 0.1 && planeID < <%= OrthoViewIndices.PLANE_XY %> + 0.1) {
         return vector[2];
-      } else if (planeID == <%= OrthoViewIndices.PLANE_YZ %>) {
+      } else if (planeID > <%= OrthoViewIndices.PLANE_YZ %> - 0.1 && planeID < <%= OrthoViewIndices.PLANE_YZ %> + 0.1) {
         return vector[0];
-      } else if (planeID == <%= OrthoViewIndices.PLANE_XZ %>) {
+      } else if (planeID > <%= OrthoViewIndices.PLANE_XZ %> - 0.1 && planeID < <%= OrthoViewIndices.PLANE_XZ %> + 0.1) {
         return vector[1];
       }
       return 0.0;

@@ -99,7 +99,6 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
               style={{ width: "100%" }}
               htmlType="submit"
               disabled={hasErrors(getFieldsError())}
-              style={{ width: "100%" }}
             >
               Create
             </Button>

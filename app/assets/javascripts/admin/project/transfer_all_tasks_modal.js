@@ -3,7 +3,12 @@
 import _ from "lodash";
 import * as React from "react";
 import { Spin, Modal, Button, Select } from "antd";
-import { getUsers, transferTask, getUsersWithOpenTaskOfProject, getTasks } from "admin/admin_rest_api";
+import {
+  getUsers,
+  transferTask,
+  getUsersWithOpenTaskOfProject,
+  getTasks,
+} from "admin/admin_rest_api";
 import type { APIUserType, APIAnnotationType, APIProjectType } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
 
@@ -18,15 +23,16 @@ type Props = {
   userId: ?string,
 };
 
+type TableEntryType = {
+  userName: string,
+  numberOfTasks: ?int,
+};
+
 type State = {
   isLoading: boolean,
   users: Array<APIUserType>,
   currentUserIdValue: string,
-};
-
-type TableEntry = {
-  userEmail: string,
-  numberOfTasks: ?int,
+  usersWithOpenTasks: Array<TableEntryType>,
 };
 
 class TransferTaskModal extends React.PureComponent<Props, State> {
@@ -34,6 +40,7 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
     isLoading: false,
     users: [],
     currentUserIdValue: "",
+    usersWithOpenTasks: [],
   };
 
   componentDidMount() {
@@ -66,17 +73,26 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
       if (queryObject.user) {
         // put request for tasks here
         const currentUsersTasks = getTasks(queryObject);
-        currentUsersTasks.forEach((task) => {
+        currentUsersTasks.forEach(task => {
           // man muss nach annotations suchen
-          // nach active tasks filtern 
-          if(task.projectName === this.props.project.name && task.status == ){
-
-          }
+          // nach active tasks filtern
+          // if(task.projectName === this.props.project.name // && task.status == ){
+          // ){}); // here
+          console.log("hi");
         });
-
+        // else do nothing
       }
-      // else do nothing
     }
+  }
+
+  async fetchUsersWithOpenTasksMock() {
+    this.setState({
+      usersWithOpenTasks: [
+        { userName: "Hans", numberOfTasks: 2 },
+        { userName: "Karla", numberOfTasks: 1 },
+        { userName: "Peter", numberOfTasks: 1 },
+      ],
+    });
   }
 
   // ** magic **

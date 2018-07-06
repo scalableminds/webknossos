@@ -322,7 +322,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     const TaskCardTitle = ({ task }) => (
       <React.Fragment>
-        {`${task.type.summary} (${moment(task.created).format("YYYY-MM-DD HH:SS")}) `}
+        {`${task.type.summary} (${moment(task.created).format("YYYY-MM-DD HH:mm")}) `}
         {task.type.settings.allowedModes.map(mode => <Tag key={mode}>{mode}</Tag>)}
       </React.Fragment>
     );

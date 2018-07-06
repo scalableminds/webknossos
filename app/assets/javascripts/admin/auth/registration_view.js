@@ -3,6 +3,8 @@ import React from "react";
 import { Link, withRouter } from "react-router-dom";
 import { Row, Col, Card } from "antd";
 import type { RouterHistory } from "react-router-dom";
+import messages from "messages";
+import Toast from "libs/toast";
 import RegistrationForm from "./registration_form";
 
 type Props = {
@@ -20,7 +22,12 @@ class RegistrationView extends React.PureComponent<Props> {
             <a href="mailto:hello@scalableminds.com">hello@scalableminds.com</a> to get more
             information about how to get to use webKnossos.
           </Card>
-          <RegistrationForm onRegistered={() => this.props.history.push("/auth/login")} />
+          <RegistrationForm
+            onRegistered={() => {
+              Toast.success(messages["auth.account_created"]);
+              this.props.history.push("/auth/login");
+            }}
+          />
           <Link to="/auth/login">Already have an account? Login instead.</Link>
         </Col>
       </Row>

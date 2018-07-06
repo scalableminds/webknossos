@@ -87,7 +87,7 @@ class ReactRouter extends React.Component<Props> {
 
   async maybeRedirectToOnboarding() {
     const organizations = await getOrganizations();
-    if (organizations.length > 0 && false) {
+    if (organizations.length > 0) {
       return;
     }
 

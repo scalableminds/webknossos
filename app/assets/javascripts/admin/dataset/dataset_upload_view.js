@@ -158,7 +158,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                 )}
               </FormItem>
 
-              <FormItem>
+              <FormItem style={{ marginBottom: 0 }}>
                 <Button size="large" type="primary" htmlType="submit" style={{ width: "100%" }}>
                   Upload
                 </Button>

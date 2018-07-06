@@ -4,8 +4,9 @@ import { Link } from "react-router-dom";
 import { Form, Input, Button, Row, Col, Icon, Select, Checkbox } from "antd";
 import messages from "messages";
 import Request from "libs/request";
-import Toast from "libs/toast";
-import { getOrganizationNames } from "admin/admin_rest_api";
+import { loginUser, getOrganizationNames } from "admin/admin_rest_api";
+import Store from "oxalis/throttled_store";
+import { setActiveUserAction } from "oxalis/model/actions/user_actions";
 
 const FormItem = Form.Item;
 const { Option } = Select;
@@ -14,8 +15,9 @@ type Props = {
   form: Object,
   onRegistered: () => void,
   confirmLabel?: string,
-  organizationId?: string,
+  organizationName?: string,
   hidePrivacyStatement?: boolean,
+  tryAutoLogin?: boolean,
 };
 
 type State = {
@@ -34,7 +36,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
   }
 
   async fetchData() {
-    if (this.props.organizationId == null) {
+    if (this.props.organizationName == null) {
       const organizations = await getOrganizationNames();
       this.setState({ organizations });
     }
@@ -43,13 +45,24 @@ class RegistrationView extends React.PureComponent<Props, State> {
   handleSubmit = (event: SyntheticInputEvent<>) => {
     event.preventDefault();
 
-    this.props.form.validateFieldsAndScroll((err: ?Object, formValues: Object) => {
-      if (!err) {
-        Request.sendJSONReceiveJSON("/api/auth/register", { data: formValues }).then(() => {
-          Toast.success(messages["auth.account_created"]);
-          this.props.onRegistered();
-        });
+    this.props.form.validateFieldsAndScroll(async (err: ?Object, formValues: Object) => {
+      if (err) {
+        return;
       }
+      await Request.sendJSONReceiveJSON(
+        this.props.organizationName != null
+          ? "/api/auth/createOrganizationWithAdmin"
+          : "/api/auth/register",
+        { data: formValues },
+      );
+      if (this.props.tryAutoLogin) {
+        const user = await loginUser({
+          email: formValues.email,
+          password: formValues.password.password1,
+        });
+        Store.dispatch(setActiveUserAction(user));
+      }
+      this.props.onRegistered();
     });
   };
 
@@ -79,7 +92,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
     const { getFieldDecorator } = this.props.form;
 
     const organizationComponents =
-      this.props.organizationId == null ? (
+      this.props.organizationName == null ? (
         <FormItem hasFeedback>
           {getFieldDecorator("organization", {
             rules: [
@@ -98,7 +111,13 @@ class RegistrationView extends React.PureComponent<Props, State> {
             </Select>,
           )}
         </FormItem>
-      ) : null;
+      ) : (
+        <FormItem style={{ display: "none" }}>
+          {getFieldDecorator("organization", { initialValue: this.props.organizationName })(
+            <Input type="text" />,
+          )}
+        </FormItem>
+      );
 
     return (
       <Form onSubmit={this.handleSubmit}>

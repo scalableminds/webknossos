@@ -91,9 +91,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "b",
         value: true,
       },
-      isMappingEnabled: {
-        type: "b",
-        value: false,
+      planeID: {
+        type: "f",
+        value: OrthoViewValues.indexOf(this.planeID),
       },
       mappingSize: {
         type: "f",
@@ -131,9 +131,9 @@ class PlaneMaterialFactory extends AbstractPlaneMaterialFactory {
         type: "f",
         value: 0,
       },
-      planeID: {
-        type: "f",
-        value: OrthoViewValues.indexOf(this.planeID),
+      isMappingEnabled: {
+        type: "b",
+        value: false,
       },
     });
 

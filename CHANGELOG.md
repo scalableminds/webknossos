@@ -9,7 +9,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 [Commits](https://github.com/scalableminds/webknossos/compare/18.07.0...HEAD)
 
 ### Added
-- Refreshing datasets now works for teamManagers too
+- Refreshing datasets now works for teamManagers too #2688
 - The shortcut to copy the currently hovered cell id (CTRL + I) works in non-volume-tracings, too.
 - admins can now get tasks from all projects in their organization
 - Team Managers are now allowed to create explorational tracings on datasets without allowed teams

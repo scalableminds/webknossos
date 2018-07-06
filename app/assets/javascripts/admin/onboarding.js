@@ -1,7 +1,7 @@
 // @flow
 
 import * as React from "react";
-import { Input, Button, Row, Col, Steps, Icon, Card } from "antd";
+import { Form, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
 import { withRouter } from "react-router-dom";
 
 import RegistrationForm from "admin/auth/registration_form";
@@ -10,6 +10,7 @@ import DatasetUploadView from "admin/dataset/dataset_upload_view";
 import type { RouterHistory } from "react-router-dom";
 
 const Step = Steps.Step;
+const FormItem = Form.Item;
 
 type Props = {
   history: RouterHistory,
@@ -53,6 +54,62 @@ function FeatureCard({ icon, header, children }) {
   );
 }
 
+const OrganizationForm = Form.create()(({ form, onComplete }) => {
+  const hasErrors = fieldsError => Object.keys(fieldsError).some(field => fieldsError[field]);
+  const handleSubmit = e => {
+    e.preventDefault();
+    form.validateFields((err, values) => {
+      if (!err) {
+        onComplete(values.organizationName);
+      }
+    });
+  };
+  const { getFieldDecorator, getFieldsError, getFieldError, isFieldTouched } = form;
+
+  const organizationNameError =
+    isFieldTouched("organizationName") && getFieldError("organizationName");
+
+  return (
+    <Form onSubmit={handleSubmit}>
+      <Row type="flex" justify="center" style={{ padding: "20px 50px" }} align="middle" gutter={8}>
+        <Col span={18}>
+          <FormItem
+            validateStatus={organizationNameError ? "error" : ""}
+            help={organizationNameError || ""}
+            style={{ width: "100%" }}
+          >
+            {getFieldDecorator("organizationName", {
+              rules: [{ required: true, message: "Please enter an organization name!" }],
+            })(
+              <Input
+                size="large"
+                placeholder="Your organization name"
+                autoFocus
+                style={{ width: "100%" }}
+              />,
+            )}
+          </FormItem>
+        </Col>
+        <Col span={6}>
+          <FormItem>
+            <Button
+              size="large"
+              type="primary"
+              icon="plus"
+              style={{ width: "100%" }}
+              htmlType="submit"
+              disabled={hasErrors(getFieldsError())}
+              style={{ width: "100%" }}
+            >
+              Create
+            </Button>
+          </FormItem>
+        </Col>
+      </Row>
+    </Form>
+  );
+});
+
 class OnboardingView extends React.PureComponent<Props, State> {
   constructor() {
     super();
@@ -75,34 +132,12 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <i className="fa fa-building" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />
         }
       >
-        <Row
-          type="flex"
-          justify="center"
-          style={{ padding: "20px 50px" }}
-          align="middle"
-          gutter={8}
-        >
-          <Col span={18}>
-            <Input
-              size="large"
-              placeholder="Your organization name"
-              autoFocus
-              value={this.state.organizationName}
-              onChange={event => this.setState({ organizationName: event.target.value })}
-            />
-          </Col>
-          <Col span={6}>
-            <Button
-              size="large"
-              type="primary"
-              icon="plus"
-              onClick={this.advanceStep}
-              style={{ width: "100%" }}
-            >
-              Create
-            </Button>
-          </Col>
-        </Row>
+        <OrganizationForm
+          onComplete={organizationName => {
+            this.setState({ organizationName });
+            this.advanceStep();
+          }}
+        />
       </StepHeader>
     );
   }

@@ -34,9 +34,9 @@ jobs:
       - run:
           name: Install frontend dependencies
           command: docker-compose run base yarn install --frozen-lockfile
-      - run:
-          name: Build frontend documentation
-          command: docker-compose run base yarn run docs
+      # - run:
+      #     name: Build frontend documentation
+      #     command: docker-compose run base yarn run docs
       - run:
           name: Build webknossos (sbt and webpack)
           command: |
@@ -67,48 +67,48 @@ jobs:
           name: Build webknossos-datastore docker image
           command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose build --pull webknossos-datastore
 
-      - run:
-          name: Lint frontend code
-          command: docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
-      - run:
-          name: Validate frontend types with flow
-          command: docker-compose run base yarn flow
-      - run:
-          name: Run frontend tests
-          command: docker-compose run base yarn test-verbose
-      - run:
-          name: Run end-to-end tests
-          command: |
-            for i in {1..3}; do # retry
-              docker-compose run e2e-tests && s=0 && break || s=$?
-            done
-            (exit $s)
+      # - run:
+      #     name: Lint frontend code
+      #     command: docker-compose run base bash -c "yarn run lint && yarn run am-i-pretty"
+      # - run:
+      #     name: Validate frontend types with flow
+      #     command: docker-compose run base yarn flow
+      # - run:
+      #     name: Run frontend tests
+      #     command: docker-compose run base yarn test-verbose
+      # - run:
+      #     name: Run end-to-end tests
+      #     command: |
+      #       for i in {1..3}; do # retry
+      #         docker-compose run e2e-tests && s=0 && break || s=$?
+      #       done
+      #       (exit $s)
 
-      - run:
-          name: Start webknossos
-          background: true
-          command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos
-      - run:
-          name: Run webknossos smoke test
-          command: |
-            sleep 10
-            ./test/infrastructure/deployment.bash
-      - run:
-          name: Stop webknossos
-          command: docker-compose down --volumes --remove-orphans
+      # - run:
+      #     name: Start webknossos
+      #     background: true
+      #     command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos
+      # - run:
+      #     name: Run webknossos smoke test
+      #     command: |
+      #       sleep 10
+      #       ./test/infrastructure/deployment.bash
+      # - run:
+      #     name: Stop webknossos
+      #     command: docker-compose down --volumes --remove-orphans
 
-      - run:
-          name: Start webknossos-datastore
-          background: true
-          command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos-datastore
-      - run:
-          name: Run webknossos-datastore smoke test
-          command: |
-            sleep 10
-            curl --fail --retry 3 --max-time 15 -v http://localhost:9090/data/health
-      - run:
-          name: Stop webknossos-datastore
-          command: docker-compose down --volumes --remove-orphans
+      # - run:
+      #     name: Start webknossos-datastore
+      #     background: true
+      #     command: DOCKER_TAG=${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} docker-compose up webknossos-datastore
+      # - run:
+      #     name: Run webknossos-datastore smoke test
+      #     command: |
+      #       sleep 10
+      #       curl --fail --retry 3 --max-time 15 -v http://localhost:9090/data/health
+      # - run:
+      #     name: Stop webknossos-datastore
+      #     command: docker-compose down --volumes --remove-orphans
 
       - run:
           name: Push docker images

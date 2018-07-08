@@ -2,30 +2,18 @@
 
 import _ from "lodash";
 import * as React from "react";
-import { Spin, Modal, Button, Select } from "antd";
-import {
-  getUsers,
-  transferTask,
-  getUsersWithOpenTaskOfProject,
-  getTasks,
-} from "admin/admin_rest_api";
-import type { APIUserType, APIAnnotationType, APIProjectType } from "admin/api_flow_types";
-import type { QueryObjectType } from "admin/task/task_search_form";
+import { Spin, Modal, Button, Select, Table } from "antd";
+import { getUsers } from "admin/admin_rest_api";
+import type { APIUserType, APIProjectType } from "admin/api_flow_types";
 
 const { Option } = Select;
 
 type Props = {
-  onChange: (updatedAnnotation: APIAnnotationType) => void,
-  annotationId: ?string,
+  onSubmit: (updatedAnnotation: APIAnnotationType) => void,
   project: APIProjectType,
   onCancel: Function,
   visible: boolean,
   userId: ?string,
-};
-
-type TableEntryType = {
-  userName: string,
-  numberOfTasks: ?int,
 };
 
 type State = {
@@ -35,7 +23,7 @@ type State = {
   usersWithOpenTasks: Array<TableEntryType>,
 };
 
-class TransferTaskModal extends React.PureComponent<Props, State> {
+class TransferAllTasksModal extends React.PureComponent<Props, State> {
   state = {
     isLoading: false,
     users: [],
@@ -50,21 +38,27 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
   async fetchData() {
     this.setState({ isLoading: true });
     const users = await getUsers();
+    const usersWithOpenTasks = await this.fetchUsersWithOpenTasksMock();
     const activeUsers = users.filter(u => u.isActive);
-    this.setState({ isLoading: false });
+    this.setState({ isLoading: false, usersWithOpenTasks });
     const sortedUsers = _.sortBy(activeUsers, "lastName");
-
     this.setState({
       users: sortedUsers,
     });
   }
 
-  // TODO get all users, and all the taskids that are open and fit to the project
+  fetchUsersWithOpenTasksMock = async () => [
+    { userName: "Hans", numberOfTasks: 2, key: "Hans" },
+    { userName: "Karla", numberOfTasks: 1, key: "Karla" },
+    { userName: "Peter", numberOfTasks: 1, key: "Peter" },
+    { userName: "Heinz-Günther", numberOfTasks: 3, key: "Heinz-Günther" },
+  ];
+
+  /* TODO get all users, and all the taskids that are open and fit to the project
   // !! make the show table compact -> size small !!
   // provide som mock-data to test atleast the table
   async fetchUsersWithOpenTasks() {
     const users = await getUsersWithOpenTaskOfProject(this.props.project.name);
-    const taskIds: string[] = {}; // stores ids from tasks
     for (let i = 0; i < users.length; i++) {
       const currentUserEntry: TableEntry = {};
       const queryObject: QueryObjectType = {};
@@ -83,25 +77,40 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
         // else do nothing
       }
     }
-  }
+  } */
 
-  async fetchUsersWithOpenTasksMock() {
-    this.setState({
-      usersWithOpenTasks: [
-        { userName: "Hans", numberOfTasks: 2 },
-        { userName: "Karla", numberOfTasks: 1 },
-        { userName: "Peter", numberOfTasks: 1 },
-      ],
-    });
+  renderTableContent() {
+    const columns = [
+      {
+        title: "User name",
+        dataIndex: "userName",
+        key: "userName",
+      },
+      {
+        title: "number of open tasks",
+        dataIndex: "numberOfTasks",
+        key: "numberOfTasks",
+      },
+    ];
+    return (
+      <Table
+        columns={columns}
+        dataSource={this.state.usersWithOpenTasks}
+        rowKey="userName"
+        pagination={false}
+        size="small"
+      />
+    );
   }
 
   // ** magic **
-  async transfer() {
+  /* async transfer() {
+    return;
     // TODO put all relevant task ids into an array
 
     // const queryObject: QueryObjectType = {};
 
-    //--------------------------------------
+    /----------------------------------------
     const annotationId = this.props.annotationId;
     if (!annotationId) {
       throw new Error("No annotation id provided");
@@ -111,7 +120,7 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
     const updatedAnnotation = await transferTask(annotationId, this.state.currentUserIdValue);
     this.setState({ isLoading: false });
     this.props.onChange(updatedAnnotation);
-  }
+  } */
 
   handleSelectChange = (userId: string) => {
     this.setState({ currentUserIdValue: userId });
@@ -143,25 +152,32 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
     if (!this.props.visible) {
       return null;
     }
-
+    const title = `All users with open tasks of ${this.props.project.name}`;
     return (
       <Modal
-        title="Transfer a Task"
+        title={title}
         visible={this.props.visible}
         onCancel={this.props.onCancel}
+        pagination="false"
         footer={
           <div>
             <Button
               type="primary"
-              onClick={() => this.transfer()}
               disabled={this.state.currentUserIdValue === ""}
+              onClick={() => this.props.onSubmit()}
             >
-              Transfer
+              Transfer all tasks
             </Button>
             <Button onClick={() => this.props.onCancel()}>Close</Button>
           </div>
         }
       >
+        <div>
+          {this.renderTableContent()}
+          <br />
+          <br />
+        </div>
+        Select a user to transfer the tasks to:
         <div className="control-group">
           <div className="form-group">
             {this.state.isLoading ? (
@@ -178,4 +194,4 @@ class TransferTaskModal extends React.PureComponent<Props, State> {
   }
 }
 
-export default TransferTaskModal;
+export default TransferAllTasksModal;

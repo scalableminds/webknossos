@@ -9,11 +9,16 @@ import type { APIUserType, APIProjectType } from "admin/api_flow_types";
 const { Option } = Select;
 
 type Props = {
-  onSubmit: (updatedAnnotation: APIAnnotationType) => void,
+  onSubmit: () => void,
   project: APIProjectType,
   onCancel: Function,
   visible: boolean,
   userId: ?string,
+};
+
+type TableEntryType = {
+  userName: string,
+  numberOfTasks: number,
 };
 
 type State = {

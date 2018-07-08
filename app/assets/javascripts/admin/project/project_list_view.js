@@ -4,7 +4,7 @@ import _ from "lodash";
 import * as React from "react";
 import { connect } from "react-redux";
 import { Link, withRouter } from "react-router-dom";
-import { Table, Icon, Spin, Button, Input, Modal, List } from "antd";
+import { Table, Icon, Spin, Button, Input, Modal } from "antd";
 import Utils from "libs/utils";
 import messages from "messages";
 import { getActiveUser } from "oxalis/model/accessors/user_accessor";
@@ -14,7 +14,6 @@ import {
   deleteProject,
   pauseProject,
   resumeProject,
-  getUsersWithOpenTaskOfProject,
 } from "admin/admin_rest_api";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import Persistence from "libs/persistence";
@@ -54,7 +53,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     projects: [],
     searchQuery: "",
     isTransferTasksVisible: false,
-    selectedProject: null,
+    selectedProject: {},
   };
 
   componentWillMount() {
@@ -133,7 +132,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     });
   };
 
-  showActiveUsersModal = async (project: APIProjectType) => {
+  /* showActiveUsersModal = async (project: APIProjectType) => {
     const data = await getUsersWithOpenTaskOfProject(project.name);
     // TODO replace with transfer_all_tasks_modal
     Modal.info({
@@ -149,7 +148,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
         />
       ),
     });
-  };
+  }; */
 
   showActiveUsersModal2 = async (project: APIProjectType) => {
     this.setState({
@@ -316,7 +315,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
             project={this.state.selectedProject}
             onCancel={() => this.setState({ isTransferTasksVisible: false })}
             onSubmit={() => this.transferCommited()}
-            userId={this.props.userId}
+            userId={this.props.activeUser.id}
           />
         </div>
       </div>

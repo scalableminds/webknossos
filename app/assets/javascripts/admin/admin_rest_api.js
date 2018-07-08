@@ -312,7 +312,7 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
   return transformProject(project);
 }
 
-export function getUsersWithOpenTaskOfProject(projectName: string): Promise {
+export function getUsersWithOpenTaskOfProject(projectName: string): Promise<Array<String>> {
   return Request.receiveJSON(`api/projects/${projectName}/usersWithOpenTasks`);
 }
 
@@ -411,15 +411,6 @@ export async function transferTask(
     data: {
       userId,
     },
-  });
-}
-
-export async function bulkTasktransfer(
-  annotationIds: string[],
-  userId: string,
-): Promise<APIAnnotationType> {
-  annotationIds.forEach(annotationId => {
-    transferTask(annotationId, userId);
   });
 }
 

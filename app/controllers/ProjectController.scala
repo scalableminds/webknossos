@@ -3,8 +3,10 @@
  */
 package controllers
 import javax.inject.Inject
+
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import models.annotation.{AnnotationSQLDAO, AnnotationService, AnnotationTypeSQL}
 import models.project._
 import models.task._
 import models.user.UserDAO
@@ -13,6 +15,7 @@ import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.json.Json
+import utils.ObjectId
 
 import scala.concurrent.Future
 
@@ -146,5 +149,19 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       } yield {
         Ok(Json.toJson(usersWithActiveTasks.map(tuple  => Json.obj("email" -> tuple._1, "tasks" -> tuple._2))))
       }
+  }
+
+  def transferActiveTasks(projectName: String) = SecuredAction.async(parse.json) { implicit request =>
+    for {
+      project <- ProjectSQLDAO.findOneByName(projectName)
+      teamId <- project._team.toBSONObjectId.toFox
+      _ <- request.identity.assertTeamManagerOrAdminOf(teamId)
+      newUserId <- (request.body \ "userId").asOpt[String].toFox
+      activeAnnotations <- AnnotationSQLDAO.findAllActiveForProject(project._id)
+      updated <- Fox.serialCombined(activeAnnotations){ id =>
+        AnnotationService.transferAnnotationToUser(AnnotationTypeSQL.Task.toString, id.toString, newUserId)(securedRequestToUserAwareRequest)
+      }
+    } yield Ok
+
   }
 }

@@ -134,6 +134,7 @@ GET           /api/projects/:name/incrementEachTasksInstances                   
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
 GET           /api/projects/:name/usersWithActiveTasks                          controllers.ProjectController.usersWithActiveTasks(name:String)
+POST          /api/projects/:name/transferActiveTasks                           controllers.ProjectController.transferActiveTasks(name:String)
 
 # Statistics
 GET           /api/statistics/webknossos                                        controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])

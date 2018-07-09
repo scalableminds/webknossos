@@ -9,6 +9,7 @@ import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
+import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}

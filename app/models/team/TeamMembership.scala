@@ -5,6 +5,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
 import scala.concurrent.ExecutionContext.Implicits._
+import reactivemongo.play.json.BSONFormats._
 import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 

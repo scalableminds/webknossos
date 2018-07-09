@@ -18,6 +18,7 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.tools.Math
 
 import scala.concurrent.ExecutionContext.Implicits._

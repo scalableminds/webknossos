@@ -86,6 +86,7 @@ In order to restore the current window, a reload is necessary.`,
   "project.delete": "Do you really want to delete this project?",
   "project.increase_instances":
     "Do you really want to add one additional instance to all tasks of this project?",
+  "project.none_selected": "No currently selected project found",
   "script.delete": "Do you really want to delete this script?",
   "team.delete": "Do you really want to delete this team?",
   "taskType.delete": "Do you really want to delete this task type?",

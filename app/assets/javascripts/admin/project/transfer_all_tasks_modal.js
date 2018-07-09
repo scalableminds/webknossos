@@ -6,6 +6,7 @@ import { Spin, Modal, Button, Select, Table } from "antd";
 import { getUsers } from "admin/admin_rest_api";
 import type { APIUserType, APIProjectType } from "admin/api_flow_types";
 import Toast from "libs/toast";
+import messages from "messages";
 
 const { Option } = Select;
 
@@ -154,56 +155,58 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     );
   }
 
+  // TODO own users does not show up !!
+  // use newly available api requests
   render() {
     if (!this.props.visible) {
       return null;
     }
-    const errorMessage = "No selected project found";
-    if (!this.props.project) {
-      // TODO move to messages
-      Toast.error(errorMessage);
+    const project = this.props.project;
+    if (!project) {
+      Toast.error(messages["project.none_selected"]);
       return null;
-    }
-    Toast.close(errorMessage); // TODO -> display Toast properly
-    const title = `All users with open tasks of ${this.props.project.name}`;
-    return (
-      <Modal
-        title={title}
-        visible={this.props.visible}
-        onCancel={this.props.onCancel}
-        pagination="false"
-        footer={
+    } else {
+      Toast.close(messages["project.none_selected"]);
+      const title = `All users with open tasks of ${project.name}`;
+      return (
+        <Modal
+          title={title}
+          visible={this.props.visible}
+          onCancel={this.props.onCancel}
+          pagination="false"
+          footer={
+            <div>
+              <Button
+                type="primary"
+                disabled={this.state.currentUserIdValue === ""}
+                onClick={() => this.props.onSubmit()}
+              >
+                Transfer all tasks
+              </Button>
+              <Button onClick={() => this.props.onCancel()}>Close</Button>
+            </div>
+          }
+        >
           <div>
-            <Button
-              type="primary"
-              disabled={this.state.currentUserIdValue === ""}
-              onClick={() => this.props.onSubmit()}
-            >
-              Transfer all tasks
-            </Button>
-            <Button onClick={() => this.props.onCancel()}>Close</Button>
+            {this.renderTableContent()}
+            <br />
+            <br />
           </div>
-        }
-      >
-        <div>
-          {this.renderTableContent()}
-          <br />
-          <br />
-        </div>
-        Select a user to transfer the tasks to:
-        <div className="control-group">
-          <div className="form-group">
-            {this.state.isLoading ? (
-              <div className="text-center">
-                <Spin size="large" />
-              </div>
-            ) : (
-              this.renderFormContent()
-            )}
+          Select a user to transfer the tasks to:
+          <div className="control-group">
+            <div className="form-group">
+              {this.state.isLoading ? (
+                <div className="text-center">
+                  <Spin size="large" />
+                </div>
+              ) : (
+                this.renderFormContent()
+              )}
+            </div>
           </div>
-        </div>
-      </Modal>
-    );
+        </Modal>
+      );
+    }
   }
 }
 

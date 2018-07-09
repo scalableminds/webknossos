@@ -59,7 +59,6 @@ class DashboardView extends React.PureComponent<Props, State> {
 
   getTabs(user: APIUserType) {
     if (this.props.activeUser) {
-      const isUserAdmin = Utils.isUserAdmin(this.props.activeUser);
       const isAdminView = this.props.isAdminView;
 
       return [
@@ -68,7 +67,7 @@ class DashboardView extends React.PureComponent<Props, State> {
             <DatasetView user={user} dataViewType="gallery" />
           </TabPane>
         ) : null,
-        !isAdminView && isUserAdmin ? (
+        !isAdminView ? (
           <TabPane tab="Datasets" key="advanced-datasets">
             <DatasetView user={user} dataViewType="advanced" />
           </TabPane>

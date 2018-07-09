@@ -51,6 +51,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Fixed a bug where cell IDs in the segmentation tab were not shown for all zoomsteps. [#2726](https://github.com/scalableminds/webknossos/pull/2726)
   - Fixed the naming of the initial tree in tasks. [#2689](https://github.com/scalableminds/webknossos/pull/2689)
   - Fixed a regression affecting node selection, shortcuts and 3d viewport navigation. [#2673](https://github.com/scalableminds/webknossos/pull/2673)
+  - Fixed the dataset zip upload for dataSets, which only have one dataLayer and no config file. [#2840](https://github.com/scalableminds/webknossos/pull/2840)
 
 
 ### Removed

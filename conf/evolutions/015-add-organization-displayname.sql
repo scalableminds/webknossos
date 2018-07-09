@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/ TODO pr number
+-- https://github.com/scalableminds/webknossos/pull/2869
 
 START TRANSACTION;
 DROP VIEW webknossos.organizations_;

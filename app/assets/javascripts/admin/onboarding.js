@@ -45,12 +45,16 @@ function StepHeader({ header, subheader, icon, children }) {
 }
 
 function FeatureCard({ icon, header, children }) {
+  const columnSpan = { xs: 24, sm: 24, md: 12, lg: 12, xl: 8, xxl: 8 };
+
   return (
-    <Card style={{ textAlign: "center" }}>
-      <div style={{ fontSize: 30 }}>{icon}</div>
-      <p style={{ fontWeight: "bold" }}>{header}</p>
-      <p style={{ color: "gray" }}>{children}</p>
-    </Card>
+    <Col {...columnSpan} style={{ padding: 12 }}>
+      <Card style={{ textAlign: "center", height: "100%" }}>
+        <div style={{ fontSize: 30 }}>{icon}</div>
+        <p style={{ fontWeight: "bold" }}>{header}</p>
+        <p style={{ color: "gray" }}>{children}</p>
+      </Card>
+    </Col>
   );
 }
 
@@ -215,50 +219,34 @@ class OnboardingView extends React.PureComponent<Props, State> {
         }
         icon={<Icon type="rocket" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
-        <Row type="flex" gutter={50} align="middle" style={{ marginBottom: 24 }}>
-          <Col span={8}>
-            <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
-              <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
-              <a href="https://youtu.be/W-dosptovEU?t=52">watch this video</a>.
-            </FeatureCard>
-          </Col>
-          <Col span={8}>
-            <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
-              <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
-              <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">Learn more</a>{" "}
-              about the formats and upload processes webKnossos supports.
-            </FeatureCard>
-          </Col>
-          <Col span={8}>
-            <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
-              Invite <a href="/users">users</a> and assign them to <a href="/teams">teams</a>. Teams
-              can be used to define dataset permissions and task assignments.
-            </FeatureCard>
-          </Col>
-        </Row>
-        <Row type="flex" gutter={50} align="middle">
-          <Col span={8}>
-            <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
-              Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
-              accomplish your research goals.{" "}
-              <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn
-              more.
-            </FeatureCard>
-          </Col>
-          <Col span={8}>
-            <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
-              Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
-              <a href="/scripts">scriptable workflows</a>.{" "}
-              <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn
-              more.
-            </FeatureCard>
-          </Col>
-          <Col span={8}>
-            <FeatureCard header="Contact Us" icon={<Icon type="customer-service" />}>
-              <a href="mailto:hello@scalableminds.com">Get in touch</a>, if you have any further
-              questions or need help getting started.
-            </FeatureCard>
-          </Col>
+        <Row type="flex" gutter={50}>
+          <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
+            <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}
+            <a href="https://youtu.be/W-dosptovEU?t=52">watch this video</a>.
+          </FeatureCard>
+          <FeatureCard header="More Datasets" icon={<Icon type="cloud-upload-o" />}>
+            <a href="/datasets/upload">Upload more of your datasets.</a>{" "}
+            <a href="https://github.com/scalableminds/webknossos/wiki/Datasets">Learn more</a> about
+            the formats and upload processes webKnossos supports.
+          </FeatureCard>
+          <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
+            Invite <a href="/users">users</a> and assign them to <a href="/teams">teams</a>. Teams
+            can be used to define dataset permissions and task assignments.
+          </FeatureCard>
+          <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
+            Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
+            accomplish your research goals.{" "}
+            <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn
+          </FeatureCard>
+          <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
+            Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
+            <a href="/scripts">scriptable workflows</a>.{" "}
+            <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn
+          </FeatureCard>
+          <FeatureCard header="Contact Us" icon={<Icon type="customer-service" />}>
+            <a href="mailto:hello@scalableminds.com">Get in touch</a>, if you have any further
+            questions or need help getting started.
+          </FeatureCard>
         </Row>
       </StepHeader>
     );
@@ -282,7 +270,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
 
     return (
       <div style={{ minHeight: "calc(100vh - 48px)", display: "flex", flexDirection: "column" }}>
-        <Row type="flex" justify="center" style={{ padding: "20px 50px" }} align="middle">
+        <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
           <Col span={18}>
             <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
               <Step title="Create Organization" onClick={() => this.setState({ currentStep: 0 })} />

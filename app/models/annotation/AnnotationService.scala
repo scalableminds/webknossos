@@ -20,7 +20,7 @@ import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO, DataStoreHandlingStrategy}
 import models.task.TaskSQL
 import models.team.OrganizationSQLDAO
-import models.user.User
+import models.user.{User, UserDAO}
 import utils.ObjectId
 import play.api.i18n.Messages
 import play.api.Play.current
@@ -35,10 +35,12 @@ import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
 import reactivemongo.bson.BSONObjectID
+import oxalis.security.WebknossosSilhouette.UserAwareRequest
 
 object AnnotationService
   extends BoxImplicits
   with FoxImplicits
+  with AnnotationInformationProvider
   with TextUtils
   with ProtoGeometryImplicits
   with LazyLogging {
@@ -298,5 +300,14 @@ object AnnotationService
       zipper.close()
       zipped
     }
+  }
+
+  def transferAnnotationToUser(typ: String, id: String, userId: String)(implicit request: UserAwareRequest[_]) = {
+    for {
+      annotation <- provideAnnotation(typ, id)
+      newUser <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
+      _ <- annotation.muta.transferToUser(newUser)
+      updated <- provideAnnotation(typ, id)
+    } yield updated
   }
 }

@@ -139,12 +139,12 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       } yield Ok(js)
   }
 
-  def usersWithOpenTasks(projectName: String) = SecuredAction.async {
+  def usersWithActiveTasks(projectName: String) = SecuredAction.async {
     implicit request =>
       for {
-        emails <- ProjectSQLDAO.findUsersWithOpenTasks(projectName)
+        usersWithActiveTasks <- ProjectSQLDAO.findUsersWithActiveTasks(projectName)
       } yield {
-        Ok(Json.toJson(emails))
+        Ok(Json.toJson(usersWithActiveTasks.map(tuple  => Json.obj("email" -> tuple._1, "tasks" -> tuple._2))))
       }
   }
 }

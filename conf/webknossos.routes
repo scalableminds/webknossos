@@ -133,7 +133,7 @@ GET           /api/projects/:name/tasks                                         
 GET           /api/projects/:name/incrementEachTasksInstances                   controllers.ProjectController.incrementEachTasksInstances(name: String, delta: Option[Long])
 GET           /api/projects/:name/pause                                         controllers.ProjectController.pause(name: String)
 GET           /api/projects/:name/resume                                        controllers.ProjectController.resume(name: String)
-GET           /api/projects/:name/usersWithOpenTasks                            controllers.ProjectController.usersWithOpenTasks(name:String)
+GET           /api/projects/:name/usersWithActiveTasks                          controllers.ProjectController.usersWithActiveTasks(name:String)
 
 # Statistics
 GET           /api/statistics/webknossos                                        controllers.StatisticsController.webKnossos(interval: String, start: Option[Long], end: Option[Long])

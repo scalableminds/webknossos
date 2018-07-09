@@ -44,9 +44,6 @@ object ObjectId extends FoxImplicits {
   def parse(input: String) = parseSync(input).toFox ?~> Messages("bsonid.invalid", input)
   private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
 
-  def stringObjectIdReads(key: String) =
-    Reads.filter[String](ValidationError("bsonid.invalid", key))(ObjectId.parseSync(_).isDefined)
-
   def stringBSONObjectIdReads(key: String) =
     Reads.filter[String](ValidationError("bsonid.invalid", key))(BSONObjectID.parse(_).isSuccess)
 }

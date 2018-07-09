@@ -39,7 +39,7 @@ type State = {
   projects: Array<APIProjectType>,
   searchQuery: string,
   isTransferTasksVisible: boolean,
-  selectedProject: APIProjectType,
+  selectedProject: ?APIProjectType,
 };
 
 const persistence: Persistence<State> = new Persistence(
@@ -53,7 +53,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     projects: [],
     searchQuery: "",
     isTransferTasksVisible: false,
-    selectedProject: {},
+    selectedProject: null,
   };
 
   componentWillMount() {

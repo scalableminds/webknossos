@@ -5,12 +5,13 @@ import * as React from "react";
 import { Spin, Modal, Button, Select, Table } from "antd";
 import { getUsers } from "admin/admin_rest_api";
 import type { APIUserType, APIProjectType } from "admin/api_flow_types";
+import Toast from "libs/toast";
 
 const { Option } = Select;
 
 type Props = {
   onSubmit: () => void,
-  project: APIProjectType,
+  project: ?APIProjectType,
   onCancel: Function,
   visible: boolean,
   userId: ?string,
@@ -157,6 +158,13 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     if (!this.props.visible) {
       return null;
     }
+    const errorMessage = "No selected project found";
+    if (!this.props.project) {
+      // TODO move to messages
+      Toast.error(errorMessage);
+      return null;
+    }
+    Toast.close(errorMessage); // TODO -> display Toast properly
     const title = `All users with open tasks of ${this.props.project.name}`;
     return (
       <Modal

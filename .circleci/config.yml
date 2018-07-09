@@ -142,6 +142,9 @@ jobs:
             fi
             docker logout
 
+      - run:
+          name: Report coverage
+          command: docker-compose run base yarn coverage
 workflows:
   version: 2
   default:

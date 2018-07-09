@@ -8,6 +8,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.md).
 ### Postgres Evolutions:
 - [013-add-logoUrl.sql](conf/evolutions/013-add-logoUrl.sql)
 - [014-equalize-schema-and-evolutions.sql](conf/evolutions/014-equalize-schema-and-evolutions.sql)
+- [015-add-organization-displayname.sql](conf/evolutions/015-add-organization-displayname.sql)
 
 ## [18.07.0](https://github.com/scalableminds/webknossos/releases/tag/18.07.0) - 2018-07-05
 First release

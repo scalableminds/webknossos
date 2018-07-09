@@ -24,6 +24,8 @@ import play.api.i18n.Messages.Implicits._
 
 import scala.collection.JavaConverters._
 import scala.util.{Failure, Success, Try}
+import play.api.data.validation.ValidationError
+import play.api.libs.json.Reads
 
 
 object SQLClient {
@@ -39,7 +41,14 @@ object ObjectId extends FoxImplicits {
   implicit val jsonFormat = Json.format[ObjectId]
   def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
   def generate = fromBsonId(BSONObjectID.generate)
-  def parse(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption.toFox ?~> Messages("bsonid.invalid", input)
+  def parse(input: String) = parseSync(input).toFox ?~> Messages("bsonid.invalid", input)
+  private def parseSync(input: String) = BSONObjectID.parse(input).map(fromBsonId).toOption
+
+  def stringObjectIdReads(key: String) =
+    Reads.filter[String](ValidationError("bsonid.invalid", key))(ObjectId.parseSync(_).isDefined)
+
+  def stringBSONObjectIdReads(key: String) =
+    Reads.filter[String](ValidationError("bsonid.invalid", key))(BSONObjectID.parse(_).isSuccess)
 }
 
 trait SQLTypeImplicits {

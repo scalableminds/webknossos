@@ -2,7 +2,6 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.{GlobalAccessContext, MongoHelpers}
 import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.reactivemongo.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
@@ -19,7 +18,6 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.BSONFormats._
 import com.scalableminds.util.tools.Math
 
 import scala.concurrent.ExecutionContext.Implicits._
@@ -143,7 +141,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       for {
         dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
         _ <- allowedToAdministrate(request.identity, dataSet)
-        teamsBson <- Fox.combined(teams.map(MongoHelpers.parseBsonToFox))
+        teamsBson <- Fox.serialCombined(teams)(t => BSONObjectID.parse(t))
         userTeams <- TeamDAO.findAllEditable
         teamsWithoutUpdate = dataSet.allowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = teamsBson.filter(t => userTeams.exists(_._id == t))

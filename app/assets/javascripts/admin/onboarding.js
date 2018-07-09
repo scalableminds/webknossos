@@ -273,10 +273,10 @@ class OnboardingView extends React.PureComponent<Props, State> {
         <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
           <Col span={18}>
             <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>
-              <Step title="Create Organization" onClick={() => this.setState({ currentStep: 0 })} />
-              <Step title="Create Account" onClick={() => this.setState({ currentStep: 1 })} />
-              <Step title="Upload Dataset" onClick={() => this.setState({ currentStep: 2 })} />
-              <Step title="What's Next?" onClick={() => this.setState({ currentStep: 3 })} />
+              <Step title="Create Organization" />
+              <Step title="Create Account" />
+              <Step title="Upload Dataset" />
+              <Step title="What's Next?" />
             </Steps>
           </Col>
         </Row>

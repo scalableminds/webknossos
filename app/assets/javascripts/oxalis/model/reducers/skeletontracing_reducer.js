@@ -40,10 +40,10 @@ import type {
   TreeType,
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
-import type { ServerNodeType, ServerBranchPointType } from "oxalis/model";
 import type { ActionType } from "oxalis/model/actions/actions";
+import type { ServerNodeType, ServerBranchPointType } from "admin/api_flow_types";
 import Maybe from "data.maybe";
-import ErrorHandling from "libs/error_handling";
+import Toast from "libs/toast";
 
 function serverNodeToNode(n: ServerNodeType): NodeType {
   return {
@@ -105,15 +105,13 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
           const treeIdMaybe = findTreeByNodeId(trees, nodeId).map(tree => tree.treeId);
           if (treeIdMaybe.isNothing) {
             // There is an activeNodeId without a corresponding tree.
-            // Log this, since this shouldn't happen, but clear the activeNodeId
+            // Warn the user, since this shouldn't happen, but clear the activeNodeId
             // so that wk is usable.
-            ErrorHandling.assert(
-              false,
+            Toast.warning(
               `This tracing was initialized with an active node ID, which does not
               belong to any tracing (nodeId: ${nodeId}). WebKnossos will fall back to
               the last tree instead.`,
-              undefined,
-              true,
+              { timeout: 10000 },
             );
             activeNodeId = null;
           }

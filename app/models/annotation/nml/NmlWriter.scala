@@ -118,6 +118,16 @@ object NmlWriter extends FoxImplicits {
         writer.writeAttribute("depth", b.depth.toString)
       }
     }
+    tracing.boundingBox.map { b =>
+      Xml.withinElementSync("taskBoundingBox") {
+        writer.writeAttribute("topLeftX", b.topLeft.x.toString)
+        writer.writeAttribute("topLeftY", b.topLeft.y.toString)
+        writer.writeAttribute("topLeftZ", b.topLeft.z.toString)
+        writer.writeAttribute("width", b.width.toString)
+        writer.writeAttribute("height", b.height.toString)
+        writer.writeAttribute("depth", b.depth.toString)
+      }
+    }
   }
 
   def writeParametersAsXml(tracing: VolumeTracing, description: String, scale: Option[Scale])(implicit writer: XMLStreamWriter) = {

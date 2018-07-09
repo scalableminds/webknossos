@@ -113,6 +113,14 @@ const tracing = {
     allowAccess: true,
     allowDownload: true,
   },
+  boundingBox: {
+    min: [0, 0, 0],
+    max: [500, 500, 500],
+  },
+  userBoundingBox: {
+    min: [5, 5, 5],
+    max: [250, 250, 250],
+  },
 };
 
 const initialState = _.extend({}, defaultState, {
@@ -123,10 +131,16 @@ const initialState = _.extend({}, defaultState, {
   },
 });
 
-async function throwsAsyncParseError(t, fn) {
+async function testThatParserThrowsWithState(t, invalidState, key) {
+  // Serialize the NML using the invalidState, then parse it again, which should throw an NMLParseError
+  const nmlWithInvalidContent = serializeToNml(invalidState, invalidState.tracing, buildInfo);
+  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidContent), key);
+}
+
+async function throwsAsyncParseError(t, fn, key) {
   try {
     await fn.call();
-    t.fail(`Test did not throw, calling the following function: ${fn.toString()}`);
+    t.fail(`Test did not throw, calling the function with the following key: ${key}`);
   } catch (e) {
     if (e.name === "NmlParseError") {
       t.true(true);
@@ -183,6 +197,21 @@ test("NML Parser should throw errors for invalid nmls", async t => {
       },
     },
   });
+  const invalidSelfEdgeState = update(initialState, {
+    tracing: {
+      trees: {
+        "2": {
+          edges: {
+            $set: EdgeCollection.loadFromArray([
+              { source: 4, target: 5 },
+              { source: 5, target: 6 },
+              { source: 6, target: 6 },
+            ]),
+          },
+        },
+      },
+    },
+  });
   const duplicateEdgeState = update(initialState, {
     tracing: {
       trees: {
@@ -193,6 +222,43 @@ test("NML Parser should throw errors for invalid nmls", async t => {
               { source: 4, target: 5 },
               { source: 5, target: 6 },
             ]),
+          },
+        },
+      },
+    },
+  });
+  const duplicateNodeState = update(initialState, {
+    tracing: {
+      trees: {
+        "1": {
+          nodes: {
+            $set: new DiffableMap([
+              [0, createDummyNode(0)],
+              [1, createDummyNode(1)],
+              [2, createDummyNode(2)],
+              [4, createDummyNode(4)],
+              [7, createDummyNode(7)],
+            ]),
+          },
+        },
+        "2": {
+          nodes: {
+            $set: new DiffableMap([
+              [4, createDummyNode(4)],
+              [5, createDummyNode(5)],
+              [6, createDummyNode(6)],
+            ]),
+          },
+        },
+      },
+    },
+  });
+  const duplicateTreeState = update(initialState, {
+    tracing: {
+      trees: {
+        "2": {
+          treeId: {
+            $set: 1,
           },
         },
       },
@@ -225,46 +291,17 @@ test("NML Parser should throw errors for invalid nmls", async t => {
       },
     },
   });
-  const nmlWithInvalidComment = serializeToNml(
-    invalidCommentState,
-    invalidCommentState.tracing,
-    buildInfo,
-  );
-  const nmlWithInvalidBranchPoint = serializeToNml(
-    invalidBranchPointState,
-    invalidBranchPointState.tracing,
-    buildInfo,
-  );
-  const nmlWithInvalidEdge = serializeToNml(invalidEdgeState, invalidEdgeState.tracing, buildInfo);
-  const nmlWithDuplicateEdge = serializeToNml(
-    duplicateEdgeState,
-    duplicateEdgeState.tracing,
-    buildInfo,
-  );
-  const nmlWithDisconnectedTree = serializeToNml(
-    disconnectedTreeState,
-    disconnectedTreeState.tracing,
-    buildInfo,
-  );
-  const nmlWithMissingGroup = serializeToNml(
-    missingGroupIdState,
-    missingGroupIdState.tracing,
-    buildInfo,
-  );
-  const nmlWithDuplicateGroup = serializeToNml(
-    duplicateGroupIdState,
-    duplicateGroupIdState.tracing,
-    buildInfo,
-  );
 
-  // TODO AVAs t.throws doesn't properly work with async functions yet, see https://github.com/avajs/ava/issues/1371
-  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidComment));
-  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidBranchPoint));
-  await throwsAsyncParseError(t, () => parseNml(nmlWithInvalidEdge));
-  await throwsAsyncParseError(t, () => parseNml(nmlWithDuplicateEdge));
-  await throwsAsyncParseError(t, () => parseNml(nmlWithDisconnectedTree));
-  await throwsAsyncParseError(t, () => parseNml(nmlWithMissingGroup));
-  await throwsAsyncParseError(t, () => parseNml(nmlWithDuplicateGroup));
+  await testThatParserThrowsWithState(t, invalidCommentState, "invalidComment");
+  await testThatParserThrowsWithState(t, invalidBranchPointState, "invalidBranchPoint");
+  await testThatParserThrowsWithState(t, invalidEdgeState, "invalidEdge");
+  await testThatParserThrowsWithState(t, invalidSelfEdgeState, "invalidSelfEdge");
+  await testThatParserThrowsWithState(t, duplicateEdgeState, "duplicateEdge");
+  await testThatParserThrowsWithState(t, duplicateNodeState, "duplicateNode");
+  await testThatParserThrowsWithState(t, duplicateTreeState, "duplicateTree");
+  await testThatParserThrowsWithState(t, disconnectedTreeState, "disconnectedTree");
+  await testThatParserThrowsWithState(t, missingGroupIdState, "missingGroupId");
+  await testThatParserThrowsWithState(t, duplicateGroupIdState, "duplicateGroupId");
 });
 
 test("addTreesAndGroups reducer should assign new node and tree ids", t => {

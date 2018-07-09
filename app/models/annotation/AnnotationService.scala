@@ -6,7 +6,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale, Vector3D}
 import com.scalableminds.util.io.{NamedEnumeratorStream, ZipIO}
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits, TextUtils}
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Color, SkeletonTracing, SkeletonTracings, Tree}
+import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceLike => DataSource, SegmentationLayerLike => SegmentationLayer}
 import com.scalableminds.webknossos.datastore.tracings._
@@ -168,7 +168,16 @@ object AnnotationService
 
   def createTracingBase(dataSetName: String, boundingBox: Option[BoundingBox], startPosition: Point3D, startRotation: Vector3D) = {
     val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
-    val initialTree = Tree(1, Seq(initialNode), Seq(), Some(Color(1, 0, 0, 1)), Seq(), Seq(), "", System.currentTimeMillis())
+    val initialTree = Tree(
+      1,
+      Seq(initialNode),
+      Seq(),
+      Some(Color(1, 0, 0, 1)),
+      Seq(BranchPoint(initialNode.id, System.currentTimeMillis())),
+      Seq(),
+      "",
+      System.currentTimeMillis()
+    )
     SkeletonTracingDefaults.createInstance.copy(
       dataSetName = dataSetName,
       boundingBox = boundingBox.flatMap { box => if (box.isEmpty) None else Some(box) },

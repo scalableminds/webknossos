@@ -100,6 +100,12 @@ module.exports = function(env = {}) {
         { test: /\.proto$/, loaders: ["json-loader", "proto-loader6"] },
       ],
     },
+    externals: {
+      // fs, tls and net are needed so that airbrake-js can be compiled by webpack
+      fs: "{}",
+      tls: "{}",
+      net: "{}",
+    },
     resolve: {
       modules: [srcPath, nodePath],
     },

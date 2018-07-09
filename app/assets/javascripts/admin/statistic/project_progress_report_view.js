@@ -12,6 +12,8 @@ const { Column, ColumnGroup } = Table;
 
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
+const typeHint: APIProjectProgressReportType[] = [];
+
 type State = {
   areSettingsVisible: boolean,
   team: ?APITeamType,
@@ -92,24 +94,28 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               title="Project"
               dataIndex="projectName"
               defaultSortOrder="ascend"
-              sorter={Utils.localeCompareBy("projectName")}
+              sorter={Utils.localeCompareBy(typeHint, "projectName")}
               render={(text, item) => (
                 <span>
                   {item.paused ? <Icon type="pause-circle-o" /> : null} {text}
                 </span>
               )}
             />
-            <Column title="Tasks" dataIndex="totalTasks" sorter={Utils.compareBy("totalTasks")} />
+            <Column
+              title="Tasks"
+              dataIndex="totalTasks"
+              sorter={Utils.compareBy(typeHint, "totalTasks")}
+            />
             <ColumnGroup title="Instances">
               <Column
                 title="Total"
                 dataIndex="totalInstances"
-                sorter={Utils.compareBy("totalInstances")}
+                sorter={Utils.compareBy(typeHint, "totalInstances")}
               />
               <Column
                 title="Open"
                 dataIndex="openInstances"
-                sorter={Utils.compareBy("openInstances")}
+                sorter={Utils.compareBy(typeHint, "openInstances")}
                 render={(text, item) =>
                   `${item.openInstances} (${Math.round(
                     item.openInstances / item.totalInstances * 100,
@@ -119,7 +125,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               <Column
                 title="Active"
                 dataIndex="activeInstances"
-                sorter={Utils.compareBy("activeInstances")}
+                sorter={Utils.compareBy(typeHint, "activeInstances")}
                 render={(text, item) =>
                   `${item.activeInstances} (${Math.round(
                     item.activeInstances / item.totalInstances * 100,
@@ -129,7 +135,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
               <Column
                 title="Finished"
                 dataIndex="finishedInstances"
-                sorter={Utils.compareBy("finishedInstances")}
+                sorter={Utils.compareBy(typeHint, "finishedInstances")}
                 render={(text, item) =>
                   `${item.finishedInstances} (${Math.round(
                     item.finishedInstances / item.totalInstances * 100,

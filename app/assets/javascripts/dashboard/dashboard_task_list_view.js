@@ -20,7 +20,7 @@ import {
   requestTask,
   peekNextTasks,
 } from "admin/admin_rest_api";
-import { getActiveUser } from "oxalis/model/accessors/user_accessor";
+import { enforceActiveUser } from "oxalis/model/accessors/user_accessor";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
 import type {
@@ -30,8 +30,11 @@ import type {
 } from "admin/api_flow_types";
 import type { OxalisState } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import { handleGenericError } from "libs/error_handling";
 
 const { Column } = Table;
+
+const typeHint: APITaskWithAnnotationType[] = [];
 
 type StateProps = {
   activeUser: APIUserType,
@@ -131,19 +134,24 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    this.setState({ isLoading: true });
     const isFinished = this.state.showFinishedTasks;
     const url = this.props.userId
       ? `/api/users/${this.props.userId}/tasks?isFinished=${isFinished.toString()}`
       : `/api/user/tasks?isFinished=${isFinished.toString()}`;
-    const annotationsWithTasks = await Request.receiveJSON(url);
 
-    const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
+    try {
+      this.setState({ isLoading: true });
+      const annotationsWithTasks = await Request.receiveJSON(url);
+      const tasks = annotationsWithTasks.map(convertAnnotationToTaskWithAnnotationType);
 
-    this.setState({
-      [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
-      isLoading: false,
-    });
+      this.setState({
+        [isFinished ? "finishedTasks" : "unfinishedTasks"]: tasks,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   }
 
   toggleShowFinished = () => {
@@ -324,25 +332,25 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           title="ID"
           dataIndex="id"
           width={100}
-          sorter={Utils.localeCompareBy("id")}
+          sorter={Utils.localeCompareBy(typeHint, "id")}
           className="monospace-id"
         />
         <Column
           title="Type"
           dataIndex="type.summary"
           width={150}
-          sorter={Utils.localeCompareBy(t => t.type.summary)}
+          sorter={Utils.localeCompareBy(typeHint, t => t.type.summary)}
         />
         <Column
           title="Project"
           dataIndex="projectName"
           width={150}
-          sorter={Utils.localeCompareBy("projectName")}
+          sorter={Utils.localeCompareBy(typeHint, "projectName")}
         />
         <Column
           title="Description"
           dataIndex="type.description"
-          sorter={Utils.localeCompareBy(t => t.type.description)}
+          sorter={Utils.localeCompareBy(typeHint, t => t.type.description)}
           render={description => (
             <div className="task-type-description">
               <Markdown
@@ -357,14 +365,14 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
           title="Modes"
           dataIndex="type.settings.allowedModes"
           width={150}
-          sorter={Utils.localeCompareBy(t => t.type.settings.allowedModes.join("-"))}
+          sorter={Utils.localeCompareBy(typeHint, t => t.type.settings.allowedModes.join("-"))}
           render={modes => modes.map(mode => <Tag key={mode}>{mode}</Tag>)}
         />
         <Column
           title="Creation Date"
           dataIndex="created"
           width={150}
-          sorter={Utils.localeCompareBy("created")}
+          sorter={Utils.localeCompareBy(typeHint, "created")}
           render={created => moment(created).format("YYYY-MM-DD HH:SS")}
         />
         <Column
@@ -413,7 +421,7 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: OxalisState): StateProps => ({
-  activeUser: getActiveUser(state.activeUser),
+  activeUser: enforceActiveUser(state.activeUser),
 });
 
 export default connect(mapStateToProps)(withRouter(DashboardTaskListView));

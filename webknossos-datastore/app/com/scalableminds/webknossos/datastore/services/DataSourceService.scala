@@ -73,7 +73,7 @@ class DataSourceService @Inject()(
 
     for {
       _ <- Fox.successful(())
-      unzipResult = ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true)
+      unzipResult = ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true, Some(Category.values.map(_.toString).toList))
       _ <- unzipResult match {
         case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))
         case e => {

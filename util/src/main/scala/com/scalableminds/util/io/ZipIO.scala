@@ -93,10 +93,10 @@ object ZipIO {
 
   def withUnziped[A](file: File, includeHiddenFiles: Boolean = false, truncateCommonPrefix: Boolean = false)(f: (Path, InputStream) => A): Box[List[A]] = {
     tryo(new java.util.zip.ZipFile(file)).flatMap(
-      withUnziped(_, includeHiddenFiles, truncateCommonPrefix)((name, is) => Full(f(name, is))))
+      withUnziped(_, includeHiddenFiles, truncateCommonPrefix, None)((name, is) => Full(f(name, is))))
   }
 
-  def withUnziped[A](zip: ZipFile, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean)(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
+  def withUnziped[A](zip: ZipFile, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean, excludeFromPrefix: Option[List[String]])(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
 
     def isFileHidden(e: ZipEntry): Boolean = new File(e.getName).isHidden || e.getName.startsWith("__MACOSX")
 
@@ -122,7 +122,7 @@ object ZipIO {
     //color, mask, segmentation are the values for dataSet layer categories and a folder only has one category
     val commonPrefix = if (truncateCommonPrefix) {
       val commonPrefixNotFixed = PathUtils.commonPrefix(zipEntries.map(e => Paths.get(e.getName)))
-      val strippedPaths = List("color", "mask", "segmentation").flatMap(stripPathFrom(commonPrefixNotFixed, _))
+      val strippedPaths = excludeFromPrefix.getOrElse(List()).flatMap(stripPathFrom(commonPrefixNotFixed, _))
       strippedPaths.headOption match {
         case Some(path) => path
         case None => commonPrefixNotFixed
@@ -163,12 +163,12 @@ object ZipIO {
     result
   }
 
-  def unzipToFolder(file: File, targetDir: Path, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean): Box[List[Path]] = {
-    tryo(new java.util.zip.ZipFile(file)).flatMap(unzipToFolder(_, targetDir, includeHiddenFiles, truncateCommonPrefix))
+  def unzipToFolder(file: File, targetDir: Path, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean, excludeFromPrefix: Option[List[String]]): Box[List[Path]] = {
+    tryo(new java.util.zip.ZipFile(file)).flatMap(unzipToFolder(_, targetDir, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix))
   }
 
-  def unzipToFolder(zip: ZipFile, targetDir: Path, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean): Box[List[Path]] = {
-    withUnziped(zip, includeHiddenFiles, truncateCommonPrefix) { (name, in) =>
+  def unzipToFolder(zip: ZipFile, targetDir: Path, includeHiddenFiles: Boolean, truncateCommonPrefix: Boolean, excludeFromPrefix: Option[List[String]]): Box[List[Path]] = {
+    withUnziped(zip, includeHiddenFiles, truncateCommonPrefix, excludeFromPrefix) { (name, in) =>
       val path = targetDir.resolve(name)
       if (path.getParent != null) {
         PathUtils.ensureDirectory(path.getParent)

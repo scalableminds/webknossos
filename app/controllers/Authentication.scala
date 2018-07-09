@@ -32,8 +32,6 @@ import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Akka
 import play.api.libs.json._
 import play.api.mvc.{Action, _}
-import play.twirl.api.Html
-import reactivemongo.bson.BSONObjectID
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -412,8 +410,8 @@ class Authentication @Inject()(
   }
 
   private def createOrganization(organizationName: String) = {
-    val organization = OrganizationSQL(ObjectId.fromBsonId(BSONObjectID.generate), organizationName, "", "")
-    val organizationTeam = TeamSQL(ObjectId.fromBsonId(BSONObjectID.generate), organization._id, organization.name, isOrganizationTeam = true)
+    val organization = OrganizationSQL(ObjectId.generate, organizationName, "", "")
+    val organizationTeam = TeamSQL(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
     for {
       _ <- OrganizationSQLDAO.insertOne(organization)(GlobalAccessContext)
       _ <- TeamSQLDAO.insertOne(organizationTeam)(GlobalAccessContext)

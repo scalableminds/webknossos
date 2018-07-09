@@ -23,8 +23,8 @@ type State = {
 
 function StepHeader({ header, subheader, icon, children }) {
   return (
-    <div style={{ textAlign: "center" }}>
-      <div style={{ paddingBottom: 32, marginTop: -32 }}>
+    <div style={{}}>
+      <div style={{ paddingBottom: 32, textAlign: "center" }}>
         {icon}
         <p style={{ fontSize: 24, margin: "14px 0 0" }}>{header}</p>
         <p
@@ -281,7 +281,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
     })();
 
     return (
-      <div style={{ height: "calc(100vh - 48px)", display: "flex", flexDirection: "column" }}>
+      <div style={{ minHeight: "calc(100vh - 48px)", display: "flex", flexDirection: "column" }}>
         <Row type="flex" justify="center" style={{ padding: "20px 50px" }} align="middle">
           <Col span={18}>
             <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>

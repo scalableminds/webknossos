@@ -147,7 +147,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       for {
         usersWithActiveTasks <- ProjectSQLDAO.findUsersWithActiveTasks(projectName)
       } yield {
-        Ok(Json.toJson(usersWithActiveTasks.map(tuple  => Json.obj("email" -> tuple._1, "tasks" -> tuple._2))))
+        Ok(Json.toJson(usersWithActiveTasks.map(tuple  => Json.obj("email" -> tuple._1, "activeTasks" -> tuple._2))))
       }
   }
 

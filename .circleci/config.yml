@@ -133,6 +133,9 @@ jobs:
             docker push scalableminds/webknossos-dev:$CIRCLE_BRANCH
             docker logout
 
+      - run:
+          name: Report coverage
+          command: docker-compose run base yarn coverage
 workflows:
   version: 2
   default:

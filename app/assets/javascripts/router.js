@@ -4,13 +4,13 @@ import React from "react";
 import { Router, Route, Switch, Redirect } from "react-router-dom";
 import createBrowserHistory from "history/createBrowserHistory";
 import { connect } from "react-redux";
-import { Layout, Alert } from "antd";
+import { Layout, Alert, message } from "antd";
 import Enum from "Enumjs";
 
 import window from "libs/window";
 import { ControlModeEnum } from "oxalis/constants";
 import { APITracingTypeEnum } from "admin/api_flow_types";
-import { getAnnotationInformation } from "admin/admin_rest_api";
+import { getOrganizations, getAnnotationInformation } from "admin/admin_rest_api";
 import SecuredRoute from "components/secured_route";
 import Navbar from "navbar";
 import { Imprint, Privacy } from "components/legal";
@@ -44,6 +44,8 @@ import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import TimeLineView from "admin/time/time_line_view";
+import Onboarding from "admin/onboarding";
+import Utils from "libs/utils";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -79,6 +81,21 @@ function PageNotFoundView() {
 }
 
 class ReactRouter extends React.Component<Props> {
+  componentDidMount() {
+    this.maybeRedirectToOnboarding();
+  }
+
+  async maybeRedirectToOnboarding() {
+    const organizations = await getOrganizations();
+    if (organizations.length > 0) {
+      return;
+    }
+
+    message.info("This WebKnossos instance seems to be empty. Redirecting to initial setup...");
+    await Utils.sleep(2000);
+    browserHistory.push("/onboarding");
+  }
+
   tracingView = ({ match }: ContextRouter) => {
     const tracingType = Enum.coalesce(APITracingTypeEnum, match.params.type);
 
@@ -337,6 +354,7 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
+              <Route path="/onboarding" component={Onboarding} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

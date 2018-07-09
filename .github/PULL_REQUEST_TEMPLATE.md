@@ -8,6 +8,6 @@
 - fixes #123
 
 ------
-- [ ] Updated [changelog](CHANGELOG.md#unreleased)
-- [ ] Updated [migration guide](MIGRATIONS.md#unreleased) if applicable
+- [ ] Updated [changelog](https://github.com/scalableminds/webknossos/blob/master/CHANGELOG.md#unreleased)
+- [ ] Updated [migration guide](https://github.com/scalableminds/webknossos/blob/master/MIGRATIONS.md#unreleased) if applicable
 - [ ] Ready for review

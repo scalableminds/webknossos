@@ -20,6 +20,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Added permission for admins to get tasks from all projects in their organization. [#2728](https://github.com/scalableminds/webknossos/pull/2728)
   - Added the shortcut to copy the currently hovered cell id (CTRL + I) to non-volume-tracings, too. [#2726](https://github.com/scalableminds/webknossos/pull/2726)
   - Added permission for team managers to refresh datasets. [#2688](https://github.com/scalableminds/webknossos/pull/2688)
+  - Added backend-unit-test setup and a first test for NML validation. [#2829](https://github.com/scalableminds/webknossos/pull/2829)
 
 
 ### Changed
@@ -50,6 +51,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Fixed a bug where cell IDs in the segmentation tab were not shown for all zoomsteps. [#2726](https://github.com/scalableminds/webknossos/pull/2726)
   - Fixed the naming of the initial tree in tasks. [#2689](https://github.com/scalableminds/webknossos/pull/2689)
   - Fixed a regression affecting node selection, shortcuts and 3d viewport navigation. [#2673](https://github.com/scalableminds/webknossos/pull/2673)
+  - Fixed the dataset zip upload for dataSets, which only have one dataLayer and no config file. [#2840](https://github.com/scalableminds/webknossos/pull/2840)
 
 
 ### Removed

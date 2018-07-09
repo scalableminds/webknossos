@@ -8,6 +8,6 @@
 - fixes #123
 
 ------
-- [ ] Updated [changelog](CHANGELOG.md#unreleased)
-- [ ] Updated [migration guide](MIGRATIONS.md#unreleased) if applicable
+- [ ] Updated [changelog](../blob/master/CHANGELOG.md#unreleased)
+- [ ] Updated [migration guide](../blob/master/MIGRATIONS.md#unreleased) if applicable
 - [ ] Ready for review

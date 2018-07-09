@@ -114,20 +114,32 @@ jobs:
           name: Push docker images
           command: |
             echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-            docker tag \
-              scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
-              scalableminds/webknossos:${CIRCLE_BRANCH}
-            docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-            docker push scalableminds/webknossos:${CIRCLE_BRANCH}
-            docker tag \
-              scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
-              scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
-            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
-            docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
-            docker tag \
-              scalableminds/webknossos-dev \
-              scalableminds/webknossos-dev:$CIRCLE_BRANCH
-            docker push scalableminds/webknossos-dev:$CIRCLE_BRANCH
+            if [ -n "$CIRCLE_TAG" ]; then
+              docker tag \
+                scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+                scalableminds/webknossos:$CIRCLE_TAG
+              docker push scalableminds/webknossos:$CIRCLE_TAG
+              docker tag \
+                scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+                scalableminds/webknossos-datastore:$CIRCLE_TAG
+              docker push scalableminds/webknossos-datastore:$CIRCLE_TAG
+            fi
+            if [ -n "$CIRCLE_BRANCH" ]; then
+              docker tag \
+                scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+                scalableminds/webknossos:${CIRCLE_BRANCH}
+              docker push scalableminds/webknossos:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+              docker push scalableminds/webknossos:${CIRCLE_BRANCH}
+              docker tag \
+                scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM} \
+                scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+              docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}__${CIRCLE_BUILD_NUM}
+              docker push scalableminds/webknossos-datastore:${CIRCLE_BRANCH}
+              docker tag \
+                scalableminds/webknossos-dev \
+                scalableminds/webknossos-dev:$CIRCLE_BRANCH
+              docker push scalableminds/webknossos-dev:$CIRCLE_BRANCH
+            fi
             docker logout
 
       - run:
@@ -137,4 +149,7 @@ workflows:
   version: 2
   default:
     jobs:
-      - build_test_deploy
+      - build_test_deploy:
+          filters:
+            tags:
+              only: /.*/

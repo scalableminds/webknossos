@@ -9,7 +9,7 @@ const initialState = {
       scale: [1, 1, 2],
       dataLayers: [
         {
-          resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16]],
+          resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8]],
         },
         {
           resolutions: [[1, 1, 1]],

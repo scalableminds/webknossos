@@ -13,6 +13,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import type { APIUserType, APIDatasetType, APIDataLayerType } from "admin/api_flow_types";
 import type { RouterHistory } from "react-router-dom";
 import { getDatastores, triggerDatasetCheck, getDatasets } from "admin/admin_rest_api";
+import { handleGenericError } from "libs/error_handling";
 
 const { Search } = Input;
 
@@ -83,14 +84,18 @@ class DatasetView extends React.PureComponent<Props, State> {
   }
 
   async fetchData(): Promise<void> {
-    this.setState({ isLoading: true });
-    const datasets = await getDatasets();
-
-    const transformedDatasets = transformDatasets(datasets);
-    this.setState({
-      datasets: transformedDatasets,
-      isLoading: false,
-    });
+    try {
+      this.setState({ isLoading: true });
+      const datasets = await getDatasets();
+      const transformedDatasets = transformDatasets(datasets);
+      this.setState({
+        datasets: transformedDatasets,
+      });
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   }
 
   handleSearch = (event: SyntheticInputEvent<>): void => {
@@ -99,10 +104,17 @@ class DatasetView extends React.PureComponent<Props, State> {
 
   handleCheckDatasets = async (): Promise<void> => {
     if (this.state.isLoading) return;
-    this.setState({ isLoading: true });
-    const datastores = await getDatastores();
-    await Promise.all(datastores.map(datastore => triggerDatasetCheck(datastore.url)));
-    await this.fetchData();
+
+    try {
+      this.setState({ isLoading: true });
+      const datastores = await getDatastores();
+      await Promise.all(datastores.map(datastore => triggerDatasetCheck(datastore.url)));
+      await this.fetchData();
+    } catch (error) {
+      handleGenericError(error);
+    } finally {
+      this.setState({ isLoading: false });
+    }
   };
 
   updateDataset = (newDataset: DatasetType) => {

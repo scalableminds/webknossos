@@ -14,6 +14,7 @@ import {
   getPlaneScalingFactor,
   getRequestLogZoomStep,
 } from "oxalis/model/accessors/flycam_accessor";
+import { getBoundaries } from "oxalis/model/accessors/dataset_accessor";
 import Model from "oxalis/model";
 import Store from "oxalis/store";
 import { getVoxelPerNM } from "oxalis/model/scaleinfo";
@@ -83,9 +84,10 @@ class SceneController {
     this.rootNode = new THREE.Object3D();
 
     // Cubes
+    const { lowerBoundary, upperBoundary } = getBoundaries(Store.getState().dataset);
     this.cube = new Cube({
-      min: Model.lowerBoundary,
-      max: Model.upperBoundary,
+      min: lowerBoundary,
+      max: upperBoundary,
       color: CUBE_COLOR,
       showCrossSections: true,
     });
@@ -194,7 +196,10 @@ class SceneController {
 
     const zoomStep = getRequestLogZoomStep(Store.getState());
     for (const dataLayer of Model.getAllLayers()) {
-      [anchorPoint, fallbackAnchorPoint] = dataLayer.updateDataTextures(gPos, zoomStep);
+      [anchorPoint, fallbackAnchorPoint] = dataLayer.layerRenderingManager.updateDataTextures(
+        gPos,
+        zoomStep,
+      );
     }
 
     if (optPlane) {

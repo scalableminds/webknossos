@@ -15,12 +15,29 @@ import UpdatableTexture from "libs/UpdatableTexture";
 import { getRenderer } from "oxalis/controller/renderer";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import messages from "messages";
-import type { MappingType, DataLayerType } from "oxalis/store";
+import { getMappings } from "oxalis/model/accessors/dataset_accessor";
+import type { MappingType } from "oxalis/store";
 import type { APIMappingType } from "admin/api_flow_types";
+import type DataLayer from "oxalis/model/data_layer";
 
 export const MAPPING_TEXTURE_WIDTH = 4096;
 
 type APIMappingsType = { [string]: APIMappingType };
+
+// For now, since we have no UI for this
+export function setupGlobalMappingsObject(segmentationLayer: DataLayer) {
+  return {
+    getAll(): string[] {
+      return segmentationLayer.mappings.getMappingNames();
+    },
+    getActive(): ?string {
+      return segmentationLayer.activeMapping;
+    },
+    activate(mapping: string) {
+      return segmentationLayer.setActiveMapping(mapping);
+    },
+  };
+}
 
 class Mappings {
   baseUrl: string;
@@ -28,13 +45,12 @@ class Mappings {
   mappingTexture: UpdatableTexture;
   mappingLookupTexture: UpdatableTexture;
 
-  constructor(layerInfo: DataLayerType) {
-    const datasetName = Store.getState().dataset.name;
-    const dataStoreUrl = Store.getState().dataset.dataStore.url;
-    this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${
-      layerInfo.name
-    }/mappings/`;
-    this.availableMappings = layerInfo.mappings || [];
+  constructor(layerName: string) {
+    const { dataset } = Store.getState();
+    const datasetName = dataset.name;
+    const dataStoreUrl = dataset.dataStore.url;
+    this.baseUrl = `${dataStoreUrl}/data/datasets/${datasetName}/layers/${layerName}/mappings/`;
+    this.availableMappings = getMappings(dataset, layerName);
   }
 
   getMappingNames(): Array<string> {

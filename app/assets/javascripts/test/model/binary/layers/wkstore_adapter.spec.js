@@ -4,6 +4,8 @@ import _ from "lodash";
 import mockRequire from "mock-require";
 import sinon from "sinon";
 import Base64 from "base64-js";
+import datasetServerObject from "test/fixtures/dataset_server_object";
+import { getBitDepth } from "oxalis/model/accessors/dataset_accessor";
 
 mockRequire.stopAll();
 
@@ -12,6 +14,13 @@ const RequestMock = {
   sendJSONReceiveArraybuffer: sinon.stub(),
   receiveJSON: sinon.stub(),
 };
+const { dataSource } = datasetServerObject;
+let _fourBit = false;
+
+function setFourBit(bool) {
+  _fourBit = bool;
+}
+
 const StoreMock = {
   getState: () => ({
     dataset: {
@@ -20,8 +29,9 @@ const StoreMock = {
         typ: "webknossos-store",
         url: "url",
       },
+      dataSource,
     },
-    datasetConfiguration: { fourBit: false },
+    datasetConfiguration: { fourBit: _fourBit },
   }),
   dispatch: sinon.stub(),
 };
@@ -30,30 +40,25 @@ mockRequire("libs/request", RequestMock);
 mockRequire("oxalis/store", StoreMock);
 
 const { DataBucket } = mockRequire.reRequire("oxalis/model/bucket_data_handling/bucket");
-const { requestFromStore, sendToStore, getBitDepth } = mockRequire.reRequire(
+const { requestFromStore, sendToStore } = mockRequire.reRequire(
   "oxalis/model/bucket_data_handling/wkstore_adapter",
 );
 
-const layerInfo = {
-  name: "layername",
-  category: "color",
-  elementClass: "uint16",
-  resolutions: [[1, 1, 1], [2, 2, 2], [4, 4, 4], [8, 8, 8], [16, 16, 16], [32, 32, 32]],
-};
 const tokenResponse = { token: "token" };
 
 test.beforeEach(t => {
   RequestMock.receiveJSON = sinon.stub();
   RequestMock.receiveJSON.returns(Promise.resolve(tokenResponse));
 
-  t.context.layer = layerInfo;
+  t.context.layer = dataSource.dataLayers[0];
+  t.context.segmentationLayer = dataSource.dataLayers[1];
 });
 
 test.serial("Initialization should set the attributes correctly", t => {
   const { layer } = t.context;
-  t.is(layer.name, "layername");
+  t.is(layer.name, "color");
   t.is(layer.category, "color");
-  t.is(getBitDepth(layer), 16);
+  t.is(getBitDepth(layer), 8);
 });
 
 function prepare() {
@@ -91,25 +96,29 @@ test.serial("requestFromStore: Token Handling should re-request a token when it'
     t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 2);
 
     const url = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args[0];
-    t.is(url, "url/data/datasets/dataSet/layers/layername/data?token=token");
+    t.is(url, "url/data/datasets/dataSet/layers/color/data?token=token");
 
     const url2 = RequestMock.sendJSONReceiveArraybuffer.getCall(1).args[0];
-    t.is(url2, "url/data/datasets/dataSet/layers/layername/data?token=token2");
+    t.is(url2, "url/data/datasets/dataSet/layers/color/data?token=token2");
   });
 });
+
+function createExpectedOptions(fourBit: boolean = false) {
+  return {
+    data: [
+      { position: [0, 0, 0], zoomStep: 0, cubeSize: 32, fourBit },
+      { position: [64, 64, 64], zoomStep: 1, cubeSize: 32, fourBit },
+    ],
+    timeout: 30000,
+  };
+}
 
 test.serial("requestFromStore: Request Handling: should pass the correct request parameters", t => {
   const { layer } = t.context;
   const { batch } = prepare();
 
-  const expectedUrl = "url/data/datasets/dataSet/layers/layername/data?token=token2";
-  const expectedOptions = {
-    data: [
-      { position: [0, 0, 0], zoomStep: 0, cubeSize: 32, fourBit: false },
-      { position: [64, 64, 64], zoomStep: 1, cubeSize: 32, fourBit: false },
-    ],
-    timeout: 30000,
-  };
+  const expectedUrl = "url/data/datasets/dataSet/layers/color/data?token=token2";
+  const expectedOptions = createExpectedOptions();
 
   return requestFromStore(layer, batch).then(() => {
     t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 1);
@@ -120,8 +129,51 @@ test.serial("requestFromStore: Request Handling: should pass the correct request
   });
 });
 
+test.serial(
+  "requestFromStore: Request Handling: four bit mode should be respected for color layers",
+  async t => {
+    setFourBit(true);
+    // test four bit color and 8 bit seg
+    const { layer } = t.context;
+    const { batch } = prepare();
+
+    const expectedUrl = "url/data/datasets/dataSet/layers/color/data?token=token2";
+    const expectedOptions = createExpectedOptions(true);
+
+    await requestFromStore(layer, batch).then(() => {
+      t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 1);
+
+      const [url, options] = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args;
+      t.is(url, expectedUrl);
+      t.deepEqual(options, expectedOptions);
+    });
+
+    setFourBit(false);
+  },
+);
+
+test.serial(
+  "requestFromStore: Request Handling: four bit mode should not be respected for segmentation layers",
+  async t => {
+    setFourBit(true);
+    const { segmentationLayer } = t.context;
+
+    const { batch } = prepare();
+    const expectedUrl = "url/data/datasets/dataSet/layers/segmentation/data?token=token2";
+    const expectedOptions = createExpectedOptions(false);
+
+    await requestFromStore(segmentationLayer, batch).then(() => {
+      t.is(RequestMock.sendJSONReceiveArraybuffer.callCount, 1);
+
+      const [url, options] = RequestMock.sendJSONReceiveArraybuffer.getCall(0).args;
+      t.is(url, expectedUrl);
+      t.deepEqual(options, expectedOptions);
+    });
+    setFourBit(false);
+  },
+);
+
 test.serial("sendToStore: Request Handling should send the correct request parameters", t => {
-  const { layer } = t.context;
   const data = new Uint8Array(2);
   const bucket1 = new DataBucket(8, [0, 0, 0, 0], null);
   bucket1.data = data;
@@ -141,7 +193,6 @@ test.serial("sendToStore: Request Handling should send the correct request param
           position: [0, 0, 0],
           zoomStep: 0,
           cubeSize: 32,
-          fourBit: false,
           base64Data: Base64.fromByteArray(data),
         },
       },
@@ -151,14 +202,13 @@ test.serial("sendToStore: Request Handling should send the correct request param
           position: [64, 64, 64],
           zoomStep: 1,
           cubeSize: 32,
-          fourBit: false,
           base64Data: Base64.fromByteArray(data),
         },
       },
     ],
   };
 
-  return sendToStore(layer, batch).then(() => {
+  return sendToStore(batch).then(() => {
     t.is(StoreMock.dispatch.callCount, 1);
 
     const [saveQueueItems] = StoreMock.dispatch.getCall(0).args;

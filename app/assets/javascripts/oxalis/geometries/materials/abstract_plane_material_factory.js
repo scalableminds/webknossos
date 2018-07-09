@@ -7,14 +7,11 @@ import _ from "lodash";
 import * as THREE from "three";
 import UpdatableTexture from "libs/UpdatableTexture";
 import app from "app";
-import Model from "oxalis/model";
+import Store from "oxalis/store";
 import type { DatasetLayerConfigurationType } from "oxalis/store";
 import { listenToStoreProperty } from "oxalis/model/helpers/listener_helpers";
 import shaderEditor from "oxalis/model/helpers/shader_editor";
-
-export type TextureMapType = {
-  [key: string]: THREE.DataTexture,
-};
+import { getColorLayers } from "oxalis/model/accessors/dataset_accessor";
 
 export type UniformsType = {
   [key: string]: {
@@ -104,10 +101,10 @@ class AbstractPlaneMaterialFactory {
   material: THREE.ShaderMaterial;
   uniforms: UniformsType;
   attributes: Object;
-  textures: TextureMapType;
   minFilter: THREE.NearestFilter;
   maxFilter: THREE.NearestFilter;
   shaderId: number;
+  storePropertyUnsubscribers: Array<() => void> = [];
 
   constructor(shaderId: number) {
     this.minFilter = THREE.NearestFilter;
@@ -118,18 +115,17 @@ class AbstractPlaneMaterialFactory {
   setup() {
     this.setupUniforms();
     this.makeMaterial();
-    this.attachTextures(this.textures);
+    this.attachTextures();
     this.setupChangeListeners();
     return this;
   }
 
-  /* eslint-disable no-unused-vars */
-  attachTextures(textures: TextureMapType): void {}
+  attachTextures(): void {}
 
   setupUniforms(): void {
     this.uniforms = {};
 
-    for (const colorLayer of Model.getColorLayers()) {
+    for (const colorLayer of getColorLayers(Store.getState().dataset)) {
       const name = sanitizeName(colorLayer.name);
       this.uniforms[`${name}_brightness`] = {
         type: "f",
@@ -152,22 +148,13 @@ class AbstractPlaneMaterialFactory {
     );
 
     shaderEditor.addMaterial(this.shaderId, this.material);
-
-    this.material.setData = (name, data) => {
-      const textureName = sanitizeName(name);
-      const texture = this.textures[textureName];
-      if (texture) {
-        texture.image.data = data;
-        texture.needsUpdate = true;
-      }
-    };
   }
 
   setupChangeListeners(): void {
     listenToStoreProperty(
       state => state.datasetConfiguration.layers,
       layerSettings => {
-        for (const colorLayer of Model.getColorLayers()) {
+        for (const colorLayer of getColorLayers(Store.getState().dataset)) {
           const settings = layerSettings[colorLayer.name];
           if (settings != null) {
             const name = sanitizeName(colorLayer.name);

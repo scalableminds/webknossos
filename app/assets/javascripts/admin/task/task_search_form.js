@@ -1,7 +1,7 @@
 // @flow
 import _ from "lodash";
 import React from "react";
-import { Form, Row, Col, Button, Input, Select } from "antd";
+import { Icon, Form, Row, Dropdown, Menu, Col, Button, Input, Select } from "antd";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/admin_rest_api";
 import Persistence from "libs/persistence";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -78,7 +78,7 @@ class TaskSearchForm extends React.Component<Props, State> {
         : this.state.fieldValues;
     if (_.size(fieldValues) > 0) {
       this.props.form.setFieldsValue(fieldValues);
-      this.handleFormSubmit();
+      this.handleFormSubmit(false);
     }
   }
 
@@ -95,7 +95,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.setState({ users, projects, taskTypes });
   }
 
-  handleFormSubmit = (event: ?SyntheticInputEvent<*>) => {
+  handleFormSubmit = (isRandom: boolean, event: ?SyntheticInputEvent<*>) => {
     if (event) {
       event.preventDefault();
     }
@@ -125,17 +125,11 @@ class TaskSearchForm extends React.Component<Props, State> {
         queryObject.project = formValues.projectName;
       }
 
-      if (formValues.random) {
-        queryObject.random = formValues.random;
-        this.props.form.setFields({
-          random: {
-            value: false,
-          },
-        });
+      if (isRandom) {
+        queryObject.random = isRandom;
       }
 
       this.setState({ fieldValues: formValues });
-
       this.props.onChange(queryObject);
     });
   };
@@ -146,16 +140,6 @@ class TaskSearchForm extends React.Component<Props, State> {
     this.props.onChange({});
   };
 
-  handleRandomSubset = () => {
-    this.props.form.getFieldDecorator("random", { initialValue: false });
-    this.props.form.setFields({
-      random: {
-        value: true,
-      },
-    });
-    this.handleFormSubmit();
-  };
-
   render() {
     const { getFieldDecorator } = this.props.form;
     const formItemLayout = {
@@ -164,7 +148,7 @@ class TaskSearchForm extends React.Component<Props, State> {
     };
 
     return (
-      <Form onSubmit={this.handleFormSubmit}>
+      <Form onSubmit={evt => this.handleFormSubmit(false, evt)}>
         <Row gutter={40}>
           <Col span={12}>
             <FormItem {...formItemLayout} label="Task Id">
@@ -233,19 +217,27 @@ class TaskSearchForm extends React.Component<Props, State> {
         </Row>
         <Row>
           <Col span={24} style={{ textAlign: "right" }}>
-            <Button
-              type="primary"
-              htmlType="submit"
-              disabled={this.props.isLoading}
-              loading={this.props.isLoading}
+            <Dropdown
+              overlay={
+                <Menu onClick={() => this.handleFormSubmit(true)}>
+                  <Menu.Item key="1">
+                    <Icon type="retweet" />Show random subset
+                  </Menu.Item>
+                </Menu>
+              }
             >
-              Search
-            </Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                disabled={this.props.isLoading}
+                loading={this.props.isLoading}
+                style={{ paddingRight: 3 }}
+              >
+                Search <Icon type="down" />
+              </Button>
+            </Dropdown>
             <Button style={{ marginLeft: 8 }} onClick={this.handleReset}>
               Clear
-            </Button>
-            <Button style={{ marginLeft: 8 }} onClick={this.handleRandomSubset}>
-              Show random subset
             </Button>
           </Col>
         </Row>

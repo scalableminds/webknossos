@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import models.team._
 import play.api.Play
 import play.api.i18n.MessagesApi

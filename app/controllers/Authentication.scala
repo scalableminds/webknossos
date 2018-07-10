@@ -373,10 +373,12 @@ class Authentication @Inject()(
             val loginInfo = LoginInfo(CredentialsProvider.ID, email)
             var errors = List[String]()
             val firstName = normalizeName(signUpData.firstName).getOrElse {
-              errors ::= Messages("user.firstName.invalid"); ""
+              errors ::= Messages("user.firstName.invalid");
+              ""
             }
             val lastName = normalizeName(signUpData.lastName).getOrElse {
-              errors ::= Messages("user.lastName.invalid"); ""
+              errors ::= Messages("user.lastName.invalid");
+              ""
             }
             UserService.retrieve(loginInfo).toFox.futureBox.flatMap {
               case Full(_) =>
@@ -390,7 +392,7 @@ class Authentication @Inject()(
                     organization <- createOrganization(signUpData.organization) ?~> Messages("organization.create.failed")
                     user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, isActive = true, teamRole = true,
                       loginInfo, passwordHasher.hash(signUpData.password), isAdmin = true)
-                    _ <- createOrganizationFolder(signUpData.organization, loginInfo)
+                    _ <- createOrganizationFolder(organization.name, loginInfo)
                   } yield Ok
                 }
               case f: Failure => Fox.failure(f.msg)
@@ -409,15 +411,16 @@ class Authentication @Inject()(
     Fox.sequenceOfFulls(List(noOrganizationPresent, configurationFlagSet, userIsSuperUser)).map(_.headOption).toFox
   }
 
-  private def createOrganization(organizationName: String) = {
-    val organization = OrganizationSQL(ObjectId.generate, organizationName, "", "")
-    val organizationTeam = TeamSQL(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
+  private def createOrganization(organizationDisplayName: String) =
     for {
+      organizationName <- normalizeName(organizationDisplayName).toFox ?~> "invalid organization name"
+      organization = OrganizationSQL(ObjectId.generate, organizationName.replaceAll(" ", "_"), "", "", organizationDisplayName)
+      organizationTeam = TeamSQL(ObjectId.generate, organization._id, organization.name, isOrganizationTeam = true)
       _ <- OrganizationSQLDAO.insertOne(organization)(GlobalAccessContext)
       _ <- TeamSQLDAO.insertOne(organizationTeam)(GlobalAccessContext)
       _ <- InitialDataService.insertLocalDataStoreIfEnabled
     } yield organization
-  }
+
 
   private def createOrganizationFolder(organizationName: String, loginInfo: LoginInfo)(implicit request: RequestHeader) = {
     def sendRPCToDataStore(dataStore: DataStoreSQL, token: String) = {

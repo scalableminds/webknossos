@@ -1,6 +1,6 @@
 package models.team
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, JsonFormatHelper}
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}
@@ -41,7 +41,7 @@ object TeamMembership extends FoxImplicits {
     )
 
   def teamMembershipPublicReads(): Reads[TeamMembership] =
-    ((__ \ "id").read[String](JsonFormatHelper.StringObjectIdReads("id")) and
+    ((__ \ "id").read[String](ObjectId.stringBSONObjectIdReads("id")) and
       (__ \ "name").read[String] and
       (__ \ "isTeamManager").read[Boolean]
       ) ((id, name, isTeamManager) => TeamMembership(BSONObjectID(id), name, isTeamManager))

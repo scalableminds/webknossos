@@ -1,12 +1,10 @@
 package models.team
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, JsonFormatHelper}
+import com.scalableminds.util.reactivemongo.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.user.User
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import reactivemongo.bson.BSONObjectID
 import play.api.Play.current
@@ -15,8 +13,6 @@ import reactivemongo.play.json.BSONFormats._
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO}
-
-import scala.concurrent.Future
 
 case class OrganizationSQL(
                             _id: ObjectId,

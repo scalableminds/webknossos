@@ -1,6 +1,6 @@
 package models.project
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext, JsonFormatHelper}
+import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
@@ -70,11 +70,11 @@ object ProjectSQL {
 
   val projectPublicReads: Reads[ProjectSQL] =
     ((__ \ 'name).read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ 'team).read[String](JsonFormatHelper.StringObjectIdReads("team")) and
+      (__ \ 'team).read[String](ObjectId.stringBSONObjectIdReads("team")) and
       (__ \ 'priority).read[Int] and
       (__ \ 'paused).readNullable[Boolean] and
       (__ \ 'expectedTime).readNullable[Long] and
-      (__ \ 'owner).read[String](JsonFormatHelper.StringObjectIdReads("owner"))) (
+      (__ \ 'owner).read[String](ObjectId.stringBSONObjectIdReads("owner"))) (
       (name, team, priority, paused, expectedTime, owner) =>
         ProjectSQL(ObjectId.generate, ObjectId(team), ObjectId(owner), name, priority, paused getOrElse false, expectedTime))
 

@@ -1,7 +1,6 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
@@ -12,7 +11,7 @@ import models.annotation.nml.NmlService
 import models.annotation.{AnnotationSQLDAO, AnnotationService, AnnotationTypeSQL}
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.project.ProjectSQLDAO
-import models.task.{ScriptDAO, TaskSQL, TaskSQLDAO, TaskTypeDAO}
+import models.task._
 import models.team.OrganizationDAO
 import models.user._
 import net.liftweb.common.Box
@@ -170,7 +169,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     scriptIdOpt match {
       case Some(scriptId) =>
         for {
-          _ <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+          scriptIdValidated <- ObjectId.parse(scriptId)
+          _ <- ScriptSQLDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
         } yield ()
       case _ => Fox.successful(())
     }

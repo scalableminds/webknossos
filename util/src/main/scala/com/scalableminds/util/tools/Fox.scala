@@ -8,6 +8,7 @@ import play.api.libs.json.{JsError, JsResult, JsSuccess}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.reflect.ClassTag
+import scala.util.{Success, Try}
 
 trait FoxImplicits {
   implicit def bool2Fox(b: Boolean)(implicit ec: ExecutionContext): Fox[Boolean] =
@@ -35,6 +36,11 @@ trait FoxImplicits {
   implicit def jsResult2Fox[T](result: JsResult[T])(implicit ec: ExecutionContext): Fox[T] = result match {
     case JsSuccess(value, _) => Fox.successful(value)
     case JsError(e) => Fox.failure(s"Invalid json: $e")
+  }
+
+  implicit def try2Fox[T](t: Try[T])(implicit ec: ExecutionContext): Fox[T] = t match {
+    case Success(result) => Fox.successful(result)
+    case _ => Fox.failure("")
   }
 
   implicit def fox2FutureBox[T](f: Fox[T])(implicit ec: ExecutionContext): Future[Box[T]] =

@@ -40,7 +40,7 @@ class Api {
    *   ...
    * });
    */
-  apiReady(version: number = 1): Promise<Object> {
+  apiReady(version: number = latestVersion): Promise<Object> {
     if (process.env.BABEL_ENV !== "test") {
       if (version !== latestVersion) {
         console.warn(`

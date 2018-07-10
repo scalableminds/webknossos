@@ -4,7 +4,7 @@ import com.mohiva.play.silhouette.api._
 import com.mohiva.play.silhouette.api.services.{AuthenticatorResult, AuthenticatorService}
 import com.mohiva.play.silhouette.api.util.{Clock, FingerprintGenerator, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators._
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.api.mvc._
 
 import scala.concurrent.{ExecutionContext, Future}

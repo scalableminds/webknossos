@@ -10,7 +10,7 @@ import type {
   TreeGroupType,
 } from "oxalis/store";
 import type { Vector3 } from "oxalis/constants";
-import type { BucketInfo } from "oxalis/model/bucket_data_handling/bucket_builder";
+import type { SendBucketInfo } from "oxalis/model/bucket_data_handling/wkstore_adapter";
 import { convertFrontendBoundingBoxToServer } from "oxalis/model/reducers/reducer_helpers";
 
 export type NodeWithTreeIdType = { treeId: number } & NodeType;
@@ -106,7 +106,7 @@ type UpdateVolumeTracingUpdateAction = {
 };
 type UpdateBucketUpdateAction = {
   name: "updateBucket",
-  value: BucketInfo & {
+  value: SendBucketInfo & {
     base64Data: string,
   },
 };
@@ -285,7 +285,7 @@ export function updateVolumeTracing(
     },
   };
 }
-export function updateBucket(bucketInfo: BucketInfo, base64Data: string) {
+export function updateBucket(bucketInfo: SendBucketInfo, base64Data: string) {
   return {
     name: "updateBucket",
     value: Object.assign({}, bucketInfo, {

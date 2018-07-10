@@ -100,30 +100,31 @@ services:
           -Dpostgres.url=$${POSTGRES_URL}"
     stdin_open: true
 
-  e2e-tests:
+  backend-tests:
     extends:
       service: base
     ports:
       - "5005:5005"
       - "9000:9000"
+    command: sbt -v -d "test-only backend.*"
+
+  e2e-tests:
+    extends:
+      service: backend-tests
     links:
       - postgres
       - fossildb
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
     command:
       - bash
       - -c
       - >
         sbt
         -v -d
-        "test-only * --
-          -Dconfig.file=./conf/application.conf
-          -Djava.net.preferIPv4Stack=true
-          -Dhttp.address=0.0.0.0
+        "test-only e2e.* --
           -Ddatastore.fossildb.address=fossildb
-          -Dpostgres.url=$${POSTGRES_URL}
-          -Dapplication.insertInitialData=false"
-    environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
+          -Dpostgres.url=$${POSTGRES_URL}"
 
   postgres:
     image: postgres:10-alpine

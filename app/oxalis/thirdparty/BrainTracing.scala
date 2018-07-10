@@ -2,7 +2,7 @@ package oxalis.thirdparty
 
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Send
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.FoxImplicits
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationSQL

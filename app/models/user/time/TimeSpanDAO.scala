@@ -1,6 +1,6 @@
 package models.user.time
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.User
 import play.api.libs.concurrent.Execution.Implicits._

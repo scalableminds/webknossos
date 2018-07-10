@@ -1,7 +1,4 @@
-/*
- * Copyright (C) 20011-2014 Scalable minds UG (haftungsbeschränkt) & Co. KG. <http://scm.io>
- */
-package com.scalableminds.util.reactivemongo
+package com.scalableminds.util.accesscontext
 
 trait DBAccessContextPayload
 
@@ -21,9 +18,9 @@ case object GlobalAccessContext extends DBAccessContext {
   override val globalAccess = true
 }
 
-object DBAccessContext{
+object DBAccessContext {
   def apply(payload: Option[DBAccessContextPayload]) = {
-    payload match{
+    payload match {
       case Some(p) => AuthorizedAccessContext(p)
       case _ => UnAuthorizedAccessContext
     }

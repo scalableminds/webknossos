@@ -238,12 +238,12 @@ class OnboardingView extends React.PureComponent<Props, State> {
           <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
             Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
             accomplish your research goals.{" "}
-            <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn
+            <a href="https://www.youtube.com/watch?v=4DD7408avUY">Watch this demo</a> to learn more.
           </FeatureCard>
           <FeatureCard header="Scripting" icon={<Icon type="code-o" />}>
             Use the <a href="/assets/docs/frontend-api/index.html">webKnossos API</a> to create{" "}
             <a href="/scripts">scriptable workflows</a>.{" "}
-            <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn
+            <a href="https://www.youtube.com/watch?v=u5j8Sf5YwuM">Watch this demo</a> to learn more.
           </FeatureCard>
           <FeatureCard header="Contact Us" icon={<Icon type="customer-service" />}>
             <a href="mailto:hello@scalableminds.com">Get in touch</a>, if you have any further

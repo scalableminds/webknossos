@@ -5,10 +5,12 @@ import * as React from "react";
 import Utils from "libs/utils";
 import _ from "lodash";
 import { Input } from "antd";
+import type { ServerBoundingBoxType } from "admin/api_flow_types";
 
 type BaseProps<T> = {
   value: T | string,
   onChange: (value: T) => void,
+  changeOnlyOnBlur?: boolean,
 };
 
 type State = {
@@ -51,10 +53,15 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
       isEditing: false,
     });
     if (this.state.isValid) {
-      this.setState({
-        isValid: true,
-        text: this.getText(this.props.value),
-      });
+      if (this.props.changeOnlyOnBlur) {
+        const vector = ((Utils.stringToNumberArray(this.state.text): any): T);
+        this.props.onChange(vector);
+      } else {
+        this.setState({
+          isValid: true,
+          text: this.getText(this.props.value),
+        });
+      }
     } else {
       this.props.onChange(this.defaultValue);
       this.setState({
@@ -81,8 +88,10 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     const isValidFormat = value.length === this.defaultValue.length;
 
     if (isValidFormat && isValidInput) {
-      const vector = ((value: any): T);
-      this.props.onChange(vector);
+      if (!this.props.changeOnlyOnBlur) {
+        const vector = ((value: any): T);
+        this.props.onChange(vector);
+      }
     }
 
     this.setState({
@@ -92,7 +101,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
   };
 
   render() {
-    const props = _.omit(this.props, ["onChange", "value"]);
+    const props = _.omit(this.props, ["onChange", "value", "changeOnlyOnBlur"]);
     return (
       <Input
         onChange={this.handleChange}
@@ -111,4 +120,36 @@ export class Vector3Input extends BaseVector<Vector3> {
 
 export class Vector6Input extends BaseVector<Vector6> {
   defaultValue: Vector6 = [0, 0, 0, 0, 0, 0];
+}
+
+type BoundingBoxInputProps = {
+  value: ServerBoundingBoxType,
+  onChange: ServerBoundingBoxType => void,
+};
+
+export class BoundingBoxInput extends React.PureComponent<{}> {
+  render() {
+    const { value, onChange, ...props } = this.props;
+    const { topLeft, width, height, depth } = value || {
+      topLeft: [0, 0, 0],
+      width: 0,
+      height: 0,
+      depth: 0,
+    };
+    return (
+      <Vector6Input
+        {...props}
+        value={topLeft.concat(width, height, depth)}
+        changeOnlyOnBlur
+        onChange={([x, y, z, width, height, depth]) =>
+          onChange({
+            topLeft: [x, y, z],
+            width,
+            height,
+            depth,
+          })
+        }
+      />
+    );
+  }
 }

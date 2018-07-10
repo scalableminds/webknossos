@@ -112,14 +112,20 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                 <Col span={12}>
                   <FormItem label="Dataset Name" hasFeedback>
                     {getFieldDecorator("name", {
-                      rules: [{ required: true }, { min: 3 }, { pattern: /[0-9a-zA-Z_-]+$/ }],
+                      rules: [
+                        { required: true, message: messages["dataset.import.required.name"] },
+                        { min: 3 },
+                        { pattern: /[0-9a-zA-Z_-]+$/ },
+                      ],
                     })(<Input autoFocus />)}
                   </FormItem>
                 </Col>
                 <Col span={12}>
                   <FormItem label="Datastore" hasFeedback>
                     {getFieldDecorator("datastore", {
-                      rules: [{ required: true }],
+                      rules: [
+                        { required: true, message: messages["dataset.import.required.datastore"] },
+                      ],
                     })(
                       <Select
                         showSearch
@@ -139,7 +145,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
               </Row>
               <FormItem label="Dataset ZIP File" hasFeedback>
                 {getFieldDecorator("zipFile", {
-                  rules: [{ required: true }],
+                  rules: [{ required: true, message: messages["dataset.import.required.zipFile"] }],
                   valuePropName: "fileList",
                   getValueFromEvent: this.normFile,
                 })(
@@ -151,9 +157,11 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
                     }}
                   >
                     <p className="ant-upload-drag-icon">
-                      <Icon type="inbox" />
+                      <Icon type="inbox" style={{ margin: 0 }} />
                     </p>
-                    <p className="ant-upload-text">Click or Drag File to This Area to Upload</p>
+                    <p className="ant-upload-text">
+                      Click or Drag your ZIP File to this Area to Upload
+                    </p>
                   </Upload.Dragger>,
                 )}
               </FormItem>

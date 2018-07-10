@@ -133,8 +133,8 @@ class OnboardingView extends React.PureComponent<Props, State> {
         subheader={
           <React.Fragment>
             Welcome to webKnossos! This guide will help you get started.<br />Setup your
-            organization to manage users and datasets. Example names: &quot;University of
-            Springfield&quot;, &quot;Simpsons Lab&quot;, &quot;Neuroscience Department&quot;
+            organization to manage users and datasets. Example names: &ldquo;University of
+            Springfield&rdquo;, &ldquo;Simpsons Lab&rdquo;, &ldquo;Neuroscience Department&rdquo;
           </React.Fragment>
         }
         icon={
@@ -191,17 +191,19 @@ class OnboardingView extends React.PureComponent<Props, State> {
         icon={<Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
         <DatasetUploadView history={this.props.history} withoutCard />
-        <a
-          href="#"
-          onClick={this.advanceStep}
-          style={{
-            fontSize: 14,
-            color: "gray",
-            display: "inline-block",
-          }}
-        >
-          Or skip this step
-        </a>
+        <div style={{ textAlign: "center" }}>
+          <a
+            href="#"
+            onClick={this.advanceStep}
+            style={{
+              fontSize: 14,
+              color: "gray",
+              display: "inline-block",
+            }}
+          >
+            Or skip this step
+          </a>
+        </div>
       </StepHeader>
     );
   }
@@ -269,7 +271,14 @@ class OnboardingView extends React.PureComponent<Props, State> {
     })();
 
     return (
-      <div style={{ minHeight: "calc(100vh - 48px)", display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          minHeight: "calc(100vh - 48px)",
+          display: "flex",
+          flexDirection: "column",
+          paddingBottom: 50,
+        }}
+      >
         <Row type="flex" justify="center" style={{ padding: "20px 50px 70px" }} align="middle">
           <Col span={18}>
             <Steps current={this.state.currentStep} size="small" style={{ height: 25 }}>

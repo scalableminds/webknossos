@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Link } from "react-router-dom";
+import { Link, withRouter } from "react-router-dom";
 import { Spin, Layout, message } from "antd";
 import { transformDatasets } from "dashboard/dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
@@ -8,7 +8,6 @@ import type { DatasetType } from "dashboard/dataset_view";
 import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
 import type { RouterHistory } from "react-router-dom";
-import { withRouter } from "react-router-dom";
 import messages from "messages";
 import Utils from "libs/utils";
 

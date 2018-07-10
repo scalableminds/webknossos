@@ -17,9 +17,13 @@ services:
       - -Dhttp.address=0.0.0.0
       - -Ddatastore.fossildb.address=fossildb
       - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
+      - -Dapplication.insertInitialData=false
+      - -Dapplication.authentication.enableDevAutoLogin=false
       # the following lines disable the integrated datastore:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Ddatastore.enabled=false
+    volumes:
+      - ./binaryData:/srv/webknossos/binaryData
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
 

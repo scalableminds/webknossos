@@ -22,7 +22,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Added permission for team managers to refresh datasets. [#2688](https://github.com/scalableminds/webknossos/pull/2688)
   - Added backend-unit-test setup and a first test for NML validation. [#2829](https://github.com/scalableminds/webknossos/pull/2829)
   - Added displayName for organizations [#2869](https://github.com/scalableminds/webknossos/pull/2869)
-
+  - Added onboarding flow for initial setup of WebKnossos [#2859](https://github.com/scalableminds/webknossos/pull/2859)
 
 ### Changed
 

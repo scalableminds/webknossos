@@ -117,7 +117,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
               "license" -> LICENSE,
               "email" -> user.email,
               "hours" -> hours.toString,
-              "tasktype_id" -> await(taskType.map(_.id).getOrElse("")),
+              "tasktype_id" -> await(taskType.map(_._id.toString).getOrElse("")),
               "tasktype_summary" -> await(taskType.map(_.summary).getOrElse("")),
               "task_id" -> await(task.map(_.id).getOrElse("")),
               "project_name" -> projectName

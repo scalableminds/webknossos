@@ -7,7 +7,7 @@ import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
 import models.project.{ProjectSQL, ProjectSQLDAO}
-import models.task.{TaskType, TaskTypeDAO}
+import models.task.{TaskTypeSQL, TaskTypeSQLDAO}
 import models.team._
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.Full
@@ -113,14 +113,16 @@ Samplecountry
   }
 
   def insertTaskType = {
-    TaskTypeDAO.findAll.flatMap {
+    TaskTypeSQLDAO.findAll.flatMap {
       types =>
         if (types.isEmpty) {
-          val taskType = TaskType(
+          val taskType = TaskTypeSQL(
+            ObjectId.generate,
+            ObjectId.fromBsonId(organizationTeam._id),
             "sampleTaskType",
-            "Check those cells out!",
-            organizationTeam._id)
-          for {_ <- TaskTypeDAO.insert(taskType)} yield ()
+            "Check those cells out!"
+            )
+          for {_ <- TaskTypeSQLDAO.insertOne(taskType)} yield ()
         }
         else Fox.successful(())
     }.toFox

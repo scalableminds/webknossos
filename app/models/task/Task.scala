@@ -48,10 +48,7 @@ case class TaskSQL(
     AnnotationService.baseFor(_id)
 
   def taskType(implicit ctx: DBAccessContext) =
-    for {
-      taskTypeIdBson <- _taskType.toBSONObjectId.toFox
-      taskType <- TaskTypeDAO.findOneById(taskTypeIdBson)(GlobalAccessContext)
-    } yield taskType
+    TaskTypeSQLDAO.findOne(_taskType)(GlobalAccessContext)
 
   def project(implicit ctx: DBAccessContext) =
     ProjectSQLDAO.findOne(_project)
@@ -81,7 +78,8 @@ case class TaskSQL(
       annotationBase <- annotationBase
       dataSet <- DataSetDAO.findOneById(annotationBase._dataSet)
       status <- status.getOrElse(CompletionStatus(-1, -1, -1))
-      taskType <- taskType.map(TaskType.transformToJson) getOrElse JsNull
+      taskType <- taskType
+      taskTypeJs <- taskType.publicWrites
       scriptInfo <- _script.map(_.toBSONObjectId).flatten.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
       scriptJs <- scriptInfo.toFox.flatMap(s => Script.scriptPublicWrites(s)).futureBox
       project <- project
@@ -92,7 +90,7 @@ case class TaskSQL(
         "formattedHash" -> Formatter.formatHash(_id.toString),
         "projectName" -> project.name,
         "team" -> team.name,
-        "type" -> taskType,
+        "type" -> taskTypeJs,
         "dataSet" -> dataSet.name,
         "neededExperience" -> neededExperience,
         "created" -> DateTimeFormat.forPattern("yyyy-MM-dd HH:mm").print(created),

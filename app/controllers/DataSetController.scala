@@ -3,7 +3,7 @@ package controllers
 import javax.inject.Inject
 
 import com.scalableminds.util.geometry.Point3D
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._

@@ -5,7 +5,7 @@ package oxalis.security
 
 import java.security.SecureRandom
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, DBAccessContextPayload}
+import com.scalableminds.util.accesscontext.{DBAccessContext, DBAccessContextPayload}
 import models.user.User
 
 

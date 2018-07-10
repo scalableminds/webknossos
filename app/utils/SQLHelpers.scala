@@ -5,7 +5,7 @@ package utils
 
 
 import com.newrelic.api.agent.NewRelic
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User

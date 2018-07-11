@@ -65,13 +65,16 @@ type Props = {
   isEditingMode: boolean,
 };
 
+type TabKeyType = "data" | "general" | "defaultConfig";
+
 type State = {
   sharingToken: string,
   dataset: ?APIDatasetType,
   datasetDefaultConfiguration: ?DatasetConfigurationType,
   messages: Array<APIMessageType>,
   isLoading: boolean,
-  activeDataSourceEditTab: "simple" | "advanced",
+  activeDataSourceEditMode: "simple" | "advanced",
+  activeTabKey: TabKeyType,
 };
 
 type FormData = {
@@ -93,7 +96,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     sharingToken: "",
     isLoading: true,
     messages: [],
-    activeDataSourceEditTab: "simple",
+    activeDataSourceEditMode: "simple",
+    activeTabKey: "data",
   };
 
   componentDidMount() {
@@ -152,33 +156,97 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   }
 
+  getFormValidationSummary = (): Object => {
+    const err = this.props.form.getFieldsError();
+    const { dataset } = this.state;
+    const formErrors = {};
+    if (!err || !dataset) {
+      return formErrors;
+    }
+
+    const gatherErrors = obj => {
+      const gatherErrorsRecursive = any => {
+        if (Array.isArray(any)) {
+          return any.map(gatherErrorsRecursive);
+        } else if (any instanceof Error) {
+          return any;
+        } else if (typeof any === "string") {
+          return any;
+        } else if (any instanceof Object) {
+          return Object.keys(any).map(key => gatherErrorsRecursive(any[key]));
+        } else {
+          return null;
+        }
+      };
+      return _.compact(_.flattenDeep([gatherErrorsRecursive(obj)]));
+    };
+    const hasErr = obj => obj && !_.isEmpty(gatherErrors(obj));
+
+    if (hasErr(err.dataSource) || hasErr(err.dataSourceJson)) {
+      formErrors.data = true;
+    }
+    if (hasErr(err.dataset)) {
+      formErrors.general = true;
+    }
+    if (hasErr(err.defaultConfiguration) || hasErr(err.defaultConfigurationLayersJson)) {
+      formErrors.defaultConfig = true;
+    }
+    return formErrors;
+  };
+
+  switchToProblematicTab() {
+    const validationSummary = this.getFormValidationSummary();
+    if (validationSummary[this.state.activeTabKey]) {
+      // Active tab is already problematic
+      return;
+    }
+    // Switch to the earliest, problematic tab
+    let problematicTab: ?TabKeyType = null;
+    if (validationSummary.data) {
+      problematicTab = "data";
+    } else if (validationSummary.general) {
+      problematicTab = "general";
+    } else if (validationSummary.defaultConfig) {
+      problematicTab = "defaultConfig";
+    }
+    if (problematicTab) {
+      this.setState({ activeTabKey: problematicTab });
+    }
+  }
+
+  async doesUserWantToChangeAllowedTeams(teamIds: Array<*>): Promise<boolean> {
+    if (teamIds.length > 0) {
+      return false;
+    }
+    return !await confirmAsync({
+      title: "Are you sure?",
+      content: (
+        <p>
+          You did not specify any teams, for which this dataset should be visible. This means that
+          only administrators and team managers will be able to view this dataset.<br /> Please
+          switch to the 'General' tab to review the teams which are allowed to see this dataset.
+        </p>
+      ),
+    });
+  }
+
   handleSubmit = (e: SyntheticEvent<>) => {
     e.preventDefault();
     // Ensure that all form fields are in sync, by initiating a sync of the not-active
     // tab
-    this.syncDataSourceFields(this.state.activeTabKey === "simple" ? "advanced" : "advanced");
+    this.syncDataSourceFields(
+      this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple",
+    );
     this.props.form.validateFields(async (err, formValues: FormData) => {
       const { dataset, datasetDefaultConfiguration } = this.state;
       if (err || !dataset) {
-        console.log("err", err);
+        this.switchToProblematicTab();
         return;
       }
+
       const teamIds = formValues.dataset.allowedTeams.map(t => t.id);
-      if (teamIds.length === 0) {
-        const didConfirm = await confirmAsync({
-          title: "Are you sure?",
-          content: (
-            <p>
-              You did not specify any teams, for which this dataset should be visible. This means
-              that only administrators and team managers will be able to view this dataset.<br />{" "}
-              Please switch to the 'General' tab to review the teams which are allowed to see this
-              dataset.
-            </p>
-          ),
-        });
-        if (!didConfirm) {
-          return;
-        }
+      if (await this.doesUserWantToChangeAllowedTeams(teamIds)) {
+        return;
       }
       await updateDataset(this.props.datasetName, Object.assign({}, dataset, formValues.dataset));
 
@@ -257,18 +325,24 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     return <div>{messageElements}</div>;
   }
 
+  hasNoAllowedTeams(): boolean {
+    return (
+      this.props.form.getFieldValue("dataset.allowedTeams") == null ||
+      this.props.form.getFieldValue("dataset.allowedTeams").length === 0
+    );
+  }
+
   getGeneralComponents() {
     const { getFieldDecorator } = this.props.form;
-    const hasNoAllowedTeams =
-      this.props.form.getFieldValue("dataset.allowedTeams") == null ||
-      this.props.form.getFieldValue("dataset.allowedTeams").length === 0;
+    const _hasNoAllowedTeams = this.hasNoAllowedTeams();
+
     const allowedTeamsComponent = (
       <FormItemWithInfo
         label="Allowed Teams"
         info="Except for administrators and team managers, only members of the teams defined here will be able to view this dataset."
-        validateStatus={hasNoAllowedTeams ? "warning" : "success"}
+        validateStatus={_hasNoAllowedTeams ? "warning" : "success"}
         help={
-          hasNoAllowedTeams
+          _hasNoAllowedTeams
             ? "If this field is empty, only administrators and team managers will be able to view this dataset."
             : null
         }
@@ -382,7 +456,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   Interpolation{" "}
                   <Tooltip
                     title={
-                      "If checked, bilinear interpolation will be used when rendering the data."
+                      "If checked, bilinear interpolation will be used the the data is rendered."
                     }
                   >
                     <Icon type="info-circle-o" style={{ color: "gray" }} />
@@ -430,6 +504,18 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     const { form } = this.props;
     const { getFieldDecorator } = form;
     const titleString = this.props.isEditingMode ? "Update" : "Import";
+    const formErrors = this.getFormValidationSummary();
+
+    const errorIcon = (
+      <Tooltip title="Some fields in this tab require your attention.">
+        <Icon type="exclamation-circle" style={{ color: "#f5222d", marginLeft: 4 }} />
+      </Tooltip>
+    );
+    const hasNoAllowedTeamsWarning = this.hasNoAllowedTeams() ? (
+      <Tooltip title="Please double-check some fields here.">
+        <Icon type="exclamation-circle" style={{ color: "#faad14", marginLeft: 4 }} />
+      </Tooltip>
+    ) : null;
 
     return (
       <Form className="row container dataset-import" onSubmit={this.handleSubmit}>
@@ -448,22 +534,44 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             {this.getMessageComponents()}
 
             <Card>
-              <Tabs>
-                <TabPane tab="Data" key="data" forceRender>
+              <Tabs
+                activeKey={this.state.activeTabKey}
+                onChange={activeTabKey => this.setState({ activeTabKey })}
+              >
+                <TabPane
+                  tab={<span> Data {formErrors.data ? errorIcon : ""}</span>}
+                  key="data"
+                  forceRender
+                >
                   <SimpleAdvancedDataForm
                     form={form}
-                    activeDataSourceEditTab={this.state.activeDataSourceEditTab}
-                    onChange={activeTabKey => {
-                      this.syncDataSourceFields(activeTabKey);
-                      this.setState({ activeDataSourceEditTab: activeTabKey });
+                    activeDataSourceEditMode={this.state.activeDataSourceEditMode}
+                    onChange={activeEditMode => {
+                      this.syncDataSourceFields(activeEditMode);
+                      this.setState({ activeDataSourceEditMode: activeEditMode });
                     }}
                   />
                 </TabPane>
-                <TabPane tab="General" key="general" forceRender>
+                <TabPane
+                  tab={
+                    <span>
+                      {" "}
+                      General {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
+                    </span>
+                  }
+                  key="general"
+                  forceRender
+                >
                   {this.getGeneralComponents()}
                 </TabPane>
                 {this.props.isEditingMode ? (
-                  <TabPane tab="View Configuration" key="defaultConfig" forceRender>
+                  <TabPane
+                    tab={
+                      <span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>
+                    }
+                    key="defaultConfig"
+                    forceRender
+                  >
                     {this.getDefaultConfigComponents()}
                   </TabPane>
                 ) : null}

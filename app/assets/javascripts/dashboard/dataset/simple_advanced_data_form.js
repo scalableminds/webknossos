@@ -29,13 +29,17 @@ import { validateDatasourceJSON, isValidJSON } from "./validation";
 
 const FormItem = Form.Item;
 
+const syncValidator = (validateValueFn, errMessage) => (rule, value, callback) => {
+  return validateValueFn(value) ? callback() : callback(new Error(errMessage));
+};
+
 export default function SimpleAdvancedDataForm({
   form,
-  activeDataSourceEditTab,
+  activeDataSourceEditMode,
   onChange,
 }: {
   form: Object,
-  activeDataSourceEditTab: "simple" | "advanced",
+  activeDataSourceEditMode: "simple" | "advanced",
   onChange: ("simple" | "advanced") => void,
 }) {
   const { getFieldDecorator } = form;
@@ -59,7 +63,7 @@ export default function SimpleAdvancedDataForm({
           <Switch
             checkedChildren="Advanced"
             unCheckedChildren="Simple"
-            checked={activeDataSourceEditTab === "advanced"}
+            checked={activeDataSourceEditMode === "advanced"}
             disabled={isJSONInvalid}
             style={{ marginBottom: 6 }}
             onChange={bool => {
@@ -77,13 +81,13 @@ export default function SimpleAdvancedDataForm({
         showIcon
       />
 
-      <Hideable hide={activeDataSourceEditTab !== "simple"}>
+      <Hideable hide={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
           <SimpleDatasetForm form={form} dataSource={dataSource} />
         </RetryingErrorBoundary>
       </Hideable>
 
-      <Hideable hide={activeDataSourceEditTab !== "advanced"}>
+      <Hideable hide={activeDataSourceEditMode !== "advanced"}>
         <FormItem label="Dataset Configuration" hasFeedback>
           {getFieldDecorator("dataSourceJson", {
             rules: [
@@ -117,10 +121,10 @@ function SimpleDatasetForm({ form, dataSource }) {
               message: "Please provide a scale for the dataset.",
             },
             {
-              validator: (rule, value, callback) =>
-                value && value.every(el => el > 0)
-                  ? callback()
-                  : callback(new Error("Each component of the scale must be larger than 0")),
+              validator: syncValidator(
+                value => value && value.every(el => el > 0),
+                "Each component of the scale must be larger than 0",
+              ),
             },
           ],
         })(<Vector3Input style={{ width: 400 }} />)}
@@ -151,6 +155,12 @@ function SimpleDatasetForm({ form, dataSource }) {
                       {
                         required: true,
                         message: "Please define a valid bounding box.",
+                      },
+                      {
+                        validator: syncValidator(
+                          value => value.width !== 0 && value.height !== 0 && value.depth !== 0,
+                          "Width, height and depth must not be zero",
+                        ),
                       },
                     ],
                   },

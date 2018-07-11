@@ -38,5 +38,7 @@ export const isValidJSON = (json: string) => {
   }
 };
 
-export const syncValidator = (validateValueFn, errMessage) => (rule, value, callback) =>
-  validateValueFn(value) ? callback() : callback(new Error(errMessage));
+export function syncValidator<T>(validateValueFn: T => boolean, errMessage: string) {
+  return (rule: Object, value: T, callback: Function) =>
+    validateValueFn(value) ? callback() : callback(new Error(errMessage));
+}

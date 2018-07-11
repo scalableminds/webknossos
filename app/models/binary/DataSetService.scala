@@ -3,13 +3,12 @@
  */
 package models.binary
 
-import com.scalableminds.util.geometry.Point3D
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerLike => DataLayer, DataSourceLike => DataSource}
 import com.typesafe.scalalogging.LazyLogging
-import models.team.OrganizationDAO
+import models.team.OrganizationSQLDAO
 import net.liftweb.common.Full
 import oxalis.security.{URLSharing, WebknossosSilhouette}
 import play.api.libs.concurrent.Akka
@@ -40,7 +39,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
                      dataSource: InboxDataSource,
                      isActive: Boolean = false
                      )(implicit ctx: DBAccessContext) = {
-    OrganizationDAO.findOneByName(owningOrganization).futureBox.flatMap {
+    OrganizationSQLDAO.findOneByName(owningOrganization).futureBox.flatMap {
       case Full(_) =>
       DataSetDAO.insert(DataSet(
         None,

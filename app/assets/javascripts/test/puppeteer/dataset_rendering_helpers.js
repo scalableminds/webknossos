@@ -1,12 +1,13 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}], no-await-in-loop: 0 */
+const urljoin = require("url-join");
 const fetch = require("node-fetch");
 const pixelmatch = require("pixelmatch");
 
 const DEV_AUTH_TOKEN = "secretScmBoyToken";
 
-async function createExplorational(datasetName, typ, withFallback, branchName) {
-  const url = `https://${branchName}.webknossos.xyz/api/datasets/${datasetName}/createExplorational`;
-  return (await fetch(url, {
+async function createExplorational(datasetName, typ, withFallback, baseUrl) {
+  const fullUrl = urljoin(baseUrl, `/api/datasets/${datasetName}/createExplorational`);
+  return (await fetch(fullUrl, {
     body: JSON.stringify({ typ, withFallback }),
     method: "POST",
     headers: {
@@ -16,21 +17,15 @@ async function createExplorational(datasetName, typ, withFallback, branchName) {
   })).json();
 }
 
-async function screenshotDataset(page, branchName, datasetName) {
-  const createdExplorational = await createExplorational(
-    datasetName,
-    "skeleton",
-    false,
-    branchName,
-  );
-  return openTracingViewAndScreenshot(page, branchName, createdExplorational.id);
+async function screenshotDataset(page, baseUrl, datasetName) {
+  const createdExplorational = await createExplorational(datasetName, "skeleton", false, baseUrl);
+  return openTracingViewAndScreenshot(page, baseUrl, createdExplorational.id);
 }
 
-async function openTracingViewAndScreenshot(page, branchName, annotationId) {
-  await page.goto(
-    `https://${branchName}.webknossos.xyz/annotations/Explorational/${annotationId}`,
-    { timeout: 0 },
-  );
+async function openTracingViewAndScreenshot(page, baseUrl, annotationId) {
+  await page.goto(urljoin(baseUrl, `/annotations/Explorational/${annotationId}`), {
+    timeout: 0,
+  });
 
   let canvas;
   while (canvas == null) {

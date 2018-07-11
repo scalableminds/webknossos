@@ -11,15 +11,19 @@ process.on("unhandledRejection", (err, promise) => {
 
 const BASE_PATH = path.join(__dirname, "../screenshots");
 
-let BRANCH = "master";
-if (!process.env.BRANCH) {
+let URL = "https://master.webknossos.xyz";
+if (!process.env.URL) {
   console.warn(
-    "[Warning] No branch specified, assuming branch master. If you want to specify a branch, prepend BRANCH=<branchname> to the command.",
+    "[Warning] No url specified, assuming dev master. If you want to specify a URL, prepend URL=<url> to the command.",
   );
 } else {
-  BRANCH = process.env.BRANCH;
-  console.log(`[Info] Executing tests on branch ${BRANCH}.`);
+  URL = process.env.URL;
+  // Prepend https:// if not specified
+  if (!/^https?:\/\//i.test(URL)) {
+    URL = `https://${URL}`;
+  }
 }
+console.log(`[Info] Executing tests on URL ${URL}.`);
 
 async function getNewPage(browser) {
   const page = await browser.newPage();
@@ -50,7 +54,7 @@ datasetNames.map(async datasetName => {
   test(`it should render dataset ${datasetName} correctly`, async t => {
     const { screenshot, width, height } = await screenshotDataset(
       await getNewPage(t.context.browser),
-      BRANCH,
+      URL,
       datasetName,
     );
     const changedPixels = await compareScreenshot(

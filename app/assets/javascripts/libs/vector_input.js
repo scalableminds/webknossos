@@ -22,6 +22,10 @@ type State = {
 // Accepts both a string or a VectorX as input and always outputs a valid VectorX
 class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>, State> {
   defaultValue: T;
+  static defaultProps = {
+    value: "",
+    onChange: () => {},
+  };
 
   constructor(props: BaseProps<T>) {
     super(props);
@@ -133,17 +137,22 @@ function boundingBoxToVector6(value: ServerBoundingBoxTypeTuple): Vector6 {
   return [x, y, z, width, height, depth];
 }
 
+const emptyBoundingBox = {
+  topLeft: [0, 0, 0],
+  width: 0,
+  height: 0,
+  depth: 0,
+};
+
 export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps> {
+  static defaultProps = {
+    value: emptyBoundingBox,
+    onChange: () => {},
+  };
+
   render() {
     const { value, onChange, ...props } = this.props;
-    const vector6Value = boundingBoxToVector6(
-      value || {
-        topLeft: [0, 0, 0],
-        width: 0,
-        height: 0,
-        depth: 0,
-      },
-    );
+    const vector6Value = boundingBoxToVector6(value || emptyBoundingBox);
     return (
       <Vector6Input
         {...props}

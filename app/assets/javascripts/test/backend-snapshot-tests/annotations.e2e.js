@@ -1,8 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
-/* eslint-disable import/first */
 // @flow
 import test from "ava";
-import { resetDatabase } from "../enzyme/e2e-setup";
+import { resetDatabase } from "test/enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 

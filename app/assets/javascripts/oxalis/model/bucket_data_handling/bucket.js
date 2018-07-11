@@ -324,9 +324,11 @@ export class NullBucket {
   hasData(): boolean {
     return false;
   }
+
   needsRequest(): boolean {
     return false;
   }
+
   getData(): Uint8Array {
     throw new Error("NullBucket has no data.");
   }

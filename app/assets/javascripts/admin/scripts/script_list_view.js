@@ -76,9 +76,9 @@ class ScriptListView extends React.PureComponent<Props, State> {
           });
 
           await deleteScript(script.id);
-          this.setState({
-            scripts: this.state.scripts.filter(s => s.id !== script.id),
-          });
+          this.setState(prevState => ({
+            scripts: prevState.scripts.filter(s => s.id !== script.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {

@@ -88,21 +88,21 @@ class UserListView extends React.PureComponent<Props, State> {
   }
 
   activateUser = (selectedUser: APIUserType, isActive: boolean = true): void => {
-    const newUsers = this.state.users.map(user => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, { isActive });
+    this.setState(prevState => {
+      const newUsers = prevState.users.map(user => {
+        if (selectedUser.id === user.id) {
+          const newUser = Object.assign({}, user, { isActive });
+          updateUser(newUser);
+          return newUser;
+        }
+        return user;
+      });
 
-        updateUser(newUser);
-        return newUser;
-      }
-
-      return user;
-    });
-
-    this.setState({
-      users: newUsers,
-      selectedUserIds: [selectedUser.id],
-      isTeamRoleModalVisible: isActive,
+      return {
+        users: newUsers,
+        selectedUserIds: [selectedUser.id],
+        isTeamRoleModalVisible: isActive,
+      };
     });
   };
 
@@ -111,18 +111,20 @@ class UserListView extends React.PureComponent<Props, State> {
   };
 
   changeEmail = (selectedUser: APIUserType, newEmail: string): void => {
-    const newUsers = this.state.users.map(user => {
-      if (selectedUser.id === user.id) {
-        const newUser = Object.assign({}, user, { email: newEmail });
-        updateUser(newUser);
-        return newUser;
-      }
-      return user;
-    });
+    this.setState(prevState => {
+      const newUsers = prevState.users.map(user => {
+        if (selectedUser.id === user.id) {
+          const newUser = Object.assign({}, user, { email: newEmail });
+          updateUser(newUser);
+          return newUser;
+        }
+        return user;
+      });
 
-    this.setState({
-      users: newUsers,
-      selectedUserIds: [selectedUser.id],
+      return {
+        users: newUsers,
+        selectedUserIds: [selectedUser.id],
+      };
     });
     Toast.success(messages["users.change_email_confirmation"]);
 

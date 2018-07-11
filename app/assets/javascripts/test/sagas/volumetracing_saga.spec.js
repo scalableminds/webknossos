@@ -3,9 +3,8 @@
  * @flow
  */
 
-/* eslint-disable import/no-extraneous-dependencies, import/first */
+/* eslint-disable import/no-extraneous-dependencies */
 import test from "ava";
-import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import mockRequire from "mock-require";
 import _ from "lodash";
 import { OrthoViews, VolumeToolEnum, ContourModeEnum } from "oxalis/constants";
@@ -14,6 +13,7 @@ import { take, put, race, call } from "redux-saga/effects";
 import * as VolumeTracingActions from "oxalis/model/actions/volumetracing_actions";
 import { pushSaveQueueAction } from "oxalis/model/actions/save_actions";
 import VolumeTracingReducer from "oxalis/model/reducers/volumetracing_reducer";
+import { expectValueDeepEqual, execCall } from "../helpers/sagaHelpers";
 import { withoutUpdateTracing } from "../helpers/saveHelpers";
 
 const mockedVolumeLayer = {

@@ -118,15 +118,17 @@ class DatasetView extends React.PureComponent<Props, State> {
   };
 
   updateDataset = (newDataset: DatasetType) => {
-    const newDatasets = this.state.datasets.map((dataset: DatasetType) => {
-      if (dataset.name === newDataset.name) {
-        return newDataset;
-      }
-      return dataset;
-    });
+    this.setState(prevState => {
+      const newDatasets = prevState.datasets.map((dataset: DatasetType) => {
+        if (dataset.name === newDataset.name) {
+          return newDataset;
+        }
+        return dataset;
+      });
 
-    this.setState({
-      datasets: newDatasets,
+      return {
+        datasets: newDatasets,
+      };
     });
   };
 

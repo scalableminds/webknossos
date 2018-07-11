@@ -45,9 +45,9 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
   }
 
   handleSettingsCollapse = () => {
-    this.setState({
-      isSettingsCollapsed: !this.state.isSettingsCollapsed,
-    });
+    this.setState(prevState => ({
+      isSettingsCollapsed: !prevState.isSettingsCollapsed,
+    }));
   };
 
   render() {

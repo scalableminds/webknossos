@@ -123,7 +123,7 @@ class OnboardingView extends React.PureComponent<Props, State> {
   }
 
   advanceStep = () => {
-    this.setState({ currentStep: this.state.currentStep + 1 });
+    this.setState(prevState => ({ currentStep: prevState.currentStep + 1 }));
   };
 
   renderCreateOrganization() {

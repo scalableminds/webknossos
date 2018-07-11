@@ -106,9 +106,9 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   };
 
   handleChangeSorting = () => {
-    this.setState({
-      isSortedAscending: !this.state.isSortedAscending,
-    });
+    this.setState(prevState => ({
+      isSortedAscending: !prevState.isSortedAscending,
+    }));
   };
 
   getTreeComponents() {

@@ -56,7 +56,7 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
   }
 
   handleToggleComment = () => {
-    this.setState({ collapsed: !this.state.collapsed });
+    this.setState(prevState => ({ collapsed: !prevState.collapsed }));
   };
 
   render() {

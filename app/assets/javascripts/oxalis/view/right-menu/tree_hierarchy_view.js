@@ -135,9 +135,9 @@ class TreeHierarchyView extends React.PureComponent<Props, State> {
     // Cannot use object destructuring in the parameters here, because the linter will complain
     // about the Flow types
     const { node, expanded } = params;
-    this.setState({
-      expandedGroupIds: update(this.state.expandedGroupIds, { [node.id]: { $set: expanded } }),
-    });
+    this.setState(prevState => ({
+      expandedGroupIds: update(prevState.expandedGroupIds, { [node.id]: { $set: expanded } }),
+    }));
   };
 
   onMoveNode = (params: {

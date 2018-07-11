@@ -95,9 +95,9 @@ class ProjectListView extends React.PureComponent<Props, State> {
 
         try {
           await deleteProject(project.name);
-          this.setState({
-            projects: this.state.projects.filter(p => p.id !== project.id),
-          });
+          this.setState(prevState => ({
+            projects: prevState.projects.filter(p => p.id !== project.id),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {
@@ -112,9 +112,9 @@ class ProjectListView extends React.PureComponent<Props, State> {
     APICall: string => Promise<APIProjectType>,
   ) => {
     const updatedProject = await APICall(project.name);
-    this.setState({
-      projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
-    });
+    this.setState(prevState => ({
+      projects: prevState.projects.map(p => (p.id === project.id ? updatedProject : p)),
+    }));
   };
 
   increaseProjectTaskInstances = async (project: APIProjectType) => {
@@ -126,9 +126,9 @@ class ProjectListView extends React.PureComponent<Props, State> {
             isLoading: true,
           });
           const updatedProject = await increaseProjectTaskInstances(project.name);
-          this.setState({
-            projects: this.state.projects.map(p => (p.id === project.id ? updatedProject : p)),
-          });
+          this.setState(prevState => ({
+            projects: prevState.projects.map(p => (p.id === project.id ? updatedProject : p)),
+          }));
         } catch (error) {
           handleGenericError(error);
         } finally {

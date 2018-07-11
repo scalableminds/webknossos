@@ -128,8 +128,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       this.setState({ isLoading: true });
       const tracings = await Request.receiveJSON(url);
       if (showArchivedTracings) {
-        this.setState(
-          update(this.state, {
+        this.setState(prevState =>
+          update(prevState, {
             archivedTracings: { $set: tracings },
             didAlreadyFetchMetaInfo: {
               isArchived: { $set: true },
@@ -137,8 +137,8 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
           }),
         );
       } else {
-        this.setState(
-          update(this.state, {
+        this.setState(prevState =>
+          update(prevState, {
             unarchivedTracings: { $set: tracings },
             didAlreadyFetchMetaInfo: {
               isUnarchived: { $set: true },
@@ -154,7 +154,9 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
   }
 
   toggleShowArchived = () => {
-    this.setState({ shouldShowArchivedTracings: !this.state.shouldShowArchivedTracings });
+    this.setState(prevState => ({
+      shouldShowArchivedTracings: !prevState.shouldShowArchivedTracings,
+    }));
   };
 
   finishOrReopenTracing = async (type: "finish" | "reopen", tracing: APIAnnotationType) => {
@@ -172,15 +174,15 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     const newTracings = this.getCurrentTracings().filter(t => t.id !== tracing.id);
 
     if (type === "finish") {
-      this.setState({
+      this.setState(prevState => ({
         unarchivedTracings: newTracings,
-        archivedTracings: [newTracing].concat(this.state.archivedTracings),
-      });
+        archivedTracings: [newTracing].concat(prevState.archivedTracings),
+      }));
     } else {
-      this.setState({
+      this.setState(prevState => ({
         archivedTracings: newTracings,
-        unarchivedTracings: [newTracing].concat(this.state.unarchivedTracings),
-      });
+        unarchivedTracings: [newTracing].concat(prevState.unarchivedTracings),
+      }));
     }
   };
 
@@ -244,11 +246,11 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
       }
     });
 
-    this.setState({
-      [this.state.shouldShowArchivedTracings
+    this.setState(prevState => ({
+      [prevState.shouldShowArchivedTracings
         ? "archivedTracings"
         : "unarchivedTracings"]: newTracings,
-    });
+    }));
 
     editAnnotation(tracing.id, tracing.typ, { name }).then(() => {
       Toast.success(messages["annotation.was_edited"]);
@@ -266,26 +268,30 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
         const data = await finishAllAnnotations(selectedAnnotationIds);
         Toast.messages(data.messages);
 
-        this.setState({
-          archivedTracings: this.state.archivedTracings.concat(selectedAnnotations),
-          unarchivedTracings: _.without(this.state.unarchivedTracings, ...selectedAnnotations),
-        });
+        this.setState(prevState => ({
+          archivedTracings: prevState.archivedTracings.concat(selectedAnnotations),
+          unarchivedTracings: _.without(prevState.unarchivedTracings, ...selectedAnnotations),
+        }));
       },
     });
   };
 
   addTagToSearch = (tag: string): void => {
     if (!this.state.tags.includes(tag)) {
-      const newTags = update(this.state.tags, { $push: [tag] });
-      this.setState({ tags: newTags });
-      localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
+      this.setState(prevState => {
+        const newTags = update(prevState.tags, { $push: [tag] });
+        localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
+        return { tags: newTags };
+      });
     }
   };
 
   removeTagFromSearch = (tag: string): void => {
-    const newTags = this.state.tags.filter(t => t !== tag);
-    this.setState({ tags: newTags });
-    localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
+    this.setState(prevState => {
+      const newTags = prevState.tags.filter(t => t !== tag);
+      localStorage.setItem("lastDashboardSearchTags", JSON.stringify(newTags));
+      return { tags: newTags };
+    });
   };
 
   editTagFromAnnotation = (
@@ -295,31 +301,34 @@ class ExplorativeAnnotationsView extends React.PureComponent<Props, State> {
     event: SyntheticInputEvent<>,
   ): void => {
     event.stopPropagation(); // prevent the onClick event
-    const newTracings = this.state.unarchivedTracings.map(t => {
-      let newAnnotation = t;
 
-      if (t.id === annotation.id) {
-        if (shouldAddTag) {
-          // add the tag to an annotation
-          newAnnotation = update(t, { tags: { $push: [tag] } });
-        } else {
-          // remove the tag from an annotation
-          const newTags = _.without(t.tags, tag);
-          newAnnotation = update(t, { tags: { $set: newTags } });
+    this.setState(prevState => {
+      const newTracings = prevState.unarchivedTracings.map(t => {
+        let newAnnotation = t;
+
+        if (t.id === annotation.id) {
+          if (shouldAddTag) {
+            // add the tag to an annotation
+            newAnnotation = update(t, { tags: { $push: [tag] } });
+          } else {
+            // remove the tag from an annotation
+            const newTags = _.without(t.tags, tag);
+            newAnnotation = update(t, { tags: { $set: newTags } });
+          }
+
+          // persist to server
+          editAnnotation(newAnnotation.id, newAnnotation.typ, {
+            tags: newAnnotation.tags,
+          });
         }
-
-        // persist to server
-        editAnnotation(newAnnotation.id, newAnnotation.typ, {
-          tags: newAnnotation.tags,
-        });
-      }
-      return newAnnotation;
+        return newAnnotation;
+      });
+      return { unarchivedTracings: newTracings };
     });
-    this.setState({ unarchivedTracings: newTracings });
   };
 
   handleSearchPressEnter = (event: SyntheticInputEvent<>) => {
-    const value = event.target.value;
+    const { value } = event.target;
     if (value !== "") {
       this.addTagToSearch(event.target.value);
       this.setState({ searchQuery: "" });

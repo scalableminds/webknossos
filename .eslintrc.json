@@ -59,16 +59,19 @@
     "one-var": ["error", "never"],
     "import/extensions": ["warn", { "js": "never", "jsx": "always" }],
     "import/no-unresolved": "off",
+    "import/no-cycle": "off",
     "quote-props": ["error", "as-needed", { "numbers": true }],
     "react/sort-comp": [
       "error",
       { "order": ["type-annotations", "static-methods", "lifecycle", "everything-else", "render"] }
     ],
+    "react/destructuring-assignment": "off",
     "flowtype/no-types-missing-file-annotation": "off",
     "prefer-destructuring": "warn",
     "jsx-a11y/anchor-is-valid": "off",
     "jsx-a11y/click-events-have-key-events": "off",
     "jsx-a11y/no-static-element-interactions": "off",
-    "import/no-named-as-default-member": "warn"
+    "import/no-named-as-default-member": "warn",
+    "lines-between-class-members": ["error", "always", { "exceptAfterSingleLine": true }]
   }
 }

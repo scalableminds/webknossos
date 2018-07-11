@@ -54,12 +54,15 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       this.fetchData();
     });
   };
+
   handleOpenSettings = () => {
     this.setState({ areSettingsVisible: true });
   };
+
   handleReload = () => {
     this.fetchData();
   };
+
   handleAutoReload = () => {
     this.fetchData(true);
   };

@@ -5,7 +5,7 @@ import * as React from "react";
 import Utils from "libs/utils";
 import _ from "lodash";
 import { Input } from "antd";
-import type { ServerBoundingBoxType } from "admin/api_flow_types";
+import type { ServerBoundingBoxTypeTuple } from "admin/api_flow_types";
 
 type BaseProps<T> = {
   value: T | string,
@@ -123,23 +123,31 @@ export class Vector6Input extends BaseVector<Vector6> {
 }
 
 type BoundingBoxInputProps = {
-  value: ServerBoundingBoxType,
-  onChange: ServerBoundingBoxType => void,
+  value: ServerBoundingBoxTypeTuple,
+  onChange: ServerBoundingBoxTypeTuple => void,
 };
 
-export class BoundingBoxInput extends React.PureComponent<{}> {
+function boundingBoxToVector6(value: ServerBoundingBoxTypeTuple): Vector6 {
+  const { topLeft, width, height, depth } = value;
+  const [x, y, z] = topLeft;
+  return [x, y, z, width, height, depth];
+}
+
+export class BoundingBoxInput extends React.PureComponent<BoundingBoxInputProps> {
   render() {
     const { value, onChange, ...props } = this.props;
-    const { topLeft, width, height, depth } = value || {
-      topLeft: [0, 0, 0],
-      width: 0,
-      height: 0,
-      depth: 0,
-    };
+    const vector6Value = boundingBoxToVector6(
+      value || {
+        topLeft: [0, 0, 0],
+        width: 0,
+        height: 0,
+        depth: 0,
+      },
+    );
     return (
       <Vector6Input
         {...props}
-        value={topLeft.concat(width, height, depth)}
+        value={vector6Value}
         changeOnlyOnBlur
         onChange={([x, y, z, width, height, depth]) =>
           onChange({

@@ -1,23 +1,7 @@
 // @flow
 import * as React from "react";
-import {
-  Button,
-  Spin,
-  Icon,
-  Collapse,
-  Input,
-  Checkbox,
-  Alert,
-  Form,
-  Card,
-  InputNumber,
-  Col,
-  Row,
-  Tabs,
-  Switch,
-  Tooltip,
-  Modal,
-} from "antd";
+import { Icon, Alert, Form, Tooltip, Modal } from "antd";
+
 const FormItem = Form.Item;
 
 export const jsonEditStyle = {
@@ -36,6 +20,7 @@ export const FormItemWithInfo = ({
 }: {
   label: React.Node,
   info: React.Node,
+  children: React.Node,
 }) => (
   <FormItem
     {...props}
@@ -44,7 +29,7 @@ export const FormItemWithInfo = ({
       <span>
         {label}{" "}
         <Tooltip title={info}>
-          <Icon type="info-circle" style={{ color: "#1890ff" }} />
+          <Icon type="info-circle-o" style={{ color: "gray" }} />
         </Tooltip>
       </span>
     }
@@ -62,17 +47,16 @@ export class RetryingErrorBoundary extends React.Component<
     this.state = { error: null };
   }
 
-  componentDidCatch(error: Error) {
-    this.setState({ error });
-  }
-
   componentWillReceiveProps() {
     this.setState({ error: null });
   }
 
+  componentDidCatch(error: Error) {
+    this.setState({ error });
+  }
+
   render() {
     if (this.state.error) {
-      // You can render any custom fallback UI
       return (
         <Alert
           type="error"
@@ -90,8 +74,7 @@ export class RetryingErrorBoundary extends React.Component<
   }
 }
 
-export const confirmAsync = (opts: Object) => {
-  return new Promise(resolve => {
+export const confirmAsync = (opts: Object) => new Promise(resolve => {
     Modal.confirm({
       ...opts,
       onOk() {
@@ -102,4 +85,3 @@ export const confirmAsync = (opts: Object) => {
       },
     });
   });
-};

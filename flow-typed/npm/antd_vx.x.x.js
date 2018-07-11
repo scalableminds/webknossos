@@ -75,4 +75,7 @@ declare module "antd" {
   declare class Upload<P> extends React$Component<P> {
     static Dragger: React$ComponentType<P>;
   }
+  declare class List<P> extends React$Component<P> {
+    static Item: React$ComponentType<P>;
+  }
 }

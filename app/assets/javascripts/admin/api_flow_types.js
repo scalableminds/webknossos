@@ -328,6 +328,13 @@ export type ServerBoundingBoxType = {
   depth: number,
 };
 
+export type ServerBoundingBoxTypeTuple = {
+  topLeft: Vector3,
+  width: number,
+  height: number,
+  depth: number,
+};
+
 export type ServerSkeletonTracingTreeType = {
   branchPoints: Array<ServerBranchPointType>,
   color: ?{ r: number, g: number, b: number },

@@ -1,24 +1,8 @@
 // @flow
 
 import * as React from "react";
-import {
-  Button,
-  Spin,
-  Icon,
-  Collapse,
-  Input,
-  Checkbox,
-  Alert,
-  Form,
-  Card,
-  InputNumber,
-  Col,
-  Row,
-  Tabs,
-  Switch,
-  Tooltip,
-} from "antd";
-import { Vector3Input, BoundingBoxInput } from "libs/vector_input";
+import { Icon, Input, Checkbox, Alert, Form, InputNumber, Col, Row, Tooltip } from "antd";
+import { Vector3Input } from "libs/vector_input";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
 import { validateLayerConfigurationJSON } from "./validation";
 
@@ -30,7 +14,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
   return (
     <div>
       <Alert
-        message="The following settings define the default configuration when viewing or creating an explorational tracing for this dataset. Use them to optimize the initial appearance of your dataset."
+        message="The following settings define the default configuration when viewing or creating an explorational tracing for this dataset. Use them to optimize the first appearance of your dataset."
         type="info"
         showIcon
       />
@@ -70,11 +54,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
             })(
               <Checkbox>
                 Interpolation{" "}
-                <Tooltip
-                  title={
-                    "If checked, bilinear interpolation will be used the the data is rendered."
-                  }
-                >
+                <Tooltip title="If checked, bilinear interpolation will be used the the data is rendered.">
                   <Icon type="info-circle-o" style={{ color: "gray" }} />
                 </Tooltip>
               </Checkbox>,

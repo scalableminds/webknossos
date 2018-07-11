@@ -21,8 +21,8 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Added the shortcut to copy the currently hovered cell id (CTRL + I) to non-volume-tracings, too. [#2726](https://github.com/scalableminds/webknossos/pull/2726)
   - Added permission for team managers to refresh datasets. [#2688](https://github.com/scalableminds/webknossos/pull/2688)
   - Added backend-unit-test setup and a first test for NML validation. [#2829](https://github.com/scalableminds/webknossos/pull/2829)
-  - Added displayName for organizations [#2869](https://github.com/scalableminds/webknossos/pull/2869)
-  - Added onboarding flow for initial setup of WebKnossos [#2859](https://github.com/scalableminds/webknossos/pull/2859)
+  - Added displayName for organizations. [#2869](https://github.com/scalableminds/webknossos/pull/2869)
+  - Added onboarding flow for initial setup of WebKnossos. [#2859](https://github.com/scalableminds/webknossos/pull/2859)
 
 ### Changed
 
@@ -38,6 +38,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Streamlined the order in which initial buckets are loaded when viewing a dataset. [#2749](https://github.com/scalableminds/webknossos/pull/2749)
   - Reduced the number of scenarios in which segmentation-related warnings are shown (e.g, not for skeleton tracings when there are multiple resolutions for segmentations anyway). [#2715](https://github.com/scalableminds/webknossos/pull/2715)
   - Improved tracing view page load performance by decreasing WebGL shader compilation time. [#2709](https://github.com/scalableminds/webknossos/pull/2709)
+  - Redesigned the user task list to make it easier to read the whole task description. [#2861](https://github.com/scalableminds/webknossos/pull/2861)
 
 
 ### Fixed
@@ -52,7 +53,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Fixed a bug where cell IDs in the segmentation tab were not shown for all zoomsteps. [#2726](https://github.com/scalableminds/webknossos/pull/2726)
   - Fixed the naming of the initial tree in tasks. [#2689](https://github.com/scalableminds/webknossos/pull/2689)
   - Fixed a regression affecting node selection, shortcuts and 3d viewport navigation. [#2673](https://github.com/scalableminds/webknossos/pull/2673)
-  - Fixed the dataset zip upload for dataSets, which only have one dataLayer and no config file. [#2840](https://github.com/scalableminds/webknossos/pull/2840)
+  - Fixed the dataset zip upload for datasets, which only have one data layer and no config file. [#2840](https://github.com/scalableminds/webknossos/pull/2840)
 
 
 ### Removed

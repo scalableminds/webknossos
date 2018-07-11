@@ -17,9 +17,13 @@ services:
       - -Dhttp.address=0.0.0.0
       - -Ddatastore.fossildb.address=fossildb
       - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
+      - -Dapplication.insertInitialData=false
+      - -Dapplication.authentication.enableDevAutoLogin=false
       # the following lines disable the integrated datastore:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Ddatastore.enabled=false
+    volumes:
+      - ./binaryData:/srv/webknossos/binaryData
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
 
@@ -57,6 +61,7 @@ services:
       - USER_NAME=${USER_NAME:-sbt-user}
       - USER_UID
       - USER_GID
+      - COVERALLS_REPO_TOKEN
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
       - HOME=/root
@@ -99,30 +104,31 @@ services:
           -Dpostgres.url=$${POSTGRES_URL}"
     stdin_open: true
 
-  e2e-tests:
+  backend-tests:
     extends:
       service: base
     ports:
       - "5005:5005"
       - "9000:9000"
+    command: sbt -v -d "test-only backend.*"
+
+  e2e-tests:
+    extends:
+      service: backend-tests
     links:
       - postgres
       - fossildb
+    environment:
+      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
     command:
       - bash
       - -c
       - >
         sbt
         -v -d
-        "test-only * --
-          -Dconfig.file=./conf/application.conf
-          -Djava.net.preferIPv4Stack=true
-          -Dhttp.address=0.0.0.0
+        "test-only e2e.* --
           -Ddatastore.fossildb.address=fossildb
-          -Dpostgres.url=$${POSTGRES_URL}
-          -Dapplication.insertInitialData=false"
-    environment:
-      - POSTGRES_URL=jdbc:postgresql://postgres/webknossos_testing
+          -Dpostgres.url=$${POSTGRES_URL}"
 
   screenshot-tests:
     build:

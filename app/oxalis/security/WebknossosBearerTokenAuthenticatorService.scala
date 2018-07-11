@@ -6,7 +6,7 @@ import com.mohiva.play.silhouette.api.services.AuthenticatorService.{CreateError
 import com.mohiva.play.silhouette.api.util.{Clock, IDGenerator}
 import com.mohiva.play.silhouette.impl.authenticators.BearerTokenAuthenticatorService.ID
 import com.mohiva.play.silhouette.impl.authenticators.{BearerTokenAuthenticator, BearerTokenAuthenticatorService, BearerTokenAuthenticatorSettings}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import oxalis.security.TokenType.TokenType

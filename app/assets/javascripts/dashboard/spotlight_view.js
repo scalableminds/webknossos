@@ -1,21 +1,28 @@
 // @flow
 import * as React from "react";
-import { Link } from "react-router-dom";
-import { Spin, Layout } from "antd";
+import { Link, withRouter } from "react-router-dom";
+import { Spin, Layout, message } from "antd";
 import { transformDatasets } from "dashboard/dataset_view";
 import GalleryDatasetView from "dashboard/gallery_dataset_view";
 import type { DatasetType } from "dashboard/dataset_view";
-import { getDatasets } from "admin/admin_rest_api";
+import { getOrganizations, getDatasets } from "admin/admin_rest_api";
 import { handleGenericError } from "libs/error_handling";
+import type { RouterHistory } from "react-router-dom";
+import messages from "messages";
+import Utils from "libs/utils";
 
 const { Header, Content, Footer } = Layout;
+
+type Props = {
+  history: RouterHistory,
+};
 
 type State = {
   datasets: Array<DatasetType>,
   isLoading: boolean,
 };
 
-class SpotlightView extends React.PureComponent<{}, State> {
+class SpotlightView extends React.PureComponent<Props, State> {
   state = {
     datasets: [],
     isLoading: true,
@@ -23,6 +30,18 @@ class SpotlightView extends React.PureComponent<{}, State> {
 
   componentDidMount() {
     this.fetchData();
+    this.maybeRedirectToOnboarding();
+  }
+
+  async maybeRedirectToOnboarding() {
+    const organizations = await getOrganizations();
+    if (organizations.length > 0) {
+      return;
+    }
+
+    message.info(messages["setup.redirect"]);
+    await Utils.sleep(2000);
+    this.props.history.push("/onboarding");
   }
 
   async fetchData(): Promise<void> {
@@ -131,4 +150,4 @@ class SpotlightView extends React.PureComponent<{}, State> {
   }
 }
 
-export default SpotlightView;
+export default withRouter(SpotlightView);

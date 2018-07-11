@@ -47,6 +47,9 @@ team.noOwner=This action is restricted to the creator of the team.
 team.admin.notAllowed=You are not authorized to administrate this team.
 team.notFound=Team could not be found.
 
+organization.create.forbidden=You are not allowed to create a new organization
+organization.create.failed=Failed to create a new organization
+
 user.automaticUserActivation=User was activated automatically
 user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
 user.activated={0} has been activated

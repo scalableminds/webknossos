@@ -105,4 +105,15 @@ class DataSourceController @Inject()(
       }
   }
 
+  def createOrganizationDirectory(organizationName: String) = TokenSecuredAction(UserAccessRequest.administrateDataSources) { implicit request =>
+    AllowRemoteOrigin{
+      val newOrganizationFolder = new File(dataSourceService.dataBaseDir + "/" + organizationName)
+        newOrganizationFolder.mkdirs()
+      if(newOrganizationFolder.isDirectory)
+        Ok
+      else
+        BadRequest
+    }
+  }
+
 }

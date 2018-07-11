@@ -6,7 +6,7 @@ import DatasourceSchema from "libs/datasource.schema.json";
 const validator = new jsonschema.Validator();
 validator.addSchema(DatasourceSchema, "/");
 
-const validateWithSchema = (type: string) => (rule: Object, value: Object, callback: Function) => {
+const validateWithSchema = (type: string) => (rule: Object, value: string, callback: Function) => {
   try {
     const json = JSON.parse(value);
     const result = validator.validate(json, {
@@ -29,7 +29,7 @@ const validateWithSchema = (type: string) => (rule: Object, value: Object, callb
 export const validateDatasourceJSON = validateWithSchema("types::DatasourceConfiguration");
 export const validateLayerConfigurationJSON = validateWithSchema("types::LayerUserConfiguration");
 
-export const isValidJSON = json => {
+export const isValidJSON = (json: string) => {
   try {
     JSON.parse(json);
     return true;

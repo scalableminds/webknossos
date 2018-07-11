@@ -94,6 +94,11 @@ export async function doWithToken<T>(fn: (token: string) => Promise<T>): Promise
 }
 
 // ### Users
+export async function loginUser(formValues: { email: string, password: string }): Promise<Object> {
+  await Request.sendJSONReceiveJSON("/api/auth/login", { data: formValues });
+  return getActiveUser();
+}
+
 export async function getUsers(): Promise<Array<APIUserType>> {
   const users = await Request.receiveJSON("/api/users");
   assertResponseLimit(users);

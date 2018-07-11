@@ -1,7 +1,7 @@
 import akka.actor.Props
 import com.newrelic.api.agent.NewRelic
 import com.scalableminds.util.mail.Mailer
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.LazyLogging
 import controllers.InitialDataService

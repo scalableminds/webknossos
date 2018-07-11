@@ -34,6 +34,9 @@ declare module "antd" {
     static Header: React$ComponentType<P>;
     static Sider: React$ComponentType<P>;
   }
+  declare class List<P> extends React$Component<P> {
+    static Item: React$ComponentType<P>;
+  }
   declare class Menu<P> extends React$Component<P> {
     static Item: React$ComponentType<P>;
     static SubMenu: React$ComponentType<P>;
@@ -78,8 +81,5 @@ declare module "antd" {
   }
   declare class Upload<P> extends React$Component<P> {
     static Dragger: React$ComponentType<P>;
-  }
-  declare class List<P> extends React$Component<P> {
-    static Item: React$ComponentType<P>;
   }
 }

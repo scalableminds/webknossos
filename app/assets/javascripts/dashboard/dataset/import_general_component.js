@@ -74,7 +74,7 @@ export default function ImportGeneralComponent({
       {allowedTeamsComponent}
       <FormItemWithInfo
         label="Sharing Link"
-        info="The sharing link can be used to allow unregistered users viewing this dataset."
+        info="The sharing link can be used to allow unregistered users to view this dataset."
       >
         <Input.Group compact>
           <Input value={sharingLink} onClick={handleSelectText} style={{ width: "80%" }} readOnly />

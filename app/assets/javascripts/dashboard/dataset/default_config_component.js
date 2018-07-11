@@ -22,7 +22,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
         <Col span={6}>
           <FormItemWithInfo
             label="Position"
-            info="The default position defined is defined in voxel-coordinates (x, y, z)."
+            info="The default position is defined in voxel-coordinates (x, y, z)."
           >
             {getFieldDecorator("defaultConfiguration.position")(<Vector3Input />)}
           </FormItemWithInfo>
@@ -54,7 +54,7 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
             })(
               <Checkbox>
                 Interpolation{" "}
-                <Tooltip title="If checked, bilinear interpolation will be used the the data is rendered.">
+                <Tooltip title="If checked, bilinear interpolation will be used when rendering the data.">
                   <Icon type="info-circle-o" style={{ color: "gray" }} />
                 </Tooltip>
               </Checkbox>,

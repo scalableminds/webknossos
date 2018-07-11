@@ -169,7 +169,7 @@ function SimpleLayerForm({ layer, index, form }) {
         {isSegmentation ? (
           <FormItemWithInfo
             label="Largest segment ID"
-            info="The largest segment ID specifies the highest id which exists in this segmentation layer. When user's extend this segmentation, new IDs will be assigned starting from that value."
+            info="The largest segment ID specifies the highest id which exists in this segmentation layer. When users extend this segmentation, new IDs will be assigned starting from that value."
           >
             {getFieldDecorator(`dataSource.dataLayers[${index}].largestSegmentId`, {
               rules: [

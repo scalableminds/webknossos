@@ -42,7 +42,7 @@ class WKDataStoreController @Inject()(val messagesApi: MessagesApi)
     request.body.validate[DataStoreStatus] match {
       case JsSuccess(status, _) =>
         logger.debug(s"Status update from data store '$name'. Status: " + status.ok)
-        DataStoreDAO.updateUrl(name, status.url)(GlobalAccessContext).map(_ => Ok)
+        DataStoreSQLDAO.updateUrlByName(name, status.url)(GlobalAccessContext).map(_ => Ok)
       case e: JsError =>
         logger.error("Data store '$name' sent invalid update. Error: " + e)
         Future.successful(JsonBadRequest(JsError.toFlatJson(e)))
@@ -109,13 +109,13 @@ trait WKDataStoreActionHelper extends FoxImplicits with Results with I18nSupport
 
   import play.api.mvc._
 
-  class RequestWithDataStore[A](val dataStore: DataStore, request: Request[A]) extends WrappedRequest[A](request)
+  class RequestWithDataStore[A](val dataStore: DataStoreSQL, request: Request[A]) extends WrappedRequest[A](request)
 
   case class DataStoreAction(name: String) extends ActionBuilder[RequestWithDataStore] {
     def invokeBlock[A](request: Request[A], block: (RequestWithDataStore[A]) => Future[Result]): Future[Result] = {
       request.getQueryString("key")
         .toFox
-        .flatMap(key => DataStoreDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
+        .flatMap(key => DataStoreSQLDAO.findOneByKey(key)(GlobalAccessContext)) // Check if key is valid
         //.filter(dataStore => dataStore.name == name) // Check if correct name is provided
         .flatMap(dataStore => block(new RequestWithDataStore(dataStore, request))) // Run underlying action
         .getOrElse(Forbidden(Messages("dataStore.notFound"))) // Default error

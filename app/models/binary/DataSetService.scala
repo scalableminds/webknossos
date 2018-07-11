@@ -95,7 +95,7 @@ object DataSetService extends FoxImplicits with LazyLogging {
   def findDataSource(name: String)(implicit ctx: DBAccessContext): Fox[InboxDataSource] =
     DataSetDAO.findOneBySourceName(name).map(_.dataSource)
 
-  def updateDataSources(dataStore: DataStore, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
+  def updateDataSources(dataStore: DataStoreSQL, dataSources: List[InboxDataSource])(implicit ctx: DBAccessContext) = {
     logger.info(s"[${dataStore.name}] Available datasets: " +
       s"${dataSources.count(_.isUsable)} (usable), ${dataSources.count(!_.isUsable)} (unusable)")
     //logger.debug(s"Found datasets: " + dataSources.map(_.id).mkString(", "))

@@ -2,7 +2,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import models.team._
 import play.api.Play
 import play.api.i18n.MessagesApi
@@ -17,7 +17,7 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
     for {
       allOrgs <- OrganizationDAO.findAll(GlobalAccessContext)
     } yield {
-      Ok(Json.toJson(allOrgs.map(org => Json.obj("id" -> org.id, "name" -> org.name, "additionalInformation" -> org.additionalInformation))))
+      Ok(Json.toJson(allOrgs.map(org => Json.obj("id" -> org.id, "name" -> org.name, "additionalInformation" -> org.additionalInformation, "displayname" -> org.displayName))))
     }
   }
 

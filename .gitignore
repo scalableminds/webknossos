@@ -66,3 +66,5 @@ app/assets/javascripts/test/snapshots/debug-htmls/*
 *.sublime-workspace
 **/screenshots/*.diff.png
 **/screenshots/*.new.png
+.nyc_output
+coverage

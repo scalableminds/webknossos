@@ -4,7 +4,7 @@ import javax.inject.Inject
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
@@ -98,14 +98,16 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     }
   }
 
-  private def buildFullParams(nmlParams: NmlTaskParameters, tracing: SkeletonTracing, fileName: String, description: Option[String]) = {
+  private def buildFullParams(nmlFormParams: NmlTaskParameters, tracing: SkeletonTracing, fileName: String, description: Option[String]) = {
+    val parsedNmlTracingBoundingBox = tracing.boundingBox.map(b => BoundingBox(b.topLeft, b.width, b.height, b.depth))
+    val bbox = if(nmlFormParams.boundingBox.isDefined) nmlFormParams.boundingBox else parsedNmlTracingBoundingBox
     TaskParameters(
-      nmlParams.taskTypeId,
-      nmlParams.neededExperience,
-      nmlParams.openInstances,
-      nmlParams.projectName,
-      nmlParams.scriptId,
-      nmlParams.boundingBox,
+      nmlFormParams.taskTypeId,
+      nmlFormParams.neededExperience,
+      nmlFormParams.openInstances,
+      nmlFormParams.projectName,
+      nmlFormParams.scriptId,
+      bbox,
       tracing.dataSetName,
       tracing.editPosition,
       tracing.editRotation,

@@ -5,7 +5,7 @@ package models.binary
 
 import java.util.UUID
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables.{Datastores, _}
 import play.api.libs.concurrent.Execution.Implicits._

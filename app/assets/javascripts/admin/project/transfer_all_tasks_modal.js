@@ -15,19 +15,18 @@ type Props = {
   project: ?APIProjectType,
   onCancel: Function,
   visible: boolean,
-  userId: ?string,
 };
 
 type TableEntryType = {
-  userName: string,
-  numberOfTasks: number,
+  email: string,
+  activeTasks: number,
 };
 
 type State = {
   isLoading: boolean,
   users: Array<APIUserType>,
   currentUserIdValue: string,
-  usersWithOpenTasks: Array<TableEntryType>,
+  usersWithActiveTasks: Array<TableEntryType>,
 };
 
 class TransferAllTasksModal extends React.PureComponent<Props, State> {
@@ -35,7 +34,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     isLoading: false,
     users: [],
     currentUserIdValue: "",
-    usersWithOpenTasks: [],
+    usersWithActiveTasks: [],
   };
 
   componentDidMount() {
@@ -45,9 +44,8 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
   async fetchData() {
     this.setState({ isLoading: true });
     const users = await getUsers();
-    const usersWithOpenTasks = await this.fetchUsersWithOpenTasksMock();
     const activeUsers = users.filter(u => u.isActive);
-    this.setState({ isLoading: false, usersWithOpenTasks });
+    this.setState({ isLoading: false });
     const sortedUsers = _.sortBy(activeUsers, "lastName");
     this.setState({
       users: sortedUsers,
@@ -61,73 +59,37 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     { userName: "Heinz-Günther", numberOfTasks: 3, key: "Heinz-Günther" },
   ];
 
-  /* TODO get all users, and all the taskids that are open and fit to the project
-  // !! make the show table compact -> size small !!
-  // provide som mock-data to test atleast the table
-  async fetchUsersWithOpenTasks() {
-    const users = await getUsersWithOpenTaskOfProject(this.props.project.name);
-    for (let i = 0; i < users.length; i++) {
-      const currentUserEntry: TableEntry = {};
-      const queryObject: QueryObjectType = {};
-      queryObject.project = this.props.project.name;
-      queryObject.user = this.state.users.find(user => user.email === users[i].email);
-      if (queryObject.user) {
-        // put request for tasks here
-        const currentUsersTasks = getTasks(queryObject);
-        currentUsersTasks.forEach(task => {
-          // man muss nach annotations suchen
-          // nach active tasks filtern
-          // if(task.projectName === this.props.project.name // && task.status == ){
-          // ){}); // here
-          console.log("hi");
-        });
-        // else do nothing
-      }
-    }
-  } */
+  updateActiveUsers(activeUsers: Array<TableEntryType>) {
+    const activeUsersWithKey = activeUsers.map(activeUser => {
+      activeUser.key = activeUser.email;
+      return activeUser;
+    });
+    this.setState({ usersWithActiveTasks: activeUsersWithKey });
+  }
 
   renderTableContent() {
     const columns = [
       {
-        title: "User name",
-        dataIndex: "userName",
-        key: "userName",
+        title: "User's email",
+        dataIndex: "email",
+        key: "email",
       },
       {
-        title: "number of open tasks",
-        dataIndex: "numberOfTasks",
-        key: "numberOfTasks",
+        title: "number of active tasks",
+        dataIndex: "activeTasks",
+        key: "activeTasks",
       },
     ];
     return (
       <Table
         columns={columns}
-        dataSource={this.state.usersWithOpenTasks}
-        rowKey="userName"
+        dataSource={this.state.usersWithActiveTasks}
+        rowKey="email"
         pagination={false}
         size="small"
       />
     );
   }
-
-  // ** magic **
-  /* async transfer() {
-    return;
-    // TODO put all relevant task ids into an array
-
-    // const queryObject: QueryObjectType = {};
-
-    /----------------------------------------
-    const annotationId = this.props.annotationId;
-    if (!annotationId) {
-      throw new Error("No annotation id provided");
-    }
-    this.setState({ isLoading: true });
-    // use bulkTaskTransfer
-    const updatedAnnotation = await transferTask(annotationId, this.state.currentUserIdValue);
-    this.setState({ isLoading: false });
-    this.props.onChange(updatedAnnotation);
-  } */
 
   handleSelectChange = (userId: string) => {
     this.setState({ currentUserIdValue: userId });
@@ -146,7 +108,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
           option.props.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
         }
       >
-        {this.state.users.filter(u => u.id !== this.props.userId).map(user => (
+        {this.state.users.map(user => (
           <Option key={user.id} value={user.id}>
             {`${user.lastName}, ${user.firstName} ${user.email}`}
           </Option>
@@ -155,7 +117,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     );
   }
 
-  // TODO own users does not show up !!
+  // TODO own user does not show up !!
   // use newly available api requests
   render() {
     if (!this.props.visible) {

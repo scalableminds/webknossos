@@ -414,6 +414,11 @@ export async function transferTask(
   });
 }
 
+export async function getUsersWithActiveTasks(projectName: string): Promise<Array> {
+  console.log(`/api/projects/${projectName}/usersWithActiveTasks`);
+  return Request.receiveJSON(`/api/projects/${projectName}/usersWithActiveTasks`);
+}
+
 // ### Annotations
 export async function reOpenAnnotation(
   annotationId: string,

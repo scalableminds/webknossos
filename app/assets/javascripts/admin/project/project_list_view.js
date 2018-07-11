@@ -14,6 +14,7 @@ import {
   deleteProject,
   pauseProject,
   resumeProject,
+  getUsersWithActiveTasks,
 } from "admin/admin_rest_api";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import Persistence from "libs/persistence";
@@ -49,6 +50,10 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class ProjectListView extends React.PureComponent<Props, State> {
+  constructor(props) {
+    super(props);
+    this.transferModal = React.createRef();
+  }
   state = {
     isLoading: true,
     projects: [],
@@ -143,25 +148,9 @@ class ProjectListView extends React.PureComponent<Props, State> {
     });
   };
 
-  /* showActiveUsersModal = async (project: APIProjectType) => {
-    const data = await getUsersWithOpenTaskOfProject(project.name);
-    // TODO replace with transfer_all_tasks_modal
-    Modal.info({
-      title: `Users with open tasks in project ${project.name}`,
-      width: 800,
-      iconType: "info-circle-o",
-      content: (
-        <List
-          size="large"
-          bordered
-          dataSource={data}
-          renderItem={item => <List.Item>{item}</List.Item>}
-        />
-      ),
-    });
-  }; */
-
   showActiveUsersModal2 = async (project: APIProjectType) => {
+    const activeUsers = await getUsersWithActiveTasks(project.name);
+    this.transferModal.current.updateActiveUsers(activeUsers);
     this.setState({
       selectedProject: project,
       isTransferTasksVisible: true,
@@ -321,11 +310,11 @@ class ProjectListView extends React.PureComponent<Props, State> {
             </Table>
           </Spin>
           <TransferAllTasksModal
+            ref={this.transferModal}
             visible={this.state.isTransferTasksVisible}
             project={this.state.selectedProject}
             onCancel={() => this.setState({ isTransferTasksVisible: false })}
             onSubmit={() => this.transferCommited()}
-            userId={this.props.activeUser.id}
           />
         </div>
       </div>

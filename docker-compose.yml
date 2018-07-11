@@ -131,9 +131,7 @@ services:
           -Dpostgres.url=$${POSTGRES_URL}"
 
   screenshot-tests:
-    build:
-      context: .
-      dockerfile: Dockerfile.puppeteer
+    image: scalableminds/puppeteer:master
     environment:
       - BRANCH
     working_dir: /home/pptruser/webknossos

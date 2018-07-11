@@ -199,7 +199,7 @@ class OnboardingView extends React.PureComponent<{}, State> {
         ) : (
           <Modal
             visible
-            width={"85%"}
+            width="85%"
             footer={null}
             maskClosable={false}
             onCancel={this.advanceStep}

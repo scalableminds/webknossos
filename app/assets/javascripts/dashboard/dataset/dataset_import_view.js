@@ -2,16 +2,7 @@
 
 import * as React from "react";
 import _ from "lodash";
-import {
-  Button,
-  Spin,
-  Icon,
-  Alert,
-  Form,
-  Card,
-  Tabs,
-  Tooltip,
-} from "antd";
+import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip } from "antd";
 import update from "immutability-helper";
 import Toast from "libs/toast";
 import {
@@ -33,15 +24,13 @@ import type {
   APIDataSourceWithMessagesType,
 } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
-import {
-  confirmAsync,
-} from "./helper_components";
+import { confirmAsync } from "./helper_components";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
 
 const FormItem = Form.Item;
-const {TabPane} = Tabs;
+const { TabPane } = Tabs;
 
 const toJSON = json => JSON.stringify(json, null, "  ");
 
@@ -210,7 +199,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         <p>
           You did not specify any teams, for which this dataset should be visible. This means that
           only administrators and team managers will be able to view this dataset.<br /> Please
-          switch to the &ldquo;General&rdquo; tab to review the teams which are allowed to see this dataset.
+          switch to the &ldquo;General&rdquo; tab to review the teams which are allowed to see this
+          dataset.
         </p>
       ),
     });

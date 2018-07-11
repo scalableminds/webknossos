@@ -3,19 +3,12 @@
 import * as React from "react";
 import {
   Button,
-  Spin,
   Icon,
-  Collapse,
   Input,
   Checkbox,
-  Alert,
   Form,
-  Card,
-  InputNumber,
   Col,
   Row,
-  Tabs,
-  Switch,
   Tooltip,
 } from "antd";
 import Clipboard from "clipboard-js";

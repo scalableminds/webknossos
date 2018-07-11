@@ -6,17 +6,10 @@ import {
   Button,
   Spin,
   Icon,
-  Collapse,
-  Input,
-  Checkbox,
   Alert,
   Form,
   Card,
-  InputNumber,
-  Col,
-  Row,
   Tabs,
-  Switch,
   Tooltip,
 } from "antd";
 import update from "immutability-helper";
@@ -41,19 +34,14 @@ import type {
 } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
 import {
-  Hideable,
-  FormItemWithInfo,
-  RetryingErrorBoundary,
   confirmAsync,
-  jsonEditStyle,
 } from "./helper_components";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
 
 const FormItem = Form.Item;
-const TabPane = Tabs.TabPane;
-const Panel = Collapse.Panel;
+const {TabPane} = Tabs;
 
 const toJSON = json => JSON.stringify(json, null, "  ");
 
@@ -222,7 +210,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         <p>
           You did not specify any teams, for which this dataset should be visible. This means that
           only administrators and team managers will be able to view this dataset.<br /> Please
-          switch to the 'General' tab to review the teams which are allowed to see this dataset.
+          switch to the &ldquo;General&rdquo; tab to review the teams which are allowed to see this dataset.
         </p>
       ),
     });
@@ -339,7 +327,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   render() {
     const { form } = this.props;
-    const { getFieldDecorator } = form;
     const titleString = this.props.isEditingMode ? "Update" : "Import";
     const formErrors = this.getFormValidationSummary();
 

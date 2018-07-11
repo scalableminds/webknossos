@@ -1,24 +1,19 @@
 // @flow
 
 import * as React from "react";
-import { Form, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
-import { withRouter } from "react-router-dom";
+import { Form, Modal, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
 
 import RegistrationForm from "admin/auth/registration_form";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
-
-import type { RouterHistory } from "react-router-dom";
+import DatasetImportView from "dashboard/dataset/dataset_import_view";
 
 const Step = Steps.Step;
 const FormItem = Form.Item;
 
-type Props = {
-  history: RouterHistory,
-};
-
 type State = {
   currentStep: number,
   organizationName: string,
+  datasetNameToImport: ?string,
 };
 
 function StepHeader({ header, subheader, icon, children }) {
@@ -113,17 +108,21 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
   );
 });
 
-class OnboardingView extends React.PureComponent<Props, State> {
+class OnboardingView extends React.PureComponent<{}, State> {
   constructor() {
     super();
     this.state = {
       currentStep: 0,
       organizationName: "",
+      datasetNameToImport: null,
     };
   }
 
   advanceStep = () => {
-    this.setState({ currentStep: this.state.currentStep + 1 });
+    this.setState({
+      currentStep: this.state.currentStep + 1,
+      datasetNameToImport: null,
+    });
   };
 
   renderCreateOrganization() {
@@ -190,7 +189,29 @@ class OnboardingView extends React.PureComponent<Props, State> {
         }
         icon={<Icon type="cloud-upload" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
-        <DatasetUploadView history={this.props.history} withoutCard />
+        {this.state.datasetNameToImport == null ? (
+          <DatasetUploadView
+            onUploaded={datasetName => {
+              this.setState({ datasetNameToImport: datasetName });
+            }}
+            withoutCard
+          />
+        ) : (
+          <Modal
+            visible
+            width={"85%"}
+            footer={null}
+            maskClosable={false}
+            onCancel={this.advanceStep}
+          >
+            <DatasetImportView
+              isEditingMode={false}
+              datasetName={this.state.datasetNameToImport || ""}
+              onComplete={this.advanceStep}
+              onCancel={this.advanceStep}
+            />
+          </Modal>
+        )}
         <div style={{ textAlign: "center" }}>
           <a
             href="#"
@@ -303,4 +324,4 @@ class OnboardingView extends React.PureComponent<Props, State> {
   }
 }
 
-export default withRouter(OnboardingView);
+export default OnboardingView;

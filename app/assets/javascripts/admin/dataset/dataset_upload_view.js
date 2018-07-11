@@ -9,7 +9,6 @@ import Utils from "libs/utils";
 import { getDatastores, addDataset } from "admin/admin_rest_api";
 
 import type { APIDataStoreType, APIUserType, DatasetConfigType } from "admin/api_flow_types";
-import type { RouterHistory } from "react-router-dom";
 import type { OxalisState } from "oxalis/store";
 
 const FormItem = Form.Item;
@@ -21,8 +20,8 @@ type StateProps = {
 
 type Props = StateProps & {
   form: Object,
-  history: RouterHistory,
   withoutCard?: boolean,
+  onUploaded: string => void,
 };
 
 type State = {
@@ -46,6 +45,10 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
     this.setState({
       datastores,
     });
+
+    if (datastores.length > 0) {
+      this.props.form.setFieldsValue({ datastore: datastores[0].url });
+    }
   }
 
   normFile = e => {
@@ -81,8 +84,7 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
           async () => {
             Toast.success(messages["dataset.upload_success"]);
             await Utils.sleep(3000); // wait for 3 seconds so the server can catch up / do its thing
-            const url = `/datasets/${formValues.name}/import`;
-            this.props.history.push(url);
+            this.props.onUploaded(formValues.name);
           },
           () => {
             this.setState({ isUploading: false });
@@ -99,7 +101,15 @@ class DatasetUploadView extends React.PureComponent<Props, State> {
       if (this.props.withoutCard) {
         return <React.Fragment>{children}</React.Fragment>;
       } else {
-        return <Card title={<h3>Upload Dataset</h3>}>{children}</Card>;
+        return (
+          <Card
+            style={{ width: "85%", marginLeft: "auto", marginRight: "auto" }}
+            bordered={false}
+            title={<h3>Upload Dataset</h3>}
+          >
+            {children}
+          </Card>
+        );
       }
     };
 

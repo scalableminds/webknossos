@@ -134,12 +134,12 @@ function SimpleLayerForm({ layer, index, form }) {
   const bitDepth = getBitDepth(layer);
   return (
     <Row gutter={48} style={{ width: "100%" }}>
-      <Col span={4}>
+      <Col span={5}>
         <div style={{ paddingTop: 9, color: "rgba(0, 0, 0, 0.85)" }}>
           {index + 1}. Layer &ldquo;{layer.name}&rdquo;:
         </div>
       </Col>
-      <Col span={18}>
+      <Col span={17}>
         <FormItemWithInfo
           label="Bounding box"
           style={{ marginBottom: 2 }}

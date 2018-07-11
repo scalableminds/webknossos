@@ -9,12 +9,9 @@ import {
   RetryingErrorBoundary,
   jsonEditStyle,
 } from "./helper_components";
-import { validateDatasourceJSON, isValidJSON } from "./validation";
+import { validateDatasourceJSON, isValidJSON, syncValidator } from "./validation";
 
 const FormItem = Form.Item;
-
-const syncValidator = (validateValueFn, errMessage) => (rule, value, callback) =>
-  validateValueFn(value) ? callback() : callback(new Error(errMessage));
 
 export default function SimpleAdvancedDataForm({
   form,
@@ -163,7 +160,7 @@ function SimpleLayerForm({ layer, index, form }) {
                 },
               ],
             },
-          )(<BoundingBoxInput style={{ width: 200 }} />)}
+          )(<BoundingBoxInput style={{ width: 300 }} />)}
         </FormItemWithInfo>
 
         {isSegmentation ? (

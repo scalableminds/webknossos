@@ -4,7 +4,7 @@ import * as React from "react";
 import { Icon, Input, Checkbox, Alert, Form, InputNumber, Col, Row, Tooltip } from "antd";
 import { Vector3Input } from "libs/vector_input";
 import { FormItemWithInfo, jsonEditStyle } from "./helper_components";
-import { validateLayerConfigurationJSON } from "./validation";
+import { validateLayerConfigurationJSON, syncValidator } from "./validation";
 
 const FormItem = Form.Item;
 
@@ -32,9 +32,16 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
             label="Zoom"
             info="A zoom of &ldquo;1&rdquo; will display the data in its original resolution."
           >
-            {getFieldDecorator("defaultConfiguration.zoom")(
-              <InputNumber style={{ width: "100%" }} />,
-            )}
+            {getFieldDecorator("defaultConfiguration.zoom", {
+              rules: [
+                {
+                  validator: syncValidator(
+                    value => value == null || value > 0,
+                    "The zoom value must be greater than 0.",
+                  ),
+                },
+              ],
+            })(<InputNumber style={{ width: "100%" }} />)}
           </FormItemWithInfo>
         </Col>
         <Col span={6}>
@@ -42,9 +49,16 @@ export default function DefaultConfigComponent({ form }: { form: Object }) {
             label="Segmentation Opacity"
             info="The segmentation layer will be overlayed using the specified percentage value (&ldquo;20&rdquo; means &ldquo;20%&rdquo; opacity)."
           >
-            {getFieldDecorator("defaultConfiguration.segmentationOpacity")(
-              <InputNumber style={{ width: "100%" }} />,
-            )}
+            {getFieldDecorator("defaultConfiguration.segmentationOpacity", {
+              rules: [
+                {
+                  validator: syncValidator(
+                    value => value == null || (value >= 0 && value <= 100),
+                    "The segmentation opacity must be between 0 and 100.",
+                  ),
+                },
+              ],
+            })(<InputNumber style={{ width: "100%" }} />)}
           </FormItemWithInfo>
         </Col>
         <Col span={6}>

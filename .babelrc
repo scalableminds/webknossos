@@ -12,7 +12,6 @@
       plugins: [
         "transform-class-properties",
         "transform-flow-strip-types",
-        ["import", { libraryName: "antd" }],
         "syntax-dynamic-import",
         ["transform-object-rest-spread", { "useBuiltIns": true }],
         [
@@ -22,7 +21,8 @@
             "outputPath": "/public/test-bundle",
             "publicPath": "",
           }
-        ]
+        ],
+        "istanbul"
       ],
     }
   },

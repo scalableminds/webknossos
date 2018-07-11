@@ -44,6 +44,7 @@ import TaskCreateFormView from "admin/task/task_create_form_view";
 import TaskTypeCreateView from "admin/tasktype/task_type_create_view";
 import ScriptCreateView from "admin/scripts/script_create_view";
 import TimeLineView from "admin/time/time_line_view";
+import Onboarding from "admin/onboarding";
 
 import type { OxalisState } from "oxalis/store";
 import type { APIUserType } from "admin/api_flow_types";
@@ -337,6 +338,7 @@ class ReactRouter extends React.Component<Props> {
               <Route path="/datasets/:id/view" render={this.tracingViewMode} />
               <Route path="/imprint" component={Imprint} />
               <Route path="/privacy" component={Privacy} />
+              <Route path="/onboarding" component={Onboarding} />
               <Route component={PageNotFoundView} />
             </Switch>
           </Content>

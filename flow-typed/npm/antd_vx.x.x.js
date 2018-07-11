@@ -39,6 +39,7 @@ declare module "antd" {
     static Item: React$ComponentType<P>;
     static SubMenu: React$ComponentType<P>;
   }
+  declare var message: Object;
   declare class Modal<P> extends React$Component<P> {
     static confirm: Function;
     static info: Function;
@@ -74,6 +75,9 @@ declare module "antd" {
     static TreeNode: React$ComponentType<P>;
   }
   declare class Tooltip<P> extends React$Component<P> {}
+  declare class Steps<P> extends React$Component<P> {
+    static Step: React$ComponentType<P>;
+  }
   declare class Upload<P> extends React$Component<P> {
     static Dragger: React$ComponentType<P>;
   }

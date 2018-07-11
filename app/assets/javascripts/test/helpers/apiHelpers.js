@@ -96,7 +96,7 @@ const ANNOTATION_ID = "annotationIdValue";
 
 let counter = 0;
 
-export function setupOxalis(t, mode, apiVersion = 2) {
+export function setupOxalis(t, mode, apiVersion) {
   UrlManager.initialState = { position: [1, 2, 3] };
   const model = new Model();
   t.context.model = model;

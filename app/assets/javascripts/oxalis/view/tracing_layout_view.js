@@ -34,6 +34,10 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
     isSettingsCollapsed: true,
   };
 
+  componentDidCatch() {
+    Toast.error(messages["react.rendering_error"]);
+  }
+
   componentWillUnmount() {
     // do a complete page refresh to make sure all tracing data is garbage
     // collected and all events are canceled, etc.
@@ -45,10 +49,6 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
       isSettingsCollapsed: !this.state.isSettingsCollapsed,
     });
   };
-
-  componentDidCatch() {
-    Toast.error(messages["react.rendering_error"]);
-  }
 
   render() {
     return (

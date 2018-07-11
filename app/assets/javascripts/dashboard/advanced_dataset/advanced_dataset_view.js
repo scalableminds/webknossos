@@ -27,6 +27,17 @@ type State = {
 };
 
 class AdvancedDatasetView extends React.PureComponent<Props, State> {
+  constructor() {
+    super();
+    this.state = {
+      sortedInfo: {
+        columnKey: "created",
+        order: "descend",
+      },
+      prevSearchQuery: "",
+    };
+  }
+
   static getDerivedStateFromProps(nextProps: Props, prevState: State): $Shape<State> {
     const maybeSortedInfo =
       // Clear the sorting exactly when the search box is initially filled
@@ -40,17 +51,6 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
     return {
       prevSearchQuery: nextProps.searchQuery,
       ...maybeSortedInfo,
-    };
-  }
-
-  constructor() {
-    super();
-    this.state = {
-      sortedInfo: {
-        columnKey: "created",
-        order: "descend",
-      },
-      prevSearchQuery: "",
     };
   }
 

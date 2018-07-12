@@ -64,5 +64,7 @@ app/assets/javascripts/test/snapshots/debug-htmls/*
 .eslintcache
 *.sublime-project
 *.sublime-workspace
+**/screenshots/*.diff.png
+**/screenshots/*.new.png
 .nyc_output
 coverage

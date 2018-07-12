@@ -5,7 +5,7 @@ package oxalis.ndstore
 
 import com.scalableminds.webknossos.datastore.models.datasource.{Category, DataSourceId, AbstractDataLayer => NDDataLayer, DataLayerLike => DataLayer, DataSourceLike => DataSource, GenericDataSource => NDDataSource}
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}
 import models.team.{OrganizationDAO, TeamDAO, TeamService}

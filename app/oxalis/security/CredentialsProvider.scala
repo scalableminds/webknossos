@@ -8,7 +8,7 @@ import com.mohiva.play.silhouette.api.repositories.AuthInfoRepository
 import com.mohiva.play.silhouette.api.util.{Credentials, ExecutionContextProvider, PasswordInfo}
 import com.mohiva.play.silhouette.impl.exceptions.{IdentityNotFoundException, InvalidPasswordException}
 import com.mohiva.play.silhouette.impl.providers.CredentialsProvider._
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import models.user.UserService
 import net.liftweb.common.Full
 

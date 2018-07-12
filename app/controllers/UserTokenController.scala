@@ -5,7 +5,7 @@ package controllers
 
 import javax.inject.Inject
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._

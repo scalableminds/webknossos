@@ -443,7 +443,7 @@ export async function editAnnotation(
 export async function finishAnnotation(
   annotationId: string,
   annotationType: APITracingType,
-): Promise<APIAnnotationType> {
+): Promise<{ messages: Array<MessageType> }> {
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/finish`);
 }
 
@@ -457,7 +457,7 @@ export async function resetAnnotation(
 export async function deleteAnnotation(
   annotationId: string,
   annotationType: APITracingType,
-): Promise<APIAnnotationType> {
+): Promise<{ messages: Array<MessageType> }> {
   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}`, {
     method: "DELETE",
   });
@@ -611,10 +611,10 @@ export async function updateDatasetTeams(
   });
 }
 
-export async function triggerDatasetCheck(datatstoreHost: string): Promise<void> {
+export async function triggerDatasetCheck(datastoreHost: string): Promise<void> {
   await doWithToken(token =>
     Request.triggerRequest(`/data/triggers/checkInboxBlocking?token=${token}`, {
-      host: datatstoreHost,
+      host: datastoreHost,
     }),
   );
 }

@@ -1,7 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { resetDatabase } from "../enzyme/e2e-setup";
+import { resetDatabase, omitVolatileFields } from "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
 import _ from "lodash";
@@ -87,35 +87,44 @@ test.serial("transferTask()", async t => {
   t.is(revertedTask.user && revertedTask.user.id, userId);
 });
 
-// Tests which require a working dataStore during tests and therefore don't work yet:
-//
-// test.serial("createTasks() and deleteTask()", async t => {
-//   const newTask = {
-//     boundingBox: null,
-//     dataSet: "confocal-multi_knossos",
-//     editPosition: [0, 0, 0],
-//     editRotation: [0, 0, 0],
-//     neededExperience: {
-//       domain: "abc",
-//       value: 1,
-//     },
-//     projectName: "Test_Project",
-//     scriptId: null,
-//     openInstances: 3,
-//     teamName: "570b9f4b2a7c0e3b008da6ec",
-//     taskTypeId: "570b9f4c2a7c0e4c008da6ee",
-//   };
-//   const createdTasks = await api.createTasks([newTask]);
-//   // console.log("createdTasks", createdTasks);
-//   t.snapshot(createdTasks, { id: "task-createTasks" });
-//
-//   await api.deleteTask(createdTasks[0].id);
-//   t.true(true);
-// });
-//
-// test.serial("requestTask()", async t => {
-//   const newTaskAnnotation = await api.requestTask();
-//   t.snapshot(newTaskAnnotation, { id: "task-requestTask" });
-// });
-//
+const newTask = {
+  boundingBox: null,
+  dataSet: "confocal-multi_knossos",
+  editPosition: [0, 0, 0],
+  editRotation: [0, 0, 0],
+  neededExperience: {
+    domain: "abc",
+    value: 1,
+  },
+  projectName: "Test_Project",
+  scriptId: null,
+  openInstances: 3,
+  teamName: "570b9f4b2a7c0e3b008da6ec",
+  taskTypeId: "570b9f4c2a7c0e4c008da6ee",
+};
+
+test.serial("createTasks() and deleteTask()", async t => {
+  const createdTaskWrapper = (await api.createTasks([newTask]))[0];
+
+  t.is(createdTaskWrapper.status, 200);
+  const createdTask = createdTaskWrapper.success;
+
+  t.snapshot(omitVolatileFields(createdTask), { id: "task-createTasks" });
+
+  await api.deleteTask(createdTask.id);
+
+  t.true(true);
+});
+
+test.serial("requestTask()", async t => {
+  const createdTaskWrapper = (await api.createTasks([newTask]))[0];
+  const newTaskAnnotation = await api.requestTask();
+
+  t.snapshot(omitVolatileFields(newTaskAnnotation), { id: "task-requestTask" });
+
+  await api.deleteTask(createdTaskWrapper.success.id);
+
+  t.true(true);
+});
+
 // test.serial("createTaskFromNML")

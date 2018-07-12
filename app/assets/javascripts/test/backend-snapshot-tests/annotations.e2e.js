@@ -2,7 +2,7 @@
 /* eslint-disable import/first */
 // @flow
 import test from "ava";
-import { resetDatabase } from "../enzyme/e2e-setup";
+import { resetDatabase, omitVolatileFields } from "../enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 
@@ -52,7 +52,7 @@ test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async
     APITracingTypeEnum.Explorational,
   );
   // $FlowFixMe: Make tracingTime deterministic
-  finishedAnnotation.tracingTime = 100;
+  reopenedAnnotation.tracingTime = 100;
   t.is(reopenedAnnotation.state, "Active");
 
   t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation-explorational" });
@@ -111,29 +111,17 @@ test.serial("finishAllAnnotations()", async t => {
   await Promise.all(annotationIds.map(id => api.reOpenAnnotation(id, APITracingTypeEnum.Task)));
 });
 
-// Tests which require a working dataStore during tests and therefore don't work yet:
-//
-// test.serial("createExplorational() and deleteAnnotation()", async t => {
-//   const dataSetName = "confocal-multi_knossos";
-//   const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
-//   t.is(createdExplorational.dataSetName, dataSetName);
-//   t.snapshot(createdExplorational, { id: "annotations-createExplorational" });
+test.serial("createExplorational() and finishAnnotation()", async t => {
+  const dataSetName = "confocal-multi_knossos";
+  const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
 
-//   const deletedAnnotation = await api.deleteAnnotation(
-//     createdExplorational.id,
-//     APITracingTypeEnum.Explorational,
-//   );
-// });
-// export async function resetAnnotation(
-//   annotationId: string,
-//   annotationType: APITracingType,
-// ): Promise<APIAnnotationType> {
-//   return Request.receiveJSON(`/api/annotations/${annotationType}/${annotationId}/reset`);
-// }
-// export async function copyAnnotationToUserAccount(
-//   annotationId: string,
-//   tracingType: string,
-// ): Promise<APIAnnotationType> {
-//   const url = `/api/annotations/${tracingType}/${annotationId}/duplicate`;
-//   return Request.receiveJSON(url);
-// }
+  t.snapshot(omitVolatileFields(createdExplorational), { id: "annotations-createExplorational" });
+
+  await api.finishAnnotation(createdExplorational.id, APITracingTypeEnum.Explorational);
+
+  const finishedAnnotation = await api.getAnnotationInformation(
+    createdExplorational.id,
+    APITracingTypeEnum.Explorational,
+  );
+  t.is(finishedAnnotation.state, "Finished");
+});

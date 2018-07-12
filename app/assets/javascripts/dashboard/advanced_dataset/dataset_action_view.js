@@ -9,6 +9,7 @@ import { createExplorational } from "admin/admin_rest_api";
 
 type Props = {
   dataset: APIDatasetType,
+  isUserAdmin: boolean,
 };
 
 type State = {};
@@ -52,7 +53,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
       </Menu>
     );
 
-    const voumeTracingMenu = (
+    const volumeTracingMenu = (
       <Dropdown overlay={menu} trigger={["click"]}>
         <a href="#" title="Create volume tracing">
           <img
@@ -67,7 +68,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
 
     return (
       <div>
-        {dataset.dataSource.dataLayers == null ? (
+        {this.props.isUserAdmin && dataset.dataSource.dataLayers == null ? (
           <div>
             <Link to={`/datasets/${dataset.name}/import`} className="import-dataset">
               <Icon type="plus-circle-o" />Import
@@ -78,7 +79,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
         ) : null}
         {dataset.isActive ? (
           <div className="dataset-actions nowrap">
-            {dataset.isEditable ? (
+            {this.props.isUserAdmin && dataset.isEditable ? (
               <Link to={`/datasets/${dataset.name}/edit`} title="Edit Dataset">
                 <Icon type="edit" />Edit
               </Link>
@@ -98,7 +99,7 @@ export default class DatasetActionView extends React.PureComponent<Props, State>
               />{" "}
               Start Skeleton Tracing
             </a>
-            {voumeTracingMenu}
+            {volumeTracingMenu}
           </div>
         ) : null}
       </div>

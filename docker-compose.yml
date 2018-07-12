@@ -17,9 +17,13 @@ services:
       - -Dhttp.address=0.0.0.0
       - -Ddatastore.fossildb.address=fossildb
       - -Dpostgres.url=jdbc:postgresql://postgres/webknossos
+      - -Dapplication.insertInitialData=false
+      - -Dapplication.authentication.enableDevAutoLogin=false
       # the following lines disable the integrated datastore:
       # - -Dplay.modules.enabled-="com.scalableminds.webknossos.datastore.DataStoreModule"
       # - -Ddatastore.enabled=false
+    volumes:
+      - ./binaryData:/srv/webknossos/binaryData
     environment:
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
 
@@ -125,6 +129,16 @@ services:
         "test-only e2e.* --
           -Ddatastore.fossildb.address=fossildb
           -Dpostgres.url=$${POSTGRES_URL}"
+
+  screenshot-tests:
+    image: scalableminds/puppeteer:master
+    environment:
+      - URL
+    working_dir: /home/pptruser/webknossos
+    command: bash -c 'for i in {1..3}; do yarn test-screenshot && break; done'
+    volumes:
+      - ".:/home/pptruser/webknossos"
+    user: ${USER_UID:-1000}:${USER_GID:-1000}
 
   postgres:
     image: postgres:10-alpine

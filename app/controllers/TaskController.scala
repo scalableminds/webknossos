@@ -223,7 +223,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       task <- TaskSQLDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
       project <- task.project
       _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
-      _ <- TaskSQLDAO.deleteOne(task._id)
+      _ <- TaskSQLDAO.removeOneAndItsAnnotations(task._id)
     } yield {
       JsonOk(Messages("task.removed"))
     }

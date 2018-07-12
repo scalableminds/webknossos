@@ -2,6 +2,7 @@
 
 echo "[info] Cleaning target directories..."
 rm -rf target
+rm -rf util/target
 rm -rf project/target
 rm -rf project/project/target
 rm -rf webknossos-datastore/target

@@ -27,6 +27,7 @@ module.name_mapper='three' -> '<PROJECT_ROOT>/node_modules/three.js/build/three.
 module.name_mapper='^\([^.].*\)' -> '<PROJECT_ROOT>/app/assets/javascripts/\1'
 
 module.name_mapper.extension='proto' -> '<PROJECT_ROOT>/app/assets/flow/ProtoFlowStub.js.flow'
+module.name_mapper.extension='less' -> '<PROJECT_ROOT>/app/assets/flow/ProtoFlowStub.js.flow'
 
 [lints]
 all=error

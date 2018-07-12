@@ -419,6 +419,7 @@ export async function transferActiveTasksOfProject(
     data: {
       userId,
     },
+    method: "POST",
   });
 }
 

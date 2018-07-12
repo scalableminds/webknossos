@@ -1,6 +1,7 @@
 // @flow
 import * as React from "react";
-import { Icon, Alert, Form, Tooltip, Modal } from "antd";
+import { Tabs, Icon, Alert, Form, Tooltip, Modal } from "antd";
+const { TabPane } = Tabs;
 
 const FormItem = Form.Item;
 
@@ -8,8 +9,8 @@ export const jsonEditStyle = {
   fontFamily: 'Monaco, Consolas, "Courier New", monospace',
 };
 
-export function Hideable({ children, hide }: { children: React.Node, hide: boolean }) {
-  return <div style={{ display: hide ? "none" : "block" }}>{children}</div>;
+export function Hideable({ children, hidden }: { children: React.Node, hidden: boolean }) {
+  return <div style={{ display: hidden ? "none" : "block" }}>{children}</div>;
 }
 
 export const FormItemWithInfo = ({
@@ -86,3 +87,15 @@ export const confirmAsync = (opts: Object) =>
       },
     });
   });
+
+export const createTabPaneWithDisplayNone = (activeTabKey: string) => ({
+  tabKey,
+  children,
+  ...props
+}) => {
+  return (
+    <TabPane key={tabKey} {...props}>
+      <Hideable hidden={tabKey !== activeTabKey}>{children}</Hideable>
+    </TabPane>
+  );
+};

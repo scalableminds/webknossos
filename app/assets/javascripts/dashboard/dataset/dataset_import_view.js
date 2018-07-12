@@ -24,13 +24,12 @@ import type {
   APIDataSourceWithMessagesType,
 } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
-import { confirmAsync } from "./helper_components";
+import { Hideable, confirmAsync, createTabPaneWithDisplayNone } from "./helper_components";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
 
 const FormItem = Form.Item;
-const { TabPane } = Tabs;
 
 const toJSON = json => JSON.stringify(json, null, "  ");
 
@@ -78,7 +77,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   componentDidMount() {
     this.fetchData();
   }
-
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
@@ -329,6 +327,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       </Tooltip>
     ) : null;
 
+    // This component hides inactive tab panes via display: none.
+    // This prevents that the user can tab to inaccessible elements
+    console.log("this.state.activeTabKey", this.state.activeTabKey);
+    const TabPaneWithDisplayNone = createTabPaneWithDisplayNone(this.state.activeTabKey);
+
     return (
       <Form className="row container dataset-import" onSubmit={this.handleSubmit}>
         <Card
@@ -350,8 +353,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 activeKey={this.state.activeTabKey}
                 onChange={activeTabKey => this.setState({ activeTabKey })}
               >
-                <TabPane
+                <TabPaneWithDisplayNone
                   tab={<span> Data {formErrors.data ? errorIcon : ""}</span>}
+                  tabKey="data"
                   key="data"
                   forceRender
                 >
@@ -363,14 +367,15 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                       this.setState({ activeDataSourceEditMode: activeEditMode });
                     }}
                   />
-                </TabPane>
-                <TabPane
+                </TabPaneWithDisplayNone>
+                <TabPaneWithDisplayNone
                   tab={
                     <span>
                       {" "}
                       General {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
                     </span>
                   }
+                  tabKey="general"
                   key="general"
                   forceRender
                 >
@@ -383,17 +388,18 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                     handleRevokeSharingLink={this.handleRevokeSharingLink}
                     isEditingMode={this.props.isEditingMode}
                   />
-                </TabPane>
+                </TabPaneWithDisplayNone>
                 {this.props.isEditingMode ? (
-                  <TabPane
+                  <TabPaneWithDisplayNone
                     tab={
                       <span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>
                     }
+                    tabKey="defaultConfig"
                     key="defaultConfig"
                     forceRender
                   >
                     <DefaultConfigComponent form={form} />
-                  </TabPane>
+                  </TabPaneWithDisplayNone>
                 ) : null}
               </Tabs>
             </Card>

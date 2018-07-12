@@ -61,13 +61,13 @@ export default function SimpleAdvancedDataForm({
         showIcon
       />
 
-      <Hideable hide={activeDataSourceEditMode !== "simple"}>
+      <Hideable hidden={activeDataSourceEditMode !== "simple"}>
         <RetryingErrorBoundary>
           <SimpleDatasetForm form={form} dataSource={dataSource} />
         </RetryingErrorBoundary>
       </Hideable>
 
-      <Hideable hide={activeDataSourceEditMode !== "advanced"}>
+      <Hideable hidden={activeDataSourceEditMode !== "advanced"}>
         <FormItem label="Dataset Configuration" hasFeedback>
           {getFieldDecorator("dataSourceJson", {
             rules: [

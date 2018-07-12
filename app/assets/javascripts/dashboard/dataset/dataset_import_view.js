@@ -6,8 +6,6 @@ import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip } from "antd";
 import update from "immutability-helper";
 import Toast from "libs/toast";
 import {
-  getDatasetSharingToken,
-  revokeDatasetSharingToken,
   getDataset,
   updateDataset,
   getDatasetDefaultConfiguration,
@@ -47,7 +45,6 @@ type Props = {
 type TabKeyType = "data" | "general" | "defaultConfig";
 
 type State = {
-  sharingToken: string,
   dataset: ?APIDatasetType,
   datasetDefaultConfiguration: ?DatasetConfigurationType,
   messages: Array<APIMessageType>,
@@ -72,7 +69,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   state = {
     dataset: null,
     datasetDefaultConfiguration: null,
-    sharingToken: "",
     isLoading: true,
     messages: [],
     activeDataSourceEditMode: "simple",
@@ -86,10 +82,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
-      const [sharingToken, dataset] = await Promise.all([
-        getDatasetSharingToken(this.props.datasetName),
-        getDataset(this.props.datasetName),
-      ]);
+      const dataset = await getDataset(this.props.datasetName);
       const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
 
       this.props.form.setFieldsValue({
@@ -120,7 +113,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       });
 
       this.setState({
-        sharingToken,
         dataset,
         messages: dataSourceMessages,
       });
@@ -225,17 +217,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
       window.history.back();
     });
-  };
-
-  handleRevokeSharingLink = async () => {
-    this.setState({ isLoading: true });
-    try {
-      await revokeDatasetSharingToken(this.props.datasetName);
-      const sharingToken = await getDatasetSharingToken(this.props.datasetName);
-      this.setState({ sharingToken });
-    } finally {
-      this.setState({ isLoading: false });
-    }
   };
 
   getMessageComponents() {
@@ -359,11 +340,8 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 >
                   <ImportGeneralComponent
                     form={form}
+                    datasetName={this.props.datasetName}
                     hasNoAllowedTeams={_hasNoAllowedTeams}
-                    sharingLink={`${window.location.origin}/datasets/${
-                      this.props.datasetName
-                    }/view?token=${this.state.sharingToken}`}
-                    handleRevokeSharingLink={this.handleRevokeSharingLink}
                   />
                 </TabPaneWithDisplayNone>
 

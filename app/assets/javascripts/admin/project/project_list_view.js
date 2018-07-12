@@ -14,7 +14,6 @@ import {
   deleteProject,
   pauseProject,
   resumeProject,
-  getUsersWithActiveTasks,
 } from "admin/admin_rest_api";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import Persistence from "libs/persistence";
@@ -50,10 +49,6 @@ const persistence: Persistence<State> = new Persistence(
 );
 
 class ProjectListView extends React.PureComponent<Props, State> {
-  constructor(props) {
-    super(props);
-    this.transferModal = React.createRef();
-  }
   state = {
     isLoading: true,
     projects: [],
@@ -148,9 +143,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
     });
   };
 
-  showActiveUsersModal2 = async (project: APIProjectType) => {
-    const activeUsers = await getUsersWithActiveTasks(project.name);
-    this.transferModal.current.updateActiveUsers(activeUsers);
+  showActiveUsersModal = async (project: APIProjectType) => {
     this.setState({
       selectedProject: project,
       isTransferTasksVisible: true,
@@ -295,7 +288,7 @@ class ProjectListView extends React.PureComponent<Props, State> {
                       <Icon type="download" />Download
                     </a>
                     <br />
-                    <a onClick={_.partial(this.showActiveUsersModal2, project)}>
+                    <a onClick={_.partial(this.showActiveUsersModal, project)}>
                       <Icon type="info-circle-o" />Show active users
                     </a>
                     <br />
@@ -309,13 +302,13 @@ class ProjectListView extends React.PureComponent<Props, State> {
               />
             </Table>
           </Spin>
-          <TransferAllTasksModal
-            ref={this.transferModal}
-            visible={this.state.isTransferTasksVisible}
-            project={this.state.selectedProject}
-            onCancel={() => this.setState({ isTransferTasksVisible: false })}
-            onSubmit={() => this.transferCommited()}
-          />
+          {this.state.isTransferTasksVisible ? (
+            <TransferAllTasksModal
+              visible={this.state.isTransferTasksVisible}
+              project={this.state.selectedProject}
+              onCancel={() => this.setState({ isTransferTasksVisible: false })}
+            />
+          ) : null}
         </div>
       </div>
     );

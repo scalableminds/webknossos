@@ -3,30 +3,28 @@
 import _ from "lodash";
 import * as React from "react";
 import { Spin, Modal, Button, Select, Table } from "antd";
-import { getUsers } from "admin/admin_rest_api";
-import type { APIUserType, APIProjectType } from "admin/api_flow_types";
+import { getUsers, getUsersWithActiveTasks } from "admin/admin_rest_api";
+import type { APIUserType, APIProjectType, APIActiveUserType } from "admin/api_flow_types";
 import Toast from "libs/toast";
 import messages from "messages";
 
 const { Option } = Select;
 
 type Props = {
-  onSubmit: () => void,
   project: ?APIProjectType,
   onCancel: Function,
   visible: boolean,
 };
 
 type TableEntryType = {
-  email: string,
-  activeTasks: number,
-};
+  key: string,
+} & APIActiveUserType;
 
 type State = {
   isLoading: boolean,
   users: Array<APIUserType>,
   currentUserIdValue: string,
-  usersWithActiveTasks: Array<TableEntryType>,
+  usersWithActiveTasks: Array<APIActiveUserType>,
 };
 
 class TransferAllTasksModal extends React.PureComponent<Props, State> {
@@ -45,29 +43,30 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     this.setState({ isLoading: true });
     const users = await getUsers();
     const activeUsers = users.filter(u => u.isActive);
-    this.setState({ isLoading: false });
+    let usersWithActiveTasks: Array<APIActiveUserType> = null;
+    if (this.props.project) {
+      usersWithActiveTasks = await getUsersWithActiveTasks(this.props.project.name);
+    }
+    this.setState({ isLoading: false, usersWithActiveTasks });
     const sortedUsers = _.sortBy(activeUsers, "lastName");
     this.setState({
       users: sortedUsers,
     });
   }
 
-  fetchUsersWithOpenTasksMock = async () => [
-    { userName: "Hans", numberOfTasks: 2, key: "Hans" },
-    { userName: "Karla", numberOfTasks: 1, key: "Karla" },
-    { userName: "Peter", numberOfTasks: 1, key: "Peter" },
-    { userName: "Heinz-Günther", numberOfTasks: 3, key: "Heinz-Günther" },
-  ];
-
-  updateActiveUsers(activeUsers: Array<TableEntryType>) {
-    const activeUsersWithKey = activeUsers.map(activeUser => {
-      activeUser.key = activeUser.email;
-      return activeUser;
-    });
-    this.setState({ usersWithActiveTasks: activeUsersWithKey });
-  }
+  transferAllActiveTasks() {}
 
   renderTableContent() {
+    const activeUsersWithKey: Array<TableEntryType> = this.state.usersWithActiveTasks.map(
+      activeUser => {
+        const userWithKey = {
+          email: activeUser.email,
+          activeTasks: activeUser.activeTasks,
+          key: activeUser.email,
+        };
+        return userWithKey;
+      },
+    );
     const columns = [
       {
         title: "User's email",
@@ -83,7 +82,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
     return (
       <Table
         columns={columns}
-        dataSource={this.state.usersWithActiveTasks}
+        dataSource={activeUsersWithKey}
         rowKey="email"
         pagination={false}
         size="small"
@@ -141,7 +140,7 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
               <Button
                 type="primary"
                 disabled={this.state.currentUserIdValue === ""}
-                onClick={() => this.props.onSubmit()}
+                onClick={() => this.transferAllActiveTasks()}
               >
                 Transfer all tasks
               </Button>

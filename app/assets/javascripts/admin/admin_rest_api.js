@@ -33,6 +33,7 @@ import type {
   APIFeatureToggles,
   APIOrganizationType,
   ServerTracingType,
+  APIActiveUserType,
 } from "admin/api_flow_types";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 import type { QueryObjectType } from "admin/task/task_search_form";
@@ -312,10 +313,6 @@ export async function resumeProject(projectName: string): Promise<APIProjectType
   return transformProject(project);
 }
 
-export function getUsersWithOpenTaskOfProject(projectName: string): Promise<Array<String>> {
-  return Request.receiveJSON(`api/projects/${projectName}/usersWithOpenTasks`);
-}
-
 // ### Tasks
 export async function peekNextTasks(): Promise<?APITaskType> {
   return Request.receiveJSON("/api/user/tasks/peek");
@@ -414,8 +411,20 @@ export async function transferTask(
   });
 }
 
-export async function getUsersWithActiveTasks(projectName: string): Promise<Array> {
-  console.log(`/api/projects/${projectName}/usersWithActiveTasks`);
+export async function transferActiveTasksOfProject(
+  projectName: string,
+  userId: string,
+): Promise<APIAnnotationType> {
+  return Request.sendJSONReceiveJSON(`/api/projects/${projectName}/transferActiveTasks`, {
+    data: {
+      userId,
+    },
+  });
+}
+
+export async function getUsersWithActiveTasks(
+  projectName: string,
+): Promise<Array<APIActiveUserType>> {
   return Request.receiveJSON(`/api/projects/${projectName}/usersWithActiveTasks`);
 }
 

@@ -104,25 +104,36 @@ const newTask = {
 };
 
 test.serial("createTasks() and deleteTask()", async t => {
-  const createdTaskWrapper = (await api.createTasks([newTask]))[0];
+  const createdTaskWrappers = await api.createTasks([newTask]);
+  t.is(createdTaskWrappers.length, 1);
+  const createdTaskWrapper = createdTaskWrappers[0];
 
-  t.is(createdTaskWrapper.status, 200);
-  const createdTask = createdTaskWrapper.success;
+  if (createdTaskWrapper.success != null) {
+    const createdTask = createdTaskWrapper.success;
 
-  t.snapshot(omitVolatileFields(createdTask), { id: "task-createTasks" });
+    t.snapshot(omitVolatileFields(createdTask), { id: "task-createTasks" });
 
-  await api.deleteTask(createdTask.id);
+    await api.deleteTask(createdTask.id);
+  } else {
+    t.fail("Task creation failed.");
+  }
 
   t.true(true);
 });
 
 test.serial("requestTask()", async t => {
-  const createdTaskWrapper = (await api.createTasks([newTask]))[0];
+  const createdTaskWrappers = await api.createTasks([newTask]);
+  t.is(createdTaskWrappers.length, 1);
+  const createdTaskWrapper = createdTaskWrappers[0];
   const newTaskAnnotation = await api.requestTask();
 
   t.snapshot(omitVolatileFields(newTaskAnnotation), { id: "task-requestTask" });
 
-  await api.deleteTask(createdTaskWrapper.success.id);
+  if (createdTaskWrapper.success != null) {
+    await api.deleteTask(createdTaskWrapper.success.id);
+  } else {
+    t.fail("Task creation failed.");
+  }
 
   t.true(true);
 });

@@ -17,7 +17,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Added a mandatory waiting interval of 10 seconds when getting a task with a new task type. The modal containing the task description cannot be closed earlier. These ten seconds should be used to fully understand the new task type. [#2793](https://github.com/scalableminds/webknossos/pull/2793)
   - Added more debugging related information in case of unexpected errors. The additional information can be used when reporting the error. [#2766](https://github.com/scalableminds/webknossos/pull/2766)
   - Added permission for team managers to create explorational tracings on datasets without allowed teams. [#2758](https://github.com/scalableminds/webknossos/pull/2758)
-  - Admins now can see and transfer all active tasks of a project to a single user [#2863](https://github.com/scalableminds/webknossos/pull/2863)
+  - Added the possibility for admins to see and transfer all active tasks of a project to a single user in the porject tab[#2863](https://github.com/scalableminds/webknossos/pull/2863)
   - Added higher-resolution images for dataset gallery thumbnails. [#2745](https://github.com/scalableminds/webknossos/pull/2745)
   - Added permission for admins to get tasks from all projects in their organization. [#2728](https://github.com/scalableminds/webknossos/pull/2728)
   - Added the shortcut to copy the currently hovered cell id (CTRL + I) to non-volume-tracings, too. [#2726](https://github.com/scalableminds/webknossos/pull/2726)

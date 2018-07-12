@@ -8,6 +8,7 @@ import { connect } from "react-redux";
 import Request from "libs/request";
 import Utils from "libs/utils";
 import LoginView from "admin/auth/login_view";
+import { getBuildInfo } from "admin/admin_rest_api";
 import { logoutUserAction } from "oxalis/model/actions/user_actions";
 import Store from "oxalis/store";
 import features from "features";
@@ -28,7 +29,25 @@ type Props = {
   history: RouterHistory,
 } & StateProps;
 
-class Navbar extends React.PureComponent<Props> {
+type State = {
+  version: ?string,
+};
+
+class Navbar extends React.PureComponent<Props, State> {
+  state = {
+    version: null,
+  };
+
+  async componentWillMount() {
+    const buildInfo = await getBuildInfo();
+    this.setState({
+      version:
+        buildInfo.webknossos.ciTag !== ""
+          ? buildInfo.webknossos.ciTag
+          : buildInfo.webknossos.ciBuild,
+    });
+  }
+
   handleLogout = async () => {
     await Request.receiveJSON("/api/auth/logout");
     Store.dispatch(logoutUserAction());
@@ -138,6 +157,9 @@ class Navbar extends React.PureComponent<Props> {
             About & Credits
           </a>
         </Menu.Item>
+        {this.state.version != null ? (
+          <Menu.Item disabled>Version: {this.state.version}</Menu.Item>
+        ) : null}
       </SubMenu>,
     );
 

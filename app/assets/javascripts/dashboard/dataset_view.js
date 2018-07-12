@@ -142,6 +142,7 @@ class DatasetView extends React.PureComponent<Props, State> {
         datasets={this.state.datasets}
         searchQuery={this.state.searchQuery}
         updateDataset={this.updateDataset}
+        isUserAdmin={Utils.isUserAdmin(this.props.user)}
       />
     );
   }
@@ -178,13 +179,7 @@ class DatasetView extends React.PureComponent<Props, State> {
       search
     );
 
-    const content = (() => {
-      if (isGallery) {
-        return this.renderGallery();
-      }
-
-      return this.renderAdvanced();
-    })();
+    const content = isGallery ? this.renderGallery() : this.renderAdvanced();
 
     return (
       <div>

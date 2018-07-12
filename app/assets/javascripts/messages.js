@@ -4,6 +4,7 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
+  "setup.redirect": "This WebKnossos instance seems to be empty. Redirecting to initial setup...",
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
@@ -75,6 +76,9 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
+  "dataset.import.required.name": "Please provide a name for the dataset",
+  "dataset.import.required.datastore": "Please select a datastore for the dataset",
+  "dataset.import.required.zipFile": "Please select a file to upload.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",

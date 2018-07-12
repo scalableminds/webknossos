@@ -4,7 +4,7 @@
 package models.annotation
 
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
 import com.scalableminds.webknossos.schema.Tables._

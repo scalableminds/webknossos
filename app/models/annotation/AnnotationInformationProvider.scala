@@ -1,7 +1,7 @@
 package models.annotation
 
 import oxalis.security.WebknossosSilhouette.UserAwareRequest
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.annotation.handler.AnnotationInformationHandler

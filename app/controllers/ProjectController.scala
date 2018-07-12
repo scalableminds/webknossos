@@ -3,8 +3,7 @@
  */
 package controllers
 import javax.inject.Inject
-
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationSQLDAO, AnnotationService, AnnotationTypeSQL}
 import models.project._

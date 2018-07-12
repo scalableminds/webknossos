@@ -1,6 +1,8 @@
 // @flow
 import * as React from "react";
 import { Tabs, Icon, Alert, Form, Tooltip, Modal } from "antd";
+import _ from "lodash";
+
 const { TabPane } = Tabs;
 
 const FormItem = Form.Item;
@@ -92,10 +94,29 @@ export const createTabPaneWithDisplayNone = (activeTabKey: string) => ({
   tabKey,
   children,
   ...props
-}) => {
+}: Object) => {
   return (
     <TabPane key={tabKey} {...props}>
       <Hideable hidden={tabKey !== activeTabKey}>{children}</Hideable>
     </TabPane>
   );
 };
+
+const gatherErrors = obj => {
+  const gatherErrorsRecursive = any => {
+    if (Array.isArray(any)) {
+      return any.map(gatherErrorsRecursive);
+    } else if (any instanceof Error) {
+      return any;
+    } else if (typeof any === "string") {
+      return any;
+    } else if (any instanceof Object) {
+      return Object.keys(any).map(key => gatherErrorsRecursive(any[key]));
+    } else {
+      return null;
+    }
+  };
+  return _.compact(_.flattenDeep([gatherErrorsRecursive(obj)]));
+};
+
+export const hasFormError = (obj: Object) => obj && !_.isEmpty(gatherErrors(obj));

@@ -23,13 +23,11 @@ export default function ImportGeneralComponent({
   hasNoAllowedTeams,
   sharingLink,
   handleRevokeSharingLink,
-  isEditingMode,
 }: {
   form: Object,
   hasNoAllowedTeams: boolean,
   sharingLink: string,
   handleRevokeSharingLink: string => Promise<void>,
-  isEditingMode: boolean,
 }) {
   const { getFieldDecorator } = form;
 
@@ -47,9 +45,7 @@ export default function ImportGeneralComponent({
       {getFieldDecorator("dataset.allowedTeams", {})(<TeamSelectionComponent mode="multiple" />)}
     </FormItemWithInfo>
   );
-  const content = !isEditingMode ? (
-    allowedTeamsComponent
-  ) : (
+  const content = (
     <div>
       <Row gutter={48}>
         <Col span={12}>

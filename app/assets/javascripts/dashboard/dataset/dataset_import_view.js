@@ -24,7 +24,12 @@ import type {
   APIDataSourceWithMessagesType,
 } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
-import { Hideable, confirmAsync, createTabPaneWithDisplayNone } from "./helper_components";
+import {
+  Hideable,
+  confirmAsync,
+  createTabPaneWithDisplayNone,
+  hasFormError,
+} from "./helper_components";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
@@ -77,6 +82,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   componentDidMount() {
     this.fetchData();
   }
+
   async fetchData(): Promise<void> {
     try {
       this.setState({ isLoading: true });
@@ -101,20 +107,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         dataSource,
       });
 
-      if (this.props.isEditingMode) {
-        const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
-          this.props.datasetName,
-        );
-        this.props.form.setFieldsValue({
-          defaultConfiguration: datasetDefaultConfiguration,
-          defaultConfigurationLayersJson: JSON.stringify(
-            datasetDefaultConfiguration.layers,
-            null,
-            "  ",
-          ),
-        });
-        this.setState({ datasetDefaultConfiguration });
-      }
+      const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
+        this.props.datasetName,
+      );
+      this.props.form.setFieldsValue({
+        defaultConfiguration: datasetDefaultConfiguration,
+        defaultConfigurationLayersJson: JSON.stringify(
+          datasetDefaultConfiguration.layers,
+          null,
+          "  ",
+        ),
+      });
 
       this.setState({
         sharingToken,
@@ -136,24 +139,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     if (!err || !dataset) {
       return formErrors;
     }
-
-    const gatherErrors = obj => {
-      const gatherErrorsRecursive = any => {
-        if (Array.isArray(any)) {
-          return any.map(gatherErrorsRecursive);
-        } else if (any instanceof Error) {
-          return any;
-        } else if (typeof any === "string") {
-          return any;
-        } else if (any instanceof Object) {
-          return Object.keys(any).map(key => gatherErrorsRecursive(any[key]));
-        } else {
-          return null;
-        }
-      };
-      return _.compact(_.flattenDeep([gatherErrorsRecursive(obj)]));
-    };
-    const hasErr = obj => obj && !_.isEmpty(gatherErrors(obj));
+    const hasErr = hasFormError;
 
     if (hasErr(err.dataSource) || hasErr(err.dataSourceJson)) {
       formErrors.data = true;
@@ -252,13 +238,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     }
   };
 
-  updateDataset(propertyName: string, value: string | boolean) {
-    const newState = update(this.state, {
-      dataset: { [propertyName]: { $set: value } },
-    });
-    this.setState(newState);
-  }
-
   getMessageComponents() {
     const messageElements = this.state.messages.map((message, i) => (
       // eslint-disable-next-line react/no-array-index-key
@@ -329,7 +308,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
     // This component hides inactive tab panes via display: none.
     // This prevents that the user can tab to inaccessible elements
-    console.log("this.state.activeTabKey", this.state.activeTabKey);
     const TabPaneWithDisplayNone = createTabPaneWithDisplayNone(this.state.activeTabKey);
 
     return (
@@ -386,21 +364,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                       this.props.datasetName
                     }/view?token=${this.state.sharingToken}`}
                     handleRevokeSharingLink={this.handleRevokeSharingLink}
-                    isEditingMode={this.props.isEditingMode}
                   />
                 </TabPaneWithDisplayNone>
-                {this.props.isEditingMode ? (
-                  <TabPaneWithDisplayNone
-                    tab={
-                      <span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>
-                    }
-                    tabKey="defaultConfig"
-                    key="defaultConfig"
-                    forceRender
-                  >
-                    <DefaultConfigComponent form={form} />
-                  </TabPaneWithDisplayNone>
-                ) : null}
+
+                <TabPaneWithDisplayNone
+                  tab={<span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>}
+                  tabKey="defaultConfig"
+                  key="defaultConfig"
+                  forceRender
+                >
+                  <DefaultConfigComponent form={form} />
+                </TabPaneWithDisplayNone>
               </Tabs>
             </Card>
             <FormItem>

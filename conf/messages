@@ -97,6 +97,7 @@ dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
+dataSet.import.fileAccessDenied=Access denied when creating dataset directory. Please check file system permissions.
 dataSet.type.invalid=External data set of type ''{0}'' is not supported
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started

@@ -60,18 +60,19 @@ class TransferAllTasksModal extends React.PureComponent<Props, State> {
 
   async transferAllActiveTasks() {
     if (this.state.selectedUser && this.props.project) {
-      const answer = await transferActiveTasksOfProject(
-        this.props.project.name,
-        this.state.selectedUser.id,
-      );
-      if (this.state.selectedUser) {
-        Toast.success(
-          `${messages["project.successful_active_task_transfer"]} ${
-            this.state.selectedUser.lastName
-          }, ${this.state.selectedUser.firstName}`,
-        );
-        this.props.onCancel();
+      try {
+        await transferActiveTasksOfProject(this.props.project.name, this.state.selectedUser.id);
+        if (this.state.selectedUser) {
+          Toast.success(
+            `${messages["project.successful_active_tasks_transfer"]} ${
+              this.state.selectedUser.lastName
+            }, ${this.state.selectedUser.firstName}`,
+          );
+        }
+      } catch (e) {
+        Toast.error(messages["project.unsuccessful_active_tasks_transfer"]);
       }
+      this.props.onCancel();
     }
   }
 

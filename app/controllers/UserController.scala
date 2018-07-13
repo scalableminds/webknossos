@@ -1,7 +1,7 @@
 package controllers
 
 import javax.inject.Inject
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationSQLDAO, AnnotationTypeSQL}
@@ -159,17 +159,6 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       } yield {
         Ok(Writes.list(User.userPublicWrites(request.identity)).writes(filtered.sortBy(_.lastName.toLowerCase)))
       }
-    }
-  }
-
-  def logTime(userId: String, time: String, note: String) = SecuredAction.async { implicit request =>
-    for {
-      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      time <- TimeSpan.parseTime(time) ?~> Messages("time.invalidFormat")
-    } yield {
-      TimeSpanService.logTime(user, time, Some(note))
-      JsonOk
     }
   }
 

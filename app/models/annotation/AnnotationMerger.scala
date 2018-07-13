@@ -2,7 +2,7 @@ package models.annotation
 
 import oxalis.security.WebknossosSilhouette.SecuredRequest
 import com.scalableminds.webknossos.datastore.tracings.{TracingReference, TracingType}
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL

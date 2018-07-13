@@ -1,6 +1,6 @@
 package models.project
 
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging

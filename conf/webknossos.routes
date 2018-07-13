@@ -19,6 +19,7 @@ POST          /api/auth/changePassword                                          
 POST          /api/auth/resetPassword                                           controllers.Authentication.handleResetPassword
 GET           /api/auth/logout                                                  controllers.Authentication.logout
 GET           /api/auth/sso                                                     controllers.Authentication.singleSignOn(sso: String, sig: String)
+POST          /api/auth/createOrganizationWithAdmin                             controllers.Authentication.createOrganizationWithAdmin
 
 # Configurations
 GET           /api/user/userConfiguration                                       controllers.ConfigurationController.read

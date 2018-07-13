@@ -1,6 +1,6 @@
 package models.annotation
 
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.management.relation.Role
 import models.user.User

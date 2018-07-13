@@ -1,6 +1,6 @@
 package models.team
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.{Json, _}

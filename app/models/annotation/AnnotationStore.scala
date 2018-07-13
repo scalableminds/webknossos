@@ -1,6 +1,6 @@
 package models.annotation
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandler

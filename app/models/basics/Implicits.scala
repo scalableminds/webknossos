@@ -1,6 +1,6 @@
 package models.basics
 
-import com.scalableminds.util.reactivemongo.{AuthorizedAccessContext, DBAccessContext}
+import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
 import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest}
 import models.user.User
 

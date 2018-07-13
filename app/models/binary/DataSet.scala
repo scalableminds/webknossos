@@ -2,7 +2,7 @@ package models.binary
 
 
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
-import com.scalableminds.util.reactivemongo.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.inbox.{UnusableDataSource, InboxDataSourceLike => InboxDataSource}
 import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLayer, AbstractSegmentationLayer, Category, DataSourceId, ElementClass, GenericDataSource, DataLayerLike => DataLayer}

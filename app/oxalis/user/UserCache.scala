@@ -1,6 +1,6 @@
 package oxalis.user
 
-import com.scalableminds.util.reactivemongo.GlobalAccessContext
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.Fox
 import models.user.{User, UserDAO}
 import play.api.Play.current

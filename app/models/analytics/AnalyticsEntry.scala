@@ -1,6 +1,6 @@
 package models.analytics
 
-import com.scalableminds.util.reactivemongo.DBAccessContext
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import play.api.libs.concurrent.Execution.Implicits._

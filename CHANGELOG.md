@@ -10,6 +10,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
 
 ### Added
 
+  - Added release version to navbar [#2888](https://github.com/scalableminds/webknossos/pull/2888)
   - Users can view datasets in a table from the dashboard. That view also allows to create explorational tracings (which had to be done via the gallery view for non-admins before). [#2866](https://github.com/scalableminds/webknossos/pull/2866)
   - Added the task bounding box of a skeleton tracing to NML files. [#2827](https://github.com/scalableminds/webknossos/pull/2827) \
     Example: `<taskBoundingBox topLeftX="0" topLeftY="0" topLeftZ="0" width="512" height="512" depth="512" />`
@@ -24,6 +25,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.md).
   - Added backend-unit-test setup and a first test for NML validation. [#2829](https://github.com/scalableminds/webknossos/pull/2829)
   - Added displayName for organizations. [#2869](https://github.com/scalableminds/webknossos/pull/2869)
   - Added onboarding flow for initial setup of WebKnossos. [#2859](https://github.com/scalableminds/webknossos/pull/2859)
+  - Added the possibility to show the task in a random order. [#2860](https://github.com/scalableminds/webknossos/pull/2860)
 
 ### Changed
 

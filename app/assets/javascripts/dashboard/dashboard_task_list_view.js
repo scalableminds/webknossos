@@ -322,7 +322,9 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
 
     const TaskCardTitle = ({ task }) => (
       <React.Fragment>
-        {`${task.type.summary} (${moment(task.created).format("YYYY-MM-DD HH:mm")}) `}
+        <span style={{ marginRight: 8 }}>{`${task.type.summary} (${moment(task.created).format(
+          "YYYY-MM-DD HH:mm",
+        )}) `}</span>
         {task.type.settings.allowedModes.map(mode => <Tag key={mode}>{mode}</Tag>)}
       </React.Fragment>
     );
@@ -331,8 +333,11 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
       <Card key={task.id} title={<TaskCardTitle task={task} />} style={{ margin: "10px" }}>
         <Row gutter={16}>
           <Col span={8}>
-            <p>TaskID: {task.id}</p>
-            <p>Project: {task.projectName}</p>
+            <p style={{ marginBottom: 14 }}>
+              <b>Task ID:</b> {task.id}
+              <br />
+              <b>Project:</b> {task.projectName}
+            </p>
             {this.renderActions(task)}
           </Col>
           <Col span={16}>

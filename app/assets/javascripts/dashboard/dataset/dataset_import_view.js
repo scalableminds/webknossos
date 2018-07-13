@@ -100,9 +100,19 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         dataSource,
       });
 
-      const datasetDefaultConfiguration = await getDatasetDefaultConfiguration(
+      const defaultConfigPerLayer = {
+        brightness: 0,
+        contrast: 1,
+        color: [255, 255, 255],
+      };
+      const datasetDefaultConfiguration = (await getDatasetDefaultConfiguration(
         this.props.datasetName,
-      );
+      )) || {
+        layers: _.fromPairs(
+          dataSource.dataLayers.map(layer => [layer.name, defaultConfigPerLayer]),
+        ),
+      };
+
       this.props.form.setFieldsValue({
         defaultConfiguration: datasetDefaultConfiguration,
         defaultConfigurationLayersJson: JSON.stringify(
@@ -113,6 +123,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       });
 
       this.setState({
+        datasetDefaultConfiguration,
         dataset,
         messages: dataSourceMessages,
       });
@@ -220,27 +231,57 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   };
 
   getMessageComponents() {
-    const messageElements = this.state.messages.map((message, i) => (
+    if (this.state.dataset == null) {
+      return null;
+    }
+    const messageElements = [];
+    const { status } = this.state.dataset.dataSource;
+    if (status != null) {
+      messageElements.push(
+        status === "Not imported yet." ? (
+          <Alert
+            key="datasourceStatus"
+            message={<span>{messages["dataset.missing_datasource_json"]}</span>}
+            type="info"
+            showIcon
+          />
+        ) : (
+          <Alert
+            key="datasourceStatus"
+            message={
+              <span>
+                {messages["dataset.invalid_datasource_json"]}
+                Status: {this.state.dataset.dataSource.status}
+              </span>
+            }
+            type="error"
+            showIcon
+          />
+        ),
+      );
+    } else {
+      if (!this.props.isEditingMode) {
+        // The user just uploaded the dataset, but the import is already complete due to a
+        // valid dataSource.json file
+        messageElements.push(
+          <Alert
+            key="datasourceStatus"
+            message={<span>{messages["dataset.import_complete"]}</span>}
+            type="success"
+            showIcon
+          />,
+        );
+      }
+    }
+
+    const restMessages = this.state.messages.map((message, i) => (
       // eslint-disable-next-line react/no-array-index-key
       <Alert key={i} message={Object.values(message)[0]} type={Object.keys(message)[0]} showIcon />
     ));
+    messageElements.push(...restMessages);
 
-    if (this.state.dataset != null && this.state.dataset.dataSource.status != null) {
-      const statusMessage = (
-        <span>
-          {messages["dataset.invalid_datasource_json"]}
-          <br />
-          {this.state.dataset.dataSource.status}
-        </span>
-      );
-      messageElements.push(
-        <Alert key="datasourceStatus" message={statusMessage} type="error" showIcon />,
-      );
-    }
-
-    return <div>{messageElements}</div>;
+    return <div style={{ marginBottom: 12 }}>{messageElements}</div>;
   }
-
   hasNoAllowedTeams(): boolean {
     return (
       this.props.form.getFieldValue("dataset.allowedTeams") == null ||
@@ -273,6 +314,11 @@ class DatasetImportView extends React.PureComponent<Props, State> {
   render() {
     const { form } = this.props;
     const titleString = this.props.isEditingMode ? "Update" : "Import";
+    const confirmString =
+      this.props.isEditingMode ||
+      (this.state.dataset != null && this.state.dataset.dataSource.status == null)
+        ? "Save"
+        : "Import";
     const formErrors = this.getFormValidationSummary();
 
     const errorIcon = (
@@ -302,9 +348,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           }
         >
           <Spin size="large" spinning={this.state.isLoading}>
-            {!this.props.isEditingMode ? (
-              <p>Please review your dataset&#39;s properties before importing it.</p>
-            ) : null}
             {this.getMessageComponents()}
 
             <Card>
@@ -357,7 +400,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             </Card>
             <FormItem>
               <Button type="primary" htmlType="submit">
-                {titleString}
+                {confirmString}
               </Button>&nbsp;
               <Button onClick={() => window.history.back()}>Cancel</Button>
             </FormItem>

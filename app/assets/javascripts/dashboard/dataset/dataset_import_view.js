@@ -80,7 +80,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       const dataset = await getDataset(this.props.datasetName);
       const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
       if (dataSource == null) {
-        throw new Error("No datasource found");
+        throw new Error("No datasource received from server.");
       }
 
       this.props.form.setFieldsValue({
@@ -190,15 +190,13 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   handleSubmit = (e: SyntheticEvent<>) => {
     e.preventDefault();
-    // Ensure that all form fields are in sync, by initiating a sync of the not-active
-    // tab
-    this.syncDataSourceFields(
-      this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple",
-    );
+    // Ensure that all form fields are in sync
+    this.syncDataSourceFields();
     this.props.form.validateFields(async (err, formValues: FormData) => {
       const { dataset, datasetDefaultConfiguration } = this.state;
       if (err || !dataset) {
         this.switchToProblematicTab();
+        Toast.warning(messages["dataset.import.invalid_fields"]);
         return;
       }
 
@@ -250,7 +248,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
             message={
               <span>
                 {messages["dataset.invalid_datasource_json"]}
-                Status: {this.state.dataset.dataSource.status}
+                <br />
+                <br />
+                Status:<br />
+                {this.state.dataset.dataSource.status}
               </span>
             }
             type="error"
@@ -279,6 +280,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
     return <div style={{ marginBottom: 12 }}>{messageElements}</div>;
   }
+
   hasNoAllowedTeams(): boolean {
     return (
       this.props.form.getFieldValue("dataset.allowedTeams") == null ||
@@ -286,11 +288,16 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     );
   }
 
-  syncDataSourceFields(newActiveTab: "simple" | "advanced") {
+  syncDataSourceFields = (_syncTargetTabKey?: "simple" | "advanced"): void => {
+    // If no sync target was provided, update the non-active tab with the values of the active one
+    const syncTargetTabKey =
+      _syncTargetTabKey ||
+      (this.state.activeDataSourceEditMode === "simple" ? "advanced" : "simple");
+
     const { form } = this.props;
     const parsedConfig = JSON.parse(form.getFieldValue("dataSourceJson"));
-    if (newActiveTab === "advanced") {
-      // Simple --> advanced: update json
+    if (syncTargetTabKey === "advanced") {
+      // Copy from simple to advanced: update json
 
       // parsedConfig has to be used as the base, since `dataSource` will only
       // contain the fields that antd has registered input elements for
@@ -301,12 +308,12 @@ class DatasetImportView extends React.PureComponent<Props, State> {
         dataSourceJson: toJSON(newDataSource),
       });
     } else {
-      // Advanced --> simple: update form values
+      // Copy from advanced to simple: update form values
       form.setFieldsValue({
         dataSource: parsedConfig,
       });
     }
-  }
+  };
 
   render() {
     const { form } = this.props;
@@ -364,6 +371,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                       activeDataSourceEditMode={this.state.activeDataSourceEditMode}
                       onChange={activeEditMode => {
                         this.syncDataSourceFields(activeEditMode);
+                        this.props.form.validateFields();
                         this.setState({ activeDataSourceEditMode: activeEditMode });
                       }}
                     />

@@ -80,7 +80,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     const validSubVector = text
       .replace(/[^,0-9]/gm, "")
       .split(",")
-      .map(el => parseFloat(el))
+      .map(el => parseFloat(el) || 0)
       .slice(0, this.defaultValue.length);
     const paddedVector = validSubVector.concat(this.defaultValue.slice(validSubVector.length));
     const vector = ((paddedVector: any): T);

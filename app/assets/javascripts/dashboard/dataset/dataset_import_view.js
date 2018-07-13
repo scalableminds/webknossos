@@ -79,6 +79,9 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       this.setState({ isLoading: true });
       const dataset = await getDataset(this.props.datasetName);
       const { dataSource, messages: dataSourceMessages } = await getDatasetDatasource(dataset);
+      if (dataSource == null) {
+        throw new Error("No datasource found");
+      }
 
       this.props.form.setFieldsValue({
         dataSourceJson: toJSON(dataSource),

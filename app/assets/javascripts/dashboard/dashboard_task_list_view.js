@@ -332,14 +332,6 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
     const TaskCard = task => (
       <Card key={task.id} title={<TaskCardTitle task={task} />} style={{ margin: "10px" }}>
         <Row gutter={16}>
-          <Col span={8}>
-            <p style={{ marginBottom: 14 }}>
-              <b>Task ID:</b> {task.id}
-              <br />
-              <b>Project:</b> {task.projectName}
-            </p>
-            {this.renderActions(task)}
-          </Col>
           <Col span={16}>
             <div className={descriptionClassName}>
               <Markdown
@@ -347,6 +339,14 @@ class DashboardTaskListView extends React.PureComponent<Props, State> {
                 options={{ html: false, breaks: true, linkify: true }}
               />
             </div>
+          </Col>
+          <Col span={8}>
+            <p style={{ marginBottom: 14 }}>
+              <b>Task ID:</b> {task.id}
+              <br />
+              <b>Project:</b> {task.projectName}
+            </p>
+            {this.renderActions(task)}
           </Col>
         </Row>
       </Card>

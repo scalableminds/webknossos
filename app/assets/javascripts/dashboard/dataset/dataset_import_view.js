@@ -3,7 +3,6 @@
 import * as React from "react";
 import _ from "lodash";
 import { Button, Spin, Icon, Alert, Form, Card, Tabs, Tooltip } from "antd";
-import update from "immutability-helper";
 import Toast from "libs/toast";
 import {
   getDataset,
@@ -22,12 +21,7 @@ import type {
   APIDataSourceWithMessagesType,
 } from "admin/api_flow_types";
 import { handleGenericError } from "libs/error_handling";
-import {
-  Hideable,
-  confirmAsync,
-  createTabPaneWithDisplayNone,
-  hasFormError,
-} from "./helper_components";
+import { Hideable, confirmAsync, hasFormError } from "./helper_components";
 import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
@@ -78,10 +72,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     this.fetchData();
-  }
-
-  componentWillUnmount() {
-    console.log("componentWillUnmount: DatasetImportView");
   }
 
   async fetchData(): Promise<void> {
@@ -243,6 +233,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     const { status } = this.state.dataset.dataSource;
     if (status != null) {
       messageElements.push(
+        // "Not imported yet." is only used, when the dataSource.json is missing.
         status === "Not imported yet." ? (
           <Alert
             key="datasourceStatus"
@@ -264,19 +255,17 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           />
         ),
       );
-    } else {
-      if (!this.props.isEditingMode) {
-        // The user just uploaded the dataset, but the import is already complete due to a
-        // valid dataSource.json file
-        messageElements.push(
-          <Alert
-            key="datasourceStatus"
-            message={<span>{messages["dataset.import_complete"]}</span>}
-            type="success"
-            showIcon
-          />,
-        );
-      }
+    } else if (!this.props.isEditingMode) {
+      // The user just uploaded the dataset, but the import is already complete due to a
+      // valid dataSource.json file
+      messageElements.push(
+        <Alert
+          key="datasourceStatus"
+          message={<span>{messages["dataset.import_complete"]}</span>}
+          type="success"
+          showIcon
+        />,
+      );
     }
 
     const restMessages = this.state.messages.map((message, i) => (
@@ -338,10 +327,6 @@ class DatasetImportView extends React.PureComponent<Props, State> {
       </Tooltip>
     ) : null;
 
-    // This component hides inactive tab panes via display: none.
-    // This prevents that the user can tab to inaccessible elements
-    const TabPaneWithDisplayNone = createTabPaneWithDisplayNone(this.state.activeTabKey);
-
     return (
       <Form className="row container dataset-import" onSubmit={this.handleSubmit}>
         <Card
@@ -365,6 +350,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                   key="data"
                   forceRender
                 >
+                  {
+                    // We use the Hideable component here to avoid that the user can "tab"
+                    // to hidden form elements.
+                  }
                   <Hideable hidden={this.state.activeTabKey !== "data"}>
                     <SimpleAdvancedDataForm
                       key="SimpleAdvancedDataForm"

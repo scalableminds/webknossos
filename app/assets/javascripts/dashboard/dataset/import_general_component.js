@@ -5,9 +5,9 @@ import { Button, Icon, Input, Checkbox, Form, Col, Row, Tooltip } from "antd";
 import Clipboard from "clipboard-js";
 import Toast from "libs/toast";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import { FormItemWithInfo } from "./helper_components";
 import { AsyncButton } from "components/async_clickables";
 import { getDatasetSharingToken, revokeDatasetSharingToken } from "admin/admin_rest_api";
+import { FormItemWithInfo } from "./helper_components";
 
 const FormItem = Form.Item;
 
@@ -46,7 +46,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
     Toast.success("Sharing Link copied to clipboard");
   };
 
-  handleRevokeSharingLink = async (): Promise<string> => {
+  handleRevokeSharingLink = async (): Promise<void> => {
     const { datasetName } = this.props;
     await revokeDatasetSharingToken(datasetName);
     const sharingToken = await getDatasetSharingToken(datasetName);
@@ -60,7 +60,7 @@ export default class ImportGeneralComponent extends React.PureComponent<Props, S
   }
 
   render() {
-    const { form, hasNoAllowedTeams, datasetName } = this.props;
+    const { form, hasNoAllowedTeams } = this.props;
     const { getFieldDecorator } = form;
 
     const allowedTeamsComponent = (

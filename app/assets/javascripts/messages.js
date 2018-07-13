@@ -72,7 +72,7 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.missing_datasource_json":
     "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset.",
   "dataset.import_complete":
-    "A valid datasource-properties.json was found. The dataset is imported and ready to use. All properties can still be changed.",
+    "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",

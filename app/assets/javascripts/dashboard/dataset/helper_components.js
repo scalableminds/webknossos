@@ -1,6 +1,6 @@
 // @flow
 import * as React from "react";
-import { Tabs, Icon, Alert, Form, Tooltip, Modal } from "antd";
+import { Icon, Alert, Form, Tooltip, Modal } from "antd";
 import _ from "lodash";
 
 const FormItem = Form.Item;

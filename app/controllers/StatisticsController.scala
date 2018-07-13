@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.Fox
 import models.annotation.AnnotationSQLDAO
 import models.binary.DataSetDAO
 import models.task.TaskSQLDAO
-import models.user.time.{TimeSpan, TimeSpanService}
+import models.user.time.{TimeSpanSQL, TimeSpanService}
 import models.user.{User, UserDAO, UserService}
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
@@ -22,8 +22,8 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
   extends Controller {
 
   val intervalHandler = Map(
-    "month" -> TimeSpan.groupByMonth _,
-    "week" -> TimeSpan.groupByWeek _
+    "month" -> TimeSpanSQL.groupByMonth _,
+    "week" -> TimeSpanSQL.groupByWeek _
   )
 
   def intervalTracingTimeJson[T <: models.user.time.Interval](times: Map[T, Duration]) = times.map {

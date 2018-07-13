@@ -67,13 +67,25 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
         });
       }
     } else {
-      this.props.onChange(this.defaultValue);
+      const fallbackValue = this.makeInvalidValueValid(this.state.text);
+      this.props.onChange(fallbackValue);
       this.setState({
         isValid: true,
-        text: this.defaultValue.join(", "),
+        text: fallbackValue.join(", "),
       });
     }
   };
+
+  makeInvalidValueValid(text: string): T {
+    const validSubVector = text
+      .replace(/[^,0-9]/gm, "")
+      .split(",")
+      .map(el => parseFloat(el))
+      .slice(0, this.defaultValue.length);
+    const paddedVector = validSubVector.concat(this.defaultValue.slice(validSubVector.length));
+    const vector = ((paddedVector: any): T);
+    return vector;
+  }
 
   handleFocus = () => {
     this.setState({

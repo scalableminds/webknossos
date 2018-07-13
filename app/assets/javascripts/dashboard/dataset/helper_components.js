@@ -3,8 +3,6 @@ import * as React from "react";
 import { Tabs, Icon, Alert, Form, Tooltip, Modal } from "antd";
 import _ from "lodash";
 
-const { TabPane } = Tabs;
-
 const FormItem = Form.Item;
 
 export const jsonEditStyle = {
@@ -89,18 +87,6 @@ export const confirmAsync = (opts: Object) =>
       },
     });
   });
-
-export const createTabPaneWithDisplayNone = (activeTabKey: string) => ({
-  tabKey,
-  children,
-  ...props
-}: Object) => {
-  return (
-    <TabPane key={tabKey} {...props}>
-      <Hideable hidden={tabKey !== activeTabKey}>{children}</Hideable>
-    </TabPane>
-  );
-};
 
 const gatherErrors = obj => {
   const gatherErrorsRecursive = any => {

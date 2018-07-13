@@ -32,6 +32,7 @@ import SimpleAdvancedDataForm from "./simple_advanced_data_form";
 import DefaultConfigComponent from "./default_config_component";
 import ImportGeneralComponent from "./import_general_component";
 
+const { TabPane } = Tabs;
 const FormItem = Form.Item;
 
 const toJSON = json => JSON.stringify(json, null, "  ");
@@ -77,6 +78,10 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
   componentDidMount() {
     this.fetchData();
+  }
+
+  componentWillUnmount() {
+    console.log("componentWillUnmount: DatasetImportView");
   }
 
   async fetchData(): Promise<void> {
@@ -355,47 +360,51 @@ class DatasetImportView extends React.PureComponent<Props, State> {
                 activeKey={this.state.activeTabKey}
                 onChange={activeTabKey => this.setState({ activeTabKey })}
               >
-                <TabPaneWithDisplayNone
+                <TabPane
                   tab={<span> Data {formErrors.data ? errorIcon : ""}</span>}
-                  tabKey="data"
                   key="data"
                   forceRender
                 >
-                  <SimpleAdvancedDataForm
-                    form={form}
-                    activeDataSourceEditMode={this.state.activeDataSourceEditMode}
-                    onChange={activeEditMode => {
-                      this.syncDataSourceFields(activeEditMode);
-                      this.setState({ activeDataSourceEditMode: activeEditMode });
-                    }}
-                  />
-                </TabPaneWithDisplayNone>
-                <TabPaneWithDisplayNone
+                  <Hideable hidden={this.state.activeTabKey !== "data"}>
+                    <SimpleAdvancedDataForm
+                      key="SimpleAdvancedDataForm"
+                      form={form}
+                      activeDataSourceEditMode={this.state.activeDataSourceEditMode}
+                      onChange={activeEditMode => {
+                        this.syncDataSourceFields(activeEditMode);
+                        this.setState({ activeDataSourceEditMode: activeEditMode });
+                      }}
+                    />
+                  </Hideable>
+                </TabPane>
+                <TabPane
                   tab={
                     <span>
                       {" "}
                       General {formErrors.general ? errorIcon : hasNoAllowedTeamsWarning}
                     </span>
                   }
-                  tabKey="general"
                   key="general"
                   forceRender
                 >
-                  <ImportGeneralComponent
-                    form={form}
-                    datasetName={this.props.datasetName}
-                    hasNoAllowedTeams={_hasNoAllowedTeams}
-                  />
-                </TabPaneWithDisplayNone>
+                  <Hideable hidden={this.state.activeTabKey !== "general"}>
+                    <ImportGeneralComponent
+                      form={form}
+                      datasetName={this.props.datasetName}
+                      hasNoAllowedTeams={_hasNoAllowedTeams}
+                    />
+                  </Hideable>
+                </TabPane>
 
-                <TabPaneWithDisplayNone
+                <TabPane
                   tab={<span> View Configuration {formErrors.defaultConfig ? errorIcon : ""}</span>}
-                  tabKey="defaultConfig"
                   key="defaultConfig"
                   forceRender
                 >
-                  <DefaultConfigComponent form={form} />
-                </TabPaneWithDisplayNone>
+                  <Hideable hidden={this.state.activeTabKey !== "defaultConfig"}>
+                    <DefaultConfigComponent form={form} />
+                  </Hideable>
+                </TabPane>
               </Tabs>
             </Card>
             <FormItem>

@@ -13,77 +13,76 @@ import { validateDatasourceJSON, isValidJSON, syncValidator } from "./validation
 
 const FormItem = Form.Item;
 
-export default function SimpleAdvancedDataForm({
-  form,
-  activeDataSourceEditMode,
-  onChange,
-}: {
-  form: Object,
-  activeDataSourceEditMode: "simple" | "advanced",
-  onChange: ("simple" | "advanced") => void,
-}) {
-  const { getFieldDecorator } = form;
-  const dataSource =
-    form.getFieldValue("dataSourceJson") && isValidJSON(form.getFieldValue("dataSourceJson"))
-      ? JSON.parse(form.getFieldValue("dataSourceJson"))
-      : null;
+export default class SimpleAdvancedDataForm extends React.Component<*, *> {
+  componentWillUnmount() {
+    console.log("componentWillUnmount: SimpleAdvancedDataForm");
+  }
 
-  const isJSONInvalid = dataSource == null;
+  render() {
+    const { form, activeDataSourceEditMode, onChange } = this.props;
+    const { getFieldDecorator } = form;
+    const dataSource =
+      form.getFieldValue("dataSourceJson") && isValidJSON(form.getFieldValue("dataSourceJson"))
+        ? JSON.parse(form.getFieldValue("dataSourceJson"))
+        : null;
 
-  return (
-    <div>
-      <div style={{ textAlign: "right" }}>
-        <Tooltip
-          title={
-            isJSONInvalid
-              ? "Please ensure that the supplied config JSON is valid."
-              : "Switch between simple and advanced mode"
-          }
-        >
-          <Switch
-            checkedChildren="Advanced"
-            unCheckedChildren="Simple"
-            checked={activeDataSourceEditMode === "advanced"}
-            disabled={isJSONInvalid}
-            style={{ marginBottom: 6 }}
-            onChange={bool => {
-              const key = bool ? "advanced" : "simple";
-              onChange(key);
-            }}
-          />
-        </Tooltip>
-      </div>
+    const isJSONInvalid = dataSource == null;
 
-      <Alert
-        message="Please review the following properties. If you want to adjust the configuration described by
+    return (
+      <div>
+        <div style={{ textAlign: "right" }}>
+          <Tooltip
+            title={
+              isJSONInvalid
+                ? "Please ensure that the supplied config JSON is valid."
+                : "Switch between simple and advanced mode"
+            }
+          >
+            <Switch
+              checkedChildren="Advanced"
+              unCheckedChildren="Simple"
+              checked={activeDataSourceEditMode === "advanced"}
+              disabled={isJSONInvalid}
+              style={{ marginBottom: 6 }}
+              onChange={bool => {
+                const key = bool ? "advanced" : "simple";
+                onChange(key);
+              }}
+            />
+          </Tooltip>
+        </div>
+
+        <Alert
+          message="Please review the following properties. If you want to adjust the configuration described by
           &ldquo;datasource-properties.json&rdquo;, please enable the &ldquo;Advanced&rdquo; mode in the top-right corner."
-        type="info"
-        showIcon
-      />
+          type="info"
+          showIcon
+        />
 
-      <Hideable hidden={activeDataSourceEditMode !== "simple"}>
-        <RetryingErrorBoundary>
-          <SimpleDatasetForm form={form} dataSource={dataSource} />
-        </RetryingErrorBoundary>
-      </Hideable>
+        <Hideable hidden={activeDataSourceEditMode !== "simple"}>
+          <RetryingErrorBoundary>
+            <SimpleDatasetForm form={form} dataSource={dataSource} />
+          </RetryingErrorBoundary>
+        </Hideable>
 
-      <Hideable hidden={activeDataSourceEditMode !== "advanced"}>
-        <FormItem label="Dataset Configuration" hasFeedback>
-          {getFieldDecorator("dataSourceJson", {
-            rules: [
-              {
-                required: true,
-                message: "Please provide a dataset configuration.",
-              },
-              {
-                validator: validateDatasourceJSON,
-              },
-            ],
-          })(<Input.TextArea rows={20} style={jsonEditStyle} />)}
-        </FormItem>
-      </Hideable>
-    </div>
-  );
+        <Hideable hidden={activeDataSourceEditMode !== "advanced"}>
+          <FormItem label="Dataset Configuration" hasFeedback>
+            {getFieldDecorator("dataSourceJson", {
+              rules: [
+                {
+                  required: true,
+                  message: "Please provide a dataset configuration.",
+                },
+                {
+                  validator: validateDatasourceJSON,
+                },
+              ],
+            })(<Input.TextArea rows={20} style={jsonEditStyle} />)}
+          </FormItem>
+        </Hideable>
+      </div>
+    );
+  }
 }
 
 function SimpleDatasetForm({ form, dataSource }) {

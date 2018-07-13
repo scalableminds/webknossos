@@ -141,6 +141,8 @@ See below for a recommended production setup.
 ## Production setup
 [See wiki](https://github.com/scalableminds/webknossos/wiki/Production-setup) for recommended production setup.
 
+For upgrades, please check the [changelog](CHANGELOG.md) & [migration guide](MIGRATIONS.md).
+
 ## Tests
 ```bash
 # Frontend linting

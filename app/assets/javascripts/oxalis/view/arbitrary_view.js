@@ -145,9 +145,10 @@ class ArbitraryView {
       clearCanvas(renderer);
 
       const { left, top, width, height } = getInputCatcherRect(ArbitraryViewport);
-      setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
-
-      renderer.render(scene, camera);
+      if (width > 0 && height > 0) {
+        setupRenderArea(renderer, left, top, Math.min(width, height), width, height, 0xffffff);
+        renderer.render(scene, camera);
+      }
 
       this.needsRerender = false;
       window.needsRerender = false;

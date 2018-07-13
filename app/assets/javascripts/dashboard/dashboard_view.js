@@ -4,7 +4,6 @@
 import * as React from "react";
 import { connect } from "react-redux";
 import { Spin, Tabs } from "antd";
-import Utils from "libs/utils";
 import DatasetView from "dashboard/dataset_view";
 import DashboardTaskListView from "dashboard/dashboard_task_list_view";
 import ExplorativeAnnotationsView from "dashboard/explorative_annotations_view";
@@ -59,7 +58,6 @@ class DashboardView extends React.PureComponent<Props, State> {
 
   getTabs(user: APIUserType) {
     if (this.props.activeUser) {
-      const isUserAdmin = Utils.isUserAdmin(this.props.activeUser);
       const isAdminView = this.props.isAdminView;
 
       return [
@@ -68,7 +66,7 @@ class DashboardView extends React.PureComponent<Props, State> {
             <DatasetView user={user} dataViewType="gallery" />
           </TabPane>
         ) : null,
-        !isAdminView && isUserAdmin ? (
+        !isAdminView ? (
           <TabPane tab="Datasets" key="advanced-datasets">
             <DatasetView user={user} dataViewType="advanced" />
           </TabPane>

@@ -287,6 +287,8 @@ export type APIBuildInfoType = {
     version: string,
     sbtVersion: string,
     commitDate: string,
+    ciTag: string,
+    ciBuild: string,
   },
   "webknossos-wrap": {
     builtAtMillis: string,

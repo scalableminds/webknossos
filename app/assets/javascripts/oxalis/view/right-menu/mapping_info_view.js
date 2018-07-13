@@ -8,10 +8,7 @@ import { connect } from "react-redux";
 import Cube from "oxalis/model/bucket_data_handling/data_cube";
 import { setMappingEnabledAction } from "oxalis/model/actions/settings_actions";
 import Model from "oxalis/model";
-import {
-  getPosition,
-  getRequestLogZoomStep
-} from "oxalis/model/accessors/flycam_accessor";
+import { getPosition, getRequestLogZoomStep } from "oxalis/model/accessors/flycam_accessor";
 import { SwitchSetting } from "oxalis/view/settings/setting_input_views";
 import type { OrthoViewType, Vector2, Vector3 } from "oxalis/constants";
 import type { OxalisState, MappingType } from "oxalis/store";
@@ -29,7 +26,7 @@ type Props = {
   mapping: ?MappingType,
   setMappingEnabled: boolean => void,
   activeViewport: OrthoViewType,
-  activeCellId: number
+  activeCellId: number,
 };
 
 // This function mirrors convertCellIdToRGB in the fragment shader of the rendering plane
@@ -39,7 +36,7 @@ const convertCellIdToHSV = id => {
   }
   const goldenRatio = 0.618033988749895;
   const lastEightBits = id & (2 ** 8 - 1);
-  const value = lastEightBits * goldenRatio % 1.0 * 360;
+  const value = ((lastEightBits * goldenRatio) % 1.0) * 360;
 
   return `hsla(${value}, 100%, 50%, 0.15)`;
 };
@@ -78,23 +75,19 @@ class MappingInfoView extends React.Component<Props> {
     const hasMapping = this.props.mapping != null;
 
     let globalMousePosition;
-    if (
-      this.props.mousePosition &&
-      this.props.activeViewport !== OrthoViews.TDView
-    ) {
+    if (this.props.mousePosition && this.props.activeViewport !== OrthoViews.TDView) {
       const [x, y] = this.props.mousePosition;
       globalMousePosition = calculateGlobalPos({ x, y });
     }
 
-    const getIdForPos = pos =>
-      pos && cube.getDataValue(pos, null, this.props.zoomStep);
+    const getIdForPos = pos => pos && cube.getDataValue(pos, null, this.props.zoomStep);
 
     const tableData = [
       { name: "Active ID", key: "active", unmapped: this.props.activeCellId },
       {
         name: "ID at current position",
         key: "current",
-        unmapped: getIdForPos(this.props.position)
+        unmapped: getIdForPos(this.props.position),
       },
       {
         name: (
@@ -102,11 +95,7 @@ class MappingInfoView extends React.Component<Props> {
             ID at mouse position{" "}
             <Tooltip
               title={
-                message[
-                  hasMapping
-                    ? "tracing.copy_maybe_mapped_cell_id"
-                    : "tracing.copy_cell_id"
-                ]
+                message[hasMapping ? "tracing.copy_maybe_mapped_cell_id" : "tracing.copy_cell_id"]
               }
               placement="bottomLeft"
             >
@@ -115,33 +104,30 @@ class MappingInfoView extends React.Component<Props> {
           </span>
         ),
         key: "mouse",
-        unmapped: getIdForPos(globalMousePosition)
-      }
+        unmapped: getIdForPos(globalMousePosition),
+      },
     ]
       .map(idInfo => ({
         ...idInfo,
-        mapped: idInfo.unmapped && cube.mapId(idInfo.unmapped)
+        mapped: idInfo.unmapped && cube.mapId(idInfo.unmapped),
       }))
       .map(idInfo => ({
         ...idInfo,
         unmapped: (
-          <span style={{ background: convertCellIdToHSV(idInfo.unmapped) }}>
-            {idInfo.unmapped}
-          </span>
+          <span style={{ background: convertCellIdToHSV(idInfo.unmapped) }}>{idInfo.unmapped}</span>
         ),
         mapped: (
-          <span style={{ background: convertCellIdToHSV(idInfo.mapped) }}>
-            {idInfo.mapped}
-          </span>
-        )
+          <span style={{ background: convertCellIdToHSV(idInfo.mapped) }}>{idInfo.mapped}</span>
+        ),
       }));
 
     const columnHelper = (title, dataIndex) => ({ title, dataIndex });
-    const idColumns = hasMapping && this.props.isMappingEnabled
-      ? // Show an unmapped and mapped id column if there's a mapping
-        [columnHelper("Unmapped", "unmapped"), columnHelper("Mapped", "mapped")]
-      : // Otherwise, only show an ID column
-        [columnHelper("ID", "unmapped")];
+    const idColumns =
+      hasMapping && this.props.isMappingEnabled
+        ? // Show an unmapped and mapped id column if there's a mapping
+          [columnHelper("Unmapped", "unmapped"), columnHelper("Mapped", "mapped")]
+        : // Otherwise, only show an ID column
+          [columnHelper("ID", "unmapped")];
     const columns = [columnHelper("", "name"), ...idColumns];
     return (
       <Table
@@ -163,15 +149,15 @@ class MappingInfoView extends React.Component<Props> {
 
     return (
       <div id="volume-mapping-info">
-        {hasMapping
-          ? <div style={{ marginBottom: 12 }}>
-              <SwitchSetting
-                value={this.props.isMappingEnabled}
-                onChange={this.props.setMappingEnabled}
-                label="Enable Mapping"
-              />
-            </div>
-          : null}
+        {hasMapping ? (
+          <div style={{ marginBottom: 12 }}>
+            <SwitchSetting
+              value={this.props.isMappingEnabled}
+              onChange={this.props.setMappingEnabled}
+              label="Enable Mapping"
+            />
+          </div>
+        ) : null}
         {this.renderIdTable()}
       </div>
     );
@@ -181,25 +167,22 @@ class MappingInfoView extends React.Component<Props> {
 const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   setMappingEnabled(isEnabled) {
     dispatch(setMappingEnabledAction(isEnabled));
-  }
+  },
 });
 
 function mapStateToProps(state: OxalisState) {
   return {
     position: getPosition(state.flycam),
     zoomStep: getRequestLogZoomStep(state),
-    isMappingEnabled:
-      state.temporaryConfiguration.activeMapping.isMappingEnabled,
+    isMappingEnabled: state.temporaryConfiguration.activeMapping.isMappingEnabled,
     mapping: state.temporaryConfiguration.activeMapping.mapping,
     mousePosition: state.temporaryConfiguration.mousePosition,
     activeViewport: state.viewModeData.plane.activeViewport,
-    activeCellId: state.tracing.type === "volume"
-      ? state.tracing.activeCellId
-      : 0
+    activeCellId: state.tracing.type === "volume" ? state.tracing.activeCellId : 0,
   };
 }
 
 const debounceTime = 100;
 export default connect(mapStateToProps, mapDispatchToProps, null, {
-  pure: false
+  pure: false,
 })(debounceRender(MappingInfoView, debounceTime));

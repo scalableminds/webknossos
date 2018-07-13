@@ -12,7 +12,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 
 type Props = {
-  isVolumeTracingDisallowed: boolean
+  isVolumeTracingDisallowed: boolean,
 };
 
 const registerWebGlCrashHandler = canvas => {
@@ -25,7 +25,7 @@ const registerWebGlCrashHandler = canvas => {
       Toast.error(messages["webgl.context_loss"], { sticky: true });
       console.error("Webgl context lost", e);
     },
-    false
+    false,
   );
 };
 
@@ -37,13 +37,13 @@ class TracingView extends React.PureComponent<Props> {
 
   render() {
     const divClassName = classnames({
-      "zoomstep-warning": this.props.isVolumeTracingDisallowed
+      "zoomstep-warning": this.props.isVolumeTracingDisallowed,
     });
     const canvasStyle = {
       width: "100%",
       position: "absolute",
       top: 0,
-      left: 0
+      left: 0,
     };
 
     return (
@@ -59,8 +59,7 @@ class TracingView extends React.PureComponent<Props> {
   }
 }
 const mapStateToProps = (state: OxalisState): Props => ({
-  isVolumeTracingDisallowed:
-    state.tracing.type === "volume" && isVolumeTracingDisallowed(state)
+  isVolumeTracingDisallowed: state.tracing.type === "volume" && isVolumeTracingDisallowed(state),
 });
 
 export default connect(mapStateToProps)(TracingView);

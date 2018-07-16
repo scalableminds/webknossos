@@ -68,9 +68,9 @@ In order to restore the current window, a reload is necessary.`,
     "Can not parse task specification. It includes at least one invalid task.",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
-    "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset.",
+    "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.missing_datasource_json":
-    "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset.",
+    "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
   "dataset.import_complete":
     "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":

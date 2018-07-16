@@ -35,6 +35,8 @@ type Props = {
   form: Object,
   datasetName: string,
   isEditingMode: boolean,
+  onComplete: () => void,
+  onCancel: () => void,
 };
 
 type TabKeyType = "data" | "general" | "defaultConfig";
@@ -222,7 +224,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
 
       const verb = this.props.isEditingMode ? "updated" : "imported";
       Toast.success(`Successfully ${verb} ${this.props.datasetName}`);
-      window.history.back();
+      this.props.onComplete();
     });
   };
 
@@ -411,7 +413,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
               <Button type="primary" htmlType="submit">
                 {confirmString}
               </Button>&nbsp;
-              <Button onClick={() => window.history.back()}>Cancel</Button>
+              <Button onClick={this.props.onCancel}>Cancel</Button>
             </FormItem>
           </Spin>
         </Card>

@@ -17,10 +17,10 @@ type Props = {|
   onRegistered: () => void,
   confirmLabel?: string,
   createOrganization?: boolean,
-  organizationDisplayName?: ?string,
+  organizationName?: ?string,
   hidePrivacyStatement?: boolean,
   tryAutoLogin?: boolean,
-  onOrganizationDisplayNameNotFound?: () => void,
+  onOrganizationNameNotFound?: () => void,
 |};
 
 type State = {
@@ -45,30 +45,19 @@ class RegistrationView extends React.PureComponent<Props, State> {
     }
 
     this.setState({ organizations: await getOrganizations() });
-    this.validateOrganizationDisplayName();
+    this.validateOrganizationName();
   }
 
-  validateOrganizationDisplayName() {
-    if (!this.props.organizationDisplayName) {
+  validateOrganizationName() {
+    if (!this.props.organizationName) {
       return;
     }
-    const organizationDisplayName = this.getOrganzationNameFromDisplayName(
-      this.props.organizationDisplayName,
-    );
-    if (organizationDisplayName != null) {
-      this.props.form.setFieldsValue({
-        organization: organizationDisplayName,
-      });
-    } else if (this.props.onOrganizationDisplayNameNotFound) {
-      this.props.onOrganizationDisplayNameNotFound();
+    if (
+      this.state.organizations.find(org => org.name === this.props.organizationName) == null &&
+      this.props.onOrganizationNameNotFound
+    ) {
+      this.props.onOrganizationNameNotFound();
     }
-  }
-
-  getOrganzationNameFromDisplayName(organizationDisplayName: string): ?string {
-    const specifiedOrganization = this.state.organizations.find(
-      org => org.displayname === organizationDisplayName,
-    );
-    return specifiedOrganization ? specifiedOrganization.name : null;
   }
 
   handleSubmit = (event: SyntheticInputEvent<>) => {
@@ -119,8 +108,8 @@ class RegistrationView extends React.PureComponent<Props, State> {
 
   getOrganizationFormField() {
     const { getFieldDecorator } = this.props.form;
-    if (this.props.createOrganization || this.props.organizationDisplayName) {
-      if (!this.props.organizationDisplayName) {
+    if (this.props.createOrganization || this.props.organizationName) {
+      if (!this.props.organizationName) {
         throw new Error("When createOrganization is set, organizationName must be passed as well.");
       }
       // The user is either
@@ -129,7 +118,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
       // Thus, the organization field is hidden.
       return (
         <FormItem style={{ display: "none" }}>
-          {getFieldDecorator("organization", { initialValue: this.props.organizationDisplayName })(
+          {getFieldDecorator("organization", { initialValue: this.props.organizationName })(
             <Input type="text" />,
           )}
         </FormItem>

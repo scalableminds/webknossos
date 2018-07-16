@@ -44,13 +44,13 @@ class RegistrationView extends React.PureComponent<Props> {
           <RegistrationForm
             // The key is used to enforce a remount in case the organizationName changes.
             // That way, we ensure that the organization field is cleared.
-            key={this.props.organizationName || "default key"}
-            organizationDisplayName={this.props.organizationName}
+            key={this.props.organizationName || "default registration form key"}
+            organizationName={this.props.organizationName}
             onRegistered={() => {
               Toast.success(messages["auth.account_created"]);
               this.props.history.push("/auth/login");
             }}
-            onOrganizationDisplayNameNotFound={() => {
+            onOrganizationNameNotFound={() => {
               Toast.error(messages["auth.invalid_organization_name"]);
               this.props.history.push("/auth/register");
             }}

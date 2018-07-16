@@ -92,4 +92,7 @@ const mapStateToProps = (state: OxalisState) => ({
   isVolumeTracingDisallowed: state.tracing.type === "volume" && isVolumeTracingDisallowed(state),
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(TracingView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(TracingView);

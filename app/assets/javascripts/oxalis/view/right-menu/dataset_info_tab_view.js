@@ -252,4 +252,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(DatasetInfoTabView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(DatasetInfoTabView);

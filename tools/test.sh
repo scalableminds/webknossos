@@ -34,11 +34,11 @@ function ensureUpToDateTests {
 if [ $cmd == "test" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --no-clean ava $(find "$testBundlePath" -name "*.spec.js") "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*.spec.js") "$@"
 elif [ $cmd == "test-e2e" ]
 then
   ensureUpToDateTests
-  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial "$@"
+  export NODE_PATH="$testBundlePath" && BABEL_ENV=test nyc --silent --no-clean ava $(find "$testBundlePath" -name "*.e2e.js") --serial "$@"
 elif [ $cmd == "prepare" ]
 then
   prepare "$@"

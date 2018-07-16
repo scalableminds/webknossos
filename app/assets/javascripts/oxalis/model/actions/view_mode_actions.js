@@ -65,10 +65,10 @@ export const moveTDViewByVectorAction = (x: number, y: number): MoveTDViewByVect
 });
 
 export const moveTDViewXAction = (x: number): MoveTDViewByVectorActionType =>
-  moveTDViewByVectorAction(x * getTDViewportSize() / constants.VIEWPORT_WIDTH, 0);
+  moveTDViewByVectorAction((x * getTDViewportSize()) / constants.VIEWPORT_WIDTH, 0);
 
 export const moveTDViewYAction = (y: number): MoveTDViewByVectorActionType =>
-  moveTDViewByVectorAction(0, -y * getTDViewportSize() / constants.VIEWPORT_WIDTH);
+  moveTDViewByVectorAction(0, (-y * getTDViewportSize()) / constants.VIEWPORT_WIDTH);
 
 export type ViewModeActionType =
   | SetViewportActionType

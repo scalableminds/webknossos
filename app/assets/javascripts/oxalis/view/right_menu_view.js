@@ -77,4 +77,9 @@ function mapStateToProps(state: OxalisState): Props {
   };
 }
 
-export default connect(mapStateToProps, null, null, { pure: false })(RightMenuView);
+export default connect(
+  mapStateToProps,
+  null,
+  null,
+  { pure: false },
+)(RightMenuView);

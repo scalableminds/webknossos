@@ -35,20 +35,22 @@ class BoundingBox {
     }
   }
 
-  getBoxForZoomStep = _.memoize((zoomStep: number): BoundingBoxType => {
-    const resolution = getResolutions(Store.getState().dataset)[zoomStep];
-    // No `map` for performance reasons
-    const min = [0, 0, 0];
-    const max = [0, 0, 0];
+  getBoxForZoomStep = _.memoize(
+    (zoomStep: number): BoundingBoxType => {
+      const resolution = getResolutions(Store.getState().dataset)[zoomStep];
+      // No `map` for performance reasons
+      const min = [0, 0, 0];
+      const max = [0, 0, 0];
 
-    for (let i = 0; i < 3; i++) {
-      const divisor = constants.BUCKET_WIDTH * resolution[i];
-      min[i] = Math.floor(this.min[i] / divisor);
-      max[i] = Math.ceil(this.max[i] / divisor);
-    }
+      for (let i = 0; i < 3; i++) {
+        const divisor = constants.BUCKET_WIDTH * resolution[i];
+        min[i] = Math.floor(this.min[i] / divisor);
+        max[i] = Math.ceil(this.max[i] / divisor);
+      }
 
-    return { min, max };
-  });
+      return { min, max };
+    },
+  );
 
   containsBucket([x, y, z, zoomStep]: Vector4): boolean {
     const { min, max } = this.getBoxForZoomStep(zoomStep);

@@ -164,9 +164,9 @@ function initializeTMax(
 
   const positiveRest = [u[0] % voxelSize[0], u[1] % voxelSize[1], u[2] % voxelSize[2]];
   const negativeRest = [
-    voxelSize[0] - u[0] % voxelSize[0],
-    voxelSize[1] - u[1] % voxelSize[1],
-    voxelSize[2] - u[2] % voxelSize[2],
+    voxelSize[0] - (u[0] % voxelSize[0]),
+    voxelSize[1] - (u[1] % voxelSize[1]),
+    voxelSize[2] - (u[2] % voxelSize[2]),
   ];
 
   // $FlowFixMe Flow does not understand that mapping a tuple returns a tuple

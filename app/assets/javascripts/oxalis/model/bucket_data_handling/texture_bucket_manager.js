@@ -63,7 +63,7 @@ export default class TextureBucketManager {
     this.packingDegree = bytes === 1 ? 4 : 1;
 
     this.maximumCapacity =
-      this.packingDegree * dataTextureCount * textureWidth ** 2 / constants.BUCKET_SIZE;
+      (this.packingDegree * dataTextureCount * textureWidth ** 2) / constants.BUCKET_SIZE;
     // the look up buffer is bucketsPerDim**3 so that arbitrary look ups can be made
     const lookUpBufferSize = Math.pow(lookUpBufferWidth, 2) * floatsPerLookUpEntry;
     this.bucketsPerDim = bucketsPerDim;
@@ -155,7 +155,7 @@ export default class TextureBucketManager {
 
     const packedBucketSize = this.getPackedBucketSize();
     const bucketHeightInTexture = packedBucketSize / this.textureWidth;
-    const bucketsPerTexture = this.textureWidth * this.textureWidth / packedBucketSize;
+    const bucketsPerTexture = (this.textureWidth * this.textureWidth) / packedBucketSize;
 
     while (performance.now() - startingTime < maxTimePerFrame && this.writerQueue.length > 0) {
       const { bucket, _index } = this.writerQueue.pop();

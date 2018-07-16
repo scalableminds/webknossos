@@ -133,9 +133,9 @@ export function setRotationReducer(state: OxalisState, rotation: Vector3) {
   if (state.dataset != null) {
     const [x, y, z] = rotation;
     let matrix = resetMatrix(state.flycam.currentMatrix, state.dataset.dataSource.scale);
-    matrix = rotateOnAxis(matrix, -z * Math.PI / 180, [0, 0, 1]);
-    matrix = rotateOnAxis(matrix, -y * Math.PI / 180, [0, 1, 0]);
-    matrix = rotateOnAxis(matrix, -x * Math.PI / 180, [1, 0, 0]);
+    matrix = rotateOnAxis(matrix, (-z * Math.PI) / 180, [0, 0, 1]);
+    matrix = rotateOnAxis(matrix, (-y * Math.PI) / 180, [0, 1, 0]);
+    matrix = rotateOnAxis(matrix, (-x * Math.PI) / 180, [1, 0, 0]);
     return update(state, { flycam: { currentMatrix: { $set: matrix } } });
   }
   return state;

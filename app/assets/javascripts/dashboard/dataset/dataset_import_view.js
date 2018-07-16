@@ -177,7 +177,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
     if (teamIds.length > 0) {
       return false;
     }
-    return !await confirmAsync({
+    return !(await confirmAsync({
       title: "Are you sure?",
       content: (
         <p>
@@ -187,7 +187,7 @@ class DatasetImportView extends React.PureComponent<Props, State> {
           &ldquo;General&rdquo; tab.
         </p>
       ),
-    });
+    }));
   }
 
   handleSubmit = (e: SyntheticEvent<>) => {

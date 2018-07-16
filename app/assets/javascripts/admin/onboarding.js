@@ -197,13 +197,7 @@ class OnboardingView extends React.PureComponent<{}, State> {
             withoutCard
           />
         ) : (
-          <Modal
-            visible
-            width="85%"
-            footer={null}
-            maskClosable={false}
-            onCancel={this.advanceStep}
-          >
+          <Modal visible width="85%" footer={null} maskClosable={false} onCancel={this.advanceStep}>
             <DatasetImportView
               isEditingMode={false}
               datasetName={this.state.datasetNameToImport || ""}

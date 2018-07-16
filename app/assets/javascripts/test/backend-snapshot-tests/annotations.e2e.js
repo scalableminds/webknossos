@@ -2,7 +2,7 @@
 /* eslint-disable import/first */
 // @flow
 import test from "ava";
-import { resetDatabase, omitVolatileFields } from "../enzyme/e2e-setup";
+import { resetDatabase, replaceVolatileValues } from "../enzyme/e2e-setup";
 import * as api from "admin/admin_rest_api";
 import { APITracingTypeEnum } from "admin/api_flow_types";
 
@@ -24,14 +24,10 @@ test.serial("finishAnnotation() and reOpenAnnotation() for task", async t => {
   const annotationId = "78135c192faeb34c0081c05d";
   const finishedAnnotation = await api.finishAnnotation(annotationId, APITracingTypeEnum.Task);
   t.is(finishedAnnotation.state, "Finished");
-  // $FlowFixMe: Make tracingTime deterministic
-  finishedAnnotation.task.tracingTime = 0;
   t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation" });
 
   const reopenedAnnotation = await api.reOpenAnnotation(annotationId, APITracingTypeEnum.Task);
   t.is(reopenedAnnotation.state, "Active");
-  // $FlowFixMe: Make tracingTime deterministic
-  reopenedAnnotation.task.tracingTime = 100;
 
   t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation" });
 });
@@ -43,16 +39,12 @@ test.serial("finishAnnotation() and reOpenAnnotation() for explorational", async
     APITracingTypeEnum.Explorational,
   );
   t.is(finishedAnnotation.state, "Finished");
-  // $FlowFixMe: Make tracingTime deterministic
-  finishedAnnotation.tracingTime = 100;
   t.snapshot(finishedAnnotation, { id: "annotations-finishAnnotation-explorational" });
 
   const reopenedAnnotation = await api.reOpenAnnotation(
     annotationId,
     APITracingTypeEnum.Explorational,
   );
-  // $FlowFixMe: Make tracingTime deterministic
-  reopenedAnnotation.tracingTime = 100;
   t.is(reopenedAnnotation.state, "Active");
 
   t.snapshot(reopenedAnnotation, { id: "annotations-reOpenAnnotation-explorational" });
@@ -83,8 +75,6 @@ test.serial("editAnnotation()", async t => {
   t.is(editedAnnotation.name, newName);
   t.is(editedAnnotation.isPublic, newIsPublic);
   t.is(editedAnnotation.description, newDescription);
-  // $FlowFixMe: Make tracingTime deterministic
-  editedAnnotation.tracingTime = 100;
   t.snapshot(editedAnnotation, { id: "annotations-editAnnotation" });
 
   await api.editAnnotation(annotationId, APITracingTypeEnum.Explorational, {
@@ -115,7 +105,9 @@ test.serial("createExplorational() and finishAnnotation()", async t => {
   const dataSetName = "confocal-multi_knossos";
   const createdExplorational = await api.createExplorational(dataSetName, "skeleton", false);
 
-  t.snapshot(omitVolatileFields(createdExplorational), { id: "annotations-createExplorational" });
+  t.snapshot(replaceVolatileValues(createdExplorational), {
+    id: "annotations-createExplorational",
+  });
 
   await api.finishAnnotation(createdExplorational.id, APITracingTypeEnum.Explorational);
 

@@ -1,7 +1,7 @@
 /* eslint import/no-extraneous-dependencies: ["error", {"peerDependencies": true}] */
 /* eslint-disable import/first */
 // @flow
-import { resetDatabase, omitVolatileFields } from "../enzyme/e2e-setup";
+import { resetDatabase, replaceVolatileValues } from "../enzyme/e2e-setup";
 import test from "ava";
 import * as api from "admin/admin_rest_api";
 import _ from "lodash";
@@ -14,10 +14,6 @@ test("getTasks()", async t => {
   const allTasks = (await api.getTasks({})).filter(
     task => task.projectName !== "Test_Project3(for_annotation_mutations)",
   );
-  allTasks.forEach(task => {
-    // $FlowFixMe: Make tracingTime deterministic
-    task.tracingTime = 100;
-  });
   t.snapshot(allTasks, { id: "tasks-getTasks" });
 
   const complexQueriedTasks = await api.getTasks({
@@ -25,10 +21,6 @@ test("getTasks()", async t => {
   });
 
   t.is(complexQueriedTasks.length, 2);
-  complexQueriedTasks.forEach(task => {
-    // $FlowFixMe: Make tracingTime deterministic
-    task.tracingTime = 100;
-  });
   t.deepEqual(
     complexQueriedTasks.map(task => task.id).sort(),
     ["58135c192faeb34c0081c058", "581367a82faeb37a008a5352"].sort(),
@@ -90,8 +82,8 @@ test.serial("transferTask()", async t => {
 const newTask = {
   boundingBox: null,
   dataSet: "confocal-multi_knossos",
-  editPosition: [0, 0, 0],
-  editRotation: [0, 0, 0],
+  editPosition: [1, 2, 3],
+  editRotation: [4, 5, 6],
   neededExperience: {
     domain: "abc",
     value: 1,
@@ -111,7 +103,7 @@ test.serial("createTasks() and deleteTask()", async t => {
   if (createdTaskWrapper.success != null) {
     const createdTask = createdTaskWrapper.success;
 
-    t.snapshot(omitVolatileFields(createdTask), { id: "task-createTasks" });
+    t.snapshot(replaceVolatileValues(createdTask), { id: "task-createTasks" });
 
     await api.deleteTask(createdTask.id);
   } else {
@@ -127,7 +119,7 @@ test.serial("requestTask()", async t => {
   const createdTaskWrapper = createdTaskWrappers[0];
   const newTaskAnnotation = await api.requestTask();
 
-  t.snapshot(omitVolatileFields(newTaskAnnotation), { id: "task-requestTask" });
+  t.snapshot(replaceVolatileValues(newTaskAnnotation), { id: "task-requestTask" });
 
   if (createdTaskWrapper.success != null) {
     await api.deleteTask(createdTaskWrapper.success.id);

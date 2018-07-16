@@ -7,7 +7,7 @@ import { configure } from "enzyme";
 import Adapter from "enzyme-adapter-react-16";
 import shell from "shelljs";
 import _ from "lodash";
-import omitDeep from "omit-deep";
+import deepForEach from "deep-for-each";
 
 const requests = [];
 const minimumWait = 100; // ms
@@ -56,9 +56,15 @@ function setCurrToken(token: string) {
 // They have to be omitted from some snapshots
 const volatileKeys = ["id", "formattedHash", "modified", "created"];
 
-export function omitVolatileFields(obj: Object) {
-  // omitDeep does in-place omission
-  return omitDeep(_.cloneDeep(obj), volatileKeys);
+export function replaceVolatileValues(obj: Object) {
+  // Replace volatile properties with deterministic values
+  const newObj = _.cloneDeep(obj);
+  deepForEach(newObj, (value, key, arrOrObj) => {
+    if (volatileKeys.includes(key)) {
+      arrOrObj[key] = key;
+    }
+  });
+  return newObj;
 }
 
 global.fetch = function fetchWrapper(url, options) {

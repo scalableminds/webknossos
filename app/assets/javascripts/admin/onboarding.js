@@ -2,6 +2,8 @@
 
 import * as React from "react";
 import { Form, Modal, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
+import Toast from "libs/toast";
+import Clipboard from "clipboard-js";
 
 import RegistrationForm from "admin/auth/registration_form";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -165,7 +167,8 @@ class OnboardingView extends React.PureComponent<{}, State> {
       >
         <RegistrationForm
           hidePrivacyStatement
-          organizationName={this.state.organizationName}
+          createOrganization
+          organizationDisplayName={this.state.organizationName}
           onRegistered={this.advanceStep}
           confirmLabel="Create account"
           tryAutoLogin
@@ -223,6 +226,17 @@ class OnboardingView extends React.PureComponent<{}, State> {
     );
   }
 
+  getRegistrationHotLink(): string {
+    return `${location.origin}/auth/register?organizationName=${encodeURI(
+      this.state.organizationName,
+    )}`;
+  }
+
+  copyRegistrationCopyLink = async () => {
+    await Clipboard.copy(this.getRegistrationHotLink());
+    Toast.success("Registration link copied to clipboard.");
+  };
+
   renderWhatsNext() {
     return (
       <StepHeader
@@ -236,6 +250,20 @@ class OnboardingView extends React.PureComponent<{}, State> {
         }
         icon={<Icon type="rocket" style={{ fontSize: 180, color: "rgb(58, 144, 255)" }} />}
       >
+        <Row type="flex" gutter={50}>
+          <Col span={8}>Share the following link to let users join your organization:</Col>
+          <Col span={16}>
+            <Input.Group compact style={{ display: "inline" }}>
+              <Input
+                size="large"
+                value={this.getRegistrationHotLink()}
+                style={{ width: "500px" }}
+                readOnly
+              />
+              <Button size="large" onClick={this.copyRegistrationCopyLink} icon="copy" />
+            </Input.Group>
+          </Col>
+        </Row>
         <Row type="flex" gutter={50}>
           <FeatureCard header="Data Annotation" icon={<Icon type="play-circle-o" />}>
             <a href="/dashboard">Explore and annotate your data.</a> For a brief overview,{" "}

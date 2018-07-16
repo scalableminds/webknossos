@@ -145,9 +145,14 @@ export function deleteNode(
     const { allowUpdate } = skeletonTracing.restrictions;
 
     if (allowUpdate) {
-      // Delete Node
+      // Delete node and possible branchpoints/comments
       const activeTree = update(tree, {
         nodes: { $apply: nodes => nodes.delete(node.id) },
+        comments: { $apply: comments => comments.filter(comment => comment.nodeId !== node.id) },
+        branchPoints: {
+          $apply: branchPoints =>
+            branchPoints.filter(branchPoint => branchPoint.nodeId !== node.id),
+        },
       });
 
       // Do we need to split trees? Are there edges leading to/from it?

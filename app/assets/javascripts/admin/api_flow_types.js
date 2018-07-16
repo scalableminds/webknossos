@@ -277,7 +277,7 @@ export type APIOrganizationType = {
   +id: string,
   +name: string,
   +additionalInformation: string,
-  +displayname: string,
+  +displayName: string,
 };
 
 export type APIBuildInfoType = {

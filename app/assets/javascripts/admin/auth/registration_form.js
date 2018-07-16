@@ -138,7 +138,7 @@ class RegistrationView extends React.PureComponent<Props, State> {
           <Select placeholder="Organization">
             {this.state.organizations.map(organization => (
               <Option value={organization.name} key={organization.name}>
-                {organization.displayname}
+                {organization.displayName}
               </Option>
             ))}
           </Select>,

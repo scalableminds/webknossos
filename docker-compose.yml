@@ -65,6 +65,8 @@ services:
       - TZ=${TZ:-Europe/Berlin}
       - POSTGRES_URL=jdbc:postgresql://postgres/webknossos
       - HOME=/root
+      - CIRCLE_TAG=${CIRCLE_TAG}
+      - CIRCLE_BUILD_NUM=${CIRCLE_BUILD_NUM}
     working_dir: /home/${USER_NAME:-sbt-user}/webknossos
     volumes:
       - ".:/home/${USER_NAME:-sbt-user}/webknossos"

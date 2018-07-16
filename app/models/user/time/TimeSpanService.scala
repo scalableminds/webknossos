@@ -188,7 +188,7 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
       case Some(taskId) =>
         for {
           _ <- TaskSQLDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
-          _ <- signalOverTime(duration, annotation)(GlobalAccessContext) ?~> "FAILED: TimeSpanService.signalOverTime"
+          _ <- signalOverTime(duration, annotation)(GlobalAccessContext).futureBox //signalOverTime is expected to fail in some cases, hence the .futureBox
         } yield {}
       case _ =>
         Fox.successful(())

@@ -4,7 +4,7 @@ import javax.inject.Inject
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import models.annotation.nml.NmlService
@@ -12,7 +12,7 @@ import models.annotation.AnnotationService
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.project.ProjectSQLDAO
 import models.task._
-import models.team.OrganizationDAO
+import models.team.OrganizationSQLDAO
 import models.user._
 import net.liftweb.common.Box
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
@@ -276,7 +276,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
       if (user.isAdmin) {
-        OrganizationDAO.findOneByName(user.organization).map(_.teams.map(ObjectId.fromBsonId))
+        OrganizationSQLDAO.findOneByName(user.organization).flatMap(_.teamIds)
       } else if (numberOfOpen < MAX_OPEN_TASKS) {
         Fox.successful(user.teamIds.map(ObjectId.fromBsonId))
       } else if (user.teamManagerTeamIds.nonEmpty) {

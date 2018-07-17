@@ -12,8 +12,15 @@ type Props = {
   data: CommentType,
 };
 
-function linkify(string: string) {
-  return string.replace(/#([0-9]+)/g, (match, p1) => `[#${p1}](#activeNode=${p1})`);
+function linkify(comment: string) {
+  // Replace linkes nodes (#<nodeid>) with a proper link
+  // (?!...) is a negative lookahead to ignore linked positions (#<x,y,z>)
+  comment = comment.replace(
+    /#(?![0-9.]+,[0-9.]+,[0-9.]+)([0-9.]+)/g,
+    (match, p1) => `[#${p1}](#activeNode=${p1})`,
+  );
+  // Replace linked positions (#<x,y,z>) with a proper link
+  return comment.replace(/#([0-9.]+,[0-9.]+,[0-9.]+)/g, (match, p1) => `[#${p1}](#position=${p1})`);
 }
 
 class Comment extends React.PureComponent<Props> {

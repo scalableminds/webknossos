@@ -51,7 +51,8 @@ class UrlManager {
     const stateString = location.hash.slice(1);
     if (stateString) {
       const [key, value] = stateString.split("=");
-      applyState({ [key]: Number(value) });
+      // The value can either be a single number or multiple numbers delimited by a ,
+      applyState({ [key]: value.indexOf(",") > -1 ? value.split(",").map(Number) : Number(value) });
     }
   }
 
@@ -63,7 +64,7 @@ class UrlManager {
     const state: UrlManagerState = {};
 
     if (stateString) {
-      const stateArray = stateString.split(",").map(item => Number(item));
+      const stateArray = stateString.split(",").map(Number);
       if (stateArray.length >= 5) {
         state.position = Utils.numberArrayToVector3(stateArray.slice(0, 3));
 

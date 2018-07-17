@@ -32,7 +32,7 @@ case class OrganizationSQL(
       "id" -> _id.toString,
       "name" -> name,
       "additionalInformation" -> additionalInformation,
-      "displayname" -> displayName
+      "displayName" -> displayName
     ))
   }
 }

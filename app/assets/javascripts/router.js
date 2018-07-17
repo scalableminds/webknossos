@@ -241,7 +241,14 @@ class ReactRouter extends React.Component<Props> {
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
                 path="/datasets/upload"
-                component={DatasetUploadView}
+                render={() => (
+                  <DatasetUploadView
+                    onUploaded={datasetName => {
+                      const url = `/datasets/${datasetName}/import`;
+                      browserHistory.push(url);
+                    }}
+                  />
+                )}
               />
               <SecuredRoute
                 isAuthenticated={isAuthenticated}
@@ -250,6 +257,8 @@ class ReactRouter extends React.Component<Props> {
                   <DatasetImportView
                     isEditingMode={false}
                     datasetName={match.params.datasetName || ""}
+                    onComplete={() => window.history.back()}
+                    onCancel={() => window.history.back()}
                   />
                 )}
               />
@@ -257,7 +266,12 @@ class ReactRouter extends React.Component<Props> {
                 isAuthenticated={isAuthenticated}
                 path="/datasets/:datasetName/edit"
                 render={({ match }: ContextRouter) => (
-                  <DatasetImportView isEditingMode datasetName={match.params.datasetName || ""} />
+                  <DatasetImportView
+                    isEditingMode
+                    datasetName={match.params.datasetName || ""}
+                    onComplete={() => window.history.back()}
+                    onCancel={() => window.history.back()}
+                  />
                 )}
               />
               <SecuredRoute

@@ -105,4 +105,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(ShareModalView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(ShareModalView);

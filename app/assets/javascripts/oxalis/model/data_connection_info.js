@@ -24,7 +24,7 @@ class DataConnectionInfo {
   log(dataLayerName: string, startTime: number, loadedBuckets: number, loadedBytes: number): void {
     const endTime = new Date().getTime();
     const roundTripTime = endTime - startTime;
-    const bandwidth = loadedBytes / roundTripTime * 1000;
+    const bandwidth = (loadedBytes / roundTripTime) * 1000;
 
     this.totalBuckets += loadedBuckets;
     this.totalBytes += loadedBytes;

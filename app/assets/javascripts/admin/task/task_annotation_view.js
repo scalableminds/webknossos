@@ -163,7 +163,7 @@ class TaskAnnotationView extends React.PureComponent<Props & StateProps, State> 
               return (
                 <tr key={`${annotation.id}-tr`}>
                   <td>{userString}</td>
-                  <td>{moment(annotation.modified).format("YYYY-MM-DD HH:SS")}</td>
+                  <td>{moment(annotation.modified).format("YYYY-MM-DD HH:mm")}</td>
                   <td>
                     <span>
                       <Icon type="check-circle-o" />

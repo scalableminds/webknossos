@@ -140,4 +140,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(DatasetSettings);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(DatasetSettings);

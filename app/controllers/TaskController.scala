@@ -223,7 +223,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       task <- TaskSQLDAO.findOne(taskIdValidated) ?~> Messages("task.notFound")
       project <- task.project
       _ <- ensureTeamAdministration(request.identity, project._team) ?~> Messages("notAllowed")
-      _ <- TaskSQLDAO.deleteOne(task._id)
+      _ <- TaskSQLDAO.removeOneAndItsAnnotations(task._id)
     } yield {
       JsonOk(Messages("task.removed"))
     }
@@ -246,7 +246,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       projectNameOpt = (request.body \ "project").asOpt[String]
       taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids => Fox.serialCombined(ids)(ObjectId.parse))
       taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.parse(_))
-      tasks <- TaskSQLDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt)
+      randomizeOpt = (request.body \ "random").asOpt[Boolean]
+      tasks <- TaskSQLDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectNameOpt, taskTypeIdOpt, taskIdsOpt, userIdOpt, randomizeOpt)
       jsResult <- Fox.serialCombined(tasks)(_.publicWrites)
     } yield {
       Ok(Json.toJson(jsResult))

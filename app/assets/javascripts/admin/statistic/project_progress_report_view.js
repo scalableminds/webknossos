@@ -118,7 +118,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 sorter={Utils.compareBy(typeHint, "openInstances")}
                 render={(text, item) =>
                   `${item.openInstances} (${Math.round(
-                    item.openInstances / item.totalInstances * 100,
+                    (item.openInstances / item.totalInstances) * 100,
                   )} %)`
                 }
               />
@@ -128,7 +128,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 sorter={Utils.compareBy(typeHint, "activeInstances")}
                 render={(text, item) =>
                   `${item.activeInstances} (${Math.round(
-                    item.activeInstances / item.totalInstances * 100,
+                    (item.activeInstances / item.totalInstances) * 100,
                   )} %)`
                 }
               />
@@ -138,7 +138,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
                 sorter={Utils.compareBy(typeHint, "finishedInstances")}
                 render={(text, item) =>
                   `${item.finishedInstances} (${Math.round(
-                    item.finishedInstances / item.totalInstances * 100,
+                    (item.finishedInstances / item.totalInstances) * 100,
                   )} %)`
                 }
               />

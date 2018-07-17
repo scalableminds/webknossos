@@ -93,8 +93,8 @@ request.body.validate[List[InboxDataSource]] match {
       }
       _ <- AnnotationSQLDAO.updateModified(annotation._id, System.currentTimeMillis)(GlobalAccessContext)
       userBox <- bearerTokenService.userForTokenOpt(userTokenOpt)(GlobalAccessContext).futureBox
+      _ <- Fox.runOptional(userBox)(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
     } yield {
-      userBox.map(user => TimeSpanService.logUserInteraction(timestamps, user, annotation)(GlobalAccessContext))
       Ok
     }
   }

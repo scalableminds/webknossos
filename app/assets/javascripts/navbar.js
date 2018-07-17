@@ -157,7 +157,7 @@ class Navbar extends React.PureComponent<Props, State> {
             About & Credits
           </a>
         </Menu.Item>
-        {this.state.version != null ? (
+        {this.state.version !== "" ? (
           <Menu.Item disabled>Version: {this.state.version}</Menu.Item>
         ) : null}
       </SubMenu>,

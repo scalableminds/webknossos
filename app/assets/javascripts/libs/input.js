@@ -219,7 +219,7 @@ export class InputKeyboard {
           const elapsed = curTime - lastTime;
           callback.lastTime = curTime;
 
-          callback(elapsed / 1000 * constants.FPS, false);
+          callback((elapsed / 1000) * constants.FPS, false);
         }
       }
 

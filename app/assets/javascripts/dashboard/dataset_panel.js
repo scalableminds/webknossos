@@ -12,7 +12,7 @@ const thumbnailDimension = 500;
 
 type Props = {
   datasets: Array<DatasetType>,
-  owningOrganization: string,
+  organizationName: string,
   showOrganizationHeader: boolean,
   croppedDatasetCount: ?number,
 };
@@ -165,7 +165,7 @@ class DatasetPanel extends React.PureComponent<Props, State> {
 
     return (
       <div className="dataset-panel">
-        {this.props.showOrganizationHeader && <h1>{this.props.owningOrganization}</h1>}
+        {this.props.showOrganizationHeader && <h1>{this.props.organizationName}</h1>}
         <Row gutter={16}>
           {maybeCroppedDatasetsGroup.map(([groupName, datasets]) => (
             <Col className="gallery-dataset-col" {...columnSpan} key={groupName}>

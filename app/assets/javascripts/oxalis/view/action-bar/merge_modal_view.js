@@ -164,6 +164,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
         onOk={this.props.onOk}
         onCancel={this.props.onOk}
         className="merge-modal"
+        width={600}
       >
         <Spin spinning={this.state.isUploading}>
           <Alert

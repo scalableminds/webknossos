@@ -184,6 +184,7 @@ class NmlUploadZone extends React.PureComponent<Props, State> {
                 position: "relative",
                 textAlign: "center",
                 border: "1px dashed #d9d9d9",
+                borderRadius: 4,
                 cursor: "pointer",
               }}
               onDrop={this.onDrop}
@@ -194,7 +195,7 @@ class NmlUploadZone extends React.PureComponent<Props, State> {
         ) : null}
 
         <Modal
-          title={`Import ${this.state.files.length} NML files`}
+          title={`Import ${this.state.files.length} NML file(s)`}
           visible={this.state.files.length > 0}
           onOk={this.importNmls}
           onCancel={() => this.setState({ files: [] })}

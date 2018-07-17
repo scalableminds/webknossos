@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import Toast from "libs/toast";
 import Request from "libs/request";
-import { Modal, Button, Upload, Select, Form, Spin } from "antd";
+import { Alert, Modal, Button, Upload, Select, Form, Spin } from "antd";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
@@ -166,6 +166,18 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
         className="merge-modal"
       >
         <Spin spinning={this.state.isUploading}>
+          <Alert
+            message={
+              <span>
+                The merged tracing will be saved as a <b>new</b> explorative tracing in your
+                account. If you wish to import NML files right into the current tracing, just drag
+                and drop them into the tracing view.
+              </span>
+            }
+            type="warning"
+            style={{ marginBottom: 12 }}
+          />
+
           <Form layout="inline" onSubmit={this.handleMergeTaskType}>
             <Form.Item label="Task Type">
               <Select
@@ -218,25 +230,6 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
             </Form.Item>
           </Form>
 
-          <Form layout="inline">
-            <Form.Item label="NML">
-              <Upload
-                name="nmlFile"
-                action="/api/annotations/upload"
-                headers={{ authorization: "authorization-text" }}
-                beforeUpload={this.handleBeforeUploadNML}
-                onChange={this.handleChangeNML}
-                value={this.state.selectedNML}
-                accept=".nml"
-                showUploadList={false}
-              >
-                <Button icon="upload" style={{ width: 200 }}>
-                  Upload NML and merge
-                </Button>
-              </Upload>
-            </Form.Item>
-          </Form>
-
           <Form layout="inline" onSubmit={this.handleMergeExplorativeAnnotation}>
             <Form.Item label="Explorative Annotation">
               <InputComponent
@@ -256,8 +249,25 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
               </Button>
             </Form.Item>
           </Form>
-          <hr />
-          <p>The merged tracing will be saved as a new explorative tracing.</p>
+
+          <Form layout="inline">
+            <Form.Item label="NML">
+              <Upload
+                name="nmlFile"
+                action="/api/annotations/upload"
+                headers={{ authorization: "authorization-text" }}
+                beforeUpload={this.handleBeforeUploadNML}
+                onChange={this.handleChangeNML}
+                value={this.state.selectedNML}
+                accept=".nml"
+                showUploadList={false}
+              >
+                <Button icon="upload" style={{ width: 200 }}>
+                  Upload NML and merge
+                </Button>
+              </Upload>
+            </Form.Item>
+          </Form>
         </Spin>
       </Modal>
     );

@@ -460,7 +460,7 @@ object DataSet extends FoxImplicits {
   private def getLogoUrl(dataSet: DataSet) =
     dataSet.logoUrl match {
       case Some(url) => Fox.successful(url)
-      case None => OrganizationDAO.findOneByName(dataSet.owningOrganization)(GlobalAccessContext).map(_.logoUrl)
+      case None => OrganizationSQLDAO.findOneByName(dataSet.owningOrganization)(GlobalAccessContext).map(_.logoUrl)
     }
 
   def fromDataSetSQL(s: DataSetSQL)(implicit ctx: DBAccessContext) = {

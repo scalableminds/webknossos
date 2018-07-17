@@ -8,7 +8,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Point3D, Scale}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.binary.{DataSet, DataStoreInfo, NDStore}
-import models.team.{OrganizationDAO, TeamDAO, TeamService}
+import models.team.{OrganizationSQLDAO, TeamDAO, TeamService}
 import play.api.i18n.Messages
 import play.api.libs.concurrent.Execution.Implicits._
 import reactivemongo.bson.BSONObjectID
@@ -21,20 +21,23 @@ object ND2WK extends FoxImplicits {
   )
 
   def dataSetFromNDProject(ndp: NDProject, team: BSONObjectID)(implicit messages: Messages) = {
+    implicit val ctx = GlobalAccessContext
     val dataStoreInfo = DataStoreInfo(ndp.server, ndp.server, NDStore, Some(ndp.token))
 
     for {
       dataLayers <- dataLayersFromNDChannels(ndp.dataset, ndp.channels)
       dataSource <- dataSourceFromNDDataSet(ndp.name, ndp.dataset, dataLayers, team)
-      orgName <- TeamDAO.findOneById(team)(GlobalAccessContext).map(_.organization)
-      organization <- OrganizationDAO.findOneByName(orgName)(GlobalAccessContext)
+      orgName <- TeamDAO.findOneById(team).map(_.organization)
+      organization <- OrganizationSQLDAO.findOneByName(orgName)
+      organizationTeamId <- organization.organizationTeamId
+      organizationTeamIdBson <- organizationTeamId.toBSONObjectId
     } yield {
       DataSet(
         None,
         dataStoreInfo,
         dataSource,
         orgName,
-        List(organization._organizationTeam),
+        List(organizationTeamIdBson),
         isActive = true,
         isPublic = false)
     }

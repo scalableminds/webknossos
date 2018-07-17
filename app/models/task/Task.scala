@@ -80,8 +80,8 @@ case class TaskSQL(
       status <- status.getOrElse(CompletionStatus(-1, -1, -1))
       taskType <- taskType
       taskTypeJs <- taskType.publicWrites
-      scriptInfo <- _script.map(_.toBSONObjectId).flatten.toFox.flatMap(sid => ScriptDAO.findOneById(sid)).futureBox
-      scriptJs <- scriptInfo.toFox.flatMap(s => Script.scriptPublicWrites(s)).futureBox
+      scriptInfo <- _script.toFox.flatMap(sid => ScriptSQLDAO.findOne(sid)).futureBox
+      scriptJs <- scriptInfo.toFox.flatMap(s => s.publicWrites).futureBox
       project <- project
       team <- project.team
     } yield {

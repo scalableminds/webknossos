@@ -170,7 +170,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     scriptIdOpt match {
       case Some(scriptId) =>
         for {
-          _ <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+          scriptIdValidated <- ObjectId.parse(scriptId)
+          _ <- ScriptSQLDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
         } yield ()
       case _ => Fox.successful(())
     }

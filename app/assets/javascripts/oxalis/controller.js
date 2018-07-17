@@ -101,16 +101,21 @@ class Controller extends React.PureComponent<Props, State> {
   }
 
   modelFetchDone() {
-    const beforeUnload = () => {
-      const stateSaved = Model.stateSaved();
-      if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
-        Store.dispatch(saveNowAction());
-        window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
-        window.setTimeout(() => {
-          // restore the event handler in case a user chose to stay on the page
-          window.onbeforeunload = beforeUnload;
-        }, 500);
-        return messages["save.leave_page_unfinished"];
+    const beforeUnload = (evt, action) => {
+      // Only show the prompt if this is a proper beforeUnload event from the browser
+      // or the pathname changed
+      // This check has to be done because history.block triggers this function even if only the url hash changed
+      if (action === undefined || evt.pathname !== window.location.pathname) {
+        const stateSaved = Model.stateSaved();
+        if (!stateSaved && Store.getState().tracing.restrictions.allowUpdate) {
+          Store.dispatch(saveNowAction());
+          window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
+          window.setTimeout(() => {
+            // restore the event handler in case a user chose to stay on the page
+            window.onbeforeunload = beforeUnload;
+          }, 500);
+          return messages["save.leave_page_unfinished"];
+        }
       }
       return null;
     };

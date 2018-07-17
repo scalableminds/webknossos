@@ -333,7 +333,7 @@ class TracingApi {
     await Model.fetch(newTracingType, newAnnotationId, newControlMode, false);
     Store.dispatch(discardSaveQueueAction());
     Store.dispatch(wkReadyAction());
-    UrlManager.updateUnthrottled(true);
+    UrlManager.updateUnthrottled();
   }
 
   //  SKELETONTRACING API

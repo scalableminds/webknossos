@@ -1,4 +1,4 @@
--- https://github.com/scalableminds/webknossos/pull/TODO
+-- https://github.com/scalableminds/webknossos/pull/2904
 
 -- From now on we store schemaVersion in the database
 -- When editing the schema, please update the number both in your evolution and in schema.sql

@@ -26,11 +26,16 @@ object BuildInfoSettings {
     }
   }.toString()
 
+  val ciBuild = if (System.getenv().containsKey("CIRCLE_BUILD_NUM")) System.getenv().get("CIRCLE_BUILD_NUM") else "";
+  val ciTag = if (System.getenv().containsKey("CIRCLE_TAG")) System.getenv().get("CIRCLE_TAG") else "";
+
 
   lazy val webknossosBuildInfoSettings = Seq(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
       "commitHash" -> commitHash,
-      "commitDate" -> commitDate
+      "commitDate" -> commitDate,
+      "ciBuild" -> ciBuild,
+      "ciTag" -> ciTag
     ),
     buildInfoPackage := "webknossos",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)
@@ -39,7 +44,9 @@ object BuildInfoSettings {
   lazy val webknossosDatastoreBuildInfoSettings = Seq(
     buildInfoKeys := Seq[BuildInfoKey](name, version, scalaVersion, sbtVersion,
       "commitHash" -> commitHash,
-      "commitDate" -> commitDate
+      "commitDate" -> commitDate,
+      "ciBuild" -> ciBuild,
+      "ciTag" -> ciTag
     ),
     buildInfoPackage := "webknossosDatastore",
     buildInfoOptions := Seq(BuildInfoOption.ToJson)

@@ -18,7 +18,6 @@ import "es6-promise";
 
 import { getActiveUser } from "admin/admin_rest_api";
 
-// $FlowFixMe: CSS/LESS imports are a special WebPack feature
 import "../stylesheets/main.less";
 
 document.addEventListener("DOMContentLoaded", async () => {

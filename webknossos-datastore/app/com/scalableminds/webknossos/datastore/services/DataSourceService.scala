@@ -4,7 +4,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import java.io.File
-import java.nio.file.{Path, Paths}
+import java.nio.file.{AccessDeniedException, Path, Paths}
 
 import akka.actor.ActorSystem
 import com.google.inject.Inject
@@ -38,7 +38,7 @@ class DataSourceService @Inject()(
   protected lazy val tickerInterval: FiniteDuration = config.getInt("braingames.binary.changeHandler.interval").getOrElse(10).minutes
 
   private val MaxNumberOfFilesForDataFormatGuessing = 10
-  private val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
+  val dataBaseDir = Paths.get(config.getString("braingames.binary.baseFolder").getOrElse("binaryData"))
 
   private val propertiesFileName = Paths.get("datasource-properties.json")
 
@@ -66,13 +66,20 @@ class DataSourceService @Inject()(
   }
 
   def handleUpload(id: DataSourceId, dataSetZip: File): Fox[Unit] = {
+
+    def ensureDirectory(dir: Path) =
+      try {
+        Fox.successful(PathUtils.ensureDirectory(dir))
+      } catch {
+        case e: AccessDeniedException => Fox.failure("dataSet.import.fileAccessDenied")
+      }
+
     val dataSourceDir = dataBaseDir.resolve(id.team).resolve(id.name)
-    PathUtils.ensureDirectory(dataSourceDir)
 
     logger.info(s"Uploading and unzipping dataset into $dataSourceDir")
 
     for {
-      _ <- Fox.successful(())
+      _ <- ensureDirectory(dataSourceDir)
       unzipResult = ZipIO.unzipToFolder(dataSetZip, dataSourceDir, includeHiddenFiles = false, truncateCommonPrefix = true, Some(Category.values.map(_.toString).toList))
       _ <- unzipResult match {
         case Full(_) => dataSourceRepository.updateDataSource(dataSourceFromFolder(dataSourceDir, id.team))

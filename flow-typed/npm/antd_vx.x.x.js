@@ -34,15 +34,20 @@ declare module "antd" {
     static Header: React$ComponentType<P>;
     static Sider: React$ComponentType<P>;
   }
+  declare class List<P> extends React$Component<P> {
+    static Item: React$ComponentType<P>;
+  }
   declare class Menu<P> extends React$Component<P> {
     static Item: React$ComponentType<P>;
     static SubMenu: React$ComponentType<P>;
   }
+  declare var message: Object;
   declare class Modal<P> extends React$Component<P> {
     static confirm: Function;
     static info: Function;
   }
   declare var notification: Object;
+  declare class Pagination<P> extends React$Component<P> {}
   declare class Popover<P> extends React$Component<P> {}
   declare class AutoComplete<P> extends React$Component<P> {
     static Option: React$ComponentType<*>;
@@ -72,6 +77,9 @@ declare module "antd" {
     static TreeNode: React$ComponentType<P>;
   }
   declare class Tooltip<P> extends React$Component<P> {}
+  declare class Steps<P> extends React$Component<P> {
+    static Step: React$ComponentType<P>;
+  }
   declare class Upload<P> extends React$Component<P> {
     static Dragger: React$ComponentType<P>;
   }

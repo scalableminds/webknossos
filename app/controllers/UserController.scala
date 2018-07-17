@@ -162,17 +162,6 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def logTime(userId: String, time: String, note: String) = SecuredAction.async { implicit request =>
-    for {
-      user <- UserDAO.findOneById(userId) ?~> Messages("user.notFound")
-      _ <- user.isEditableBy(request.identity) ?~> Messages("notAllowed")
-      time <- TimeSpan.parseTime(time) ?~> Messages("time.invalidFormat")
-    } yield {
-      TimeSpanService.logTime(user, time, Some(note))
-      JsonOk
-    }
-  }
-
   val userUpdateReader =
     ((__ \ "firstName").read[String] and
       (__ \ "lastName").read[String] and

@@ -4,6 +4,7 @@ import _ from "lodash";
 export default {
   yes: "Yes",
   no: "No",
+  "setup.redirect": "This WebKnossos instance seems to be empty. Redirecting to initial setup...",
   unknown_error:
     "An unknown error occured. Please try again or check the console for more details.",
   "datastore.health": _.template(
@@ -67,7 +68,11 @@ In order to restore the current window, a reload is necessary.`,
     "Can not parse task specification. It includes at least one invalid task.",
   "dataset.upload_success": "The dataset was uploaded successfully",
   "dataset.invalid_datasource_json":
-    "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos.",
+    "The datasource-properties.json on disk is invalid. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
+  "dataset.missing_datasource_json":
+    "The datasource-properties.json was not found. The values below are guessed by webKnossos. Please review all properties before importing the dataset. You can always go back and change the values later.",
+  "dataset.import_complete":
+    "A valid datasource-properties.json was found. The dataset is imported and ready to use. You may still change the properties below.",
   "dataset.confirm_signup":
     "For dataset annotation, please log in or create an account. For dataset viewing, no account is required. Do you wish to sign up now?",
   "dataset.does_not_exist": "Selected dataset doesn't exist!",
@@ -75,6 +80,10 @@ In order to restore the current window, a reload is necessary.`,
   "dataset.not_imported": "Please double check if you have the dataset imported:",
   "dataset.changed_without_reload":
     "Model.fetch was called for a task with another dataset, without reloading the page.",
+  "dataset.import.required.name": "Please provide a name for the dataset",
+  "dataset.import.required.datastore": "Please select a datastore for the dataset",
+  "dataset.import.required.zipFile": "Please select a file to upload.",
+  "dataset.import.invalid_fields": "Please check that all form fields are valid.",
   "dataset.unique_layer_names": "The layer names provided by the dataset are not unique.",
   "annotation.finish": "Are you sure you want to permanently finish this tracing?",
   "annotation.was_finished": "Annotation was archived",

@@ -76,21 +76,23 @@ function SkeletonTracingReducer(state: OxalisState, action: ActionType): OxalisS
       );
 
       const trees = _.keyBy(
-        action.tracing.trees.map((tree): TreeType => ({
-          comments: tree.comments,
-          edges: EdgeCollection.loadFromArray(tree.edges),
-          name: tree.name,
-          treeId: tree.treeId,
-          nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
-          color:
-            tree.color != null
-              ? [tree.color.r, tree.color.g, tree.color.b]
-              : ColorGenerator.distinctColorForId(tree.treeId),
-          branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
-          isVisible: true,
-          timestamp: tree.createdTimestamp,
-          groupId: tree.groupId,
-        })),
+        action.tracing.trees.map(
+          (tree): TreeType => ({
+            comments: tree.comments,
+            edges: EdgeCollection.loadFromArray(tree.edges),
+            name: tree.name,
+            treeId: tree.treeId,
+            nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
+            color:
+              tree.color != null
+                ? [tree.color.r, tree.color.g, tree.color.b]
+                : ColorGenerator.distinctColorForId(tree.treeId),
+            branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
+            isVisible: true,
+            timestamp: tree.createdTimestamp,
+            groupId: tree.groupId,
+          }),
+        ),
         "treeId",
       );
 

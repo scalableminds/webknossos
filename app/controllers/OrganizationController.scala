@@ -17,7 +17,7 @@ class OrganizationController @Inject()(val messagesApi: MessagesApi) extends Con
     for {
       allOrgs <- OrganizationDAO.findAll(GlobalAccessContext)
     } yield {
-      Ok(Json.toJson(allOrgs.map(org => Json.obj("id" -> org.id, "name" -> org.name, "additionalInformation" -> org.additionalInformation))))
+      Ok(Json.toJson(allOrgs.map(org => Json.obj("id" -> org.id, "name" -> org.name, "additionalInformation" -> org.additionalInformation, "displayName" -> org.displayName))))
     }
   }
 

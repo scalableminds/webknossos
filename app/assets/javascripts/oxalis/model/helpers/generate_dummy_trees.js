@@ -24,8 +24,8 @@ export default function generateDummyTrees(
       nodes.push({
         id: currentNewNodeId++,
         position: {
-          x: 5120 + 5000 * counter / nodeCount,
-          y: 3725 + (currentTreeId - 1) * treeCount / 10,
+          x: 5120 + (5000 * counter) / nodeCount,
+          y: 3725 + ((currentTreeId - 1) * treeCount) / 10,
           z: 1545,
         },
         rotation: { x: 0, y: 270, z: 0 },

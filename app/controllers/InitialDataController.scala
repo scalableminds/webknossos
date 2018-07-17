@@ -1,5 +1,6 @@
 package controllers
 
+import com.mohiva.play.silhouette.api.LoginInfo
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -11,6 +12,8 @@ import models.task.{TaskTypeSQL, TaskTypeSQLDAO}
 import models.team._
 import models.user.{User, UserDAO, UserService}
 import net.liftweb.common.Full
+import org.joda.time.DateTime
+import oxalis.security.{TokenSQL, TokenSQLDAO, TokenType}
 import play.api.i18n.MessagesApi
 import play.api.Play.current
 import oxalis.security.WebknossosSilhouette.UserAwareAction
@@ -43,7 +46,7 @@ Sampletown
 Samplecountry
 """
   val organizationTeamId = BSONObjectID.generate
-  val defaultOrganization = Organization("/assets/images/mpi-logos.svg", additionalInformation, "Connectomics department", List(), organizationTeamId)
+  val defaultOrganization = Organization("MPI for Brain Research", "/assets/images/mpi-logos.svg", additionalInformation, "Connectomics department", List(), organizationTeamId)
   val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, organizationTeamId)
   val organizationTeamSQL = TeamSQL(ObjectId.fromBsonId(organizationTeamId), ObjectId.fromBsonId(defaultOrganization._id), defaultOrganization.name, isOrganizationTeam = true)
 
@@ -54,6 +57,7 @@ Samplecountry
       _ <- insertOrganization
       _ <- insertTeams
       _ <- insertDefaultUser
+      _ <- insertToken
       _ <- insertTaskType
       _ <- insertProject
       _ <- insertLocalDataStoreIfEnabled
@@ -92,6 +96,24 @@ Samplecountry
           _isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser"))
         )
     }.toFox
+  }
+
+  def insertToken = {
+    val expiryTime = Play.configuration.underlying.getDuration("silhouette.tokenAuthenticator.authenticatorExpiry").toMillis
+    TokenSQLDAO.findOneByLoginInfo("credentials", defaultUserEmail, TokenType.Authentication).futureBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _ =>
+        val newToken = TokenSQL(
+          ObjectId.generate,
+          "secretScmBoyToken",
+          LoginInfo("credentials", defaultUserEmail),
+          new DateTime(System.currentTimeMillis()),
+          new DateTime(System.currentTimeMillis() + expiryTime),
+          None,
+          TokenType.Authentication
+        )
+      TokenSQLDAO.insertOne(newToken)
+    }
   }
 
   def insertOrganization = {

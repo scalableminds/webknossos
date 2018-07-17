@@ -47,6 +47,9 @@ team.noOwner=This action is restricted to the creator of the team.
 team.admin.notAllowed=You are not authorized to administrate this team.
 team.notFound=Team could not be found.
 
+organization.create.forbidden=You are not allowed to create a new organization
+organization.create.failed=Failed to create a new organization
+
 user.automaticUserActivation=User was activated automatically
 user.accountCreated=Your account has been created. An administrator is going to unlock you soon.
 user.activated={0} has been activated
@@ -94,6 +97,7 @@ dataSet.name.alreadyTaken=This dataset name is already in use.
 dataSet.source.notFound=The data source for the data source couldn''t be found
 dataSet.import.success=The import of the dataset was successful
 dataSet.import.failed=Failed to import the dataset
+dataSet.import.fileAccessDenied=Access denied when creating dataset directory. Please check file system permissions.
 dataSet.type.invalid=External data set of type ''{0}'' is not supported
 dataSet.import.inProgress=Dataset import is in progress
 dataSet.import.notStarted=Dataset import couldn''t be started
@@ -213,7 +217,7 @@ task.create.success=Task successfully created
 task.create.failed=Failed to create Task
 task.bulk.processed=Tasks successfully processed
 task.finished=Task is finished
-task.assigned=You was a new task
+task.assigned=You got a new task
 task.tooManyOpenOnes=You already have too many open tasks
 task.requestAnother=Do you really want another task?
 task.unavailable=There is currently no task available

@@ -1,7 +1,4 @@
-/**
- * tracing_layout_view.js
- * @flow
- */
+// @flow
 
 import * as React from "react";
 import OxalisController from "oxalis/controller";
@@ -16,6 +13,7 @@ import type { TracingTypeTracingType } from "oxalis/store";
 import type { ControlModeType } from "oxalis/constants";
 import Toast from "libs/toast";
 import messages from "messages";
+import NmlUploadZone from "oxalis/view/nml_upload_zone";
 
 const { Header, Sider } = Layout;
 
@@ -52,7 +50,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
 
   render() {
     return (
-      <div>
+      <NmlUploadZone>
         <OxalisController
           initialTracingType={this.props.initialTracingType}
           initialAnnotationId={this.props.initialAnnotationId}
@@ -60,7 +58,14 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
         />
 
         <Layout className="tracing-layout">
-          <Header style={{ position: "fixed", width: "100%", zIndex: 210, minHeight: 48 }}>
+          <Header
+            style={{
+              position: "fixed",
+              width: "100%",
+              zIndex: 210,
+              minHeight: 48,
+            }}
+          >
             <ButtonComponent onClick={this.handleSettingsCollapse}>
               <Icon type={this.state.isSettingsCollapsed ? "menu-unfold" : "menu-fold"} />
               Settings
@@ -88,7 +93,7 @@ class TracingLayoutView extends React.PureComponent<Props, State> {
             </div>
           </Layout>
         </Layout>
-      </div>
+      </NmlUploadZone>
     );
   }
 }

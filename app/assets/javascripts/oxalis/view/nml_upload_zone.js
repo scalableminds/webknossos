@@ -1,9 +1,10 @@
 // @flow
+import _ from "lodash";
 import * as React from "react";
 import Dropzone from "react-dropzone";
 import moment from "moment";
 import prettyBytes from "pretty-bytes";
-import { Icon, Modal, Avatar, List, Spin } from "antd";
+import { Button, Icon, Modal, Avatar, List, Spin, Checkbox } from "antd";
 import { readFileAsText } from "components/file_upload";
 import { parseNml } from "oxalis/model/helpers/nml_helpers";
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
@@ -14,6 +15,7 @@ type State = {
   files: Array<*>,
   dropzoneActive: boolean,
   isImporting: boolean,
+  createGroupForEachFile: boolean,
 };
 
 type Props = {
@@ -61,6 +63,7 @@ export default class NmlUploadZone extends React.PureComponent<Props, State> {
     files: [],
     dropzoneActive: false,
     isImporting: false,
+    createGroupForEachFile: true,
   };
 
   onDragEnter(evt: SyntheticDragEvent<>) {
@@ -117,7 +120,11 @@ export default class NmlUploadZone extends React.PureComponent<Props, State> {
     try {
       for (const file of this.state.files) {
         const nmlString = await readFileAsText(file);
-        const { trees, treeGroups } = await parseNml(nmlString);
+        const { trees, treeGroups } = await parseNml(
+          nmlString,
+          this.state.createGroupForEachFile ? file.name : null,
+        );
+
         Store.dispatch(addTreesAndGroupsAction(trees, treeGroups));
       }
     } catch (e) {
@@ -146,6 +153,19 @@ export default class NmlUploadZone extends React.PureComponent<Props, State> {
           visible={this.state.files.length > 0}
           onOk={this.importNmls}
           onCancel={() => this.setState({ files: [] })}
+          footer={[
+            <Checkbox
+              style={{ float: "left" }}
+              onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
+              checked={this.state.createGroupForEachFile}
+            >
+              Create a new tree group for each file.
+            </Checkbox>,
+            ,
+            <Button key="submit" type="primary" onClick={this.importNmls}>
+              Import
+            </Button>,
+          ]}
         >
           <Spin spinning={this.state.isImporting}>{this.renderModalContent()}</Spin>
         </Modal>

@@ -73,7 +73,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
         annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
         restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
         _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> BAD_REQUEST
-        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(id, TimeSpan.groupByMonth)
+        loggedTimeAsMap <- TimeSpanService.loggedTimeOfAnnotation(annotation._id, TimeSpanSQL.groupByMonth)
       } yield {
         Ok(Json.arr(
           loggedTimeAsMap.map {

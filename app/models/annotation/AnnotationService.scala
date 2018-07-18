@@ -20,7 +20,7 @@ import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO, DataStoreHandlingStrategy}
 import models.task.TaskSQL
 import models.team.OrganizationSQLDAO
-import models.user.User
+import models.user.{User, UserSQL}
 import utils.ObjectId
 import play.api.i18n.Messages
 import play.api.Play.current
@@ -43,7 +43,7 @@ object AnnotationService
   with ProtoGeometryImplicits
   with LazyLogging {
 
-  private def selectSuitableTeam(user: User, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
+  private def selectSuitableTeam(user: UserSQL, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
     val selectedTeamOpt = dataSet.allowedTeams.intersect(user.teamIds).headOption
     selectedTeamOpt match {
       case Some(selectedTeam) => Fox.successful(ObjectId.fromBsonId(selectedTeam))
@@ -80,7 +80,7 @@ object AnnotationService
   }
 
   def createExplorationalFor(
-    user: User,
+    user: UserSQL,
     _dataSet: ObjectId,
     tracingType: TracingType.Value,
     withFallback: Boolean)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
@@ -101,7 +101,7 @@ object AnnotationService
         _dataSet,
         None,
         teamId,
-        ObjectId.fromBsonId(user._id),
+        user._id,
         tracing
       )
       _ <- AnnotationSQLDAO.insertOne(annotation)
@@ -194,7 +194,7 @@ object AnnotationService
 
   def createAnnotationBase(
     taskFox: Fox[TaskSQL],
-    userId: BSONObjectID,
+    userId: ObjectId,
     tracingReferenceBox: Box[TracingReference],
     dataSetId: ObjectId,
     description: Option[String]
@@ -210,7 +210,7 @@ object AnnotationService
         dataSetId,
         Some(task._id),
         project._team,
-        ObjectId.fromBsonId(userId),
+        userId,
         tracingReference,
         description.getOrElse(""),
         typ = AnnotationTypeSQL.TracingBase)
@@ -220,7 +220,7 @@ object AnnotationService
 
 
   def createFrom(
-                user: User,
+                user: UserSQL,
                 dataSetId: ObjectId,
                 dataSet: DataSet,
                 tracingReference: TracingReference,
@@ -234,7 +234,7 @@ object AnnotationService
         dataSetId,
         None,
         teamId,
-        ObjectId.fromBsonId(user._id),
+        user._id,
         tracingReference,
         description,
         name = name.getOrElse(""),

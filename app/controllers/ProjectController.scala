@@ -7,7 +7,6 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.project._
 import models.task._
-import models.user.UserDAO
 import net.liftweb.common.Empty
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
 import play.api.i18n.{Messages, MessagesApi}

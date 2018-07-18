@@ -10,8 +10,8 @@ import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.binary.DataSetDAO
 import models.task.TaskSQLDAO
 import models.user.time._
-import models.user.{User, UserDAO}
-import oxalis.security.WebknossosSilhouette.{SecuredAction, UserAwareAction, SecuredRequest}
+import models.user.{UserSQL, UserSQLDAO}
+import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.json.{JsArray, _}
 import utils.ObjectId
@@ -112,7 +112,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
   }
 
   def reopen(typ: String, id: String) = SecuredAction.async { implicit request =>
-    def isReopenAllowed(user: User, annotation: AnnotationSQL) = for {
+    def isReopenAllowed(user: UserSQL, annotation: AnnotationSQL) = for {
       teamIdBson <- annotation._team.toBSONObjectId.toFox
       isAdminOrTeamManager <- user.isTeamManagerOrAdminOf(teamIdBson)
     } yield (annotation._user == user._id || isAdminOrTeamManager)
@@ -145,7 +145,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       }
     }
 
-  private def finishAnnotation(typ: String, id: String, user: User)(implicit request: SecuredRequest[_]): Fox[(AnnotationSQL, String)] = {
+  private def finishAnnotation(typ: String, id: String, user: UserSQL)(implicit request: SecuredRequest[_]): Fox[(AnnotationSQL, String)] = {
     for {
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
@@ -231,7 +231,8 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
       restrictions <- restrictionsFor(typ, id)(securedRequestToUserAwareRequest)
       _ <- restrictions.allowFinish(request.identity) ?~> Messages("notAllowed")
       newUserId <- (request.body \ "userId").asOpt[String].toFox
-      newUser <- UserDAO.findOneById(newUserId) ?~> Messages("user.notFound")
+      newUserIdValidated <- ObjectId.parse(newUserId)
+      newUser <- UserSQLDAO.findOne(newUserIdValidated) ?~> Messages("user.notFound")
       _ <- annotation.muta.transferToUser(newUser)
       updated <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updated.publicWrites(Some(request.identity), Some(restrictions))
@@ -251,7 +252,7 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  private def duplicateAnnotation(annotation: AnnotationSQL, user: User)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
+  private def duplicateAnnotation(annotation: AnnotationSQL, user: UserSQL)(implicit ctx: DBAccessContext): Fox[AnnotationSQL] = {
     for {
       dataSet <- DataSetDAO.findOneById(annotation._dataSet).toFox ?~> Messages("dataSet.notFound", annotation._dataSet)
       oldTracingReference = annotation.tracing

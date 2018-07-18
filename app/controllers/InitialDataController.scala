@@ -7,10 +7,11 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
 import models.binary._
+import models.configuration.UserConfiguration
 import models.project.{ProjectSQL, ProjectSQLDAO}
 import models.task.{TaskTypeSQL, TaskTypeSQLDAO}
 import models.team._
-import models.user.{User, UserDAO, UserService}
+import models.user._
 import net.liftweb.common.Full
 import org.joda.time.DateTime
 import oxalis.security.{TokenSQL, TokenSQLDAO, TokenType}
@@ -18,6 +19,7 @@ import play.api.i18n.MessagesApi
 import play.api.Play.current
 import oxalis.security.WebknossosSilhouette.UserAwareAction
 import play.api.Play
+import play.api.libs.json.Json
 import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
@@ -77,23 +79,27 @@ Samplecountry
     UserService.defaultUser.futureBox.flatMap {
       case Full(_) => Fox.successful(())
       case _ =>
-        val email = defaultUserEmail
-        val password = defaultUserPassword
-        logger.info("Inserted default user scmboy")
-        UserDAO.insert(User(
-          email,
-          "SCM",
-          "Boy",
-          true,
-          SCrypt.md5(password),
-          defaultOrganization.name,
-          List(TeamMembership(organizationTeam._id, organizationTeam.name, true)),
-          isAdmin = true,
-          loginInfo = UserService.createLoginInfo(email),
-          passwordInfo = UserService.createPasswordInfo(password),
-          experiences = Map("sampleExp" -> 10),
-          _isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser"))
-        )
+        for {
+          _ <- UserSQLDAO.insertOne(UserSQL(
+            ObjectId.generate,
+            defaultOrganization._id,
+            defaultUserEmail,
+            "SCM",
+            "Boy",
+            System.currentTimeMillis(),
+            Json.toJson(UserConfiguration.default),
+            SCrypt.md5(defaultUserPassword),
+            UserService.createLoginInfo(defaultUserEmail),
+            UserService.createPasswordInfo(defaultUserPassword),
+            isAdmin = true,
+            isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser").getOrElse(false),
+            isDeactivated = false
+          ))
+          _ <- Fox.successful(())
+          //TODO: experiences = Map("sampleExp" -> 10),
+          //TODO: List(TeamMembership(organizationTeam._id, organizationTeam.name, true)),
+          _ = logger.info("Inserted default user scmboy")
+        } yield ()
     }.toFox
   }
 
@@ -154,7 +160,7 @@ Samplecountry
       projects =>
         if (projects.isEmpty) {
           UserService.defaultUser.flatMap { user =>
-            val project = ProjectSQL(ObjectId.generate, ObjectId.fromBsonId(organizationTeam._id), ObjectId.fromBsonId(user._id), "sampleProject", 100, false, Some(5400000))
+            val project = ProjectSQL(ObjectId.generate, ObjectId.fromBsonId(organizationTeam._id), user._id, "sampleProject", 100, false, Some(5400000))
             for {_ <- ProjectSQLDAO.insertOne(project)} yield ()
           }
         } else Fox.successful(())

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLay
 import com.scalableminds.webknossos.schema.Tables._
 import models.configuration.DataSetConfiguration
 import models.team._
-import models.user.{User, UserSQLDAO}
+import models.user.{User, UserSQL, UserSQLDAO}
 import net.liftweb.common.Full
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -397,15 +397,24 @@ case class DataSet(
                     displayName: Option[String] = None,
                     defaultConfiguration: Option[DataSetConfiguration] = None,
                     sharingToken: Option[String] = None,
-                    created: Long = System.currentTimeMillis()) {
+                    created: Long = System.currentTimeMillis()) extends FoxImplicits {
 
   def name = dataSource.id.name
 
   def urlEncodedName: String =
     UriEncoding.encodePathSegment(name, "UTF-8")
 
-  def isEditableBy(user: Option[User]) =
-    user.exists(u => u.isAdminOf(owningOrganization) || u.isTeamManagerInOrg(owningOrganization))
+  def isEditableBy(userOpt: Option[UserSQL])(implicit ctx: DBAccessContext) = {
+    userOpt match {
+      case Some(user) =>
+        for {
+          organization <- OrganizationSQLDAO.findOneByName(owningOrganization)
+          isAdmin <- user.isAdminOf(organization._id)
+          isTeamManagerInOrg <- user.isTeamManagerInOrg(organization._id)
+        } yield (isAdmin || isTeamManagerInOrg)
+      case _ => Fox.successful(false)
+    }
+  }
 
   lazy val dataStore: DataStoreHandlingStrategy =
     DataStoreHandlingStrategy(this)
@@ -414,11 +423,12 @@ case class DataSet(
 object DataSet extends FoxImplicits {
   implicit val dataSetFormat = Json.format[DataSet]
 
-  def dataSetPublicWrites(d: DataSet, user: Option[User]): Fox[JsObject] =
+  def dataSetPublicWrites(d: DataSet, user: Option[UserSQL])(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       teams <- Fox.combined(d.allowedTeams.map(TeamDAO.findOneById(_)(GlobalAccessContext)))
       teamsJs <- Future.traverse(teams)(Team.teamPublicWrites(_)(GlobalAccessContext))
       logoUrl <- getLogoUrl(d)
+      isEditable <- d.isEditableBy(user)
     } yield {
       Json.obj("name" -> d.name,
         "dataSource" -> d.dataSource,
@@ -430,7 +440,7 @@ object DataSet extends FoxImplicits {
         "description" -> d.description,
         "displayName" -> d.displayName,
         "created" -> d.created,
-        "isEditable" -> d.isEditableBy(user),
+        "isEditable" -> isEditable,
         "logoUrl" -> logoUrl)
     }
 

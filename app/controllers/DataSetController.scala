@@ -78,7 +78,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
   def list = UserAwareAction.async { implicit request =>
     UsingFilters(
       Filter("isEditable", (value: Boolean, el: DataSet) =>
-        Fox.successful(el.isEditableBy(request.identity) && value || !el.isEditableBy(request.identity) && !value)),
+        for {isEditable <- el.isEditableBy(request.identity)} yield {isEditable && value || !isEditable && !value}),
       Filter("isActive", (value: Boolean, el: DataSet) =>
         Fox.successful(el.isActive == value))
     ) { filter =>
@@ -98,8 +98,9 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
     for {
       dataSet <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataSet.notFound", dataSetName)
       users <- UserService.findByTeams(dataSet.allowedTeams.map(ObjectId.fromBsonId(_)))
+      usersJs <- Fox.serialCombined(users.distinct)(_.compactWrites)
     } yield {
-      Ok(Writes.list(User.userCompactWrites).writes(users.distinct))
+      Ok(Json.toJson(usersJs))
     }
   }
 

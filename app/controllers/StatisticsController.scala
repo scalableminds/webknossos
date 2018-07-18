@@ -9,7 +9,7 @@ import models.annotation.AnnotationSQLDAO
 import models.binary.DataSetDAO
 import models.task.TaskSQLDAO
 import models.user.time.{TimeSpanSQL, TimeSpanService}
-import models.user.{User, UserDAO, UserService}
+import models.user.{User, UserSQLDAO, UserService}
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -39,7 +39,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
       case Some(handler) =>
         for {
           times <- TimeSpanService.loggedTimePerInterval(handler, start, end)
-          numberOfUsers <- UserDAO.countAll
+          numberOfUsers <- UserSQLDAO.countAll
           numberOfDatasets <- DataSetDAO.countAll
           numberOfAnnotations <- AnnotationSQLDAO.countAll
           numberOfAssignments <- TaskSQLDAO.countAllOpenInstances
@@ -61,13 +61,13 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
   def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
-      users <- UserDAO.findAll
+      users <- UserSQLDAO.findAll
       usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
     } yield {
       val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       val json = data.map {
         case (user, times) => Json.obj(
-          "user" -> User.userCompactWrites.writes(user),
+          "user" -> User.userCompactWrites.writes(user), // TODO: writes are async now
           "tracingTimes" -> intervalTracingTimeJson(times)
         )
       }

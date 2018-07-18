@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-class WebknossosEnvironment @Inject()(configuration: Configuration)(implicit val executionContext: ExecutionContext) extends Environment[User, CombinedAuthenticator] {
+class WebknossosEnvironment @Inject()(configuration: Configuration)(implicit val executionContext: ExecutionContext) extends Environment[UserSQL, CombinedAuthenticator] {
   val eventBusObject = EventBus()
   val cookieSettings = configuration.underlying.as[CookieAuthenticatorSettings]("silhouette.cookieAuthenticator")
   val tokenSettings = configuration.underlying.as[BearerTokenAuthenticatorSettings]("silhouette.tokenAuthenticator")

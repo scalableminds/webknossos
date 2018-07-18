@@ -4,7 +4,7 @@ package models.team
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.user.{User, UserDAO, UserSQL}
+import models.user.{UserSQLDAO, UserSQL}
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -165,7 +165,7 @@ object Team extends FoxImplicits {
       )
     )
 
-  def teamPublicReads(requestingUser: User): Reads[Team] =
+  def teamPublicReads(requestingUser: UserSQL): Reads[Team] =
     ((__ \ "name").read[String](Reads.minLength[String](3)) and
       (__ \ "organization").read[String](Reads.minLength[String](3))
       ) ((name, organization) => Team(name, organization))
@@ -189,7 +189,7 @@ object Team extends FoxImplicits {
 }
 
 object TeamService {
-  def create(team: Team, user: User)(implicit ctx: DBAccessContext) =
+  def create(team: Team, user: UserSQL)(implicit ctx: DBAccessContext) =
     for {
       _ <- TeamDAO.insert(team)
     } yield ()

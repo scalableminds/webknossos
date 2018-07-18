@@ -8,13 +8,13 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation.AnnotationState._
 import models.binary.DataSetDAO
-import models.user.User
+import models.user.{User, UserSQL}
 import play.api.libs.concurrent.Execution.Implicits._
 import utils.ObjectId
 
 class AnnotationMutations(val annotation: AnnotationSQL) extends BoxImplicits with FoxImplicits {
 
-  def finish(user: User, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[String] = {
+  def finish(user: UserSQL, restrictions: AnnotationRestrictions)(implicit ctx: DBAccessContext): Fox[String] = {
     def executeFinish: Fox[String] = {
       for {
         _ <- AnnotationService.finish(annotation)
@@ -58,8 +58,8 @@ class AnnotationMutations(val annotation: AnnotationSQL) extends BoxImplicits wi
   def cancel(implicit ctx: DBAccessContext) =
     AnnotationSQLDAO.updateState(annotation._id, Cancelled)
 
-  def transferToUser(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationSQLDAO.updateUser(annotation._id, ObjectId.fromBsonId(user._id))
+  def transferToUser(user: UserSQL)(implicit ctx: DBAccessContext) =
+    AnnotationSQLDAO.updateUser(annotation._id, user._id)
 
   def resetToBase(implicit ctx: DBAccessContext) = annotation.typ match {
     case AnnotationTypeSQL.Explorational =>

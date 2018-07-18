@@ -1,12 +1,13 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.webknossos.datastore.controllers.ValidationHelpers
 import com.scalableminds.util.mvc.ExtendedController
 import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
 import models.basics.Implicits
 import models.binary.DataSet
-import models.user.User
+import models.user.{User, UserSQL}
 import net.liftweb.common.{Box, Failure, Full, ParamFailure}
 import oxalis.security._
 import oxalis.view.ProvidesSessionData
@@ -31,16 +32,16 @@ trait Controller extends PlayController
   implicit def AuthenticatedRequest2Request[T](r: SecuredRequest[T]): Request[T] =
     r.request
 
-  def ensureTeamAdministration(user: User, teamId: ObjectId): Fox[Unit] =
+  def ensureTeamAdministration(user: UserSQL, teamId: ObjectId): Fox[Unit] =
     for {
       teamIdBson <- teamId.toBSONObjectId.toFox
       _ <- ensureTeamAdministration(user, teamIdBson)
     } yield ()
 
-  def ensureTeamAdministration(user: User, team: BSONObjectID): Fox[Unit] =
-    user.assertTeamManagerOrAdminOf(team) ?~> Messages("team.admin.notAllowed")
+  def ensureTeamAdministration(user: UserSQL, team: BSONObjectID): Fox[Unit] =
+    user.assertTeamManagerOrAdminOf(ObjectId.fromBsonId(team)) ?~> Messages("team.admin.notAllowed")
 
-  def allowedToAdministrate(admin: User, dataSet: DataSet) =
+  def allowedToAdministrate(admin: UserSQL, dataSet: DataSet)(implicit ctx: DBAccessContext) =
     dataSet.isEditableBy(Some(admin)) ?~> Messages("notAllowed")
 
   case class Filter[A, T](name: String, predicate: (A, T) => Fox[Boolean], default: Option[String] = None)(implicit converter: Converter[String, A]) {

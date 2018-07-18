@@ -38,7 +38,7 @@ case class UserSQL(
                   isDeactivated: Boolean,
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
-                  ) extends FoxImplicits {
+                  ) extends DBAccessContextPayload with Identity with FoxImplicits {
   val name = firstName + " " + lastName
 
   val abreviatedName =
@@ -548,101 +548,4 @@ object User extends FoxImplicits {
     }
   }
 
-}
-
-
-
-object UserDAO {
-
-  def findOneByEmail(email: String)(implicit ctx: DBAccessContext) =
-    for {
-      userSQL <- UserSQLDAO.findOneByEmail(email)
-      user <- User.fromUserSQL(userSQL)
-    } yield user
-
-  def findByTeams(teamIds: List[BSONObjectID], includeInactive: Boolean = true)(implicit ctx: DBAccessContext) =
-    for {
-      teams <- Fox.combined(teamIds.map(id => TeamSQLDAO.findOne(ObjectId.fromBsonId(id))))
-      usersSQL <- UserSQLDAO.findAllByTeams(teams.map(_._id), includeInactive)
-      users <- Fox.combined(usersSQL.map(User.fromUserSQL(_)))
-    } yield users
-
-  def update(_user: BSONObjectID, firstName: String, lastName: String, email: String, activated: Boolean, isAdmin: Boolean, teams: List[TeamMembership], experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[User] =
-    for {
-      teamMembershipsSQL <- Fox.combined(teams.map(TeamMembershipSQL.fromTeamMembership(_)))
-      id = ObjectId.fromBsonId(_user)
-      _ <- UserSQLDAO.updateValues(id, firstName, lastName, email, isAdmin, !activated)
-      _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(id, teamMembershipsSQL)
-      _ <- UserExperiencesSQLDAO.updateExperiencesForUser(id, experiences)
-      updated <- findOneById(_user.stringify)
-    } yield updated
-
-  def addTeam(_user: BSONObjectID, team: TeamMembership)(implicit ctx: DBAccessContext) =
-    for {
-      teamMembershipSQL <- TeamMembershipSQL.fromTeamMembership(team)(GlobalAccessContext)
-      _ <- UserTeamRolesSQLDAO.insertTeamMembership(ObjectId.fromBsonId(_user), teamMembershipSQL)
-    } yield ()
-
-  def updateTeams(_user: BSONObjectID, teamMemberships: List[TeamMembership])(implicit ctx: DBAccessContext) =
-    for {
-      teamMembershipsSQL <- Fox.combined(teamMemberships.map(TeamMembershipSQL.fromTeamMembership(_)))
-      _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(ObjectId.fromBsonId(_user), teamMembershipsSQL)
-    } yield ()
-
-  def removeTeamFromUsers(_team: BSONObjectID)(implicit ctx: DBAccessContext) =
-    UserTeamRolesSQLDAO.removeTeamFromAllUsers(ObjectId.fromBsonId(_team))
-
-  def updateUserConfiguration(user: User, configuration: UserConfiguration)(implicit ctx: DBAccessContext) =
-    UserSQLDAO.updateUserConfiguration(ObjectId.fromBsonId(user._id), configuration)
-
-  def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) =
-    for {
-      dataSet <- DataSetSQLDAO.findOneByName(dataSetName)
-      _ <- UserDataSetConfigurationSQLDAO.updateDatasetConfigurationForUserAndDataset(ObjectId.fromBsonId(user._id), dataSet._id, configuration.configuration)
-    } yield ()
-
-  def logActivity(_user: BSONObjectID, lastActivity: Long)(implicit c: DBAccessContext) =
-    UserSQLDAO.updateLastActivity(ObjectId.fromBsonId(_user), lastActivity)
-
-  def changePasswordInfo(_user: BSONObjectID, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext) =
-    UserSQLDAO.updatePasswordInfo(ObjectId.fromBsonId(_user), passwordInfo)
-
-  def findAllByIds(ids: List[BSONObjectID])(implicit ctx: DBAccessContext) =
-    for {
-      usersSQL <- UserSQLDAO.findAllByIds(ids.map(ObjectId.fromBsonId(_)))
-      users <- Fox.combined(usersSQL.map(User.fromUserSQL(_)))
-    } yield users
-
-  def findAll(implicit ctx: DBAccessContext) =
-    for {
-      usersSQL <- UserSQLDAO.findAll
-      users <- Fox.combined(usersSQL.map(User.fromUserSQL(_)))
-    } yield users
-
-  def countAll(implicit ctx: DBAccessContext) =
-    UserSQLDAO.countAll
-
-  def findOneById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[User] =
-    findOneById(id.stringify)
-
-  def findOneById(id: String)(implicit ctx: DBAccessContext): Fox[User] =
-    for {
-      userSQL <- UserSQLDAO.findOne(ObjectId(id))
-      user <- User.fromUserSQL(userSQL)
-    } yield user
-
-  def insert(user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      userSQL: UserSQL <- UserSQL.fromUser(user)
-      _ <- UserSQLDAO.insertOne(userSQL)
-      teamMemberships <- Fox.combined(user.teams.map(TeamMembershipSQL.fromTeamMembership(_)))
-      _ <- Fox.combined(teamMemberships.map(UserTeamRolesSQLDAO.insertTeamMembership(userSQL._id, _)))
-      _ <- UserExperiencesSQLDAO.updateExperiencesForUser(userSQL._id, user.experiences)
-      _ <- UserDataSetConfigurationSQLDAO.insertDatasetConfigurationsFor(userSQL._id, user.dataSetConfigurations)
-    } yield ()
-
-  def removeById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- UserSQLDAO.deleteOne(ObjectId.fromBsonId(id))
-    } yield ()
 }

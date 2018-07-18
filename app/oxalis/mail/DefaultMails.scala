@@ -1,7 +1,7 @@
 package oxalis.mail
 
 import com.scalableminds.util.mail.Mail
-import models.user.User
+import models.user.{User, UserSQL}
 import play.api.i18n.Messages
 import views._
 
@@ -24,7 +24,7 @@ object DefaultMails {
 
   val workloadMail = conf.getString("workload.mail").getOrElse("")
 
-  def registerAdminNotifyerMail(user: User, email: String, brainDBResult: String) =
+  def registerAdminNotifyerMail(user: UserSQL, email: String, brainDBResult: String) =
     Mail(
       from = email,
       headers = Map("Sender" -> defaultFrom),

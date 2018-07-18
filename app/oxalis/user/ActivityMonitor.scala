@@ -4,16 +4,15 @@ import akka.actor._
 import akka.agent.Agent
 import com.newrelic.api.agent.NewRelic
 import com.typesafe.scalalogging.LazyLogging
-import models.user.{User, UserService}
+import models.user.{UserSQL, UserService}
 import play.api.libs.concurrent.Execution.Implicits._
-import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
 import scala.concurrent.duration._
 
 case object FlushActivities
 
-case class UserActivity(user: User, time: Long)
+case class UserActivity(user: UserSQL, time: Long)
 
 class ActivityMonitor extends Actor with LazyLogging {
   implicit val system = context.system

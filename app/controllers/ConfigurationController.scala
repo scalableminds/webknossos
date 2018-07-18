@@ -20,7 +20,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
 
   def read = UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
-      UserService.findOneById(user.id, useCache = false)
+      UserService.findOneById(user._id, useCache = false)
       .map(_.userConfiguration.configurationOrDefaults)
     }
     .getOrElse(UserConfiguration.default.configuration)

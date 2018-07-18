@@ -70,7 +70,7 @@ function NmlDropArea({ showClickHint }) {
   );
 }
 
-class NmlUploadZone extends React.PureComponent<Props, State> {
+class NmlUploadZoneContainer extends React.PureComponent<Props, State> {
   state = {
     files: [],
     dropzoneActive: false,
@@ -100,7 +100,7 @@ class NmlUploadZone extends React.PureComponent<Props, State> {
     this.props.hideDropzoneModal();
   };
 
-  renderModalContent() {
+  renderNmlList() {
     return (
       <List
         itemLayout="horizontal"
@@ -155,7 +155,62 @@ class NmlUploadZone extends React.PureComponent<Props, State> {
     }
   };
 
+  renderDropzoneModal() {
+    return (
+      <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
+        <Alert
+          message="Did you know that you do can just drop NML files directly into the tracing view? You don't have to explicitly open this dialog first."
+          style={{ marginBottom: 12 }}
+        />
+        <Dropzone
+          multiple
+          disablePreview
+          style={{
+            position: "relative",
+            textAlign: "center",
+            border: "1px dashed #d9d9d9",
+            borderRadius: 4,
+            cursor: "pointer",
+          }}
+          onDrop={this.onDrop}
+        >
+          <NmlDropArea showClickHint />
+        </Dropzone>
+      </Modal>
+    );
+  }
+
+  renderImportModal() {
+    return (
+      <Modal
+        title={`Import ${this.state.files.length} NML file(s)`}
+        visible={this.state.files.length > 0}
+        onOk={this.importNmls}
+        onCancel={() => this.setState({ files: [] })}
+        footer={
+          <React.Fragment>
+            <Checkbox
+              style={{ float: "left" }}
+              onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
+              checked={this.state.createGroupForEachFile}
+            >
+              Create a new tree group for each file.
+            </Checkbox>
+            <Button key="submit" type="primary" onClick={this.importNmls}>
+              Import
+            </Button>
+          </React.Fragment>
+        }
+      >
+        <Spin spinning={this.state.isImporting}>{this.renderNmlList()}</Spin>
+      </Modal>
+    );
+  }
+
   render() {
+    // This react component wraps its children and lays a dropzone over them.
+    // That way, files can be dropped over the entire view.
+
     return (
       <Dropzone
         disableClick
@@ -166,56 +221,26 @@ class NmlUploadZone extends React.PureComponent<Props, State> {
         onDragEnter={this.onDragEnter}
         onDragLeave={this.onDragLeave}
       >
+        {
+          // While dragging files over the view, the OverlayDropZone is rendered
+          // which shows a hint to the user that he may drop files here.
+        }
         {this.state.dropzoneActive && !this.props.showDropzoneModal ? (
           <OverlayDropZone>
             <NmlDropArea showClickHint={false} />
           </OverlayDropZone>
         ) : null}
-        {this.props.showDropzoneModal ? (
-          <Modal visible footer={null} onCancel={this.props.hideDropzoneModal}>
-            <Alert
-              message="Did you know that you do can just drop NML files directly into the tracing view? You don't have to explicitly open this dialog first."
-              style={{ marginBottom: 12 }}
-            />
-            <Dropzone
-              multiple
-              disablePreview
-              style={{
-                position: "relative",
-                textAlign: "center",
-                border: "1px dashed #d9d9d9",
-                borderRadius: 4,
-                cursor: "pointer",
-              }}
-              onDrop={this.onDrop}
-            >
-              <NmlDropArea showClickHint />
-            </Dropzone>
-          </Modal>
-        ) : null}
+        {
+          // If the user explicitly selected the menu option to import NMLs,
+          // we show a proper modal which renderes almost the same hint ("You may drag... or click").
+        }
+        {this.props.showDropzoneModal ? this.renderDropzoneModal() : null}
 
-        <Modal
-          title={`Import ${this.state.files.length} NML file(s)`}
-          visible={this.state.files.length > 0}
-          onOk={this.importNmls}
-          onCancel={() => this.setState({ files: [] })}
-          footer={
-            <React.Fragment>
-              <Checkbox
-                style={{ float: "left" }}
-                onChange={e => this.setState({ createGroupForEachFile: e.target.checked })}
-                checked={this.state.createGroupForEachFile}
-              >
-                Create a new tree group for each file.
-              </Checkbox>
-              <Button key="submit" type="primary" onClick={this.importNmls}>
-                Import
-              </Button>
-            </React.Fragment>
-          }
-        >
-          <Spin spinning={this.state.isImporting}>{this.renderModalContent()}</Spin>
-        </Modal>
+        {
+          // Once, files were dropped, we render the import modal
+        }
+        {this.renderImportModal()}
+
         {this.props.children}
       </Dropzone>
     );
@@ -235,4 +260,4 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
 export default connect(
   mapStateToProps,
   mapDispatchToProps,
-)(NmlUploadZone);
+)(NmlUploadZoneContainer);

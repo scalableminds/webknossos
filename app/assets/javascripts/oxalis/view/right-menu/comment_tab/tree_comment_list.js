@@ -12,15 +12,16 @@ import { enforceSkeletonTracing } from "oxalis/model/accessors/skeletontracing_a
 import scrollIntoViewIfNeeded from "scroll-into-view-if-needed";
 import type { OxalisState, TreeType, SkeletonTracingType, CommentType } from "oxalis/store";
 
-type OwnProps = {
+type OwnProps = {|
   tree: TreeType,
   isSortedAscending: boolean,
   isSortedByName: boolean,
-};
+|};
 
-type TreeCommentListProps = {
+type TreeCommentListProps = {|
+  ...OwnProps,
   skeletonTracing: SkeletonTracingType,
-} & OwnProps;
+|};
 
 type State = {
   collapsed: boolean,
@@ -110,9 +111,10 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState, ownProps: OwnProps): $Shape<TreeCommentListProps> {
+function mapStateToProps(state: OxalisState, ownProps: OwnProps): TreeCommentListProps {
   return {
     skeletonTracing: enforceSkeletonTracing(state.tracing),
+    ...ownProps,
   };
 }
 

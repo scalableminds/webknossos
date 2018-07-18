@@ -66,8 +66,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
       const sortedComments = _.flatMap(
         sortedTrees,
-        (tree: TreeType): Array<CommentType> => {
-          return tree.comments
+        (tree: TreeType): Array<CommentType> =>
+          tree.comments
             .slice(0)
             .sort(
               Utils.localeCompareBy(
@@ -77,8 +77,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
                   : comment => `${comment.nodeId}_${comment.content}`,
                 sortAscending,
               ),
-            );
-        },
+            ),
       );
 
       const currentCommentIndex = _.findIndex(sortedComments, { nodeId: activeNode.id });

@@ -7,6 +7,7 @@ import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
 import TeamSelectionForm from "./team_selection_form";
+import FormattedDate from "components/formatted_date";
 
 const { Column, ColumnGroup } = Table;
 
@@ -69,7 +70,7 @@ class ProjectProgressReportView extends React.PureComponent<{}, State> {
       <div className="container">
         <Loop onTick={this.handleAutoReload} interval={RELOAD_INTERVAL} />
         <div className="pull-right">
-          {this.state.updatedAt != null ? FormatUtils.formatDate(this.state.updatedAt) : null}{" "}
+          {this.state.updatedAt != null ? <FormattedDate timestamp={this.state.updatedAt} /> : null}{" "}
           <Icon type="setting" onClick={this.handleOpenSettings} />
           <Icon type="reload" onClick={this.handleReload} />
         </div>

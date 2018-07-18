@@ -11,6 +11,7 @@ import type { DatasetType } from "dashboard/dataset_view";
 import type { APITeamType } from "admin/api_flow_types";
 import dice from "dice-coefficient";
 import _ from "lodash";
+import FormattedDate from "components/formatted_date";
 
 const { Column } = Table;
 
@@ -120,9 +121,9 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={Utils.localeCompareBy(typeHint, "formattedCreated")}
+            sorter={Utils.localeCompareBy(typeHint, "created")}
             sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
-            render={(__, dataset: DatasetType) => dataset.formattedCreated}
+            render={created => <FormattedDate timestamp={created} />}
           />
           <Column
             title="Scale"

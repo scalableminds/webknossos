@@ -15,6 +15,7 @@ import type { OxalisState, TreeType, SkeletonTracingType, CommentType } from "ox
 type OwnProps = {
   tree: TreeType,
   isSortedAscending: boolean,
+  isSortedByName: boolean,
 };
 
 type TreeCommentListProps = {
@@ -69,7 +70,7 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
           .sort(
             Utils.localeCompareBy(
               ([]: Array<CommentType>),
-              "content",
+              this.props.isSortedByName ? "content" : "nodeId",
               this.props.isSortedAscending,
             ),
           )
@@ -109,11 +110,9 @@ class TreeCommentList extends React.PureComponent<TreeCommentListProps, State> {
   }
 }
 
-function mapStateToProps(state: OxalisState, ownProps: OwnProps): TreeCommentListProps {
+function mapStateToProps(state: OxalisState, ownProps: OwnProps): $Shape<TreeCommentListProps> {
   return {
     skeletonTracing: enforceSkeletonTracing(state.tracing),
-    tree: ownProps.tree,
-    isSortedAscending: ownProps.isSortedAscending,
   };
 }
 

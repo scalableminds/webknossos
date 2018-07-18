@@ -8,7 +8,7 @@ import * as React from "react";
 import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import { connect } from "react-redux";
-import { Input } from "antd";
+import { Icon, Input } from "antd";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -36,11 +36,13 @@ type Props = {
 
 type CommentTabStateType = {
   isSortedAscending: boolean,
+  isSortedByName: boolean,
 };
 
 class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   state = {
     isSortedAscending: true,
+    isSortedByName: true,
   };
 
   componentWillUnmount() {
@@ -60,20 +62,24 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       // Create a sorted, flat array of all comments across all trees
       const sortedTrees = _.values(trees)
         .slice(0)
-        .sort(Utils.localeCompareBy(treeTypeHint, "name", sortAscending));
+        .sort(this.getTreeSorter());
 
-      // eslint-disable-next-line prefer-arrow-callback
-      const sortedComments = _.flatMap(sortedTrees, function(tree: TreeType): Array<CommentType> {
-        return tree.comments
-          .slice(0)
-          .sort(
-            Utils.localeCompareBy(
-              ([]: CommentType[]),
-              comment => `${comment.content}_${comment.nodeId}`,
-              sortAscending,
-            ),
-          );
-      });
+      const sortedComments = _.flatMap(
+        sortedTrees,
+        (tree: TreeType): Array<CommentType> => {
+          return tree.comments
+            .slice(0)
+            .sort(
+              Utils.localeCompareBy(
+                ([]: CommentType[]),
+                this.state.isSortedByName
+                  ? comment => `${comment.content}_${comment.nodeId}`
+                  : comment => `${comment.nodeId}_${comment.content}`,
+                sortAscending,
+              ),
+            );
+        },
+      );
 
       const currentCommentIndex = _.findIndex(sortedComments, { nodeId: activeNode.id });
       const nextCommentIndex = (currentCommentIndex + 1) % sortedComments.length;
@@ -106,21 +112,44 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   };
 
   handleChangeSorting = () => {
-    this.setState({
-      isSortedAscending: !this.state.isSortedAscending,
-    });
+    // Cycle between isSortedAscending, !isSortedAscending and !isSortedByName
+    if (!this.state.isSortedByName) {
+      this.setState({
+        isSortedAscending: true,
+        isSortedByName: true,
+      });
+      return;
+    }
+    if (!this.state.isSortedAscending) {
+      this.setState({
+        isSortedAscending: true,
+        isSortedByName: false,
+      });
+    } else {
+      this.setState({
+        isSortedAscending: false,
+        isSortedByName: true,
+      });
+    }
   };
+
+  getTreeSorter(): Function {
+    return this.state.isSortedByName
+      ? Utils.localeCompareBy(treeTypeHint, "name", this.state.isSortedAscending)
+      : Utils.localeCompareBy(treeTypeHint, "treeId");
+  }
 
   getTreeComponents() {
     return _.values(this.props.skeletonTracing.trees)
       .filter(tree => tree.comments.length > 0)
-      .sort(Utils.localeCompareBy(treeTypeHint, "name", this.state.isSortedAscending))
+      .sort(this.getTreeSorter())
       .map(tree => (
         // one tree and its comments
         <TreeCommentList
           key={tree.treeId}
           tree={tree}
           isSortedAscending={this.state.isSortedAscending}
+          isSortedByName={this.state.isSortedByName}
         />
       ));
   }
@@ -157,7 +186,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             <i className="fa fa-arrow-right" />
           </ButtonComponent>
           <ButtonComponent onClick={this.handleChangeSorting} title="sort">
-            <i className={sortingIconClass} />
+            {this.state.isSortedByName ? <i className={sortingIconClass} /> : <Icon type="minus" />}
           </ButtonComponent>
         </InputGroup>
         <ul id="comment-list" className="flex-overflow">

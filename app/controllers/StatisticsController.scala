@@ -9,7 +9,7 @@ import models.annotation.AnnotationSQLDAO
 import models.binary.DataSetDAO
 import models.task.TaskSQLDAO
 import models.user.time.{TimeSpanSQL, TimeSpanService}
-import models.user.{User, UserSQLDAO, UserService}
+import models.user.UserSQLDAO
 import oxalis.security.WebknossosSilhouette.SecuredAction
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -67,7 +67,7 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
       val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
       val json = data.map {
         case (user, times) => Json.obj(
-          "user" -> User.userCompactWrites.writes(user), // TODO: writes are async now
+          "user" -> user.compactWrites, // TODO: writes are async now
           "tracingTimes" -> intervalTracingTimeJson(times)
         )
       }

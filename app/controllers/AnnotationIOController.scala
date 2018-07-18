@@ -121,7 +121,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     } yield result
   }
 
-  def downloadExplorational(annotationId: String, typ: String, user: User)(implicit request: UserAwareRequest[_]) = {
+  def downloadExplorational(annotationId: String, typ: String, user: UserSQL)(implicit request: UserAwareRequest[_]) = {
 
     def skeletonToDownloadStream(dataSet: DataSet, annotation: AnnotationSQL, name: String) = {
       for {
@@ -170,12 +170,11 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def downloadProject(projectId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadProject(projectId: String, user: UserSQL)(implicit ctx: DBAccessContext) = {
     for {
       projectIdValidated <- ObjectId.parse(projectId)
       project <- ProjectSQLDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId)
-      teamIdBson <- project._team.toBSONObjectId.toFox
-      _ <- user.assertTeamManagerOrAdminOf(teamIdBson)
+      _ <- user.assertTeamManagerOrAdminOf(project._team)
       annotations <- AnnotationSQLDAO.findAllFinishedForProject(projectIdValidated)
       zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {
@@ -183,7 +182,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
-  def downloadTask(taskId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadTask(taskId: String, user: UserSQL)(implicit ctx: DBAccessContext) = {
     def createTaskZip(task: TaskSQL): Fox[TemporaryFile] = task.annotations.flatMap { annotations =>
       val finished = annotations.filter(_.state == Finished)
       AnnotationService.zipAnnotations(finished, task._id.toString + "_nmls.zip")
@@ -197,7 +196,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     } yield Ok.sendFile(zip.file)
   }
 
-  def downloadTaskType(taskTypeId: String, user: User)(implicit ctx: DBAccessContext) = {
+  def downloadTaskType(taskTypeId: String, user: UserSQL)(implicit ctx: DBAccessContext) = {
     def createTaskTypeZip(taskType: TaskTypeSQL) =
       for {
         tasks <- TaskSQLDAO.findAllByTaskType(taskType._id)

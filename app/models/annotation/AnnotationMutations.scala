@@ -8,9 +8,8 @@ import com.scalableminds.util.tools.{BoxImplicits, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.tracings.TracingType
 import models.annotation.AnnotationState._
 import models.binary.DataSetDAO
-import models.user.{User, UserSQL}
+import models.user.UserSQL
 import play.api.libs.concurrent.Execution.Implicits._
-import utils.ObjectId
 
 class AnnotationMutations(val annotation: AnnotationSQL) extends BoxImplicits with FoxImplicits {
 

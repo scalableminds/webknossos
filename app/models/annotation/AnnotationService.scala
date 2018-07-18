@@ -20,21 +20,17 @@ import models.annotation.nml.NmlWriter
 import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO, DataStoreHandlingStrategy}
 import models.task.TaskSQL
 import models.team.OrganizationSQLDAO
-import models.user.{User, UserSQL}
+import models.user.UserSQL
 import utils.ObjectId
 import play.api.i18n.Messages
 import play.api.Play.current
 import play.api.i18n.Messages.Implicits._
 
 import scala.concurrent.Future
-import scala.collection.{IterableLike, TraversableLike}
-import scala.runtime.Tuple3Zipped
-import scala.collection.generic.Growable
 import net.liftweb.common.{Box, Full}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.iteratee.Enumerator
-import reactivemongo.bson.BSONObjectID
 
 object AnnotationService
   extends BoxImplicits
@@ -126,8 +122,11 @@ object AnnotationService
   def countActiveAnnotationsFor(taskId: ObjectId)(implicit ctx: DBAccessContext) =
     AnnotationSQLDAO.countActiveByTask(taskId, AnnotationTypeSQL.Task)
 
-  def countOpenNonAdminTasks(user: User)(implicit ctx: DBAccessContext) =
-    AnnotationSQLDAO.countActiveAnnotationsFor(ObjectId.fromBsonId(user._id), AnnotationTypeSQL.Task, user.teamManagerTeamIds.map(ObjectId.fromBsonId(_)))
+  def countOpenNonAdminTasks(user: UserSQL)(implicit ctx: DBAccessContext) =
+    for {
+      teamManagerTeamIds <- user.teamManagerTeamIds
+      result <- AnnotationSQLDAO.countActiveAnnotationsFor(user._id, AnnotationTypeSQL.Task, teamManagerTeamIds)
+    } yield result
 
   def tracingFromBase(annotationBase: AnnotationSQL, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[TracingReference] = {
     for {
@@ -136,7 +135,7 @@ object AnnotationService
     } yield newTracingReference
   }
 
-  def createAnnotationFor(user: User, task: TaskSQL, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[AnnotationSQL] = {
+  def createAnnotationFor(user: UserSQL, task: TaskSQL, initializingAnnotationId: ObjectId)(implicit messages: Messages, ctx: DBAccessContext): Fox[AnnotationSQL] = {
     def useAsTemplateAndInsert(annotation: AnnotationSQL) = {
       for {
         dataSetName <- DataSetSQLDAO.getNameById(annotation._dataSet)(GlobalAccessContext) ?~> "dataSet.notFound"
@@ -144,7 +143,7 @@ object AnnotationService
         newTracing <- tracingFromBase(annotation, dataSet) ?~> "Failed to use annotation base as template."
         newAnnotation = annotation.copy(
           _id = initializingAnnotationId,
-          _user = ObjectId.fromBsonId(user._id),
+          _user = user._id,
           tracing = newTracing,
           state = Active,
           typ = AnnotationTypeSQL.Task,

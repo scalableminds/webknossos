@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.{Converter, Fox}
 import com.typesafe.scalalogging.LazyLogging
 import models.basics.Implicits
 import models.binary.DataSet
-import models.user.{User, UserSQL}
+import models.user.UserSQL
 import net.liftweb.common.{Box, Failure, Full, ParamFailure}
 import oxalis.security._
 import oxalis.view.ProvidesSessionData

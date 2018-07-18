@@ -101,7 +101,7 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
       _ <- UserSQLDAO.updateValues(user._id, firstName, lastName, email, isAdmin, !activated)
       _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- UserExperiencesSQLDAO.updateExperiencesForUser(user._id, experiences)
-      _ = UserCache.invalidateUser(user._id.toString)
+      _ = UserCache.invalidateUser(user._id)
       _ <- if (user.email == email) Fox.successful(()) else WebknossosSilhouette.environment.tokenDAO.updateEmail(user.email, email)
       updated <- UserSQLDAO.findOne(user._id)
     } yield updated
@@ -123,7 +123,7 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
   def updateUserConfiguration(user: UserSQL, configuration: UserConfiguration)(implicit ctx: DBAccessContext) = {
     UserSQLDAO.updateUserConfiguration(user._id, configuration).map {
       result =>
-        UserCache.invalidateUser(user._id.toString)
+        UserCache.invalidateUser(user._id)
         result
     }
   }
@@ -132,7 +132,7 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
     for {
       dataSet <- DataSetSQLDAO.findOneByName(dataSetName)
       _ <- UserDataSetConfigurationSQLDAO.updateDatasetConfigurationForUserAndDataset(user._id, dataSet._id, configuration.configuration)
-      _ = UserCache.invalidateUser(user._id.toString)
+      _ = UserCache.invalidateUser(user._id)
     } yield ()
 
   def retrieve(loginInfo: LoginInfo): Future[Option[UserSQL]] =

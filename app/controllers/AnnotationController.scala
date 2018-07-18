@@ -113,14 +113,13 @@ class AnnotationController @Inject()(val messagesApi: MessagesApi)
 
   def reopen(typ: String, id: String) = SecuredAction.async { implicit request =>
     def isReopenAllowed(user: UserSQL, annotation: AnnotationSQL) = for {
-      teamIdBson <- annotation._team.toBSONObjectId.toFox
-      isAdminOrTeamManager <- user.isTeamManagerOrAdminOf(teamIdBson)
+      isAdminOrTeamManager <- user.isTeamManagerOrAdminOf(annotation._team)
     } yield (annotation._user == user._id || isAdminOrTeamManager)
 
     for {
       annotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       isAllowed <- isReopenAllowed(request.identity, annotation)
-      _ <- isAllowed ?~> "reopen.notAllowed"
+      _ <- isAllowed.toFox ?~> "reopen.notAllowed"
       _ <- annotation.muta.reopen ?~> "annotation.invalid"
       updatedAnnotation <- provideAnnotation(typ, id)(securedRequestToUserAwareRequest)
       json <- updatedAnnotation.publicWrites(Some(request.identity))

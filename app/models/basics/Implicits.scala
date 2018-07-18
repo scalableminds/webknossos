@@ -1,17 +1,12 @@
 package models.basics
 
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
-import oxalis.security.WebknossosSilhouette.{UserAwareAction, UserAwareRequest, SecuredRequest}
-import models.user.User
+import models.user.UserSQL
+import oxalis.security.WebknossosSilhouette.{SecuredRequest, UserAwareAction, UserAwareRequest}
 
 import scala.language.implicitConversions
 
-/**
- * Company: scalableminds
- * User: tmbo
- * Date: 10.06.13
- * Time: 01:11
- */
+
 object Implicits extends Implicits
 
 trait Implicits {
@@ -30,7 +25,7 @@ trait Implicits {
     UserAwareRequest[B](Some(user), Some(authenticator), initialRequest)
   }
 
-  implicit def userToDBAccess(user: User): DBAccessContext = {
+  implicit def userToDBAccess(user: UserSQL): DBAccessContext = {
     AuthorizedAccessContext(user)
   }
 }

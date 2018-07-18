@@ -69,8 +69,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
       ProjectSQLDAO.findOneByName(project.name)(GlobalAccessContext).futureBox.flatMap {
         case Empty =>
           for {
-            teamIdBson <- project._team.toBSONObjectId.toFox
-            _ <- request.identity.assertTeamManagerOrAdminOf(teamIdBson) ?~> "team.notAllowed"
+            _ <- request.identity.assertTeamManagerOrAdminOf(project._team) ?~> "team.notAllowed"
             _ <- ProjectSQLDAO.insertOne(project)
             js <- project.publicWrites
           } yield Ok(js)
@@ -84,8 +83,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     withJsonBodyUsing(ProjectSQL.projectPublicReads) { updateRequest =>
       for{
         project <- ProjectSQLDAO.findOneByName(projectName)(GlobalAccessContext) ?~> Messages("project.notFound", projectName)
-        teamIdBson <- project._team.toBSONObjectId.toFox
-        _ <- request.identity.assertTeamManagerOrAdminOf(teamIdBson) ?~> Messages("team.notAllowed")
+        _ <- request.identity.assertTeamManagerOrAdminOf(project._team) ?~> Messages("team.notAllowed")
         _ <- ProjectSQLDAO.updateOne(updateRequest.copy(_id = project._id, paused = project.paused)) ?~> Messages("project.update.failed", projectName)
         updated <- ProjectSQLDAO.findOneByName(projectName)
         js <- updated.publicWrites
@@ -118,8 +116,7 @@ class ProjectController @Inject()(val messagesApi: MessagesApi) extends Controll
     implicit request =>
       for {
         project <- ProjectSQLDAO.findOneByName(projectName) ?~> Messages("project.notFound", projectName)
-        teamIdBson <- project._team.toBSONObjectId.toFox
-        _ <- request.identity.assertTeamManagerOrAdminOf(teamIdBson) ?~> Messages("notAllowed")
+        _ <- request.identity.assertTeamManagerOrAdminOf(project._team) ?~> Messages("notAllowed")
         tasks <- TaskSQLDAO.findAllByProject(project._id)(GlobalAccessContext)
         js <- Fox.serialCombined(tasks)(_.publicWrites)
       } yield {

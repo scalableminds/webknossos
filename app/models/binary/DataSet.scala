@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{AbstractDataLay
 import com.scalableminds.webknossos.schema.Tables._
 import models.configuration.DataSetConfiguration
 import models.team._
-import models.user.{User, UserSQL, UserSQLDAO}
+import models.user.{UserSQL, UserSQLDAO}
 import net.liftweb.common.Full
 import play.api.Play.current
 import play.api.i18n.Messages

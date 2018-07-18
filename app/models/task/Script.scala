@@ -22,7 +22,6 @@ case class ScriptSQL(
 
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
-      ownerIdBson <- _owner.toBSONObjectId.toFox
       owner <- UserSQLDAO.findOne(_owner)
       ownerJs <- owner.compactWrites
     } yield {

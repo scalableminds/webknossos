@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandler
-import models.user.User
+import models.user.UserSQL
 import net.liftweb.common.{Box, Empty, Failure, Full}
 import play.api.libs.concurrent.Execution.Implicits._
 
@@ -16,7 +16,7 @@ object AnnotationStore extends LazyLogging {
 
   case class StoredResult(result: Fox[AnnotationSQL], timestamp: Long = System.currentTimeMillis)
 
-  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
+  def requestAnnotation(id: AnnotationIdentifier, user: Option[UserSQL])(implicit ctx: DBAccessContext) = {
     requestFromCache(id)
     .getOrElse(requestFromHandler(id, user))
     .futureBox
@@ -37,7 +37,7 @@ object AnnotationStore extends LazyLogging {
       None
   }
 
-  private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
+  private def requestFromHandler(id: AnnotationIdentifier, user: Option[UserSQL])(implicit ctx: DBAccessContext) = {
     val handler = AnnotationInformationHandler.informationHandlers(id.annotationType)
     for {
       annotation <- handler.provideAnnotation(id.identifier, user)

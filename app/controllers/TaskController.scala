@@ -261,8 +261,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     val user = request.identity
     for {
       teams <- getAllowedTeamsForNextTask(user)
-      _ <- !user.isAnonymous ?~> Messages("user.anonymous.notAllowed")
-      (task, initializingAnnotationId) <-  TaskSQLDAO.assignNext(ObjectId.fromBsonId(user._id), teams) ?~> Messages("task.unavailable")
+      (task, initializingAnnotationId) <-  TaskSQLDAO.assignNext(user._id, teams) ?~> Messages("task.unavailable")
       insertedAnnotationBox <- AnnotationService.createAnnotationFor(user, task, initializingAnnotationId).futureBox
       _ <- AnnotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
       annotation <- insertedAnnotationBox.toFox
@@ -273,14 +272,15 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   }
 
 
-  private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+  private def getAllowedTeamsForNextTask(user: UserSQL)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
       if (user.isAdmin) {
-        OrganizationSQLDAO.findOneByName(user.organization).flatMap(_.teamIds)
+        OrganizationSQLDAO.findOne(user._organization).flatMap(_.teamIds)
       } else if (numberOfOpen < MAX_OPEN_TASKS) {
-        Fox.successful(user.teamIds.map(ObjectId.fromBsonId))
+        user.teamIds
+        //TODO
       } else if (user.teamManagerTeamIds.nonEmpty) {
-        Fox.successful(user.teamManagerTeamIds.map(ObjectId.fromBsonId))
+        Fox.successful(user.teamManagerTeamIds)
       } else {
         Fox.failure(Messages("task.tooManyOpenOnes"))
       }
@@ -290,7 +290,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   def peekNext = SecuredAction.async { implicit request =>
     val user = request.identity
     for {
-      task <- TaskSQLDAO.peekNextAssignment(ObjectId.fromBsonId(user._id), user.teamIds.map(ObjectId.fromBsonId)) ?~> Messages("task.unavailable")
+      teamIds <- user.teamIds
+      task <- TaskSQLDAO.peekNextAssignment(user._id, teamIds) ?~> Messages("task.unavailable")
       taskJson <- task.publicWrites(GlobalAccessContext)
     } yield Ok(taskJson)
   }

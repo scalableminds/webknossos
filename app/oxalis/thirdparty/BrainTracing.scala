@@ -8,7 +8,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.annotation.AnnotationSQL
 import models.project.ProjectSQL
 import models.task.TaskSQL
-import models.user.{User, UserSQL}
+import models.user.UserSQL
 import net.liftweb.common.Box
 import oxalis.mail.DefaultMails
 import play.api.Play
@@ -83,7 +83,7 @@ object BrainTracing extends LazyLogging with FoxImplicits {
                               project: Box[ProjectSQL],
                               task: Box[TaskSQL],
                               annotation: Option[AnnotationSQL],
-                              user: User) = {
+                              user: UserSQL) = {
     for {
       p <- project
       a <- annotation

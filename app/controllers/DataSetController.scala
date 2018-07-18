@@ -7,7 +7,7 @@ import com.scalableminds.util.tools.DefaultConverters._
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.binary._
 import models.team.TeamDAO
-import models.user.{User, UserService}
+import models.user.UserService
 import oxalis.ndstore.{ND2WK, NDServerConnection}
 import oxalis.security.URLSharing
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction}

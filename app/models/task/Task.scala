@@ -10,7 +10,7 @@ import models.annotation._
 import models.binary.DataSetDAO
 import models.project.ProjectSQLDAO
 import models.team.TeamSQLDAO
-import models.user.{Experience, User}
+import models.user.{Experience, UserSQL}
 import org.joda.time.DateTime
 import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
@@ -67,10 +67,6 @@ case class TaskSQL(
       active <- countActive
     } yield CompletionStatus(openInstances, active, totalInstances - (active + openInstances))
   }
-
-  def hasEnoughExperience(user: User) =
-    neededExperience.isEmpty || user.experiences.get(neededExperience.domain).exists(_ >= neededExperience.value)
-
 
 
   def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] =

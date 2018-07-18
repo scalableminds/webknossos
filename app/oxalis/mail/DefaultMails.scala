@@ -1,7 +1,7 @@
 package oxalis.mail
 
 import com.scalableminds.util.mail.Mail
-import models.user.{User, UserSQL}
+import models.user.UserSQL
 import play.api.i18n.Messages
 import views._
 
@@ -32,7 +32,7 @@ object DefaultMails {
       bodyText = html.mail.registerAdminNotify(user, brainDBResult, uri).body,
       recipients = List(newUserMailingList))
 
-  def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String) =
+  def overLimitMail(user: UserSQL, projectName: String, taskId: String, annotationId: String) =
     Mail(
       from = defaultFrom,
       subject = s"Time limit reached. ${user.abreviatedName} in $projectName",

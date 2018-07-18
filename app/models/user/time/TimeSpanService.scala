@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation._
 import models.task.TaskSQLDAO
-import models.user.{User, UserSQL}
+import models.user.UserSQL
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
 import oxalis.thirdparty.BrainTracing.Mailer
@@ -94,14 +94,14 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
 
   private def trackTime(timestamps: Seq[Long], _user: ObjectId, _annotation: AnnotationSQL)(implicit ctx: DBAccessContext) = {
     // Only if the annotation belongs to the user, we are going to log the time on the annotation
-    val annotation = if (_annotation._user == ObjectId.fromBsonId(_user)) Some(_annotation) else None
+    val annotation = if (_annotation._user == _user) Some(_annotation) else None
     val start = timestamps.head
 
     var timeSpansToInsert: List[TimeSpanSQL] = List()
     var timeSpansToUpdate: List[(TimeSpanSQL, Long)] = List()
 
     def createNewTimeSpan(timestamp: Long, _user: ObjectId, annotation: Option[AnnotationSQL]) = {
-      val timeSpan = TimeSpanSQL.createFrom(timestamp, timestamp, ObjectId.fromBsonId(_user), annotation.map(_._id))
+      val timeSpan = TimeSpanSQL.createFrom(timestamp, timestamp, _user, annotation.map(_._id))
       timeSpansToInsert = timeSpan :: timeSpansToInsert
       timeSpan
     }

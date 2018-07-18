@@ -5,7 +5,6 @@ import com.mohiva.play.silhouette.api.{Identity, LoginInfo}
 import com.scalableminds.util.accesscontext._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
-import reactivemongo.play.json.BSONFormats._
 import models.binary.DataSetSQLDAO
 import models.configuration.{DataSetConfiguration, UserConfiguration}
 import models.team._
@@ -15,7 +14,6 @@ import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import reactivemongo.bson.BSONObjectID
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
@@ -147,29 +145,6 @@ case class UserSQL(
       )
     }
 
-}
-
-object UserSQL {
-  def fromUser(user: User)(implicit ctx: DBAccessContext): Fox[UserSQL] =
-    for {
-      organization <- OrganizationSQLDAO.findOneByName(user.organization)
-    } yield {
-      UserSQL(
-        ObjectId.fromBsonId(user._id),
-        organization._id,
-        user.email,
-        user.firstName,
-        user.lastName,
-        user.lastActivity,
-        Json.toJson(user.userConfiguration.configuration),
-        user.md5hash,
-        user.loginInfo,
-        user.passwordInfo,
-        user.isAdmin,
-        user.isSuperUser,
-        !user.isActive,
-        System.currentTimeMillis())
-  }
 }
 
 object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
@@ -399,153 +374,6 @@ object UserDataSetConfigurationSQLDAO extends SimpleSQLDAO {
         sqlu"""insert into webknossos.user_dataSetConfigurations(_user, _dataSet, configuration)
                values ('#${sanitize(configuration.toString)}', ${userId} and _dataSet = ${dataSetId})""")
     } yield ()
-  }
-
-}
-
-
-case class User(
-                 email: String,
-                 firstName: String,
-                 lastName: String,
-                 isActive: Boolean = false,
-                 md5hash: String = "",
-                 organization: String,
-                 teams: List[TeamMembership],
-                 userConfiguration: UserConfiguration = UserConfiguration.default,
-                 dataSetConfigurations: Map[String, DataSetConfiguration] = Map.empty,
-                 experiences: Map[String, Int] = Map.empty,
-                 lastActivity: Long = System.currentTimeMillis,
-                 isAdmin: Boolean = false,
-                 _isAnonymous: Option[Boolean] = None,
-                 _isSuperUser: Option[Boolean] = None,
-                 _id: BSONObjectID = BSONObjectID.generate,
-                 loginInfo: LoginInfo,
-                 passwordInfo: PasswordInfo) extends DBAccessContextPayload with Identity with FoxImplicits {
-
-  def teamIds = teams.map(_._id)
-
-  def isSuperUser = _isSuperUser getOrElse false
-
-  def isAnonymous = _isAnonymous getOrElse false
-
-  val name = firstName + " " + lastName
-
-  val abreviatedName =
-    (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
-
-  lazy val id = _id.stringify
-
-  lazy val teamManagerTeams = teams.filter(_.isTeamManager)
-
-  lazy val teamManagerTeamIds = teamManagerTeams.map(_._id)
-
-  def isTeamManagerOrAdminOf(_team: BSONObjectID): Fox[Boolean] = {
-    for {
-      team <- TeamDAO.findOneById(_team)(GlobalAccessContext)
-    } yield (teamManagerTeamIds.contains(_team) || isAdmin && organization == team.organization)
-  }
-
-  def assertTeamManagerOrAdminOf(_team: BSONObjectID) =
-    for {
-      asBoolean <- isTeamManagerOrAdminOf(_team)
-      _ <- asBoolean ?~> Messages("notAllowed")
-    } yield ()
-
-  def isTeamManagerInOrg(organization: String) = teamManagerTeams.length > 0 && organization == this.organization
-
-  def isAdminOf(organization: String): Boolean = isAdmin && organization == this.organization
-
-  override def toString = email
-
-
-  def isEditableBy(other: User) =
-    other.isTeamManagerOrAdminOf(this) || teams.isEmpty
-
-  def isTeamManagerOrAdminOf(user: User): Boolean =
-    user.teamIds.intersect(teamManagerTeamIds).nonEmpty || this.isAdminOf(user)
-
-  def isAdminOf(user: User): Boolean =
-    this.organization == user.organization && this.isAdmin
-}
-
-object User extends FoxImplicits {
-
-  implicit val passwordInfoJsonFormat: Format[PasswordInfo] = Json.format[PasswordInfo]
-  implicit val userFormat = Json.format[User]
-
-  def userPublicWrites(requestingUser: User): Writes[User] =
-    ((__ \ "id").write[String] and
-      (__ \ "email").write[String] and
-      (__ \ "firstName").write[String] and
-      (__ \ "lastName").write[String] and
-      (__ \ "isAdmin").write[Boolean] and
-      (__ \ "isActive").write[Boolean] and
-      (__ \ "teams").write[List[JsObject]] and
-      (__ \ "experiences").write[Map[String, Int]] and
-      (__ \ "lastActivity").write[Long] and
-      (__ \ "isAnonymous").write[Boolean] and
-      (__ \ "isEditable").write[Boolean] and
-      (__ \ "organization").write[String]) (u =>
-      (u.id, u.email, u.firstName, u.lastName, u.isAdmin, u.isActive, u.teams.map(TeamMembership.teamMembershipPublicWrites(_)), u.experiences,
-        u.lastActivity, u.isAnonymous, u.isEditableBy(requestingUser), u.organization))
-
-  def userCompactWrites: Writes[User] =
-    ((__ \ "id").write[String] and
-      (__ \ "email").write[String] and
-      (__ \ "firstName").write[String] and
-      (__ \ "lastName").write[String] and
-      (__ \ "isAnonymous").write[Boolean] and
-      (__ \ "teams").write[List[JsObject]]) (u =>
-      (u.id, u.email, u.firstName, u.lastName, u.isAnonymous, u.teams.map(TeamMembership.teamMembershipPublicWrites(_))))
-
-  private def constructDatasetConfigurations(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, DataSetConfiguration]] =
-    for {
-      jsValueByDatasetName <- fetchDatasetConfigurations(userId)
-    } yield {
-      jsValueByDatasetName.mapValues(v => DataSetConfiguration(v.validate[Map[String, JsValue]].getOrElse(Map.empty)))
-    }
-
-  private def fetchDatasetConfigurations(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, JsValue]] = {
-    for {
-      jsValueByDataSetId: Map[ObjectId, JsValue] <- UserDataSetConfigurationSQLDAO.findAllForUser(userId)
-      keyList: List[ObjectId] = jsValueByDataSetId.keySet.toList
-      dataSets <- Fox.combined(keyList.map(dataSetId => DataSetSQLDAO.findOne(dataSetId)))
-    } yield {
-      keyList.zip(dataSets).map(Function.tupled((dataSetId, dataSet) => (dataSet.name, jsValueByDataSetId(dataSetId)))).toMap
-    }
-  }
-
-  def fromUserSQL(s: UserSQL)(implicit ctx: DBAccessContext): Fox[User] = {
-    for {
-      idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      teamRolesSQL <- UserTeamRolesSQLDAO.findTeamMembershipsForUser(s._id)(GlobalAccessContext)
-      teamRoles <- Fox.combined(teamRolesSQL.map(TeamMembership.fromTeamMembershipSQL(_)))
-      experiences <- UserExperiencesSQLDAO.findAllExperiencesForUser(s._id)(GlobalAccessContext)
-      userConfiguration <- JsonHelper.jsResultToFox(s.userConfiguration.validate[Map[String, JsValue]])
-      dataSetConfigurations <- constructDatasetConfigurations(s._id)(GlobalAccessContext)
-      organization <- OrganizationSQLDAO.findOne(s._organization)
-    } yield {
-      User(
-        s.email,
-        s.firstName,
-        s.lastName,
-        !s.isDeactivated,
-        s.md5hash,
-        organization.name,
-        teamRoles,
-        UserConfiguration(userConfiguration),
-        dataSetConfigurations,
-        experiences,
-        s.lastActivity,
-        s.isAdmin,
-        None,
-        Some(s.isSuperUser),
-        idBson,
-        s.loginInfo,
-        s.passwordInfo
-      )
-    }
   }
 
 }

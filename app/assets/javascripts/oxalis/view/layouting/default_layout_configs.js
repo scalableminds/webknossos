@@ -35,17 +35,17 @@ const Panes = {
   Mappings: Pane("Segmentation", "MappingInfoView"),
 };
 
-const OrthoViewsGrid = [Column(Panes.xy, Panes.xz), Column(Panes.yz, Panes.td)];
+const OrthoViewsGrid = [Column([Panes.xy, Panes.xz]), Column([Panes.yz, Panes.td])];
 
-const SkeletonRightHandColumn = Stack(
+const SkeletonRightHandColumn = Stack([
   Panes.DatasetInfoTabView,
   Panes.TreesTabView,
   Panes.CommentTabView,
   Panes.AbstractTreeTabView,
   Panes.Mappings,
-);
+]);
 
-const NonSkeletonRightHandColumn = Stack(Panes.DatasetInfoTabView, Panes.Mappings);
+const NonSkeletonRightHandColumn = Stack([Panes.DatasetInfoTabView, Panes.Mappings]);
 
 const createLayout = (...content: Array<*>) => ({
   settings: LayoutSettings,
@@ -55,10 +55,22 @@ const createLayout = (...content: Array<*>) => ({
   content,
 });
 
-const OrthoLayout = createLayout(Row(...OrthoViewsGrid, SkeletonRightHandColumn));
-const OrthoLayoutView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const VolumeTracingView = createLayout(Row(...OrthoViewsGrid, NonSkeletonRightHandColumn));
-const ArbitraryLayout = createLayout(Row(Panes.arbitraryViewport, SkeletonRightHandColumn));
+// const OrthoLayout = createLayout(Row([...OrthoViewsGrid, SkeletonRightHandColumn]));
+
+const OrthoLayout = createLayout(
+  Row([
+    { ...Panes.xy, width: 45 },
+    {
+      ...Column([{ ...Panes.xz, height: 70 }, Row([Panes.yz, Panes.td, Panes.Mappings])]),
+      width: 40,
+    },
+    { ...Panes.DatasetInfoTabView, width: 15 },
+  ]),
+);
+
+const OrthoLayoutView = createLayout(Row([...OrthoViewsGrid, NonSkeletonRightHandColumn]));
+const VolumeTracingView = createLayout(Row([...OrthoViewsGrid, NonSkeletonRightHandColumn]));
+const ArbitraryLayout = createLayout(Row([Panes.arbitraryViewport, SkeletonRightHandColumn]));
 
 const defaultLayouts = {
   ArbitraryLayout,

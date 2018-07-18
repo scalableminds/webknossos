@@ -104,5 +104,5 @@ export class GoldenLayoutAdapter extends React.PureComponent<Props<*>, *> {
 }
 
 // Warning: Don't use a default export for this component. Otherwise, when webpack is run in prod mode,
-// UglifyJS will break this component be re-mounting it on every state change of the parent
+// UglifyJS will break this component by re-mounting it on every state change of the parent
 export default {};

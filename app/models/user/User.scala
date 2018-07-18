@@ -21,9 +21,6 @@ import slick.jdbc.TransactionIsolation.Serializable
 import slick.lifted.Rep
 import utils.{ObjectId, SQLDAO, SimpleSQLDAO}
 
-import scala.concurrent.Await
-import scala.concurrent.duration._
-
 
 case class UserSQL(
                   _id: ObjectId,
@@ -41,7 +38,110 @@ case class UserSQL(
                   isDeactivated: Boolean,
                   created: Long = System.currentTimeMillis(),
                   isDeleted: Boolean = false
-                  )
+                  ) extends FoxImplicits {
+  val name = firstName + " " + lastName
+
+  val abreviatedName =
+    (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
+
+  def organization = OrganizationSQLDAO.findOne(_organization)(GlobalAccessContext)
+
+  def experiences = UserExperiencesSQLDAO.findAllExperiencesForUser(_id)(GlobalAccessContext)
+
+  def teamMemberships = UserTeamRolesSQLDAO.findTeamMembershipsForUser(_id)(GlobalAccessContext)
+
+  def teamManagerMemberships =
+    for {
+      teamMemberships <- teamMemberships
+    } yield teamMemberships.filter(_.isTeamManager)
+
+  def teamManagerTeamIds =
+    for {
+      teamManagerMemberships <- teamManagerMemberships
+    } yield teamManagerMemberships.map(_.teamId)
+
+  def teamIds =
+    for {
+      teamMemberships <- teamMemberships
+    } yield teamMemberships.map(_.teamId)
+
+  def isTeamManagerOrAdminOf(otherUser: UserSQL): Fox[Boolean] =
+    for {
+      otherUserTeamIds <- otherUser.teamIds
+      teamManagerTeamIds <- teamManagerTeamIds
+    } yield (otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || this.isAdminOf(otherUser))
+
+  def isTeamManagerOrAdminOf(_team: ObjectId): Fox[Boolean] =
+    for {
+      team <- TeamSQLDAO.findOne(_team)(GlobalAccessContext)
+      teamManagerTeamIds <- teamManagerTeamIds
+    } yield (teamManagerTeamIds.contains(_team) || this.isAdmin && this._organization == team._organization)
+
+  def assertTeamManagerOrAdminOf(_team: ObjectId) =
+    for {
+      asBoolean <- isTeamManagerOrAdminOf(_team)
+      _ <- asBoolean ?~> Messages("notAllowed")
+    } yield ()
+
+  def isEditableBy(otherUser: UserSQL): Fox[Boolean] =
+    for {
+      otherIsTeamManagerOrAdmin <- otherUser.isTeamManagerOrAdminOf(this)
+      teamMemberships <- teamMemberships
+    } yield {
+      (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
+    }
+
+  def isAdminOf(otherUser: UserSQL): Boolean =
+    this._organization == otherUser._organization && this.isAdmin
+
+  def isTeamManagerInOrg(_organization: ObjectId): Fox[Boolean] =
+    for {
+      teamManagerMemberships <- teamManagerMemberships
+    } yield (teamManagerMemberships.length > 0 && _organization == this._organization)
+
+  def isAdminOf(_organization: ObjectId): Boolean =
+    isAdmin && _organization == this._organization
+
+  def publicWrites(requestingUser: UserSQL)(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      isEditable <- isEditableBy(requestingUser)
+      organization <- organization
+      teamMemberships <- teamMemberships
+      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
+      experiences <- experiences
+    } yield {
+      Json.obj(
+        "id" -> _id.toString,
+        "email" -> email,
+        "firstName" -> firstName,
+        "lastName" -> lastName,
+        "isAdmin" -> isAdmin,
+        "isActive" -> !isDeactivated,
+        "teams" -> teamMembershipsJs,
+        "experiences" -> experiences,
+        "lastActivity" -> lastActivity,
+        "isAnonymous" -> false,
+        "isEditable" -> isEditable,
+        "organization" -> organization.name
+      )
+    }
+
+  def compactWrites(implicit ctx: DBAccessContext): Fox[JsObject] =
+    for {
+      teamMemberships <- teamMemberships
+      teamMembershipsJs <- Fox.serialCombined(teamMemberships)(_.publicWrites)
+    } yield {
+      Json.obj(
+        "id" -> _id.toString,
+        "email" -> email,
+        "firstName" -> firstName,
+        "lastName" -> lastName,
+        "isAnonymous" -> false,
+        "teams" -> teamMembershipsJs
+      )
+    }
+
+}
 
 object UserSQL {
   def fromUser(user: User)(implicit ctx: DBAccessContext): Fox[UserSQL] =
@@ -191,15 +291,16 @@ object UserSQLDAO extends SQLDAO[UserSQL, UsersRow, Users] {
 
 object UserTeamRolesSQLDAO extends SimpleSQLDAO {
 
-  def findTeamMembershipsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembership]] = {
+  def findTeamMembershipsForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[TeamMembershipSQL]] = {
     val query = for {
       (teamRoleRow, team) <- UserTeamRoles.filter(_._User === userId.id) join Teams  on (_._Team === _._Id)
     } yield (team._Id, team.name, teamRoleRow.isteammanager)
 
     for {
       rows: Seq[(String, String, Boolean)] <- run(query.result)
+      teamMemberships <- Fox.combined(rows.toList.map { case (teamId, teamName, isTeamManager) => ObjectId.parse(teamId).map(teamIdValidated => TeamMembershipSQL(teamIdValidated, isTeamManager)) })
     } yield {
-      rows.toList.map { case (teamId, teamName, isTeamManager) => TeamMembership(BSONObjectID.parse(teamId).get, teamName, isTeamManager) }
+      teamMemberships
     }
   }
 
@@ -250,7 +351,7 @@ object UserExperiencesSQLDAO extends SimpleSQLDAO {
 
 }
 
-object UserDataSetConfigurationsSQLDAO extends SimpleSQLDAO {
+object UserDataSetConfigurationSQLDAO extends SimpleSQLDAO {
 
   def findAllForUser(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[ObjectId, JsValue]] = {
     for {
@@ -351,38 +452,6 @@ case class User(
 
   override def toString = email
 
-  def setExperience(name: String, value: Int) = {
-    val n = name.trim
-    this.copy(experiences = this.experiences + (n -> value))
-  }
-
-  def increaseExperience(name: String, value: Int) = {
-    val n = name.trim
-    this.copy(experiences = this.experiences + (n -> (this.experiences.getOrElse(n, default = 0) + value)))
-  }
-
-  def deleteExperience(name: String) = {
-    val n = name.trim
-    this.copy(experiences = this.experiences.filterNot(_._1 == n))
-  }
-
-  def logActivity(time: Long) =
-    this.copy(lastActivity = time)
-
-  def activate =
-    this.copy(isActive = true)
-
-  def deactivate =
-    this.copy(isActive = false)
-
-  def addTeam(teamMemberships: List[TeamMembership]) =
-    this.copy(teams = teamMemberships ::: teams)
-
-  def removeTeam(team: String) =
-    this.copy(teams = teams.filterNot(_._id == team))
-
-  def lastActivityDays =
-    (System.currentTimeMillis - this.lastActivity) / (1000 * 60 * 60 * 24)
 
   def isEditableBy(other: User) =
     other.isTeamManagerOrAdminOf(this) || teams.isEmpty
@@ -433,7 +502,7 @@ object User extends FoxImplicits {
 
   private def fetchDatasetConfigurations(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Map[String, JsValue]] = {
     for {
-      jsValueByDataSetId: Map[ObjectId, JsValue] <- UserDataSetConfigurationsSQLDAO.findAllForUser(userId)
+      jsValueByDataSetId: Map[ObjectId, JsValue] <- UserDataSetConfigurationSQLDAO.findAllForUser(userId)
       keyList: List[ObjectId] = jsValueByDataSetId.keySet.toList
       dataSets <- Fox.combined(keyList.map(dataSetId => DataSetSQLDAO.findOne(dataSetId)))
     } yield {
@@ -444,7 +513,8 @@ object User extends FoxImplicits {
   def fromUserSQL(s: UserSQL)(implicit ctx: DBAccessContext): Fox[User] = {
     for {
       idBson <- s._id.toBSONObjectId.toFox ?~> Messages("sql.invalidBSONObjectId", s._id.toString)
-      teamRoles <- UserTeamRolesSQLDAO.findTeamMembershipsForUser(s._id)(GlobalAccessContext)
+      teamRolesSQL <- UserTeamRolesSQLDAO.findTeamMembershipsForUser(s._id)(GlobalAccessContext)
+      teamRoles <- Fox.combined(teamRolesSQL.map(TeamMembership.fromTeamMembershipSQL(_)))
       experiences <- UserExperiencesSQLDAO.findAllExperiencesForUser(s._id)(GlobalAccessContext)
       userConfiguration <- JsonHelper.jsResultToFox(s.userConfiguration.validate[Map[String, JsValue]])
       dataSetConfigurations <- constructDatasetConfigurations(s._id)(GlobalAccessContext)
@@ -522,7 +592,7 @@ object UserDAO {
   def updateDataSetConfiguration(user: User, dataSetName: String, configuration: DataSetConfiguration)(implicit ctx: DBAccessContext) =
     for {
       dataSet <- DataSetSQLDAO.findOneByName(dataSetName)
-      _ <- UserDataSetConfigurationsSQLDAO.updateDatasetConfigurationForUserAndDataset(ObjectId.fromBsonId(user._id), dataSet._id, configuration.configuration)
+      _ <- UserDataSetConfigurationSQLDAO.updateDatasetConfigurationForUserAndDataset(ObjectId.fromBsonId(user._id), dataSet._id, configuration.configuration)
     } yield ()
 
   def logActivity(_user: BSONObjectID, lastActivity: Long)(implicit c: DBAccessContext) =
@@ -562,7 +632,7 @@ object UserDAO {
       teamMemberships <- Fox.combined(user.teams.map(TeamMembershipSQL.fromTeamMembership(_)))
       _ <- Fox.combined(teamMemberships.map(UserTeamRolesSQLDAO.insertTeamMembership(userSQL._id, _)))
       _ <- UserExperiencesSQLDAO.updateExperiencesForUser(userSQL._id, user.experiences)
-      _ <- UserDataSetConfigurationsSQLDAO.insertDatasetConfigurationsFor(userSQL._id, user.dataSetConfigurations)
+      _ <- UserDataSetConfigurationSQLDAO.insertDatasetConfigurationsFor(userSQL._id, user.dataSetConfigurations)
     } yield ()
 
   def removeById(id: BSONObjectID)(implicit ctx: DBAccessContext): Fox[Unit] =

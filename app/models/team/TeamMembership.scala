@@ -10,7 +10,19 @@ import reactivemongo.bson.BSONObjectID
 import utils.ObjectId
 
 
-case class TeamMembershipSQL(teamId: ObjectId, isTeamManager: Boolean)
+case class TeamMembershipSQL(teamId: ObjectId, isTeamManager: Boolean) {
+  def publicWrites(implicit ctx: DBAccessContext): Fox[JsObject] = {
+    for {
+      team <- TeamSQLDAO.findOne(teamId)
+    } yield {
+      Json.obj(
+        "id" -> teamId,
+        "name" -> team.name,
+        "isTeamManager" -> isTeamManager
+      )
+    }
+  }
+}
 
 object TeamMembershipSQL {
   def fromTeamMembership(t: TeamMembership)(implicit ctx: DBAccessContext): Fox[TeamMembershipSQL] = {

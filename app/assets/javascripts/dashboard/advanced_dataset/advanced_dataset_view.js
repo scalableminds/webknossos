@@ -121,7 +121,7 @@ class AdvancedDatasetView extends React.PureComponent<Props, State> {
             title="Creation Date"
             dataIndex="created"
             key="created"
-            sorter={Utils.localeCompareBy(typeHint, "created")}
+            sorter={Utils.compareBy(typeHint, "created")}
             sortOrder={sortedInfo.columnKey === "created" && sortedInfo.order}
             render={created => <FormattedDate timestamp={created} />}
           />

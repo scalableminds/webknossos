@@ -325,7 +325,7 @@ class TaskCreateBulkView extends React.PureComponent<Props, State> {
               <FormItem>
                 {this.state.isUploading ? (
                   <Progress
-                    percent={parseInt(this.state.tasksProcessed / this.state.tasksCount * 100)}
+                    percent={parseInt((this.state.tasksProcessed / this.state.tasksCount) * 100)}
                     showInfo
                     status="active"
                   />

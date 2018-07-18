@@ -341,4 +341,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(UserSettingsView);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(UserSettingsView);

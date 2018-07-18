@@ -1,19 +1,18 @@
 package controllers
 
 import javax.inject.Inject
-
 import com.scalableminds.util.geometry.{BoundingBox, Point3D, Vector3D}
 import com.scalableminds.util.mvc.ResultBox
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TimeLogger}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.tracings.{ProtoGeometryImplicits, TracingReference}
 import models.annotation.nml.NmlService
-import models.annotation.{AnnotationSQLDAO, AnnotationService, AnnotationTypeSQL}
+import models.annotation.AnnotationService
 import models.binary.{DataSetDAO, DataSetSQLDAO}
 import models.project.ProjectSQLDAO
-import models.task.{ScriptDAO, TaskSQL, TaskSQLDAO, TaskTypeDAO}
-import models.team.OrganizationDAO
+import models.task._
+import models.team.OrganizationSQLDAO
 import models.user._
 import net.liftweb.common.Box
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest}
@@ -87,7 +86,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
       inputFile <- body.file("nmlFile[]") ?~> Messages("nml.file.notFound")
       jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption) ?~> Messages("format.json.missing")
       params <- JsonHelper.parseJsonToFox[NmlTaskParameters](jsonString) ?~> Messages("task.create.failed")
-      taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
+      taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
+      taskType <- TaskTypeSQLDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       project <- ProjectSQLDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- ensureTeamAdministration(request.identity, project._team)
       parseResults: List[NmlService.NmlParseResult] = NmlService.extractFromFile(inputFile.ref.file, inputFile.filename).parseResults
@@ -170,7 +170,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
     scriptIdOpt match {
       case Some(scriptId) =>
         for {
-          _ <- ScriptDAO.findOneById(scriptId) ?~> Messages("script.notFound")
+          scriptIdValidated <- ObjectId.parse(scriptId)
+          _ <- ScriptSQLDAO.findOne(scriptIdValidated) ?~> Messages("script.notFound")
         } yield ()
       case _ => Fox.successful(())
     }
@@ -179,7 +180,8 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   private def createTaskWithoutAnnotationBase(params: TaskParameters, tracingReferenceBox: Box[TracingReference])(implicit request: SecuredRequest[_]): Fox[TaskSQL] = {
     for {
       _ <- tracingReferenceBox.toFox
-      taskType <- TaskTypeDAO.findOneById(params.taskTypeId) ?~> Messages("taskType.notFound")
+      taskTypeIdValidated <- ObjectId.parse(params.taskTypeId)
+      taskType <- TaskTypeSQLDAO.findOne(taskTypeIdValidated) ?~> Messages("taskType.notFound")
       project <- ProjectSQLDAO.findOneByName(params.projectName) ?~> Messages("project.notFound", params.projectName)
       _ <- validateScript(params.scriptId)
       _ <- ensureTeamAdministration(request.identity, project._team)
@@ -187,7 +189,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
         ObjectId.generate,
         project._id,
         params.scriptId.map(ObjectId(_)),
-        ObjectId.fromBsonId(taskType._id),
+        taskType._id,
         params.neededExperience,
         params.openInstances, //all instances are open at this time
         params.openInstances,
@@ -274,7 +276,7 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
   private def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
     AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
       if (user.isAdmin) {
-        OrganizationDAO.findOneByName(user.organization).map(_.teams.map(ObjectId.fromBsonId))
+        OrganizationSQLDAO.findOneByName(user.organization).flatMap(_.teamIds)
       } else if (numberOfOpen < MAX_OPEN_TASKS) {
         Fox.successful(user.teamIds.map(ObjectId.fromBsonId))
       } else if (user.teamManagerTeamIds.nonEmpty) {

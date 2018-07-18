@@ -126,7 +126,7 @@ function* copySegmentationLayer(action: CopySegmentationLayerActionType): Genera
   const segmentationLayer = yield call([Model, Model.getSegmentationLayer]);
   const position = Dimensions.roundCoordinate(yield select(state => getPosition(state.flycam)));
   const zoom = yield select(state => state.flycam.zoomStep);
-  const halfViewportWidth = Math.round(Constants.PLANE_WIDTH / 2 * zoom);
+  const halfViewportWidth = Math.round((Constants.PLANE_WIDTH / 2) * zoom);
   const activeCellId = yield select(state => state.tracing.activeCellId);
 
   function copyVoxelLabel(voxelTemplateAddress, voxelTargetAddress) {

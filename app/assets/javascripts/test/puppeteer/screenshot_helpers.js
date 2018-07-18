@@ -5,8 +5,7 @@ const fs = require("fs");
 
 function openScreenshot(path, name) {
   return new Promise(resolve => {
-    fs
-      .createReadStream(`${path}/${name}.png`)
+    fs.createReadStream(`${path}/${name}.png`)
       .on("error", error => {
         if (error.code === "ENOENT") {
           resolve(null);

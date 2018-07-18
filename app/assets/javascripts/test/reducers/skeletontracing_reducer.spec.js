@@ -205,6 +205,31 @@ test("SkeletonTracing should delete a node from a tree", t => {
   t.deepEqual(newStateB, newState);
 });
 
+test("SkeletonTracing should delete respective comments and branchpoints when deleting a node from a tree", t => {
+  const createNodeAction = SkeletonTracingActions.createNodeAction(
+    position,
+    rotation,
+    viewport,
+    resolution,
+  );
+  const deleteNodeAction = SkeletonTracingActions.deleteNodeAction();
+  const createCommentAction = SkeletonTracingActions.createCommentAction("foo");
+  const createBranchPointAction = SkeletonTracingActions.createBranchPointAction();
+
+  // Add a node, comment, and branchpoint, then delete the node again
+  const newState = SkeletonTracingReducer(initialState, createNodeAction);
+  const newStateA = SkeletonTracingReducer(newState, createCommentAction);
+  const newStateB = SkeletonTracingReducer(newStateA, createBranchPointAction);
+  const newStateC = SkeletonTracingReducer(newStateB, deleteNodeAction);
+
+  // Workaround, because the diffable map creates a new chunk but doesn't delete it again
+  const nodes = newStateC.tracing.trees[1].nodes;
+  t.is(nodes.chunks.length, 1);
+  t.is(nodes.chunks[0].size, 0);
+  nodes.chunks = [];
+  t.deepEqual(newStateC, initialState);
+});
+
 test("SkeletonTracing should not delete tree when last node is deleted from the tree", t => {
   const createNodeAction = SkeletonTracingActions.createNodeAction(
     position,

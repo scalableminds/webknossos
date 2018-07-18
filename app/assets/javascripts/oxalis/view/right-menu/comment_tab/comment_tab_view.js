@@ -184,6 +184,7 @@ const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
   },
 });
 
-export default connect(mapStateToProps, mapDispatchToProps)(
-  makeSkeletonTracingGuard(CommentTabView),
-);
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(makeSkeletonTracingGuard(CommentTabView));

@@ -183,6 +183,11 @@ function mapStateToProps(state: OxalisState) {
 }
 
 const debounceTime = 100;
-export default connect(mapStateToProps, mapDispatchToProps, null, {
-  pure: false,
-})(debounceRender(MappingInfoView, debounceTime));
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+  null,
+  {
+    pure: false,
+  },
+)(debounceRender(MappingInfoView, debounceTime));

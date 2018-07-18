@@ -104,7 +104,7 @@ class VolumeTracingPlaneController extends PlaneControllerClass {
 
         if (tool === VolumeToolEnum.MOVE) {
           const viewportScale = getViewportScale(planeId);
-          this.movePlane([delta.x * -1 / viewportScale, delta.y * -1 / viewportScale, 0]);
+          this.movePlane([(delta.x * -1) / viewportScale, (delta.y * -1) / viewportScale, 0]);
         }
 
         if (

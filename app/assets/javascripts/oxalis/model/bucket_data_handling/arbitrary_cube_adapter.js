@@ -44,29 +44,31 @@ class ArbitraryCubeAdapter {
     0,
   ];
 
-  getBucket = _.memoize((bucketIndex: number): DataBucket | typeof NULL_BUCKET => {
-    let bucketAddress = this.getBucketAddress(bucketIndex);
+  getBucket = _.memoize(
+    (bucketIndex: number): DataBucket | typeof NULL_BUCKET => {
+      let bucketAddress = this.getBucketAddress(bucketIndex);
 
-    for (let zoomStep = 0; zoomStep <= ARBITRARY_MAX_ZOOMSTEP; zoomStep++) {
-      const bucket = this.cube.getBucket(bucketAddress);
+      for (let zoomStep = 0; zoomStep <= ARBITRARY_MAX_ZOOMSTEP; zoomStep++) {
+        const bucket = this.cube.getBucket(bucketAddress);
 
-      if (bucket.isOutOfBoundingBox) {
-        return NULL_BUCKET_OUT_OF_BB;
+        if (bucket.isOutOfBoundingBox) {
+          return NULL_BUCKET_OUT_OF_BB;
+        }
+
+        if (bucket.hasData()) {
+          return bucket;
+        }
+
+        bucketAddress = [
+          bucketAddress[0] >> 1,
+          bucketAddress[1] >> 1,
+          bucketAddress[2] >> 1,
+          bucketAddress[3] + 1,
+        ];
       }
-
-      if (bucket.hasData()) {
-        return bucket;
-      }
-
-      bucketAddress = [
-        bucketAddress[0] >> 1,
-        bucketAddress[1] >> 1,
-        bucketAddress[2] >> 1,
-        bucketAddress[3] + 1,
-      ];
-    }
-    return NULL_BUCKET;
-  });
+      return NULL_BUCKET;
+    },
+  );
 }
 
 export default ArbitraryCubeAdapter;

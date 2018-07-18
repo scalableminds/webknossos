@@ -375,7 +375,7 @@ class AbstractTreeRenderer {
   calculateBranchMiddle(decision: DecisionType, left: number, right: number): number {
     const leftChild = decision.node.children[0];
     const rightChild = decision.node.children[1];
-    return (right - left) * leftChild.width / (leftChild.width + rightChild.width) + left;
+    return ((right - left) * leftChild.width) / (leftChild.width + rightChild.width) + left;
   }
 
   /**

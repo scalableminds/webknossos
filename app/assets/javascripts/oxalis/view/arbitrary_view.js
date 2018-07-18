@@ -46,7 +46,7 @@ class ArbitraryView {
     // camDistance has to be calculated such that with cam
     // angle 45°, the plane of width Constants.VIEWPORT_WIDTH fits exactly in the
     // viewport.
-    this.camDistance = Constants.VIEWPORT_WIDTH / 2 / Math.tan(Math.PI / 180 * 45 / 2);
+    this.camDistance = Constants.VIEWPORT_WIDTH / 2 / Math.tan(((Math.PI / 180) * 45) / 2);
 
     // Initialize main THREE.js components
     this.camera = new THREE.PerspectiveCamera(45, 1, 50, 1000);

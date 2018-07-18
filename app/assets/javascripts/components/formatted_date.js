@@ -1,7 +1,7 @@
 // @flow
 import * as React from "react";
 import moment from "moment";
-import { Table, Icon, Tag, Tooltip } from "antd";
+import { Tooltip } from "antd";
 
 const defaultTimeFormat = "YYYY-MM-DD HH:mm";
 

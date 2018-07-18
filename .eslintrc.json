@@ -39,6 +39,7 @@
     "react/jsx-filename-extension": "off",
     "react/no-multi-comp": "warn",
     "react/prop-types": "off",
+    "react/require-default-props": "off",
     "radix": "off",
     "no-bitwise": "off",
     "no-confusing-arrow": "off",

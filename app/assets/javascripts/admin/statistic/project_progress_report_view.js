@@ -2,12 +2,11 @@
 import * as React from "react";
 import { Icon, Spin, Table, Card } from "antd";
 import Utils from "libs/utils";
-import FormatUtils from "libs/format_utils";
 import Loop from "components/loop";
 import { getProjectProgressReport } from "admin/admin_rest_api";
 import type { APIProjectProgressReportType, APITeamType } from "admin/api_flow_types";
-import TeamSelectionForm from "./team_selection_form";
 import FormattedDate from "components/formatted_date";
+import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
 

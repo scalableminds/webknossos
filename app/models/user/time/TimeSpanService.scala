@@ -6,7 +6,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation._
 import models.task.TaskSQLDAO
-import models.user.User
+import models.user.{User, UserSQL}
 import net.liftweb.common.Full
 import oxalis.mail.DefaultMails
 import oxalis.thirdparty.BrainTracing.Mailer
@@ -32,13 +32,13 @@ object TimeSpanService extends FoxImplicits with LazyLogging {
     trackTime(timestamps, user._id, annotation)
 
   def loggedTimeOfUser[T](
-    user: User,
+    user: UserSQL,
     groupingF: TimeSpanSQL => T,
     start: Option[Long] = None,
     end: Option[Long] = None)(implicit ctx: DBAccessContext): Fox[Map[T, Duration]] =
 
     for {
-      timeTrackingOpt <- TimeSpanSQLDAO.findAllByUser(ObjectId.fromBsonId(user._id), start, end).futureBox
+      timeTrackingOpt <- TimeSpanSQLDAO.findAllByUser(user._id, start, end).futureBox
     } yield {
       timeTrackingOpt match {
         case Full(timeSpans) =>

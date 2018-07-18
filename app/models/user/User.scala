@@ -91,6 +91,12 @@ case class UserSQL(
       (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
     }
 
+  def assertEditableBy(otherUser: UserSQL): Fox[Unit] =
+    for {
+      asBoolean <- isEditableBy(otherUser)
+      _ <- asBoolean ?~> Messages("notAllowed")
+    } yield ()
+
   def isAdminOf(otherUser: UserSQL): Boolean =
     this._organization == otherUser._organization && this.isAdmin
 

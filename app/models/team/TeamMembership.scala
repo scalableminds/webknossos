@@ -25,6 +25,12 @@ case class TeamMembershipSQL(teamId: ObjectId, isTeamManager: Boolean) {
 }
 
 object TeamMembershipSQL {
+  def publicReads(): Reads[TeamMembershipSQL] =
+    ((__ \ "id").read[String](ObjectId.stringObjectIdReads("id")) and
+      (__ \ "isTeamManager").read[Boolean]
+      ) ((id, isTeamManager) => TeamMembershipSQL(ObjectId(id), isTeamManager))
+
+
   def fromTeamMembership(t: TeamMembership)(implicit ctx: DBAccessContext): Fox[TeamMembershipSQL] = {
     for {
       team <- TeamSQLDAO.findOne(ObjectId.fromBsonId(t._id))

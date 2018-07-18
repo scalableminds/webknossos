@@ -4,7 +4,7 @@ package models.team
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
-import models.user.{User, UserDAO}
+import models.user.{User, UserDAO, UserSQL}
 import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
@@ -138,15 +138,20 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
 case class Team(name: String,
                 organization: String,
                 isOrganizationTeam: Boolean = false,
-                _id: BSONObjectID = BSONObjectID.generate) {
+                _id: BSONObjectID = BSONObjectID.generate) extends FoxImplicits {
 
   lazy val id = _id.stringify
 
-  def couldBeAdministratedBy(user: User) =
-    user.organization == organization
+  def couldBeAdministratedBy(user: UserSQL) =
+    for {
+      organization <- user.organization
+    } yield organization.name == this.organization
 
-  def isAdminOfOrganization(user: User) =
-    user.organization == organization && user.isAdmin
+  def assertCouldBeAdministratedBy(user: UserSQL) =
+    for {
+      asBoolean <- couldBeAdministratedBy(user)
+      _ <- asBoolean ?~> Messages("notAllowed")
+    } yield ()
 }
 
 object Team extends FoxImplicits {

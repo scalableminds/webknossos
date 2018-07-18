@@ -163,7 +163,7 @@ class Authentication @Inject()(
             } else {
               for {
                 organization <- OrganizationSQLDAO.findOneByName(signUpData.organization)(GlobalAccessContext)
-                user <- UserService.insert(organization.name, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
+                user <- UserService.insert(organization._id, email, firstName, lastName, signUpData.password, automaticUserActivation, roleOnRegistration,
                   loginInfo, passwordHasher.hash(signUpData.password))
                 brainDBResult <- BrainTracing.register(user).toFox
               } yield {
@@ -213,7 +213,7 @@ class Authentication @Inject()(
   }
 
   def switchTo(email: String) = SecuredAction.async { implicit request =>
-    if (request.identity._isSuperUser.openOr(false)) {
+    if (request.identity.isSuperUser) {
       val loginInfo = LoginInfo(CredentialsProvider.ID, email)
       for {
         _ <- findOneByEmail(email) ?~> Messages("user.notFound")

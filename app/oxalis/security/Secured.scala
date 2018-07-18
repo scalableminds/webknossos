@@ -3,19 +3,17 @@ package oxalis.security
 import play.api.i18n._
 import play.api.mvc.Request
 import play.api.{Configuration, Logger, Play}
-
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import controllers.routes
-import models.user.{User, UserService}
+import models.user.{User, UserSQL, UserService}
 import net.liftweb.common.{Empty, Full}
 import play.api.Play.current
 import play.api.libs.concurrent.Execution.Implicits._
-
 import com.mohiva.play.silhouette.api.{Environment, SecuredErrorHandler, Silhouette}
 import com.mohiva.play.silhouette.impl.authenticators.CookieAuthenticator
 
 
-object WebknossosSilhouette extends Silhouette[User, CombinedAuthenticator] with FoxImplicits{
+object WebknossosSilhouette extends Silhouette[UserSQL, CombinedAuthenticator] with FoxImplicits{
 
   val config = Play.configuration
   val lang = new DefaultLangs(config)
@@ -23,7 +21,7 @@ object WebknossosSilhouette extends Silhouette[User, CombinedAuthenticator] with
 
   val environment = new WebknossosEnvironment(config)
 
-  override protected def env: Environment[User, CombinedAuthenticator] = environment
+  override protected def env: Environment[UserSQL, CombinedAuthenticator] = environment
 
   override def messagesApi: MessagesApi = new DefaultMessagesApi(messagesAPIEnvironment, config, lang)
 }

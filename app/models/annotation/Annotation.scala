@@ -12,7 +12,7 @@ import models.annotation.AnnotationState._
 import models.annotation.AnnotationTypeSQL.AnnotationTypeSQL
 import models.binary.{DataSet, DataSetDAO}
 import models.task.{TaskSQLDAO, TaskTypeSQLDAO, _}
-import models.user.{User, UserService}
+import models.user.{User, UserSQL, UserService}
 import org.joda.time.format.DateTimeFormat
 import play.api.Play.current
 import play.api.i18n.Messages
@@ -89,7 +89,7 @@ case class AnnotationSQL(
       restrictions.getOrElse(AnnotationRestrictions.defaultAnnotationRestrictions(this))
   }
 
-  def publicWrites(requestingUser: Option[User] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
+  def publicWrites(requestingUser: Option[UserSQL] = None, restrictions: Option[AnnotationRestrictions] = None, readOnly: Option[Boolean] = None)(implicit ctx: DBAccessContext): Fox[JsObject] = {
     for {
       taskJson <- task.flatMap(_.publicWrites).getOrElse(JsNull)
       dataSet <- dataSet

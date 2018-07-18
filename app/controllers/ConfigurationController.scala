@@ -1,10 +1,9 @@
 package controllers
 
 import javax.inject.Inject
-
 import models.binary.{DataSet, DataSetDAO, DataSetSQLDAO}
 import models.configuration.{DataSetConfiguration, UserConfiguration}
-import models.user.UserService
+import models.user.{UserDataSetConfigurationSQLDAO, UserService}
 import oxalis.security.WebknossosSilhouette.{SecuredAction, SecuredRequest, UserAwareAction, UserAwareRequest}
 import play.api.i18n.{Messages, MessagesApi}
 import play.api.libs.concurrent.Execution.Implicits._
@@ -20,8 +19,9 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
 
   def read = UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
-      UserService.findOneById(user._id, useCache = false)
-      .map(_.userConfiguration.configurationOrDefaults)
+      for {
+        userConfig <- user.userConfigurationStructured
+      } yield userConfig.configurationOrDefaults
     }
     .getOrElse(UserConfiguration.default.configuration)
     .map(configuration => Ok(toJson(configuration)))
@@ -39,8 +39,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
 
   def readDataSet(dataSetName: String) = UserAwareAction.async { implicit request =>
     request.identity.toFox.flatMap { user =>
-      UserService.findOneById(user.id, useCache = false)
-      .flatMap(_.dataSetConfigurations.get(dataSetName))
+      UserDataSetConfigurationSQLDAO.findOneForUserAndDataset(user._id, dataSetName).map(DataSetConfiguration(_)) //TODO
     }
     .orElse(DataSetDAO.findOneBySourceName(dataSetName).flatMap(_.defaultConfiguration))
     .getOrElse(DataSetConfiguration.constructInitialDefault(List()))

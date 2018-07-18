@@ -46,6 +46,9 @@ case class UserSQL(
 
   def experiences = UserExperiencesSQLDAO.findAllExperiencesForUser(_id)(GlobalAccessContext)
 
+  def userConfigurationStructured =
+    JsonHelper.jsResultToFox(userConfiguration.validate[Map[String, JsValue]]).map(UserConfiguration(_))
+
   def teamMemberships = UserTeamRolesSQLDAO.findTeamMembershipsForUser(_id)(GlobalAccessContext)
 
   def teamManagerMemberships =
@@ -340,6 +343,19 @@ object UserDataSetConfigurationSQLDAO extends SimpleSQLDAO {
     } yield {
       rows.map(r => (ObjectId(r._Dataset), Json.parse(r.configuration).as[JsValue])).toMap
     }
+  }
+
+  def findOneForUserAndDataset(userId: ObjectId, dataSetName: String)(implicit ctx: DBAccessContext): Fox[JsValue] = {
+    for {
+      rows <- run(
+        sql"""select c.configuration
+              from webknossos.user_dataSetConfigurations c
+              join webknossos.dataSets_ d on c._dataSet = d._id
+              where d.name = ${dataSetName}
+              and c._user = ${userId}
+          """.as[JsValue])
+      result <- rows.headOption.toFox
+    } yield result
   }
 
   def updateDatasetConfigurationForUserAndDataset(userId: ObjectId, dataSetId: ObjectId, configuration: Map[String, JsValue])(implicit ctx: DBAccessContext): Fox[Unit] = {

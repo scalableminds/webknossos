@@ -117,11 +117,11 @@ GET           /api/taskTypes/:id                                                
 PUT           /api/taskTypes/:id                                                controllers.TaskTypeController.update(id: String)
 
 # Scripts
-GET           /api/scripts                                                      controllers.ScriptsController.list
-POST          /api/scripts                                                      controllers.ScriptsController.create
-GET           /api/scripts/:id                                                  controllers.ScriptsController.get(id: String)
-PUT           /api/scripts/:id                                                  controllers.ScriptsController.update(id: String)
-DELETE        /api/scripts/:id                                                  controllers.ScriptsController.delete(id: String)
+GET           /api/scripts                                                      controllers.ScriptController.list
+POST          /api/scripts                                                      controllers.ScriptController.create
+GET           /api/scripts/:id                                                  controllers.ScriptController.get(id: String)
+PUT           /api/scripts/:id                                                  controllers.ScriptController.update(id: String)
+DELETE        /api/scripts/:id                                                  controllers.ScriptController.delete(id: String)
 
 # Projects
 GET           /api/projects                                                     controllers.ProjectController.list

@@ -28,18 +28,16 @@ case class TeamSQL(
                   isDeleted: Boolean = false
                   )
 
-object TeamSQL {
+object TeamSQL extends FoxImplicits {
   def fromTeam(t: Team)(implicit ctx: DBAccessContext): Fox[TeamSQL] = {
     for {
       organization <- OrganizationSQLDAO.findOneByName(t.organization)
-      organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(organization._id)
-      teamId = ObjectId.fromBsonId(t._id)
     } yield {
       TeamSQL(
-        teamId,
+        ObjectId.fromBsonId(t._id),
         organization._id,
         t.name,
-        organizationTeamId == teamId,
+        t.isOrganizationTeam,
         System.currentTimeMillis(),
         false
       )
@@ -116,6 +114,14 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
     } yield parsed
   }
 
+  def findAllIdsByOrganization(organizationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(sql"select _id from #${existingCollectionName} where _organization = ${organizationId.id} and #${accessQuery}".as[String])
+      parsed <- Fox.serialCombined(r.toList)(col => ObjectId.parse(col))
+    } yield parsed
+  }
+
   def insertOne(t: TeamSQL)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       r <- run(
@@ -131,6 +137,7 @@ object TeamSQLDAO extends SQLDAO[TeamSQL, TeamsRow, Teams] {
 
 case class Team(name: String,
                 organization: String,
+                isOrganizationTeam: Boolean = false,
                 _id: BSONObjectID = BSONObjectID.generate) {
 
   lazy val id = _id.stringify
@@ -169,6 +176,7 @@ object Team extends FoxImplicits {
       Team(
         t.name,
         organization.name,
+        t.isOrganizationTeam,
         idBson
       )
     }

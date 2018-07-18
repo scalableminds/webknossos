@@ -6,7 +6,7 @@ import com.scalableminds.util.security.SCrypt
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import javax.inject.Inject
-import models.binary.{DataStore, DataStoreDAO, WebKnossosStore}
+import models.binary._
 import models.project.{ProjectSQL, ProjectSQLDAO}
 import models.task.{TaskTypeSQL, TaskTypeSQLDAO}
 import models.team._
@@ -163,11 +163,11 @@ Samplecountry
 
   def insertLocalDataStoreIfEnabled: Fox[Any] = {
     if (Play.configuration.getBoolean("datastore.enabled").getOrElse(true)) {
-      DataStoreDAO.findOneByName("localhost").futureBox.map { maybeStore =>
+      DataStoreSQLDAO.findOneByName("localhost").futureBox.map { maybeStore =>
         if (maybeStore.isEmpty) {
           val url = Play.configuration.getString("http.uri").getOrElse("http://localhost:9000")
           val key = Play.configuration.getString("datastore.key").getOrElse("something-secure")
-          DataStoreDAO.insert(DataStore("localhost", url, WebKnossosStore, key))
+          DataStoreSQLDAO.insertOne(DataStoreSQL("localhost", url, WebKnossosStore, key))
         }
       }
     } else Fox.successful(())

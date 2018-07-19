@@ -8,8 +8,12 @@ import { Alert, Modal, Button, Select, Form, Spin } from "antd";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
-import type { OxalisState } from "oxalis/store";
+import type { OxalisState, TreeMapType, TreeGroupType } from "oxalis/store";
 import type { RouterHistory } from "react-router-dom";
+import { getAnnotationInformation, getTracingForAnnotation } from "admin/admin_rest_api";
+import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
+import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
+import Utils from "libs/utils";
 
 type AnnotationInfoType = {
   typ: string,
@@ -25,10 +29,12 @@ type StateProps = {
   annotationId: string,
   tracingType: string,
 };
+
 type Props = {
   isVisible: boolean,
   onOk: () => void,
   history: RouterHistory,
+  addTreesAndGroupsAction: (TreeMapType, Array<TreeGroupType>) => void,
 } & StateProps;
 
 type MergeModalViewState = {
@@ -59,7 +65,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
 
   componentWillMount() {
     (async () => {
-      const [projects] = await Request.receiveJSON("/api/projects", { doNotCatch: true });
+      const projects = await Request.receiveJSON("/api/projects", { doNotCatch: true });
       this.setState({
         projects: projects.map(project => ({ id: project.id, label: project.name })),
       });
@@ -102,10 +108,27 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      const url =
-        `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-        `${this.props.tracingType}/${this.props.annotationId}`;
-      this.merge(url);
+      // const url =
+      //   `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
+      //   `${this.props.tracingType}/${this.props.annotationId}`;
+
+      const annotation = await getAnnotationInformation(
+        selectedExplorativeAnnotation,
+        "Explorational",
+      );
+      const tracing = await getTracingForAnnotation(annotation);
+      if (tracing.trees) {
+        const { trees, treeGroups } = tracing;
+        this.setState({ isUploading: true });
+        // Wait for an animation frame so that the loading animation is kicked off
+        await Utils.animationFrame();
+        this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
+        this.setState({ isUploading: false });
+      } else {
+        // todo: a toast is enough.
+        // can we handle volumes here?
+        throw new Error("This operation is not supported for volume tracings");
+      }
     }
   };
 
@@ -183,4 +206,13 @@ function mapStateToProps(state: OxalisState): StateProps {
   };
 }
 
-export default connect(mapStateToProps)(withRouter(MergeModalView));
+const mapDispatchToProps = (dispatch: Dispatch<*>) => ({
+  addTreesAndGroupsAction(trees: TreeMapType, treeGroups: Array<TreeGroupType>) {
+    dispatch(addTreesAndGroupsAction(trees, treeGroups));
+  },
+});
+
+export default connect(
+  mapStateToProps,
+  mapDispatchToProps,
+)(withRouter(MergeModalView));

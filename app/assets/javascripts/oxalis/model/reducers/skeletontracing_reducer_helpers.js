@@ -33,6 +33,11 @@ import type {
 } from "oxalis/store";
 import DiffableMap from "libs/diffable_map";
 import EdgeCollection from "oxalis/model/edge_collection";
+import type {
+  ServerSkeletonTracingTreeType,
+  ServerNodeType,
+  ServerBranchPointType,
+} from "admin/api_flow_types";
 
 export function generateTreeName(state: OxalisState, timestamp: number, treeId: number) {
   let user = "";
@@ -702,4 +707,50 @@ export function toggleTreeGroupReducer(
       trees: updateTreeObject,
     },
   });
+}
+
+function serverNodeToNode(n: ServerNodeType): NodeType {
+  return {
+    id: n.id,
+    position: Utils.point3ToVector3(n.position),
+    rotation: Utils.point3ToVector3(n.rotation),
+    bitDepth: n.bitDepth,
+    viewport: n.viewport,
+    resolution: n.resolution,
+    radius: n.radius,
+    timestamp: n.createdTimestamp,
+    interpolation: n.interpolation,
+  };
+}
+
+function serverBranchPointToBranchPoint(b: ServerBranchPointType): BranchPointType {
+  return {
+    timestamp: b.createdTimestamp,
+    nodeId: b.nodeId,
+  };
+}
+
+export function createTreeMapFromTreeArray(
+  trees: Array<ServerSkeletonTracingTreeType>,
+): TreeMapType {
+  return _.keyBy(
+    trees.map(
+      (tree): TreeType => ({
+        comments: tree.comments,
+        edges: EdgeCollection.loadFromArray(tree.edges),
+        name: tree.name,
+        treeId: tree.treeId,
+        nodes: new DiffableMap(tree.nodes.map(serverNodeToNode).map(node => [node.id, node])),
+        color:
+          tree.color != null
+            ? [tree.color.r, tree.color.g, tree.color.b]
+            : ColorGenerator.distinctColorForId(tree.treeId),
+        branchPoints: _.map(tree.branchPoints, serverBranchPointToBranchPoint),
+        isVisible: true,
+        timestamp: tree.createdTimestamp,
+        groupId: tree.groupId,
+      }),
+    ),
+    "treeId",
+  );
 }

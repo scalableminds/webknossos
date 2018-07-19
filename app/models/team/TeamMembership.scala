@@ -16,7 +16,7 @@ case class TeamMembershipSQL(teamId: ObjectId, isTeamManager: Boolean) {
       team <- TeamSQLDAO.findOne(teamId)
     } yield {
       Json.obj(
-        "id" -> teamId,
+        "id" -> teamId.toString,
         "name" -> team.name,
         "isTeamManager" -> isTeamManager
       )

@@ -12,7 +12,6 @@ import play.api.Play.current
 import play.api.i18n.Messages
 import play.api.i18n.Messages.Implicits._
 import play.api.libs.concurrent.Execution.Implicits._
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
@@ -83,12 +82,6 @@ case class UserSQL(
       teamManagerTeamIds <- teamManagerTeamIds
     } yield teamManagerTeamIds.nonEmpty && this._organization == _organization
 
-  def assertTeamManagerOrAdminOf(_team: ObjectId) =
-    for {
-      asBoolean <- isTeamManagerOrAdminOf(_team)
-      _ <- asBoolean ?~> Messages("notAllowed")
-    } yield ()
-
   def isEditableBy(otherUser: UserSQL): Fox[Boolean] =
     for {
       otherIsTeamManagerOrAdmin <- otherUser.isTeamManagerOrAdminOf(this)
@@ -96,12 +89,6 @@ case class UserSQL(
     } yield {
       (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
     }
-
-  def assertEditableBy(otherUser: UserSQL): Fox[Unit] =
-    for {
-      asBoolean <- isEditableBy(otherUser)
-      _ <- asBoolean ?~> Messages("notAllowed")
-    } yield ()
 
   def isAdminOf(otherUser: UserSQL): Boolean =
     this._organization == otherUser._organization && this.isAdmin

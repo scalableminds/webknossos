@@ -65,7 +65,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     for {
       userIdValidated <- ObjectId.parse(userId)
       user <- UserSQLDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- user.assertEditableBy(request.identity)
+      _ <- Fox.assertBoolean(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
       loggedTimeAsMap <- TimeSpanService.loggedTimeOfUser(user, TimeSpanSQL.groupByMonth)
     } yield {
       JsonOk(Json.obj("loggedTime" ->
@@ -85,7 +85,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
       for {
         userIdValidated <- ObjectId.parse(userId)
         user <- UserSQLDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-        _ <- user.assertEditableBy(request.identity)
+        _ <- Fox.assertBoolean(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
         result <- TimeSpanService.loggedTimeOfUser(user, groupByAnnotationAndDay, Some(request.body.start), Some(request.body.end))
       } yield {
         Json.obj(
@@ -112,7 +112,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     for {
       userIdValidated <- ObjectId.parse(userId)
       user <- UserSQLDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- user.assertEditableBy(request.identity)
+      _ <- Fox.assertBoolean(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
       annotations <- AnnotationSQLDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Explorational, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
@@ -124,7 +124,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
     for {
       userIdValidated <- ObjectId.parse(userId)
       user <- UserSQLDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-      _ <- user.assertEditableBy(request.identity)
+      _ <- Fox.assertBoolean(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
       annotations <- AnnotationSQLDAO.findAllFor(userIdValidated, isFinished, AnnotationTypeSQL.Task, limit.getOrElse(defaultAnnotationLimit))
       jsonList <- Fox.serialCombined(annotations)(_.publicWrites(Some(request.identity)))
     } yield {
@@ -194,7 +194,7 @@ class UserController @Inject()(val messagesApi: MessagesApi)
         for {
           userIdValidated <- ObjectId.parse(userId)
           user <- UserSQLDAO.findOne(userIdValidated) ?~> Messages("user.notFound")
-          _ <- user.assertEditableBy(request.identity)
+          _ <- Fox.assertBoolean(user.isEditableBy(request.identity)) ?~> Messages("notAllowed")
           _ <- checkAdminOnlyUpdates(user, isActive, isAdmin, email)(issuingUser) ?~> Messages("notAllowed")
           teams <- Fox.combined(assignedMemberships.map(t => TeamDAO.findOneById(t.teamId.toString)(GlobalAccessContext) ?~> Messages("team.notFound")))
           oldTeamMemberships <- user.teamMemberships

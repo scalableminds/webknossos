@@ -21,7 +21,7 @@ import {
 } from "oxalis/model/actions/skeletontracing_actions";
 import TreeWithComments from "oxalis/view/right-menu/comment_tab/tree_with_comments";
 import Comment from "oxalis/view/right-menu/comment_tab/comment";
-import { AutoSizer, List } from "react-virtualized";
+import { AutoSizer, List, CellMeasurer, CellMeasurerCache } from "react-virtualized";
 import type { Dispatch } from "redux";
 import type { OxalisState, SkeletonTracingType, TreeType, CommentType } from "oxalis/store";
 import { makeSkeletonTracingGuard } from "oxalis/view/guards";
@@ -83,9 +83,37 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
     collapsedTreeIds: {},
   };
 
+  componentDidUpdate(prevProps) {
+    if (prevProps.skeletonTracing.activeNodeId !== this.props.skeletonTracing.activeNodeId) {
+      this.cache.clear(prevProps.skeletonTracing.activeNodeId, 0);
+      this.cache.clear(this.props.skeletonTracing.activeNodeId, 0);
+      this.forceUpdate();
+    } else if (prevProps.skeletonTracing.trees !== this.props.skeletonTracing.trees) {
+      this.cache.clear(this.props.skeletonTracing.activeNodeId, 0);
+      this.forceUpdate();
+    }
+  }
+
   componentWillUnmount() {
     this.keyboard.destroy();
   }
+
+  cache = new CellMeasurerCache({
+    defaultHeight: 21,
+    fixedWidth: true,
+    keyMapper: (rowIndex: number) => {
+      const commentOrTree = this.state.data[rowIndex];
+      if (commentOrTree != null) {
+        if (commentOrTree.treeId != null) {
+          return "default";
+        } else if (commentOrTree.nodeId != null && commentOrTree.content != null) {
+          const isActive = commentOrTree.nodeId === this.props.skeletonTracing.activeNodeId;
+          return isActive ? commentOrTree.content : "default";
+        }
+      }
+      return "none";
+    },
+  });
 
   keyboard = new InputKeyboardNoLoop({
     n: () => this.nextComment(),
@@ -184,11 +212,11 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       : "fa fa-sort-alpha-desc";
 
     const rowCount = this.state.data.length;
-    const rowHeight = 21;
-    const rowRenderer = ({ index, key, style }) => {
+    const rowRenderer = ({ index, key, style, parent }) => {
+      let element;
       if (this.state.data[index].treeId != null) {
         const tree = this.state.data[index];
-        return (
+        element = (
           <TreeWithComments
             key={key}
             style={style}
@@ -200,15 +228,15 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
         );
       } else {
         const comment = this.state.data[index];
-        return (
-          <Comment
-            key={key}
-            style={style}
-            comment={comment}
-            isActive={comment.nodeId === this.props.skeletonTracing.activeNodeId}
-          />
-        );
+        const isActive = comment.nodeId === this.props.skeletonTracing.activeNodeId;
+        element = <Comment key={key} style={style} comment={comment} isActive={isActive} />;
       }
+
+      return (
+        <CellMeasurer cache={this.cache} columnIndex={0} key={key} parent={parent} rowIndex={index}>
+          {element}
+        </CellMeasurer>
+      );
     };
 
     return (
@@ -238,7 +266,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
                   height={height}
                   width={width}
                   rowCount={rowCount}
-                  rowHeight={rowHeight}
+                  deferredMeasurementCache={this.cache}
+                  rowHeight={this.cache.rowHeight}
                   rowRenderer={rowRenderer}
                   scrollToIndex={scrollIndex > -1 ? scrollIndex : undefined}
                 />

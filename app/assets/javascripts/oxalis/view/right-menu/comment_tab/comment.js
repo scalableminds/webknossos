@@ -32,7 +32,7 @@ function Comment({ comment, isActive, style }: CommentProps) {
     Store.dispatch(setActiveNodeAction(comment.nodeId));
   };
 
-  const liClassName = classNames({
+  const liClassName = classNames("markdown", {
     bold: isActive,
     "markdown-small": !isActive,
   });

@@ -8,6 +8,7 @@ import type { Vector3, Vector4, Vector6, BoundingBoxType } from "oxalis/constant
 import Maybe from "data.maybe";
 import window, { document, location } from "libs/window";
 import pako from "pako";
+import naturalSort from "javascript-natural-sort";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
@@ -20,6 +21,8 @@ function swap(arr, a, b) {
     arr[a] = tmp;
   }
 }
+
+naturalSort.insensitive = true;
 
 function getRecursiveValues(obj: Object | Array<*> | string): Array<*> {
   return _.flattenDeep(getRecursiveValuesUnflat(obj));
@@ -156,12 +159,7 @@ const Utils = {
       if (typeof valueA !== "string" || typeof valueB !== "string") {
         return 0;
       }
-      return (
-        valueA.localeCompare(valueB, "en", {
-          numeric: true,
-          usage: "search",
-        }) * sortingOrder
-      );
+      return naturalSort(valueA, valueB) * sortingOrder;
     };
   },
 

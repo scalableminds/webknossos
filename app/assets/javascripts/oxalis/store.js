@@ -48,10 +48,10 @@ import type {
   APIDataLayerType,
 } from "admin/api_flow_types";
 
-export type CommentType = {
+export type CommentType = {|
   +content: string,
   +nodeId: number,
-};
+|};
 
 export type EdgeType = {
   +source: number,
@@ -84,7 +84,7 @@ export type BoundingBoxObjectType = {
   +depth: number,
 };
 
-type TreeTypeBase = {
+export type TreeType = {|
   +treeId: number,
   +groupId: ?number,
   +color: Vector3,
@@ -94,11 +94,8 @@ type TreeTypeBase = {
   +branchPoints: Array<BranchPointType>,
   +edges: EdgeCollection,
   +isVisible: boolean,
-};
-
-export type TreeType = TreeTypeBase & {
   +nodes: NodeMapType,
-};
+|};
 
 export type TreeGroupType = {
   name: string,

@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import Toast from "libs/toast";
 import Request from "libs/request";
-import { Alert, Modal, Button, Select, Form, Spin } from "antd";
+import { Alert, Modal, Button, Select, Form, Spin, Checkbox } from "antd";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
@@ -42,6 +42,7 @@ type MergeModalViewState = {
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   isUploading: boolean,
+  mergeExplorativeLocally: boolean,
 };
 
 type UploadInfoType<T> = {
@@ -61,6 +62,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     selectedProject: null,
     selectedExplorativeAnnotation: "",
     isUploading: false,
+    mergeExplorativeLocally: true,
   };
 
   componentWillMount() {
@@ -108,26 +110,29 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const { selectedExplorativeAnnotation } = this.state;
 
     if (selectedExplorativeAnnotation != null) {
-      // const url =
-      //   `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-      //   `${this.props.tracingType}/${this.props.annotationId}`;
-
-      const annotation = await getAnnotationInformation(
-        selectedExplorativeAnnotation,
-        "Explorational",
-      );
-      const tracing = await getTracingForAnnotation(annotation);
-      if (tracing.trees) {
-        const { trees, treeGroups } = tracing;
-        this.setState({ isUploading: true });
-        // Wait for an animation frame so that the loading animation is kicked off
-        await Utils.animationFrame();
-        this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
-        this.setState({ isUploading: false });
+      if (this.state.mergeExplorativeLocally) {
+        const annotation = await getAnnotationInformation(
+          selectedExplorativeAnnotation,
+          "Explorational",
+        );
+        const tracing = await getTracingForAnnotation(annotation);
+        if (tracing.trees) {
+          const { trees, treeGroups } = tracing;
+          this.setState({ isUploading: true });
+          // Wait for an animation frame so that the loading animation is kicked off
+          await Utils.animationFrame();
+          this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
+          this.setState({ isUploading: false });
+          Toast.success(messages["tracing.merged"]);
+        } else {
+          Toast.error("Merging is not supported for volume tracings.");
+          return;
+        }
       } else {
-        // todo: a toast is enough.
-        // can we handle volumes here?
-        throw new Error("This operation is not supported for volume tracings");
+        const url =
+          `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
+          `${this.props.tracingType}/${this.props.annotationId}`;
+        this.merge(url);
       }
     }
   };
@@ -140,6 +145,8 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
         onOk={this.props.onOk}
         onCancel={this.props.onOk}
         className="merge-modal"
+        width={800}
+        footer={null}
       >
         <Spin spinning={this.state.isUploading}>
           <Alert
@@ -181,6 +188,14 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 style={{ width: 200 }}
                 onChange={this.handleChangeMergeExplorativeAnnotation}
               />
+            </Form.Item>
+            <Form.Item>
+              <Checkbox
+                onChange={event => this.setState({ mergeExplorativeLocally: event.target.checked })}
+                checked={this.state.mergeExplorativeLocally}
+              >
+                Merge into active tracing
+              </Checkbox>
             </Form.Item>
             <Form.Item>
               <Button

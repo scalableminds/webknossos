@@ -12,6 +12,7 @@ import naturalSort from "javascript-natural-sort";
 import type { APIUserType } from "admin/api_flow_types";
 
 type Comparator<T> = (T, T) => -1 | 0 | 1;
+type UrlParamsType = { [key: string]: string | boolean };
 
 function swap(arr, a, b) {
   let tmp;
@@ -157,6 +158,7 @@ const Utils = {
       const valueA = typeof selector === "function" ? selector(a) : a[selector];
       const valueB = typeof selector === "function" ? selector(b) : b[selector];
       if (typeof valueA !== "string" || typeof valueB !== "string") {
+        console.log("not a string");
         return 0;
       }
       return naturalSort(valueA, valueB) * sortingOrder;
@@ -224,12 +226,16 @@ const Utils = {
     return user.isAdmin || this.isUserTeamManager(user);
   },
 
-  getUrlParamsObject(): { [key: string]: string | boolean } {
+  getUrlParamsObject(): UrlParamsType {
+    return this.getUrlParamsObjectFromString(location.search);
+  },
+
+  getUrlParamsObjectFromString(str: string): UrlParamsType {
     // Parse the URL parameters as objects and return it or just a single param
-    return location.search
+    return str
       .substring(1)
       .split("&")
-      .reduce((result, value): void => {
+      .reduce((result: UrlParamsType, value: string): UrlParamsType => {
         const parts = value.split("=");
         if (parts[0]) {
           const key = decodeURIComponent(parts[0]);

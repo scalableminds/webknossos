@@ -9,7 +9,7 @@ import Maybe from "data.maybe";
 import Utils from "libs/utils";
 import update from "immutability-helper";
 import { connect } from "react-redux";
-import { Input } from "antd";
+import { Icon, Input } from "antd";
 import InputComponent from "oxalis/view/components/input_component";
 import ButtonComponent from "oxalis/view/components/button_component";
 import { InputKeyboardNoLoop } from "libs/input";
@@ -30,6 +30,22 @@ const InputGroup = Input.Group;
 
 const treeTypeHint = ([]: TreeType[]);
 
+type SortOptionsType = {
+  isSortedByName: boolean,
+  isSortedAscending: boolean,
+};
+function getTreeSorter({ isSortedByName, isSortedAscending }: SortOptionsType): Function {
+  return isSortedByName
+    ? Utils.localeCompareBy(treeTypeHint, "name", isSortedAscending)
+    : Utils.compareBy(treeTypeHint, "treeId");
+}
+
+function getCommentSorter({ isSortedByName, isSortedAscending }: SortOptionsType): Function {
+  return isSortedByName
+    ? Utils.localeCompareBy(([]: Array<CommentType>), "content", isSortedAscending)
+    : Utils.compareBy(([]: Array<CommentType>), "nodeId");
+}
+
 type Props = {
   skeletonTracing: SkeletonTracingType,
   setActiveNode: (nodeId: number) => void,
@@ -39,36 +55,27 @@ type Props = {
 
 type CommentTabStateType = {
   isSortedAscending: boolean,
+  isSortedByName: boolean,
   data: Array<TreeType | CommentType>,
   collapsedTreeIds: { [number]: boolean },
 };
 
 class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   static getDerivedStateFromProps(
-    nextProps: Props,
-    prevState: CommentTabStateType,
+    props: Props,
+    state: CommentTabStateType,
   ): $Shape<CommentTabStateType> {
     console.time("derive");
-    const sortedTrees = _.values(nextProps.skeletonTracing.trees)
+    const sortedTrees = _.values(props.skeletonTracing.trees)
       .filter(tree => tree.comments.length > 0)
-      .sort(Utils.localeCompareBy(treeTypeHint, "name", prevState.isSortedAscending));
+      .sort(getTreeSorter(state));
 
     const data = sortedTrees.reduce((result, tree) => {
       result.push(tree);
-      const isCollapsed = prevState.collapsedTreeIds[tree.treeId];
+      const isCollapsed = state.collapsedTreeIds[tree.treeId];
       return isCollapsed
         ? result
-        : result.concat(
-            tree.comments
-              .slice(0)
-              .sort(
-                Utils.localeCompareBy(
-                  ([]: Array<CommentType>),
-                  "content",
-                  prevState.isSortedAscending,
-                ),
-              ),
-          );
+        : result.concat(tree.comments.slice(0).sort(getCommentSorter(state)));
     }, []);
     console.timeEnd("derive");
 
@@ -77,6 +84,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
 
   state = {
     isSortedAscending: true,
+    isSortedByName: true,
     data: [],
     // TODO: Remove once https://github.com/yannickcr/eslint-plugin-react/issues/1751 is merged
     // eslint-disable-next-line react/no-unused-state
@@ -128,9 +136,8 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
       // Create a sorted, flat array of all comments across all trees
       const sortedTrees = _.values(trees)
         .slice(0)
-        .sort(Utils.localeCompareBy(treeTypeHint, "name", sortAscending));
+        .sort(getTreeSorter(this.state));
 
-      // eslint-disable-next-line prefer-arrow-callback
       const sortedComments = _.flatMap(
         sortedTrees,
         (tree: TreeType): Array<CommentType> =>
@@ -139,7 +146,9 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             .sort(
               Utils.localeCompareBy(
                 ([]: CommentType[]),
-                comment => `${comment.content}_${comment.nodeId}`,
+                this.state.isSortedByName
+                  ? comment => `${comment.content}_${comment.nodeId}`
+                  : comment => `${comment.nodeId}`,
                 sortAscending,
               ),
             ),
@@ -171,9 +180,25 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
   };
 
   handleChangeSorting = () => {
-    this.setState({
-      isSortedAscending: !this.state.isSortedAscending,
-    });
+    // Cycle between isSortedAscending, !isSortedAscending and !isSortedByName
+    if (!this.state.isSortedByName) {
+      this.setState({
+        isSortedAscending: true,
+        isSortedByName: true,
+      });
+      return;
+    }
+    if (!this.state.isSortedAscending) {
+      this.setState({
+        isSortedAscending: true,
+        isSortedByName: false,
+      });
+    } else {
+      this.setState({
+        isSortedAscending: false,
+        isSortedByName: true,
+      });
+    }
   };
 
   onExpand = (treeId: number) => {
@@ -255,7 +280,7 @@ class CommentTabView extends React.PureComponent<Props, CommentTabStateType> {
             <i className="fa fa-arrow-right" />
           </ButtonComponent>
           <ButtonComponent onClick={this.handleChangeSorting} title="sort">
-            <i className={sortingIconClass} />
+            {this.state.isSortedByName ? <i className={sortingIconClass} /> : <Icon type="minus" />}
           </ButtonComponent>
         </InputGroup>
         <div style={{ flex: "1 1 auto", marginTop: 20 }}>

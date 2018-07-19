@@ -1,7 +1,13 @@
 // @flow
 
 import * as React from "react";
-import { Form, Modal, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
+import { Form, Popover, Modal, Input, Button, Row, Col, Steps, Icon, Card } from "antd";
+import Toast from "libs/toast";
+import Clipboard from "clipboard-js";
+import { connect } from "react-redux";
+import type { OxalisState } from "oxalis/store";
+import type { APIUserType } from "admin/api_flow_types";
+import { location } from "libs/window";
 
 import RegistrationForm from "admin/auth/registration_form";
 import DatasetUploadView from "admin/dataset/dataset_upload_view";
@@ -9,6 +15,10 @@ import DatasetImportView from "dashboard/dataset/dataset_import_view";
 
 const Step = Steps.Step;
 const FormItem = Form.Item;
+
+type StateProps = {
+  activeUser: ?APIUserType,
+};
 
 type State = {
   currentStep: number,
@@ -51,6 +61,44 @@ function FeatureCard({ icon, header, children }) {
       </Card>
     </Col>
   );
+}
+
+export class InviteUsersPopover extends React.Component<{
+  organizationName: string,
+  children: React.Node,
+}> {
+  getRegistrationHotLink(): string {
+    return `${location.origin}/auth/register?organizationName=${encodeURI(
+      this.props.organizationName,
+    )}`;
+  }
+
+  copyRegistrationCopyLink = async () => {
+    await Clipboard.copy(this.getRegistrationHotLink());
+    Toast.success("Registration link copied to clipboard.");
+  };
+
+  getContent() {
+    return (
+      <React.Fragment>
+        <div style={{ marginBottom: 8 }}>
+          Share the following link to let users join your organization:
+        </div>
+        <Input.Group compact>
+          <Input style={{ width: "85%" }} value={this.getRegistrationHotLink()} readOnly />
+          <Button style={{ width: "15%" }} onClick={this.copyRegistrationCopyLink} icon="copy" />
+        </Input.Group>
+      </React.Fragment>
+    );
+  }
+
+  render() {
+    return (
+      <Popover trigger="click" title="Invite Users" content={this.getContent()}>
+        {this.props.children}
+      </Popover>
+    );
+  }
 }
 
 const OrganizationForm = Form.create()(({ form, onComplete }) => {
@@ -108,7 +156,7 @@ const OrganizationForm = Form.create()(({ form, onComplete }) => {
   );
 });
 
-class OnboardingView extends React.PureComponent<{}, State> {
+class OnboardingView extends React.PureComponent<StateProps, State> {
   constructor() {
     super();
     this.state = {
@@ -165,6 +213,7 @@ class OnboardingView extends React.PureComponent<{}, State> {
       >
         <RegistrationForm
           hidePrivacyStatement
+          createOrganization
           organizationName={this.state.organizationName}
           onRegistered={this.advanceStep}
           confirmLabel="Create account"
@@ -247,8 +296,15 @@ class OnboardingView extends React.PureComponent<{}, State> {
             the formats and upload processes webKnossos supports.
           </FeatureCard>
           <FeatureCard header="User & Team Management" icon={<Icon type="team" />}>
-            Invite <a href="/users">users</a> and assign them to <a href="/teams">teams</a>. Teams
-            can be used to define dataset permissions and task assignments.
+            <InviteUsersPopover
+              organizationName={
+                this.props.activeUser != null ? this.props.activeUser.organization : ""
+              }
+            >
+              <a href="#">Invite users</a>{" "}
+            </InviteUsersPopover>
+            and assign them to <a href="/teams">teams</a>. Teams can be used to define dataset
+            permissions and task assignments.
           </FeatureCard>
           <FeatureCard header="Project Management" icon={<Icon type="paper-clip" />}>
             Create <a href="/tasks">tasks</a> and <a href="/projects">projects</a> to efficiently
@@ -318,4 +374,8 @@ class OnboardingView extends React.PureComponent<{}, State> {
   }
 }
 
-export default OnboardingView;
+const mapStateToProps = (state: OxalisState): StateProps => ({
+  activeUser: state.activeUser,
+});
+
+export default connect(mapStateToProps)(OnboardingView);

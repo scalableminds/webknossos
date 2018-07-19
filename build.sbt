@@ -6,6 +6,8 @@ name := "oxalis"
 
 scalaVersion in ThisBuild := "2.11.8"
 
+version := "wk"
+
 
 lazy val webknossosSettings = Seq(
   TwirlKeys.templateImports += "oxalis.view.helpers._",
@@ -29,7 +31,8 @@ lazy val webknossosDatastoreSettings = Seq(
   libraryDependencies ++= Dependencies.webknossosDatastoreDependencies,
   resolvers ++= DependencyResolvers.dependencyResolvers,
   routesGenerator := InjectedRoutesGenerator,
-  name := "webknossos-datastore"
+  name := "webknossos-datastore",
+  version := "wk"
 )
 
 

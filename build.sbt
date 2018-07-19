@@ -2,7 +2,7 @@ import play.routes.compiler.InjectedRoutesGenerator
 import play.sbt.routes.RoutesKeys.routesGenerator
 import sbt._
 
-name := "oxalis"
+name := "webknossos"
 
 scalaVersion in ThisBuild := "2.11.8"
 

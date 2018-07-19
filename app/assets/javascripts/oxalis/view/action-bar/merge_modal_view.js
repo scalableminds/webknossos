@@ -82,23 +82,6 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     this.setState({ selectedExplorativeAnnotation: event.target.value });
   };
 
-  handleChangeNML = (
-    info: UploadInfoType<{ annotation: AnnotationInfoType, messages: Array<any> }>,
-  ) => {
-    if (info.file.status === "done") {
-      const { annotation } = info.file.response;
-      Toast.messages(info.file.response.messages);
-      this.setState({ isUploading: false });
-      const url =
-        `/api/annotations/${annotation.typ}/${annotation.id}/merge/` +
-        `${this.props.tracingType}/${this.props.annotationId}`;
-      this.merge(url);
-    } else if (info.file.status === "error") {
-      Toast.messages(info.file.response.messages);
-      this.setState({ isUploading: false });
-    }
-  };
-
   handleBeforeUploadNML = () => {
     this.setState({ isUploading: true });
   };

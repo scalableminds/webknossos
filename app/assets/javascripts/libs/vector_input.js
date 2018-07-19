@@ -11,6 +11,7 @@ type BaseProps<T> = {
   value: T | string,
   onChange: (value: T) => void,
   changeOnlyOnBlur?: boolean,
+  allowDecimals?: boolean,
 };
 
 type State = {
@@ -78,7 +79,7 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
 
   makeInvalidValueValid(text: string): T {
     const validSubVector = text
-      .replace(/[^,0-9]/gm, "")
+      .replace(this.props.allowDecimals ? /[^0-9,.]/gm : /[^0-9,]/gm, "")
       .split(",")
       .map(el => parseFloat(el) || 0)
       .slice(0, this.defaultValue.length);
@@ -99,7 +100,10 @@ class BaseVector<T: Vector3 | Vector6> extends React.PureComponent<BaseProps<T>,
     const text = evt.target.value;
 
     // only numbers, commas and whitespace is allowed
-    const isValidInput = /^[\d\s,]*$/g.test(text);
+    const isValidInput = this.props.allowDecimals
+      ? /^[\d\s,.]*$/g.test(text)
+      : /^[\d\s,]*$/g.test(text);
+
     const value = Utils.stringToNumberArray(text);
     const isValidFormat = value.length === this.defaultValue.length;
 

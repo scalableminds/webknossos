@@ -14,6 +14,7 @@ import { getAnnotationInformation, getTracingForAnnotation } from "admin/admin_r
 import { addTreesAndGroupsAction } from "oxalis/model/actions/skeletontracing_actions";
 import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracing_reducer_helpers";
 import Utils from "libs/utils";
+import type { APIAnnotationType } from "admin/api_flow_types";
 
 type AnnotationInfoType = {
   typ: string,
@@ -94,14 +95,19 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     this.setState({ isUploading: true });
   };
 
-  handleMergeProject = (event: SyntheticInputEvent<>) => {
+  handleMergeProject = async (event: SyntheticInputEvent<>) => {
     event.preventDefault();
     const { selectedProject } = this.state;
     if (selectedProject != null) {
-      const url =
-        `/api/annotations/CompoundProject/${selectedProject}/merge/` +
-        `${this.props.tracingType}/${this.props.annotationId}`;
-      this.merge(url);
+      if (this.state.mergeExplorativeLocally) {
+        const annotation = await getAnnotationInformation(selectedProject, "CompoundProject");
+        this.mergeAnnotationIntoActiveTracing(annotation);
+      } else {
+        const url =
+          `/api/annotations/CompoundProject/${selectedProject}/merge/` +
+          `${this.props.tracingType}/${this.props.annotationId}`;
+        this.merge(url);
+      }
     }
   };
 
@@ -115,19 +121,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
           selectedExplorativeAnnotation,
           "Explorational",
         );
-        const tracing = await getTracingForAnnotation(annotation);
-        if (tracing.trees) {
-          const { trees, treeGroups } = tracing;
-          this.setState({ isUploading: true });
-          // Wait for an animation frame so that the loading animation is kicked off
-          await Utils.animationFrame();
-          this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
-          this.setState({ isUploading: false });
-          Toast.success(messages["tracing.merged"]);
-        } else {
-          Toast.error("Merging is not supported for volume tracings.");
-          return;
-        }
+        this.mergeAnnotationIntoActiveTracing(annotation);
       } else {
         const url =
           `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
@@ -136,6 +130,22 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       }
     }
   };
+
+  async mergeAnnotationIntoActiveTracing(annotation: APIAnnotationType): Promise<void> {
+    const tracing = await getTracingForAnnotation(annotation);
+    if (tracing.trees) {
+      const { trees, treeGroups } = tracing;
+      this.setState({ isUploading: true });
+      // Wait for an animation frame so that the loading animation is kicked off
+      await Utils.animationFrame();
+      this.props.addTreesAndGroupsAction(createTreeMapFromTreeArray(trees), treeGroups || []);
+      this.setState({ isUploading: false });
+      Toast.success(messages["tracing.merged"]);
+    } else {
+      Toast.error("Merging is not supported for volume tracings.");
+      return;
+    }
+  }
 
   render() {
     return (

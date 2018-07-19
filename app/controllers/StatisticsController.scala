@@ -58,19 +58,23 @@ class StatisticsController @Inject()(val messagesApi: MessagesApi)
     }
   }
 
+
   def users(interval: String, start: Option[Long], end: Option[Long], limit: Int) = SecuredAction.async { implicit request =>
     for {
       handler <- intervalHandler.get(interval) ?~> Messages("statistics.interval.invalid")
       users <- UserSQLDAO.findAll
       usersWithTimes <- Fox.serialCombined(users)(user => TimeSpanService.loggedTimeOfUser(user, handler, start, end).map(user -> _))
-    } yield {
-      val data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
-      val json = data.map {
-        case (user, times) => Json.obj(
-          "user" -> user.compactWrites, // TODO: writes are async now
+      data = usersWithTimes.sortBy(-_._2.map(_._2.toMillis).sum).take(limit)
+      json <- Fox.combined(data.map {
+        case (user, times) => for {
+          userJs <- user.compactWrites
+        } yield {Json.obj(
+          "user" -> userJs,
           "tracingTimes" -> intervalTracingTimeJson(times)
-        )
-      }
+        )}
+        case _ => Fox.failure("serialization.failed")
+      })
+    } yield {
       Ok(Json.toJson(json))
     }
   }

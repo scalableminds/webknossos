@@ -49,8 +49,9 @@ class TeamController @Inject()(val messagesApi: MessagesApi) extends Controller 
 
   def create = SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Team.teamReadsName) { teamName =>
-      val team = Team(teamName, request.identity.organization)
       for {
+        organization <- request.identity.organization
+        team = Team(teamName, organization.name)
         _ <- bool2Fox(request.identity.isAdmin) ?~> Messages("user.noAdmin")
         _ <- TeamService.create(team, request.identity)
         js <- Team.teamPublicWrites(team)

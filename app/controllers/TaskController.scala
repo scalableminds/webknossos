@@ -273,18 +273,25 @@ class TaskController @Inject() (val messagesApi: MessagesApi)
 
 
   private def getAllowedTeamsForNextTask(user: UserSQL)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
-    AnnotationService.countOpenNonAdminTasks(user).flatMap { numberOfOpen =>
+    (for {
+      numberOfOpen <- AnnotationService.countOpenNonAdminTasks(user)
+    } yield {
       if (user.isAdmin) {
         OrganizationSQLDAO.findOne(user._organization).flatMap(_.teamIds)
       } else if (numberOfOpen < MAX_OPEN_TASKS) {
         user.teamIds
-        //TODO
-      } else if (user.teamManagerTeamIds.nonEmpty) {
-        Fox.successful(user.teamManagerTeamIds)
       } else {
-        Fox.failure(Messages("task.tooManyOpenOnes"))
+        (for {
+          teamManagerTeamIds <- user.teamManagerTeamIds
+        } yield {
+          if (teamManagerTeamIds.nonEmpty) {
+            Fox.successful(teamManagerTeamIds)
+          } else {
+            Fox.failure(Messages("task.tooManyOpenOnes"))
+          }
+        }).flatten
       }
-    }
+    }).flatten
   }
 
   def peekNext = SecuredAction.async { implicit request =>

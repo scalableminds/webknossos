@@ -78,6 +78,11 @@ case class UserSQL(
       teamManagerTeamIds <- teamManagerTeamIds
     } yield (teamManagerTeamIds.contains(_team) || this.isAdmin && this._organization == team._organization)
 
+  def isTeamManagerOrAdminOfOrg(_organization: ObjectId): Fox[Boolean] =
+    for {
+      teamManagerTeamIds <- teamManagerTeamIds
+    } yield teamManagerTeamIds.nonEmpty && this._organization == _organization
+
   def assertTeamManagerOrAdminOf(_team: ObjectId) =
     for {
       asBoolean <- isTeamManagerOrAdminOf(_team)
@@ -104,7 +109,7 @@ case class UserSQL(
   def isTeamManagerInOrg(_organization: ObjectId): Fox[Boolean] =
     for {
       teamManagerMemberships <- teamManagerMemberships
-    } yield (teamManagerMemberships.length > 0 && _organization == this._organization)
+    } yield (teamManagerMemberships.nonEmpty && _organization == this._organization)
 
   def isAdminOf(_organization: ObjectId): Boolean =
     isAdmin && _organization == this._organization
@@ -353,8 +358,9 @@ object UserDataSetConfigurationSQLDAO extends SimpleSQLDAO {
               join webknossos.dataSets_ d on c._dataSet = d._id
               where d.name = ${dataSetName}
               and c._user = ${userId}
-          """.as[JsValue])
-      result <- rows.headOption.toFox
+          """.as[String])
+      parsed = rows.map(Json.parse(_))
+      result <- parsed.headOption.toFox
     } yield result
   }
 

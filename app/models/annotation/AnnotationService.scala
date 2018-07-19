@@ -40,16 +40,19 @@ object AnnotationService
   with LazyLogging {
 
   private def selectSuitableTeam(user: UserSQL, dataSet: DataSet)(implicit ctx: DBAccessContext): Fox[ObjectId] = {
-    val selectedTeamOpt = dataSet.allowedTeams.intersect(user.teamIds).headOption
-    selectedTeamOpt match {
-      case Some(selectedTeam) => Fox.successful(ObjectId.fromBsonId(selectedTeam))
-      case None =>
-        for {
-          _ <- (user.isTeamManagerInOrg(user.organization) || user.isAdmin)
-          organization <- OrganizationSQLDAO.findOneByName(user.organization)
-          organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(organization._id)
-        } yield organizationTeamId
-    }
+    (for {
+      userTeamIds <- user.teamIds
+    } yield {
+      val selectedTeamOpt = dataSet.allowedTeams.intersect(userTeamIds).headOption
+      selectedTeamOpt match {
+        case Some(selectedTeam) => Fox.successful(ObjectId.fromBsonId(selectedTeam))
+        case None =>
+          for {
+            _ <- Fox.assertBoolean(user.isTeamManagerOrAdminOfOrg(user._organization))
+            organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(user._organization)
+          } yield organizationTeamId
+      }
+    }).flatten
   }
 
   private def createVolumeTracing(dataSource: DataSource, withFallback: Boolean): VolumeTracing = {

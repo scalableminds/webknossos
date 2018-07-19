@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{AccessMode, AccessResourceType, UserAccessAnswer, UserAccessRequest}
 import models.annotation._
 import models.binary.{DataSetDAO, DataStoreHandlingStrategy}
+import models.team.OrganizationSQLDAO
 import models.user.UserSQL
 import net.liftweb.common.{Box, Full}
 import oxalis.security.WebknossosSilhouette.UserAwareAction
@@ -77,17 +78,19 @@ class UserTokenController @Inject()(val messagesApi: MessagesApi)
       for {
         dataset <- DataSetDAO.findOneBySourceName(dataSourceName) ?~> "datasource.notFound"
         user <- userBox.toFox
-        owningOrg = dataset.owningOrganization
-        //TODO
-        isAllowed <- (user.isAdminOf(owningOrg) || user.isTeamManagerInOrg(owningOrg)).futureBox
+        organization <- OrganizationSQLDAO.findOneByName(dataset.owningOrganization)
+        isAllowed <- user.isTeamManagerOrAdminOfOrg(organization._id)
       } yield {
-        Full(UserAccessAnswer(isAllowed.isDefined))
+        UserAccessAnswer(isAllowed)
       }
     }
 
     def tryAdministrate: Fox[UserAccessAnswer] = {
       userBox match {
-        case Full(user) => Fox.successful(UserAccessAnswer(user.isAdmin || user.teamManagerTeams.nonEmpty))
+        case Full(user) =>
+          for {
+            isAllowed <- user.isTeamManagerOrAdminOfOrg(user._organization)
+          } yield UserAccessAnswer(isAllowed)
         case _ => Fox.successful(UserAccessAnswer(false, Some("invalid access token")))
       }
     }

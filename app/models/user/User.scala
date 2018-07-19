@@ -80,7 +80,7 @@ case class UserSQL(
   def isTeamManagerOrAdminOfOrg(_organization: ObjectId): Fox[Boolean] =
     for {
       teamManagerTeamIds <- teamManagerTeamIds
-    } yield teamManagerTeamIds.nonEmpty && this._organization == _organization
+    } yield teamManagerTeamIds.nonEmpty || this.isAdmin && this._organization == _organization
 
   def isEditableBy(otherUser: UserSQL): Fox[Boolean] =
     for {

@@ -50,6 +50,21 @@ Samplecountry
   val organizationTeamId = BSONObjectID.generate
   val defaultOrganization = OrganizationSQL(ObjectId.generate, "Connectomics department", additionalInformation, "/assets/images/mpi-logos.svg", "MPI for Brain Research")
   val organizationTeam = Team(defaultOrganization.name, defaultOrganization.name, true, organizationTeamId)
+  val defaultUser = UserSQL(
+    ObjectId.generate,
+    defaultOrganization._id,
+    defaultUserEmail,
+    "SCM",
+    "Boy",
+    System.currentTimeMillis(),
+    Json.toJson(UserConfiguration.default),
+    SCrypt.md5(defaultUserPassword),
+    UserService.createLoginInfo(defaultUserEmail),
+    UserService.createPasswordInfo(defaultUserPassword),
+    isAdmin = true,
+    isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser").getOrElse(false),
+    isDeactivated = false
+  )
 
   def insert: Fox[Unit] =
     for {
@@ -80,24 +95,9 @@ Samplecountry
       case Full(_) => Fox.successful(())
       case _ =>
         for {
-          _ <- UserSQLDAO.insertOne(UserSQL(
-            ObjectId.generate,
-            defaultOrganization._id,
-            defaultUserEmail,
-            "SCM",
-            "Boy",
-            System.currentTimeMillis(),
-            Json.toJson(UserConfiguration.default),
-            SCrypt.md5(defaultUserPassword),
-            UserService.createLoginInfo(defaultUserEmail),
-            UserService.createPasswordInfo(defaultUserPassword),
-            isAdmin = true,
-            isSuperUser = Play.configuration.getBoolean("application.authentication.defaultUser.isSuperUser").getOrElse(false),
-            isDeactivated = false
-          ))
-          _ <- Fox.successful(())
-          //TODO: experiences = Map("sampleExp" -> 10),
-          //TODO: List(TeamMembership(organizationTeam._id, organizationTeam.name, true)),
+          _ <- UserSQLDAO.insertOne(defaultUser)
+          _ <- UserExperiencesSQLDAO.updateExperiencesForUser(defaultUser._id, Map("sampleExp" -> 10))
+          _ <- UserTeamRolesSQLDAO.insertTeamMembership(defaultUser._id, TeamMembershipSQL(ObjectId.fromBsonId(organizationTeam._id), true))
           _ = logger.info("Inserted default user scmboy")
         } yield ()
     }.toFox

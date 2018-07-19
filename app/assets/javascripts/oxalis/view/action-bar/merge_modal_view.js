@@ -4,7 +4,7 @@ import { connect } from "react-redux";
 import { withRouter } from "react-router-dom";
 import Toast from "libs/toast";
 import Request from "libs/request";
-import { Alert, Modal, Button, Select, Form, Spin, Checkbox } from "antd";
+import { Icon, Alert, Modal, Button, Select, Form, Spin, Checkbox, Tooltip } from "antd";
 import messages from "messages";
 import InputComponent from "oxalis/view/components/input_component";
 import api from "oxalis/api/internal_api";
@@ -194,7 +194,14 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
                 onChange={event => this.setState({ mergeExplorativeLocally: event.target.checked })}
                 checked={this.state.mergeExplorativeLocally}
               >
-                Merge into active tracing
+                Merge into active tracing{" "}
+                <Tooltip
+                  title={
+                    "If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account."
+                  }
+                >
+                  <Icon type="info-circle-o" style={{ color: "gray" }} />
+                </Tooltip>
               </Checkbox>
             </Form.Item>
             <Form.Item>

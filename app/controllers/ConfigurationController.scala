@@ -68,7 +68,7 @@ class ConfigurationController @Inject()(val messagesApi: MessagesApi) extends Co
     for {
       dataset <- DataSetDAO.findOneBySourceName(dataSetName) ?~> Messages("dataset.notFound")
       organization <- OrganizationSQLDAO.findOneByName(dataset.owningOrganization)
-      _ <- Fox.assertBoolean(request.identity.isTeamManagerOrAdminOfOrg(organization._id)) ?~> Messages("notAllowed")
+      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOfOrg(organization._id)) ?~> Messages("notAllowed")
       jsConfiguration <- request.body.asOpt[JsObject] ?~> Messages("user.configuration.dataset.invalid")
       conf = jsConfiguration.fields.toMap
       _ <- DataSetSQLDAO.updateDefaultConfigurationByName(dataSetName, DataSetConfiguration(conf))

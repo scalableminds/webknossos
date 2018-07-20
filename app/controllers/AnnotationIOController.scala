@@ -174,7 +174,7 @@ class AnnotationIOController @Inject()(val messagesApi: MessagesApi)
     for {
       projectIdValidated <- ObjectId.parse(projectId)
       project <- ProjectSQLDAO.findOne(projectIdValidated) ?~> Messages("project.notFound", projectId)
-      _ <- Fox.assertBoolean(user.isTeamManagerOrAdminOf(project._team))
+      _ <- Fox.assertTrue(user.isTeamManagerOrAdminOf(project._team))
       annotations <- AnnotationSQLDAO.findAllFinishedForProject(projectIdValidated)
       zip <- AnnotationService.zipAnnotations(annotations, project.name + "_nmls.zip")
     } yield {

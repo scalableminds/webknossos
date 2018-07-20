@@ -48,7 +48,7 @@ object AnnotationService
         case Some(selectedTeam) => Fox.successful(ObjectId.fromBsonId(selectedTeam))
         case None =>
           for {
-            _ <- Fox.assertBoolean(user.isTeamManagerOrAdminOfOrg(user._organization))
+            _ <- Fox.assertTrue(user.isTeamManagerOrAdminOfOrg(user._organization))
             organizationTeamId <- OrganizationSQLDAO.findOrganizationTeamId(user._organization)
           } yield organizationTeamId
       }

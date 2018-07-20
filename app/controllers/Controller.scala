@@ -32,7 +32,7 @@ trait Controller extends PlayController
     r.request
 
   def ensureTeamAdministration(user: UserSQL, teamId: ObjectId): Fox[Unit] =
-    Fox.assertBoolean(user.isTeamManagerOrAdminOf(teamId)) ?~> Messages("team.admin.notAllowed")
+    Fox.assertTrue(user.isTeamManagerOrAdminOf(teamId)) ?~> Messages("team.admin.notAllowed")
 
   def allowedToAdministrate(admin: UserSQL, dataSet: DataSet)(implicit ctx: DBAccessContext) =
     dataSet.isEditableBy(Some(admin)) ?~> Messages("notAllowed")

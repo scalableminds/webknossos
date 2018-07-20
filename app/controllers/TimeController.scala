@@ -31,7 +31,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
   def getWorkingHoursOfUsers(userString: String, year: Int, month: Int, startDay: Option[Int], endDay: Option[Int]) = SecuredAction.async { implicit request =>
     for {
       users <- Fox.combined(userString.split(",").toList.map(email => UserService.findOneByEmail(email))) ?~> Messages("user.email.invalid")
-      _ <- Fox.combined(users.map(user => Fox.assertBoolean(request.identity.isTeamManagerOrAdminOf(user)))) ?~> Messages("user.notAuthorised")
+      _ <- Fox.combined(users.map(user => Fox.assertTrue(request.identity.isTeamManagerOrAdminOf(user)))) ?~> Messages("user.notAuthorised")
       js <- loggedTimeForUserListByMonth(users, year, month, startDay, endDay)
     } yield {
       Ok(js)
@@ -42,7 +42,7 @@ class TimeController @Inject()(val messagesApi: MessagesApi) extends Controller 
     for {
       userIdValidated <- ObjectId.parse(userId)
       user <- UserService.findOneById(userIdValidated, false) ?~> Messages("user.notFound")
-      _ <- Fox.assertBoolean(request.identity.isTeamManagerOrAdminOf(user)) ?~> Messages("user.notAuthorised")
+      _ <- Fox.assertTrue(request.identity.isTeamManagerOrAdminOf(user)) ?~> Messages("user.notAuthorised")
       js <- loggedTimeForUserListByTimestamp(user,startDate, endDate)
     } yield {
       Ok(js)

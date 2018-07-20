@@ -149,7 +149,7 @@ object Fox extends FoxImplicits {
         Fox.successful(None)}
   }
 
-  def assertBoolean(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] = {
+  def assertTrue(fox: Fox[Boolean])(implicit ec: ExecutionContext): Fox[Unit] = {
     for {
       asBoolean <- fox
       _ <- bool2Fox(asBoolean)

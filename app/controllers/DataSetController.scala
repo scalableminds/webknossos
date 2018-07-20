@@ -178,7 +178,7 @@ class DataSetController @Inject()(val messagesApi: MessagesApi) extends Controll
       case (server, name, token, team) =>
         for {
           _ <- DataSetService.checkIfNewDataSetName(name) ?~> Messages("dataSet.name.alreadyTaken")
-          _ <- Fox.assertBoolean(request.identity.isTeamManagerOrAdminOf(ObjectId.fromBsonId(team))) ?~> Messages("team.admin.notAllowed")
+          _ <- ensureTeamAdministration(request.identity, ObjectId.fromBsonId(team)) ?~> Messages("team.admin.notAllowed")
           ndProject <- NDServerConnection.requestProjectInformationFromNDStore(server, name, token)
           dataSet <- ND2WK.dataSetFromNDProject(ndProject, team)
           _ <-  DataSetDAO.insert(dataSet)(GlobalAccessContext)

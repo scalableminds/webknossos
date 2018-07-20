@@ -19,7 +19,7 @@ object ProjectInformationHandler extends AnnotationInformationHandler with FoxIm
       _ <- assertAllOnSameDataset(annotations)
       _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
       user <- userOpt ?~> "user.notAuthorised"
-      _ <- Fox.assertBoolean(user.isTeamManagerOrAdminOf(project._team))
+      _ <- Fox.assertTrue(user.isTeamManagerOrAdminOf(project._team))
       _dataSet = annotations.head._dataSet
       mergedAnnotation <- AnnotationMerger.mergeN(projectId, persistTracing=false, user._id,
         _dataSet, project._team, AnnotationTypeSQL.CompoundProject, annotations) ?~> "annotation.merge.failed.compound"

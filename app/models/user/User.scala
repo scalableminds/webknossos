@@ -75,23 +75,18 @@ case class UserSQL(
     for {
       team <- TeamSQLDAO.findOne(_team)(GlobalAccessContext)
       teamManagerTeamIds <- teamManagerTeamIds
-    } yield (teamManagerTeamIds.contains(_team) || this.isAdmin && this._organization == team._organization)
+    } yield (teamManagerTeamIds.contains(_team) || this.isAdminOf(team._organization))
 
   def isTeamManagerOrAdminOfOrg(_organization: ObjectId): Fox[Boolean] =
     for {
-      teamManagerTeamIds <- teamManagerTeamIds
-    } yield teamManagerTeamIds.nonEmpty || this.isAdmin && this._organization == _organization
+      isTeamManager <- isTeamManagerInOrg(_organization)
+    } yield (isTeamManager || this.isAdminOf(_organization))
 
   def isEditableBy(otherUser: UserSQL): Fox[Boolean] =
     for {
       otherIsTeamManagerOrAdmin <- otherUser.isTeamManagerOrAdminOf(this)
       teamMemberships <- teamMemberships
-    } yield {
-      (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
-    }
-
-  def isAdminOf(otherUser: UserSQL): Boolean =
-    this._organization == otherUser._organization && this.isAdmin
+    } yield (otherIsTeamManagerOrAdmin || teamMemberships.isEmpty)
 
   def isTeamManagerInOrg(_organization: ObjectId): Fox[Boolean] =
     for {
@@ -100,6 +95,9 @@ case class UserSQL(
 
   def isAdminOf(_organization: ObjectId): Boolean =
     isAdmin && _organization == this._organization
+
+  def isAdminOf(otherUser: UserSQL): Boolean =
+    isAdminOf(otherUser._organization)
 
   def publicWrites(requestingUser: UserSQL)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {

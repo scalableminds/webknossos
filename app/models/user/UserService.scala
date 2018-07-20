@@ -77,7 +77,7 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
         passwordInfo,
         isAdmin,
         isSuperUser = false,
-        !isActive
+        isDeactivated = !isActive
       )
       _ <- UserSQLDAO.insertOne(user)
       _ <- Fox.combined(teamMemberships.map(UserTeamRolesSQLDAO.insertTeamMembership(user._id, _)))
@@ -98,7 +98,7 @@ object UserService extends FoxImplicits with IdentityService[UserSQL] {
       Mailer ! Send(DefaultMails.activatedMail(user.name, user.email))
     }
     for {
-      _ <- UserSQLDAO.updateValues(user._id, firstName, lastName, email, isAdmin, !activated)
+      _ <- UserSQLDAO.updateValues(user._id, firstName, lastName, email, isAdmin, isDeactivated = !activated)
       _ <- UserTeamRolesSQLDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- UserExperiencesSQLDAO.updateExperiencesForUser(user._id, experiences)
       _ = UserCache.invalidateUser(user._id)

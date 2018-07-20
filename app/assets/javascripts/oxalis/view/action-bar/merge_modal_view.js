@@ -190,8 +190,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
           <Alert
             type="info"
             style={{ marginBottom: 12 }}
-            message="The merged tracing will be saved as a new explorative tracing. If you would like to
-            import NML files, please simply drag and drop them into the tracing view."
+            message="If you would like to import NML files, please simply drag and drop them into the tracing view."
           />
           <Form layout="inline">
             <Form.Item label="Project">

@@ -7,7 +7,6 @@ import _ from "lodash";
 import update from "immutability-helper";
 import Utils from "libs/utils";
 import ColorGenerator from "libs/color_generator";
-import EdgeCollection from "oxalis/model/edge_collection";
 import {
   createBranchPoint,
   deleteBranchPoint,
@@ -33,14 +32,7 @@ import {
   getNodeAndTree,
 } from "oxalis/model/accessors/skeletontracing_accessor";
 import Constants from "oxalis/constants";
-import type {
-  OxalisState,
-  SkeletonTracingType,
-  NodeType,
-  BranchPointType,
-  TreeType,
-} from "oxalis/store";
-import DiffableMap from "libs/diffable_map";
+import type { OxalisState, SkeletonTracingType } from "oxalis/store";
 import type { ActionType } from "oxalis/model/actions/actions";
 import Maybe from "data.maybe";
 import Toast from "libs/toast";

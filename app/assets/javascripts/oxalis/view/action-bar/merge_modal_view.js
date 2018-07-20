@@ -16,11 +16,6 @@ import { createTreeMapFromTreeArray } from "oxalis/model/reducers/skeletontracin
 import Utils from "libs/utils";
 import type { APIAnnotationType } from "admin/api_flow_types";
 
-type AnnotationInfoType = {
-  typ: string,
-  id: string,
-};
-
 type ProjectInfoType = {
   id: string,
   label: string,
@@ -43,17 +38,6 @@ type MergeModalViewState = {
   selectedProject: ?string,
   selectedExplorativeAnnotation: string,
   isUploading: boolean,
-};
-
-type UploadInfoType<T> = {
-  file:
-    | {
-        status: "uploading",
-      }
-    | {
-        status: "done" | "error",
-        response: T,
-      },
 };
 
 type ButtonWithCheckboxProps = {
@@ -179,7 +163,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       Toast.success(messages["tracing.merged"]);
     } else {
       Toast.error("Merging is not supported for volume tracings.");
-      return;
+      
     }
   }
 
@@ -188,9 +172,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       <React.Fragment>
         Merge into active tracing{" "}
         <Tooltip
-          title={
-            "If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account."
-          }
+          title="If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account."
         >
           <Icon type="info-circle-o" style={{ color: "gray" }} />
         </Tooltip>

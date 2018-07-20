@@ -31,11 +31,11 @@ test("Shader syntax: Ortho Mode + Segmentation - Mapping", t => {
     segmentationName: "segmentationLayer",
     segmentationPackingDegree: 1,
     isRgb: false,
-    planeID: OrthoViews.PLANE_XY,
     isMappingSupported: false,
     dataTextureCountPerLayer: 3,
     resolutions,
     datasetScale: [1, 1, 1],
+    isOrthogonal: true,
   });
 
   const parseResult = glslParser.check(code);

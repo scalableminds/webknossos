@@ -1,6 +1,5 @@
 // @flow
 import _ from "lodash";
-import Dimensions from "oxalis/model/dimensions";
 import {
   MAPPING_TEXTURE_WIDTH,
   MAPPING_COLOR_TEXTURE_WIDTH,

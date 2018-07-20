@@ -536,10 +536,9 @@ class DataApi {
 
   /**
    * Returns the name of the volume tracing layer.
-   * _Volume tracing only!_
    */
   getVolumeTracingLayerName(): string {
-    assertVolume(Store.getState().tracing);
+    // TODO: Rename method to getSegmentationLayerName() and increase api version
     const segmentationLayer = this.model.getSegmentationLayer();
     assertExists(segmentationLayer, "Segmentation layer not found!");
     return segmentationLayer.name;

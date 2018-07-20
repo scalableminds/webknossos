@@ -163,7 +163,6 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
       Toast.success(messages["tracing.merged"]);
     } else {
       Toast.error("Merging is not supported for volume tracings.");
-      
     }
   }
 
@@ -171,9 +170,7 @@ class MergeModalView extends PureComponent<Props, MergeModalViewState> {
     const mergeIntoActiveTracingCheckbox = (
       <React.Fragment>
         Merge into active tracing{" "}
-        <Tooltip
-          title="If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account."
-        >
+        <Tooltip title="If this option is enabled, trees and tree groups will be imported directly into the currently opened tracing. If not, a new explorative annotation will be created in your account.">
           <Icon type="info-circle-o" style={{ color: "gray" }} />
         </Tooltip>
       </React.Fragment>

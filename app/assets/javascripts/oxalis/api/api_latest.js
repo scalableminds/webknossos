@@ -567,7 +567,7 @@ class DataApi {
     if (layerName !== segmentationLayerName) {
       throw new Error(messages["mapping.unsupported_layer"]);
     }
-    Store.dispatch(setMappingAction(mapping));
+    Store.dispatch(setMappingAction(_.clone(mapping)));
   }
 
   /**
